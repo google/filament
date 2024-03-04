@@ -18,6 +18,14 @@
 
 #include "OpenGLDriverFactory.h"
 
+#include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+
+#include <utils/compiler.h>
+
+#include <stdint.h>
+
 namespace filament::backend {
 
 Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
@@ -26,6 +34,10 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 }
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
+
+bool OpenGLPlatform::isProtectedContextSupported() const noexcept {
+    return false;
+}
 
 bool OpenGLPlatform::isSRGBSwapChainSupported() const noexcept {
     return false;

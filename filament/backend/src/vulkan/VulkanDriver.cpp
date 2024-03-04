@@ -868,6 +868,11 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
     return mIsSRGBSwapChainSupported;
 }
 
+bool VulkanDriver::isProtectedContentSupported() {
+    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
+    return false;
+}
+
 bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
     switch (stereoscopicType) {
     case backend::StereoscopicType::INSTANCED:
@@ -884,6 +889,10 @@ bool VulkanDriver::isParallelShaderCompileSupported() {
 
 bool VulkanDriver::isDepthStencilResolveSupported() {
     // TODO: apparently it could be supported in core 1.2 and/or with VK_KHR_depth_stencil_resolve
+    return false;
+}
+
+bool VulkanDriver::isProtectedTexturesSupported() {
     return false;
 }
 
@@ -1033,10 +1042,10 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
 void VulkanDriver::setupExternalImage(void* image) {
 }
 
-bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     VulkanTimerQuery* vtq = mResourceAllocator.handle_cast<VulkanTimerQuery*>(tqh);
     if (!vtq->isCompleted()) {
-        return false;
+        return TimerQueryResult::NOT_READY;
     }
 
     auto results = mTimestamps->getResult(vtq);
@@ -1046,7 +1055,7 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     uint64_t available1 = results[3];
 
     if (available0 == 0 || available1 == 0) {
-        return false;
+        return TimerQueryResult::NOT_READY;
     }
 
     ASSERT_POSTCONDITION(timestamp1 >= timestamp0, "Timestamps are not monotonically increasing.");
@@ -1058,7 +1067,7 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     float const period = mContext.getPhysicalDeviceLimits().timestampPeriod;
     uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
     *elapsedTime = delta;
-    return true;
+    return TimerQueryResult::AVAILABLE;
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {

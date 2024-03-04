@@ -91,6 +91,8 @@ protected:
 
     void terminate() noexcept override;
 
+    bool isProtectedContextSupported() const noexcept override;
+
     bool isSRGBSwapChainSupported() const noexcept override;
     SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
     SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
@@ -148,8 +150,17 @@ protected:
             bool KHR_gl_colorspace = false;
             bool KHR_no_config_context = false;
             bool KHR_surfaceless_context = false;
+            bool EXT_protected_content = false;
         } egl;
     } ext;
+
+    struct SwapChainEGL : public Platform::SwapChain {
+        EGLSurface sur = EGL_NO_SURFACE;
+        Config attribs{};
+        EGLNativeWindowType nativeWindow{};
+        EGLConfig config{};
+        uint64_t flags{};
+    };
 
     void initializeGlExtensions() noexcept;
 

@@ -63,6 +63,22 @@ public:
     virtual void terminate() noexcept = 0;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
+     * The default implementation returns false.
+     *
+     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
+     */
+    virtual bool isSRGBSwapChainSupported() const noexcept;
+
+    /**
+     * Return whether protected contexts are supported by this backend.
+     * If protected context are supported, the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag can be
+     * used when creating a SwapChain.
+     * The default implementation returns false.
+     */
+    virtual bool isProtectedContextSupported() const noexcept;
+
+    /**
      * Called by the driver to create a SwapChain for this driver.
      *
      * @param nativeWindow  a token representing the native window. See concrete implementation
@@ -73,14 +89,6 @@ public:
      */
     virtual SwapChain* UTILS_NONNULL createSwapChain(
             void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
-
-    /**
-     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
-     * The default implementation returns false.
-     *
-     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
-     */
-    virtual bool isSRGBSwapChainSupported() const noexcept;
 
     /**
      * Called by the driver create a headless SwapChain.

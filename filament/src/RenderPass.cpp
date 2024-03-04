@@ -434,7 +434,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
-        uint8_t instancedStereoEyeCount) noexcept {
+        uint8_t stereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
 
@@ -466,12 +466,12 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    instancedStereoEyeCount);
+                    stereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    instancedStereoEyeCount);
+                    stereoEyeCount);
             break;
         default:
             // we should never end-up here
@@ -494,7 +494,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept {
+        float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -520,7 +520,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
-    const bool hasInstancedStereo = renderFlags & IS_STEREOSCOPIC;
+    const bool hasStereo = renderFlags & IS_STEREOSCOPIC;
 
     Command cmdColor;
 
@@ -576,7 +576,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // calculate the per-primitive face winding order inversion
         const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
         const bool hasMorphing = soaVisibility[i].morphing;
-        const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
+        const bool hasSkinning = soaVisibility[i].skinning;
+        const bool hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
@@ -588,9 +589,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
-        if (UTILS_UNLIKELY(hasInstancedStereo)) {
+        if (UTILS_UNLIKELY(hasStereo)) {
             cmdColor.primitive.instanceCount =
-                    (soaInstanceInfo[i].count * instancedStereoEyeCount) |
+                    (soaInstanceInfo[i].count * stereoEyeCount) |
                     PrimitiveInfo::USER_INSTANCE_MASK;
         }
 
@@ -600,6 +601,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         renderableVariant.setShadowReceiver(
                 Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
         renderableVariant.setSkinning(hasSkinningOrMorphing);
+
+        const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
+        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
 
         if constexpr (isDepthPass) {
             cmdDepth.key = uint64_t(Pass::DEPTH);
@@ -614,23 +618,30 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
-            if (UTILS_UNLIKELY(hasInstancedStereo)) {
+            cmdDepth.primitive.skinningHandle = skinning.handle;
+            cmdDepth.primitive.skinningOffset = skinning.offset;
+            cmdDepth.primitive.skinningTexture = skinning.handleSampler;
+            cmdDepth.primitive.morphWeightBuffer = morphing.handle;
+
+            if (UTILS_UNLIKELY(hasStereo)) {
                 cmdColor.primitive.instanceCount =
-                        (soaInstanceInfo[i].count * instancedStereoEyeCount) |
+                        (soaInstanceInfo[i].count * stereoEyeCount) |
                         PrimitiveInfo::USER_INSTANCE_MASK;
             }
         }
         if constexpr (isColorPass) {
             renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
+
+            cmdColor.primitive.skinningHandle = skinning.handle;
+            cmdColor.primitive.skinningOffset = skinning.offset;
+            cmdColor.primitive.skinningTexture = skinning.handleSampler;
+            cmdColor.primitive.morphWeightBuffer = morphing.handle;
         }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
-        const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
-        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
-
         /*
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
@@ -641,15 +652,13 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
 
+            // TODO: we should disable the SKN variant if this primitive doesn't have either
+            //       skinning or morphing.
+
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitive = &primitive;
                 RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
 
-                cmdColor.primitive.skinningHandle = skinning.handle;
-                cmdColor.primitive.skinningOffset = skinning.offset;
-                cmdColor.primitive.skinningTexture = skinning.handleSampler;
-
-                cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
@@ -744,17 +753,14 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
 
+                // TODO: we should disable the SKN variant if this primitive doesn't have either
+                //       skinning or morphing.
+
                 cmdDepth.key |= mi->getSortingKey(); // already all set-up for direct or'ing
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitive = &primitive;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
-
-                cmdDepth.primitive.skinningHandle = skinning.handle;
-                cmdDepth.primitive.skinningOffset = skinning.offset;
-                cmdDepth.primitive.skinningTexture = skinning.handleSampler;
-
-                cmdDepth.primitive.morphWeightBuffer = morphing.handle;
                 cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?

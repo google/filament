@@ -63,7 +63,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     out << "#extension GL_OES_EGL_image_external : require\n\n";
                 }
             }
-            if (v.hasInstancedStereo() && stage == ShaderStage::VERTEX) {
+            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
                 // If we're not processing the shader through glslang (in the case of unoptimized
                 // OpenGL shaders), then we need to add the #extension string ourselves.
                 // If we ARE running the shader through glslang, then we must not include it,
@@ -180,6 +180,15 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         }
     }
     generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
+
+    switch (material.stereoscopicType) {
+    case StereoscopicType::INSTANCED:
+        generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
+        break;
+    case StereoscopicType::MULTIVIEW:
+        generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
+        break;
+    }
 
     if (stage == ShaderStage::VERTEX) {
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);

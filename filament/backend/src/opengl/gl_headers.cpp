@@ -72,6 +72,7 @@ PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
 // On Android, If we want to support a build system less than ANDROID_API 21, we need to
 // use getProcAddress for ES3.1 and above entry points.
 PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
+PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
 #endif
 static std::once_flag sGlExtInitialized;
 #endif // __EMSCRIPTEN__
@@ -119,6 +120,7 @@ void importGLESExtensionsEntryPoints() {
 #endif
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
         getProcAddress(glDispatchCompute, "glDispatchCompute");
+        getProcAddress(glFramebufferTextureMultiviewOVR, "glFramebufferTextureMultiviewOVR");
 #endif
     });
 #endif // __EMSCRIPTEN__

@@ -34,7 +34,15 @@ Java_com_google_android_filament_SwapChain_nSetFrameCompletedCallback(JNIEnv* en
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_SwapChain_nIsSRGBSwapChainSupported(JNIEnv *, jclass, jlong nativeEngine) {
+Java_com_google_android_filament_SwapChain_nIsSRGBSwapChainSupported(
+        JNIEnv *, jclass, jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;
-    return (bool)SwapChain::isSRGBSwapChainSupported(*engine);
+    return (jboolean)SwapChain::isSRGBSwapChainSupported(*engine);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_SwapChain_nIsProtectedContentSupported(
+        JNIEnv *, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)SwapChain::isProtectedContentSupported(*engine);
 }

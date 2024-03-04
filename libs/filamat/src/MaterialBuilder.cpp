@@ -498,6 +498,11 @@ MaterialBuilder& MaterialBuilder::transparencyMode(TransparencyMode mode) noexce
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::stereoscopicType(StereoscopicType stereoscopicType) noexcept {
+    mStereoscopicType = stereoscopicType;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::reflectionMode(ReflectionMode mode) noexcept {
     mReflectionMode = mode;
     return *this;
@@ -632,6 +637,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
     info.featureLevel = mFeatureLevel;
     info.groupSize = mGroupSize;
+    info.stereoscopicType = mStereoscopicType;
 
     // This is determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
@@ -894,7 +900,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .domain = mMaterialDomain,
                         .materialInfo = &info,
                         .hasFramebufferFetch = mEnableFramebufferFetch,
-                        .usesClipDistance = v.variant.hasInstancedStereo(),
+                        .usesClipDistance = v.variant.hasStereo(),
                         .glsl = {},
                 };
 

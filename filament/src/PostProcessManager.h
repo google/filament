@@ -288,6 +288,15 @@ public:
             FrameGraphId<FrameGraphTexture> shadowmap, float scale,
             uint8_t layer, uint8_t level, uint8_t channel, float power) noexcept;
 
+    // Combine an array texture pointed to by `input` into a single image, then return it.
+    // This is only useful to check the multiview rendered scene as a debugging purpose, thus this
+    // is not expected to be used in normal cases.
+    FrameGraphId<FrameGraphTexture> debugCombineArrayTexture(FrameGraph& fg, bool translucent,
+        FrameGraphId<FrameGraphTexture> input,
+        filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+        backend::SamplerMagFilter filterMag,
+        backend::SamplerMinFilter filterMin) noexcept;
+
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;

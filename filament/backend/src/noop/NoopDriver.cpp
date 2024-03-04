@@ -177,6 +177,10 @@ bool NoopDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool NoopDriver::isProtectedContentSupported() {
+    return false;
+}
+
 bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
     return false;
 }
@@ -186,6 +190,10 @@ bool NoopDriver::isParallelShaderCompileSupported() {
 }
 
 bool NoopDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
+bool NoopDriver::isProtectedTexturesSupported() {
     return true;
 }
 
@@ -244,8 +252,8 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
 void NoopDriver::setupExternalImage(void* image) {
 }
 
-bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return false;
+TimerQueryResult NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    return TimerQueryResult::ERROR;
 }
 
 void NoopDriver::setExternalImage(Handle<HwTexture> th, void* image) {

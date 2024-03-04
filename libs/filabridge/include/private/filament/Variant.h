@@ -115,7 +115,7 @@ struct Variant {
     inline bool hasDirectionalLighting() const noexcept { return key & DIR; }
     inline bool hasDynamicLighting() const noexcept     { return key & DYN; }
     inline bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
-    inline bool hasInstancedStereo() const noexcept     { return key & STE; }
+    inline bool hasStereo() const noexcept              { return key & STE; }
 
     inline void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
     inline void setDynamicLighting(bool v) noexcept     { set(v, DYN); }

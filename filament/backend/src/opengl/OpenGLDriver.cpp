@@ -519,7 +519,6 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     auto& gl = mContext;
 
-    GLVertexBuffer const* const vb = handle_cast<const GLVertexBuffer*>(vbh);
     GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
     assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
 
@@ -532,8 +531,9 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     gl.bindVertexArray(&rp->gl);
 
-    // update the VBO bindings in the VAO
-    updateVertexArrayObject(rp, vb);
+    // Note: we don't update the vertex buffer bindings in the VAO just yet, we will do that
+    // later in draw() or bindRenderPrimitive(). At this point, the HwVertexBuffer might not
+    // have all its buffers set.
 
     // this records the index buffer into the currently bound VAO
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
@@ -580,12 +580,21 @@ void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size
 
 UTILS_NOINLINE
 void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
-        uint32_t width, uint32_t height, uint32_t depth) noexcept {
+        uint32_t width, uint32_t height, uint32_t depth, bool useProtectedMemory) noexcept {
 
     auto& gl = mContext;
 
     bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
     gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
+
+#ifdef GL_EXT_protected_textures
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (UTILS_UNLIKELY(useProtectedMemory)) {
+        assert_invariant(gl.ext.EXT_protected_textures);
+        glTexParameteri(t->gl.target, GL_TEXTURE_PROTECTED_EXT, 1);
+    }
+#endif
+#endif
 
     switch (t->gl.target) {
         case GL_TEXTURE_2D:
@@ -677,6 +686,12 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     GLenum internalFormat = getInternalFormat(format);
     assert_invariant(internalFormat);
 
+    if (UTILS_UNLIKELY(usage & TextureUsage::PROTECTED)) {
+        // renderbuffers don't have a protected mode, so we need to use a texture
+        // because protected textures are only supported on GLES 3.2, MSAA will be available.
+        usage |= TextureUsage::SAMPLEABLE;
+    }
+
     auto& gl = mContext;
     samples = std::clamp(samples, uint8_t(1u), uint8_t(gl.gets.max_samples));
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
@@ -746,7 +761,8 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 }
 #endif
             }
-            textureStorage(t, w, h, depth);
+
+            textureStorage(t, w, h, depth, bool(usage & TextureUsage::PROTECTED));
         }
     } else {
         assert_invariant(any(usage & (
@@ -755,6 +771,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 TextureUsage::STENCIL_ATTACHMENT)));
         assert_invariant(levels == 1);
         assert_invariant(target == SamplerType::SAMPLER_2D);
+        assert_invariant(none(usage & TextureUsage::PROTECTED));
         t->gl.internalFormat = internalFormat;
         t->gl.target = GL_RENDERBUFFER;
         glGenRenderbuffers(1, &t->gl.id);
@@ -856,7 +873,6 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
 
     // NOTE: this is called from draw() and must be as efficient as possible.
 
-
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
 #ifndef NDEBUG
@@ -875,38 +891,44 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
     for (size_t i = 0, n = vbi->attributes.size(); i < n; i++) {
         const auto& attribute = vbi->attributes[i];
         const uint8_t bi = attribute.buffer;
+        if (bi != Attribute::BUFFER_UNUSED) {
+            // if a buffer is defined it must not be invalid.
+            assert_invariant(vb->gl.buffers[bi]);
 
-        // Invoking glVertexAttribPointer without a bound VBO is an invalid operation, so we must
-        // take care to avoid it. This can occur when VertexBuffer is only partially populated with
-        // BufferObject items.
-        if (bi != Attribute::BUFFER_UNUSED && UTILS_LIKELY(vb->gl.buffers[bi] != 0)) {
-
+            // if w're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
+            GLuint const index = i;
+            GLint const size = getComponentCount(attribute.type);
+            GLenum const type = getComponentType(attribute.type);
+            GLboolean const normalized = getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED);
+            GLsizei const stride = attribute.stride;
+            void const* pointer = reinterpret_cast<void const *>(attribute.offset);
+
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
-                glVertexAttribIPointer(GLuint(i),
-                        (GLint)getComponentCount(attribute.type),
-                        getComponentType(attribute.type),
-                        attribute.stride,
-                        (void*) uintptr_t(attribute.offset));
+                // integer attributes can't be floats
+                assert_invariant(type == GL_BYTE || type == GL_UNSIGNED_BYTE || type == GL_SHORT ||
+                        type == GL_UNSIGNED_SHORT || type == GL_INT || type == GL_UNSIGNED_INT);
+                glVertexAttribIPointer(index, size, type, stride, pointer);
             } else
 #endif
             {
-                glVertexAttribPointer(GLuint(i),
-                        (GLint)getComponentCount(attribute.type),
-                        getComponentType(attribute.type),
-                        getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED),
-                        attribute.stride,
-                        (void*) uintptr_t(attribute.offset));
+                glVertexAttribPointer(index, size, type, normalized, stride, pointer);
             }
 
             gl.enableVertexAttribArray(GLuint(i));
         } else {
-
             // In some OpenGL implementations, we must supply a properly-typed placeholder for
-            // every integer input that is declared in the vertex shader, even if disabled.
+            // every integer input that is declared in the vertex shader.
+            // Note that the corresponding doesn't have to be enabled and in fact won't be. If it
+            // was enabled, it would indicate a user-error (providing the wrong type of array).
+            // With a disabled array, the vertex shader gets the attribute from glVertexAttrib,
+            // and must have the proper intergerness.
+            // But at this point, we don't know what the shader requirements are, and so we must
+            // rely on the attribute.
+
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                 if (!gl.isES2()) {
@@ -1916,6 +1938,10 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
+bool OpenGLDriver::isProtectedContentSupported() {
+    return mPlatform.isProtectedContextSupported();
+}
+
 bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.
@@ -1938,6 +1964,10 @@ bool OpenGLDriver::isParallelShaderCompileSupported() {
 
 bool OpenGLDriver::isDepthStencilResolveSupported() {
     return true;
+}
+
+bool OpenGLDriver::isProtectedTexturesSupported() {
+    return getContext().ext.EXT_protected_textures;
 }
 
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -2664,7 +2694,7 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mTimerQueryImpl->endTimeElapsedQuery(tq);
 }
 
-bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+TimerQueryResult OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     return OpenGLTimerQueryInterface::getTimerQueryValue(tq, elapsedTime);
 }

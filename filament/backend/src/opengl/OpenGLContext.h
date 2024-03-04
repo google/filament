@@ -183,6 +183,7 @@ public:
         bool EXT_discard_framebuffer;
         bool EXT_multisampled_render_to_texture2;
         bool EXT_multisampled_render_to_texture;
+        bool EXT_protected_textures;
         bool EXT_shader_framebuffer_fetch;
         bool EXT_texture_compression_bptc;
         bool EXT_texture_compression_etc2;
