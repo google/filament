@@ -525,7 +525,7 @@ public:
     //! Specify the stereoscopic type (default is INSTANCED)
     MaterialBuilder& stereoscopicType(StereoscopicType stereoscopicType) noexcept;
 
-    //! Specify the number of eye count for stereoscopic rendering
+    //! Specify the number of eyes for stereoscopic rendering
     MaterialBuilder& stereoscopicEyeCount(uint8_t eyeCount) noexcept;
 
     /**
