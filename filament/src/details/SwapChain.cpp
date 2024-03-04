@@ -27,7 +27,10 @@
 namespace filament {
 
 FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags)
-        : mEngine(engine), mNativeWindow(nativeWindow), mConfigFlags(flags) {
+    : mEngine(engine),
+      mFrameScheduledCallback(nullptr),
+      mNativeWindow(nativeWindow),
+      mConfigFlags(flags) {
     mSwapChain = engine.getDriverApi().createSwapChain(nativeWindow, flags);
 }
 
@@ -41,7 +44,12 @@ void FSwapChain::terminate(FEngine& engine) noexcept {
 }
 
 void FSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
+    mFrameScheduledCallback = callback;
     mEngine.getDriverApi().setFrameScheduledCallback(mSwapChain, callback, user);
+}
+
+SwapChain::FrameScheduledCallback FSwapChain::getFrameScheduledCallback() const noexcept {
+    return mFrameScheduledCallback;
 }
 
 void FSwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
