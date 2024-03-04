@@ -170,7 +170,7 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
-          mContext(),
+          mContext(mPlatform),
           mShaderCompilerService(*this),
           mHandleAllocator("Handles", driverConfig.handleArenaSize),
           mSamplerMap(32),
@@ -193,8 +193,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
 #if defined(BACKEND_OPENGL_VERSION_GL)
     assert_invariant(mContext.ext.EXT_disjoint_timer_query);
 #endif
-
-    mTimerQueryImpl = OpenGLTimerQueryFactory::init(mPlatform, *this);
 
     mShaderCompilerService.init();
 }
@@ -239,8 +237,6 @@ void OpenGLDriver::terminate() {
         mSamplerMap.clear();
     }
 #endif
-
-    delete mTimerQueryImpl;
 
     mPlatform.terminate();
 }
@@ -1434,7 +1430,7 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    mTimerQueryImpl->createTimerQuery(tq);
+    mContext.createTimerQuery(tq);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1629,7 +1625,7 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
     if (tqh) {
         GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-        mTimerQueryImpl->destroyTimerQuery(tq);
+        mContext.destroyTimerQuery(tq);
         destruct(tqh, tq);
     }
 }
@@ -1920,7 +1916,7 @@ bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
-    return OpenGLTimerQueryFactory::isGpuTimeSupported();
+    return TimerQueryFactory::isGpuTimeSupported();
 }
 
 bool OpenGLDriver::isAutoDepthResolveSupported() {
@@ -2685,18 +2681,18 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    mTimerQueryImpl->beginTimeElapsedQuery(tq);
+    mContext.beginTimeElapsedQuery(tq);
 }
 
 void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    mTimerQueryImpl->endTimeElapsedQuery(tq);
+    mContext.endTimeElapsedQuery(*this, tq);
 }
 
 TimerQueryResult OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    return OpenGLTimerQueryInterface::getTimerQueryValue(tq, elapsedTime);
+    return TimerQueryFactoryInterface::getTimerQueryValue(tq, elapsedTime);
 }
 
 void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,
