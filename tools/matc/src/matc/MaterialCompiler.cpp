@@ -415,6 +415,11 @@ bool MaterialCompiler::run(const Config& config) {
         builder.shaderDefine(define.first.c_str(), define.second.c_str());
     }
 
+    if (!processMaterialParameters(builder, config)) {
+        std::cerr << "Error while processing material parameters." << std::endl;
+        return false;
+    }
+
     JobSystem js;
     js.adopt();
 
@@ -618,6 +623,16 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
     output->close();
 
     return true;
+}
+
+bool MaterialCompiler::processMaterialParameters(filamat::MaterialBuilder& builder,
+    const Config& config) const {
+    ParametersProcessor parametersProcessor;
+    bool ok = true;
+    for (const auto& param : config.getMaterialParameters()) {
+        ok &= parametersProcessor.process(builder, param.first, param.second);
+    }
+    return ok;
 }
 
 } // namespace matc
