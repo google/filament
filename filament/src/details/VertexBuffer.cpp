@@ -284,10 +284,12 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             size_t const i = mAttributes[index].buffer;
             if (i != Attribute::BUFFER_UNUSED) {
                 assert_invariant(bufferSizes[i] > 0);
-                BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
-                        backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
-                driver.setVertexBufferObject(mHandle, i, bo);
-                mBufferObjects[i] = bo;
+                if (!mBufferObjects[i]) {
+                    BufferObjectHandle bo = driver.createBufferObject(bufferSizes[i],
+                            backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+                    driver.setVertexBufferObject(mHandle, i, bo);
+                    mBufferObjects[i] = bo;
+                }
             }
         }
     } else {
@@ -298,10 +300,12 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
                 size_t const i = mAttributes[index].buffer;
                 assert_invariant(i != Attribute::BUFFER_UNUSED);
                 assert_invariant(bufferSizes[i] > 0);
-                BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
-                        backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
-                driver.setVertexBufferObject(mHandle, i, bo);
-                mBufferObjects[i] = bo;
+                if (!mBufferObjects[i]) {
+                    BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
+                            backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+                    driver.setVertexBufferObject(mHandle, i, bo);
+                    mBufferObjects[i] = bo;
+                }
             }
         }
     }
@@ -355,18 +359,18 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
         std::unique_ptr<float[]> skinWeights) {
     ASSERT_PRECONDITION(mAdvancedSkinningEnabled, "No advanced skinning enabled");
     auto jointsData = skinJoints.release();
-    engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 2], {
-            jointsData, mVertexCount * 8,
-            [](void* buffer, size_t, void*) {
-                delete[] static_cast<uint16_t*>(buffer);
-            }}, 0);
+    uint8_t const indicesIndex = mAttributes[VertexAttribute::BONE_INDICES].buffer;
+    engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex],
+            {jointsData, mVertexCount * 8,
+                    [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); }},
+            0);
 
     auto weightsData = skinWeights.release();
-    engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 1], {
-            weightsData, mVertexCount * 16,
-            [](void* buffer, size_t, void*) {
-                delete[] static_cast<float*>(buffer);
-            }}, 0);
+    uint8_t const weightsIndex = mAttributes[VertexAttribute::BONE_WEIGHTS].buffer;
+    engine.getDriverApi().updateBufferObject(mBufferObjects[weightsIndex],
+            {weightsData, mVertexCount * 16,
+                    [](void* buffer, size_t, void*) { delete[] static_cast<float*>(buffer); }},
+            0);
 }
 
 } // namespace filament

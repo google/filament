@@ -19,6 +19,8 @@
 
 #include <math/vec4.h>
 
+#include "OpenGLTimerQuery.h"
+
 #include <utils/CString.h>
 #include <utils/debug.h>
 
@@ -35,7 +37,7 @@ namespace filament::backend {
 
 class OpenGLPlatform;
 
-class OpenGLContext {
+class OpenGLContext final : public TimerQueryFactoryInterface {
 public:
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = MAX_SAMPLER_COUNT;
     static constexpr const size_t DUMMY_TEXTURE_BINDING = 7; // highest binding guaranteed to work with ES2
@@ -67,7 +69,18 @@ public:
 
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
-    OpenGLContext() noexcept;
+    explicit OpenGLContext(OpenGLPlatform& platform) noexcept;
+    ~OpenGLContext() noexcept;
+
+    // TimerQueryInterface ------------------------------------------------------------------------
+
+    // note: OpenGLContext being final ensures (clang) these are not called through the vtable
+    void createTimerQuery(GLTimerQuery* query) override;
+    void destroyTimerQuery(GLTimerQuery* query) override;
+    void beginTimeElapsedQuery(GLTimerQuery* query) override;
+    void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) override;
+
+    // --------------------------------------------------------------------------------------------
 
     template<int MAJOR, int MINOR>
     inline bool isAtLeastGL() const noexcept {
@@ -420,6 +433,7 @@ public:
 private:
     ShaderModel mShaderModel = ShaderModel::MOBILE;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
+    TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
             {   bugs.disable_glFlush,

@@ -48,7 +48,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 #endif
 }
 
-OpenGLContext::OpenGLContext() noexcept {
+OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept {
 
     state.vao.p = &mDefaultVAO;
 
@@ -231,6 +231,12 @@ OpenGLContext::OpenGLContext() noexcept {
         glDebugMessageCallback(cb, nullptr);
     }
 #endif
+
+    mTimerQueryFactory = TimerQueryFactory::init(platform, *this);
+}
+
+OpenGLContext::~OpenGLContext() noexcept {
+    delete mTimerQueryFactory;
 }
 
 void OpenGLContext::setDefaultState() noexcept {
@@ -1009,7 +1015,22 @@ void OpenGLContext::resetState() noexcept {
         state.window.viewport.w
     );
     glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
-    
+}
+
+void OpenGLContext::createTimerQuery(GLTimerQuery* query) {
+    mTimerQueryFactory->createTimerQuery(query);
+}
+
+void OpenGLContext::destroyTimerQuery(GLTimerQuery* query) {
+    mTimerQueryFactory->destroyTimerQuery(query);
+}
+
+void OpenGLContext::beginTimeElapsedQuery(GLTimerQuery* query) {
+    mTimerQueryFactory->beginTimeElapsedQuery(query);
+}
+
+void OpenGLContext::endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) {
+    mTimerQueryFactory->endTimeElapsedQuery(driver, query);
 }
 
 } // namesapce filament

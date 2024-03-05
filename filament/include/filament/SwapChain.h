@@ -268,6 +268,10 @@ public:
      * automatically schedule itself for presentation. Instead, the application must call the
      * PresentCallable passed to the FrameScheduledCallback.
      *
+     * There may be only one FrameScheduledCallback set per SwapChain. A call to
+     * SwapChain::setFrameScheduledCallback will overwrite any previous FrameScheduledCallbacks set
+     * on the same SwapChain.
+     *
      * If your application delays the call to the PresentCallable by, for example, calling it on a
      * separate thread, you must ensure all PresentCallables have been called before shutting down
      * the Filament Engine. You can do this by issuing an Engine::flushAndWait before calling
@@ -286,6 +290,16 @@ public:
      */
     void setFrameScheduledCallback(FrameScheduledCallback UTILS_NULLABLE callback,
             void* UTILS_NULLABLE user = nullptr);
+
+    /**
+     * Returns the SwapChain::FrameScheduledCallback that was previously set with
+     * SwapChain::setFrameScheduledCallback, or nullptr if one is not set.
+     *
+     * @return the previously-set FrameScheduledCallback, or nullptr
+     *
+     * @see SwapChain::setFrameCompletedCallback
+     */
+    UTILS_NULLABLE FrameScheduledCallback getFrameScheduledCallback() const noexcept;
 
     /**
      * FrameCompletedCallback is a callback function that notifies an application when a frame's
