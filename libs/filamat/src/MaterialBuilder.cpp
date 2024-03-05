@@ -503,6 +503,11 @@ MaterialBuilder& MaterialBuilder::stereoscopicType(StereoscopicType stereoscopic
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::stereoscopicEyeCount(uint8_t eyeCount) noexcept {
+    mStereoscopicEyeCount = eyeCount;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::reflectionMode(ReflectionMode mode) noexcept {
     mReflectionMode = mode;
     return *this;
@@ -638,6 +643,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.featureLevel = mFeatureLevel;
     info.groupSize = mGroupSize;
     info.stereoscopicType = mStereoscopicType;
+    info.stereoscopicEyeCount = mStereoscopicEyeCount;
 
     // This is determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
