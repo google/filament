@@ -7,6 +7,12 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.50.6
+
+- Add new API `SwapChain::getFrameScheduledCallback`
+- vulkan: fixed validation error VUID-vkAcquireNextImageKHR-semaphore-01779
+- opengl: Add support for protected content swapchains and contexts
+
 ## v1.50.5
 
 - android: NDK 26.1.10909125 is used by default
