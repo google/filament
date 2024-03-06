@@ -64,13 +64,20 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 }
             }
             if (v.hasStereo() && stage == ShaderStage::VERTEX) {
-                // If we're not processing the shader through glslang (in the case of unoptimized
-                // OpenGL shaders), then we need to add the #extension string ourselves.
-                // If we ARE running the shader through glslang, then we must not include it,
-                // otherwise glslang will complain.
-                out << "#ifndef FILAMENT_GLSLANG\n";
-                out << "#extension GL_EXT_clip_cull_distance : require\n";
-                out << "#endif\n\n";
+                switch (material.stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    // If we're not processing the shader through glslang (in the case of unoptimized
+                    // OpenGL shaders), then we need to add the #extension string ourselves.
+                    // If we ARE running the shader through glslang, then we must not include it,
+                    // otherwise glslang will complain.
+                    out << "#ifndef FILAMENT_GLSLANG\n";
+                    out << "#extension GL_EXT_clip_cull_distance : require\n";
+                    out << "#endif\n\n";
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    out << "#extension GL_OVR_multiview2 : require\n";
+                    break;
+                }
             }
             break;
         case ShaderModel::DESKTOP:
@@ -83,6 +90,16 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 out << "#version 410 core\n\n";
                 out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
+            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+                switch (material.stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    // Nothing to generate
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    out << "#extension GL_OVR_multiview2 : require\n";
+                    break;
+                }
+            }
             break;
     }
 
@@ -93,6 +110,17 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // This allows our includer system to use the #line directive to denote the source file for
     // #included code. This way, glslang reports errors more accurately.
     out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
+
+    if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+        switch (material.stereoscopicType) {
+        case StereoscopicType::INSTANCED:
+            // Nothing to generate
+            break;
+        case StereoscopicType::MULTIVIEW:
+            out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            break;
+        }
+    }
 
     if (stage == ShaderStage::COMPUTE) {
         out << "layout(local_size_x = " << material.groupSize.x
@@ -293,7 +321,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
 
     generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
-            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, 2);
+            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, material.stereoscopicEyeCount);
 
     // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for

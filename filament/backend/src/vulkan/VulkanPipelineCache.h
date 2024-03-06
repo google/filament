@@ -64,11 +64,15 @@ public:
     static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
     static constexpr uint32_t SAMPLER_BINDING_COUNT = MAX_SAMPLER_COUNT;
 
+    // We assume only one possible input attachment between two subpasses. See also the subpasses
+    // definition in VulkanFboCache.
+    static constexpr uint32_t INPUT_ATTACHMENT_COUNT = 1;
+
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
     static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = MAX_VERTEX_ATTRIBUTE_COUNT;
 
-    // Three descriptor set layouts: uniforms, and combined image samplers.
-    static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 2;
+    // Three descriptor set layouts: uniforms, combined image samplers, and input attachments.
+    static constexpr uint32_t DESCRIPTOR_TYPE_COUNT = 3;
     static constexpr uint32_t INITIAL_DESCRIPTOR_SET_POOL_SIZE = 512;
 
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
@@ -149,14 +153,13 @@ public:
     // Each of the following methods are fast and do not make Vulkan calls.
     void bindProgram(VulkanProgram* program) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
-    void bindRenderPass(VkRenderPass renderPass) noexcept;
+    void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindUniformBufferObject(uint32_t bindingIndex, VulkanBufferObject* bufferObject,
             VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
-    void bindUniformBuffer(uint32_t bindingIndex, VkBuffer buffer,
-            VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
     void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT],
             VulkanTexture* textures[SAMPLER_BINDING_COUNT], UsageFlags flags) noexcept;
+    void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
     void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
             VkVertexInputBindingDescription const* bufferDesc, uint8_t count);
 
@@ -253,17 +256,16 @@ private:
 
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. The size:offset comments below are expressed in bytes.
-    struct PipelineKey {                                                          // size  : offset
-        VkShaderModule shaders[SHADER_MODULE_COUNT];                              //  16   : 0
-        VkRenderPass renderPass;                                                  //  8    : 16
-        uint16_t topology;                                                        //  2    : 24
-        uint16_t padding0;                                                        //  2    : 26
-        VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128  : 28
-        VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128  : 156
-        RasterState rasterState;                                                  //  16   : 284
-        uint32_t padding1;                                                        //  4    : 300
-        PipelineLayoutKey layout;                                                 //  16   : 304
-                                                                                  // total : 320
+    struct PipelineKey {                                                          // size : offset
+        VkShaderModule shaders[SHADER_MODULE_COUNT];                              //  16  : 0
+        VkRenderPass renderPass;                                                  //  8   : 16
+        uint16_t topology;                                                        //  2   : 24
+        uint16_t subpassIndex;                                                    //  2   : 26
+        VertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; //  128 : 28
+        VertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT];      //  128 : 156
+        RasterState rasterState;                                                  //  16  : 284
+        uint32_t padding;                                                         //  4   : 300
+        PipelineLayoutKey layout;                                                 // 16   : 304
     };
 
     static_assert(sizeof(PipelineKey) == 320, "PipelineKey must not have implicit padding.");
@@ -304,15 +306,15 @@ private:
     struct DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];               //   80     0
         DescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];          // 1488    80
-        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];         //   40  1568
-        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];           //   40  1608
-                                                                      //total  1648
+        DescriptorImageInfo inputAttachments[INPUT_ATTACHMENT_COUNT]; //   24  1568
+        uint32_t uniformBufferOffsets[UBUFFER_BINDING_COUNT];         //   40  1592
+        uint32_t uniformBufferSizes[UBUFFER_BINDING_COUNT];           //   40  1632
     };
-
     static_assert(offsetof(DescriptorKey, samplers)              == 80);
-    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1568);
-    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1608);
-    static_assert(sizeof(DescriptorKey) == 1648, "DescriptorKey must not have implicit padding.");
+    static_assert(offsetof(DescriptorKey, inputAttachments)      == 1568);
+    static_assert(offsetof(DescriptorKey, uniformBufferOffsets)  == 1592);
+    static_assert(offsetof(DescriptorKey, uniformBufferSizes)    == 1632);
+    static_assert(sizeof(DescriptorKey) == 1672, "DescriptorKey must not have implicit padding.");
 
     using DescHashFn = utils::hash::MurmurHashFn<DescriptorKey>;
 
@@ -435,6 +437,7 @@ private:
     VkDescriptorBufferInfo mDummyBufferInfo = {};
     VkWriteDescriptorSet mDummyBufferWriteInfo = {};
     VkDescriptorImageInfo mDummyTargetInfo = {};
+    VkWriteDescriptorSet mDummyTargetWriteInfo = {};
 
     VkBuffer mDummyBuffer;
     VmaAllocation mDummyMemory;
