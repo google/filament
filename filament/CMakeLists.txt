@@ -66,6 +66,7 @@ set(SRCS
         src/Froxelizer.cpp
         src/Frustum.cpp
         src/HwRenderPrimitiveFactory.cpp
+        src/HwVertexBufferInfoFactory.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/InstanceBuffer.cpp
@@ -137,6 +138,7 @@ set(SRCS
 
 set(PRIVATE_HDRS
         src/Allocators.h
+        src/Bimap.h
         src/BufferPoolAllocator.h
         src/ColorSpaceUtils.h
         src/Culler.h
@@ -147,6 +149,7 @@ set(PRIVATE_HDRS
         src/FrameSkipper.h
         src/Froxelizer.h
         src/HwRenderPrimitiveFactory.h
+        src/HwVertexBufferInfoFactory.h
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
@@ -212,6 +215,7 @@ set(MATERIAL_SRCS
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/blitLow.mat
+        src/materials/blitArray.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomDownsample2x.mat
         src/materials/bloom/bloomDownsample9.mat

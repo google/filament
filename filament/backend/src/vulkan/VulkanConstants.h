@@ -39,7 +39,12 @@
 // not required for validation.
 
 // FVK is short for Filament Vulkan
+
+// Enables Android systrace
 #define FVK_DEBUG_SYSTRACE                0x00000001
+
+// Group markers are used to denote collection of GPU commands.  It is typically at the granualarity
+// of a renderpass.
 #define FVK_DEBUG_GROUP_MARKERS           0x00000002
 #define FVK_DEBUG_TEXTURE                 0x00000004
 #define FVK_DEBUG_LAYOUT_TRANSITION       0x00000008
@@ -54,6 +59,9 @@
 #define FVK_DEBUG_READ_PIXELS             0x00001000
 #define FVK_DEBUG_PIPELINE_CACHE          0x00002000
 #define FVK_DEBUG_ALLOCATION              0x00004000
+
+// Enable the debug utils extension if it is available.
+#define FVK_DEBUG_DEBUG_UTILS             0x00008000
 
 // Usefaul default combinations
 #define FVK_DEBUG_EVERYTHING              0xFFFFFFFF
@@ -72,7 +80,7 @@
     FVK_DEBUG_PRINT_GROUP_MARKERS
 
 #ifndef NDEBUG
-#define FVK_DEBUG_FLAGS FVK_DEBUG_PERFORMANCE
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE | FVK_DEBUG_DEBUG_UTILS | FVK_DEBUG_VALIDATION)
 #else
 #define FVK_DEBUG_FLAGS 0
 #endif
@@ -80,9 +88,21 @@
 #define FVK_ENABLED(flags) ((FVK_DEBUG_FLAGS) & (flags))
 #define FVK_ENABLED_BOOL(flags) ((bool) FVK_ENABLED(flags))
 
+
+// Group marker only works only if validation or debug utils is enabled since it uses
+// vkCmd(Begin/End)DebugUtilsLabelEXT or vkCmdDebugMarker(Begin/End)EXT
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
+static_assert(FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) || FVK_ENABLED(FVK_DEBUG_VALIDATION));
+#endif
+
 // Ensure dependencies are met between debug options
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
 static_assert(FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS));
+#endif
+
+// Only enable debug utils if validation is enabled.
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 #endif
 
 // end dependcy checks

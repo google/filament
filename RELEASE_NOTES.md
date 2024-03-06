@@ -7,6 +7,13 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.50.5
+
+- android: NDK 26.1.10909125 is used by default
+- android: Minimum API level on Android is now API 21 instead of API 19. This allows the use of OpenGL ES 3.1
+- rendering: New PBR Neutral tone mapper, designed to preserve materials color appearance
+- android: Change default frameRateOptions.interval to 1.0
+
 ## v1.50.4
 
 

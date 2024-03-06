@@ -53,6 +53,7 @@ class CommandBufferQueue;
 }
 
 class FMaterialInstance;
+class FRenderPrimitive;
 class RenderPassBuilder;
 
 class RenderPass {
@@ -235,13 +236,13 @@ public:
         return boolish ? value : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 48 bytes
+    struct PrimitiveInfo { // 56 bytes
         union {
-            FMaterialInstance const* mi;
-            uint64_t padding = {}; // ensures mi is 8 bytes on all archs
+            FRenderPrimitive const* primitive;                          // 8 bytes;
+            uint64_t padding = {}; // ensures primitive is 8 bytes on all archs
         };                                                              // 8 bytes
+        uint64_t rfu0;                                                  // 8 bytes
         backend::RasterState rasterState;                               // 4 bytes
-        backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
         backend::Handle<backend::HwSamplerGroup> skinningTexture;       // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
@@ -251,16 +252,17 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
+        uint8_t rfu1;                                                   // 1 byte
+        uint32_t rfu2;                                                  // 4 byte
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
     };
-    static_assert(sizeof(PrimitiveInfo) == 48);
+    static_assert(sizeof(PrimitiveInfo) == 56);
 
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 48 bytes
-        uint64_t reserved[1] = {};  //  8 bytes
+        PrimitiveInfo primitive;    // 56 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (size_t, void* ptr) {
@@ -328,6 +330,10 @@ public:
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
         void execute(FEngine& engine, const Command* first, const Command* last) const noexcept;
+
+        static backend::Viewport applyScissorViewport(
+                backend::Viewport const& scissorViewport,
+                backend::Viewport const& scissor) noexcept;
 
     public:
         Executor() = default;

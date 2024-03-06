@@ -53,6 +53,9 @@ void deallocateResource(VulkanResourceAllocator* allocator, VulkanResourceType t
         case VulkanResourceType::TIMER_QUERY:
             allocator->destruct<VulkanTimerQuery>(Handle<HwTimerQuery>(id));
             break;
+        case VulkanResourceType::VERTEX_BUFFER_INFO:
+            allocator->destruct<VulkanVertexBufferInfo>(Handle<HwVertexBufferInfo>(id));
+            break;
         case VulkanResourceType::VERTEX_BUFFER:
             allocator->destruct<VulkanVertexBuffer>(Handle<HwVertexBuffer>(id));
             break;

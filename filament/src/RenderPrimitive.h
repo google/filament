@@ -17,13 +17,16 @@
 #ifndef TNT_FILAMENT_DETAILS_RENDERPRIMITIVE_H
 #define TNT_FILAMENT_DETAILS_RENDERPRIMITIVE_H
 
+#include <filament/RenderableManager.h>
+
 #include "components/RenderableManager.h"
 
 #include "details/MaterialInstance.h"
 
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -43,13 +46,16 @@ public:
     void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             RenderableManager::PrimitiveType type,
             FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
-            size_t minIndex, size_t maxIndex, size_t count) noexcept;
+            size_t count) noexcept;
 
     // frees driver resources, object becomes invalid
     void terminate(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver);
 
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
     backend::Handle<backend::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
+    uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
+    uint32_t getIndexCount() const noexcept { return mIndexCount; }
+
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
@@ -66,13 +72,19 @@ public:
     }
 
 private:
-    FMaterialInstance const* mMaterialInstance = nullptr;
-    backend::Handle<backend::HwRenderPrimitive> mHandle = {};
+    // These first fields are dereferences from PrimitiveInfo, keep them together
+    struct {
+        FMaterialInstance const* mMaterialInstance = nullptr;
+        backend::Handle<backend::HwRenderPrimitive> mHandle = {};
+        UTILS_UNUSED uint8_t padding[4]= {};
+        uint32_t mIndexOffset = 0;
+        uint32_t mIndexCount = 0;
+    };
+
     AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
     bool mGlobalBlendOrderEnabled = false;
     backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::TRIANGLES;
-    UTILS_UNUSED uint8_t reserved[4] = {};
 };
 
 } // namespace filament

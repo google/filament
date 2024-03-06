@@ -43,6 +43,7 @@ enum class VulkanResourceType : uint8_t {
     TEXTURE,
     TIMER_QUERY,
     VERTEX_BUFFER,
+    VERTEX_BUFFER_INFO,
 
     // Below are resources that are managed manually (i.e. not ref counted).
     FENCE,
@@ -62,16 +63,16 @@ struct VulkanResourceBase {
 protected:
     explicit VulkanResourceBase(VulkanResourceType type)
         : mRefCount(IS_HEAP_ALLOC_TYPE(type) ? 1 : 0),
-          mType(type),
+          mType(uint32_t(type)),
           mHandleId(0) {
     }
 
 private:
-    inline VulkanResourceType getType() {
-        return mType;
+    inline VulkanResourceType getType() const noexcept {
+        return VulkanResourceType(mType);
     }
 
-    inline HandleBase::HandleId getId() {
+    inline HandleBase::HandleId getId() const noexcept {
         return mHandleId;
     }
 
@@ -80,7 +81,7 @@ private:
     }
 
     inline void ref() noexcept {
-        if (IS_HEAP_ALLOC_TYPE(mType)) {
+        if (IS_HEAP_ALLOC_TYPE(getType())) {
             return;
         }
         assert_invariant(mRefCount < ((1<<24) - 1));
@@ -88,19 +89,19 @@ private:
     }
 
     inline void deref() noexcept {
-        if (IS_HEAP_ALLOC_TYPE(mType)) {
+        if (IS_HEAP_ALLOC_TYPE(getType())) {
             return;
         }
         assert_invariant(mRefCount > 0);
         --mRefCount;
     }
 
-    inline size_t refcount() noexcept {
+    inline size_t refcount() const noexcept {
         return mRefCount;
     }
 
     uint32_t mRefCount : 24; // 16M is enough for the refcount
-    VulkanResourceType mType : 8;
+    uint32_t mType : 8; // must be uint32_t or MSVC doesn't pack it. no codegen impact w/ clang.
     HandleBase::HandleId mHandleId;
 
     friend struct VulkanThreadSafeResource;
@@ -109,6 +110,8 @@ private:
     template<typename RT, typename ST>
     friend class VulkanResourceManagerImpl;
 };
+
+static_assert(sizeof(VulkanResourceBase) == 8, "VulkanResourceBase should be 8 bytes");
 
 struct VulkanThreadSafeResource {
 protected:

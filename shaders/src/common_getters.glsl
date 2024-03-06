@@ -24,7 +24,7 @@ highp mat4 getViewFromClipMatrix() {
 
 /** @public-api */
 highp mat4 getClipFromWorldMatrix() {
-#if defined(VARIANT_HAS_INSTANCED_STEREO)
+#if defined(VARIANT_HAS_STEREO)
     int eye = instance_index % CONFIG_STEREO_EYE_COUNT;
     return frameUniforms.clipFromWorldMatrix[eye];
 #else

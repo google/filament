@@ -48,6 +48,11 @@ Java_com_google_android_filament_ToneMapper_nCreateFilmicToneMapper(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_ToneMapper_nCreatePBRNeutralToneMapper(JNIEnv*, jclass) {
+    return (jlong) new PBRNeutralToneMapper();
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_ToneMapper_nCreateAgxToneMapper(JNIEnv*, jclass, jint look) {
     return (jlong) new AgxToneMapper(AgxToneMapper::AgxLook(look));
 }

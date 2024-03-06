@@ -109,14 +109,12 @@ RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
 
 RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
         PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
-        size_t offset, size_t minIndex, size_t maxIndex, size_t count) noexcept {
+        size_t offset, UTILS_UNUSED size_t minIndex, UTILS_UNUSED size_t maxIndex, size_t count) noexcept {
     std::vector<Entry>& entries = mImpl->mEntries;
     if (index < entries.size()) {
         entries[index].vertices = vertices;
         entries[index].indices = indices;
         entries[index].offset = offset;
-        entries[index].minIndex = minIndex;
-        entries[index].maxIndex = maxIndex;
         entries[index].count = count;
         entries[index].type = type;
     }
@@ -435,11 +433,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
                 "[entity=%u, primitive @ %u] offset (%u) + count (%u) > indexCount (%u)",
                 entity.getId(), i,
                 entry.offset, entry.count, entry.indices->getIndexCount());
-
-        ASSERT_PRECONDITION(entry.minIndex <= entry.maxIndex,
-                "[entity=%u, primitive @ %u] minIndex (%u) > maxIndex (%u)",
-                entity.getId(), i,
-                entry.minIndex, entry.maxIndex);
 
         // this can't be an error because (1) those values are not immutable, so the caller
         // could fix later, and (2) the material's shader will work (i.e. compile), and
@@ -816,7 +809,7 @@ void FRenderableManager::setGeometryAt(Instance instance, uint8_t level, size_t 
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].set(mHwRenderPrimitiveFactory, mEngine.getDriverApi(),
-                    type, vertices, indices, offset, 0, vertices->getVertexCount() - 1, count);
+                    type, vertices, indices, offset, count);
         }
     }
 }

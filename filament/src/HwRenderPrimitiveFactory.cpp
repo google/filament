@@ -16,6 +16,16 @@
 
 #include "HwRenderPrimitiveFactory.h"
 
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <private/backend/DriverApi.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Hash.h>
+
 #include <stdlib.h>
 
 namespace filament {
@@ -23,96 +33,60 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-bool operator<(HwRenderPrimitiveFactory::Key const& lhs,
+size_t HwRenderPrimitiveFactory::KeyHash::operator()(
+        HwRenderPrimitiveFactory::Key const& p) const noexcept {
+    return utils::hash::combine(
+            p.params.vbh.getId(),
+            utils::hash::combine(p.params.ibh.getId(), (size_t)p.params.type));
+}
+
+bool operator==(HwRenderPrimitiveFactory::Key const& lhs,
         HwRenderPrimitiveFactory::Key const& rhs) noexcept {
-    if (lhs.vbh == rhs.vbh) {
-        if (lhs.ibh == rhs.ibh) {
-            if (lhs.offset == rhs.offset) {
-                if (lhs.count == rhs.count) {
-                    return lhs.type < rhs.type;
-                } else {
-                    return lhs.count < rhs.count;
-                }
-            } else {
-                return lhs.offset < rhs.offset;
-            }
-        } else {
-            return lhs.ibh < rhs.ibh;
-        }
-    } else {
-        return lhs.vbh < rhs.vbh;
-    }
-}
-
-inline bool operator<(HwRenderPrimitiveFactory::Entry const& lhs,
-        HwRenderPrimitiveFactory::Entry const& rhs) noexcept {
-    return lhs.key < rhs.key;
-}
-
-inline bool operator<(HwRenderPrimitiveFactory::Key const& lhs,
-        HwRenderPrimitiveFactory::Entry const& rhs) noexcept {
-    return lhs < rhs.key;
-}
-
-inline bool operator<(HwRenderPrimitiveFactory::Entry const& lhs,
-        HwRenderPrimitiveFactory::Key const& rhs) noexcept {
-    return lhs.key < rhs;
+    return lhs.params.vbh == rhs.params.vbh &&
+           lhs.params.ibh == rhs.params.ibh &&
+           lhs.params.type == rhs.params.type;
 }
 
 // ------------------------------------------------------------------------------------------------
 
 HwRenderPrimitiveFactory::HwRenderPrimitiveFactory()
         : mArena("HwRenderPrimitiveFactory::mArena", SET_ARENA_SIZE),
-          mSet(mArena) {
-    mMap.reserve(256);
+          mBimap(mArena) {
+    mBimap.reserve(256);
 }
 
 HwRenderPrimitiveFactory::~HwRenderPrimitiveFactory() noexcept = default;
 
-void HwRenderPrimitiveFactory::terminate(DriverApi& driver) noexcept {
-    assert_invariant(mMap.empty());
-    assert_invariant(mSet.empty());
+void HwRenderPrimitiveFactory::terminate(DriverApi&) noexcept {
+    assert_invariant(mBimap.empty());
 }
 
-RenderPrimitiveHandle HwRenderPrimitiveFactory::create(DriverApi& driver,
-        VertexBufferHandle vbh, IndexBufferHandle ibh,
-        PrimitiveType type, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
-        uint32_t count) noexcept {
-
-    const Key key = { vbh, ibh, offset, count, type };
+auto HwRenderPrimitiveFactory::create(DriverApi& driver,
+        backend::VertexBufferHandle vbh,
+        backend::IndexBufferHandle ibh,
+        backend::PrimitiveType type) noexcept -> Handle {
 
     // see if we already have seen this RenderPrimitive
-    auto pos = mSet.find(key);
+    Key const key{{ vbh, ibh, type }, 1 };
+    auto pos = mBimap.find(key);
 
     // the common case is that we've never seen it (i.e.: no reuse)
-    if (UTILS_LIKELY(pos == mSet.end())) {
-        // create the backend object
-        auto handle = driver.createRenderPrimitive(vbh, ibh,
-                type, offset, minIndex, maxIndex, count);
-        // insert key/handle in our set with a refcount of 1
-        // IMPORTANT: std::set<> doesn't invalidate iterators in insert/erase
-        auto [ipos, _] = mSet.insert({ key, handle, 1 });
-        // map the handle back to the key/payload
-        mMap.insert({ handle.getId(), ipos });
+    if (UTILS_LIKELY(pos == mBimap.end())) {
+        auto handle = driver.createRenderPrimitive(vbh, ibh, type);
+        mBimap.insert(key, { handle });
         return handle;
     }
-    pos->refs++;
-    return pos->handle;
+
+    pos->first.pKey->refs++;
+    return pos->second.handle;
 }
 
-void HwRenderPrimitiveFactory::destroy(DriverApi& driver, RenderPrimitiveHandle rph) noexcept {
+void HwRenderPrimitiveFactory::destroy(DriverApi& driver, Handle handle) noexcept {
     // look for this handle in our map
-    auto pos = mMap.find(rph.getId());
-
-    // it must be there
-    assert_invariant(pos != mMap.end());
-
-    // check the refcount and destroy if needed
-    auto ipos = pos->second;
-    if (--ipos->refs == 0) {
-        mSet.erase(ipos);
-        mMap.erase(pos);
-        driver.destroyRenderPrimitive(rph);
+    auto pos = mBimap.find(Value{ handle });
+    if (--pos->second.pKey->refs == 0) {
+        mBimap.erase(pos);
+        driver.destroyRenderPrimitive(handle);
     }
 }
 

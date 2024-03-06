@@ -133,11 +133,8 @@ private:
         mHandleAllocator.deallocate(handle, p);
     }
 
-    inline void setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+    inline void setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
             Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh);
-
-    inline void setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
-            uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
 
     void finalizeSamplerGroup(MetalSamplerGroup* sg);
     void enumerateBoundBuffers(BufferObjectBinding bindingType,

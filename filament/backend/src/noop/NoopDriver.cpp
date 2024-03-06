@@ -77,6 +77,9 @@ void NoopDriver::finish(int) {
 void NoopDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
+void NoopDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+}
+
 void NoopDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 }
 
@@ -174,7 +177,7 @@ bool NoopDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
-bool NoopDriver::isStereoSupported() {
+bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
     return false;
 }
 
@@ -340,10 +343,14 @@ void NoopDriver::blit(
 }
 
 void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        uint32_t instanceCount) {
+        uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
 }
 
 void NoopDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+}
+
+void NoopDriver::scissor(
+        Viewport scissor) {
 }
 
 void NoopDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

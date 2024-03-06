@@ -94,8 +94,22 @@ public:
         uint16_t age = 0;
     };
 
+    struct GLVertexBufferInfo : public HwVertexBufferInfo {
+        GLVertexBufferInfo() noexcept = default;
+        GLVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
+                AttributeArray const& attributes)
+                : HwVertexBufferInfo(bufferCount, attributeCount),
+                  attributes(attributes) {
+        }
+        AttributeArray attributes;
+    };
+
     struct GLVertexBuffer : public HwVertexBuffer {
-        using HwVertexBuffer::HwVertexBuffer;
+        GLVertexBuffer() noexcept = default;
+        GLVertexBuffer(uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
+                : HwVertexBuffer(vertexCount), vbih(vbih) {
+        }
+        Handle<HwVertexBufferInfo> vbih;
         struct {
             // 4 * MAX_VERTEX_ATTRIBUTE_COUNT bytes
             std::array<GLuint, MAX_VERTEX_ATTRIBUTE_COUNT> buffers{};

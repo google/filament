@@ -167,11 +167,14 @@ DECL_DRIVER_API_0(resetState)
  * -----------------------
  */
 
-DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_R_N(backend::VertexBufferInfoHandle, createVertexBufferInfo,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
-        uint32_t, vertexCount,
         backend::AttributeArray, attributes)
+
+DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+        uint32_t, vertexCount,
+        backend::VertexBufferInfoHandle, vbih)
 
 DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
@@ -224,11 +227,7 @@ DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
 DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
         backend::VertexBufferHandle, vbh,
         backend::IndexBufferHandle, ibh,
-        backend::PrimitiveType, pt,
-        uint32_t, offset,
-        uint32_t, minIndex,
-        uint32_t, maxIndex,
-        uint32_t, count)
+        backend::PrimitiveType, pt)
 
 DECL_DRIVER_API_R_N(backend::ProgramHandle, createProgram,
         backend::Program&&, program)
@@ -264,6 +263,7 @@ DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
  */
 
 DECL_DRIVER_API_N(destroyVertexBuffer,    backend::VertexBufferHandle, vbh)
+DECL_DRIVER_API_N(destroyVertexBufferInfo,backend::VertexBufferInfoHandle, vbih)
 DECL_DRIVER_API_N(destroyIndexBuffer,     backend::IndexBufferHandle, ibh)
 DECL_DRIVER_API_N(destroyBufferObject,    backend::BufferObjectHandle, ibh)
 DECL_DRIVER_API_N(destroyRenderPrimitive, backend::RenderPrimitiveHandle, rph)
@@ -298,7 +298,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchMultiSampleSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isStereoSupported, backend::StereoscopicType, stereoscopicType)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
@@ -494,11 +494,16 @@ DECL_DRIVER_API_N(blit,
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
         backend::RenderPrimitiveHandle, rph,
+        uint32_t, indexOffset,
+        uint32_t, indexCount,
         uint32_t, instanceCount)
 
 DECL_DRIVER_API_N(dispatchCompute,
         backend::ProgramHandle, program,
         math::uint3, workGroupCount)
+
+DECL_DRIVER_API_N(scissor,
+        Viewport, scissor)
 
 
 #pragma clang diagnostic pop

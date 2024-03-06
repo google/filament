@@ -279,10 +279,16 @@ void MetalDriver::finish(int) {
     [oneOffBuffer waitUntilCompleted];
 }
 
-void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes) {
-    construct_handle<MetalVertexBuffer>(vbh, *mContext, bufferCount,
-            attributeCount, vertexCount, attributes);
+void MetalDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
+        uint8_t attributeCount, AttributeArray attributes) {
+    construct_handle<MetalVertexBufferInfo>(vbih, *mContext,
+            bufferCount, attributeCount, attributes);
+}
+
+void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih) {
+    MetalVertexBufferInfo const* const vbi = handle_cast<const MetalVertexBufferInfo>(vbih);
+    construct_handle<MetalVertexBuffer>(vbh, *mContext, vertexCount, vbi->bufferCount, vbih);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
@@ -350,11 +356,9 @@ void MetalDriver::createSamplerGroupR(
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     construct_handle<MetalRenderPrimitive>(rph);
-    MetalDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
-    MetalDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
+    MetalDriver::setRenderPrimitiveBuffer(rph, pt, vbh, ibh);
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
@@ -440,6 +444,10 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
 
+Handle<HwVertexBufferInfo> MetalDriver::createVertexBufferInfoS() noexcept {
+    return alloc_handle<MetalVertexBufferInfo>();
+}
+
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer>();
 }
@@ -502,6 +510,12 @@ Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
     return alloc_and_construct_handle<MetalTimerQuery, HwTimerQuery>();
+}
+
+void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+    if (vbih) {
+        destruct_handle<MetalVertexBufferInfo>(vbih);
+    }
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -756,8 +770,14 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
-bool MetalDriver::isStereoSupported() {
-    return true;
+bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return true;
+    case backend::StereoscopicType::MULTIVIEW:
+        // TODO: implement multiview feature in Metal.
+        return false;
+    }
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
@@ -1063,23 +1083,14 @@ void MetalDriver::endRenderPass(int dummy) {
     mContext->currentRenderPassEncoder = nil;
 }
 
-void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
-    primitive->setBuffers(vertexBuffer, indexBuffer);
-}
-
-void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
-        PrimitiveType pt, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
-        uint32_t count) {
-    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
+    MetalVertexBufferInfo const* const vbi = handle_cast<MetalVertexBufferInfo>(vertexBuffer->vbih);
+    primitive->setBuffers(vbi, vertexBuffer, indexBuffer);
     primitive->type = pt;
-    primitive->offset = offset * primitive->indexBuffer->elementSize;
-    primitive->count = count;
-    primitive->minIndex = minIndex;
-    primitive->maxIndex = maxIndex > minIndex ? maxIndex : primitive->maxVertexCount - 1;
 }
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
@@ -1581,7 +1592,8 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 }
 
-void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
@@ -1598,7 +1610,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         return;
     }
 
-    ASSERT_PRECONDITION(bool(functions), "Attempting to draw with an invalid Metal program.");
+    functions.validate();
 
     auto [fragment, vertex] = functions.getRasterFunctions();
 
@@ -1719,36 +1731,6 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         mContext->currentPolygonOffset = ps.polygonOffset;
     }
 
-    // Set scissor-rectangle.
-    // In order to do this, we compute the intersection between:
-    //  1. the scissor rectangle
-    //  2. the render target attachment dimensions (important, as the scissor can't be set larger)
-    // fmax/min are used below to guard against NaN and because the MTLViewport/MTLRegion
-    // coordinates are doubles.
-    MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(ps.scissor);
-    const float sleft = scissor.origin.x, sright = scissor.origin.x + scissor.size.width;
-    const float stop = scissor.origin.y, sbottom = scissor.origin.y + scissor.size.height;
-
-    // Attachment extent
-    const auto attachmentSize = mContext->currentRenderTarget->getAttachmentSize();
-    const float aleft = 0.0f, atop = 0.0f;
-    const float aright = static_cast<float>(attachmentSize.x);
-    const float abottom = static_cast<float>(attachmentSize.y);
-
-    const auto left   = std::fmax(sleft, aleft);
-    const auto right  = std::fmin(sright, aright);
-    const auto top    = std::fmax(stop, atop);
-    const auto bottom = std::fmin(sbottom, abottom);
-
-    MTLScissorRect scissorRect = {
-        .x      = static_cast<NSUInteger>(left),
-        .y      = static_cast<NSUInteger>(top),
-        .width  = static_cast<NSUInteger>(right  - left),
-        .height = static_cast<NSUInteger>(bottom - top)
-    };
-
-    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
-
     // Bind uniform buffers.
     MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
@@ -1826,10 +1808,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
     id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw(cmdBuffer);
     [mContext->currentRenderPassEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
-                                                   indexCount:primitive->count
+                                                   indexCount:indexCount
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
-                                            indexBufferOffset:primitive->offset
+                                            indexBufferOffset:indexOffset * primitive->indexBuffer->elementSize
                                                 instanceCount:instanceCount];
 }
 
@@ -1900,6 +1882,38 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
                    threadsPerThreadgroup:threadsPerThreadgroup];
 
     [computeEncoder endEncoding];
+}
+
+void MetalDriver::scissor(Viewport scissorBox) {
+    // Set scissor-rectangle.
+    // In order to do this, we compute the intersection between:
+    //  1. the scissor rectangle
+    //  2. the render target attachment dimensions (important, as the scissor can't be set larger)
+    // fmax/min are used below to guard against NaN and because the MTLViewport/MTLRegion
+    // coordinates are doubles.
+    MTLRegion scissor = mContext->currentRenderTarget->getRegionFromClientRect(scissorBox);
+    const float sleft = scissor.origin.x, sright = scissor.origin.x + scissor.size.width;
+    const float stop = scissor.origin.y, sbottom = scissor.origin.y + scissor.size.height;
+
+    // Attachment extent
+    const auto attachmentSize = mContext->currentRenderTarget->getAttachmentSize();
+    const float aleft = 0.0f, atop = 0.0f;
+    const float aright = static_cast<float>(attachmentSize.x);
+    const float abottom = static_cast<float>(attachmentSize.y);
+
+    const auto left   = std::fmax(sleft, aleft);
+    const auto right  = std::fmin(sright, aright);
+    const auto top    = std::fmax(stop, atop);
+    const auto bottom = std::fmin(sbottom, abottom);
+
+    MTLScissorRect scissorRect = {
+            .x      = static_cast<NSUInteger>(left),
+            .y      = static_cast<NSUInteger>(top),
+            .width  = static_cast<NSUInteger>(right  - left),
+            .height = static_cast<NSUInteger>(bottom - top)
+    };
+
+    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

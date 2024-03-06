@@ -101,7 +101,7 @@ public class Renderer {
         /**
          * Desired frame interval in unit of 1 / DisplayInfo.refreshRate.
          */
-        public float interval = 1.0f / 60.0f;
+        public float interval = 1.0f;
 
         /**
          * Additional headroom for the GPU as a ratio of the targetFrameTime.

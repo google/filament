@@ -395,10 +395,10 @@ public:
     }
 
     PoolAllocator(void* begin, size_t size) noexcept
-        : mFreeList(begin, static_cast<char *>(begin) + size, ELEMENT_SIZE, ALIGNMENT, OFFSET) {
+        : PoolAllocator(begin, static_cast<char *>(begin) + size) {
     }
 
-    template <typename AREA>
+    template<typename AREA>
     explicit PoolAllocator(const AREA& area) noexcept
         : PoolAllocator(area.begin(), area.end()) {
     }
@@ -422,6 +422,53 @@ public:
 
 private:
     FREELIST mFreeList;
+};
+
+template <
+        size_t ELEMENT_SIZE,
+        size_t ALIGNMENT = alignof(std::max_align_t),
+        typename FREELIST = FreeList>
+class PoolAllocatorWithFallback :
+        private PoolAllocator<ELEMENT_SIZE, ALIGNMENT, 0, FREELIST>,
+        private HeapAllocator {
+    using PoolAllocator = PoolAllocator<ELEMENT_SIZE, ALIGNMENT, 0, FREELIST>;
+    void* mBegin;
+    void* mEnd;
+public:
+    PoolAllocatorWithFallback(void* begin, void* end) noexcept
+            : PoolAllocator(begin, end), mBegin(begin), mEnd(end) {
+    }
+
+    PoolAllocatorWithFallback(void* begin, size_t size) noexcept
+            : PoolAllocatorWithFallback(begin, static_cast<char*>(begin) + size) {
+    }
+
+    template<typename AREA>
+    explicit PoolAllocatorWithFallback(const AREA& area) noexcept
+            : PoolAllocatorWithFallback(area.begin(), area.end()) {
+    }
+
+    bool isHeapAllocation(void* p) const noexcept {
+        return  p < mBegin || p >= mEnd;
+    }
+
+    // our allocator concept
+    void* alloc(size_t size = ELEMENT_SIZE, size_t alignment = ALIGNMENT) noexcept {
+        void* p = PoolAllocator::alloc(size, alignment);
+        if (UTILS_UNLIKELY(!p)) {
+            p = HeapAllocator::alloc(size, alignment);
+        }
+        assert_invariant(p);
+        return p;
+    }
+
+    void free(void* p, size_t size) noexcept {
+        if (UTILS_LIKELY(!isHeapAllocation(p))) {
+            PoolAllocator::free(p, size);
+        } else {
+            HeapAllocator::free(p);
+        }
+    }
 };
 
 #define UTILS_MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -884,7 +931,7 @@ public:
 
 public:
     // we don't make this explicit, so that we can initialize a vector using a STLAllocator
-    // from an Arena, avoiding to have to repeat the vector type.
+    // from an Arena, avoiding having to repeat the vector type.
     STLAllocator(ARENA& arena) : mArena(arena) { } // NOLINT(google-explicit-constructor)
 
     template<typename U>

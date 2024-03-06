@@ -94,22 +94,24 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
     //    GLSamplerGroup            :  16       few
     //    GLSwapChain               :  16       few
     //    GLTimerQuery              :  16       few
-    // -- less than or equal 16 bytes
+    //    GLRenderPrimitive         :  20       many
     //    GLFence                   :  24       few
+    // -- less than or equal 24 bytes
     //    GLBufferObject            :  32       many
-    //    GLRenderPrimitive         :  40       many
     //    OpenGLProgram             :  56       moderate
     //    GLTexture                 :  64       moderate
     // -- less than or equal 64 bytes
+    //    GLVertexBuffer            :  76       moderate
     //    GLStream                  : 104       few
     //    GLRenderTarget            : 112       few
-    //    GLVertexBuffer            : 200       moderate
-    // -- less than or equal to 208 bytes
+    //    GLVertexBufferInfo        : 132       moderate
+    // -- less than or equal to 136 bytes
 
     slog.d
            << "\nGLSwapChain: " << sizeof(GLSwapChain)
            << "\nGLBufferObject: " << sizeof(GLBufferObject)
            << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
+           << "\nGLVertexBufferInfo: " << sizeof(GLVertexBufferInfo)
            << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
            << "\nGLSamplerGroup: " << sizeof(GLSamplerGroup)
            << "\nGLRenderPrimitive: " << sizeof(GLRenderPrimitive)
@@ -386,6 +388,10 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
 // Creating driver objects
 // ------------------------------------------------------------------------------------------------
 
+Handle<HwVertexBufferInfo> OpenGLDriver::createVertexBufferInfoS() noexcept {
+    return initHandle<GLVertexBufferInfo>();
+}
+
 Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();
 }
@@ -446,14 +452,21 @@ Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
     return initHandle<GLTimerQuery>();
 }
 
-void OpenGLDriver::createVertexBufferR(
-        Handle<HwVertexBuffer> vbh,
+void OpenGLDriver::createVertexBufferInfoR(
+        Handle<HwVertexBufferInfo> vbih,
         uint8_t bufferCount,
         uint8_t attributeCount,
-        uint32_t elementCount,
         AttributeArray attributes) {
     DEBUG_MARKER()
-    construct<GLVertexBuffer>(vbh, bufferCount, attributeCount, elementCount, attributes);
+    construct<GLVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+}
+
+void OpenGLDriver::createVertexBufferR(
+        Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih) {
+    DEBUG_MARKER()
+    construct<GLVertexBuffer>(vbh, vertexCount, vbih);
 }
 
 void OpenGLDriver::createIndexBufferR(
@@ -501,13 +514,11 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
 
-    GLVertexBuffer const* const eb = handle_cast<const GLVertexBuffer*>(vbh);
     GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
     assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
 
@@ -515,17 +526,14 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
     rp->gl.vertexBufferWithObjects = vbh;
     rp->type = pt;
-    rp->offset = offset * rp->gl.indicesSize;
-    rp->count = count;
-    rp->minIndex = minIndex;
-    rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
 
     gl.procs.genVertexArrays(1, &rp->gl.vao);
 
     gl.bindVertexArray(&rp->gl);
 
-    // update the VBO bindings in the VAO
-    updateVertexArrayObject(rp, eb);
+    // Note: we don't update the vertex buffer bindings in the VAO just yet, we will do that
+    // later in draw() or bindRenderPrimitive(). At this point, the HwVertexBuffer might not
+    // have all its buffers set.
 
     // this records the index buffer into the currently bound VAO
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
@@ -848,7 +856,6 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
 
     // NOTE: this is called from draw() and must be as efficient as possible.
 
-
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
 #ifndef NDEBUG
@@ -862,42 +869,49 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
         // that it's always reset in draw
     }
 
-    rp->maxVertexCount = vb->vertexCount;
-    for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
-        const auto& attribute = vb->attributes[i];
+    GLVertexBufferInfo const* const vbi = handle_cast<const GLVertexBufferInfo*>(vb->vbih);
+
+    for (size_t i = 0, n = vbi->attributes.size(); i < n; i++) {
+        const auto& attribute = vbi->attributes[i];
         const uint8_t bi = attribute.buffer;
+        if (bi != Attribute::BUFFER_UNUSED) {
+            // if a buffer is defined it must not be invalid.
+            assert_invariant(vb->gl.buffers[bi]);
 
-        // Invoking glVertexAttribPointer without a bound VBO is an invalid operation, so we must
-        // take care to avoid it. This can occur when VertexBuffer is only partially populated with
-        // BufferObject items.
-        if (bi != Attribute::BUFFER_UNUSED && UTILS_LIKELY(vb->gl.buffers[bi] != 0)) {
-
+            // if w're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
+            GLuint const index = i;
+            GLint const size = getComponentCount(attribute.type);
+            GLenum const type = getComponentType(attribute.type);
+            GLboolean const normalized = getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED);
+            GLsizei const stride = attribute.stride;
+            void const* pointer = reinterpret_cast<void const *>(attribute.offset);
+
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
-                glVertexAttribIPointer(GLuint(i),
-                        (GLint)getComponentCount(attribute.type),
-                        getComponentType(attribute.type),
-                        attribute.stride,
-                        (void*) uintptr_t(attribute.offset));
+                // integer attributes can't be floats
+                assert_invariant(type == GL_BYTE || type == GL_UNSIGNED_BYTE || type == GL_SHORT ||
+                        type == GL_UNSIGNED_SHORT || type == GL_INT || type == GL_UNSIGNED_INT);
+                glVertexAttribIPointer(index, size, type, stride, pointer);
             } else
 #endif
             {
-                glVertexAttribPointer(GLuint(i),
-                        (GLint)getComponentCount(attribute.type),
-                        getComponentType(attribute.type),
-                        getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED),
-                        attribute.stride,
-                        (void*) uintptr_t(attribute.offset));
+                glVertexAttribPointer(index, size, type, normalized, stride, pointer);
             }
 
             gl.enableVertexAttribArray(GLuint(i));
         } else {
-
             // In some OpenGL implementations, we must supply a properly-typed placeholder for
-            // every integer input that is declared in the vertex shader, even if disabled.
+            // every integer input that is declared in the vertex shader.
+            // Note that the corresponding doesn't have to be enabled and in fact won't be. If it
+            // was enabled, it would indicate a user-error (providing the wrong type of array).
+            // With a disabled array, the vertex shader gets the attribute from glVertexAttrib,
+            // and must have the proper intergerness.
+            // But at this point, we don't know what the shader requirements are, and so we must
+            // rely on the attribute.
+
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                 if (!gl.isES2()) {
@@ -1410,6 +1424,14 @@ void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 // Destroying driver objects
 // ------------------------------------------------------------------------------------------------
 
+void OpenGLDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+    DEBUG_MARKER()
+    if (vbih) {
+        GLVertexBufferInfo const* vbi = handle_cast<const GLVertexBufferInfo*>(vbih);
+        destruct(vbih, vbi);
+    }
+}
+
 void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()
     if (vbh) {
@@ -1899,12 +1921,20 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
-bool OpenGLDriver::isStereoSupported() {
-    // Stereo requires instancing and EXT_clip_cull_distance.
+bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    // Instanced-stereo requires instancing and EXT_clip_cull_distance.
+    // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    return mContext.ext.EXT_clip_cull_distance;
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return mContext.ext.EXT_clip_cull_distance;
+    case backend::StereoscopicType::MULTIVIEW:
+        return mContext.ext.OVR_multiview2;
+    default:
+        return false;
+    }
 }
 
 bool OpenGLDriver::isParallelShaderCompileSupported() {
@@ -3698,7 +3728,8 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
 #endif
 }
 
-void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -3733,16 +3764,15 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 
-    setScissor(state.scissor);
-
     if (UTILS_LIKELY(instanceCount <= 1)) {
-        glDrawElements(GLenum(rp->type), (GLsizei)rp->count, rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(rp->offset));
+        glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
+                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
     } else {
         assert_invariant(!mContext.isES2());
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)rp->count,
-                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset),
+        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
+                rp->gl.getIndicesType(),
+                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
                 (GLsizei)instanceCount);
 #endif
     }
@@ -3752,6 +3782,10 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 #else
     CHECK_GL_ERROR(utils::slog.e)
 #endif
+}
+
+void OpenGLDriver::scissor(Viewport scissor) {
+    setScissor(scissor);
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {

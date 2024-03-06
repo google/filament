@@ -23,6 +23,7 @@
 #include "DFG.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
+#include "HwVertexBufferInfoFactory.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -182,7 +183,9 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported() const noexcept { return getDriver().isStereoSupported(); }
+    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
+        return getDriver().isStereoSupported(stereoscopicType);
+    }
 
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;
@@ -403,6 +406,10 @@ public:
         return mAutomaticInstancingEnabled;
     }
 
+    HwVertexBufferInfoFactory& getVertexBufferInfoFactory() noexcept {
+        return mHwVertexBufferInfoFactory;
+    }
+
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
@@ -471,6 +478,7 @@ private:
     FLightManager mLightManager;
     FCameraManager mCameraManager;
     ResourceAllocator* mResourceAllocator = nullptr;
+    HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
     ResourceList<FRenderer> mRenderers{ "Renderer" };

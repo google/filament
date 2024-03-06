@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
-#define TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
+#ifndef TNT_FILAMENT_HWVERTEXBUFFERINFOFACTORY_H
+#define TNT_FILAMENT_HWVERTEXBUFFERINFOFACTORY_H
 
 #include "Bimap.h"
 
@@ -34,54 +34,60 @@ namespace filament {
 
 class FEngine;
 
-class HwRenderPrimitiveFactory {
+class HwVertexBufferInfoFactory {
 public:
-    using Handle = backend::RenderPrimitiveHandle;
+    using Handle = backend::VertexBufferInfoHandle;
 
-    HwRenderPrimitiveFactory();
-    ~HwRenderPrimitiveFactory() noexcept;
+    HwVertexBufferInfoFactory();
+    ~HwVertexBufferInfoFactory() noexcept;
 
-    HwRenderPrimitiveFactory(HwRenderPrimitiveFactory const& rhs) = delete;
-    HwRenderPrimitiveFactory(HwRenderPrimitiveFactory&& rhs) noexcept = delete;
-    HwRenderPrimitiveFactory& operator=(HwRenderPrimitiveFactory const& rhs) = delete;
-    HwRenderPrimitiveFactory& operator=(HwRenderPrimitiveFactory&& rhs) noexcept = delete;
+    HwVertexBufferInfoFactory(HwVertexBufferInfoFactory const& rhs) = delete;
+    HwVertexBufferInfoFactory(HwVertexBufferInfoFactory&& rhs) noexcept = delete;
+    HwVertexBufferInfoFactory& operator=(HwVertexBufferInfoFactory const& rhs) = delete;
+    HwVertexBufferInfoFactory& operator=(HwVertexBufferInfoFactory&& rhs) noexcept = delete;
 
     void terminate(backend::DriverApi& driver) noexcept;
 
-    struct Parameters { // 20 bytes
-        backend::VertexBufferHandle vbh;            // 4
-        backend::IndexBufferHandle ibh;             // 4
-        backend::PrimitiveType type;                // 4
+    struct Parameters { // 136 bytes
+        uint8_t bufferCount;
+        uint8_t attributeCount;
+        uint8_t padding[2] = {};
+        backend::AttributeArray attributes;
+        size_t hash() const noexcept;
     };
 
+    friend bool operator==(Parameters const& lhs, Parameters const& rhs) noexcept;
+
     Handle create(backend::DriverApi& driver,
-            backend::VertexBufferHandle vbh,
-            backend::IndexBufferHandle ibh,
-            backend::PrimitiveType type) noexcept;
+            uint8_t bufferCount,
+            uint8_t attributeCount,
+            backend::AttributeArray attributes) noexcept;
 
     void destroy(backend::DriverApi& driver, Handle handle) noexcept;
 
 private:
-    struct Key {
+    struct Key { // 140 bytes
         Parameters params;
         mutable uint32_t refs;  // 4 bytes
+        bool operator==(Key const& rhs) const noexcept {
+            return params == rhs.params;
+        }
     };
 
-    struct KeyHash {
-        size_t operator()(Key const& p) const noexcept;
+    struct KeyHasher {
+        size_t operator()(Key const& p) const noexcept {
+            return p.params.hash();
+        }
     };
 
-    friend bool operator==(Key const& lhs, Key const& rhs) noexcept;
-
-
-    struct Value { // 4 bytes
+    struct Value {
         Handle handle;
     };
 
-    struct ValueHash {
-        size_t operator()(Value const& p) const noexcept {
-            std::hash<Handle::HandleId> const h;
-            return h(p.handle.getId());
+    struct ValueHasher {
+        size_t operator()(Value v) const noexcept {
+            std::hash<Handle::HandleId> const hasher;
+            return hasher(v.handle.getId());
         }
     };
 
@@ -104,10 +110,10 @@ private:
     PoolAllocatorArena mArena;
 
     // The special Bimap
-    Bimap<Key, Value, KeyHash, ValueHash,
+    Bimap<Key, Value, KeyHasher, ValueHasher,
             utils::STLAllocator<Key, PoolAllocatorArena>> mBimap;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
+#endif // TNT_FILAMENT_HWVERTEXBUFFERINFOFACTORY_H

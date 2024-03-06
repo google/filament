@@ -172,7 +172,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
             }
 
             getDriverApi().beginRenderPass(defaultRenderTarget, params);
-            getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+            getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
             getDriverApi().endRenderPass();
 
             triangleIndex++;
