@@ -88,11 +88,22 @@ public:
      */
     class EquirectangularToCubemap {
     public:
+
+        struct Config {
+            bool mirror = true;  //!< mirror the source horizontally
+        };
+
         /**
-         * Creates a EquirectangularToCubemap processor.
+         * Creates a EquirectangularToCubemap processor using the default Config
          * @param context IBLPrefilterContext to use
          */
         explicit EquirectangularToCubemap(IBLPrefilterContext& context);
+
+        /**
+         * Creates a EquirectangularToCubemap processor using the provided Config
+         * @param context IBLPrefilterContext to use
+         */
+       EquirectangularToCubemap(IBLPrefilterContext& context, Config const& config);
 
         /**
          * Destroys all GPU resources created during initialization.
@@ -125,6 +136,7 @@ public:
     private:
         IBLPrefilterContext& mContext;
         filament::Material* mEquirectMaterial = nullptr;
+        Config mConfig{};
     };
 
     /**

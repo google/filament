@@ -122,9 +122,10 @@ void postProcess(inout PostProcessInputs postProcess) {
     float side = materialParams.side;
 
     // compute the view (and normal, since v = n) direction for each face
-    vec3 rx = normalize(vec3(      side,  -p.y, side * -p.x));
-    vec3 ry = normalize(vec3(       p.x,  side, side *  p.y));
-    vec3 rz = normalize(vec3(side * p.x,  -p.y, side));
+    float l = inversesqrt(p.x * p.x + p.y * p.y + 1.0);
+    vec3 rx = vec3(      side,  p.y,  side * -p.x) * l;
+    vec3 ry = vec3(       p.x,  side, side * -p.y) * l;
+    vec3 rz = vec3(side * p.x,  p.y,  side)        * l;
 
     // random rotation around r
     mediump float a = 2.0 * PI * random(gl_FragCoord.xy);
