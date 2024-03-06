@@ -1284,7 +1284,9 @@ bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::
             var = std::make_unique<JsonishString>(value);
             break;
         default:
-            std::cerr << "Unsupported type: \"" << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "\"" << std::endl;
+            std::cerr << "Unsupported type: \""
+                      << JsonishValue::typeToString(mParameters.at(key).rootAssert)
+                      << "\"" << std::endl;
             return false;
     }
 
