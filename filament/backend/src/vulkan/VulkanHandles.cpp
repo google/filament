@@ -99,6 +99,10 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
 #endif
     }
 
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+    auto& bindingToName = mInfo->bindingToName;
+#endif
+
     auto& groupInfo = builder.getSamplerGroupInfo();
     auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
     auto& usage = mInfo->usage;
@@ -109,12 +113,16 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             uint32_t const binding = samplers[i].binding;
             bindingToSamplerIndex[binding] = (groupInd << 8) | (0xff & i);
             usage = VulkanPipelineCache::getUsageFlags(binding, group.stageFlags, usage);
+
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+            bindingToName[binding] = samplers[i].name.c_str();
+#endif
         }
     }
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-    utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << bundle.vertex
-                  << ", " << bundle.fragment << ")" << utils::io::endl;
+    utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << modules[0]
+                  << ", " << modules[1] << ")" << utils::io::endl;
 #endif
 }
 

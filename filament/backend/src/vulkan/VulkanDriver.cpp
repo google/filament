@@ -359,6 +359,11 @@ void VulkanDriver::collectGarbage() {
     mCommands->gc();
     mStagePool.gc();
     mFramebufferCache.gc();
+
+#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
+    mResourceAllocator.print();
+#endif
+
     FVK_SYSTRACE_END();
 }
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
@@ -1731,13 +1736,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     commands->acquire(prim.indexBuffer);
     commands->acquire(prim.vertexBuffer);
 
-    // If this is a debug build, validate the current shader.
-#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-    if (program->bundle.vertex == VK_NULL_HANDLE || program->bundle.fragment == VK_NULL_HANDLE) {
-        utils::slog.e << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
-    }
-#endif
-
     // Update the VK raster state.
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
 
@@ -1787,6 +1785,10 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     auto const& bindingToSamplerIndex = program->getBindingToSamplerIndex();
     VulkanPipelineCache::UsageFlags usage = program->getUsage();
 
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+    auto const& bindingToName = program->getBindingToName();
+#endif
+
     UTILS_NOUNROLL
     for (uint8_t binding = 0; binding < VulkanPipelineCache::SAMPLER_BINDING_COUNT; binding++) {
         uint16_t const indexPair = bindingToSamplerIndex[binding];
@@ -1819,15 +1821,21 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         // matching characteristics. (e.g. if the missing texture is a 3D texture)
         if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
-            utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
+            utils::slog.w << "Uninitialized texture bound to '" << bindingToName[binding] << "'";
             utils::slog.w << " in material '" << program->name.c_str() << "'";
-            utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
+            utils::slog.w << " at binding point " << +binding << utils::io::endl;
 #endif
             texture = mEmptyTexture.get();
         }
 
         SamplerParams const& samplerParams = boundSampler->s;
         VkSampler const vksampler = mSamplerCache.getSampler(samplerParams);
+
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SAMPLER,
+                reinterpret_cast<uint64_t>(vksampler), bindingToName[binding].c_str());
+#endif
+
         VkImageView imageView = VK_NULL_HANDLE;
         VkImageSubresourceRange const range = texture->getPrimaryViewRange();
         if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) &&

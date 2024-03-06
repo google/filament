@@ -64,6 +64,12 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->bindingToSamplerIndex;
     }
 
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+    inline utils::FixedCapacityVector<std::string> const& getBindingToName() const {
+        return mInfo->bindingToName;
+    }
+#endif
+
 private:
     // TODO: handle compute shaders.
     // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
@@ -80,6 +86,12 @@ private:
         // We store the samplerGroupIndex as the top 8-bit and the index within each group as the lower 8-bit.
         utils::FixedCapacityVector<uint16_t> bindingToSamplerIndex;
         VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
+
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+        // We store the sampler name mapped from binding index (only for debug purposes).
+        utils::FixedCapacityVector<std::string> bindingToName;
+#endif
+
     };
 
     PipelineInfo* mInfo;

@@ -51,6 +51,8 @@ enum class VulkanResourceType : uint8_t {
     // Below are resources that are managed manually (i.e. not ref counted).
     FENCE,
     HEAP_ALLOCATED,
+
+    END_TYPE,  // A placeholder
 };
 
 #define IS_HEAP_ALLOC_TYPE(f)                                                                      \

@@ -436,7 +436,7 @@ void VulkanCommands::popGroupMarker() {
         auto const endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = endTime - startTime;
         utils::slog.d << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms\n"
-                      << utils::io::flush;
+                      << utils::io::endl;
 #else
         mGroupMarkers->pop();
 #endif

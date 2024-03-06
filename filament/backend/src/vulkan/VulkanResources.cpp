@@ -70,6 +70,7 @@ void deallocateResource(VulkanResourceAllocator* allocator, VulkanResourceType t
         // destruction.
         case VulkanResourceType::FENCE:
         case VulkanResourceType::HEAP_ALLOCATED:
+        case VulkanResourceType::END_TYPE:
             break;
     }
 }
