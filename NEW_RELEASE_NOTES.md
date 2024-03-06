@@ -9,4 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - Add new API `SwapChain::getFrameScheduledCallback`
-- Fixed Vulkan validation error VUID-vkAcquireNextImageKHR-semaphore-01779
+- vulkan: fixed validation error VUID-vkAcquireNextImageKHR-semaphore-01779
