@@ -19,6 +19,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <variant>
 
 #include "JsonishLexeme.h"
 #include "JsonishParser.h"
@@ -33,6 +34,7 @@ public:
     ParametersProcessor();
     ~ParametersProcessor() = default;
     bool process(filamat::MaterialBuilder& builder, const JsonishObject& jsonObject);
+    bool process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value);
 
 private:
 

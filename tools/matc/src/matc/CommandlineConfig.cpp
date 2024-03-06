@@ -74,6 +74,11 @@ static void usage(char* name) {
             "       Unlike --define, this applies to the material specification, not GLSL.\n"
             "       Can be repeated to specify multiple macros:\n"
             "           MATC -TBLENDING=fade -TDOUBLESIDED=false ...\n\n"
+            "   --material-parameter <key>=<value>, -P<key>=<value>\n"
+            "       Set the material property pointed to by <key> to <value>\n"
+            "       This overwrites the value configured in the material file.\n"
+            "       Material property of array type is not supported.\n"
+            "           MATC -PflipUV=false -PshadingModel=lit -Pname=myMat ...\n\n"
             "   --reflect, -r\n"
             "       Reflect the specified metadata as JSON: parameters\n\n"
             "   --variant-filter=<filter>, -V <filter>\n"
@@ -174,7 +179,7 @@ static void parseDefine(std::string defineString, Config::StringReplacementMap& 
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:OSEr:vV:gtwF1";
+    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'L' },
@@ -193,6 +198,7 @@ bool CommandlineConfig::parse() {
             { "no-essl1",                no_argument, nullptr, '1' },
             { "define",            required_argument, nullptr, 'D' },
             { "template",          required_argument, nullptr, 'T' },
+            { "material-parameter",required_argument, nullptr, 'P' },
             { "reflect",           required_argument, nullptr, 'r' },
             { "print",                   no_argument, nullptr, 't' },
             { "version",                 no_argument, nullptr, 'v' },
@@ -282,6 +288,9 @@ bool CommandlineConfig::parse() {
                 break;
             case 'T':
                 parseDefine(arg, mTemplateMap);
+                break;
+            case 'P':
+                parseDefine(arg, mMaterialParameters);
                 break;
             case 'v':
                 // Similar to --help, the --version command does an early exit in order to avoid
