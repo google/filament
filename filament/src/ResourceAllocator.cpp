@@ -109,8 +109,7 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
 }
 
 ResourceAllocator::ResourceAllocator(Engine::Config const& config, DriverApi& driverApi) noexcept
-        : mCacheCapacity(config.resourceAllocatorCacheSizeMB << 20),
-          mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
+        : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
           mBackend(driverApi) {
 }
 
@@ -218,51 +217,18 @@ void ResourceAllocator::gc() noexcept {
     // Purging strategy:
     //  - remove entries that are older than a certain age
     //      - remove only one entry per gc(),
-    //      - unless we're at capacity
-    // - remove LRU entries until we're below capacity
 
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         const size_t ageDiff = age - it->second.age;
         if (ageDiff >= mCacheMaxAge) {
-            it = purge(it);
-            if (mCacheSize < mCacheCapacity) {
-                // if we're not at capacity, only purge a single entry per gc, trying to
-                // avoid a burst of work.
-                break;
-            }
+            purge(it);
+            // only purge a single entry per gc
+            break;
         } else {
             ++it;
         }
     }
-
-    if (UTILS_UNLIKELY(mCacheSize >= mCacheCapacity)) {
-        // make a copy of our CacheContainer to a vector
-        using Vector = FixedCapacityVector<std::pair<TextureKey, TextureCachePayload>>;
-        auto cache = Vector::with_capacity(textureCache.size());
-        std::copy(textureCache.begin(), textureCache.end(), std::back_insert_iterator<Vector>(cache));
-
-        // sort by least recently used
-        std::sort(cache.begin(), cache.end(), [](auto const& lhs, auto const& rhs) {
-            return lhs.second.age < rhs.second.age;
-        });
-
-        // now remove entries until we're at capacity
-        auto curr = cache.begin();
-        while (mCacheSize >= mCacheCapacity) {
-            // by construction this entry must exist
-            purge(textureCache.find(curr->first));
-            ++curr;
-        }
-
-        // Since we're sorted already, reset the oldestAge of the whole system
-        size_t const oldestAge = cache.front().second.age;
-        for (auto& it : textureCache) {
-            it.second.age -= oldestAge;
-        }
-        mAge -= oldestAge;
-    }
-    //if (mAge % 60 == 0) dump();
 }
 
 UTILS_NOINLINE
@@ -280,12 +246,12 @@ void ResourceAllocator::dump(bool brief) const noexcept {
     }
 }
 
-ResourceAllocator::CacheContainer::iterator ResourceAllocator::purge(
+void ResourceAllocator::purge(
         ResourceAllocator::CacheContainer::iterator const& pos) {
     //slog.d << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age << io::endl;
     mBackend.destroyTexture(pos->second.handle);
     mCacheSize -= pos->second.size;
-    return mTextureCache.erase(pos);
+    mTextureCache.erase(pos);
 }
 
 } // namespace filament

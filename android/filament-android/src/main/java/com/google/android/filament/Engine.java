@@ -400,16 +400,14 @@ public class Engine {
         public long stereoscopicEyeCount = 2;
 
         /*
-         * Size in MiB of the frame graph texture cache. This should be adjusted based on the
-         * size of used render targets (typically the screen).
+         * @Deprecated This value is no longer used.
          */
         public long resourceAllocatorCacheSizeMB = 64;
 
         /*
          * This value determines for how many frames are texture entries kept in the cache.
-         * The default value of 30 corresponds to about half a second at 60 fps.
          */
-        public long resourceAllocatorCacheMaxAge = 30;
+        public long resourceAllocatorCacheMaxAge = 2;
     }
 
     private Engine(long nativeEngine, Config config) {
