@@ -69,6 +69,8 @@ struct VulkanSwapChain : public HwSwapChain, VulkanResource {
     }
 
 private:
+	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
+
     void update();
 
     VulkanPlatform* mPlatform;
@@ -83,7 +85,8 @@ private:
     utils::FixedCapacityVector<std::unique_ptr<VulkanTexture>> mColors;
     std::unique_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
-    VkSemaphore mImageReady;
+    VkSemaphore mImageReady[IMAGE_READY_SEMAPHORE_COUNT];
+	uint32_t mCurrentImageReadyIndex;
     uint32_t mCurrentSwapIndex;
     bool mAcquired;
     bool mIsFirstRenderPass;
