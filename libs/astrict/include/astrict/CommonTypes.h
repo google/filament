@@ -56,15 +56,6 @@ private:
     T mValue;
 };
 
-using StringId = Newtype<int, struct StringIdTag>;
-using TypeId = Newtype<int, struct TypeIdTag>;
-using GlobalVariableId = Newtype<int, struct GlobalVariableIdTag>;
-using LocalVariableId = Newtype<int, struct LocalVariableIdTag>;
-using ExpressionId = Newtype<int, struct ExpressionIdTag>;
-using FunctionId = Newtype<int, struct FunctionIdTag>;
-using StatementBlockId = Newtype<int, struct StatementBlockIdTag>;
-using StructId = Newtype<int, struct StructIdTag>;
-
 template<class>
 inline constexpr bool always_false_v = false;
 
@@ -156,29 +147,27 @@ enum class ExpressionOperator : uint8_t {
     Comma,
 };
 
-// // Workaround for missing std::expected.
-// template<typename T>
-// using StatusOr = std::variant<T, int>;
-
 using VariableOrExpressionId = std::variant<GlobalVariableId, LocalVariableId, ExpressionId>;
 
 struct StructMember {
-    StringId name;
-    TypeId type;
+    StringId qualifier;
+    StringId type;
 
     bool operator==(const StructMember& o) const {
-        return name == o.name
+        return qualifier == o.qualifier
                 && type == o.type;
     }
 };
 
 struct Struct {
-    StringId name;
+    StringId qualifier;
     std::vector<StructMember> members;
+    std::vector<StringId> memberNames;
 
     bool operator==(const Struct& o) const {
-        return name == o.name
-                && members == o.members;
+        return qualifier == o.qualifier
+                && members == o.members
+                && memberNames == o.memberNames;
     }
 };
 
@@ -195,12 +184,14 @@ struct Type {
 };
 
 struct Variable {
-    StringId name;
-    std::optional<TypeId> type; // Don't record globals' types.
+    StringId qualifier;
+    StringId type;
+    std::optional<StringId> name;
 
     bool operator==(const Variable& o) const {
-        return name == o.name
-                && type == o.type;
+        return qualifier == o.qualifier
+                && type == o.type
+                && name == o.name;
     }
 };
 
