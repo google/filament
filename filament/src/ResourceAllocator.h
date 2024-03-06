@@ -94,7 +94,6 @@ public:
     void gc() noexcept;
 
 private:
-    size_t const mCacheCapacity;
     size_t const mCacheMaxAge;
 
     struct TextureKey {
@@ -194,7 +193,7 @@ private:
     using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
     using InUseContainer = AssociativeContainer<backend::TextureHandle, TextureKey>;
 
-    CacheContainer::iterator purge(CacheContainer::iterator const& pos);
+    void purge(ResourceAllocator::CacheContainer::iterator const& pos);
 
     backend::DriverApi& mBackend;
     CacheContainer mTextureCache;

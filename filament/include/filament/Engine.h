@@ -327,16 +327,14 @@ public:
         uint8_t stereoscopicEyeCount = 2;
 
         /*
-         * Size in MiB of the frame graph texture cache. This should be adjusted based on the
-         * size of used render targets (typically the screen).
+         * @deprecated This value is no longer used.
          */
         uint32_t resourceAllocatorCacheSizeMB = 64;
 
         /*
          * This value determines for how many frames are texture entries kept in the cache.
-         * The default value of 30 corresponds to about half a second at 60 fps.
          */
-        uint32_t resourceAllocatorCacheMaxAge = 30;
+        uint32_t resourceAllocatorCacheMaxAge = 2;
     };
 
 
