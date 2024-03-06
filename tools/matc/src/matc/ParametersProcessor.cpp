@@ -1266,23 +1266,23 @@ bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::
 
     std::unique_ptr<JsonishValue> var;
     switch (mParameters.at(key).rootAssert) {
-    case JsonishValue::Type::BOOL: {
-        std::string lower;
-        std::transform(value.begin(), value.end(), std::back_inserter(lower), ::tolower);
-        if (lower.empty() || lower == "false" || lower == "f" || lower == "0") {
-            var = std::make_unique<JsonishBool>(false);
+        case JsonishValue::Type::BOOL: {
+            std::string lower;
+            std::transform(value.begin(), value.end(), std::back_inserter(lower), ::tolower);
+            if (lower.empty() || lower == "false" || lower == "f" || lower == "0") {
+                var = std::make_unique<JsonishBool>(false);
+            }
+            else {
+                var = std::make_unique<JsonishBool>(true);
+            }
+            break;
         }
-        else {
-            var = std::make_unique<JsonishBool>(true);
-        }
-        break;
-    }
-    case JsonishValue::Type::NUMBER:
-        var = std::make_unique<JsonishNumber>(std::stof(value));
-        break;
-    case JsonishValue::Type::STRING:
-        var = std::make_unique<JsonishString>(value);
-        break;
+        case JsonishValue::Type::NUMBER:
+            var = std::make_unique<JsonishNumber>(std::stof(value));
+            break;
+        case JsonishValue::Type::STRING:
+            var = std::make_unique<JsonishString>(value);
+            break;
     }
 
     auto fPointer = mParameters[key].callback;

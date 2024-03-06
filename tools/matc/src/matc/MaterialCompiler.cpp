@@ -626,7 +626,7 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
 }
 
 bool MaterialCompiler::processMaterialParameters(filamat::MaterialBuilder& builder,
-    const Config& config) const {
+        const Config& config) const {
     ParametersProcessor parametersProcessor;
     bool ok = true;
     for (const auto& param : config.getMaterialParameters()) {
