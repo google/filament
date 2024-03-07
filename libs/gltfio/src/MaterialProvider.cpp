@@ -143,6 +143,21 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             retval[key->volumeThicknessUV] = (UvSet) index++;
         }
     }
+    if (key->hasSpecularTexture && retval[key->specularTextureUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasSpecularTexture = false;
+        } else {
+            retval[key->specularTextureUV] = (UvSet) index++;
+        }
+    }
+    if (key->hasSpecularColorTexture && retval[key->specularColorTextureUV] == UNUSED) {
+        if (index > MAX_INDEX) {
+            key->hasSpecularColorTexture = false;
+        } else {
+            retval[key->specularColorTextureUV] = (UvSet) index++;
+        }
+    }
+
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -167,6 +182,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& sheenColorUV = uvstrings[uvmap[config.sheenColorUV]];
     const auto& sheenRoughnessUV = uvstrings[uvmap[config.sheenRoughnessUV]];
     const auto& volumeThicknessUV = uvstrings[uvmap[config.volumeThicknessUV]];
+    const auto& specularUV = uvstrings[uvmap[config.specularTextureUV]];
+    const auto& specularColorUV = uvstrings[uvmap[config.specularColorTextureUV]];
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -180,6 +197,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${sheenColor}", sheenColorUV);
     replaceAll("${sheenRoughness}", sheenRoughnessUV);
     replaceAll("${volumeThickness}", volumeThicknessUV);
+    replaceAll("${specular}", specularUV);
+    replaceAll("${specularColor}", specularColorUV);
 }
 
 } // namespace filament::gltfio

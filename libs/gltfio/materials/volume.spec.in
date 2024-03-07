@@ -26,3 +26,8 @@ TransmissionTexture=optional
 # Volume Features
 Volume=optional
 VolumeThicknessTexture=optional
+
+# KHR_materials_specular Features
+Specular=optional
+SpecularTexture=optional
+SpecularColorTexture=unsupported

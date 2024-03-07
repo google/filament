@@ -63,8 +63,11 @@ vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
 
     float D = distribution(pixel.roughness, NoH, h);
     float V = visibility(pixel.roughness, NoV, NoL);
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    vec3  F = fresnel(pixel.f0, pixel.f90, LoH);
+#else
     vec3  F = fresnel(pixel.f0, LoH);
-
+#endif
     return (D * V) * F;
 }
 
@@ -144,7 +147,6 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     color += clearCoat;
 #endif
 #endif
-
     return (color * light.colorIntensity.rgb) *
             (light.colorIntensity.w * light.attenuation * NoL * occlusion);
 }

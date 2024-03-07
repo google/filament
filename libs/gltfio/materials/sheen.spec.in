@@ -17,3 +17,8 @@ TextureTransforms=optional
 Sheen=optional
 SheenColorTexture=optional
 SheenRoughnessTexture=optional
+
+# KHR_material_specular Features
+Specular=optional
+SpecularTexture=optional
+SpecularColorTexture=unsupported
