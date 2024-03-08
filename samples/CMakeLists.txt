@@ -222,6 +222,12 @@ function(add_demo NAME)
     target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
     set_target_properties(${NAME} PROPERTIES FOLDER Samples)
+
+    # This is needed after XCode 15.3
+    if (APPLE)
+        set_target_properties(${NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+        set_target_properties(${NAME} PROPERTIES INSTALL_RPATH /usr/local/lib)
+    endif()
 endfunction()
 
 if (NOT ANDROID)
