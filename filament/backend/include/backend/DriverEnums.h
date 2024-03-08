@@ -1186,11 +1186,27 @@ struct StencilState {
 
     //! Stencil operations for front-facing polygons
     StencilOperations front = {
-            .stencilFunc = StencilFunction::A, .ref = 0, .readMask = 0xff, .writeMask = 0xff };
+            .stencilFunc = StencilFunction::A,
+            .stencilOpStencilFail = StencilOperation::KEEP,
+            .padding0 = 0,
+            .stencilOpDepthFail = StencilOperation::KEEP,
+            .stencilOpDepthStencilPass = StencilOperation::KEEP,
+            .padding1 = 0,
+            .ref = 0,
+            .readMask = 0xff,
+            .writeMask = 0xff };
 
     //! Stencil operations for back-facing polygons
     StencilOperations back  = {
-            .stencilFunc = StencilFunction::A, .ref = 0, .readMask = 0xff, .writeMask = 0xff };
+            .stencilFunc = StencilFunction::A,
+            .stencilOpStencilFail = StencilOperation::KEEP,
+            .padding0 = 0,
+            .stencilOpDepthFail = StencilOperation::KEEP,
+            .stencilOpDepthStencilPass = StencilOperation::KEEP,
+            .padding1 = 0,
+            .ref = 0,
+            .readMask = 0xff,
+            .writeMask = 0xff };
 
     //! Whether stencil-buffer writes are enabled
     bool stencilWrite = false;

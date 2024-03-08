@@ -101,10 +101,6 @@ private:
     VulkanDriver& operator=(VulkanDriver const&) = delete;
 
 private:
-    inline void setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
-            Handle<HwVertexBuffer> vbh,
-            Handle<HwIndexBuffer> ibh);
-
     void collectGarbage();
 
     VulkanPlatform* mPlatform = nullptr;

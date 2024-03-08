@@ -29,10 +29,13 @@ namespace filament::backend {
 //! \privatesection
 
 struct PipelineState {
-    Handle<HwProgram> program;
-    RasterState rasterState;
-    StencilState stencilState;
-    PolygonOffset polygonOffset;
+    Handle<HwProgram> program;                                              //  4
+    Handle<HwVertexBufferInfo> vertexBufferInfo;                            //  4
+    RasterState rasterState;                                                //  4
+    StencilState stencilState;                                              // 12
+    PolygonOffset polygonOffset;                                            //  8
+    PrimitiveType primitiveType = PrimitiveType::TRIANGLES;                 //  1
+    uint8_t padding[3] = {};                                                //  3
 };
 
 } // namespace filament::backend

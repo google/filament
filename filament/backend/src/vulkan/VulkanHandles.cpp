@@ -289,32 +289,21 @@ uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) co
     return count;
 }
 
-VulkanVertexBufferInfo::VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-        AttributeArray const& attributes)
-        : HwVertexBufferInfo(bufferCount, attributeCount),
-          VulkanResource(VulkanResourceType::VERTEX_BUFFER_INFO),
-          attributes(attributes) {
-}
+VulkanVertexBufferInfo::VulkanVertexBufferInfo(
+        uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes)
+    : HwVertexBufferInfo(bufferCount, attributeCount),
+      VulkanResource(VulkanResourceType::VERTEX_BUFFER_INFO),
+      mInfo(attributes.size()) {
 
-VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanResourceAllocator* allocator, uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
-    : HwVertexBuffer(vertexCount),
-      VulkanResource(VulkanResourceType::VERTEX_BUFFER),
-      vbih(vbih),
-      mResources(allocator) {
+    auto attribDesc = mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
+    auto bufferDesc = mInfo.mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
+    auto offsets = mInfo.mSoa.data<PipelineInfo::OFFSETS>();
+    auto attribToBufferIndex = mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
+    std::fill(mInfo.mSoa.begin<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(),
+            mInfo.mSoa.end<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(), -1);
 
-    VulkanVertexBufferInfo const* const vbi = allocator->handle_cast<VulkanVertexBufferInfo*>(vbih);
-    mInfo = new PipelineInfo(vbi->attributes.size());
-
-    auto attribDesc = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
-    auto bufferDesc = mInfo->mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
-    auto offsets = mInfo->mSoa.data<PipelineInfo::OFFSETS>();
-    auto attribToBufferIndex = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
-    std::fill(mInfo->mSoa.begin<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(),
-            mInfo->mSoa.end<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(), -1);
-
-    for (uint32_t attribIndex = 0; attribIndex < vbi->attributes.size(); attribIndex++) {
-        Attribute attrib = vbi->attributes[attribIndex];
+    for (uint32_t attribIndex = 0; attribIndex < attributes.size(); attribIndex++) {
+        Attribute attrib = attributes[attribIndex];
         bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
         bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
         VkFormat vkformat = getVkFormat(attrib.type, isNormalized, isInteger);
@@ -326,7 +315,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
         // expects to receive floats or ints.
         if (attrib.buffer == Attribute::BUFFER_UNUSED) {
             vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
-            attrib = vbi->attributes[0];
+            attrib = attributes[0];
         }
         offsets[attribIndex] = attrib.offset;
         attribDesc[attribIndex] = {
@@ -342,18 +331,23 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
     }
 }
 
-VulkanVertexBuffer::~VulkanVertexBuffer() {
-    delete mInfo;
+VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
+        VulkanResourceAllocator* allocator,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
+    : HwVertexBuffer(vertexCount),
+      VulkanResource(VulkanResourceType::VERTEX_BUFFER),
+      vbih(vbih),
+      mBuffers(MAX_VERTEX_BUFFER_COUNT), // TODO: can we do better here?
+      mResources(allocator) {
 }
 
 void VulkanVertexBuffer::setBuffer(VulkanResourceAllocator const& allocator,
         VulkanBufferObject* bufferObject, uint32_t index) {
-
     VulkanVertexBufferInfo const* const vbi =
             const_cast<VulkanResourceAllocator&>(allocator).handle_cast<VulkanVertexBufferInfo*>(vbih);
-    size_t count = vbi->attributes.size();
-    auto vkbuffers = mInfo->mSoa.data<PipelineInfo::VK_BUFFER>();
-    auto attribToBuffer = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
+    size_t const count = vbi->getAttributeCount();
+    VkBuffer* const vkbuffers = getVkBuffers();
+    int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
             vkbuffers[attribIndex] = bufferObject->buffer.getGpuBuffer();
@@ -368,35 +362,6 @@ VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& 
       VulkanResource(VulkanResourceType::BUFFER_OBJECT),
       buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
       bindingType(bindingType) {}
-
-void VulkanRenderPrimitive::setPrimitiveType(PrimitiveType pt) {
-    this->type = pt;
-    switch (pt) {
-        case PrimitiveType::POINTS:
-            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-            break;
-        case PrimitiveType::LINES:
-            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-            break;
-        case PrimitiveType::LINE_STRIP:
-            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-            break;
-        case PrimitiveType::TRIANGLES:
-            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            break;
-        case PrimitiveType::TRIANGLE_STRIP:
-            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-            break;
-    }
-}
-
-void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
-        VulkanIndexBuffer* indexBuffer) {
-    this->vertexBuffer = vertexBuffer;
-    this->indexBuffer = indexBuffer;
-    mResources.acquire(vertexBuffer);
-    mResources.acquire(indexBuffer);
-}
 
 VulkanTimerQuery::VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices)
     : VulkanThreadSafeResource(VulkanResourceType::TIMER_QUERY),
@@ -428,5 +393,16 @@ bool VulkanTimerQuery::isCompleted() noexcept {
 }
 
 VulkanTimerQuery::~VulkanTimerQuery() = default;
+
+VulkanRenderPrimitive::VulkanRenderPrimitive(VulkanResourceAllocator* resourceAllocator,
+        PrimitiveType pt, Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh)
+        : VulkanResource(VulkanResourceType::RENDER_PRIMITIVE),
+          mResources(resourceAllocator) {
+    type = pt;
+    vertexBuffer = resourceAllocator->handle_cast<VulkanVertexBuffer*>(vbh);
+    indexBuffer = resourceAllocator->handle_cast<VulkanIndexBuffer*>(ibh);
+    mResources.acquire(vertexBuffer);
+    mResources.acquire(indexBuffer);
+}
 
 } // namespace filament::backend

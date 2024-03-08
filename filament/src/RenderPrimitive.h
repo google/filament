@@ -45,14 +45,15 @@ public:
 
     void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             RenderableManager::PrimitiveType type,
-            FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
+            FVertexBuffer* vertexBuffer, FIndexBuffer* indexBuffer, size_t offset,
             size_t count) noexcept;
 
     // frees driver resources, object becomes invalid
     void terminate(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver);
 
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
-    backend::Handle<backend::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
+    backend::RenderPrimitiveHandle getHwHandle() const noexcept { return mHandle; }
+    backend::VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
     uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
     uint32_t getIndexCount() const noexcept { return mIndexCount; }
 
@@ -76,7 +77,7 @@ private:
     struct {
         FMaterialInstance const* mMaterialInstance = nullptr;
         backend::Handle<backend::HwRenderPrimitive> mHandle = {};
-        UTILS_UNUSED uint8_t padding[4]= {};
+        backend::Handle<backend::HwVertexBufferInfo> mVertexBufferInfoHandle = {};
         uint32_t mIndexOffset = 0;
         uint32_t mIndexCount = 0;
     };
