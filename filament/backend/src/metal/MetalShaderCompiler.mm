@@ -77,7 +77,7 @@ MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device, MetalDriver& driv
 }
 
 void MetalShaderCompiler::init() noexcept {
-    const uint32_t poolSize = 2;
+    const uint32_t poolSize = 1;
     mCompilerThreadPool.init(poolSize, []() {}, []() {});
 }
 
