@@ -35,10 +35,14 @@ fragment {
         if (materialParams.constantColor != 0) {
             sky = materialParams.color;
         } else {
+#if MATERIAL_FEATURE_LEVEL == 0
+            sky = vec4(textureCube(materialParams_skybox, variable_eyeDirection.xyz).rgb, 1.0);
+#else
             sky = vec4(textureLod(materialParams_skybox, variable_eyeDirection.xyz, 0.0).rgb, 1.0);
+#endif
             sky.rgb *= frameUniforms.iblLuminance;
         }
-        if (materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0f) {
+        if (materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0) {
             vec3 direction = normalize(variable_eyeDirection.xyz);
             // Assume the sun is a sphere
             vec3 sun = frameUniforms.lightColorIntensity.rgb *
