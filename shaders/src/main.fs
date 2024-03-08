@@ -6,17 +6,19 @@ layout(location = 0) out vec4 fragColor;
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
 void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
+    vec4 blend = color;
 #if defined(POST_LIGHTING_BLEND_MODE_OPAQUE)
-    color = material.postLightingColor;
+    blend = material.postLightingColor;
 #elif defined(POST_LIGHTING_BLEND_MODE_TRANSPARENT)
-    color = material.postLightingColor + color * (1.0 - material.postLightingColor.a);
+    blend = material.postLightingColor + color * (1.0 - material.postLightingColor.a);
 #elif defined(POST_LIGHTING_BLEND_MODE_ADD)
-    color += material.postLightingColor;
+    blend += material.postLightingColor;
 #elif defined(POST_LIGHTING_BLEND_MODE_MULTIPLY)
-    color *= material.postLightingColor;
+    blend *= material.postLightingColor;
 #elif defined(POST_LIGHTING_BLEND_MODE_SCREEN)
-    color += material.postLightingColor * (1.0 - color);
+    blend += material.postLightingColor * (1.0 - color);
 #endif
+    color = mix(color, blend, material.postLightingMixFactor);
 }
 #endif
 

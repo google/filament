@@ -701,6 +701,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.postLightingColor = vec4(1.0);
+            material.postLightingMixFactor = 0.5;
         }
     )");
 
@@ -712,6 +713,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
     MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
+    expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_MIX_FACTOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
