@@ -410,7 +410,8 @@ public:
     /**
      * Set the blending mode of the post-lighting color for this material.
      * Only OPAQUE, TRANSPARENT and ADD are supported, the default is TRANSPARENT.
-     * This setting requires the material property "postLightingColor" to be set.
+     * This setting requires the material properties "postLightingColor" and
+     * "postLightingMixFactor" to be set.
      */
     MaterialBuilder& postLightingBlending(BlendingMode blending) noexcept;
 

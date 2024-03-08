@@ -1115,32 +1115,33 @@ io::sstream& CodeGenerator::generateShaderReflections(utils::io::sstream& out, S
 char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) noexcept {
     using Property = MaterialBuilder::Property;
     switch (property) {
-        case Property::BASE_COLOR:           return "BASE_COLOR";
-        case Property::ROUGHNESS:            return "ROUGHNESS";
-        case Property::METALLIC:             return "METALLIC";
-        case Property::REFLECTANCE:          return "REFLECTANCE";
-        case Property::AMBIENT_OCCLUSION:    return "AMBIENT_OCCLUSION";
-        case Property::CLEAR_COAT:           return "CLEAR_COAT";
-        case Property::CLEAR_COAT_ROUGHNESS: return "CLEAR_COAT_ROUGHNESS";
-        case Property::CLEAR_COAT_NORMAL:    return "CLEAR_COAT_NORMAL";
-        case Property::ANISOTROPY:           return "ANISOTROPY";
-        case Property::ANISOTROPY_DIRECTION: return "ANISOTROPY_DIRECTION";
-        case Property::THICKNESS:            return "THICKNESS";
-        case Property::SUBSURFACE_POWER:     return "SUBSURFACE_POWER";
-        case Property::SUBSURFACE_COLOR:     return "SUBSURFACE_COLOR";
-        case Property::SHEEN_COLOR:          return "SHEEN_COLOR";
-        case Property::SHEEN_ROUGHNESS:      return "SHEEN_ROUGHNESS";
-        case Property::GLOSSINESS:           return "GLOSSINESS";
-        case Property::SPECULAR_COLOR:       return "SPECULAR_COLOR";
-        case Property::EMISSIVE:             return "EMISSIVE";
-        case Property::NORMAL:               return "NORMAL";
-        case Property::POST_LIGHTING_COLOR:  return "POST_LIGHTING_COLOR";
-        case Property::CLIP_SPACE_TRANSFORM: return "CLIP_SPACE_TRANSFORM";
-        case Property::ABSORPTION:           return "ABSORPTION";
-        case Property::TRANSMISSION:         return "TRANSMISSION";
-        case Property::IOR:                  return "IOR";
-        case Property::MICRO_THICKNESS:      return "MICRO_THICKNESS";
-        case Property::BENT_NORMAL:          return "BENT_NORMAL";
+        case Property::BASE_COLOR:                  return "BASE_COLOR";
+        case Property::ROUGHNESS:                   return "ROUGHNESS";
+        case Property::METALLIC:                    return "METALLIC";
+        case Property::REFLECTANCE:                 return "REFLECTANCE";
+        case Property::AMBIENT_OCCLUSION:           return "AMBIENT_OCCLUSION";
+        case Property::CLEAR_COAT:                  return "CLEAR_COAT";
+        case Property::CLEAR_COAT_ROUGHNESS:        return "CLEAR_COAT_ROUGHNESS";
+        case Property::CLEAR_COAT_NORMAL:           return "CLEAR_COAT_NORMAL";
+        case Property::ANISOTROPY:                  return "ANISOTROPY";
+        case Property::ANISOTROPY_DIRECTION:        return "ANISOTROPY_DIRECTION";
+        case Property::THICKNESS:                   return "THICKNESS";
+        case Property::SUBSURFACE_POWER:            return "SUBSURFACE_POWER";
+        case Property::SUBSURFACE_COLOR:            return "SUBSURFACE_COLOR";
+        case Property::SHEEN_COLOR:                 return "SHEEN_COLOR";
+        case Property::SHEEN_ROUGHNESS:             return "SHEEN_ROUGHNESS";
+        case Property::GLOSSINESS:                  return "GLOSSINESS";
+        case Property::SPECULAR_COLOR:              return "SPECULAR_COLOR";
+        case Property::EMISSIVE:                    return "EMISSIVE";
+        case Property::NORMAL:                      return "NORMAL";
+        case Property::POST_LIGHTING_COLOR:         return "POST_LIGHTING_COLOR";
+        case Property::POST_LIGHTING_MIX_FACTOR:    return "POST_LIGHTING_MIX_FACTOR";
+        case Property::CLIP_SPACE_TRANSFORM:        return "CLIP_SPACE_TRANSFORM";
+        case Property::ABSORPTION:                  return "ABSORPTION";
+        case Property::TRANSMISSION:                return "TRANSMISSION";
+        case Property::IOR:                         return "IOR";
+        case Property::MICRO_THICKNESS:             return "MICRO_THICKNESS";
+        case Property::BENT_NORMAL:                 return "BENT_NORMAL";
     }
 }
 
