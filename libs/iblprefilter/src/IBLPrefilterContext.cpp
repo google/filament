@@ -19,6 +19,7 @@
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
+#include <filament/MaterialEnums.h>
 #include <filament/RenderTarget.h>
 #include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
@@ -29,12 +30,22 @@
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
-#include <utils/Panic.h>
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
 #include <utils/EntityManager.h>
+#include <utils/Panic.h>
 #include <utils/Systrace.h>
 
-#include <math/mat3.h>
-#include <math/vec3.h>
+#include <math/scalar.h>
+#include <math/vec4.h>
+
+#include <algorithm>
+#include <cmath>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #include "generated/resources/iblprefilter_materials.h"
 
@@ -167,11 +178,17 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) n
 // ------------------------------------------------------------------------------------------------
 
 IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
-        IBLPrefilterContext& context) : mContext(context) {
+        IBLPrefilterContext& context,
+        IBLPrefilterContext::EquirectangularToCubemap::Config const& config)
+        : mContext(context), mConfig(config) {
     Engine& engine = mContext.mEngine;
     mEquirectMaterial = Material::Builder().package(
             IBLPREFILTER_MATERIALS_EQUIRECTTOCUBE_DATA,
             IBLPREFILTER_MATERIALS_EQUIRECTTOCUBE_SIZE).build(engine);
+}
+
+IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
+        IBLPrefilterContext& context) : EquirectangularToCubemap(context, {}) {
 }
 
 IBLPrefilterContext::EquirectangularToCubemap::~EquirectangularToCubemap() noexcept {
@@ -256,6 +273,8 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     builder.texture(RenderTarget::AttachmentPoint::COLOR0, outCube)
            .texture(RenderTarget::AttachmentPoint::COLOR1, outCube)
            .texture(RenderTarget::AttachmentPoint::COLOR2, outCube);
+
+    mi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
 
     for (size_t i = 0; i < 2; i++) {
         mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
