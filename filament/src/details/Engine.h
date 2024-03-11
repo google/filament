@@ -340,6 +340,8 @@ public:
 
     void destroy(utils::Entity e);
 
+    void setPaused(bool paused);
+
     void flushAndWait();
 
     // flush the current buffer

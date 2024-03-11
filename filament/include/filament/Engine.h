@@ -402,6 +402,13 @@ public:
          */
         Builder& featureLevel(FeatureLevel featureLevel) noexcept;
 
+        /**
+         * @param paused Whether to start the rendering thread paused.
+         * @return A reference to this Builder for chaining calls.
+         * @warning Experimental.
+         */
+        Builder& paused(bool paused) noexcept;
+
 #if UTILS_HAS_THREADING
         /**
          * Creates the filament Engine asynchronously.
@@ -826,6 +833,12 @@ public:
      * queue which has a limited size.</p>
       */
     void flush();
+
+    /**
+     * Pause or resume rendering thread.
+     * @warning Experimental.
+     */
+    void setPaused(bool paused);
 
     /**
      * Drains the user callback message queue and immediately execute all pending callbacks.

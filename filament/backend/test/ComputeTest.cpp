@@ -46,7 +46,8 @@ void ComputeTest::init(Backend backend) {
 }
 
 ComputeTest::ComputeTest()
-        : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE) {
+    : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE,
+            /*paused=*/false) {
 }
 
 ComputeTest::~ComputeTest() = default;

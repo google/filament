@@ -295,6 +295,11 @@ utils::JobSystem& Engine::getJobSystem() noexcept {
     return downcast(this)->getJobSystem();
 }
 
+void Engine::setPaused(bool paused) {
+    ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
+    downcast(this)->setPaused(paused);
+}
+
 DebugRegistry& Engine::getDebugRegistry() noexcept {
     return downcast(this)->getDebugRegistry();
 }

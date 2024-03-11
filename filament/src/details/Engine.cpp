@@ -69,6 +69,7 @@ struct Engine::BuilderDetails {
     Engine::Config mConfig;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
+    bool mPaused = false;
     static Config validateConfig(const Config* pConfig) noexcept;
 };
 
@@ -200,7 +201,8 @@ FEngine::FEngine(Engine::Builder const& builder) :
         mCameraManager(*this),
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
-                builder->mConfig.commandBufferSizeMB * MiB),
+                builder->mConfig.commandBufferSizeMB * MiB,
+                builder->mPaused),
         mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
@@ -1194,6 +1196,10 @@ void FEngine::destroy(FEngine* engine) {
     }
 }
 
+void FEngine::setPaused(bool paused) {
+    mCommandBufferQueue.setPaused(paused);
+}
+
 Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
     FEngine::DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
     return driver.getFeatureLevel();
@@ -1244,6 +1250,11 @@ Engine::Builder& Engine::Builder::featureLevel(FeatureLevel featureLevel) noexce
 
 Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
     mImpl->mSharedContext = sharedContext;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::paused(bool paused) noexcept {
+    mImpl->mPaused = paused;
     return *this;
 }
 

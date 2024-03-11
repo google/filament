@@ -51,7 +51,7 @@ void BackendTest::init(Backend backend, bool isMobilePlatform) {
 }
 
 BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
-            CONFIG_COMMAND_BUFFERS_SIZE) {
+        CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
     initializeDriver();
 }
 
