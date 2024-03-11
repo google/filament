@@ -50,12 +50,13 @@ class CommandBufferQueue {
     size_t mFreeSpace = 0;
     size_t mHighWatermark = 0;
     uint32_t mExitRequested = 0;
+    bool mPaused = false;
 
     static constexpr uint32_t EXIT_REQUESTED = 0x31415926;
 
 public:
     // requiredSize: guaranteed available space after flush()
-    CommandBufferQueue(size_t requiredSize, size_t bufferSize);
+    CommandBufferQueue(size_t requiredSize, size_t bufferSize, bool paused);
     ~CommandBufferQueue();
 
     CircularBuffer& getCircularBuffer() noexcept { return mCircularBuffer; }
@@ -79,6 +80,9 @@ public:
 
     // returns from waitForCommands() immediately.
     void requestExit();
+
+    // suspend or unsuspend the queue.
+    void setPaused(bool paused);
 
     bool isExitRequested() const;
 };

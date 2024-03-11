@@ -39,10 +39,11 @@ using namespace utils;
 
 namespace filament::backend {
 
-CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize)
+CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize, bool paused)
         : mRequiredSize((requiredSize + (CircularBuffer::getBlockSize() - 1u)) & ~(CircularBuffer::getBlockSize() -1u)),
           mCircularBuffer(bufferSize),
-          mFreeSpace(mCircularBuffer.size()) {
+          mFreeSpace(mCircularBuffer.size()),
+          mPaused(paused) {
     assert_invariant(mCircularBuffer.size() > requiredSize);
 }
 
@@ -54,6 +55,15 @@ void CommandBufferQueue::requestExit() {
     std::lock_guard<utils::Mutex> const lock(mLock);
     mExitRequested = EXIT_REQUESTED;
     mCondition.notify_one();
+}
+
+void CommandBufferQueue::setPaused(bool paused) {
+    if (paused) {
+        mPaused = true;
+    } else {
+        mPaused = false;
+        mCondition.notify_one();
+    }
 }
 
 bool CommandBufferQueue::isExitRequested() const {
@@ -127,7 +137,7 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
         return std::move(mCommandBuffersToExecute);
     }
     std::unique_lock<utils::Mutex> lock(mLock);
-    while (mCommandBuffersToExecute.empty() && !mExitRequested) {
+    while ((mCommandBuffersToExecute.empty() || mPaused) && !mExitRequested) {
         mCondition.wait(lock);
     }
 

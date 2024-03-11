@@ -241,6 +241,18 @@ public class Engine {
         }
 
         /**
+         * Sets the initial paused state of the rendering thread.
+         *
+         * @param paused Whether to start the rendering thread paused.
+         * @return A reference to this Builder for chaining calls.
+         * @warning Experimental.
+         */
+        public Builder paused(boolean paused) {
+            nSetBuilderPaused(mNativeBuilder, paused);
+            return this;
+        }
+
+        /**
          * Creates an instance of Engine
          *
          * @return A newly created <code>Engine</code>, or <code>null</code> if the GPU driver couldn't
@@ -1195,6 +1207,13 @@ public class Engine {
         nFlush(getNativeObject());
     }
 
+    /**
+     * Pause or resume the rendering thread.
+     * @warning Experimental.
+     */
+    public void setPaused(boolean paused) {
+        nSetPaused(getNativeObject(), paused);
+    }
 
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
@@ -1269,6 +1288,7 @@ public class Engine {
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
     private static native void nFlush(long nativeEngine);
+    private static native void nSetPaused(long nativeEngine, boolean paused);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);
@@ -1293,5 +1313,6 @@ public class Engine {
             boolean disableHandleUseAfterFreeCheck);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
+    private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
     private static native long nBuilderBuild(long nativeBuilder);
 }
