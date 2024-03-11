@@ -796,6 +796,20 @@ static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
     return true;
 }
 
+static bool processStereoscopicType(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::StereoscopicType> strToEnum{
+            { "instanced", MaterialBuilder::StereoscopicType::INSTANCED },
+            { "multiview",  MaterialBuilder::StereoscopicType::MULTIVIEW },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("stereoscopicType", *jsonString, strToEnum);
+    }
+
+    builder.stereoscopicType(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
 static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
@@ -1214,6 +1228,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };
     mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
     mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
+    mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
@@ -1236,9 +1251,45 @@ bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject&
         auto fPointer = mParameters[key].callback;
         bool ok = fPointer(builder, *field);
         if (!ok) {
-            std::cerr << "Error while processing material key:\"" << key << "\"" << std::endl;
+            std::cerr << "Error while processing material json, key:\"" << key << "\"" << std::endl;
             return false;
         }
+    }
+    return true;
+}
+
+bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value) {
+    if (mParameters.find(key) == mParameters.end()) {
+        std::cerr << "Ignoring config entry (unknown key): \"" << key << "\"" << std::endl;
+        return false;
+    }
+
+    std::unique_ptr<JsonishValue> var;
+    switch (mParameters.at(key).rootAssert) {
+        case JsonishValue::Type::BOOL: {
+            std::string lower;
+            std::transform(value.begin(), value.end(), std::back_inserter(lower), ::tolower);
+            if (lower.empty() || lower == "false" || lower == "f" || lower == "0") {
+                var = std::make_unique<JsonishBool>(false);
+            }
+            else {
+                var = std::make_unique<JsonishBool>(true);
+            }
+            break;
+        }
+        case JsonishValue::Type::NUMBER:
+            var = std::make_unique<JsonishNumber>(std::stof(value));
+            break;
+        case JsonishValue::Type::STRING:
+            var = std::make_unique<JsonishString>(value);
+            break;
+    }
+
+    auto fPointer = mParameters[key].callback;
+    bool ok = fPointer(builder, *var);
+    if (!ok) {
+        std::cerr << "Error while processing material param, key:\"" << key << "\"" << std::endl;
+        return false;
     }
     return true;
 }

@@ -157,8 +157,6 @@ public:
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
     void bindUniformBufferObject(uint32_t bindingIndex, VulkanBufferObject* bufferObject,
             VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
-    void bindUniformBuffer(uint32_t bindingIndex, VkBuffer buffer,
-            VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE) noexcept;
     void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT],
             VulkanTexture* textures[SAMPLER_BINDING_COUNT], UsageFlags flags) noexcept;
     void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;

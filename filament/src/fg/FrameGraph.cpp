@@ -16,16 +16,30 @@
 
 #include "fg/FrameGraph.h"
 #include "fg/details/PassNode.h"
+#include "fg/details/Resource.h"
 #include "fg/details/ResourceNode.h"
 #include "fg/details/DependencyGraph.h"
+
+#include "FrameGraphId.h"
+#include "FrameGraphPass.h"
+#include "FrameGraphRenderPass.h"
+#include "FrameGraphTexture.h"
 
 #include "details/Engine.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
+
+#include <algorithm>
+#include <functional>
+
+#include <stdint.h>
 
 namespace filament {
 
@@ -59,9 +73,10 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator)
+FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator, Mode mode)
         : mResourceAllocator(resourceAllocator),
           mArena("FrameGraph Arena", 262144),
+          mMode(mode),
           mResourceSlots(mArena),
           mResources(mArena),
           mResourceNodes(mArena),
@@ -181,6 +196,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
     SYSTRACE_CALL();
 
+    bool const useProtectedMemory = mMode == Mode::PROTECTED;
     auto const& passNodes = mPassNodes;
     auto& resourceAllocator = mResourceAllocator;
 
@@ -200,7 +216,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
         // devirtualize resourcesList
         for (VirtualResource* resource : node->devirtualize) {
             assert_invariant(resource->first == node);
-            resource->devirtualize(resourceAllocator);
+            resource->devirtualize(resourceAllocator, useProtectedMemory);
         }
 
         // call execute

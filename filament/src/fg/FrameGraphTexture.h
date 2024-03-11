@@ -34,7 +34,8 @@ namespace filament {
  *      struct SubResourceDescriptor;
  *      a Usage bitmask
  * And declares and define:
- *      void create(ResourceAllocatorInterface&, const char* name, Descriptor const&, Usage) noexcept;
+ *      void create(ResourceAllocatorInterface&, const char* name, Descriptor const&, Usage,
+ *              bool useProtectedMemory) noexcept;
  *      void destroy(ResourceAllocatorInterface&) noexcept;
  */
 struct FrameGraphTexture {
@@ -78,7 +79,7 @@ struct FrameGraphTexture {
      * @param descriptor Descriptor to the resource
      */
     void create(ResourceAllocatorInterface& resourceAllocator, const char* name,
-            Descriptor const& descriptor, Usage usage) noexcept;
+            Descriptor const& descriptor, Usage usage, bool useProtectedMemory) noexcept;
 
     /**
      * Destroy the concrete resource

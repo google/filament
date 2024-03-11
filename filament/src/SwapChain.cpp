@@ -18,6 +18,10 @@
 
 #include "details/Engine.h"
 
+#include <backend/CallbackHandler.h>
+
+#include <utility>
+
 namespace filament {
 
 void* SwapChain::getNativeWindow() const noexcept {
@@ -25,7 +29,11 @@ void* SwapChain::getNativeWindow() const noexcept {
 }
 
 void SwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
-    return downcast(this)->setFrameScheduledCallback(callback, user);
+    downcast(this)->setFrameScheduledCallback(callback, user);
+}
+
+SwapChain::FrameScheduledCallback SwapChain::getFrameScheduledCallback() const noexcept {
+    return downcast(this)->getFrameScheduledCallback();
 }
 
 void SwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
@@ -35,6 +43,10 @@ void SwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
 
 bool SwapChain::isSRGBSwapChainSupported(Engine& engine) noexcept {
     return FSwapChain::isSRGBSwapChainSupported(downcast(engine));
+}
+
+bool SwapChain::isProtectedContentSupported(Engine& engine) noexcept {
+    return FSwapChain::isProtectedContentSupported(downcast(engine));
 }
 
 } // namespace filament

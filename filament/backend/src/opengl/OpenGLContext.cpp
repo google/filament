@@ -18,6 +18,7 @@
 
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <functional>
 #include <utility>
 
 // change to true to display all GL extensions in the console on start-up
@@ -48,7 +49,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 #endif
 }
 
-OpenGLContext::OpenGLContext() noexcept {
+OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept {
 
     state.vao.p = &mDefaultVAO;
 
@@ -231,6 +232,46 @@ OpenGLContext::OpenGLContext() noexcept {
         glDebugMessageCallback(cb, nullptr);
     }
 #endif
+
+    mTimerQueryFactory = TimerQueryFactory::init(platform, *this);
+}
+
+OpenGLContext::~OpenGLContext() noexcept {
+    delete mTimerQueryFactory;
+}
+
+void OpenGLContext::destroyWithContext(
+        size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept {
+    if (index == 0) {
+        // Note: we only need to delay the destruction of objects on the unprotected context
+        // (index 0) because the protected context is always immediately destroyed and all its
+        // active objects and bindings are then automatically destroyed.
+        // TODO: this is only guaranteed for EGLPlatform, but that's the only one we care about.
+        mDestroyWithNormalContext.push_back(closure);
+    }
+}
+
+void OpenGLContext::unbindEverything() noexcept {
+    // TODO:  we're supposed to unbind everything here so that resources don't get
+    //        stuck in this context (contextIndex) when destroyed in the other context.
+    //        However, because EGLPlatform always immediately destroys the protected context (1),
+    //        the bindings will automatically be severed when we switch back to the default context.
+    //        Since bindings now only exist in one context, we don't have a ref-counting issue to
+    //        worry about.
+}
+
+void OpenGLContext::synchronizeStateAndCache(size_t index) noexcept {
+
+    // if we're just switching back to context 0, run all the pending destructors
+    if (index == 0) {
+        auto list = std::move(mDestroyWithNormalContext);
+        for (auto&& fn: list) {
+            fn(*this);
+        }
+    }
+
+    contextIndex = index;
+    resetState();
 }
 
 void OpenGLContext::setDefaultState() noexcept {
@@ -599,6 +640,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
     ext->EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
     ext->EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
+    ext->EXT_protected_textures = exts.has("GL_EXT_protected_textures"sv);
 #endif
     ext->EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
 #ifndef __EMSCRIPTEN__
@@ -819,19 +861,22 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
 #endif
 }
 
-void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept {
-    procs.deleteVertexArrays(n, arrays);
-    // if one of the destroyed VAO is bound, clear the binding.
-    for (GLsizei i = 0; i < n; ++i) {
-        if (state.vao.p->vao == arrays[i]) {
+void OpenGLContext::deleteVertexArray(GLuint vao) noexcept {
+    if (UTILS_LIKELY(vao)) {
+        procs.deleteVertexArrays(1, &vao);
+        // if the destroyed VAO is bound, clear the binding.
+        if (state.vao.p->vao[contextIndex] == vao) {
             bindVertexArray(nullptr);
-            break;
         }
     }
 }
 
 void OpenGLContext::resetState() noexcept {
     // Force GL state to match the Filament state
+
+    // increase the state version so other parts of the state know to reset
+    state.age++;
+
     if (state.major > 2) {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.draw_fbo);
@@ -848,11 +893,8 @@ void OpenGLContext::resetState() noexcept {
     glUseProgram(state.program.use);
 
     // state.vao
-    if (state.vao.p) {
-        procs.bindVertexArray(state.vao.p->vao);
-    } else {
-        bindVertexArray(nullptr);
-    }
+    state.vao.p = nullptr;
+    bindVertexArray(nullptr);
 
     // state.raster
     glFrontFace(state.raster.frontFace);
@@ -1008,7 +1050,22 @@ void OpenGLContext::resetState() noexcept {
         state.window.viewport.w
     );
     glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
-    
+}
+
+void OpenGLContext::createTimerQuery(GLTimerQuery* query) {
+    mTimerQueryFactory->createTimerQuery(query);
+}
+
+void OpenGLContext::destroyTimerQuery(GLTimerQuery* query) {
+    mTimerQueryFactory->destroyTimerQuery(query);
+}
+
+void OpenGLContext::beginTimeElapsedQuery(GLTimerQuery* query) {
+    mTimerQueryFactory->beginTimeElapsedQuery(query);
+}
+
+void OpenGLContext::endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) {
+    mTimerQueryFactory->endTimeElapsedQuery(driver, query);
 }
 
 } // namesapce filament

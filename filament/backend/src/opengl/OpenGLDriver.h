@@ -20,6 +20,7 @@
 #include "DriverBase.h"
 #include "GLUtils.h"
 #include "OpenGLContext.h"
+#include "OpenGLTimerQuery.h"
 #include "ShaderCompilerService.h"
 
 #include "private/backend/Driver.h"
@@ -38,7 +39,11 @@
 
 #include <tsl/robin_map.h>
 
+#include <atomic>
+#include <memory>
 #include <set>
+
+#include <stdint.h>
 
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
 #    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 4
@@ -51,7 +56,7 @@ class PixelBufferDescriptor;
 struct TargetBufferInfo;
 
 class OpenGLProgram;
-class OpenGLTimerQueryInterface;
+class TimerQueryFactoryInterface;
 
 class OpenGLDriver final : public DriverBase {
     inline explicit OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept;
@@ -161,15 +166,7 @@ public:
         OpenGLPlatform::ExternalTexture* externalTexture = nullptr;
     };
 
-    struct GLTimerQuery : public HwTimerQuery {
-        struct State {
-            struct {
-                GLuint query;
-            } gl;
-            std::atomic<int64_t> elapsed{};
-        };
-        std::shared_ptr<State> state;
-    };
+    using GLTimerQuery = filament::backend::GLTimerQuery;
 
     struct GLStream : public HwStream {
         using HwStream::HwStream;
@@ -223,8 +220,8 @@ private:
     OpenGLContext mContext;
     ShaderCompilerService mShaderCompilerService;
 
-    friend class OpenGLTimerQueryFactory;
-    friend class TimerQueryNative;
+    friend class TimerQueryFactory;
+    friend class TimerQueryNativeFactory;
     OpenGLContext& getContext() noexcept { return mContext; }
 
     ShaderCompilerService& getShaderCompilerService() noexcept {
@@ -325,8 +322,8 @@ private:
     void renderBufferStorage(GLuint rbo, GLenum internalformat, uint32_t width,
             uint32_t height, uint8_t samples) const noexcept;
 
-    void textureStorage(GLTexture* t,
-            uint32_t width, uint32_t height, uint32_t depth) noexcept;
+    void textureStorage(OpenGLDriver::GLTexture* t, uint32_t width, uint32_t height,
+            uint32_t depth, bool useProtectedMemory) noexcept;
 
     /* State tracking GL wrappers... */
 
@@ -410,9 +407,6 @@ private:
     void runEveryNowAndThen(std::function<bool()> fn) noexcept;
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
-
-    // timer query implementation
-    OpenGLTimerQueryInterface* mTimerQueryImpl = nullptr;
 
     const Platform::DriverConfig mDriverConfig;
     Platform::DriverConfig const& getDriverConfig() const noexcept { return mDriverConfig; }

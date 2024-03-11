@@ -22,7 +22,9 @@
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace filament::backend {
@@ -63,6 +65,22 @@ public:
     virtual void terminate() noexcept = 0;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
+     * The default implementation returns false.
+     *
+     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
+     */
+    virtual bool isSRGBSwapChainSupported() const noexcept;
+
+    /**
+     * Return whether protected contexts are supported by this backend.
+     * If protected context are supported, the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag can be
+     * used when creating a SwapChain.
+     * The default implementation returns false.
+     */
+    virtual bool isProtectedContextSupported() const noexcept;
+
+    /**
      * Called by the driver to create a SwapChain for this driver.
      *
      * @param nativeWindow  a token representing the native window. See concrete implementation
@@ -73,14 +91,6 @@ public:
      */
     virtual SwapChain* UTILS_NONNULL createSwapChain(
             void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
-
-    /**
-     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
-     * The default implementation returns false.
-     *
-     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
-     */
-    virtual bool isSRGBSwapChainSupported() const noexcept;
 
     /**
      * Called by the driver create a headless SwapChain.
@@ -130,6 +140,26 @@ public:
     virtual void makeCurrent(
             SwapChain* UTILS_NONNULL drawSwapChain,
             SwapChain* UTILS_NONNULL readSwapChain) noexcept = 0;
+
+    /**
+     * Called by the driver to make the OpenGL context active on the calling thread and bind
+     * the drawSwapChain to the default render target (FBO) created with createDefaultRenderTarget.
+     * The context used is either the default context or the protected context. When a context
+     * change is necessary, the preContextChange and postContextChange callbacks are called,
+     * before and after the context change respectively. postContextChange is given the index
+     * of the new context (0 for default and 1 for protected).
+     * The default implementation just calls makeCurrent(SwapChain*, SwapChain*).
+     *
+     * @param drawSwapChain SwapChain to draw to. It must be bound to the default FBO.
+     * @param readSwapChain SwapChain to read from (for operation like `glBlitFramebuffer`)
+     * @param preContextChange called before the context changes
+     * @param postContextChange called after the context changes
+     */
+    virtual void makeCurrent(
+            SwapChain* UTILS_NONNULL drawSwapChain,
+            SwapChain* UTILS_NONNULL readSwapChain,
+            utils::Invocable<void()> preContextChange,
+            utils::Invocable<void(size_t index)> postContextChange) noexcept;
 
     /**
      * Called by the driver once the current frame finishes drawing. Typically, this should present

@@ -23,7 +23,7 @@ void main() {
     logical_instance_index = instance_index;
 #endif
 
-#if defined(VARIANT_HAS_STEREO)
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
 #if !defined(FILAMENT_HAS_FEATURE_INSTANCING)
 #error Instanced stereo not supported at this feature level
 #endif
@@ -215,7 +215,7 @@ void main() {
     // this must happen before we compensate for vulkan below
     vertex_position = position;
 
-#if defined(VARIANT_HAS_STEREO)
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
     // We're transforming a vertex whose x coordinate is within the range (-w to w).
     // To move it to the correct portion of the viewport, we need to modify the x coordinate.
     // It's important to do this after computing vertex_position.
@@ -253,7 +253,7 @@ void main() {
     // some PowerVR drivers crash when gl_Position is written more than once
     gl_Position = position;
 
-#if defined(VARIANT_HAS_STEREO)
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
     // Fragment shaders filter out the stereo variant, so we need to set instance_index here.
     instance_index = logical_instance_index;
 #endif

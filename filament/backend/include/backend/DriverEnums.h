@@ -81,7 +81,14 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_SRGB_COLORSPACE     = 0x10;
 /**
  * Indicates that the SwapChain should also contain a stencil component.
  */
-static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = 0x20;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER  = 0x20;
+static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER;
+
+/**
+ * The SwapChain contains protected content. Currently only supported by OpenGLPlatform and
+ * only when OpenGLPlatform::isProtectedContextSupported() is true.
+ */
+static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
 
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
@@ -127,6 +134,12 @@ enum class Backend : uint8_t {
     VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it (default on Linux/Windows)
     METAL = 3,    //!< Selects the Metal driver if the platform supports it (default on MacOS/iOS).
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
+};
+
+enum class TimerQueryResult : int8_t {
+    ERROR = -1,     // an error occurred, result won't be available
+    NOT_READY = 0,  // result to ready yet
+    AVAILABLE = 1,  // result is available
 };
 
 static constexpr const char* backendToString(Backend backend) {
@@ -659,16 +672,17 @@ enum class TextureFormat : uint16_t {
 };
 
 //! Bitmask describing the intended Texture Usage
-enum class TextureUsage : uint8_t {
-    NONE                = 0x00,
-    COLOR_ATTACHMENT    = 0x01,                     //!< Texture can be used as a color attachment
-    DEPTH_ATTACHMENT    = 0x02,                     //!< Texture can be used as a depth attachment
-    STENCIL_ATTACHMENT  = 0x04,                     //!< Texture can be used as a stencil attachment
-    UPLOADABLE          = 0x08,                     //!< Data can be uploaded into this texture (default)
-    SAMPLEABLE          = 0x10,                     //!< Texture can be sampled (default)
-    SUBPASS_INPUT       = 0x20,                     //!< Texture can be used as a subpass input
-    BLIT_SRC            = 0x40,                     //!< Texture can be used the source of a blit()
-    BLIT_DST            = 0x80,                     //!< Texture can be used the destination of a blit()
+enum class TextureUsage : uint16_t {
+    NONE                = 0x0000,
+    COLOR_ATTACHMENT    = 0x0001,            //!< Texture can be used as a color attachment
+    DEPTH_ATTACHMENT    = 0x0002,            //!< Texture can be used as a depth attachment
+    STENCIL_ATTACHMENT  = 0x0004,            //!< Texture can be used as a stencil attachment
+    UPLOADABLE          = 0x0008,            //!< Data can be uploaded into this texture (default)
+    SAMPLEABLE          = 0x0010,            //!< Texture can be sampled (default)
+    SUBPASS_INPUT       = 0x0020,            //!< Texture can be used as a subpass input
+    BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
+    BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
+    PROTECTED           = 0x0100,            //!< Texture can be used the destination of a blit()
     DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
 

@@ -25,6 +25,8 @@
 #include <EGL/eglext.h>
 #include <EGL/eglplatform.h>
 
+#include <utils/Invocable.h>
+
 #include <initializer_list>
 #include <utility>
 #include <vector>
@@ -41,15 +43,11 @@ class PlatformEGL : public OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
-    bool isExtraContextSupported() const noexcept override;
-    void createContext(bool shared) override;
-    void releaseContext() noexcept override;
 
     // Return true if we're on an OpenGL platform (as opposed to OpenGL ES). false by default.
     virtual bool isOpenGL() const noexcept;
 
 protected:
-
     // --------------------------------------------------------------------------------------------
     // Helper for EGL configs and attributes parameters
 
@@ -89,13 +87,23 @@ protected:
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
+    bool isExtraContextSupported() const noexcept override;
+    void createContext(bool shared) override;
+    void releaseContext() noexcept override;
+
     void terminate() noexcept override;
+
+    bool isProtectedContextSupported() const noexcept override;
 
     bool isSRGBSwapChainSupported() const noexcept override;
     SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
     SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
+
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
+    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
+            utils::Invocable<void()> preContextChange,
+            utils::Invocable<void(size_t index)> postContextChange) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
 
     bool canCreateFence() noexcept override;
@@ -122,15 +130,22 @@ protected:
     static void clearGlError() noexcept;
 
     /**
-     * Always use this instead of eglMakeCurrent().
+     * Always use this instead of eglMakeCurrent(), as it tracks some state.
      */
     EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
+
+    /**
+     * Returns true if the swapchain is protected
+     */
+    static bool isSwapChainProtected(Platform::SwapChain const* swapChain) noexcept;
 
     // TODO: this should probably use getters instead.
     EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
     EGLContext mEGLContext = EGL_NO_CONTEXT;
+    EGLContext mEGLContextProtected = EGL_NO_CONTEXT;
     EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
     EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
+    EGLContext mCurrentContext = EGL_NO_CONTEXT;
     EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
     // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
@@ -148,6 +163,7 @@ protected:
             bool KHR_gl_colorspace = false;
             bool KHR_no_config_context = false;
             bool KHR_surfaceless_context = false;
+            bool EXT_protected_content = false;
         } egl;
     } ext;
 
@@ -156,12 +172,17 @@ protected:
         Config attribs{};
         EGLNativeWindowType nativeWindow{};
         EGLConfig config{};
+        uint64_t flags{};
     };
 
     void initializeGlExtensions() noexcept;
 
 protected:
     EGLConfig findSwapChainConfig(uint64_t flags, bool window, bool pbuffer) const;
+
+private:
+    EGLBoolean makeCurrent(EGLContext context,
+            EGLSurface drawSurface, EGLSurface readSurface) noexcept;
 };
 
 } // namespace filament::backend

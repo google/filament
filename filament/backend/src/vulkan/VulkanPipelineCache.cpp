@@ -628,12 +628,8 @@ void VulkanPipelineCache::unbindImageView(VkImageView imageView) noexcept {
 
 void VulkanPipelineCache::bindUniformBufferObject(uint32_t bindingIndex,
         VulkanBufferObject* bufferObject, VkDeviceSize offset, VkDeviceSize size) noexcept {
-    bindUniformBuffer(bindingIndex, bufferObject->buffer.getGpuBuffer(), offset, size);
-    mPipelineBoundResources.acquire(bufferObject);
-}
+    VkBuffer buffer = bufferObject->buffer.getGpuBuffer();
 
-void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer buffer,
-        VkDeviceSize offset, VkDeviceSize size) noexcept {
     ASSERT_POSTCONDITION(bindingIndex < UBUFFER_BINDING_COUNT,
             "Uniform bindings overflow: index = %d, capacity = %d.", bindingIndex,
             UBUFFER_BINDING_COUNT);
@@ -649,6 +645,8 @@ void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer buff
 
     key.uniformBufferOffsets[bindingIndex] = offset;
     key.uniformBufferSizes[bindingIndex] = size;
+
+    mPipelineBoundResources.acquire(bufferObject);
 }
 
 void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT],
