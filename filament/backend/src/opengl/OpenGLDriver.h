@@ -357,8 +357,8 @@ private:
     }
 
     using AttachmentArray = std::array<GLenum, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2>;
-    static GLsizei getAttachments(AttachmentArray& attachments,
-            GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept;
+    static GLsizei getAttachments(AttachmentArray& attachments, TargetBufferFlags buffers,
+            bool isDefaultFramebuffer) noexcept;
 
     // state required to represent the current render pass
     Handle<HwRenderTarget> mRenderPassTarget;

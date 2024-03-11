@@ -127,7 +127,14 @@ public:
 
     /**
      * Called by the driver to establish the default FBO. The default implementation returns 0.
-      * @return a GLuint casted to a uint32_t that is an OpenGL framebuffer object.
+     *
+     * This method can be called either on the regular or protected OpenGL contexts and can return
+     * a different name.
+     *
+     * Despite its misleading name, this method doesn't create a new handle each time it is called,
+     * as there can only be a single default FBO per context.
+     *
+     * @return a GLuint casted to a uint32_t that is an OpenGL framebuffer object.
      */
     virtual uint32_t createDefaultRenderTarget() noexcept;
 
