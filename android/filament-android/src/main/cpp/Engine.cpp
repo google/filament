@@ -391,6 +391,13 @@ Java_com_google_android_filament_Engine_nFlush(JNIEnv*, jclass,
     engine->flush();
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nSetPaused(JNIEnv*, jclass,
+        jlong nativeEngine, jboolean paused) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->setPaused(paused);
+}
+
 // Managers...
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -516,6 +523,12 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         JNIEnv*, jclass, jlong nativeBuilder, jlong sharedContext) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     builder->sharedContext((void*) sharedContext);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderPaused(
+        JNIEnv*, jclass, jlong nativeBuilder, jboolean paused) {
+    Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
+    builder->paused((bool) paused);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
