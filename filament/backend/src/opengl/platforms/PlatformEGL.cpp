@@ -487,6 +487,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     }
 
     if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
+        // error already logged
         return nullptr;
     }
 
@@ -512,7 +513,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
             (EGLNativeWindowType)nativeWindow, attribs.data());
 
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
-        logEglError("eglCreateWindowSurface");
+        logEglError("PlatformEGL::createSwapChain: eglCreateWindowSurface");
         return nullptr;
     }
 
@@ -540,6 +541,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     }
 
     if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
+        // error already logged
         return nullptr;
     }
 
@@ -567,7 +569,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs.data());
 
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
-        logEglError("eglCreatePbufferSurface");
+        logEglError("PlatformEGL::createSwapChain: eglCreatePbufferSurface");
         return nullptr;
     }
 
