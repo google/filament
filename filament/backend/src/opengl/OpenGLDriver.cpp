@@ -1418,6 +1418,9 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
+    ASSERT_POSTCONDITION(sc->swapChain,
+            "createSwapChain(%p, 0x%lx) failed. See logs for details.",
+            nativeWindow, flags);
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
@@ -1432,6 +1435,9 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+    ASSERT_POSTCONDITION(sc->swapChain,
+            "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
+            width, height, flags);
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
