@@ -239,6 +239,7 @@ DECL_DRIVER_API_R_N(backend::RenderTargetHandle, createRenderTarget,
         uint32_t, width,
         uint32_t, height,
         uint8_t, samples,
+        uint8_t, layerCount,
         backend::MRT, color,
         backend::TargetBufferInfo, depth,
         backend::TargetBufferInfo, stencil)

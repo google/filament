@@ -40,6 +40,7 @@ public:
             uint32_t width,
             uint32_t height,
             uint8_t samples,
+            uint8_t layerCount,
             backend::MRT color,
             backend::TargetBufferInfo depth,
             backend::TargetBufferInfo stencil) noexcept override {

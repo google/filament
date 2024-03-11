@@ -150,7 +150,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
     auto stencilTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT);
     auto renderTarget = getDriverApi().createRenderTarget(
-            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1,
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1, 0,
             {{colorTexture}}, {}, {{stencilTexture}});
 
     RunTest(renderTarget);
@@ -174,7 +174,7 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     auto depthStencilTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::DEPTH24_STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT);
     auto renderTarget = getDriverApi().createRenderTarget(
-            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1,
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1, 0,
             {{colorTexture}}, {depthStencilTexture}, {{depthStencilTexture}});
 
     RunTest(renderTarget);
@@ -202,10 +202,10 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     auto depthStencilTextureMSAA = api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::DEPTH24_STENCIL8, 4, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT);
     auto renderTarget0 = getDriverApi().createRenderTarget(
-            TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4,
+            TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4, 0,
             {{}}, {depthStencilTextureMSAA}, {depthStencilTextureMSAA});
     auto renderTarget1 = getDriverApi().createRenderTarget(
-            TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4,
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4, 0,
             {{colorTexture}}, {depthStencilTextureMSAA}, {depthStencilTextureMSAA});
 
     api.startCapture(0);

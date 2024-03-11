@@ -376,7 +376,7 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, MRT color,
+        uint8_t samples, uint8_t layerCount, MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "createRenderTarget must be called outside of a render pass.");

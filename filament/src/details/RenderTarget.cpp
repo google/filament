@@ -34,6 +34,7 @@ struct RenderTarget::BuilderDetails {
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
+    uint8_t mLayerCount = 0;// currently not settable in the public facing API
 };
 
 using BuilderType = RenderTarget;
@@ -160,7 +161,8 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createRenderTarget(mAttachmentMask,
-            builder.mImpl->mWidth, builder.mImpl->mHeight, builder.mImpl->mSamples, mrt, dinfo, {});
+            builder.mImpl->mWidth, builder.mImpl->mHeight, builder.mImpl->mSamples,
+            builder.mImpl->mLayerCount, mrt, dinfo, {});
 }
 
 void FRenderTarget::terminate(FEngine& engine) {

@@ -302,7 +302,7 @@ private:
     void updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb);
 
     void framebufferTexture(TargetBufferInfo const& binfo,
-            GLRenderTarget const* rt, GLenum attachment) noexcept;
+            GLRenderTarget const* rt, GLenum attachment, uint8_t layerCount) noexcept;
 
     void setRasterState(RasterState rs) noexcept;
 

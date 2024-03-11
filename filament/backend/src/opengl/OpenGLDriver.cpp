@@ -956,7 +956,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
 }
 
 void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
-        GLRenderTarget const* rt, GLenum attachment) noexcept {
+        GLRenderTarget const* rt, GLenum attachment, uint8_t layerCount) noexcept {
 
 #if !defined(NDEBUG)
     // Only used by assert_invariant() checks below
@@ -1094,9 +1094,15 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case GL_TEXTURE_2D_ARRAY:
             case GL_TEXTURE_CUBE_MAP_ARRAY:
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-                // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
-                glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
+                if (layerCount > 1) {
+                    // if layerCount > 1, it means we use the multiview extension.
+                    glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
+                        t->gl.id, 0, binfo.baseViewIndex, layerCount);
+                } else {
+                    // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
+                    glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
                         t->gl.id, binfo.level, binfo.layer);
+                }
 #endif
                 break;
             default:
@@ -1270,6 +1276,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         uint32_t width,
         uint32_t height,
         uint8_t samples,
+        uint8_t layerCount,
         MRT color,
         TargetBufferInfo depth,
         TargetBufferInfo stencil) {
@@ -1336,7 +1343,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             if (any(targets & getTargetBufferFlagsAt(i))) {
                 assert_invariant(color[i].handle);
                 rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
-                framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
+                framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i, layerCount);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
                 checkDimensions(rt->gl.color[i], color[i].level);
             }
@@ -1358,7 +1365,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         // either we supplied only the depth handle or both depth/stencil are identical and not null
         if (depth.handle && (stencil.handle == depth.handle || !stencil.handle)) {
             rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
-            framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT);
+            framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT, layerCount);
             specialCased = true;
             checkDimensions(rt->gl.depth, depth.level);
         }
@@ -1369,13 +1376,13 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         if (any(targets & TargetBufferFlags::DEPTH)) {
             assert_invariant(depth.handle);
             rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
-            framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
+            framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT, layerCount);
             checkDimensions(rt->gl.depth, depth.level);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
             assert_invariant(stencil.handle);
             rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
-            framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
+            framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT, layerCount);
             checkDimensions(rt->gl.stencil, stencil.level);
         }
     }

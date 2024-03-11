@@ -155,7 +155,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
         Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
-                TargetBufferFlags::COLOR, 32, 32, 1,
+                TargetBufferFlags::COLOR, 32, 32, 1, 0,
                 {texture, 2 /* level */, 0 /* layer */}, {}, {});
         {
             RenderPassParams params = {};
