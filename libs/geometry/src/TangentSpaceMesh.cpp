@@ -503,6 +503,14 @@ void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
     output->triangles16.borrow(triangles16);
 }
 
+void auxImpl(TangentSpaceMeshInput::AttributeMap& attributeData, AttributeImpl attribute,
+        InData data, size_t stride) noexcept {
+    attributeData[attribute] = {
+            data,
+            stride ? stride : TangentSpaceMeshInput::attributeSize(attribute),
+    };
+}
+
 } // anonymous namespace
 
 Builder::Builder() noexcept
@@ -527,27 +535,27 @@ Builder& Builder::vertexCount(size_t vertexCount) noexcept {
 }
 
 Builder& Builder::normals(float3 const* normals, size_t stride) noexcept {
-    mMesh->mInput->attributeData[AttributeImpl::NORMALS] = { normals, stride };
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::NORMALS, normals, stride);
     return *this;
 }
 
 Builder& Builder::uvs(float2 const* uvs, size_t stride) noexcept {
-    mMesh->mInput->attributeData[AttributeImpl::UV0] = { uvs, stride };
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::UV0, uvs, stride);
     return *this;
 }
 
 Builder& Builder::positions(float3 const* positions, size_t stride) noexcept {
-    mMesh->mInput->attributeData[AttributeImpl::POSITIONS] = { positions, stride };
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::POSITIONS, positions, stride);
     return *this;
 }
 
 Builder& Builder::tangents(float4 const* tangents, size_t stride) noexcept {
-    mMesh->mInput->attributeData[AttributeImpl::TANGENTS] = { tangents, stride };
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::TANGENTS, tangents, stride);
     return *this;
 }
 
 Builder& Builder::aux(AuxAttribute attribute, InData data, size_t stride) noexcept {
-    mMesh->mInput->attributeData[static_cast<AttributeImpl>(attribute)] = { data, stride };
+    auxImpl(mMesh->mInput->attributeData, static_cast<AttributeImpl>(attribute), data, stride);
     return *this;
 }
 
@@ -646,7 +654,6 @@ size_t TangentSpaceMesh::getVertexCount() const noexcept {
 
 void TangentSpaceMesh::getPositions(float3* positions, size_t stride) const {
     auto inPositions = mInput->positions();
-
     ASSERT_PRECONDITION(inPositions, "Must provide input positions");
     stride = stride ? stride : sizeof(decltype(*positions));
     auto const& outPositions = mOutput->positions();
