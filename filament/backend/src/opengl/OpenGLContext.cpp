@@ -49,7 +49,8 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 #endif
 }
 
-OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept {
+OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
+        : mPlatform(platform) {
 
     state.vao.p = &mDefaultVAO;
 
@@ -269,6 +270,9 @@ void OpenGLContext::synchronizeStateAndCache(size_t index) noexcept {
             fn(*this);
         }
     }
+
+    // the default FBO could be invalid
+    mDefaultFbo[index].reset();
 
     contextIndex = index;
     resetState();
@@ -750,6 +754,51 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
 }
 
 #endif // BACKEND_OPENGL_VERSION_GL
+
+
+GLuint OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
+    if (UTILS_UNLIKELY(buffer == 0)) {
+        // we're binding the default frame buffer, resolve it's actual name
+        auto& defaultFboForThisContext = mDefaultFbo[contextIndex];
+        if (UTILS_UNLIKELY(!defaultFboForThisContext.has_value())) {
+            defaultFboForThisContext = GLuint(mPlatform.createDefaultRenderTarget());
+        }
+        buffer = defaultFboForThisContext.value();
+    }
+    bindFramebufferResolved(target, buffer);
+    return buffer;
+}
+
+void OpenGLContext::unbindFramebuffer(GLenum target) noexcept {
+    bindFramebufferResolved(target, 0);
+}
+
+void OpenGLContext::bindFramebufferResolved(GLenum target, GLuint buffer) noexcept {
+    switch (target) {
+        case GL_FRAMEBUFFER:
+            if (state.draw_fbo != buffer || state.read_fbo != buffer) {
+                state.draw_fbo = state.read_fbo = buffer;
+                glBindFramebuffer(target, buffer);
+            }
+            break;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        case GL_DRAW_FRAMEBUFFER:
+            if (state.draw_fbo != buffer) {
+                state.draw_fbo = buffer;
+                glBindFramebuffer(target, buffer);
+            }
+            break;
+        case GL_READ_FRAMEBUFFER:
+            if (state.read_fbo != buffer) {
+                state.read_fbo = buffer;
+                glBindFramebuffer(target, buffer);
+            }
+            break;
+#endif
+        default:
+            break;
+    }
+}
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
     if (target == GL_ELEMENT_ARRAY_BUFFER) {
