@@ -23,6 +23,7 @@
 #include "FNodeManager.h"
 #include "FTrsTransformManager.h"
 #include "GltfEnums.h"
+#include "Utility.h"
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -52,7 +53,6 @@
 
 #include <tsl/robin_map.h>
 
-#define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
 #include "downcast.h"
@@ -84,21 +84,6 @@ static constexpr cgltf_material kDefaultMat = {
         .roughness_factor = 1.0,
     },
 };
-
-// Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
-// compute the correct size of the vertex buffer. Filament automatically infers the size of
-// driver-level vertex buffers from the attribute data (stride, count, offset) and clients are
-// expected to avoid uploading data blobs that exceed this size. Since this information doesn't
-// exist in the glTF we need to compute it manually. This is a bit of a cheat, cgltf_calc_size is
-// private but its implementation file is available in this cpp file.
-uint32_t computeBindingSize(const cgltf_accessor* accessor) {
-    cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
-    return uint32_t(accessor->stride * (accessor->count - 1) + element_size);
-}
-
-uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
-    return uint32_t(accessor->offset + accessor->buffer_view->offset);
-}
 
 static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName) {
     if (node->name) return node->name;
@@ -617,15 +602,15 @@ void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Ent
 
 void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         FFilamentAsset* fAsset) {
-    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+    cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
-    assert_invariant(srcAsset != nullptr);
+    assert_invariant(gltf != nullptr);
     assert_invariant(mesh != nullptr);
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive), otherwise allocate a new list of
     // pointers for the primitives.
-    FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
+    FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - gltf->meshes];
     if (prims.empty()) {
         prims.reserve(mesh->primitives_count);
         prims.resize(mesh->primitives_count);
@@ -791,6 +776,7 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* name,
         Primitive* outPrim, FFilamentAsset* fAsset) {
+
     Material* material = getMaterial(fAsset->mSourceAsset->hierarchy,
                 inPrim.material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
     AttributeBitset requiredAttributes = material->getRequiredAttributes();
@@ -849,7 +835,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
 
-    const size_t firstSlot = fAsset->mBufferSlots.size();
+    const size_t firstSlot = slots->size();
     int slot = 0;
 
     for (cgltf_size aindex = 0; aindex < inPrim.attributes_count; aindex++) {
@@ -891,6 +877,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             utils::slog.e << "Too many joints in " << name << utils::io::endl;
             continue;
         }
+
         if (atype == cgltf_attribute_type_texcoord) {
             if (index >= UvMapSize) {
                 utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
@@ -1065,8 +1052,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     fAsset->mPrimitives.push_back({&inPrim, vertices});
     fAsset->mVertexBuffers.push_back(vertices);
 
-    for (size_t i = firstSlot; i < fAsset->mBufferSlots.size(); ++i) {
-        fAsset->mBufferSlots[i].vertexBuffer = vertices;
+    for (size_t i = firstSlot; i < slots->size(); ++i) {
+        (*slots)[i].vertexBuffer = vertices;
     }
 
     if (targetsCount > 0) {
