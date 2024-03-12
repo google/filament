@@ -16,6 +16,16 @@
 
 package com.google.android.filament;
 
+// Note: SwapChainFlags is kept separate from SwapChain so that UiHelper does not need to depend
+// on SwapChain. This allows clients to use UiHelper without requiring all of Filament's Java
+// classes.
+
+/**
+ * Flags that a <code>SwapChain</code> can be created with to control behavior.
+ *
+ * @see Engine#createSwapChain
+ * @see Engine#createSwapChainFromNativeSurface
+ */
 public final class SwapChainFlags {
 
     public static final long CONFIG_DEFAULT = 0x0;
