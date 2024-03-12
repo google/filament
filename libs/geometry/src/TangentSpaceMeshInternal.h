@@ -150,8 +150,6 @@ private:
 using ArrayType = std::variant<InternalArray<float2>, InternalArray<float3>, InternalArray<float4>,
         InternalArray<ushort3>, InternalArray<ushort4>, InternalArray<quatf>>;
 
-using AttributeMap = std::unordered_map<AttributeImpl, AttributeDataStride>;
-
 ArrayType toArray(AttributeImpl attribute) {
     switch (attribute) {
         case AttributeImpl::UV1:
@@ -178,6 +176,8 @@ ArrayType toArray(AttributeImpl attribute) {
 } // namespace
 
 struct TangentSpaceMeshInput {
+    using AttributeMap = std::unordered_map<AttributeImpl, AttributeDataStride>;
+
     size_t vertexCount = 0;
     ushort3 const* triangles16 = nullptr;
     uint3 const* triangles32 = nullptr;
@@ -357,7 +357,7 @@ struct TangentSpaceMeshOutput {
         return std::get<InternalArray<DataType>>(attributeData[attrib]);
     }
 
-    void passthrough(AttributeMap const& inAttributeMap,
+    void passthrough(TangentSpaceMeshInput::AttributeMap const& inAttributeMap,
             std::vector<AttributeImpl> const& attributes) {
         auto const borrow = [&inAttributeMap, this](AttributeImpl attrib) {
             auto ref = inAttributeMap.find(attrib);
