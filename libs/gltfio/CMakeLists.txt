@@ -69,6 +69,13 @@ set(TRANSPARENCY default)
 
 set(UBERZ_OUTPUT_PATH "${RESOURCE_DIR}/default.uberz")
 
+set (MATC_FLAGS ${MATC_BASE_FLAGS})
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=instanced)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=multiview)
+endif ()
+
 function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
     set(DEST "${RESOURCE_DIR}/${NAME}")
     configure_file(materials/${SRC}.mat.in "${DEST}.mat" COPYONLY)
@@ -85,7 +92,7 @@ function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
 
     add_custom_command(
         OUTPUT "${NAME}.filamat"
-        COMMAND matc ${MATC_BASE_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
+        COMMAND matc ${MATC_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
         DEPENDS matc "${DEST}.mat"
         WORKING_DIRECTORY ${RESOURCE_DIR}
         COMMENT "Compiling material ${NAME}")
