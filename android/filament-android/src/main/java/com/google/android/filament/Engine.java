@@ -654,7 +654,7 @@ public class Engine {
      */
     @NonNull
     public SwapChain createSwapChain(@NonNull Object surface) {
-        return createSwapChain(surface, SwapChain.CONFIG_DEFAULT);
+        return createSwapChain(surface, SwapChainFlags.CONFIG_DEFAULT);
     }
 
     /**
@@ -662,15 +662,15 @@ public class Engine {
      *
      * @param surface on Android, <b>must be</b> an instance of {@link android.view.Surface}
      *
-     * @param flags configuration flags, see {@link SwapChain}
+     * @param flags configuration flags, see {@link SwapChainFlags}
      *
      * @return a newly created {@link SwapChain} object
      *
      * @exception IllegalStateException can be thrown if the SwapChain couldn't be created
      *
-     * @see SwapChain#CONFIG_DEFAULT
-     * @see SwapChain#CONFIG_TRANSPARENT
-     * @see SwapChain#CONFIG_READABLE
+     * @see SwapChainFlags#CONFIG_DEFAULT
+     * @see SwapChainFlags#CONFIG_TRANSPARENT
+     * @see SwapChainFlags#CONFIG_READABLE
      *
      */
     @NonNull
@@ -688,21 +688,22 @@ public class Engine {
      *
      * @param width  width of the rendering buffer
      * @param height height of the rendering buffer
-     * @param flags  configuration flags, see {@link SwapChain}
+     * @param flags  configuration flags, see {@link SwapChainFlags}
      *
      * @return a newly created {@link SwapChain} object
      *
      * @exception IllegalStateException can be thrown if the SwapChain couldn't be created
      *
-     * @see SwapChain#CONFIG_DEFAULT
-     * @see SwapChain#CONFIG_TRANSPARENT
-     * @see SwapChain#CONFIG_READABLE
+     * @see SwapChainFlags#CONFIG_DEFAULT
+     * @see SwapChainFlags#CONFIG_TRANSPARENT
+     * @see SwapChainFlags#CONFIG_READABLE
      *
      */
     @NonNull
     public SwapChain createSwapChain(int width, int height, long flags) {
         if (width >= 0 && height >= 0) {
-            long nativeSwapChain = nCreateSwapChainHeadless(getNativeObject(), width, height, flags);
+            long nativeSwapChain =
+                nCreateSwapChainHeadless(getNativeObject(), width, height, flags);
             if (nativeSwapChain == 0) throw new IllegalStateException("Couldn't create SwapChain");
             return new SwapChain(nativeSwapChain, null);
         }
@@ -714,11 +715,12 @@ public class Engine {
      *
      * @param surface a properly initialized {@link NativeSurface}
      *
-     * @param flags configuration flags, see {@link SwapChain}
+     * @param flags configuration flags, see {@link SwapChainFlags}
      *
      * @return a newly created {@link SwapChain} object
      *
-     * @exception IllegalStateException can be thrown if the {@link SwapChain} couldn't be created
+     * @exception IllegalStateException can be thrown if the {@link SwapChainFlags} couldn't be
+     *            created
      */
     @NonNull
     public SwapChain createSwapChainFromNativeSurface(@NonNull NativeSurface surface, long flags) {
