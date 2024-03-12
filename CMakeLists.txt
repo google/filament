@@ -531,6 +531,16 @@ else()
     option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" ON)
 endif()
 
+# This only affects the prebuilt shader files in gltfio and samples, not filament library.
+# The value can be either "instanced" or "multiview".
+set(FILAMENT_SAMPLES_STEREO_TYPE "instanced" CACHE STRING
+    "Stereoscopic type that shader files in gltfio and samples are built for."
+)
+string(TOLOWER "${FILAMENT_SAMPLES_STEREO_TYPE}" FILAMENT_SAMPLES_STEREO_TYPE)
+if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced" AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\" or \"multiview\" ")
+endif ()
+
 # ==================================================================================================
 # Material compilation flags
 # ==================================================================================================
