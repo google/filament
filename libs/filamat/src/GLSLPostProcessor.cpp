@@ -169,6 +169,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
     }
 
     mslOptions.argument_buffers = true;
+    mslOptions.ios_support_base_vertex_instance = true;
 
     // We're using argument buffers for texture resources, however, we cannot rely on spirv-cross to
     // generate the argument buffer definitions.
