@@ -300,7 +300,7 @@ public:
 
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
-         * Currently only honored by the GL backend.
+         * Currently only honored by the GL and Metal backends.
          */
         bool disableParallelShaderCompile = false;
 

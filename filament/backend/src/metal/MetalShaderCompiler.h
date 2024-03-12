@@ -41,6 +41,11 @@ class MetalShaderCompiler {
     struct MetalProgramToken;
 
 public:
+    enum class Mode {
+        SYNCHRONOUS,    // synchronous shader compilation
+        ASYNCHRONOUS    // asynchronous shader compilation
+    };
+
     class MetalFunctionBundle {
     public:
         using Raster = std::tuple<id<MTLFunction>, id<MTLFunction>>;
@@ -110,7 +115,7 @@ public:
 
     using program_token_t = std::shared_ptr<MetalProgramToken>;
 
-    explicit MetalShaderCompiler(id<MTLDevice> device, MetalDriver& driver);
+    explicit MetalShaderCompiler(id<MTLDevice> device, MetalDriver& driver, Mode mode);
 
     MetalShaderCompiler(MetalShaderCompiler const& rhs) = delete;
     MetalShaderCompiler(MetalShaderCompiler&& rhs) = delete;
@@ -120,14 +125,14 @@ public:
     void init() noexcept;
     void terminate() noexcept;
 
-    // Creates a program asynchronously
+    bool isParallelShaderCompileSupported() const noexcept;
+
+    // Creates a program, either synchronously or asynchronously, depending on the Mode
+    // MetalShaderCompiler was constructed with.
     program_token_t createProgram(utils::CString const& name, Program&& program);
 
     // Returns the functions, blocking if necessary. The Token is destroyed and becomes invalid.
     MetalFunctionBundle getProgram(program_token_t& token);
-
-    // Destroys a valid token and all associated resources. Used to "cancel" a program compilation.
-    static void terminate(program_token_t& token);
 
     void notifyWhenAllProgramsAreReady(
             CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
@@ -138,6 +143,7 @@ private:
     CompilerThreadPool mCompilerThreadPool;
     id<MTLDevice> mDevice;
     CallbackManager mCallbackManager;
+    Mode mMode;
 };
 
 } // namespace filament::backend
