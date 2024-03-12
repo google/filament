@@ -747,14 +747,25 @@ int main(int argc, char** argv) {
                 createJitShaderProvider(engine, OPTIMIZE_MATERIALS) :
                 createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
 
-        app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
+        AssetConfiguration assetLoaderConfig {
+            .engine= engine,
+            .materials = app.materials,
+            .names = app.names,
+        };
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
+            app.assetLoader = AssetLoader::create(assetLoaderConfig);
             app.asset = app.assetLoader->createAsset(
                     GLTF_DEMO_DAMAGEDHELMET_DATA,
                     GLTF_DEMO_DAMAGEDHELMET_SIZE);
             app.instance = app.asset->getInstance();
         } else {
+            std::string gltfPath = filename.getAbsolutePath();
+            AssetConfigurationExtended extendedConfig = {
+                    .gltfPath = gltfPath.c_str(),                    
+            };
+            assetLoaderConfig.ext = &extendedConfig;
+            app.assetLoader = AssetLoader::create(assetLoaderConfig);
             loadAsset(filename);
         }
 

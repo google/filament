@@ -47,9 +47,17 @@ set(SRCS
         src/TangentsJob.cpp
         src/TangentsJob.h
         src/UbershaderProvider.cpp
+        src/Utility.cpp
+        src/Utility.h        
         src/Wireframe.cpp
         src/Wireframe.h
         src/downcast.h
+        src/extended/AssetLoaderExtended.cpp
+        src/extended/AssetLoaderExtended.h
+        src/extended/ResourceLoaderExtended.cpp
+        src/extended/ResourceLoaderExtended.h
+        src/extended/TangentsJobExtended.cpp
+        src/extended/TangentsJobExtended.h
 )
 
 # ==================================================================================================
