@@ -331,6 +331,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
            MaterialBuilder::TransparencyMode::DEFAULT)
            .reflectionMode(MaterialBuilder::ReflectionMode::SCREEN_SPACE)
            .targetApi(filamat::targetApiFromBackend(engine->getBackend()))
+           .stereoscopicType(engine->getConfig().stereoscopicType)
            .stereoscopicEyeCount(engine->getConfig().stereoscopicEyeCount);
 
     if (!optimizeShaders) {

@@ -27,7 +27,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.TextureView;
 
-import com.google.android.filament.SwapChain;
+import com.google.android.filament.SwapChainFlags;
 
 /**
  * UiHelper is a simple class that can manage either a SurfaceView, TextureView, or a SurfaceHolder
@@ -538,7 +538,7 @@ public class UiHelper {
      * the options set on this UiHelper.
      */
     public long getSwapChainFlags() {
-        return isOpaque() ? SwapChain.CONFIG_DEFAULT : SwapChain.CONFIG_TRANSPARENT;
+        return isOpaque() ? SwapChainFlags.CONFIG_DEFAULT : SwapChainFlags.CONFIG_TRANSPARENT;
     }
 
     /**

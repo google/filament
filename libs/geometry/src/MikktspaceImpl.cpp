@@ -18,6 +18,7 @@
 
 #include <math/mat3.h>
 #include <math/norm.h>
+#include <utils/Panic.h>
 
 #include <meshoptimizer.h>
 #include <mikktspace/mikktspace.h>
@@ -82,7 +83,7 @@ void MikktspaceImpl::setTSpaceBasic(SMikkTSpaceContext const* context, float con
     // TODO: packTangentFrame actually changes the orientation of b.
     quatf const quat = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
 
-    auto output = wrapper->mOutputData;
+    auto& output = wrapper->mOutputData;
     auto const& EMPTY_ELEMENT = wrapper->EMPTY_ELEMENT;
 
     size_t const outputCurSize = output.size();
@@ -92,15 +93,15 @@ void MikktspaceImpl::setTSpaceBasic(SMikkTSpaceContext const* context, float con
 
     uint8_t* cursor = output.data() + outputCurSize;
 
-    *((float3*) (cursor)) = pos;
-    *((float2*) (cursor + 12)) = uv;
-    *((quatf*) (cursor + 20)) = quat;
+    *((float3*) (cursor + POS_OFFSET)) = pos;
+    *((float2*) (cursor + UV_OFFSET)) = uv;
+    *((quatf*) (cursor + TBN_OFFSET)) = quat;
 
-    cursor += 36;
-    for (auto [attribArray, attribStride, attribSize]: wrapper->mInputAttribArrays) {
-        uint8_t const* input = pointerAdd(attribArray, vertInd, attribStride);
-        memcpy(cursor, input, attribSize);
-        cursor += attribSize;
+    cursor += BASE_OUTPUT_SIZE;
+    for (auto const& inputAttrib: wrapper->mInputAttribArrays) {
+        uint8_t const* input = pointerAdd(inputAttrib.data, vertInd, inputAttrib.stride);
+        memcpy(cursor, input, inputAttrib.size);
+        cursor += inputAttrib.size;
     }
 }
 
@@ -125,7 +126,12 @@ MikktspaceImpl::MikktspaceImpl(const TangentSpaceMeshInput* input) noexcept
     for (auto attrib: input->getAuxAttributes()) {
         size_t const attribSize =input->attributeSize(attrib);
         mOutputElementSize += attribSize;
-        mInputAttribArrays.push_back({input->raw(attrib), input->stride(attrib), attribSize});
+        mInputAttribArrays.push_back({
+            .attrib = attrib,
+            .data = input->raw(attrib),
+            .stride = input->stride(attrib),
+            .size = attribSize,
+        });
     }
     mOutputData.reserve(mFaceCount * 3 * mOutputElementSize);
 
@@ -156,12 +162,12 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
     genTangSpaceDefault(&context);
 
     size_t oVertexCount = mOutputData.size() / mOutputElementSize;
-
-    std::vector<unsigned int> remap(oVertexCount);
+    std::vector<unsigned int> remap;
+    remap.resize(oVertexCount);
     size_t vertexCount = meshopt_generateVertexRemap(remap.data(), NULL, remap.size(),
             mOutputData.data(), oVertexCount, mOutputElementSize);
 
-    std::vector<IOVertex> newVertices(vertexCount);
+    std::vector<uint8_t> newVertices(vertexCount * mOutputElementSize);
     meshopt_remapVertexBuffer((void*) newVertices.data(), mOutputData.data(), oVertexCount,
             mOutputElementSize, remap.data());
 
@@ -172,10 +178,48 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
     float2* outUVs = output->uvs().allocate(vertexCount);
     quatf* outQuats = output->tspace().allocate(vertexCount);
 
-    for (size_t i = 0; i < vertexCount; ++i) {
-        outPositions[i] = newVertices[i].position;
-        outUVs[i] = newVertices[i].uv;
-        outQuats[i] = newVertices[i].tangentSpace;
+    uint8_t* const verts = newVertices.data();
+
+    std::vector<std::tuple<AttributeImpl, void*, size_t>> attributes;
+
+    for (auto const& inputAttrib: mInputAttribArrays) {
+        auto const attrib = inputAttrib.attrib;
+        switch(attrib) {
+            case AttributeImpl::UV1:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_UV1>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            case AttributeImpl::COLORS:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_COLORS>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            case AttributeImpl::JOINTS:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_JOINTS>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            case AttributeImpl::WEIGHTS:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_WEIGHTS>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            default:
+                PANIC_POSTCONDITION("Unexpected attribute=%d", (int) inputAttrib.attrib);
+        }
+    }
+
+    for (size_t i = 0, vi=0; i < vertexCount; ++i, vi+=mOutputElementSize) {
+        outPositions[i] =  *((float3*) (verts + vi + POS_OFFSET));
+        outUVs[i] = *((float2*) (verts + vi + UV_OFFSET));
+        outQuats[i] = *((quatf*) (verts + vi + TBN_OFFSET));
+
+        uint8_t* cursor = verts + vi + BASE_OUTPUT_SIZE;
+        for (auto const [attrib, outdata, size] : attributes) {
+            memcpy((uint8_t*) outdata + (i * size), cursor, size);
+            cursor += size;
+        }
     }
 
     output->vertexCount = vertexCount;

@@ -180,7 +180,10 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
 
-    mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this);
+    const MetalShaderCompiler::Mode compilerMode = driverConfig.disableParallelShaderCompile
+            ? MetalShaderCompiler::Mode::SYNCHRONOUS
+            : MetalShaderCompiler::Mode::ASYNCHRONOUS;
+    mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this, compilerMode);
     mContext->shaderCompiler->init();
 
 #if defined(FILAMENT_METAL_PROFILING)
@@ -788,7 +791,7 @@ bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) 
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
-    return true;
+    return mContext->shaderCompiler->isParallelShaderCompileSupported();
 }
 
 bool MetalDriver::isDepthStencilResolveSupported() {

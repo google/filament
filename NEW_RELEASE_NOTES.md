@@ -7,5 +7,3 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- materials: add support for post-lighting mix factor (b/328498606) [⚠️ **New Material Version**]
