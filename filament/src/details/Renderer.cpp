@@ -233,8 +233,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
     SYSTRACE_CALL();
 
-
-#if defined(__ANDROID__)
+#if 0 && defined(__ANDROID__)
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("debug.filament.protected", scratch);
     if (swapChain && length > 0) {

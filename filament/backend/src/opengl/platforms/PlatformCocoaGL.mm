@@ -247,8 +247,8 @@ void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept 
     delete cocoaSwapChain;
 }
 
-void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
-        Platform::SwapChain* readSwapChain) noexcept {
+bool PlatformCocoaGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "ContextManagerCocoa does not support using distinct draw/read swap chains.");
     CocoaGLSwapChain* swapChain = (CocoaGLSwapChain*)drawSwapChain;
@@ -287,6 +287,7 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
 
     swapChain->previousBounds = currentBounds;
     swapChain->previousWindowFrame = currentWindowFrame;
+    return true;
 }
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
