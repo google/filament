@@ -81,6 +81,8 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/TangentsJob.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/UbershaderProvider.cpp
+        ${GLTFIO_DIR}/src/Utility.cpp
+        ${GLTFIO_DIR}/src/Utility.h
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/downcast.h

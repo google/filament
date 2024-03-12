@@ -47,6 +47,8 @@ set(SRCS
         src/TangentsJob.cpp
         src/TangentsJob.h
         src/UbershaderProvider.cpp
+        src/Utility.cpp
+        src/Utility.h
         src/Wireframe.cpp
         src/Wireframe.h
         src/downcast.h

@@ -45,6 +45,7 @@
 #include "DependencyGraph.h"
 #include "DracoCache.h"
 #include "FFilamentInstance.h"
+#include "Utility.h"
 
 #include <tsl/htrie_map.h>
 

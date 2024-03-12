@@ -156,7 +156,6 @@ public:
 
 private:
     bool loadResources(FFilamentAsset* asset, bool async);
-    void normalizeSkinningWeights(FFilamentAsset* asset) const;
     struct Impl;
     Impl* pImpl;
 };
