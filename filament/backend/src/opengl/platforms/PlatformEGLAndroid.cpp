@@ -142,11 +142,12 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 }
 
 void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
-    if (mCurrentDrawSurface != EGL_NO_SURFACE) {
+    EGLSurface currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
+    if (currentDrawSurface != EGL_NO_SURFACE) {
         if (eglPresentationTimeANDROID) {
             eglPresentationTimeANDROID(
                     mEGLDisplay,
-                    mCurrentDrawSurface,
+                    currentDrawSurface,
                     presentationTimeInNanosecond);
         }
     }

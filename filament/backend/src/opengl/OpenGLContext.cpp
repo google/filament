@@ -758,10 +758,10 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
 
 GLuint OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
     if (UTILS_UNLIKELY(buffer == 0)) {
-        // we're binding the default frame buffer, resolve it's actual name
+        // we're binding the default frame buffer, resolve its actual name
         auto& defaultFboForThisContext = mDefaultFbo[contextIndex];
         if (UTILS_UNLIKELY(!defaultFboForThisContext.has_value())) {
-            defaultFboForThisContext = GLuint(mPlatform.createDefaultRenderTarget());
+            defaultFboForThisContext = GLuint(mPlatform.getDefaultFramebufferObject());
         }
         buffer = defaultFboForThisContext.value();
     }
