@@ -395,7 +395,9 @@ void AnimatorImpl::applyCrossFade(float alpha) {
         }
         return index;
     };
-    recursiveFn(tm.getInstance(asset->mRoot), 0, recursiveFn);
+    const Entity rootEntity = instance ? instance->getRoot() : asset->mRoot;
+    const Instance root = tm.getInstance(rootEntity);
+    recursiveFn(root, 0, recursiveFn);
 }
 
 void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
