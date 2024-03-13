@@ -1257,11 +1257,9 @@ void OpenGLDriver::createDefaultRenderTargetR(
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
 
-    uint32_t const framebuffer = mPlatform.createDefaultRenderTarget();
-
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     rt->gl.isDefault = true;
-    rt->gl.fbo = framebuffer;
+    rt->gl.fbo = 0; // the actual id is resolved at binding time
     rt->gl.samples = 1;
     // FIXME: these flags should reflect the actual attachments present
     rt->targets = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
@@ -1418,6 +1416,9 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
+    ASSERT_POSTCONDITION(sc->swapChain,
+            "createSwapChain(%p, 0x%lx) failed. See logs for details.",
+            nativeWindow, flags);
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
@@ -1432,6 +1433,9 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+    ASSERT_POSTCONDITION(sc->swapChain,
+            "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
+            width, height, flags);
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
@@ -1575,11 +1579,11 @@ void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
         GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
         if (rt->gl.fbo) {
             // first unbind this framebuffer if needed
-            gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
+            gl.unbindFramebuffer(GL_FRAMEBUFFER);
         }
         if (rt->gl.fbo_read) {
             // first unbind this framebuffer if needed
-            gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
+            gl.unbindFramebuffer(GL_FRAMEBUFFER);
         }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
@@ -2760,13 +2764,13 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     const TargetBufferFlags clearFlags = params.flags.clear & rt->targets;
     TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;
 
-    gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+    GLuint const fbo = gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
 
     if (gl.ext.EXT_discard_framebuffer
             && !gl.bugs.disable_invalidate_framebuffer) {
         AttachmentArray attachments; // NOLINT
-        GLsizei const attachmentCount = getAttachments(attachments, rt, discardFlags);
+        GLsizei const attachmentCount = getAttachments(attachments, discardFlags, !fbo);
         if (attachmentCount) {
             gl.procs.invalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
         }
@@ -2854,9 +2858,9 @@ void OpenGLDriver::endRenderPass(int) {
         }
         if (!gl.bugs.disable_invalidate_framebuffer) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
-            gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+            GLuint const fbo = gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei const attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
+            GLsizei const attachmentCount = getAttachments(attachments, effectiveDiscardFlags, !fbo);
             if (attachmentCount) {
                 gl.procs.invalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2918,50 +2922,48 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
 }
 
 GLsizei OpenGLDriver::getAttachments(AttachmentArray& attachments,
-        GLRenderTarget const* rt, TargetBufferFlags buffers) noexcept {
-    assert_invariant(buffers <= rt->targets);
-
+        TargetBufferFlags buffers, bool isDefaultFramebuffer) noexcept {
     GLsizei attachmentCount = 0;
     // the default framebuffer uses different constants!!!
-    const bool defaultFramebuffer = (rt->gl.fbo == 0);
+
     if (any(buffers & TargetBufferFlags::COLOR0)) {
-        attachments[attachmentCount++] = defaultFramebuffer ? GL_COLOR : GL_COLOR_ATTACHMENT0;
+        attachments[attachmentCount++] = isDefaultFramebuffer ? GL_COLOR : GL_COLOR_ATTACHMENT0;
     }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (any(buffers & TargetBufferFlags::COLOR1)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT1;
     }
     if (any(buffers & TargetBufferFlags::COLOR2)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT2;
     }
     if (any(buffers & TargetBufferFlags::COLOR3)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT3;
     }
     if (any(buffers & TargetBufferFlags::COLOR4)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT4;
     }
     if (any(buffers & TargetBufferFlags::COLOR5)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT5;
     }
     if (any(buffers & TargetBufferFlags::COLOR6)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT6;
     }
     if (any(buffers & TargetBufferFlags::COLOR7)) {
-        assert_invariant(!defaultFramebuffer);
+        assert_invariant(!isDefaultFramebuffer);
         attachments[attachmentCount++] = GL_COLOR_ATTACHMENT7;
     }
 #endif
     if (any(buffers & TargetBufferFlags::DEPTH)) {
-        attachments[attachmentCount++] = defaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
+        attachments[attachmentCount++] = isDefaultFramebuffer ? GL_DEPTH : GL_DEPTH_ATTACHMENT;
     }
     if (any(buffers & TargetBufferFlags::STENCIL)) {
-        attachments[attachmentCount++] = defaultFramebuffer ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
+        attachments[attachmentCount++] = isDefaultFramebuffer ? GL_STENCIL : GL_STENCIL_ATTACHMENT;
     }
     return attachmentCount;
 }
@@ -3681,8 +3683,8 @@ void OpenGLDriver::blit(
             mask, GL_NEAREST);
     CHECK_GL_ERROR(utils::slog.e)
 
-    gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    gl.bindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    gl.unbindFramebuffer(GL_DRAW_FRAMEBUFFER);
+    gl.unbindFramebuffer(GL_READ_FRAMEBUFFER);
     glDeleteFramebuffers(2, fbo);
 
     if (any(d->usage & TextureUsage::SAMPLEABLE)) {

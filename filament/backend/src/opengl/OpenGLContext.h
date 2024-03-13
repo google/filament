@@ -21,6 +21,8 @@
 
 #include "OpenGLTimerQuery.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
+
 #include <utils/CString.h>
 #include <utils/debug.h>
 
@@ -30,6 +32,7 @@
 
 #include <array>
 #include <functional>
+#include <optional>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -148,7 +151,8 @@ public:
     inline void bindBufferRange(GLenum target, GLuint index, GLuint buffer,
             GLintptr offset, GLsizeiptr size) noexcept;
 
-    inline void bindFramebuffer(GLenum target, GLuint buffer) noexcept;
+    GLuint bindFramebuffer(GLenum target, GLuint buffer) noexcept;
+    void unbindFramebuffer(GLenum target) noexcept;
 
     inline void enableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept;
     inline void disableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept;
@@ -460,10 +464,15 @@ public:
     void synchronizeStateAndCache(size_t index) noexcept;
 
 private:
+    OpenGLPlatform& mPlatform;
     ShaderModel mShaderModel = ShaderModel::MOBILE;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
     std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
+    RenderPrimitive mDefaultVAO;
+    std::optional<GLuint> mDefaultFbo[2];
+
+    void bindFramebufferResolved(GLenum target, GLuint buffer) noexcept;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
             {   bugs.disable_glFlush,
@@ -515,8 +524,6 @@ private:
                     "force_feature_level0",
                     ""},
     }};
-
-    RenderPrimitive mDefaultVAO;
 
     // this is chosen to minimize code size
 #if defined(BACKEND_OPENGL_VERSION_GLES)
@@ -730,33 +737,6 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         glBindBufferRange(target, index, buffer, offset, size);
     }
 #endif
-}
-
-void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
-    switch (target) {
-        case GL_FRAMEBUFFER:
-            if (state.draw_fbo != buffer || state.read_fbo != buffer) {
-                state.draw_fbo = state.read_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        case GL_DRAW_FRAMEBUFFER:
-            if (state.draw_fbo != buffer) {
-                state.draw_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-        case GL_READ_FRAMEBUFFER:
-            if (state.read_fbo != buffer) {
-                state.read_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-#endif
-        default:
-            break;
-    }
 }
 
 void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept {
