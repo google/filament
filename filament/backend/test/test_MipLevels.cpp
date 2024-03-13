@@ -156,7 +156,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
         Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
                 TargetBufferFlags::COLOR, 32, 32, 1, 0,
-                {texture, 2 /* level */, 0 /* layer */}, {}, {});
+                {texture, 0 /* baseViewIndex */, 2 /* level */, 0 /* layer */}, {}, {});
         {
             RenderPassParams params = {};
             fullViewport(params);

@@ -114,11 +114,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         // that this case is handled correctly.
         Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {depthTexture, 0, 0}, {});
+                {srcTexture, 0, kSrcLevel, 0}, {depthTexture, 0, 0, 0}, {});
 
         Handle<HwRenderTarget> fullRenderTarget = api.createRenderTarget(TargetBufferFlags::COLOR,
                 kSrcTexHeight >> kSrcLevel, kSrcTexWidth >> kSrcLevel, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {}, {});
+                {srcTexture, 0, kSrcLevel, 0}, {}, {});
 
         TrianglePrimitive triangle(api);
 
@@ -209,7 +209,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
 
         Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
                 TargetBufferFlags::COLOR, 512, 512, 1, 0,
-                {srcTexture, 0, 0}, {}, {});
+                {srcTexture, 0, 0, 0}, {}, {});
 
         TrianglePrimitive triangle(api);
 

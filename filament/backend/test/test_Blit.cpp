@@ -226,9 +226,9 @@ TEST_F(BackendTest, ColorMagnify) {
     Handle<HwRenderTarget> dstRenderTargets[kNumLevels];
     for (uint8_t level = 0; level < kNumLevels; level++) {
         srcRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, 0 }, {}, {});
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, 0, level, 0 }, {}, {});
         dstRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, level, 0 }, {}, {});
+                kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, 0, level, 0 }, {}, {});
     }
 
     // Do a "magnify" blit from level 1 of the source RT to the level 0 of the destination RT.
@@ -301,9 +301,9 @@ TEST_F(BackendTest, ColorMinify) {
     Handle<HwRenderTarget> dstRenderTargets[kNumLevels];
     for (uint8_t level = 0; level < kNumLevels; level++) {
         srcRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, 0 }, {}, {});
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, 0, level, 0 }, {}, {});
         dstRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, level, 0 }, {}, {});
+                kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, 0, level, 0 }, {}, {});
     }
 
     // Do a "minify" blit from level 1 of the source RT to the level 0 of the destination RT.
@@ -473,9 +473,9 @@ TEST_F(BackendTest, Blit2DTextureArray) {
     // Create two RenderTargets.
     const int level = 0;
     Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
-            kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, kSrcTexLayer }, {}, {});
+            kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, 0, level, kSrcTexLayer }, {}, {});
     Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
-            kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, level, kDstTexLayer }, {}, {});
+            kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, 0, level, kDstTexLayer }, {}, {});
 
     // Do a blit from kSrcTexLayer of the source RT to kDstTexLayer of the destination RT.
     const int srcLevel = 0;
@@ -565,10 +565,10 @@ TEST_F(BackendTest, BlitRegion) {
     // that this case is handled correctly.
     Handle<HwRenderTarget> srcRenderTarget =
             api.createRenderTarget(TargetBufferFlags::COLOR, srcRect.width,
-                    srcRect.height, 1, 0, {srcTexture, kSrcLevel, 0}, {}, {});
+                    srcRect.height, 1, 0, {srcTexture, 0, kSrcLevel, 0}, {}, {});
     Handle<HwRenderTarget> dstRenderTarget =
             api.createRenderTarget(TargetBufferFlags::COLOR, kDstTexWidth >> kDstLevel,
-                    kDstTexHeight >> kDstLevel, 1, 0, {dstTexture, kDstLevel, 0}, {}, {});
+                    kDstTexHeight >> kDstLevel, 1, 0, {dstTexture, 0, kDstLevel, 0}, {}, {});
 
     api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget, dstRect, srcRenderTarget, srcRect,
             SamplerMagFilter::LINEAR);
@@ -637,7 +637,7 @@ TEST_F(BackendTest, BlitRegionToSwapChain) {
     Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
     for (uint8_t level = 0; level < kNumLevels; level++) {
         srcRenderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, 0 }, {}, {});
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, 0, level, 0 }, {}, {});
     }
 
     // Blit one-quarter of src level 1 to dst level 0.
