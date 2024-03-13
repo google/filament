@@ -153,7 +153,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 if (engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
                     // Add sampleable usage flag for depth in multiview rendering, othewise it's
-                    // treated renderbuffer in the backend and crashed.
+                    // treated as renderbuffer in the backend and crashed.
                     data.depth = builder.write(data.depth,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
                         FrameGraphTexture::Usage::SAMPLEABLE);

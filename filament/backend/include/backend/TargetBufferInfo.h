@@ -83,8 +83,8 @@ public:
     }
 
     // this is here for backward compatibility
-    MRT(Handle<HwTexture> handle, uint8_t layerCount, uint8_t level, uint16_t layer) noexcept
-            : mInfos{{ handle, layerCount, level, layer }} {
+    MRT(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
+            : mInfos{{ handle, 0, level, layer }} {
     }
 };
 
