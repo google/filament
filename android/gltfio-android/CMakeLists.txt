@@ -86,6 +86,12 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/downcast.h
+        ${GLTFIO_DIR}/src/extended/AssetLoaderExtended.h
+        ${GLTFIO_DIR}/src/extended/TangentsJobExtended.cpp
+        ${GLTFIO_DIR}/src/extended/TangentsJobExtended.h
+        ${GLTFIO_DIR}/src/extended/TangentSpaceMeshWrapper.cpp
+        ${GLTFIO_DIR}/src/extended/TangentSpaceMeshWrapper.h
+
 
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp

@@ -52,6 +52,11 @@ set(SRCS
         src/Wireframe.cpp
         src/Wireframe.h
         src/downcast.h
+        src/extended/AssetLoaderExtended.h
+        src/extended/TangentsJobExtended.cpp
+        src/extended/TangentsJobExtended.h
+        src/extended/TangentSpaceMeshWrapper.cpp
+        src/extended/TangentSpaceMeshWrapper.h
 )
 
 # ==================================================================================================
