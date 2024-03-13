@@ -104,9 +104,9 @@ private:
     void collectGarbage();
 
     VulkanPlatform* mPlatform = nullptr;
-    std::unique_ptr<VulkanCommands> mCommands;
     std::unique_ptr<VulkanTimestamps> mTimestamps;
-    std::unique_ptr<VulkanTexture> mEmptyTexture;
+
+    VulkanTexture* mEmptyTexture;
 
     VulkanSwapChain* mCurrentSwapChain = nullptr;
     VulkanRenderTarget* mDefaultRenderTarget = nullptr;
@@ -122,6 +122,7 @@ private:
     // thread.
     VulkanThreadSafeResourceManager mThreadSafeResourceManager;
 
+    VulkanCommands mCommands;
     VulkanPipelineCache mPipelineCache;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;

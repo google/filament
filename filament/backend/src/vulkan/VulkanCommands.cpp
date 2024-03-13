@@ -155,7 +155,7 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
 #endif
 }
 
-VulkanCommands::~VulkanCommands() {
+void VulkanCommands::terminate() {
     wait();
     gc();
     vkDestroyCommandPool(mDevice, mPool, VKALLOC);

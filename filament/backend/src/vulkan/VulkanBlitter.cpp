@@ -154,15 +154,9 @@ struct BlitterUniforms {
 
 }// anonymous namespace
 
-VulkanBlitter::VulkanBlitter() noexcept = default;
-
-void VulkanBlitter::initialize(VkPhysicalDevice physicalDevice, VkDevice device,
-        VmaAllocator allocator, VulkanCommands* commands) noexcept {
-    mPhysicalDevice = physicalDevice;
-    mDevice = device;
-    mAllocator = allocator;
-    mCommands = commands;
-}
+VulkanBlitter::VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept
+    : mPhysicalDevice(physicalDevice),
+      mCommands(commands) {}
 
 void VulkanBlitter::resolve(VulkanAttachment dst, VulkanAttachment src) {
 

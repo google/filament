@@ -45,7 +45,7 @@ struct VulkanStageImage {
 // This class manages two types of host-mappable staging areas: buffer stages and image stages.
 class VulkanStagePool {
 public:
-    void initialize(VmaAllocator allocator, VulkanCommands* commands) noexcept;
+    VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands);
 
     // Finds or creates a stage whose capacity is at least the given number of bytes.
     // The stage is automatically released back to the pool after TIME_BEFORE_EVICTION frames.

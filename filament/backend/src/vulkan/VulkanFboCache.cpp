@@ -64,7 +64,8 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     return true;
 }
 
-void VulkanFboCache::initialize(VkDevice device) noexcept { mDevice = device; }
+VulkanFboCache::VulkanFboCache(VkDevice device)
+    : mDevice(device) {}
 
 VulkanFboCache::~VulkanFboCache() {
     ASSERT_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty(),
