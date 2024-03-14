@@ -18,31 +18,41 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVER_H
 
 #include "DriverBase.h"
-#include "GLUtils.h"
 #include "OpenGLContext.h"
 #include "OpenGLTimerQuery.h"
 #include "ShaderCompilerService.h"
 
-#include "private/backend/Driver.h"
-#include "private/backend/HandleAllocator.h"
-
 #include <backend/platforms/OpenGLPlatform.h>
 
 #include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Platform.h>
 #include <backend/Program.h>
 #include <backend/TargetBufferInfo.h>
 
+#include "private/backend/Driver.h"
+#include "private/backend/HandleAllocator.h"
+
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
-#include <utils/Allocator.h>
+#include <utils/debug.h>
 
 #include <math/vec4.h>
 
 #include <tsl/robin_map.h>
 
-#include <atomic>
+#include <array>
+#include <condition_variable>
+#include <functional>
 #include <memory>
-#include <set>
+#include <mutex>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
@@ -59,12 +69,14 @@ class OpenGLProgram;
 class TimerQueryFactoryInterface;
 
 class OpenGLDriver final : public DriverBase {
-    inline explicit OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept;
+    inline explicit OpenGLDriver(OpenGLPlatform* platform,
+            const Platform::DriverConfig& driverConfig) noexcept;
     ~OpenGLDriver() noexcept final;
     Dispatcher getDispatcher() const noexcept final;
 
 public:
-    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept;
+    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext,
+            const Platform::DriverConfig& driverConfig) noexcept;
 
     class DebugMarker {
         OpenGLDriver& driver;

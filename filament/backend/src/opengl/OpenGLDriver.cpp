@@ -16,21 +16,54 @@
 
 #include "OpenGLDriver.h"
 
-#include "private/backend/DriverApi.h"
-
 #include "CommandStreamDispatcher.h"
+#include "GLUtils.h"
 #include "OpenGLContext.h"
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
 #include "OpenGLTimerQuery.h"
+#include "gl_headers.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
-#include <backend/SamplerDescriptor.h>
 
-#include <utils/compiler.h>
+#include <backend/BufferDescriptor.h>
+#include <backend/CallbackHandler.h>
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/PipelineState.h>
+#include <backend/Platform.h>
+#include <backend/Program.h>
+#include <backend/SamplerDescriptor.h>
+#include <backend/TargetBufferInfo.h>
+
+#include "private/backend/Dispatcher.h"
+#include "private/backend/DriverApi.h"
+
+#include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
+
+#include <math/vec2.h>
+#include <math/vec3.h>
+
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <utility>
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
@@ -730,23 +763,23 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                     // we can't be here -- doesn't matter what we do
                 case SamplerType::SAMPLER_2D:
                     t->gl.target = GL_TEXTURE_2D;
-                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
                     break;
                 case SamplerType::SAMPLER_3D:
                     t->gl.target = GL_TEXTURE_3D;
-                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_3D);
+                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_3D);
                     break;
                 case SamplerType::SAMPLER_2D_ARRAY:
                     t->gl.target = GL_TEXTURE_2D_ARRAY;
-                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
+                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
                     break;
                 case SamplerType::SAMPLER_CUBEMAP:
                     t->gl.target = GL_TEXTURE_CUBE_MAP;
-                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
+                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
                     break;
                 case SamplerType::SAMPLER_CUBEMAP_ARRAY:
                     t->gl.target = GL_TEXTURE_CUBE_MAP_ARRAY;
-                    t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP_ARRAY);
+                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP_ARRAY);
                     break;
             }
 
@@ -758,7 +791,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
                     t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
                     t->gl.targetIndex = (uint8_t)
-                            gl.getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
+                            OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
@@ -829,27 +862,27 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     switch (target) {
         case SamplerType::SAMPLER_EXTERNAL:
             t->gl.target = GL_TEXTURE_EXTERNAL_OES;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
             break;
         case SamplerType::SAMPLER_2D:
             t->gl.target = GL_TEXTURE_2D;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
             break;
         case SamplerType::SAMPLER_3D:
             t->gl.target = GL_TEXTURE_3D;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_3D);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_3D);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             t->gl.target = GL_TEXTURE_2D_ARRAY;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
             break;
         case SamplerType::SAMPLER_CUBEMAP:
             t->gl.target = GL_TEXTURE_CUBE_MAP;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
             break;
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             t->gl.target = GL_TEXTURE_CUBE_MAP_ARRAY;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP_ARRAY);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP_ARRAY);
             break;
     }
 
@@ -860,7 +893,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
             t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
-            t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
+            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
         } else {
             // Turn off multi-sampling for that texture. It's just not supported.
         }
@@ -901,7 +934,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
             GLuint const index = i;
-            GLint const size = getComponentCount(attribute.type);
+            GLint const size = (GLint)getComponentCount(attribute.type);
             GLenum const type = getComponentType(attribute.type);
             GLboolean const normalized = getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED);
             GLsizei const stride = attribute.stride;
@@ -2494,7 +2527,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!gl.isES2()) {
-        // update the base/max LOD, so we don't access undefined LOD. this allows the app to
+        // Update the base/max LOD, so we don't access undefined LOD. this allows the app to
         // specify levels as they become available.
         if (int8_t(level) < t->gl.baseLevel) {
             t->gl.baseLevel = int8_t(level);
@@ -2595,7 +2628,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!gl.isES2()) {
-        // update the base/max LOD, so we don't access undefined LOD. this allows the app to
+        // Update the base/max LOD, so we don't access undefined LOD. this allows the app to
         // specify levels as they become available.
         if (int8_t(level) < t->gl.baseLevel) {
             t->gl.baseLevel = int8_t(level);
@@ -2748,7 +2781,7 @@ TimerQueryResult OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
     return TimerQueryFactoryInterface::getTimerQueryValue(tq, elapsedTime);
 }
 
-void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,
+void OpenGLDriver::compilePrograms(CompilerPriorityQueue,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
         getShaderCompilerService().notifyWhenAllProgramsAreReady(handler, callback, user);

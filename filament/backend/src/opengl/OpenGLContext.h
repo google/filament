@@ -17,26 +17,31 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
 #define TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
 
-#include <math/vec4.h>
 
 #include "OpenGLTimerQuery.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
 
-#include <utils/CString.h>
-#include <utils/debug.h>
-
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include "GLUtils.h"
+#include "gl_headers.h"
+
+#include <utils/compiler.h>
+#include <utils/bitset.h>
+#include <utils/debug.h>
+
+#include <math/vec2.h>
+#include <math/vec4.h>
 
 #include <array>
 #include <functional>
 #include <optional>
-#include <set>
 #include <tuple>
-#include <utility>
 #include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -85,7 +90,7 @@ public:
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
     explicit OpenGLContext(OpenGLPlatform& platform) noexcept;
-    ~OpenGLContext() noexcept;
+    ~OpenGLContext() noexcept final;
 
     // TimerQueryInterface ------------------------------------------------------------------------
 
