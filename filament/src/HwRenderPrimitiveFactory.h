@@ -52,7 +52,10 @@ public:
         backend::VertexBufferHandle vbh;            // 4
         backend::IndexBufferHandle ibh;             // 4
         backend::PrimitiveType type;                // 4
+        size_t hash() const noexcept;
     };
+
+    friend bool operator==(Parameters const& lhs, Parameters const& rhs) noexcept;
 
     Handle create(backend::DriverApi& driver,
             backend::VertexBufferHandle vbh,
@@ -63,29 +66,36 @@ public:
 
 private:
     struct Key {
+        // The key should not be copyable, unfortunately due to how the Bimap works we have
+        // to copy-construct it once.
+        Key(Key const&) = default;
+        Key& operator=(Key const&) = delete;
+        Key& operator=(Key&&) noexcept = delete;
+        explicit Key(Parameters const& params) : params(params), refs(1) { }
         Parameters params;
         mutable uint32_t refs;  // 4 bytes
+        bool operator==(Key const& rhs) const noexcept {
+            return params == rhs.params;
+        }
     };
 
-    struct KeyHash {
-        size_t operator()(Key const& p) const noexcept;
+    struct KeyHasher {
+        size_t operator()(Key const& p) const noexcept {
+            return p.params.hash();
+        }
     };
-
-    friend bool operator==(Key const& lhs, Key const& rhs) noexcept;
-
 
     struct Value { // 4 bytes
         Handle handle;
     };
 
-    struct ValueHash {
-        size_t operator()(Value const& p) const noexcept {
-            std::hash<Handle::HandleId> const h;
-            return h(p.handle.getId());
+    struct ValueHasher {
+        size_t operator()(Value const v) const noexcept {
+            return std::hash<Handle::HandleId>()(v.handle.getId());
         }
     };
 
-    friend bool operator==(Value const& lhs, Value const& rhs) noexcept {
+    friend bool operator==(Value const lhs, Value const rhs) noexcept {
         return lhs.handle == rhs.handle;
     }
 
@@ -104,7 +114,7 @@ private:
     PoolAllocatorArena mArena;
 
     // The special Bimap
-    Bimap<Key, Value, KeyHash, ValueHash,
+    Bimap<Key, Value, KeyHasher, ValueHasher,
             utils::STLAllocator<Key, PoolAllocatorArena>> mBimap;
 };
 
