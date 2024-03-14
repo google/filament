@@ -17,7 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 #define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
+#include "VulkanCommands.h"
 #include "VulkanContext.h"
+#include "VulkanMemory.h"
 
 #include <map>
 #include <unordered_set>
