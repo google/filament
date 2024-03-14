@@ -16,10 +16,24 @@
 
 #include "OpenGLContext.h"
 
+#include "GLUtils.h"
+#include "OpenGLTimerQuery.h"
+
 #include <backend/platforms/OpenGLPlatform.h>
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 
 #include <functional>
+#include <string_view>
 #include <utility>
+
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
