@@ -113,11 +113,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         // We purposely set the render target width and height to smaller than the texture, to check
         // that this case is handled correctly.
         Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
-                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1,
+                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1, 0,
                 {srcTexture, kSrcLevel, 0}, {depthTexture, 0, 0}, {});
 
         Handle<HwRenderTarget> fullRenderTarget = api.createRenderTarget(TargetBufferFlags::COLOR,
-                kSrcTexHeight >> kSrcLevel, kSrcTexWidth >> kSrcLevel, 1,
+                kSrcTexHeight >> kSrcLevel, kSrcTexWidth >> kSrcLevel, 1, 0,
                 {srcTexture, kSrcLevel, 0}, {}, {});
 
         TrianglePrimitive triangle(api);
@@ -208,7 +208,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
                 (uint32_t)std::numeric_limits<int32_t>::max()};
 
         Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
-                TargetBufferFlags::COLOR, 512, 512, 1,
+                TargetBufferFlags::COLOR, 512, 512, 1, 0,
                 {srcTexture, 0, 0}, {}, {});
 
         TrianglePrimitive triangle(api);

@@ -279,7 +279,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             // level (at least for OpenGL).
             renderTarget = getDriverApi().createRenderTarget(
                     TargetBufferFlags::COLOR, t.getRenderTargetSize(),
-                    t.getRenderTargetSize(), t.samples, {{ texture, uint8_t(t.mipLevel) }}, {},
+                    t.getRenderTargetSize(), t.samples, 0, {{ texture, uint8_t(t.mipLevel) }}, {},
                     {});
         }
 
@@ -318,9 +318,8 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             // correct mip.
             RenderPassParams p = params;
             Handle<HwRenderTarget> mipLevelOneRT = getDriverApi().createRenderTarget(
-                    TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1,
-                    {{ texture }}, {},
-                    {});
+                    TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1, 0,
+                    {{ texture }}, {}, {});
             p.clearColor = {1.f, 0.f, 0.f, 1.f};
             getDriverApi().beginRenderPass(mipLevelOneRT, p);
             getDriverApi().endRenderPass();
@@ -402,6 +401,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             renderTargetSize,                          // width
             renderTargetSize,                          // height
             1,                                         // samples
+            0,                                         // layerCount
             {{ texture }},                             // color
             {},                                        // depth
             {});                                       // stencil

@@ -57,6 +57,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 TargetBufferFlags const clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearStencilFlags = config.clearFlags & TargetBufferFlags::STENCIL;
+                uint8_t layerCount = 0;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
@@ -150,7 +151,17 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                if (engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
+                    // Add sampleable usage flag for depth in multiview rendering, othewise it's
+                    // treated as renderbuffer in the backend and crashed.
+                    data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
+                        FrameGraphTexture::Usage::SAMPLEABLE);
+                    layerCount = engine.getConfig().stereoscopicEyeCount;
+                } else {
+                    data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                }
 
                 /*
                  * There is a bit of magic happening here regarding the viewport used.
@@ -172,7 +183,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                         .stencil = data.stencil },
                         .clearColor = config.clearColor,
                         .samples = config.msaa,
-                        .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags });
+                        .layerCount = layerCount,
+                        .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags});
                 blackboard["depth"] = data.depth;
             },
             [=, &view, &engine](FrameGraphResources const& resources,
