@@ -275,9 +275,9 @@ public:
             "Command isn't trivially destructible");
 
     using RenderFlags = uint8_t;
-    static constexpr RenderFlags HAS_SHADOWING           = 0x01;
-    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x02;
-    static constexpr RenderFlags IS_STEREOSCOPIC         = 0x04;
+    static constexpr RenderFlags HAS_SHADOWING             = 0x01;
+    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES   = 0x02;
+    static constexpr RenderFlags IS_INSTANCED_STEREOSCOPIC = 0x04;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -397,14 +397,14 @@ private:
             Variant variant, RenderFlags renderFlags,
             FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
-            backend::StereoscopicType stereoscopicType, uint8_t instancedStereoEyeCount) noexcept;
+            uint8_t instancedStereoEyeCount) noexcept;
 
     template<RenderPass::CommandTypeFlags commandTypeFlags>
     static inline Command* generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags, Command* curr,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
-            backend::StereoscopicType stereoscopicType, uint8_t instancedStereoEyeCount) noexcept;
+            uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
