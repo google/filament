@@ -106,6 +106,14 @@ Java_com_google_android_filament_RenderableManager_nBuilderGeometry__JIIJJIIII(J
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderGeometryType(JNIEnv*, jclass,
+        jlong nativeBuilder, int type) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->geometryType((RenderableManager::Builder::GeometryType)type);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderMaterial(JNIEnv*, jclass,
         jlong nativeBuilder, jint index, jlong nativeMaterialInstance) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;

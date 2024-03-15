@@ -58,6 +58,7 @@ struct RenderableManager::BuilderDetails {
     bool mScreenSpaceContactShadows : 1;
     bool mSkinningBufferMode : 1;
     bool mFogEnabled : 1;
+    RenderableManager::Builder::GeometryType mGeometryType : 2;
     size_t mSkinningBoneCount = 0;
     size_t mMorphTargetCount = 0;
     Bone const* mUserBones = nullptr;
@@ -75,7 +76,9 @@ struct RenderableManager::BuilderDetails {
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false),
               mReceiveShadows(true), mScreenSpaceContactShadows(false),
-              mSkinningBufferMode(false),  mFogEnabled(true), mBonePairs() {
+              mSkinningBufferMode(false), mFogEnabled(true),
+              mGeometryType(RenderableManager::Builder::GeometryType::DYNAMIC),
+              mBonePairs() {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -118,6 +121,11 @@ RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
         entries[index].count = count;
         entries[index].type = type;
     }
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::geometryType(GeometryType type) noexcept {
+    mImpl->mGeometryType = type;
     return *this;
 }
 
@@ -388,11 +396,21 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     ASSERT_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
             "bone count > %u", CONFIG_MAX_BONE_COUNT);
+
     ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer,
             "instance count is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
             "instances when supplying transforms via an InstanceBuffer.",
             mImpl->mInstanceCount,
             CONFIG_MAX_INSTANCES);
+
+    if (mImpl->mGeometryType == GeometryType::STATIC) {
+        ASSERT_PRECONDITION(mImpl->mSkinningBoneCount > 0,
+                "Skinning can't be used with STATIC geometry");
+
+        ASSERT_PRECONDITION(mImpl->mMorphTargetCount > 0,
+                "Morphing can't be used with STATIC geometry");
+    }
+
     if (mImpl->mInstanceBuffer) {
         size_t const bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
         ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
@@ -519,6 +537,8 @@ void FRenderableManager::create(
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphTargetCount);
         setFogEnabled(ci, builder->mFogEnabled);
+        // do this after calling setAxisAlignedBoundingBox
+        static_cast<Visibility&>(mManager[ci].visibility).geometryType = builder->mGeometryType;
         mManager[ci].channels = builder->mLightChannels;
 
         InstancesInfo& instances = manager[ci].instances;
