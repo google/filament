@@ -1083,7 +1083,7 @@ public class View {
      */
     public void setStereoscopicOptions(@NonNull StereoscopicOptions options) {
         mStereoscopicOptions = options;
-        nSetStereoscopicOptions(getNativeObject(), options.enabled, options.combineMultiviewImages);
+        nSetStereoscopicOptions(getNativeObject(), options.enabled);
     }
 
     /**
@@ -1266,7 +1266,7 @@ public class View {
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, long skyColorNativeObject, boolean enabled);
-    private static native void nSetStereoscopicOptions(long nativeView, boolean enabled, boolean combineMultiviewImages);
+    private static native void nSetStereoscopicOptions(long nativeView, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
@@ -2140,9 +2140,5 @@ public class View {
      */
     public static class StereoscopicOptions {
         public boolean enabled = false;
-        /**
-         * whether to combine images from multiview array texture (debug option)
-         */
-        public boolean combineMultiviewImages = false;
     }
 }

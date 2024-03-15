@@ -600,7 +600,6 @@ struct SoftShadowOptions {
  */
 struct StereoscopicOptions {
     bool enabled = false;
-    bool combineMultiviewImages = false; //!< whether to combine images from multiview array texture (debug option)
 };
 
 } // namespace filament

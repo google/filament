@@ -111,6 +111,8 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.shadowmap.display_shadow_texture_level_count);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_power",
             &engine.debug.shadowmap.display_shadow_texture_power);
+    debugRegistry.registerProperty("d.stereo.combine_multiview_images",
+        &engine.debug.stereo.combine_multiview_images);
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -536,7 +538,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
-    auto stereoscopicOptions = view.getStereoscopicOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
             engine.getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
     // FIXME: This is to override some settings that are not supported for multiview at the moment.
@@ -544,8 +545,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     if (isRenderingMultiview) {
         hasPostProcess = false;
         msaaOptions.enabled = false;
-        // FIXME: for now, we always combine layers into one.
-        stereoscopicOptions.combineMultiviewImages = true;
     }
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
 
@@ -1174,7 +1173,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // Debug: combine the array texture for multiview into a single image.
     if (isRenderingMultiview &&
-        stereoscopicOptions.combineMultiviewImages) {
+        engine.debug.stereo.combine_multiview_images) {
         input = ppm.debugCombineArrayTexture(fg, blendModeTranslucent, input, xvp, {
                         .width = vp.width, .height = vp.height,
                         .format = colorGradingConfig.ldrFormat },

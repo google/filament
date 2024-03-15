@@ -483,11 +483,10 @@ Java_com_google_android_filament_View_nIsStencilBufferEnabled(JNIEnv *, jclass, 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetStereoscopicOptions(JNIEnv *, jclass, jlong nativeView,
-        jboolean enabled, jboolean combineMultiviewImages) {
+        jboolean enabled) {
     View* view = (View*) nativeView;
     View::StereoscopicOptions options {
-        .enabled = (bool) enabled,
-        .combineMultiviewImages = (bool) combineMultiviewImages,
+        .enabled = (bool) enabled
     };
     view->setStereoscopicOptions(options);
 }
