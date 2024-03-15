@@ -299,6 +299,16 @@ public:
         }
     }
 
+    UTILS_NOINLINE
+    void shrink_to_fit() {
+        if (size() < capacity()) {
+            FixedCapacityVector t(construct_with_capacity, size(), allocator());
+            t.mSize = size();
+            std::uninitialized_move(begin(), end(), t.begin());
+            this->swap(t);
+        }
+    }
+
 private:
     enum construct_with_capacity_tag{ construct_with_capacity };
 
