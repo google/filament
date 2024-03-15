@@ -893,8 +893,10 @@ int main(int argc, char** argv) {
                                     "d.shadowmap.display_shadow_texture_channel"), 0, 3);
                     ImGui::Unindent();
                 }
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
                 ImGui::Checkbox("Combine Multiview Images",
                     debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
+#endif
 
                 bool debugFroxelVisualization;
                 if (debug.getProperty("d.lighting.debug_froxel_visualization",
