@@ -712,8 +712,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
     if (view.hasStereo() &&
-        engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED)
+           engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED) {
         renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
+    }
 
     RenderPassBuilder passBuilder(commandArena);
     passBuilder.renderFlags(renderFlags);
@@ -1172,8 +1173,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // Debug: combine the array texture for multiview into a single image.
-    if (isRenderingMultiview &&
-        engine.debug.stereo.combine_multiview_images) {
+    if (UTILS_UNLIKELY(isRenderingMultiview && engine.debug.stereo.combine_multiview_images)) {
         input = ppm.debugCombineArrayTexture(fg, blendModeTranslucent, input, xvp, {
                         .width = vp.width, .height = vp.height,
                         .format = colorGradingConfig.ldrFormat },

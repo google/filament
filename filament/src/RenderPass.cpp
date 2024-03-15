@@ -591,8 +591,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // eye count.
         if (UTILS_UNLIKELY(hasInstancedStereo)) {
             cmdColor.primitive.instanceCount =
-                (soaInstanceInfo[i].count * stereoEyeCount) |
-                PrimitiveInfo::USER_INSTANCE_MASK;
+                    (soaInstanceInfo[i].count * stereoEyeCount) |
+                    PrimitiveInfo::USER_INSTANCE_MASK;
         }
 
         // if we are already an SSR variant, the SRE bit is already set,
@@ -625,8 +625,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
             if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
-                    (soaInstanceInfo[i].count * stereoEyeCount) |
-                    PrimitiveInfo::USER_INSTANCE_MASK;
+                        (soaInstanceInfo[i].count * stereoEyeCount) |
+                        PrimitiveInfo::USER_INSTANCE_MASK;
             }
         }
         if constexpr (isColorPass) {
