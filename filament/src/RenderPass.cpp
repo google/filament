@@ -184,8 +184,7 @@ void RenderPass::appendCommands(FEngine& engine,
     Command* curr = commands.data();
     size_t const commandCount = commands.size();
 
-    auto stereoscopicEyeCount =
-            renderFlags & IS_STEREOSCOPIC ? engine.getConfig().stereoscopicEyeCount : 1;
+    auto stereoscopicEyeCount = engine.getConfig().stereoscopicEyeCount;
 
     const float3 cameraPosition(mCameraPosition);
     const float3 cameraForwardVector(mCameraForwardVector);
@@ -521,7 +520,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
-    const bool hasStereo = renderFlags & IS_STEREOSCOPIC;
+    const bool hasInstancedStereo = renderFlags & IS_INSTANCED_STEREOSCOPIC;
 
     Command cmdColor;
 
@@ -590,7 +589,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
-        if (UTILS_UNLIKELY(hasStereo)) {
+        if (UTILS_UNLIKELY(hasInstancedStereo)) {
             cmdColor.primitive.instanceCount =
                     (soaInstanceInfo[i].count * stereoEyeCount) |
                     PrimitiveInfo::USER_INSTANCE_MASK;
@@ -624,7 +623,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.primitive.skinningTexture = skinning.handleSampler;
             cmdDepth.primitive.morphWeightBuffer = morphing.handle;
 
-            if (UTILS_UNLIKELY(hasStereo)) {
+            if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
                         (soaInstanceInfo[i].count * stereoEyeCount) |
                         PrimitiveInfo::USER_INSTANCE_MASK;
