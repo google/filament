@@ -143,11 +143,12 @@ void PlatformCocoaTouchGL::destroySwapChain(Platform::SwapChain* swapChain) noex
     }
 }
 
-uint32_t PlatformCocoaTouchGL::createDefaultRenderTarget() noexcept {
+uint32_t PlatformCocoaTouchGL::getDefaultFramebufferObject() noexcept {
     return pImpl->mDefaultFramebuffer;
 }
 
-void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept {
+bool PlatformCocoaTouchGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "PlatformCocoaTouchGL does not support using distinct draw/read swap chains.");
     CAEAGLLayer* const glLayer = (__bridge CAEAGLLayer*) drawSwapChain;
@@ -182,6 +183,7 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
         ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
         glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer);
     }
+    return true;
 }
 
 void PlatformCocoaTouchGL::commit(Platform::SwapChain* swapChain) noexcept {

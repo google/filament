@@ -47,13 +47,20 @@ endif()
 
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
+set (MATC_FLAGS ${MATC_BASE_FLAGS})
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=instanced)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=multiview)
+endif ()
+
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
     set(output_path "${MATERIAL_DIR}/${localname}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_FLAGS} -o ${output_path} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"

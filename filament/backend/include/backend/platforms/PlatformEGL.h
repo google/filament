@@ -99,11 +99,18 @@ protected:
     SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
     SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
+    bool isSwapChainProtected(SwapChain* swapChain) noexcept override;
 
-    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
+    ContextType getCurrentContextType() const noexcept override;
+
+    bool makeCurrent(ContextType type,
+            SwapChain* drawSwapChain,
+            SwapChain* readSwapChain) noexcept override;
+
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
             utils::Invocable<void()> preContextChange,
             utils::Invocable<void(size_t index)> postContextChange) noexcept override;
+
     void commit(SwapChain* swapChain) noexcept override;
 
     bool canCreateFence() noexcept override;
@@ -132,21 +139,25 @@ protected:
     /**
      * Always use this instead of eglMakeCurrent(), as it tracks some state.
      */
-    EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
 
-    /**
-     * Returns true if the swapchain is protected
-     */
-    static bool isSwapChainProtected(Platform::SwapChain const* swapChain) noexcept;
+    EGLContext getContextForType(ContextType type) const noexcept;
+
+    // makes the draw and read surface current without changing the current context
+    EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
+        return egl.makeCurrent(drawSurface, readSurface);
+    }
+
+    // makes context current and set draw and read surfaces to EGL_NO_SURFACE
+    EGLBoolean makeCurrent(EGLContext context) noexcept {
+        return egl.makeCurrent(context, mEGLDummySurface, mEGLDummySurface);
+    }
 
     // TODO: this should probably use getters instead.
     EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
     EGLContext mEGLContext = EGL_NO_CONTEXT;
     EGLContext mEGLContextProtected = EGL_NO_CONTEXT;
-    EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
-    EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
-    EGLContext mCurrentContext = EGL_NO_CONTEXT;
     EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
+    ContextType mCurrentContextType = ContextType::NONE;
     // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
@@ -181,8 +192,20 @@ protected:
     EGLConfig findSwapChainConfig(uint64_t flags, bool window, bool pbuffer) const;
 
 private:
-    EGLBoolean makeCurrent(EGLContext context,
-            EGLSurface drawSurface, EGLSurface readSurface) noexcept;
+    class EGL {
+        EGLDisplay& mEGLDisplay;
+        EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
+        EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
+        EGLContext mCurrentContext = EGL_NO_CONTEXT;
+    public:
+        explicit EGL(EGLDisplay& dpy) : mEGLDisplay(dpy) {}
+        EGLBoolean makeCurrent(EGLContext context,
+                EGLSurface drawSurface, EGLSurface readSurface) noexcept;
+
+        EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
+            return makeCurrent(mCurrentContext, drawSurface, readSurface);
+        }
+    } egl{ mEGLDisplay };
 };
 
 } // namespace filament::backend

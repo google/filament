@@ -104,9 +104,8 @@ public:
         bool operator()(const FboKey& k1, const FboKey& k2) const;
     };
 
+    explicit VulkanFboCache(VkDevice device);
     ~VulkanFboCache();
-
-    void initialize(VkDevice device) noexcept;
 
     // Retrieves or creates a VkFramebuffer handle.
     VkFramebuffer getFramebuffer(FboKey config) noexcept;

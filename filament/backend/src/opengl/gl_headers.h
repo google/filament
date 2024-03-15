@@ -151,9 +151,11 @@ extern PFNGLDISCARDFRAMEBUFFEREXTPROC glDiscardFramebufferEXT;
 #ifdef GL_KHR_parallel_shader_compile
 extern PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
 #endif
+#ifdef GL_OVR_multiview
+extern PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
+#endif
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
-extern PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
 #endif
 #endif // __EMSCRIPTEN__
 } // namespace glext

@@ -28,6 +28,9 @@
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <array>
+#include <limits>
+
 #include <stddef.h>
 #include <stdint.h>
 

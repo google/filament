@@ -32,6 +32,10 @@ struct TargetBufferInfo {
     // texture to be used as render target
     Handle<HwTexture> handle;
 
+    // starting layer index for multiview. This value is only used when the `layerCount` for the
+    // render target is greater than 1.
+    uint8_t baseViewIndex = 0;
+
     // level to be used
     uint8_t level = 0;
 
@@ -80,7 +84,7 @@ public:
 
     // this is here for backward compatibility
     MRT(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
-            : mInfos{{ handle, level, layer }} {
+            : mInfos{{ handle, 0, level, layer }} {
     }
 };
 

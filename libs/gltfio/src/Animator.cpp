@@ -368,7 +368,8 @@ void AnimatorImpl::stashCrossFade() {
         return index;
     };
 
-    const Instance root = tm.getInstance(asset->mRoot);
+    const Entity rootEntity = instance ? instance->getRoot() : asset->mRoot;
+    const Instance root = tm.getInstance(rootEntity);
     const size_t count = recursiveCount(root, 0, recursiveCount);
     crossFade.reserve(count);
     crossFade.resize(count);
@@ -394,7 +395,9 @@ void AnimatorImpl::applyCrossFade(float alpha) {
         }
         return index;
     };
-    recursiveFn(tm.getInstance(asset->mRoot), 0, recursiveFn);
+    const Entity rootEntity = instance ? instance->getRoot() : asset->mRoot;
+    const Instance root = tm.getInstance(rootEntity);
+    recursiveFn(root, 0, recursiveFn);
 }
 
 void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,

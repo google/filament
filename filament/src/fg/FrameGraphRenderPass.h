@@ -47,7 +47,8 @@ struct FrameGraphRenderPass {
         Attachments attachments{};
         Viewport viewport{};
         math::float4 clearColor{};
-        uint8_t samples = 0; // # of samples (0 = unset, default)
+        uint8_t samples = 0;    // # of samples (0 = unset, default)
+        uint8_t layerCount = 0; // # of layer (# > 1 = multiview)
         backend::TargetBufferFlags clearFlags{};
         backend::TargetBufferFlags discardStart{};
     };

@@ -224,7 +224,9 @@ MetalShaderCompiler::MetalFunctionBundle MetalShaderCompiler::getProgram(program
             }
         }
     }
-    assert_invariant(token->isReady());
+
+    // The job isn't guaranteed to have finished yet. We may have failed to dequeue it above,
+    // which means it's currently running. In that case get() will block until it finishes.
 
     MetalShaderCompiler::MetalFunctionBundle program = token->get();
     token = nullptr;
