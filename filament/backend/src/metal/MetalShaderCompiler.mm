@@ -70,20 +70,29 @@ struct MetalShaderCompiler::MetalProgramToken : ProgramToken {
 
 MetalShaderCompiler::MetalProgramToken::~MetalProgramToken() = default;
 
-MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device, MetalDriver& driver)
+MetalShaderCompiler::MetalShaderCompiler(id<MTLDevice> device, MetalDriver& driver, Mode mode)
         : mDevice(device),
-          mCallbackManager(driver) {
+          mCallbackManager(driver),
+          mMode(mode) {
 
 }
 
 void MetalShaderCompiler::init() noexcept {
     const uint32_t poolSize = 1;
-    mCompilerThreadPool.init(poolSize, []() {}, []() {});
+    if (mMode == Mode::ASYNCHRONOUS) {
+        mCompilerThreadPool.init(poolSize, []() {}, []() {});
+    }
 }
 
 void MetalShaderCompiler::terminate() noexcept {
-    mCompilerThreadPool.terminate();
+    if (mMode == Mode::ASYNCHRONOUS) {
+        mCompilerThreadPool.terminate();
+    }
     mCallbackManager.terminate();
+}
+
+bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
+    return mMode == Mode::ASYNCHRONOUS;
 }
 
 /* static */ MetalShaderCompiler::MetalFunctionBundle MetalShaderCompiler::compileProgram(
@@ -180,14 +189,26 @@ MetalShaderCompiler::program_token_t MetalShaderCompiler::createProgram(
 
     token->handle = mCallbackManager.get();
 
-    CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
-    mCompilerThreadPool.queue(priorityQueue, token,
-            [this, name, device = mDevice, program = std::move(program), token]() {
-                MetalFunctionBundle compiledProgram = compileProgram(program, device);
+    switch (mMode) {
+        case Mode::ASYNCHRONOUS: {
+            CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
+            mCompilerThreadPool.queue(priorityQueue, token,
+                    [this, name, device = mDevice, program = std::move(program), token]() {
+                        MetalFunctionBundle compiledProgram = compileProgram(program, device);
+                        token->set(compiledProgram);
+                        mCallbackManager.put(token->handle);
+                    });
 
-                token->set(compiledProgram);
-                mCallbackManager.put(token->handle);
-            });
+            break;
+        }
+
+        case Mode::SYNCHRONOUS: {
+            MetalFunctionBundle compiledProgram = compileProgram(program, mDevice);
+            token->set(compiledProgram);
+            mCallbackManager.put(token->handle);
+            break;
+        }
+    }
 
     return token;
 }
@@ -195,33 +216,21 @@ MetalShaderCompiler::program_token_t MetalShaderCompiler::createProgram(
 MetalShaderCompiler::MetalFunctionBundle MetalShaderCompiler::getProgram(program_token_t& token) {
     assert_invariant(token);
 
-    if (!token->isReady()) {
-        auto job = mCompilerThreadPool.dequeue(token);
-        if (job) {
-            job();
+    if (mMode == Mode::ASYNCHRONOUS) {
+        if (!token->isReady()) {
+            auto job = mCompilerThreadPool.dequeue(token);
+            if (job) {
+                job();
+            }
         }
     }
 
+    // The job isn't guaranteed to have finished yet. We may have failed to dequeue it above,
+    // which means it's currently running. In that case get() will block until it finishes.
+
     MetalShaderCompiler::MetalFunctionBundle program = token->get();
-
     token = nullptr;
-
     return program;
-}
-
-/* static */ void MetalShaderCompiler::terminate(program_token_t& token) {
-    assert_invariant(token);
-
-    auto job = token->compiler.mCompilerThreadPool.dequeue(token);
-    if (!job) {
-        // The job is being executed right now (or has already executed).
-        token->wait();
-    } else {
-        // The job has not executed yet.
-        token->compiler.mCallbackManager.put(token->handle);
-    }
-
-    token.reset();
 }
 
 void MetalShaderCompiler::notifyWhenAllProgramsAreReady(

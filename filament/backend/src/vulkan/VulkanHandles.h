@@ -64,6 +64,12 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->bindingToSamplerIndex;
     }
 
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+    inline utils::FixedCapacityVector<std::string> const& getBindingToName() const {
+        return mInfo->bindingToName;
+    }
+#endif
+
 private:
     // TODO: handle compute shaders.
     // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
@@ -80,6 +86,12 @@ private:
         // We store the samplerGroupIndex as the top 8-bit and the index within each group as the lower 8-bit.
         utils::FixedCapacityVector<uint16_t> bindingToSamplerIndex;
         VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
+
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+        // We store the sampler name mapped from binding index (only for debug purposes).
+        utils::FixedCapacityVector<std::string> bindingToName;
+#endif
+
     };
 
     PipelineInfo* mInfo;
@@ -132,7 +144,48 @@ struct VulkanBufferObject;
 struct VulkanVertexBufferInfo : public HwVertexBufferInfo, VulkanResource {
     VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
             AttributeArray const& attributes);
-    AttributeArray attributes;
+
+    inline VkVertexInputAttributeDescription const* getAttribDescriptions() const {
+        return mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
+    }
+
+    inline VkVertexInputBindingDescription const* getBufferDescriptions() const {
+        return mInfo.mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
+    }
+
+    inline int8_t const* getAttributeToBuffer() const {
+        return mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
+    }
+
+    inline VkDeviceSize const* getOffsets() const {
+        return mInfo.mSoa.data<PipelineInfo::OFFSETS>();
+    }
+
+    size_t getAttributeCount() const noexcept {
+        return mInfo.mSoa.size();
+    }
+
+private:
+    struct PipelineInfo {
+        PipelineInfo(size_t size) : mSoa(size /* capacity */) {
+            mSoa.resize(size);
+        }
+
+        // These correspond to the index of the element in the SoA
+        static constexpr uint8_t ATTRIBUTE_DESCRIPTION = 0;
+        static constexpr uint8_t BUFFER_DESCRIPTION = 1;
+        static constexpr uint8_t OFFSETS = 2;
+        static constexpr uint8_t ATTRIBUTE_TO_BUFFER_INDEX = 3;
+
+        utils::StructureOfArrays<
+            VkVertexInputAttributeDescription,
+            VkVertexInputBindingDescription,
+            VkDeviceSize,
+            int8_t
+        > mSoa;
+    };
+
+    PipelineInfo mInfo;
 };
 
 struct VulkanVertexBuffer : public HwVertexBuffer, VulkanResource {
@@ -140,53 +193,20 @@ struct VulkanVertexBuffer : public HwVertexBuffer, VulkanResource {
             VulkanResourceAllocator* allocator,
             uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih);
 
-    ~VulkanVertexBuffer();
-
     void setBuffer(VulkanResourceAllocator const& allocator,
             VulkanBufferObject* bufferObject, uint32_t index);
 
-    inline VkVertexInputAttributeDescription const* getAttribDescriptions() {
-        return mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
-    }
-
-    inline VkVertexInputBindingDescription const* getBufferDescriptions() {
-        return mInfo->mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
-    }
-
     inline VkBuffer const* getVkBuffers() const {
-        return mInfo->mSoa.data<PipelineInfo::VK_BUFFER>();
+        return mBuffers.data();
     }
 
-    inline VkDeviceSize const* getOffsets() const {
-        return mInfo->mSoa.data<PipelineInfo::OFFSETS>();
+    inline VkBuffer* getVkBuffers() {
+        return mBuffers.data();
     }
 
     Handle<HwVertexBufferInfo> vbih;
-
 private:
-    struct PipelineInfo {
-        PipelineInfo(size_t size)
-            : mSoa(size /* capacity */) {
-            mSoa.resize(size);
-        }
-
-        // These correspond to the index of the element in the SoA
-        static constexpr uint8_t ATTRIBUTE_DESCRIPTION = 0;
-        static constexpr uint8_t BUFFER_DESCRIPTION = 1;
-        static constexpr uint8_t VK_BUFFER = 2;
-        static constexpr uint8_t OFFSETS = 3;
-        static constexpr uint8_t ATTRIBUTE_TO_BUFFER_INDEX = 4;
-
-        utils::StructureOfArrays<
-            VkVertexInputAttributeDescription,
-            VkVertexInputBindingDescription,
-            VkBuffer,
-            VkDeviceSize,
-            int8_t
-        > mSoa;
-    };
-
-    PipelineInfo* mInfo;
+    utils::FixedCapacityVector<VkBuffer> mBuffers;
     FixedSizeVulkanResourceManager<MAX_VERTEX_BUFFER_COUNT> mResources;
 };
 
@@ -219,19 +239,15 @@ struct VulkanSamplerGroup : public HwSamplerGroup, VulkanResource {
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive, VulkanResource {
-    VulkanRenderPrimitive(VulkanResourceAllocator* allocator)
-        : VulkanResource(VulkanResourceType::RENDER_PRIMITIVE),
-          mResources(allocator) {}
+    VulkanRenderPrimitive(VulkanResourceAllocator* resourceAllocator,
+            PrimitiveType pt, Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh);
 
     ~VulkanRenderPrimitive() {
         mResources.clear();
     }
 
-    void setPrimitiveType(PrimitiveType pt);
-    void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer);
     VulkanVertexBuffer* vertexBuffer = nullptr;
     VulkanIndexBuffer* indexBuffer = nullptr;
-    VkPrimitiveTopology primitiveTopology;
 
 private:
     // Keep references to the vertex buffer and the index buffer.

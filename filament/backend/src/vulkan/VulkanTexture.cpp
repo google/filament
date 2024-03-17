@@ -159,7 +159,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     imageInfo.samples = (VkSampleCountFlagBits) samples;
 
     VkResult error = vkCreateImage(mDevice, &imageInfo, VKALLOC, &mTextureImage);
-    if (error || FVK_ENABLED_BOOL(FVK_DEBUG_TEXTURE)) {
+    if (error || FVK_ENABLED(FVK_DEBUG_TEXTURE)) {
         utils::slog.d << "vkCreateImage: "
             << "image = " << mTextureImage << ", "
             << "result = " << error << ", "

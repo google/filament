@@ -563,6 +563,14 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
 void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
     mPipelineRequirements.shaders[0] = program->getVertexShader();
     mPipelineRequirements.shaders[1] = program->getFragmentShader();
+
+    // If this is a debug build, validate the current shader.
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    if (mPipelineRequirements.shaders[0] == VK_NULL_HANDLE ||
+            mPipelineRequirements.shaders[1] == VK_NULL_HANDLE) {
+        utils::slog.e << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
+    }
+#endif
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {

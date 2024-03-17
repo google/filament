@@ -48,24 +48,26 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
     // For reference on a 64-bits machine in Release mode:
     //    MetalTimerQuery              :  16       few
     //    HwStream                     :  24       few
+    //    MetalRenderPrimitive         :  24       many
+    //    MetalVertexBuffer            :  32       moderate
+    // -- less than or equal 32 bytes
     //    MetalIndexBuffer             :  40       moderate
     //    MetalFence                   :  48       few
     //    MetalBufferObject            :  48       many
     // -- less than or equal 48 bytes
     //    MetalSamplerGroup            : 112       few
-    //    MetalProgram                 : 144       moderate
+    //    MetalProgram                 : 152       moderate
     //    MetalTexture                 : 152       moderate
-    //    MetalVertexBuffer            : 152       moderate
-    // -- less than or equal 160 bytes
     //    MetalSwapChain               : 184       few
     //    MetalRenderTarget            : 272       few
-    //    MetalRenderPrimitive         : 584       many
-    // -- less than or equal to 592 bytes
+    //    MetalVertexBufferInfo        : 552       moderate
+    // -- less than or equal to 552 bytes
 
     utils::slog.d
            << "\nMetalSwapChain: " << sizeof(MetalSwapChain)
            << "\nMetalBufferObject: " << sizeof(MetalBufferObject)
            << "\nMetalVertexBuffer: " << sizeof(MetalVertexBuffer)
+           << "\nMetalVertexBufferInfo: " << sizeof(MetalVertexBufferInfo)
            << "\nMetalIndexBuffer: " << sizeof(MetalIndexBuffer)
            << "\nMetalSamplerGroup: " << sizeof(MetalSamplerGroup)
            << "\nMetalRenderPrimitive: " << sizeof(MetalRenderPrimitive)
@@ -178,7 +180,10 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
 
-    mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this);
+    const MetalShaderCompiler::Mode compilerMode = driverConfig.disableParallelShaderCompile
+            ? MetalShaderCompiler::Mode::SYNCHRONOUS
+            : MetalShaderCompiler::Mode::ASYNCHRONOUS;
+    mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this, compilerMode);
     mContext->shaderCompiler->init();
 
 #if defined(FILAMENT_METAL_PROFILING)
@@ -786,7 +791,7 @@ bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) 
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
-    return true;
+    return mContext->shaderCompiler->isParallelShaderCompileSupported();
 }
 
 bool MetalDriver::isDepthStencilResolveSupported() {
@@ -1602,11 +1607,13 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 }
 
-void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
-        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+void MetalDriver::bindPipeline(PipelineState ps) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
-            "Attempted to draw without a valid command encoder.");
-    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
+            "bindPipeline() without a valid command encoder.");
+
+    MetalVertexBufferInfo const* const vbi =
+            handle_cast<MetalVertexBufferInfo>(ps.vertexBufferInfo);
+
     auto program = handle_cast<MetalProgram>(ps.program);
     const auto& rs = ps.rasterState;
 
@@ -1620,7 +1627,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
         return;
     }
 
-    functions.validate();
+    ASSERT_PRECONDITION(bool(functions), "Attempting to bind an invalid Metal program.");
 
     auto [fragment, vertex] = functions.getRasterFunctions();
 
@@ -1647,7 +1654,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
     MetalPipelineState const pipelineState {
         .vertexFunction = vertex,
         .fragmentFunction = fragment,
-        .vertexDescription = primitive->vertexDescription,
+        .vertexDescription = vbi->vertexDescription,
         .colorAttachmentPixelFormat = {
             colorPixelFormat[0],
             colorPixelFormat[1],
@@ -1741,20 +1748,6 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
         mContext->currentPolygonOffset = ps.polygonOffset;
     }
 
-    // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
-    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
-
-    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
-            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
-                    uint32_t index) {
-        uniformsToBind[index] = buffer;
-        offsets[index] = state.offset;
-    });
-    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
-            uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
-
     // Bind sampler groups (argument buffers).
     for (size_t s = 0; s < Program::SAMPLER_BINDING_COUNT; s++) {
         MetalSamplerGroup* const samplerGroup = mContext->samplerBindings[s];
@@ -1785,19 +1778,29 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
                                                           atIndex:(SAMPLER_GROUP_BINDING_START + s)];
         }
     }
+}
+
+void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
+            "bindRenderPrimitive() without a valid command encoder.");
 
     // Bind the user vertex buffers.
-
     MetalBuffer* vertexBuffers[MAX_VERTEX_BUFFER_COUNT] = {};
     size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT] = {};
     size_t maxBufferIndex = 0;
 
+    MetalRenderPrimitive const* const primitive = handle_cast<MetalRenderPrimitive>(rph);
+    MetalVertexBufferInfo const* const vbi =
+            handle_cast<MetalVertexBufferInfo>(primitive->vertexBuffer->vbih);
+
+    mContext->currentRenderPrimitive = rph;
+
     auto vb = primitive->vertexBuffer;
-    for (auto m : primitive->bufferMapping) {
+    for (auto m : vbi->bufferMapping) {
         assert_invariant(
                 m.bufferArgumentIndex >= USER_VERTEX_BUFFER_BINDING_START &&
                 m.bufferArgumentIndex < USER_VERTEX_BUFFER_BINDING_START + MAX_VERTEX_BUFFER_COUNT);
-        size_t vertexBufferIndex = m.bufferArgumentIndex - USER_VERTEX_BUFFER_BINDING_START;
+        size_t const vertexBufferIndex = m.bufferArgumentIndex - USER_VERTEX_BUFFER_BINDING_START;
         vertexBuffers[vertexBufferIndex] = vb->buffers[m.sourceBufferIndex];
         maxBufferIndex = std::max(maxBufferIndex, vertexBufferIndex);
     }
@@ -1812,6 +1815,27 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
     [mContext->currentRenderPassEncoder setVertexBytes:bytes
                                                 length:16
                                                atIndex:ZERO_VERTEX_BUFFER_BINDING];
+}
+
+void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
+            "draw() without a valid command encoder.");
+
+    // Bind uniform buffers.
+    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
+
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
+                uniformsToBind[index] = buffer;
+                offsets[index] = state.offset;
+            });
+    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
+            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
+            uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
+
+    auto primitive = handle_cast<MetalRenderPrimitive>(mContext->currentRenderPrimitive);
 
     MetalIndexBuffer* indexBuffer = primitive->indexBuffer;
 
@@ -1823,6 +1847,16 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
                                                   indexBuffer:metalIndexBuffer
                                             indexBufferOffset:indexOffset * primitive->indexBuffer->elementSize
                                                 instanceCount:instanceCount];
+}
+
+void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+    MetalRenderPrimitive const* const rp = handle_cast<MetalRenderPrimitive>(rph);
+    ps.primitiveType = rp->type;
+    ps.vertexBufferInfo = rp->vertexBuffer->vbih;
+    bindPipeline(ps);
+    bindRenderPrimitive(rph);
+    draw2(indexOffset, indexCount, instanceCount);
 }
 
 void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {

@@ -343,27 +343,9 @@ void MetalBufferObject::updateBufferUnsynchronized(void* data, size_t size, uint
 MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t bufferCount,
         uint8_t attributeCount, AttributeArray const& attributes)
         : HwVertexBufferInfo(bufferCount, attributeCount),
-          attributes(attributes) {
-}
+          bufferMapping(utils::FixedCapacityVector<Entry>::with_capacity(MAX_VERTEX_BUFFER_COUNT)) {
 
-MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
-        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
-    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
-}
-
-MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
-        uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
-        buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
-
-MetalRenderPrimitive::MetalRenderPrimitive()
-    : bufferMapping(utils::FixedCapacityVector<Entry>::with_capacity(MAX_VERTEX_BUFFER_COUNT)) {}
-
-void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
-        MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer) {
-    this->vertexBuffer = vertexBuffer;
-    this->indexBuffer = indexBuffer;
-
-    const size_t attributeCount = vbi->attributes.size();
+    const size_t maxAttributeCount = attributes.size();
 
     auto& mapping = bufferMapping;
     mapping.clear();
@@ -403,8 +385,8 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
         }
     };
 
-    for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
-        const auto& attribute = vbi->attributes[attributeIndex];
+    for (uint32_t attributeIndex = 0; attributeIndex < maxAttributeCount; attributeIndex++) {
+        const auto& attribute = attributes[attributeIndex];
 
         // If the attribute is unused, bind it to the zero buffer. It's a Metal error for a shader
         // to read from missing vertex attributes.
@@ -429,6 +411,24 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
                 .offset = attribute.offset
         };
     }
+}
+
+MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
+        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
+    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
+}
+
+MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
+        uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
+        buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
+
+MetalRenderPrimitive::MetalRenderPrimitive() {
+}
+
+void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
+        MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer) {
+    this->vertexBuffer = vertexBuffer;
+    this->indexBuffer = indexBuffer;
 }
 
 MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept

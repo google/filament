@@ -252,8 +252,8 @@ set(MATERIAL_SRCS
 )
 
 set(MATERIAL_FL0_SRCS
-        src/materials/defaultMaterial0.mat
-        src/materials/skybox0.mat
+        src/materials/defaultMaterial.mat
+        src/materials/skybox.mat
 )
 
 # Embed the binary resource blob for materials.
@@ -316,32 +316,30 @@ foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
     set(output_path "${MATERIAL_DIR}/${localname}.filamat")
 
-    add_custom_command(
-            OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
-            MAIN_DEPENDENCY ${fullname}
-            DEPENDS matc
-            COMMENT "Compiling material ${mat_src} to ${output_path}"
-    )
-    list(APPEND MATERIAL_BINS ${output_path})
-endforeach()
-
-if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
-    foreach (mat_src ${MATERIAL_FL0_SRCS})
-        get_filename_component(localname "${mat_src}" NAME_WE)
-        get_filename_component(fullname "${mat_src}" ABSOLUTE)
-        set(output_path "${MATERIAL_DIR}/${localname}.filamat")
-
+    list(FIND MATERIAL_FL0_SRCS ${mat_src} index)
+    if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
+        string(REGEX REPLACE "[.]filamat$" "0.filamat" output_path0 ${output_path})
+        add_custom_command(
+                OUTPUT ${output_path} ${output_path0}
+                COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
+                COMMAND matc ${MATC_BASE_FLAGS} -PfeatureLevel=0 -o ${output_path0} ${fullname}
+                MAIN_DEPENDENCY ${fullname}
+                DEPENDS matc
+                COMMENT "Compiling material ${fullname} to ${output_path} and ${output_path0}"
+        )
+        list(APPEND MATERIAL_BINS ${output_path0})
+    else ()
         add_custom_command(
                 OUTPUT ${output_path}
                 COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
                 MAIN_DEPENDENCY ${fullname}
                 DEPENDS matc
-                COMMENT "Compiling material ${mat_src} to ${output_path}"
+                COMMENT "Compiling material ${fullname} to ${output_path}"
         )
-        list(APPEND MATERIAL_BINS ${output_path})
-    endforeach ()
-endif ()
+    endif ()
+
+    list(APPEND MATERIAL_BINS ${output_path})
+endforeach()
 
 # Additional dependencies on included files for materials
 

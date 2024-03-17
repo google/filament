@@ -14,20 +14,33 @@
  * limitations under the License.
  */
 
+#include <backend/AcquiredImage.h>
+#include <backend/Platform.h>
+#include <backend/platforms/PlatformEGL.h>
 #include <backend/platforms/PlatformEGLAndroid.h>
 
 #include "opengl/GLUtils.h"
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
+#include <android/hardware_buffer.h>
+
+#include <utils/compiler.h>
+#include <utils/ostream.h>
+#include <utils/Log.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include <utils/compiler.h>
-#include <utils/Log.h>
-
 #include <sys/system_properties.h>
+
+#include <jni.h>
+
+#include <new>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 // We require filament to be built with an API 19 toolchain, before that, OpenGLES 3.0 didn't exist
 // Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
@@ -165,14 +178,28 @@ int PlatformEGLAndroid::getOSVersion() const noexcept {
 
 AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) noexcept {
     // Convert the AHardwareBuffer to EGLImage.
-    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID((const AHardwareBuffer*)source.image);
+    AHardwareBuffer const* const pHardwareBuffer = (const AHardwareBuffer*)source.image;
+
+    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(pHardwareBuffer);
     if (!clientBuffer) {
         slog.e << "Unable to get EGLClientBuffer from AHardwareBuffer." << io::endl;
         return {};
     }
-    // Note that this cannot be used to stream protected video (for now) because we do not set EGL_PROTECTED_CONTENT_EXT.
-    EGLint attrs[] = { EGL_NONE, EGL_NONE };
-    EGLImageKHR eglImage = eglCreateImageKHR(mEGLDisplay, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attrs);
+
+    PlatformEGL::Config attributes;
+
+    if (__builtin_available(android 26, *)) {
+        AHardwareBuffer_Desc desc;
+        AHardwareBuffer_describe(pHardwareBuffer, &desc);
+        bool const isProtectedContent =
+                desc.usage & AHardwareBuffer_UsageFlags::AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
+        if (isProtectedContent) {
+            attributes[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
+        }
+    }
+
+    EGLImageKHR eglImage = eglCreateImageKHR(mEGLDisplay,
+            EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attributes.data());
     if (eglImage == EGL_NO_IMAGE_KHR) {
         slog.e << "eglCreateImageKHR returned no image." << io::endl;
         return {};

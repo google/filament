@@ -63,11 +63,12 @@
 // Enable the debug utils extension if it is available.
 #define FVK_DEBUG_DEBUG_UTILS             0x00008000
 
+#define FVK_DEBUG_RESOURCE_LEAK           0x00010000
+
 // Usefaul default combinations
 #define FVK_DEBUG_EVERYTHING              0xFFFFFFFF
 #define FVK_DEBUG_PERFORMANCE     \
-    FVK_DEBUG_SYSTRACE |          \
-    FVK_DEBUG_GROUP_MARKERS
+    FVK_DEBUG_SYSTRACE
 
 #define FVK_DEBUG_CORRECTNESS     \
     FVK_DEBUG_VALIDATION |        \
@@ -80,14 +81,12 @@
     FVK_DEBUG_PRINT_GROUP_MARKERS
 
 #ifndef NDEBUG
-#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE | FVK_DEBUG_DEBUG_UTILS | FVK_DEBUG_VALIDATION)
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE)
 #else
 #define FVK_DEBUG_FLAGS 0
 #endif
 
-#define FVK_ENABLED(flags) ((FVK_DEBUG_FLAGS) & (flags))
-#define FVK_ENABLED_BOOL(flags) ((bool) FVK_ENABLED(flags))
-
+#define FVK_ENABLED(flags) (((FVK_DEBUG_FLAGS) & (flags)) == (flags))
 
 // Group marker only works only if validation or debug utils is enabled since it uses
 // vkCmd(Begin/End)DebugUtilsLabelEXT or vkCmdDebugMarker(Begin/End)EXT
@@ -106,6 +105,15 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 #endif
 
 // end dependcy checks
+
+// Shorthand for combination of enabled debug flags
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) || FVK_ENABLED(FVK_DEBUG_TEXTURE)
+#define FVK_ENABLED_DEBUG_SAMPLER_NAME 1
+#else
+#define FVK_ENABLED_DEBUG_SAMPLER_NAME 0
+#endif
+
+// end shorthands
 
 #if FVK_ENABLED(FVK_DEBUG_SYSTRACE)
 

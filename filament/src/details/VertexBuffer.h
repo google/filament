@@ -52,6 +52,8 @@ public:
 
     VertexBufferHandle getHwHandle() const noexcept { return mHandle; }
 
+    VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
+
     size_t getVertexCount() const noexcept;
 
     AttributeBitset getDeclaredAttributes() const noexcept {
