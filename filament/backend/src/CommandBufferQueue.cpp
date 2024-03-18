@@ -58,6 +58,7 @@ void CommandBufferQueue::requestExit() {
 }
 
 void CommandBufferQueue::setPaused(bool paused) {
+    std::lock_guard<utils::Mutex> const lock(mLock);
     if (paused) {
         mPaused = true;
     } else {
@@ -125,6 +126,9 @@ void CommandBufferQueue::flush() noexcept {
 #endif
 
         SYSTRACE_NAME("waiting: CircularBuffer::flush()");
+        ASSERT_POSTCONDITION(!mPaused,
+                "CommandStream is full, but since the rendering thread is paused, "
+                "the buffer cannot flush and we will deadlock. Instead, abort.");
         mCondition.wait(lock, [this, requiredSize]() -> bool {
             // TODO: on macOS, we need to call pumpEvents from time to time
             return mFreeSpace >= requiredSize;
