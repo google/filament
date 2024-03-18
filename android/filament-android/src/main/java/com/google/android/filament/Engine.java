@@ -242,9 +242,11 @@ public class Engine {
         /**
          * Sets the initial paused state of the rendering thread.
          *
+         * <p>Warning: This is an experimental API. See {@link Engine#setPaused(boolean)} for
+         * caveats.
+         *
          * @param paused Whether to start the rendering thread paused.
          * @return A reference to this Builder for chaining calls.
-         * @warning Experimental.
          */
         public Builder paused(boolean paused) {
             nSetBuilderPaused(mNativeBuilder, paused);
@@ -1203,7 +1205,16 @@ public class Engine {
 
     /**
      * Pause or resume the rendering thread.
-     * @warning Experimental.
+     *
+     * <p>Warning: This is an experimental API. In particular, note the following caveats.
+     *
+     * <ul><li>
+     * Buffer callbacks will never be called as long as the rendering thread is paused.
+     * Do not rely on a buffer callback to unpause the thread.
+     * </li><li>
+     * While the rendering thread is paused, rendering commands will continued to be queued
+     * until the buffer limit is reached. When the limit is reached, the program will abort.
+     * </li></ul>
      */
     public void setPaused(boolean paused) {
         nSetPaused(getNativeObject(), paused);
