@@ -253,7 +253,7 @@ float3 PBRNeutralToneMapper::operator()(math::float3 color) const noexcept {
     color *= newPeak / peak;
 
     float g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
-    return mix(color, float3(1.0f), g);
+    return mix(color, float3(newPeak), g);
 }
 
 //------------------------------------------------------------------------------
