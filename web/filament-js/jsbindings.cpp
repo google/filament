@@ -938,6 +938,10 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             size_t count), {
         return &builder->geometry(index, type, vertices, indices, offset, minIndex, maxIndex, count); })
 
+    .BUILDER_FUNCTION("geometryType", RenderableBuilder, (RenderableBuilder* builder,
+            RenderableManager::Builder::GeometryType type), {
+        return &builder->geometryType(type); })
+
     .BUILDER_FUNCTION("material", RenderableBuilder, (RenderableBuilder* builder,
             size_t index, MaterialInstance* mi), {
         return &builder->material(index, mi); })

@@ -43,9 +43,12 @@
 // Enables Android systrace
 #define FVK_DEBUG_SYSTRACE                0x00000001
 
-// Group markers are used to denote collection of GPU commands.  It is typically at the granualarity
-// of a renderpass.
-#define FVK_DEBUG_GROUP_MARKERS           0x00000002
+// Group markers are used to denote collections of GPU commands.  It is typically at the
+// granualarity of a renderpass. You can enable this along with FVK_DEBUG_DEBUG_UTILS to take
+// advantage of vkCmdBegin/EndDebugUtilsLabelEXT. You can also just enable this with
+// FVK_DEBUG_PRINT_GROUP_MARKERS to print the current marker to stdout.
+#define FVK_DEBUG_GROUP_MARKERS 0x00000002
+
 #define FVK_DEBUG_TEXTURE                 0x00000004
 #define FVK_DEBUG_LAYOUT_TRANSITION       0x00000008
 #define FVK_DEBUG_COMMAND_BUFFER          0x00000010
@@ -63,9 +66,11 @@
 // Enable the debug utils extension if it is available.
 #define FVK_DEBUG_DEBUG_UTILS             0x00008000
 
+// Use this to debug potential Handle/Resource leakage. It will print out reference counts for all
+// the currently active resources.
 #define FVK_DEBUG_RESOURCE_LEAK           0x00010000
 
-// Usefaul default combinations
+// Useful default combinations
 #define FVK_DEBUG_EVERYTHING              0xFFFFFFFF
 #define FVK_DEBUG_PERFORMANCE     \
     FVK_DEBUG_SYSTRACE
