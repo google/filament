@@ -275,16 +275,16 @@ const float kSensitivity = 100.0f;
 - (void)dealloc {
     [self destroyModel];
 
-    delete _manipulator;
-    delete _stbDecoder;
-    delete _ktxDecoder;
-
     _materialProvider->destroyMaterials();
     delete _materialProvider;
     auto* ncm = _assetLoader->getNames();
     delete ncm;
     AssetLoader::destroy(&_assetLoader);
     delete _resourceLoader;
+
+    delete _manipulator;
+    delete _stbDecoder;
+    delete _ktxDecoder;
 
     _engine->destroy(_swapChain);
     _engine->destroy(_view);
