@@ -18,9 +18,9 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
+#include <DataReshaper.h>
+#include <backend/DriverEnums.h>
 #include <private/backend/BackendUtils.h>
-
-#include "DataReshaper.h"
 
 #include <utils/Panic.h>
 
@@ -100,8 +100,12 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
-    const VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+    constexpr VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    if (any(usage & (TextureUsage::BLIT_DST | TextureUsage::BLIT_SRC))) {
+        imageInfo.usage |= blittable;
+    }
 
     if (any(usage & TextureUsage::SAMPLEABLE)) {
 

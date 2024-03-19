@@ -77,7 +77,11 @@ private:
 
     struct PipelineInfo {
         PipelineInfo()
-            : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff) {}
+            : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff)
+#if FVK_ENABLED_DEBUG_SAMPLER_NAME
+            , bindingToName(MAX_SAMPLER_COUNT, "")
+#endif              
+            {}
 
         // This bitset maps to each of the sampler in the sampler groups associated with this
         // program, and whether each sampler is used in which shader (i.e. vert, frag, compute).
