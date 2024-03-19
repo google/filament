@@ -33,18 +33,17 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-size_t HwRenderPrimitiveFactory::KeyHash::operator()(
-        HwRenderPrimitiveFactory::Key const& p) const noexcept {
-    return utils::hash::combine(
-            p.params.vbh.getId(),
-            utils::hash::combine(p.params.ibh.getId(), (size_t)p.params.type));
+size_t HwRenderPrimitiveFactory::Parameters::hash() const noexcept {
+    return utils::hash::combine(vbh.getId(),
+            utils::hash::combine(ibh.getId(),
+                    (size_t)type));
 }
 
-bool operator==(HwRenderPrimitiveFactory::Key const& lhs,
-        HwRenderPrimitiveFactory::Key const& rhs) noexcept {
-    return lhs.params.vbh == rhs.params.vbh &&
-           lhs.params.ibh == rhs.params.ibh &&
-           lhs.params.type == rhs.params.type;
+bool operator==(HwRenderPrimitiveFactory::Parameters const& lhs,
+        HwRenderPrimitiveFactory::Parameters const& rhs) noexcept {
+    return lhs.vbh == rhs.vbh &&
+           lhs.ibh == rhs.ibh &&
+           lhs.type == rhs.type;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -67,7 +66,7 @@ auto HwRenderPrimitiveFactory::create(DriverApi& driver,
         backend::PrimitiveType type) noexcept -> Handle {
 
     // see if we already have seen this RenderPrimitive
-    Key const key{{ vbh, ibh, type }, 1 };
+    Key const key({ vbh, ibh, type });
     auto pos = mBimap.find(key);
 
     // the common case is that we've never seen it (i.e.: no reuse)
@@ -77,7 +76,7 @@ auto HwRenderPrimitiveFactory::create(DriverApi& driver,
         return handle;
     }
 
-    pos->first.pKey->refs++;
+    ++(pos->first.pKey->refs);
     return pos->second.handle;
 }
 

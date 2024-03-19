@@ -30,6 +30,9 @@
 
 #include <cgltf.h>
 
+#include <unordered_map>
+#include <variant>
+
 namespace filament::gltfio {
 
 namespace {

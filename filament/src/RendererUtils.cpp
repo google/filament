@@ -125,7 +125,9 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                             // depth auto-resolve, in which case we must allocate the depth
                             // buffer with MS and manually resolve it (see "Resolved Depth Buffer"
                             // pass).
+                            .depth = colorBufferDesc.depth,
                             .samples = canAutoResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
+                            .type = colorBufferDesc.type,
                             .format = format,
                     });
                     if (config.enabledStencilBuffer) {
