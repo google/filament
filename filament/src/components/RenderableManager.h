@@ -312,7 +312,7 @@ void FRenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box&
     if (instance) {
         ASSERT_PRECONDITION(
                 static_cast<Visibility const&>(
-                        mManager[instance].visibility).geometryType != GeometryType::DYNAMIC,
+                        mManager[instance].visibility).geometryType == GeometryType::DYNAMIC,
                 "This renderable has staticBounds enabled; its AABB cannot change.");
         mManager[instance].aabb = aabb;
     }
