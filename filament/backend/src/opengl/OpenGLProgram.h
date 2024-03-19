@@ -70,13 +70,13 @@ public:
         }
     }
 
-    struct {
-        GLuint program = 0;
-    } gl; // 12 bytes
-
     // For ES2 only
     void updateUniforms(uint32_t index, GLuint id, void const* buffer, uint16_t age) noexcept;
     void setRec709ColorSpace(bool rec709) const noexcept;
+
+    struct {
+        GLuint program = 0;
+    } gl;                                               // 4 bytes
 
 private:
     // keep these away from of other class attributes
@@ -89,14 +89,17 @@ private:
 
     void updateSamplers(OpenGLDriver* gld) const noexcept;
 
-    ShaderCompilerService::program_token_t mToken{};
-
     // number of bindings actually used by this program
-    uint8_t mUsedBindingsCount = 0u;
-    UTILS_UNUSED uint8_t padding[3] = {};
     std::array<uint8_t, Program::SAMPLER_BINDING_COUNT> mUsedSamplerBindingPoints;   // 4 bytes
 
+    ShaderCompilerService::program_token_t mToken{};    // 16 bytes
+
+    uint8_t mUsedBindingsCount = 0u;                    // 1 byte
+    UTILS_UNUSED uint8_t padding[3] = {};               // 3 bytes
+
+
     // only needed for ES2
+    GLint mRec709Location = -1; // 4 bytes
     using LocationInfo = utils::FixedCapacityVector<GLint>;
     struct UniformsRecord {
         Program::UniformInfo uniforms;
@@ -105,11 +108,10 @@ private:
         mutable uint16_t age = std::numeric_limits<uint16_t>::max();
     };
     UniformsRecord const* mUniformsRecords = nullptr;
-    GLint mRec709Location = -1;
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
-static_assert(sizeof(OpenGLProgram) <= 64);
+static_assert(sizeof(OpenGLProgram) <= 64); // currently 48 bytes
 
 } // namespace filament::backend
 
