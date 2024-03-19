@@ -239,7 +239,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .format = config.colorFormat[i],
             .samples = (VkSampleCountFlagBits) config.samples,
             .loadOp = clear ? kClear : (discard ? kDontCare : kKeep),
-            .storeOp = config.samples == 1 ? kEnableStore : kDisableStore,
+            .storeOp = kEnableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
             .initialLayout = ((!discard && config.initialColorLayoutMask & (1 << i)) || clear)
