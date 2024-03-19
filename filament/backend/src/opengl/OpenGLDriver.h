@@ -348,22 +348,6 @@ private:
     void resolvePass(ResolveAction action, GLRenderTarget const* rt,
             TargetBufferFlags discardFlags) noexcept;
 
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    GLuint getSamplerSlow(SamplerParams sp) const noexcept;
-
-    inline GLuint getSampler(SamplerParams sp) const noexcept {
-        assert_invariant(!sp.padding0);
-        assert_invariant(!sp.padding1);
-        assert_invariant(!sp.padding2);
-        auto& samplerMap = mSamplerMap;
-        auto pos = samplerMap.find(sp);
-        if (UTILS_UNLIKELY(pos == samplerMap.end())) {
-            return getSamplerSlow(sp);
-        }
-        return pos->second;
-    }
-#endif
-
     const std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
@@ -390,13 +374,9 @@ private:
 
     // ES2 only. Uniform buffer emulation binding points
     GLuint mLastAssignedEmulatedUboId = 0;
-    std::array<std::tuple<GLuint, void const*, uint16_t>, Program::UNIFORM_BINDING_COUNT> mUniformBindings = {};
 
     // sampler buffer binding points (nullptr if not used)
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
-
-    mutable tsl::robin_map<SamplerParams, GLuint,
-            SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
     // this must be accessed from the driver thread only
     std::vector<GLTexture*> mTexturesWithStreamsAttached;

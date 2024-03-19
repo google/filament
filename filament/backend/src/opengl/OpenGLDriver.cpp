@@ -208,7 +208,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
                   driverConfig.disableHandleUseAfterFreeCheck),
-          mSamplerMap(32),
           mDriverConfig(driverConfig) {
 
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
@@ -263,14 +262,6 @@ void OpenGLDriver::terminate() {
 
     // because we called glFinish(), all callbacks should have been executed
     assert_invariant(mGpuCommandCompleteOps.empty());
-
-    if (!getContext().isES2()) {
-        for (auto& item: mSamplerMap) {
-            mContext.unbindSampler(item.second);
-            glDeleteSamplers(1, &item.second);
-        }
-        mSamplerMap.clear();
-    }
 #endif
 
     mPlatform.terminate();
@@ -307,7 +298,7 @@ bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
 
     if (UTILS_UNLIKELY(mContext.isES2())) {
         for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-            auto [id, buffer, age] = mUniformBindings[i];
+            auto [id, buffer, age] = mContext.getEs2UniformBinding(i);
             if (buffer) {
                 p->updateUniforms(i, id, buffer, age);
             }
@@ -2345,7 +2336,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 #endif
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_LIKELY(!es2)) {
-                samplerId = getSampler(params);
+                samplerId = mContext.getSampler(params);
             } else
 #endif
             {
@@ -3070,11 +3061,10 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
     assert_invariant(offset + size <= ub->byteCount);
 
     if (UTILS_UNLIKELY(ub->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        mUniformBindings[index] = {
+        gl.setEs2UniformBinding(index,
                 ub->gl.id,
                 static_cast<uint8_t const*>(ub->gl.buffer) + offset,
-                ub->age,
-        };
+                ub->age);
     } else {
         GLenum const target = GLUtils::getBufferBindingType(bindingType);
 
@@ -3092,7 +3082,7 @@ void OpenGLDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index)
     auto& gl = mContext;
 
     if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        mUniformBindings[index] = {};
+        gl.setEs2UniformBinding(index, 0, nullptr, 0);
         return;
     }
 
@@ -3108,36 +3098,6 @@ void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     mSamplerBindings[index] = sb;
     CHECK_GL_ERROR(utils::slog.e)
 }
-
-
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
-    assert_invariant(mSamplerMap.find(params) == mSamplerMap.end());
-
-    GLuint s;
-    glGenSamplers(1, &s);
-    glSamplerParameteri(s, GL_TEXTURE_MIN_FILTER,   (GLint)getTextureFilter(params.filterMin));
-    glSamplerParameteri(s, GL_TEXTURE_MAG_FILTER,   (GLint)getTextureFilter(params.filterMag));
-    glSamplerParameteri(s, GL_TEXTURE_WRAP_S,       (GLint)getWrapMode(params.wrapS));
-    glSamplerParameteri(s, GL_TEXTURE_WRAP_T,       (GLint)getWrapMode(params.wrapT));
-    glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       (GLint)getWrapMode(params.wrapR));
-    glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, (GLint)getTextureCompareMode(params.compareMode));
-    glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, (GLint)getTextureCompareFunc(params.compareFunc));
-
-#if defined(GL_EXT_texture_filter_anisotropic)
-    auto& gl = mContext;
-    if (gl.ext.EXT_texture_filter_anisotropic &&
-            !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
-        GLfloat const anisotropy = float(1u << params.anisotropyLog2);
-        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                std::min(gl.gets.max_anisotropy, anisotropy));
-    }
-#endif
-    CHECK_GL_ERROR(utils::slog.e)
-    mSamplerMap[params] = s;
-    return s;
-}
-#endif
 
 void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 #ifndef __EMSCRIPTEN__
