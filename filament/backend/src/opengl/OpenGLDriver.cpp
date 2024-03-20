@@ -1465,6 +1465,13 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             "createSwapChain(%p, 0x%lx) failed. See logs for details.",
             nativeWindow, flags);
 
+#if !defined(__EMSCRIPTEN__)
+    // note: in practice this should never happen on Android
+    ASSERT_POSTCONDITION(sc->swapChain,
+            "createSwapChain(%p, 0x%lx) failed. See logs for details.",
+            nativeWindow, flags);
+#endif
+
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
         sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
@@ -1481,6 +1488,13 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     ASSERT_POSTCONDITION(sc->swapChain,
             "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
             width, height, flags);
+
+#if !defined(__EMSCRIPTEN__)
+    // note: in practice this should never happen on Android
+    ASSERT_POSTCONDITION(sc->swapChain,
+            "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
+            width, height, flags);
+#endif
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
