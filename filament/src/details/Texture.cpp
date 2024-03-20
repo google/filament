@@ -25,13 +25,32 @@
 
 #include <filament/Texture.h>
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
 #include <ibl/Cubemap.h>
 #include <ibl/CubemapIBL.h>
 #include <ibl/CubemapUtils.h>
 #include <ibl/Image.h>
 
+#include <math/half.h>
+#include <math/scalar.h>
+#include <math/vec3.h>
+
+#include <utils/Allocator.h>
+#include <utils/algorithm.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+
+#include <algorithm>
+#include <array>
+#include <type_traits>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace utils;
 
@@ -246,20 +265,20 @@ size_t FTexture::getDepth(size_t level) const noexcept {
 void FTexture::setImage(FEngine& engine, size_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
-        FTexture::PixelBufferDescriptor&& buffer) const {
+        FTexture::PixelBufferDescriptor&& p) const {
 
     if (UTILS_UNLIKELY(!engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))) {
-        ASSERT_PRECONDITION(buffer.stride == 0 || buffer.stride == width,
+        ASSERT_PRECONDITION(p.stride == 0 || p.stride == width,
                 "PixelBufferDescriptor stride must be 0 (or width) at FEATURE_LEVEL_0");
     }
 
     // this should have been validated already
     assert_invariant(isTextureFormatSupported(engine, mFormat));
 
-    ASSERT_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
-            validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
+    ASSERT_PRECONDITION(p.type == PixelDataType::COMPRESSED ||
+                        validatePixelFormatAndType(mFormat, p.format, p.type),
             "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type));
+            unsigned(mFormat), unsigned(p.format), unsigned(p.type));
 
     ASSERT_PRECONDITION(!mStream, "setImage() called on a Stream texture.");
 
@@ -283,7 +302,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
             unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)),
             unsigned(level));
 
-    ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
+    ASSERT_PRECONDITION(p.buffer, "Data buffer is nullptr.");
 
     uint32_t effectiveTextureDepthOrLayers;
     switch (mTarget) {
@@ -311,8 +330,21 @@ void FTexture::setImage(FEngine& engine, size_t level,
             "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
             unsigned(zoffset), unsigned(depth), effectiveTextureDepthOrLayers, unsigned(level));
 
+    using PBD = PixelBufferDescriptor;
+    size_t const stride = p.stride ? p.stride : width;
+    size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
+    size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
+    size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
+    // TODO: PBD should have a p.depth (# layers to skip)
+    ASSERT_PRECONDITION(bpp * p.left + bpr * p.top + bpl * (0 + depth) <= p.size,
+        "buffer overflow: (size=%lu, stride=%lu, left=%u, top=%u) smaller than specified region "
+        "{{%u,%u,%u},{%u,%u,%u)}}",
+        size_t(p.size), size_t(p.stride), unsigned(p.left), unsigned(p.top),
+        unsigned(xoffset), unsigned(yoffset), unsigned(zoffset),
+        unsigned(width), unsigned(height), unsigned(depth));
+
     engine.getDriverApi().update3DImage(mHandle,
-            uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
+            uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(p));
 }
 
 // deprecated
