@@ -454,20 +454,7 @@ bool PlatformEGL::isSRGBSwapChainSupported() const noexcept {
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t flags) noexcept {
 
-    EGLConfig config = EGL_NO_CONFIG_KHR;
-    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
-        config = findSwapChainConfig(flags, true, false);
-    } else {
-        config = mEGLConfig;
-    }
-
-    if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
-        // error already logged
-        return nullptr;
-    }
-
     Config attribs;
-
     if (ext.egl.KHR_gl_colorspace) {
         if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
             attribs[EGL_GL_COLORSPACE_KHR] = EGL_GL_COLORSPACE_SRGB_KHR;
@@ -484,16 +471,27 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
-    EGLSurface sur = eglCreateWindowSurface(mEGLDisplay, config,
-            (EGLNativeWindowType)nativeWindow, attribs.data());
-
-    if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
-        logEglError("PlatformEGL::createSwapChain: eglCreateWindowSurface");
-        return nullptr;
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
+        config = findSwapChainConfig(flags, true, false);
+    } else {
+        config = mEGLConfig;
     }
 
-    // this is not fatal
-    eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED);
+    EGLSurface sur = EGL_NO_SURFACE;
+    if (UTILS_LIKELY(config != EGL_NO_CONFIG_KHR)) {
+        sur = eglCreateWindowSurface(mEGLDisplay, config,
+                (EGLNativeWindowType)nativeWindow, attribs.data());
+
+        if (UTILS_LIKELY(sur != EGL_NO_SURFACE)) {
+            // this is not fatal
+            eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED);
+        } else {
+            logEglError("PlatformEGL::createSwapChain: eglCreateWindowSurface");
+        }
+    } else {
+        // error already logged
+    }
 
     SwapChainEGL* const sc = new(std::nothrow) SwapChainEGL({
         .sur = sur,
@@ -507,18 +505,6 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
         uint32_t width, uint32_t height, uint64_t flags) noexcept {
-
-    EGLConfig config = EGL_NO_CONFIG_KHR;
-    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
-        config = findSwapChainConfig(flags, false, true);
-    } else {
-        config = mEGLConfig;
-    }
-
-    if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
-        // error already logged
-        return nullptr;
-    }
 
     Config attribs = {
             { EGL_WIDTH,  EGLint(width) },
@@ -541,17 +527,28 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
-    EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs.data());
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
+        config = findSwapChainConfig(flags, true, false);
+    } else {
+        config = mEGLConfig;
+    }
 
-    if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
-        logEglError("PlatformEGL::createSwapChain: eglCreatePbufferSurface");
-        return nullptr;
+    EGLSurface sur = EGL_NO_SURFACE;
+    if (UTILS_LIKELY(config != EGL_NO_CONFIG_KHR)) {
+        sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs.data());
+        if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
+            logEglError("PlatformEGL::createSwapChain: eglCreatePbufferSurface");
+        }
+    } else {
+        // error already logged
     }
 
     SwapChainEGL* const sc = new(std::nothrow) SwapChainEGL({
             .sur = sur,
             .attribs = std::move(attribs),
-            .config = config
+            .config = config,
+            .flags = flags
     });
     return sc;
 }
@@ -592,6 +589,9 @@ void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         Platform::SwapChain* readSwapChain,
         utils::Invocable<void()> preContextChange,
         utils::Invocable<void(size_t index)> postContextChange) noexcept {
+
+    assert_invariant(drawSwapChain);
+    assert_invariant(readSwapChain);
 
     ContextType type = ContextType::UNPROTECTED;
     if (ext.egl.EXT_protected_content) {
