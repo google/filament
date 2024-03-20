@@ -1461,6 +1461,8 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
+
+    // note: in practice this should never happen on Android
     ASSERT_POSTCONDITION(sc->swapChain,
             "createSwapChain(%p, 0x%lx) failed. See logs for details.",
             nativeWindow, flags);
@@ -1478,6 +1480,8 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+
+    // note: in practice this should never happen on Android
     ASSERT_POSTCONDITION(sc->swapChain,
             "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
             width, height, flags);
