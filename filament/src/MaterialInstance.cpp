@@ -184,6 +184,12 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 // ------------------------------------------------------------------------------------------------
 
 template<typename T>
+T FMaterialInstance::getParameterImpl(std::string_view name) const noexcept {
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
+    return downcast(this)->getUniformBuffer().getUniform<T>(offset);
+}
+
+template<typename T>
 T MaterialInstance::getParameter(const char* name, size_t nameLength) const {
     return downcast(this)->getParameterImpl<T>({ name, nameLength });
 }
