@@ -235,6 +235,28 @@ public:
     }
 
     /**
+     * Gets the value of a parameter by name.
+     * 
+     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
+     * @param nameLength    Length in `char` of the name parameter.
+     * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
+     */
+    template<typename T>
+    T getParameter(const char* UTILS_NONNULL name, size_t nameLength) const;
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_parameter_t<T>>
+    inline T getParameter(StringLiteral name) const {
+        return getParameter<T>(name.data, name.size);
+    }
+
+    /** inline helper to provide the name as a null-terminated C string */
+    template<typename T, typename = is_supported_parameter_t<T>>
+    inline T getParameter(const char* UTILS_NONNULL name) const {
+        return getParameter<T>(name, strlen(name));
+    }
+
+    /**
      * Set-up a custom scissor rectangle; by default it is disabled.
      *
      * The scissor rectangle gets clipped by the View's viewport, in other words, the scissor
