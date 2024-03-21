@@ -20,6 +20,8 @@
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 #include "OpenGLTimerQuery.h"
+#include "GLBufferObject.h"
+#include "GLTexture.h"
 #include "ShaderCompilerService.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
@@ -92,25 +94,6 @@ public:
         bool rec709 = false;
     };
 
-    struct GLBufferObject : public HwBufferObject {
-        using HwBufferObject::HwBufferObject;
-        GLBufferObject(uint32_t size,
-                BufferObjectBinding bindingType, BufferUsage usage) noexcept
-                : HwBufferObject(size), usage(usage), bindingType(bindingType) {
-        }
-
-        struct {
-            GLuint id;
-            union {
-                GLenum binding;
-                void* buffer;
-            };
-        } gl;
-        BufferUsage usage;
-        BufferObjectBinding bindingType;
-        uint16_t age = 0;
-    };
-
     struct GLVertexBufferInfo : public HwVertexBufferInfo {
         GLVertexBufferInfo() noexcept = default;
         GLVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
@@ -140,7 +123,6 @@ public:
         } gl;
     };
 
-    struct GLTexture;
     struct GLSamplerGroup : public HwSamplerGroup {
         using HwSamplerGroup::HwSamplerGroup;
         struct Entry {
@@ -157,27 +139,9 @@ public:
         Handle<HwVertexBufferInfo> vbih;
     };
 
-    struct GLTexture : public HwTexture {
-        using HwTexture::HwTexture;
-        struct GL {
-            GL() noexcept : imported(false), sidecarSamples(1), reserved(0) {}
-            GLuint id = 0;          // texture or renderbuffer id
-            GLenum target = 0;
-            GLenum internalFormat = 0;
-            GLuint sidecarRenderBufferMS = 0;  // multi-sample sidecar renderbuffer
+    using GLBufferObject = filament::backend::GLBufferObject;
 
-            // texture parameters go here too
-            GLfloat anisotropy = 1.0;
-            int8_t baseLevel = 127;
-            int8_t maxLevel = -1;
-            uint8_t targetIndex = 0;    // optimization: index corresponding to target
-            bool imported           : 1;
-            uint8_t sidecarSamples  : 4;
-            uint8_t reserved        : 3;
-        } gl;
-
-        OpenGLPlatform::ExternalTexture* externalTexture = nullptr;
-    };
+    using GLTexture = filament::backend::GLTexture;
 
     using GLTimerQuery = filament::backend::GLTimerQuery;
 
