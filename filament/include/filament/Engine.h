@@ -844,8 +844,8 @@ public:
      * Buffer callbacks will never be called as long as the rendering thread is paused.
      * Do not rely on a buffer callback to unpause the thread.
      * </li><li>
-     * While the rendering thread is paused, rendering commands will continued to be queued
-     * until the buffer limit is reached. When the limit is reached, the program will abort.
+     * While the rendering thread is paused, rendering commands will continue to be queued until the
+     * buffer limit is reached. When the limit is reached, the program will abort.
      * </li></ul>
      */
     void setPaused(bool paused);
