@@ -98,7 +98,9 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
           mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
-          mHandleAllocator("Handles", driverConfig.handleArenaSize) {
+          mHandleAllocator("Handles",
+                  driverConfig.handleArenaSize,
+                  driverConfig.disableHandleUseAfterFreeCheck) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();

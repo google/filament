@@ -59,6 +59,11 @@ public:
          * Currently only honored by the GL and Metal backends.
          */
         bool disableParallelShaderCompile = false;
+
+        /**
+         * Disable backend handles use-after-free checks.
+         */
+        bool disableHandleUseAfterFreeCheck = false;
     };
 
     Platform() noexcept;

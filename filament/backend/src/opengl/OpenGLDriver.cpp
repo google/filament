@@ -205,7 +205,9 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
         : mPlatform(*platform),
           mContext(mPlatform),
           mShaderCompilerService(*this),
-          mHandleAllocator("Handles", driverConfig.handleArenaSize),
+          mHandleAllocator("Handles",
+                  driverConfig.handleArenaSize,
+                  driverConfig.disableHandleUseAfterFreeCheck),
           mSamplerMap(32),
           mDriverConfig(driverConfig) {
 

@@ -49,7 +49,7 @@ namespace filament::backend {
 template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator {
 public:
-    HandleAllocator(const char* name, size_t size) noexcept;
+    HandleAllocator(const char* name, size_t size, bool disableUseAfterFreeCheck) noexcept;
     HandleAllocator(HandleAllocator const& rhs) = delete;
     HandleAllocator& operator=(HandleAllocator const& rhs) = delete;
     ~HandleAllocator();
@@ -169,11 +169,13 @@ public:
 
         if (isPoolHandle(handle.getId())) {
             // check for use after free
-            uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
-            auto const pNode = static_cast<typename Allocator::Node*>(p);
-            uint8_t const expectedAge = pNode[-1].age;
-            ASSERT_POSTCONDITION(expectedAge == age,
-                    "use-after-free of Handle with id=%d", handle.getId());
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+                auto const pNode = static_cast<typename Allocator::Node*>(p);
+                uint8_t const expectedAge = pNode[-1].age;
+                ASSERT_POSTCONDITION(expectedAge == age,
+                        "use-after-free of Handle with id=%d", handle.getId());
+            }
         }
 
         return static_cast<Dp>(p);
@@ -186,7 +188,6 @@ public:
     handle_cast(Handle<B> const& handle) noexcept {
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
     }
-
 
 private:
 
@@ -210,8 +211,9 @@ private:
         Pool<P1> mPool1;
         Pool<P2> mPool2;
         UTILS_UNUSED_IN_RELEASE const utils::AreaPolicy::HeapArea& mArea;
+        bool mUseAfterFreeCheckDisabled;
     public:
-        explicit Allocator(const utils::AreaPolicy::HeapArea& area);
+        explicit Allocator(const utils::AreaPolicy::HeapArea& area, bool disableUseAfterFreeCheck);
 
         static constexpr size_t getAlignment() noexcept { return MIN_ALIGNMENT; }
 
@@ -237,8 +239,10 @@ private:
             // check for double-free
             Node* const pNode = static_cast<Node*>(p);
             uint8_t& expectedAge = pNode[-1].age;
-            ASSERT_POSTCONDITION(expectedAge == age,
-                    "double-free of Handle of size %d at %p", size, p);
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                ASSERT_POSTCONDITION(expectedAge == age,
+                        "double-free of Handle of size %d at %p", size, p);
+            }
             expectedAge = (expectedAge + 1) & 0xF; // fixme
 
             if (size <= mPool0.getSize()) { mPool0.free(p); return; }
@@ -348,6 +352,7 @@ private:
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
     HandleBase::HandleId mId = 0;
+    bool mUseAfterFreeCheckDisabled = false;
 };
 
 } // namespace filament::backend

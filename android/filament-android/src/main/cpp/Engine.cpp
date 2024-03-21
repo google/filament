@@ -487,7 +487,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jlong jobSystemThreadCount,
         jlong textureUseAfterFreePoolSize, jboolean disableParallelShaderCompile,
         jint stereoscopicType, jlong stereoscopicEyeCount,
-        jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge) {
+        jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge,
+        jboolean disableHandleUseAfterFreeCheck) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -502,6 +503,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .stereoscopicEyeCount = (uint8_t) stereoscopicEyeCount,
             .resourceAllocatorCacheSizeMB = (uint32_t) resourceAllocatorCacheSizeMB,
             .resourceAllocatorCacheMaxAge = (uint8_t) resourceAllocatorCacheMaxAge,
+            .disableHandleUseAfterFreeCheck = (bool) disableHandleUseAfterFreeCheck,
     };
     builder->config(&config);
 }

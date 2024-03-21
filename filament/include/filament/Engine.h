@@ -335,6 +335,11 @@ public:
          * This value determines for how many frames are texture entries kept in the cache.
          */
         uint32_t resourceAllocatorCacheMaxAge = 2;
+
+        /*
+         * Disable backend handles use-after-free checks.
+         */
+        bool disableHandleUseAfterFreeCheck = false;
     };
 
 

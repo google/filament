@@ -224,7 +224,8 @@ public class Engine {
                     config.jobSystemThreadCount,
                     config.textureUseAfterFreePoolSize, config.disableParallelShaderCompile,
                     config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
-                    config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge);
+                    config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
+                    config.disableHandleUseAfterFreeCheck);
             return this;
         }
 
@@ -408,6 +409,11 @@ public class Engine {
          * This value determines for how many frames are texture entries kept in the cache.
          */
         public long resourceAllocatorCacheMaxAge = 2;
+
+        /*
+         * Disable backend handles use-after-free checks.
+         */
+        public boolean disableHandleUseAfterFreeCheck = false;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1283,7 +1289,8 @@ public class Engine {
             long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,
             long textureUseAfterFreePoolSize, boolean disableParallelShaderCompile,
             int stereoscopicType, long stereoscopicEyeCount,
-            long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge);
+            long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,
+            boolean disableHandleUseAfterFreeCheck);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native long nBuilderBuild(long nativeBuilder);

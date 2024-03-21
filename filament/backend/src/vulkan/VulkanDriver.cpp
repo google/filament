@@ -209,7 +209,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),
-      mResourceAllocator(driverConfig.handleArenaSize),
+      mResourceAllocator(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
       mResourceManager(&mResourceAllocator),
       mThreadSafeResourceManager(&mResourceAllocator),
       mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
