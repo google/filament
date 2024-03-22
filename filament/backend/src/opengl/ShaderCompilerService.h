@@ -137,7 +137,10 @@ private:
             std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
             std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
 
-    static std::string_view process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+    static void process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+            char* source, size_t len) noexcept;
+
+    static void process_OVR_multiview2(OpenGLContext& context, int32_t eyeCount,
             char* source, size_t len) noexcept;
 
     static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
