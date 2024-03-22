@@ -53,4 +53,18 @@ size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size
     return 0;
 }
 
+void Platform::setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept {
+    mDebugUpdateStat = std::move(debugUpdateStat);
+}
+
+bool Platform::hasDebugUpdateStatFunc() const noexcept {
+    return bool(mDebugUpdateStat);
+}
+
+void Platform::debugUpdateStat(const char* key, uint64_t value) {
+    if (mDebugUpdateStat) {
+        mDebugUpdateStat(key, value);
+    }
+}
+
 } // namespace filament::backend

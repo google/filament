@@ -25,6 +25,7 @@ class sstream : public ostream {
 public:
     ostream& flush() noexcept override;
     const char* c_str() const noexcept;
+    size_t length() const noexcept;
 };
 
 } // namespace utils::io
