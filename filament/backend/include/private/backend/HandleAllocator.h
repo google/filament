@@ -169,11 +169,13 @@ public:
 
         if (isPoolHandle(handle.getId())) {
             // check for use after free
-            uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
-            auto const pNode = static_cast<typename Allocator::Node*>(p);
-            uint8_t const expectedAge = pNode[-1].age;
-            ASSERT_POSTCONDITION(!mUseAfterFreeCheckDisabled && expectedAge == age,
-                    "use-after-free of Handle with id=%d", handle.getId());
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+                auto const pNode = static_cast<typename Allocator::Node*>(p);
+                uint8_t const expectedAge = pNode[-1].age;
+                ASSERT_POSTCONDITION(expectedAge == age,
+                        "use-after-free of Handle with id=%d", handle.getId());
+            }
         }
 
         return static_cast<Dp>(p);
@@ -237,8 +239,10 @@ private:
             // check for double-free
             Node* const pNode = static_cast<Node*>(p);
             uint8_t& expectedAge = pNode[-1].age;
-            ASSERT_POSTCONDITION(!mUseAfterFreeCheckDisabled && expectedAge == age,
-                    "double-free of Handle of size %d at %p", size, p);
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                ASSERT_POSTCONDITION(expectedAge == age,
+                        "double-free of Handle of size %d at %p", size, p);
+            }
             expectedAge = (expectedAge + 1) & 0xF; // fixme
 
             if (size <= mPool0.getSize()) { mPool0.free(p); return; }
