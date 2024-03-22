@@ -144,6 +144,7 @@ TEST(sstream, LargeBuffer) {
     }
 
     EXPECT_EQ(1024 * 1024 * 16, strlen(ss.c_str()));
+    EXPECT_EQ(1024 * 1024 * 16, ss.length());
 }
 
 TEST(sstream, LargeString) {
@@ -158,6 +159,7 @@ TEST(sstream, LargeString) {
     ss << filler;
 
     EXPECT_EQ(size, strlen(ss.c_str()));
+    EXPECT_EQ(size, ss.length());
     EXPECT_STREQ(filler, ss.c_str());
 
     free(filler);
@@ -182,7 +184,18 @@ TEST(sstream, SeveralStrings) {
     ss << fillerB;
 
     EXPECT_EQ(sizeA + sizeB, strlen(ss.c_str()));
+    EXPECT_EQ(sizeA + sizeB, ss.length());
 
     free(fillerA);
     free(fillerB);
+}
+
+TEST(sstream, length) {
+    sstream ss;
+
+    EXPECT_EQ(0, ss.length());
+    ss << "Hello, world\n";
+    EXPECT_EQ(13, ss.length());
+    ss << "Foo bar\n";
+    EXPECT_EQ(13 + 8, ss.length());
 }

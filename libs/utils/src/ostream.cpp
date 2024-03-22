@@ -267,6 +267,10 @@ void ostream::Buffer::reset() noexcept {
     size = capacity;
 }
 
+size_t ostream::Buffer::length() const noexcept {
+    return curr - buffer;
+}
+
 std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
     if (UTILS_UNLIKELY(size < s)) {
         size_t const used = curr - buffer;
