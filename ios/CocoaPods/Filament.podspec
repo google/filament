@@ -17,7 +17,7 @@ Pod::Spec.new do |spec|
         "include/ibl/*.h",
         "include/geometry/*.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
         "lib/libfilament.xcframework",
         "lib/libbackend.xcframework",
         "lib/libfilabridge.xcframework",
@@ -34,7 +34,7 @@ Pod::Spec.new do |spec|
         "include/filament/MaterialChunkType.h",
         "include/filament/MaterialEnums.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
       "lib/libfilamat.xcframework",
       "lib/libshaders.xcframework",
       "lib/libsmol-v.xcframework",
@@ -46,7 +46,7 @@ Pod::Spec.new do |spec|
   spec.subspec "gltfio_core" do |ss|
     ss.source_files = "include/gltfio/**/*.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
       "lib/libgltfio_core.xcframework",
       "lib/libdracodec.xcframework",
       "lib/libuberarchive.xcframework",
@@ -58,14 +58,14 @@ Pod::Spec.new do |spec|
 
   spec.subspec "camutils" do |ss|
     ss.source_files = "include/camutils/*.h"
-    ss.vendored_libraries = "lib/libcamutils.xcframework"
+    ss.vendored_frameworks = "lib/libcamutils.xcframework"
     ss.header_dir = "camutils"
     ss.dependency "Filament/math"
   end
 
   spec.subspec "filameshio" do |ss|
     ss.source_files = "include/filameshio/*.h"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
       "lib/libfilameshio.xcframework",
       "lib/libmeshoptimizer.xcframework"
     ss.header_dir = "filameshio"
@@ -74,7 +74,7 @@ Pod::Spec.new do |spec|
 
   spec.subspec "image" do |ss|
     ss.source_files = "include/image/*.h"
-    ss.vendored_libraries = "lib/libimage.xcframework"
+    ss.vendored_frameworks = "lib/libimage.xcframework"
     ss.header_dir = "image"
     ss.dependency "Filament/filament"
   end
@@ -82,7 +82,7 @@ Pod::Spec.new do |spec|
   spec.subspec "utils" do |ss|
     ss.source_files = "include/utils/**/*.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries = "lib/libutils.xcframework"
+    ss.vendored_frameworks = "lib/libutils.xcframework"
     ss.dependency "Filament/tsl"
   end
 
@@ -99,7 +99,7 @@ Pod::Spec.new do |spec|
   spec.subspec "ktxreader" do |ss|
     ss.source_files = "include/ktxreader/*.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
         "lib/libktxreader.xcframework",
         "lib/libbasis_transcoder.xcframework"
     ss.dependency "Filament/image"
@@ -109,7 +109,7 @@ Pod::Spec.new do |spec|
   spec.subspec "viewer" do |ss|
     ss.source_files = "include/viewer/*.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
         "lib/libviewer.xcframework",
         "lib/libcivetweb.xcframework"
     ss.dependency "Filament/filament"
@@ -119,7 +119,7 @@ Pod::Spec.new do |spec|
   spec.subspec "uberz" do |ss|
     ss.source_files = "include/uberz/*.h"
     ss.header_mappings_dir = "include"
-    ss.vendored_libraries =
+    ss.vendored_frameworks =
         "lib/libuberzlib.xcframework",
         "lib/libzstd.xcframework"
     ss.header_dir = "uberz"
