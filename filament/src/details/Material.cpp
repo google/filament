@@ -641,6 +641,9 @@ void FMaterial::getSurfaceProgramSlow(Variant variant,
 
     Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
     pb.priorityQueue(priorityQueue);
+    pb.multiview(
+            mEngine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
+            Variant::isStereoVariant(variant));
     createAndCacheProgram(std::move(pb), variant);
 }
 

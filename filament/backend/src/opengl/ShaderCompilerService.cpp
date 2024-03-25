@@ -263,8 +263,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     // compile the shaders
                     std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders{};
                     compileShaders(gl,
-                            std::move(program.getShadersSource()),
-                            program.getSpecializationConstants(),
+                            program,
                             shaders,
                             token->shaderSourceCode);
 
@@ -298,8 +297,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         // this cannot fail because we check compilation status after linking the program
         // shaders[] is filled with id of shader stages present.
         compileShaders(gl,
-                std::move(program.getShadersSource()),
-                program.getSpecializationConstants(),
+                program,
                 token->gl.shaders,
                 token->shaderSourceCode);
 
@@ -499,13 +497,15 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
  * checked until after the program is linked.
  * This always returns the GL shader IDs or zero a shader stage is not present.
  */
-void ShaderCompilerService::compileShaders(OpenGLContext& context,
-        Program::ShaderSource shadersSource,
-        utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
+void ShaderCompilerService::compileShaders(OpenGLContext& context, Program& program,
         std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
         UTILS_UNUSED_IN_RELEASE std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
     SYSTRACE_CALL();
+
+    Program::ShaderSource shadersSource = std::move(program.getShadersSource());
+    utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants =
+            program.getSpecializationConstants();
 
     auto appendSpecConstantString = +[](std::string& s, Program::SpecializationConstant const& sc) {
         s += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
@@ -560,7 +560,7 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             process_GOOGLE_cpp_style_line_directive(context, shader_src, shader_len);
 
             // replace the value of layout(num_views = X) for multiview extension
-            if (stage == ShaderStage::VERTEX) {
+            if (program.getMultiview() && stage == ShaderStage::VERTEX) {
                 process_OVR_multiview2(context, numViews, shader_src, shader_len);
             }
 
