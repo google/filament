@@ -581,9 +581,9 @@ function build_ios_target {
     local platform=$3
 
     echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
-    mkdir -p "out/cmake-ios-${lc_target}-${arch}"
+    mkdir -p "out/cmake-ios-${lc_target}-${arch}-${platform}"
 
-    pushd "out/cmake-ios-${lc_target}-${arch}" > /dev/null
+    pushd "out/cmake-ios-${lc_target}-${arch}-${platform}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
@@ -598,14 +598,14 @@ function build_ios_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ../..
-        ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
+        ln -sf "out/cmake-ios-${lc_target}-${arch}-${platform}/compile_commands.json" \
            ../../compile_commands.json
     fi
 
     ${BUILD_COMMAND}
 
     if [[ "${INSTALL_COMMAND}" ]]; then
-        echo "Installing ${lc_target} in out/${lc_target}/filament..."
+        echo "Installing ${lc_target}-${arch}-${platform} in out/${lc_target}/filament..."
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
@@ -640,16 +640,26 @@ function build_ios {
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         build_ios_target "Debug" "arm64" "iphoneos"
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+            build_ios_target "Debug" "arm64" "iphonesimulator"
             build_ios_target "Debug" "x86_64" "iphonesimulator"
         fi
-
+        
         if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
             build/ios/create-universal-libs.sh \
-                -o out/ios-debug/filament/lib/universal \
-                out/ios-debug/filament/lib/arm64 \
-                out/ios-debug/filament/lib/x86_64
-            rm -rf out/ios-debug/filament/lib/arm64
-            rm -rf out/ios-debug/filament/lib/x86_64
+                -o ./out/ios-debug/filament/lib/universal \
+                ./out/ios-debug/filament/lib/arm64-iphonesimulator \
+                ./out/ios-debug/filament/lib/x86_64-iphonesimulator
+
+            rm -rf out/ios-debug/filament/lib/x86_64-iphonesimulator
+            rm -rf out/ios-debug/filament/lib/arm64-iphonesimulator
+            
+            build/ios/create-xc-frameworks.sh \
+                -o out/ios-debug/filament/lib \
+                out/ios-debug/filament/lib/arm64-iphoneos \
+                out/ios-debug/filament/lib/universal            
+            
+            rm -rf out/ios-debug/filament/lib/universal
+            rm -rf out/ios-debug/filament/lib/arm64-iphoneos
         fi
 
         archive_ios "Debug"
@@ -658,16 +668,26 @@ function build_ios {
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         build_ios_target "Release" "arm64" "iphoneos"
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
+            build_ios_target "Release" "arm64" "iphonesimulator"
             build_ios_target "Release" "x86_64" "iphonesimulator"
         fi
-
+        
         if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
             build/ios/create-universal-libs.sh \
-                -o out/ios-release/filament/lib/universal \
-                out/ios-release/filament/lib/arm64 \
-                out/ios-release/filament/lib/x86_64
-            rm -rf out/ios-release/filament/lib/arm64
-            rm -rf out/ios-release/filament/lib/x86_64
+                -o ./out/ios-release/filament/lib/universal \
+                ./out/ios-release/filament/lib/arm64-iphonesimulator \
+                ./out/ios-release/filament/lib/x86_64-iphonesimulator
+
+            rm -rf out/ios-release/filament/lib/x86_64-iphonesimulator
+            rm -rf out/ios-release/filament/lib/arm64-iphonesimulator
+            
+            build/ios/create-xc-frameworks.sh \
+                -o out/ios-release/filament/lib \
+                out/ios-release/filament/lib/arm64-iphoneos \
+                out/ios-release/filament/lib/universal            
+            
+            rm -rf out/ios-release/filament/lib/universal
+            rm -rf out/ios-release/filament/lib/arm64-iphoneos
         fi
 
         archive_ios "Release"
