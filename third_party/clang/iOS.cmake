@@ -104,3 +104,22 @@ IF (NOT DEFINED IOS_MIN_TARGET)
 ENDIF()
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET ${IOS_MIN_TARGET} CACHE STRING "Minimum iOS version")
+
+if(PLATFORM_NAME STREQUAL "iphonesimulator")
+  # Ensure that the simulator is built with the correct target.
+  SET(IOS_COMMON_FLAGS "-m${PLATFORM_FLAG_NAME}-version-min=${IOS_MIN_TARGET} -target ${IOS_ARCH}-apple-ios-simulator")
+else()
+  SET(IOS_COMMON_FLAGS "-m${PLATFORM_FLAG_NAME}-version-min=${IOS_MIN_TARGET}")
+endif()
+
+SET(CMAKE_C_FLAGS_INIT "${IOS_COMMON_FLAGS}")
+SET(CMAKE_CXX_FLAGS_INIT "${IOS_COMMON_FLAGS}")
+SET(CMAKE_ASM_FLAGS_INIT "${IOS_COMMON_FLAGS}")
+
+SET(CMAKE_C_FLAGS_DEBUG_INIT "-fembed-bitcode-marker")
+SET(CMAKE_CXX_FLAGS_DEBUG_INIT "-fembed-bitcode-marker")
+SET(CMAKE_ASM_FLAGS_DEBUG_INIT "-fembed-bitcode-marker")
+
+SET(CMAKE_C_FLAGS_RELEASE_INIT "-fembed-bitcode")
+SET(CMAKE_CXX_FLAGS_RELEASE_INIT "-fembed-bitcode")
+SET(CMAKE_ASM_FLAGS_RELEASE_INIT "-fembed-bitcode")
