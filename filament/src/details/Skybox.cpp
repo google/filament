@@ -129,7 +129,11 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
                 builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
                 break;
             case Engine::StereoscopicType::MULTIVIEW:
+#ifdef FILAMENT_ENABLE_MULTIVIEW
                 builder.package(MATERIALS_SKYBOX_MULTIVIEW_DATA, MATERIALS_SKYBOX_MULTIVIEW_SIZE);
+#else
+                assert_invariant(false);
+#endif
                 break;
         }
     }

@@ -290,6 +290,11 @@ if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
     add_definitions(-DFILAMENT_ENABLE_FEATURE_LEVEL_0)
 endif()
 
+# Whether to include MULTIVIEW materials.
+if (FILAMENT_ENABLE_MULTIVIEW)
+    add_definitions(-DFILAMENT_ENABLE_MULTIVIEW)
+endif()
+
 # ==================================================================================================
 # Definitions
 # ==================================================================================================
@@ -343,7 +348,7 @@ foreach (mat_src ${MATERIAL_SRCS})
     endif ()
 
     list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
-    if (${index} GREATER -1)
+    if (${index} GREATER -1 AND FILAMENT_ENABLE_MULTIVIEW)
         string(REGEX REPLACE "[.]filamat$" "_multiview.filamat" output_path_multiview ${output_path})
         add_custom_command(
                 OUTPUT ${output_path_multiview}
