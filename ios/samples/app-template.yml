@@ -17,26 +17,32 @@ targetTemplates:
             configVariants:
                 - Metal
                 - OpenGL
+        dependencies:
+            - framework: "$(FILAMENT_LIB_DIR)/libbackend.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libfilament.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libfilaflat.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libktxreader.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libfilabridge.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libutils.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libsmol-v.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libgeometry.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libibl.xcframework"
         settings:
             base:
-                OTHER_LDFLAGS: ["-lfilament", "-lbackend", "-lfilaflat", "-lktxreader",
-                                "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry", "-libl",
-                                "-labseil", "-lzstd"]
+                FILAMENT_OUT_DIR: $(SRCROOT)/../../../out/ios-release
+                FILAMENT_DIST_DIR: $(FILAMENT_OUT_DIR)/filament
+                FILAMENT_LIB_DIR: $(FILAMENT_DIST_DIR)/lib
+                FILAMENT_INCLUDE_DIR: $(FILAMENT_DIST_DIR)/include
+                HEADER_SEARCH_PATHS: ["$(FILAMENT_INCLUDE_DIR)", "generated"]
                 ENABLE_BITCODE: NO
                 CLANG_CXX_LANGUAGE_STANDARD: c++20
                 # This allows users to not have to specify a unique bundle ID when building the sample apps.
                 SAMPLE_CODE_DISAMBIGUATOR: ${DEVELOPMENT_TEAM}
             configs:
                 debug:
-                    HEADER_SEARCH_PATHS: ["../../../out/ios-debug/filament/include", "generated"]
-                    LIBRARY_SEARCH_PATHS:
-                        - "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)"
-                        - "../../../out/ios-debug/filament/lib/universal"
+                    FILAMENT_OUT_DIR: $(SRCROOT)/../../../out/ios-debug
                 release:
-                    HEADER_SEARCH_PATHS: ["../../../out/ios-release/filament/include", "generated"]
-                    LIBRARY_SEARCH_PATHS:
-                        - "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)"
-                        - "../../../out/ios-release/filament/lib/universal"
+                    FILAMENT_OUT_DIR: $(SRCROOT)/../../../out/ios-release
                 metal:
                     GCC_PREPROCESSOR_DEFINITIONS: ["FILAMENT_APP_USE_METAL=1", "$(inherited)"]
                 opengl:

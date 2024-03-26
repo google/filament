@@ -17,11 +17,19 @@ targets:
               optional: true
         templates:
             - FilamentApp
-        settings:
-            base:
-                OTHER_LDFLAGS: ["-lgltfio_core", "-luberarchive", "-limage", "-lstb", "-lbasis_transcoder",
-                                "-lzstd", "-lcamutils", "-ldracodec", "-lmeshoptimizer", "-lviewer", "-lcivetweb",
-                                "-luberzlib", "-limageio-lite"]
+        dependencies:
+            - framework: "$(FILAMENT_LIB_DIR)/libgltfio_core.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libuberarchive.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libimage.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libstb.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libbasis_transcoder.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libzstd.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libcamutils.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libdracodec.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libmeshoptimizer.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libviewer.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libcivetweb.xcframework"
+            - framework: "$(FILAMENT_LIB_DIR)/libuberzlib.xcframework"
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources
