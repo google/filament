@@ -265,7 +265,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     compileShaders(gl,
                             std::move(program.getShadersSource()),
                             program.getSpecializationConstants(),
-                            program.getMultiview(),
+                            program.isMultiview(),
                             shaders,
                             token->shaderSourceCode);
 
@@ -301,7 +301,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         compileShaders(gl,
                 std::move(program.getShadersSource()),
                 program.getSpecializationConstants(),
-                program.getMultiview(),
+                program.isMultiview(),
                 token->gl.shaders,
                 token->shaderSourceCode);
 

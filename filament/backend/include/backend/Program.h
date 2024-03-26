@@ -145,7 +145,7 @@ public:
 
     uint64_t getCacheId() const noexcept { return mCacheId; }
 
-    bool getMultiview() const noexcept { return mMultiview; }
+    bool isMultiview() const noexcept { return mMultiview; }
 
     CompilerPriorityQueue getPriorityQueue() const noexcept { return mPriorityQueue; }
 
