@@ -249,9 +249,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
     mEmptyTexture = createEmptyTexture(mPlatform->getDevice(), mPlatform->getPhysicalDevice(),
             mContext, mAllocator, &mCommands, mStagePool);
 
-    // Use resource manager to ref-count placeholder resources.
-    mResourceManager.acquire(mEmptyTexture);
-
     mPipelineCache.setDummyTexture(mEmptyTexture->getPrimaryImageView());
 }
 
@@ -317,6 +314,7 @@ void VulkanDriver::terminate() {
     // are about to be destroyed.
     mCommands.terminate();
 
+    delete mEmptyTexture;
     mResourceManager.clear();
 
     mTimestamps.reset();
