@@ -23,6 +23,7 @@
 #include <utils/Invocable.h>
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
