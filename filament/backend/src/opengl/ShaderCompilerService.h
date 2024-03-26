@@ -132,7 +132,9 @@ private:
 
     static void compileShaders(
             OpenGLContext& context,
-            Program& program,
+            Program::ShaderSource shadersSource,
+            utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
+            bool multiview,
             std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
             std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
 
