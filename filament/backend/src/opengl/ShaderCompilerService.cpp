@@ -265,6 +265,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     compileShaders(gl,
                             std::move(program.getShadersSource()),
                             program.getSpecializationConstants(),
+                            program.isMultiview(),
                             shaders,
                             token->shaderSourceCode);
 
@@ -300,6 +301,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         compileShaders(gl,
                 std::move(program.getShadersSource()),
                 program.getSpecializationConstants(),
+                program.isMultiview(),
                 token->gl.shaders,
                 token->shaderSourceCode);
 
@@ -502,6 +504,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
 void ShaderCompilerService::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
+        bool multiview,
         std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
         UTILS_UNUSED_IN_RELEASE std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
@@ -560,7 +563,7 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             process_GOOGLE_cpp_style_line_directive(context, shader_src, shader_len);
 
             // replace the value of layout(num_views = X) for multiview extension
-            if (stage == ShaderStage::VERTEX) {
+            if (multiview && stage == ShaderStage::VERTEX) {
                 process_OVR_multiview2(context, numViews, shader_src, shader_len);
             }
 
