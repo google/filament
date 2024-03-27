@@ -196,7 +196,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             SDL_SysWMinfo wmInfo;
             SDL_VERSION(&wmInfo.version);
             SDL_GetWindowWMInfo(window->getSDLWindow(), &wmInfo);
-            io.ImeWindowHandle = wmInfo.info.win.window;
+            ImGui::GetMainViewport()->PlatformHandleRaw = wmInfo.info.win.window;
         #endif
         io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
         io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
