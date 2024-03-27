@@ -604,7 +604,13 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
     });
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
-        registerSizePasses(*optimizer, config);
+        // When optimizing for size, we don't run the SPIR-V through any size optimization passes
+        // when targeting MSL. This results in better line dictionary compression. We do, however,
+        // still register the passes necessary (below) to support half precision floating point
+        // math.
+        if (config.targetApi != MaterialBuilder::TargetApi::METAL) {
+            registerSizePasses(*optimizer, config);
+        }
     } else if (optimization == MaterialBuilder::Optimization::PERFORMANCE) {
         registerPerformancePasses(*optimizer, config);
     }
@@ -719,7 +725,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
@@ -728,11 +733,9 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateCCPPass());
     RegisterPass(CreateLoopUnrollPass(true));
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateScalarReplacementPass(0));
     RegisterPass(CreateLocalSingleStoreElimPass());
     RegisterPass(CreateIfConversionPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
@@ -748,7 +751,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateBlockMergePass());
     RegisterPass(CreateLocalMultiStoreElimPass());
     RegisterPass(CreateRedundancyEliminationPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateCFGCleanupPass());
 }
