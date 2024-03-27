@@ -80,7 +80,7 @@ static void exportScreenshot(View* view, Renderer* renderer, std::string filenam
             convertRGBAtoRGB(buffer, vp.width, vp.height);
 
             Path out(state->filename);
-            std::ofstream ppmStream(out);
+            std::ofstream ppmStream(out, std::ios_base::binary);
             ppmStream << "P6 " << vp.width << " " << vp.height << " " << 255 << std::endl;
             ppmStream.write(static_cast<char*>(buffer), vp.width * vp.height * 3);
             delete[] static_cast<uint8_t*>(buffer);
