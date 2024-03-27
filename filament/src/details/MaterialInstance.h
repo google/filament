@@ -231,6 +231,9 @@ private:
     void setParameterImpl(std::string_view name,
             FTexture const* texture, TextureSampler const& sampler);
 
+    template<typename T>
+    T getParameterImpl(std::string_view name) const noexcept;
+
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
 
