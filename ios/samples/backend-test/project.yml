@@ -6,8 +6,11 @@ targets:
     backend-test:
         templates:
             - FilamentApp
+        dependencies:
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libbackend_test.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libfilamat.xcframework
         settings:
             base:
                 # Because each test case is a separate file, the -force_load flag is necessary to prevent the
                 # linker from removing "unused" symbols.
-                OTHER_LDFLAGS: ["-lfilamat", "-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a"]
+                OTHER_LDFLAGS: ["-force_load ../../../out/ios-release/filament/lib/arm64/libbackend_test.xcframework"]
