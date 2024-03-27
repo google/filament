@@ -16,6 +16,10 @@
 
 #include <utils/Panic.h>
 
+#if defined(__APPLE__)
+#include <utils/darwin/Exception.h>
+#endif
+
 #include <atomic>
 #include <cstdarg>
 #include <cstdlib>
@@ -89,6 +93,16 @@ const char* TPanic<T>::what() const noexcept {
 }
 
 template<typename T>
+const char* TPanic<T>::getReason() const noexcept {
+    return m_reason.c_str();
+}
+
+template<typename T>
+const char* TPanic<T>::getType() const noexcept {
+    return m_type.c_str();
+}
+
+template<typename T>
 const char* TPanic<T>::getFunction() const noexcept {
     return m_function;
 }
@@ -116,13 +130,12 @@ void TPanic<T>::log() const noexcept {
 
 template<typename T>
 void TPanic<T>::buildMessage() {
-    std::string type;
 #if UTILS_HAS_RTTI
-    type = CallStack::demangleTypeName(typeid(T).name()).c_str();
+    m_type = CallStack::demangleTypeName(typeid(T).name()).c_str();
 #else
-    type = "Panic";
+    m_type = "Panic";
 #endif
-    m_msg = panicString(type, m_function, m_line, m_file, m_reason.c_str());
+    m_msg = panicString(m_type, m_function, m_line, m_file, m_reason.c_str());
 }
 
 UTILS_ALWAYS_INLINE
@@ -139,6 +152,11 @@ void TPanic<T>::panic(char const* function, char const* file, int line, const ch
     va_end(args);
     T e(function, formatFile(file), line, reason);
     e.log();
+
+#if defined(__APPLE__)
+    details::throwDarwinException(e);
+#endif
+
 #ifdef __EXCEPTIONS
         throw e;
 #endif
