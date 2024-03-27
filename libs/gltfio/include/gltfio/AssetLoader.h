@@ -97,8 +97,8 @@ struct AssetConfiguration {
  *
  * // Load buffers and textures from disk.
  * ResourceLoader resourceLoader({engine, ".", true});
- * resourceLoader.addTextureProvider("image/png", decoder)
- * resourceLoader.addTextureProvider("image/jpeg", decoder)
+ * resourceLoader.addTextureProvider("image/png", decoder);
+ * resourceLoader.addTextureProvider("image/jpeg", decoder);
  * resourceLoader.loadResources(asset);
  *
  * // Free the glTF hierarchy as it is no longer needed.
