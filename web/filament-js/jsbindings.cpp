@@ -369,8 +369,8 @@ using EntityVector = std::vector<utils::Entity>;
 
 register_vector<std::string>("RegistryKeys");
 register_vector<utils::Entity>("EntityVector");
-register_vector<FilamentInstance*>("AssetInstanceVector");
-register_vector<MaterialInstance*>("MaterialInstanceVector");
+register_vector<allow_raw_pointer<FilamentInstance*>>("AssetInstanceVector");
+register_vector<allow_raw_pointer<MaterialInstance*>>("MaterialInstanceVector");
 
 // CORE FILAMENT CLASSES
 // ---------------------
