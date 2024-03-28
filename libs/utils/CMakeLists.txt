@@ -87,6 +87,7 @@ if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Path.cpp)
 endif()
 if (APPLE)
+    list(APPEND SRCS src/darwin/Exception.mm)
     list(APPEND SRCS src/darwin/Path.mm)
     list(APPEND SRCS src/darwin/Systrace.cpp)
 endif()
@@ -120,6 +121,10 @@ if (LINUX)
     find_package(Threads REQUIRED)
     target_link_libraries(${TARGET} PRIVATE Threads::Threads)
     target_link_libraries(${TARGET} PRIVATE dl)
+endif()
+
+if (APPLE AND NOT IOS)
+    target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
 endif()
 
 # ==================================================================================================

@@ -259,6 +259,18 @@ public:
     virtual const char* what() const noexcept = 0;
 
     /**
+     * Get the reason for the panic.
+     * @return a C string containing the reason for the panic.
+     */
+    virtual const char* getReason() const noexcept = 0;
+
+    /**
+     * Get the type of the panic. When compiled without RTTI, this returns a generic type name.
+     * @return a C string containing the type of the panic.
+     */
+    virtual const char* getType() const noexcept = 0;
+
+    /**
      * Get the function name where the panic was detected
      * @return a C string containing the function name where the panic was detected
      */
@@ -305,6 +317,8 @@ public:
     const char* what() const noexcept override;
 
     // Panic interface
+    const char* getReason() const noexcept override;
+    const char* getType() const noexcept override;
     const char* getFunction() const noexcept override;
     const char* getFile() const noexcept override;
     int getLine() const noexcept override;
@@ -369,7 +383,8 @@ private:
     char const* const m_function = nullptr;
     char const* const m_file = nullptr;
     const int m_line = -1;
-    mutable std::string m_msg;
+    std::string m_msg;
+    std::string m_type;
 };
 
 namespace details {
