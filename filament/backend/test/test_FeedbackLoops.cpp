@@ -160,7 +160,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             slog.i << "Level " << int(level) << ": " <<
                     (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
             renderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                    kTexWidth >> level, kTexHeight >> level, 1, { texture, level, 0 }, {}, {});
+                    kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {});
         }
 
         // Fill the base level of the texture with interesting colors.

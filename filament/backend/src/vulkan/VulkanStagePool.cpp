@@ -26,10 +26,9 @@ static constexpr uint32_t TIME_BEFORE_EVICTION = FVK_MAX_COMMAND_BUFFERS;
 
 namespace filament::backend {
 
-void VulkanStagePool::initialize(VmaAllocator allocator, VulkanCommands* commands) noexcept {
-    mAllocator = allocator;
-    mCommands = commands;
-}
+VulkanStagePool::VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands)
+    : mAllocator(allocator),
+      mCommands(commands) {}
 
 VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     // First check if a stage exists whose capacity is greater than or equal to the requested size.

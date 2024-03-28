@@ -25,8 +25,9 @@
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-#if defined(__ANDROID__)
+#include <EGL/eglplatform.h>
 
+#if defined(__ANDROID__)
 #include <sys/system_properties.h>
 #endif
 #include <utils/compiler.h>
@@ -282,12 +283,14 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         }
     }
 
-    if (UTILS_UNLIKELY(makeCurrent(mEGLContext, mEGLDummySurface, mEGLDummySurface) == EGL_FALSE)) {
+    if (UTILS_UNLIKELY(
+            egl.makeCurrent(mEGLContext, mEGLDummySurface, mEGLDummySurface) == EGL_FALSE)) {
         // eglMakeCurrent failed
         logEglError("eglMakeCurrent");
         goto error;
     }
 
+    mCurrentContextType = ContextType::UNPROTECTED;
     mContextAttribs = std::move(contextAttribs);
 
     initializeGlExtensions();
@@ -360,26 +363,6 @@ void PlatformEGL::releaseContext() noexcept {
                     }), mAdditionalContexts.end());
 
     eglReleaseThread();
-}
-
-EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
-    return makeCurrent(mCurrentContext, drawSurface, readSurface);
-}
-
-EGLBoolean PlatformEGL::makeCurrent(EGLContext context,
-        EGLSurface drawSurface, EGLSurface readSurface) noexcept {
-    if (UTILS_UNLIKELY((mCurrentContext != context ||
-            drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
-        EGLBoolean const success = eglMakeCurrent(
-                mEGLDisplay, drawSurface, readSurface, context);
-        if (success) {
-            mCurrentDrawSurface = drawSurface;
-            mCurrentReadSurface = readSurface;
-            mCurrentContext = context;
-        }
-        return success;
-    }
-    return EGL_TRUE;
 }
 
 void PlatformEGL::terminate() noexcept {
@@ -468,30 +451,10 @@ bool PlatformEGL::isSRGBSwapChainSupported() const noexcept {
     return ext.egl.KHR_gl_colorspace;
 }
 
-bool PlatformEGL::isSwapChainProtected(Platform::SwapChain const* swapChain) noexcept {
-    if (swapChain) {
-        SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
-        return bool(sc->flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT);
-    }
-    return false;
-}
-
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t flags) noexcept {
 
-    EGLConfig config = EGL_NO_CONFIG_KHR;
-    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
-        config = findSwapChainConfig(flags, true, false);
-    } else {
-        config = mEGLConfig;
-    }
-
-    if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
-        return nullptr;
-    }
-
     Config attribs;
-
     if (ext.egl.KHR_gl_colorspace) {
         if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
             attribs[EGL_GL_COLORSPACE_KHR] = EGL_GL_COLORSPACE_SRGB_KHR;
@@ -508,16 +471,27 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
-    EGLSurface sur = eglCreateWindowSurface(mEGLDisplay, config,
-            (EGLNativeWindowType)nativeWindow, attribs.data());
-
-    if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
-        logEglError("eglCreateWindowSurface");
-        return nullptr;
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
+        config = findSwapChainConfig(flags, true, false);
+    } else {
+        config = mEGLConfig;
     }
 
-    // this is not fatal
-    eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED);
+    EGLSurface sur = EGL_NO_SURFACE;
+    if (UTILS_LIKELY(config != EGL_NO_CONFIG_KHR)) {
+        sur = eglCreateWindowSurface(mEGLDisplay, config,
+                (EGLNativeWindowType)nativeWindow, attribs.data());
+
+        if (UTILS_LIKELY(sur != EGL_NO_SURFACE)) {
+            // this is not fatal
+            eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED);
+        } else {
+            logEglError("PlatformEGL::createSwapChain: eglCreateWindowSurface");
+        }
+    } else {
+        // error already logged
+    }
 
     SwapChainEGL* const sc = new(std::nothrow) SwapChainEGL({
         .sur = sur,
@@ -531,17 +505,6 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
         uint32_t width, uint32_t height, uint64_t flags) noexcept {
-
-    EGLConfig config = EGL_NO_CONFIG_KHR;
-    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
-        config = findSwapChainConfig(flags, false, true);
-    } else {
-        config = mEGLConfig;
-    }
-
-    if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
-        return nullptr;
-    }
 
     Config attribs = {
             { EGL_WIDTH,  EGLint(width) },
@@ -564,17 +527,28 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
-    EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs.data());
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
+        config = findSwapChainConfig(flags, true, false);
+    } else {
+        config = mEGLConfig;
+    }
 
-    if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
-        logEglError("eglCreatePbufferSurface");
-        return nullptr;
+    EGLSurface sur = EGL_NO_SURFACE;
+    if (UTILS_LIKELY(config != EGL_NO_CONFIG_KHR)) {
+        sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs.data());
+        if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
+            logEglError("PlatformEGL::createSwapChain: eglCreatePbufferSurface");
+        }
+    } else {
+        // error already logged
     }
 
     SwapChainEGL* const sc = new(std::nothrow) SwapChainEGL({
             .sur = sur,
             .attribs = std::move(attribs),
-            .config = config
+            .config = config,
+            .flags = flags
     });
     return sc;
 }
@@ -583,29 +557,45 @@ void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
         if (sc->sur != EGL_NO_SURFACE) {
-            makeCurrent(mCurrentContext, mEGLDummySurface, mEGLDummySurface);
+            egl.makeCurrent(mEGLDummySurface, mEGLDummySurface);
             eglDestroySurface(mEGLDisplay, sc->sur);
             delete sc;
         }
     }
 }
 
-void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
-        Platform::SwapChain* readSwapChain) noexcept {
+bool PlatformEGL::isSwapChainProtected(Platform::SwapChain* swapChain) noexcept {
+    if (swapChain) {
+        SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
+        return bool(sc->flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT);
+    }
+    return false;
+}
+
+OpenGLPlatform::ContextType PlatformEGL::getCurrentContextType() const noexcept {
+    return mCurrentContextType;
+}
+
+bool PlatformEGL::makeCurrent(ContextType type,
+        SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept {
     SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
     SwapChainEGL const* const rsc = static_cast<SwapChainEGL const*>(readSwapChain);
-    makeCurrent(mEGLContext, dsc->sur, rsc->sur);
+    EGLContext context = getContextForType(type);
+    EGLBoolean const success = egl.makeCurrent(context, dsc->sur, rsc->sur);
+    return success == EGL_TRUE ? true : false;
 }
 
 void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         Platform::SwapChain* readSwapChain,
         utils::Invocable<void()> preContextChange,
         utils::Invocable<void(size_t index)> postContextChange) noexcept {
-    SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
-    SwapChainEGL const* const rsc = static_cast<SwapChainEGL const*>(readSwapChain);
-    EGLContext context = mEGLContext;
+
+    assert_invariant(drawSwapChain);
+    assert_invariant(readSwapChain);
+
+    ContextType type = ContextType::UNPROTECTED;
     if (ext.egl.EXT_protected_content) {
-        bool const swapChainProtected = PlatformEGL::isSwapChainProtected(dsc);
+        bool const swapChainProtected = isSwapChainProtected(drawSwapChain);
         if (UTILS_UNLIKELY(swapChainProtected)) {
             // we need a protected context
             if (UTILS_UNLIKELY(mEGLContextProtected == EGL_NO_CONTEXT)) {
@@ -622,34 +612,36 @@ void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
                     goto error;
                 }
             }
-            context = mEGLContextProtected;
+            type = ContextType::PROTECTED;
             error: ;
         }
 
-        bool const contextChange = context != mCurrentContext;
+        bool const contextChange = type != mCurrentContextType;
+        mCurrentContextType = type;
+
         if (UTILS_UNLIKELY(contextChange)) {
             preContextChange();
-            EGLBoolean const success = makeCurrent(context, dsc->sur, rsc->sur);
+            bool const success = makeCurrent(mCurrentContextType, drawSwapChain, readSwapChain);
             if (UTILS_UNLIKELY(!success)) {
                 logEglError("PlatformEGL::makeCurrent");
                 if (mEGLContextProtected != EGL_NO_CONTEXT) {
                     eglDestroyContext(mEGLDisplay, mEGLContextProtected);
                     mEGLContextProtected = EGL_NO_CONTEXT;
                 }
-                context = mEGLContext;
+                mCurrentContextType = ContextType::UNPROTECTED;
             }
             if (UTILS_LIKELY(!swapChainProtected && mEGLContextProtected != EGL_NO_CONTEXT)) {
                 // We don't need the protected context anymore, unbind and destroy right away.
                 eglDestroyContext(mEGLDisplay, mEGLContextProtected);
                 mEGLContextProtected = EGL_NO_CONTEXT;
             }
-            size_t const contextIndex = (context == mEGLContext) ? 0 : 1;
+            size_t const contextIndex = (mCurrentContextType == ContextType::PROTECTED) ? 1 : 0;
             postContextChange(contextIndex);
             return;
         }
     }
 
-    EGLBoolean const success = makeCurrent(context, dsc->sur, rsc->sur);
+    bool const success = makeCurrent(mCurrentContextType, drawSwapChain, readSwapChain);
     if (UTILS_UNLIKELY(!success)) {
         logEglError("PlatformEGL::makeCurrent");
     }
@@ -746,6 +738,17 @@ void PlatformEGL::initializeGlExtensions() noexcept {
     ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
+EGLContext PlatformEGL::getContextForType(OpenGLPlatform::ContextType type) const noexcept {
+    switch (type) {
+        case ContextType::NONE:
+            return EGL_NO_CONTEXT;
+        case ContextType::UNPROTECTED:
+            return mEGLContext;
+        case ContextType::PROTECTED:
+            return mEGLContextProtected;
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGL::Config::Config() = default;
@@ -780,6 +783,25 @@ void PlatformEGL::Config::erase(EGLint name) noexcept {
             mConfig.erase(pos);
         }
     }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+EGLBoolean PlatformEGL::EGL::makeCurrent(EGLContext context, EGLSurface drawSurface,
+        EGLSurface readSurface) noexcept {
+    if (UTILS_UNLIKELY((
+            mCurrentContext != context ||
+            drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
+        EGLBoolean const success = eglMakeCurrent(
+                mEGLDisplay, drawSurface, readSurface, context);
+        if (success) {
+            mCurrentDrawSurface = drawSurface;
+            mCurrentReadSurface = readSurface;
+            mCurrentContext = context;
+        }
+        return success;
+    }
+    return EGL_TRUE;
 }
 
 } // namespace filament::backend

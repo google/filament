@@ -48,7 +48,14 @@ public:
 
 private:
     // sizeof(float3 + float2 + quatf) (pos, uv, tangent)
-    static constexpr size_t const BASE_OUTPUT_SIZE = 36;
+    static constexpr size_t const FLOAT3_SIZE = sizeof(float3);
+    static constexpr size_t const FLOAT2_SIZE = sizeof(float2);
+    static constexpr size_t const QUATF_SIZE = sizeof(quatf);
+
+    static constexpr size_t const POS_OFFSET = 0;
+    static constexpr size_t const UV_OFFSET = FLOAT3_SIZE;
+    static constexpr size_t const TBN_OFFSET = FLOAT3_SIZE + FLOAT2_SIZE;
+    static constexpr size_t const BASE_OUTPUT_SIZE = FLOAT3_SIZE + FLOAT2_SIZE + QUATF_SIZE;
 
     static int getNumFaces(SMikkTSpaceContext const* context) noexcept;
     static int getNumVerticesOfFace(SMikkTSpaceContext const* context, int const iFace) noexcept;
@@ -74,7 +81,14 @@ private:
     size_t const mUVStride;
     uint8_t const* mTriangles;
     bool mIsTriangle16;
-    std::vector<std::tuple<uint8_t const*, size_t, size_t>> mInputAttribArrays;
+
+    struct InputAttribute {
+        AttributeImpl attrib;
+        uint8_t const* data;
+        size_t stride;
+        size_t size;
+    };
+    std::vector<InputAttribute> mInputAttribArrays;
 
     size_t mOutputElementSize;
     std::vector<uint8_t> mOutputData;

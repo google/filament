@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_SSTREAM_H
-#define TNT_UTILS_SSTREAM_H
+#ifndef GLTFIO_ASSETLOADEREXTENDED_H
+#define GLTFIO_ASSETLOADEREXTENDED_H
 
-#include <utils/ostream.h>
+#include <cgltf.h>
 
-namespace utils::io {
+namespace filament::gltfio {
 
-class sstream : public ostream {
-public:
-    ostream& flush() noexcept override;
-    const char* c_str() const noexcept;
-    size_t length() const noexcept;
+// The cgltf attribute is a type and the attribute index
+struct Attribute {
+    cgltf_attribute_type type; // positions, tangents
+    int index;
 };
 
-} // namespace utils::io
+} // namespace filament::gltfio
 
-#endif // TNT_UTILS_SSTREAM_H
+#endif // GLTFIO_ASSETLOADEREXTENDED_H

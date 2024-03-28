@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_DRIVER_METALBUFFER_H
 
 #include "MetalContext.h"
-#include "MetalBufferPool.h"
 
 #include <backend/DriverEnums.h>
 
@@ -28,8 +27,49 @@
 
 #include <utility>
 #include <memory>
+#include <atomic>
 
 namespace filament::backend {
+
+class TrackedMetalBuffer {
+public:
+    TrackedMetalBuffer() noexcept : mBuffer(nil) {}
+    TrackedMetalBuffer(id<MTLBuffer> buffer) noexcept : mBuffer(buffer) {
+        if (buffer) {
+            aliveBuffers++;
+        }
+    }
+    ~TrackedMetalBuffer() {
+        if (mBuffer) {
+            aliveBuffers--;
+        }
+    }
+
+    TrackedMetalBuffer(TrackedMetalBuffer&&) = delete;
+    TrackedMetalBuffer(TrackedMetalBuffer const&) = delete;
+    TrackedMetalBuffer& operator=(TrackedMetalBuffer const&) = delete;
+
+    TrackedMetalBuffer& operator=(TrackedMetalBuffer&& rhs) noexcept {
+        swap(rhs);
+        return *this;
+    }
+
+    id<MTLBuffer> get() const noexcept { return mBuffer; }
+    operator bool() const noexcept { return bool(mBuffer); }
+
+    static uint64_t getAliveBuffers() { return aliveBuffers; }
+
+private:
+    void swap(TrackedMetalBuffer& other) noexcept {
+        id<MTLBuffer> temp = mBuffer;
+        mBuffer = other.mBuffer;
+        other.mBuffer = temp;
+    }
+
+    id<MTLBuffer> mBuffer;
+
+    static std::atomic<uint64_t> aliveBuffers;
+};
 
 class MetalBuffer {
 public:
@@ -82,7 +122,7 @@ public:
 
 private:
 
-    id<MTLBuffer> mBuffer = nil;
+    TrackedMetalBuffer mBuffer;
     size_t mBufferSize = 0;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
@@ -151,7 +191,7 @@ public:
             // finishes executing.
             mAuxBuffer = [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions];
             assert_invariant(mAuxBuffer);
-            return {mAuxBuffer, 0};
+            return {mAuxBuffer.get(), 0};
         }
         mCurrentSlot = (mCurrentSlot + 1) % mSlotCount;
         mOccupiedSlots->fetch_add(1, std::memory_order_relaxed);
@@ -180,9 +220,9 @@ public:
      */
     std::pair<id<MTLBuffer>, NSUInteger> getCurrentAllocation() const {
         if (UTILS_UNLIKELY(mAuxBuffer)) {
-            return { mAuxBuffer, 0 };
+            return { mAuxBuffer.get(), 0 };
         }
-        return { mBuffer, mCurrentSlot * mSlotSizeBytes };
+        return { mBuffer.get(), mCurrentSlot * mSlotSizeBytes };
     }
 
     bool canAccomodateLayout(MTLSizeAndAlign layout) const {
@@ -191,8 +231,8 @@ public:
 
 private:
     id<MTLDevice> mDevice;
-    id<MTLBuffer> mBuffer;
-    id<MTLBuffer> mAuxBuffer;
+    TrackedMetalBuffer mBuffer;
+    TrackedMetalBuffer mAuxBuffer;
 
     MTLResourceOptions mBufferOptions;
 

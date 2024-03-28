@@ -335,6 +335,11 @@ public:
          * This value determines for how many frames are texture entries kept in the cache.
          */
         uint32_t resourceAllocatorCacheMaxAge = 2;
+
+        /*
+         * Disable backend handles use-after-free checks.
+         */
+        bool disableHandleUseAfterFreeCheck = false;
     };
 
 
@@ -401,6 +406,13 @@ public:
          * @return A reference to this Builder for chaining calls.
          */
         Builder& featureLevel(FeatureLevel featureLevel) noexcept;
+
+        /**
+         * @param paused Whether to start the rendering thread paused.
+         * @return A reference to this Builder for chaining calls.
+         * @warning Experimental.
+         */
+        Builder& paused(bool paused) noexcept;
 
 #if UTILS_HAS_THREADING
         /**
@@ -826,6 +838,12 @@ public:
      * queue which has a limited size.</p>
       */
     void flush();
+
+    /**
+     * Pause or resume rendering thread.
+     * @warning Experimental.
+     */
+    void setPaused(bool paused);
 
     /**
      * Drains the user callback message queue and immediately execute all pending callbacks.

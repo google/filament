@@ -69,6 +69,7 @@ struct Engine::BuilderDetails {
     Engine::Config mConfig;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
+    bool mPaused = false;
     static Config validateConfig(const Config* pConfig) noexcept;
 };
 
@@ -100,7 +101,8 @@ Engine* FEngine::create(Engine::Builder const& builder) {
         DriverConfig const driverConfig{
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
-                .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile
+                .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
+                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -200,7 +202,8 @@ FEngine::FEngine(Engine::Builder const& builder) :
         mCameraManager(*this),
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
-                builder->mConfig.commandBufferSizeMB * MiB),
+                builder->mConfig.commandBufferSizeMB * MiB,
+                builder->mPaused),
         mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
@@ -339,7 +342,7 @@ void FEngine::init() {
     if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         defaultMaterialBuilder.package(
-                MATERIALS_DEFAULTMATERIAL0_DATA, MATERIALS_DEFAULTMATERIAL0_SIZE);
+                MATERIALS_DEFAULTMATERIAL_FL0_DATA, MATERIALS_DEFAULTMATERIAL_FL0_SIZE);
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
     } else
 #endif
@@ -347,8 +350,20 @@ void FEngine::init() {
         mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-        defaultMaterialBuilder.package(
-                MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+        switch (mConfig.stereoscopicType) {
+            case StereoscopicType::INSTANCED:
+                defaultMaterialBuilder.package(
+                    MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+                break;
+            case StereoscopicType::MULTIVIEW:
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+                defaultMaterialBuilder.package(
+                    MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA, MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+#else
+                assert_invariant(false);
+#endif
+                break;
+        }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
 
         float3 dummyPositions[1] = {};
@@ -655,7 +670,8 @@ int FEngine::loop() {
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
-            .disableParallelShaderCompile = mConfig.disableParallelShaderCompile
+            .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
+            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
@@ -1186,6 +1202,10 @@ void FEngine::destroy(FEngine* engine) {
     }
 }
 
+void FEngine::setPaused(bool paused) {
+    mCommandBufferQueue.setPaused(paused);
+}
+
 Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
     FEngine::DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
     return driver.getFeatureLevel();
@@ -1236,6 +1256,11 @@ Engine::Builder& Engine::Builder::featureLevel(FeatureLevel featureLevel) noexce
 
 Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
     mImpl->mSharedContext = sharedContext;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::paused(bool paused) noexcept {
+    mImpl->mPaused = paused;
     return *this;
 }
 

@@ -276,8 +276,8 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
                 name, targetBufferFlags,
                 backend.params.viewport.width,
                 backend.params.viewport.height,
-                descriptor.samples,
-                colorInfo,info[0], info[1]);
+                descriptor.samples, descriptor.layerCount,
+                colorInfo, info[0], info[1]);
     }
 }
 

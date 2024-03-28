@@ -32,10 +32,7 @@ struct VulkanProgram;
 
 class VulkanBlitter {
 public:
-    VulkanBlitter() noexcept;
-
-    void initialize(VkPhysicalDevice physicalDevice, VkDevice device,
-            VmaAllocator allocator, VulkanCommands* commands) noexcept;
+    VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept;
 
     void blit(VkFilter filter,
             VulkanAttachment dst, const VkOffset3D* dstRectPair,
@@ -47,8 +44,6 @@ public:
 
 private:
     UTILS_UNUSED VkPhysicalDevice mPhysicalDevice;
-    VkDevice mDevice;
-    VmaAllocator mAllocator;
     VulkanCommands* mCommands;
 };
 

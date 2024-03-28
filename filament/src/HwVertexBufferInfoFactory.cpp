@@ -22,7 +22,6 @@
 
 #include <private/backend/DriverApi.h>
 
-#include <utils/Log.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Hash.h>
@@ -66,7 +65,7 @@ auto HwVertexBufferInfoFactory::create(DriverApi& driver,
         uint8_t attributeCount,
         backend::AttributeArray attributes) noexcept -> Handle {
 
-    Key const key{{ bufferCount, attributeCount, {}, attributes }, 1 };
+    Key const key({ bufferCount, attributeCount, {}, attributes });
     auto pos = mBimap.find(key);
 
     // the common case is that we've never seen it (i.e.: no reuse)

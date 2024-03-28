@@ -20,6 +20,7 @@
 #include "metal/MetalDriver.h"
 
 #include "MetalBlitter.h"
+#include "MetalBufferPool.h"
 #include "MetalContext.h"
 #include "MetalDriverFactory.h"
 #include "MetalEnums.h"
@@ -36,6 +37,7 @@
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <utils/sstream.h>
 
 #include <algorithm>
 
@@ -98,7 +100,9 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
           mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
-          mHandleAllocator("Handles", driverConfig.handleArenaSize) {
+          mHandleAllocator("Handles",
+                  driverConfig.handleArenaSize,
+                  driverConfig.disableHandleUseAfterFreeCheck) {
     mContext->driver = this;
 
     mContext->device = mPlatform.createDevice();
@@ -212,6 +216,9 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
+    if (mPlatform.hasDebugUpdateStatFunc()) {
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers", TrackedMetalBuffer::getAliveBuffers());
+    }
 }
 
 void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -376,7 +383,7 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, MRT color,
+        uint8_t samples, uint8_t layerCount, MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "createRenderTarget must be called outside of a render pass.");

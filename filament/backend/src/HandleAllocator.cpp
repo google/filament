@@ -39,8 +39,10 @@ using namespace utils;
 
 template <size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
-HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& area)
-        : mArea(area) {
+HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& area,
+        bool disableUseAfterFreeCheck)
+        : mArea(area),
+          mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck) {
 
     // The largest handle this allocator can generate currently depends on the architecture's
     // min alignment, typically 8 or 16 bytes.
@@ -74,8 +76,10 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
 // ------------------------------------------------------------------------------------------------
 
 template <size_t P0, size_t P1, size_t P2>
-HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size) noexcept
-    : mHandleArena(name, size) {
+HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size,
+        bool disableUseAfterFreeCheck) noexcept
+    : mHandleArena(name, size, disableUseAfterFreeCheck),
+      mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck) {
 }
 
 template <size_t P0, size_t P1, size_t P2>

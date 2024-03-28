@@ -224,7 +224,8 @@ public class Engine {
                     config.jobSystemThreadCount,
                     config.textureUseAfterFreePoolSize, config.disableParallelShaderCompile,
                     config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
-                    config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge);
+                    config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
+                    config.disableHandleUseAfterFreeCheck);
             return this;
         }
 
@@ -236,6 +237,18 @@ public class Engine {
          */
         public Builder featureLevel(FeatureLevel featureLevel) {
             nSetBuilderFeatureLevel(mNativeBuilder, featureLevel.ordinal());
+            return this;
+        }
+
+        /**
+         * Sets the initial paused state of the rendering thread.
+         *
+         * @param paused Whether to start the rendering thread paused.
+         * @return A reference to this Builder for chaining calls.
+         * @warning Experimental.
+         */
+        public Builder paused(boolean paused) {
+            nSetBuilderPaused(mNativeBuilder, paused);
             return this;
         }
 
@@ -408,6 +421,11 @@ public class Engine {
          * This value determines for how many frames are texture entries kept in the cache.
          */
         public long resourceAllocatorCacheMaxAge = 2;
+
+        /*
+         * Disable backend handles use-after-free checks.
+         */
+        public boolean disableHandleUseAfterFreeCheck = false;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1189,6 +1207,13 @@ public class Engine {
         nFlush(getNativeObject());
     }
 
+    /**
+     * Pause or resume the rendering thread.
+     * @warning Experimental.
+     */
+    public void setPaused(boolean paused) {
+        nSetPaused(getNativeObject(), paused);
+    }
 
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
@@ -1263,6 +1288,7 @@ public class Engine {
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
     private static native void nFlush(long nativeEngine);
+    private static native void nSetPaused(long nativeEngine, boolean paused);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);
@@ -1283,8 +1309,10 @@ public class Engine {
             long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,
             long textureUseAfterFreePoolSize, boolean disableParallelShaderCompile,
             int stereoscopicType, long stereoscopicEyeCount,
-            long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge);
+            long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,
+            boolean disableHandleUseAfterFreeCheck);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
+    private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
     private static native long nBuilderBuild(long nativeBuilder);
 }

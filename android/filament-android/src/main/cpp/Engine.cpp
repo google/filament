@@ -391,6 +391,13 @@ Java_com_google_android_filament_Engine_nFlush(JNIEnv*, jclass,
     engine->flush();
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nSetPaused(JNIEnv*, jclass,
+        jlong nativeEngine, jboolean paused) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->setPaused(paused);
+}
+
 // Managers...
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -487,7 +494,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jlong jobSystemThreadCount,
         jlong textureUseAfterFreePoolSize, jboolean disableParallelShaderCompile,
         jint stereoscopicType, jlong stereoscopicEyeCount,
-        jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge) {
+        jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge,
+        jboolean disableHandleUseAfterFreeCheck) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -502,6 +510,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .stereoscopicEyeCount = (uint8_t) stereoscopicEyeCount,
             .resourceAllocatorCacheSizeMB = (uint32_t) resourceAllocatorCacheSizeMB,
             .resourceAllocatorCacheMaxAge = (uint8_t) resourceAllocatorCacheMaxAge,
+            .disableHandleUseAfterFreeCheck = (bool) disableHandleUseAfterFreeCheck,
     };
     builder->config(&config);
 }
@@ -516,6 +525,12 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         JNIEnv*, jclass, jlong nativeBuilder, jlong sharedContext) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     builder->sharedContext((void*) sharedContext);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderPaused(
+        JNIEnv*, jclass, jlong nativeBuilder, jboolean paused) {
+    Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
+    builder->paused((bool) paused);
 }
 
 extern "C" JNIEXPORT jlong JNICALL

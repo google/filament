@@ -275,9 +275,9 @@ public:
             "Command isn't trivially destructible");
 
     using RenderFlags = uint8_t;
-    static constexpr RenderFlags HAS_SHADOWING           = 0x01;
-    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x02;
-    static constexpr RenderFlags IS_STEREOSCOPIC         = 0x04;
+    static constexpr RenderFlags HAS_SHADOWING             = 0x01;
+    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES   = 0x02;
+    static constexpr RenderFlags IS_INSTANCED_STEREOSCOPIC = 0x04;
 
     // Arena used for commands
     using Arena = utils::Arena<

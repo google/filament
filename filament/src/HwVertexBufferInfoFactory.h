@@ -67,6 +67,12 @@ public:
 
 private:
     struct Key { // 140 bytes
+        // The key should not be copyable, unfortunately due to how the Bimap works we have
+        // to copy-construct it once.
+        Key(Key const&) = default;
+        Key& operator=(Key const&) = delete;
+        Key& operator=(Key&&) noexcept = delete;
+        explicit Key(Parameters const& params) : params(params), refs(1) { }
         Parameters params;
         mutable uint32_t refs;  // 4 bytes
         bool operator==(Key const& rhs) const noexcept {
@@ -85,13 +91,12 @@ private:
     };
 
     struct ValueHasher {
-        size_t operator()(Value v) const noexcept {
-            std::hash<Handle::HandleId> const hasher;
-            return hasher(v.handle.getId());
+        size_t operator()(Value const v) const noexcept {
+            return std::hash<Handle::HandleId>()(v.handle.getId());
         }
     };
 
-    friend bool operator==(Value const& lhs, Value const& rhs) noexcept {
+    friend bool operator==(Value const lhs, Value const rhs) noexcept {
         return lhs.handle == rhs.handle;
     }
 

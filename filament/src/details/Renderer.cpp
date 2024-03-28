@@ -111,6 +111,8 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.shadowmap.display_shadow_texture_level_count);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_power",
             &engine.debug.shadowmap.display_shadow_texture_power);
+    debugRegistry.registerProperty("d.stereo.combine_multiview_images",
+        &engine.debug.stereo.combine_multiview_images);
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -233,8 +235,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
     SYSTRACE_CALL();
 
-
-#if defined(__ANDROID__)
+#if 0 && defined(__ANDROID__)
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("debug.filament.protected", scratch);
     if (swapChain && length > 0) {
@@ -521,7 +522,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     driver.debugThreading();
 
-    const bool hasPostProcess = view.hasPostProcessPass();
+    bool hasPostProcess = view.hasPostProcessPass();
     bool hasScreenSpaceRefraction = false;
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
@@ -537,7 +538,16 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
+    const bool isRenderingMultiview = view.hasStereo() &&
+            engine.getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
+    // FIXME: This is to override some settings that are not supported for multiview at the moment.
+    // Remove this when all features are supported.
+    if (isRenderingMultiview) {
+        hasPostProcess = false;
+        msaaOptions.enabled = false;
+    }
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
+
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         dofOptions.enabled = false;
@@ -701,7 +711,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
-    if (view.hasStereo())                   renderFlags |= RenderPass::IS_STEREOSCOPIC;
+    if (view.hasStereo() &&
+           engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED) {
+        renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
+    }
 
     RenderPassBuilder passBuilder(commandArena);
     passBuilder.renderFlags(renderFlags);
@@ -978,11 +991,17 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     RenderPass const pass{ passBuilder.build(engine) };
 
-    FrameGraphTexture::Descriptor const desc = {
+    FrameGraphTexture::Descriptor colorBufferDesc = {
             .width = config.physicalViewport.width,
             .height = config.physicalViewport.height,
             .format = config.hdrFormat
     };
+
+    // Set the depth to the number of layers if we're rendering multiview.
+    if (isRenderingMultiview) {
+        colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
+        colorBufferDesc.type = backend::SamplerType::SAMPLER_2D_ARRAY;
+    }
 
     // a non-drawing pass to prepare everything that need to be before the color passes execute
     fg.addTrivialSideEffectPass("Prepare Color Passes",
@@ -991,7 +1010,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
-                            desc.width, desc.height);
+                            colorBufferDesc.width, colorBufferDesc.height);
                 } else if (colorGradingConfig.customResolve) {
                     ppm.customResolvePrepareSubpass(driver,
                             PostProcessManager::CustomResolveOp::COMPRESS);
@@ -1009,7 +1028,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view,
-            desc, config, colorGradingConfigForColor, pass.getExecutor());
+            colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
 
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
@@ -1151,6 +1170,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             xvp.left = xvp.bottom = 0;
             svp = xvp;
         }
+    }
+
+    // Debug: combine the array texture for multiview into a single image.
+    if (UTILS_UNLIKELY(isRenderingMultiview && engine.debug.stereo.combine_multiview_images)) {
+        input = ppm.debugCombineArrayTexture(fg, blendModeTranslucent, input, xvp, {
+                        .width = vp.width, .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat },
+                        SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
     }
 
     // We need to do special processing when rendering directly into the swap-chain, that is when

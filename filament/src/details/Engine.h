@@ -340,6 +340,8 @@ public:
 
     void destroy(utils::Entity e);
 
+    void setPaused(bool paused);
+
     void flushAndWait();
 
     // flush the current buffer
@@ -588,6 +590,9 @@ public:
         struct {
             bool debug_froxel_visualization = false;
         } lighting;
+        struct {
+            bool combine_multiview_images = true;
+        } stereo;
         matdbg::DebugServer* server = nullptr;
     } debug;
 };

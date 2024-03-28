@@ -216,7 +216,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     auto colorTexture = getDriverApi().createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
     auto renderTarget = getDriverApi().createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, {{colorTexture}}, {}, {});
+            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {});
 
     // Upload uniforms for the first triangle.
     {
