@@ -450,11 +450,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         .levels = uint8_t(levelCount),
                         .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
 
-                // workaround: since we have levels, this implies SAMPLEABLE (because of the gl
-                // backend, which implements non-sampleables with renderbuffers, which don't have levels).
-                // (should the gl driver revert to textures, in that case?)
                 data.depth = builder.write(data.depth,
-                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT | FrameGraphTexture::Usage::SAMPLEABLE);
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 if (config.picking) {
                     data.picking = builder.createTexture("Picking Buffer", {

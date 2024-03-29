@@ -724,9 +724,18 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     GLenum internalFormat = getInternalFormat(format);
     assert_invariant(internalFormat);
 
-    if (UTILS_UNLIKELY(usage & TextureUsage::PROTECTED)) {
+    if (any(usage & TextureUsage::PROTECTED)) {
         // renderbuffers don't have a protected mode, so we need to use a texture
         // because protected textures are only supported on GLES 3.2, MSAA will be available.
+        usage |= TextureUsage::SAMPLEABLE;
+    } else if (any(usage & TextureUsage::UPLOADABLE)) {
+        // if we have the uploadable flag, we also need to use a texture
+        usage |= TextureUsage::SAMPLEABLE;
+    } else if (target != SamplerType::SAMPLER_2D) {
+        // renderbuffers can only be 2D
+        usage |= TextureUsage::SAMPLEABLE;
+    } else if (levels > 1) {
+        // renderbuffers can't have mip levels
         usage |= TextureUsage::SAMPLEABLE;
     }
 
@@ -803,13 +812,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             textureStorage(t, w, h, depth, bool(usage & TextureUsage::PROTECTED));
         }
     } else {
-        assert_invariant(any(usage & (
-                TextureUsage::COLOR_ATTACHMENT |
-                TextureUsage::DEPTH_ATTACHMENT |
-                TextureUsage::STENCIL_ATTACHMENT)));
-        assert_invariant(levels == 1);
-        assert_invariant(target == SamplerType::SAMPLER_2D);
-        assert_invariant(none(usage & TextureUsage::PROTECTED));
         t->gl.internalFormat = internalFormat;
         t->gl.target = GL_RENDERBUFFER;
         glGenRenderbuffers(1, &t->gl.id);
