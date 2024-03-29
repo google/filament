@@ -228,6 +228,7 @@ private:
     Shading mShading = Shading::UNLIT;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    std::array<backend::BlendFunction, 4> mCustomBlendFunctions = {};
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;

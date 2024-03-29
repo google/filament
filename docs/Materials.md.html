@@ -1397,7 +1397,7 @@ Type
 :    `string`
 
 Value
-:     Any of `opaque`, `transparent`, `fade`, `add`, `masked`, `multiply`, `screen`. Defaults to `opaque`.
+:     Any of `opaque`, `transparent`, `fade`, `add`, `masked`, `multiply`, `screen`, `custom`. Defaults to `opaque`.
 
 Description
 :     Defines how/if the rendered object is blended with the content of the render target.
@@ -1420,6 +1420,7 @@ Description
       of the material's output defines whether a fragment is discarded or not. Additionally,
       ALPHA_TO_COVERAGE is enabled for non-translucent views. See the maskThreshold section for more
       information.
+    - **Custom**: blending is enabled. But the blending function is user specified. See `blendFunction`.
 
 !!! Note
     When `blending` is set to `masked`, alpha to coverage is automatically enabled for the material.
@@ -1430,6 +1431,36 @@ Description
 material {
     blending : transparent
 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Blending and transparency: blendFunction
+
+Type
+:    `object`
+
+Fields
+:     `srcRGB`, `srcA`, `dstRGB`, `dstA`
+
+Description
+:       - *srcRGB*: source function applied to the RGB channels
+        - *srcA*: source function applied to the alpha channel
+        - *srcRGB*: destination function applied to the RGB channels
+        - *srcRGB*: destination function applied to the alpha channel
+        The values possible for each functions are one of `zero`, `one`, `srcColor`, `oneMinusSrcColor`,
+               `dstColor`, `oneMinusDstColor`, `srcAlpha`, `oneMinusSrcAlpha`, `dstAlpha`,
+               `oneMinusDstAlpha`, `srcAlphaSaturate`
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    blending : custom,
+    blendFunction :
+    {
+        srcRGB: one,
+        srcA: one,
+        dstRGB: oneMinusSrcColor,
+        dstA: oneMinusSrcAlpha
+    }
+ }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ### Blending and transparency: postLightingBlending
