@@ -268,13 +268,13 @@ private:
     HandleAllocatorGL mHandleAllocator;
 
     template<typename D, typename ... ARGS>
-    Handle<D> initHandle(ARGS&& ... args) noexcept {
+    Handle<D> initHandle(ARGS&& ... args) {
         return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args) ...);
     }
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-    construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
+    construct(Handle<B> const& handle, ARGS&& ... args) {
         return mHandleAllocator.destroyAndConstruct<D, B>(handle, std::forward<ARGS>(args) ...);
     }
 
@@ -288,7 +288,7 @@ private:
     typename std::enable_if_t<
             std::is_pointer_v<Dp> &&
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(Handle<B>& handle) noexcept {
+    handle_cast(Handle<B>& handle) {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
@@ -296,7 +296,7 @@ private:
     inline typename std::enable_if_t<
             std::is_pointer_v<Dp> &&
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(Handle<B> const& handle) noexcept {
+    handle_cast(Handle<B> const& handle) {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
