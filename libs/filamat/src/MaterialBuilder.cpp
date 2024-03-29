@@ -388,6 +388,16 @@ MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::customBlendFunctions(
+        BlendFunction srcRGB, BlendFunction srcA,
+        BlendFunction dstRGB, BlendFunction dstA) noexcept {
+    mCustomBlendFunctions[0] = srcRGB;
+    mCustomBlendFunctions[1] = srcA;
+    mCustomBlendFunctions[2] = dstRGB;
+    mCustomBlendFunctions[3] = dstA;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::postLightingBlending(BlendingMode blending) noexcept {
     mPostLightingBlendingMode = blending;
     return *this;
@@ -1510,6 +1520,16 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.emplace<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
         container.emplace<uint8_t>(ChunkType::MaterialBlendingMode,
                 static_cast<uint8_t>(mBlendingMode));
+
+        if (mBlendingMode == BlendingMode::CUSTOM) {
+            uint32_t const blendFunctions =
+                    (uint32_t(mCustomBlendFunctions[0]) << 24) |
+                    (uint32_t(mCustomBlendFunctions[1]) << 16) |
+                    (uint32_t(mCustomBlendFunctions[2]) <<  8) |
+                    (uint32_t(mCustomBlendFunctions[3]) <<  0);
+            container.emplace< uint32_t >(ChunkType::MaterialBlendFunction, blendFunctions);
+        }
+
         container.emplace<uint8_t>(ChunkType::MaterialTransparencyMode,
                 static_cast<uint8_t>(mTransparencyMode));
         container.emplace<uint8_t>(ChunkType::MaterialReflectionMode,

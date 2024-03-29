@@ -323,6 +323,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         parser->getMaskThreshold(&mMaskThreshold);
     }
 
+    if (mBlendingMode == BlendingMode::CUSTOM) {
+        parser->getCustomBlendFunction(&mCustomBlendFunctions);
+    }
+
     if (mShading == Shading::UNLIT) {
         parser->hasShadowMultiplier(&mHasShadowMultiplier);
     }
@@ -373,6 +377,12 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             mRasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_COLOR;
             mRasterState.depthWrite = false;
             break;
+        case BlendingMode::CUSTOM:
+            mRasterState.blendFunctionSrcRGB   = mCustomBlendFunctions[0];
+            mRasterState.blendFunctionSrcAlpha = mCustomBlendFunctions[1];
+            mRasterState.blendFunctionDstRGB   = mCustomBlendFunctions[2];
+            mRasterState.blendFunctionDstAlpha = mCustomBlendFunctions[3];
+            mRasterState.depthWrite = false;
     }
 
     bool depthWriteSet = false;

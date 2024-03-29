@@ -80,6 +80,8 @@ enum class BlendingMode : uint8_t {
     MULTIPLY,
     //! material brightens what's behind it
     SCREEN,
+    //! custom blending function
+    CUSTOM,
 };
 
 /**
