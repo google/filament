@@ -78,14 +78,14 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     vec3 dielectricSpecularF0 = vec3(0.0);
     float dielectricSpecularF90 = 0.0;
 #if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
-    dielectricSpecularF0 = min(0.04 * material.specularColorFactor, vec3(1.0));
+    dielectricSpecularF0 = min(reflectance * material.specularColorFactor, vec3(1.0));
 #endif
 #if defined(MATERIAL_HAS_SPECULAR_FACTOR)
     dielectricSpecularF0 *= material.specularFactor;
     dielectricSpecularF90 = material.specularFactor;
 #endif
     pixel.f0 = baseColor.rgb * material.metallic + dielectricSpecularF0 * (1.0 - material.metallic);
-    pixel.f90 = 1.0 * material.metallic + dielectricSpecularF90 * (1.0 - material.metallic);
+    pixel.f90 = material.metallic + dielectricSpecularF90 * (1.0 - material.metallic);
 #endif
 #else
     pixel.diffuseColor = baseColor.rgb;

@@ -131,7 +131,7 @@ build_ubershader(volume_fade               volume          lit fade)
 build_ubershader(volume_masked             volume          lit masked)
 build_ubershader(sheen                     sheen           _ _)
 build_ubershader(specular_opaque           specular        lit opaque)
-build_ubershader(specular_fade           specular        lit fade)
+build_ubershader(specular_fade             specular        lit fade)
 build_ubershader(specular_masked           specular        lit masked)
 
 add_custom_target(uberz_file DEPENDS ${UBERZ_OUTPUT_PATH})
