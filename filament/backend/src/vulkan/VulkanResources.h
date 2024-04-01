@@ -35,24 +35,25 @@ struct VulkanThreadSafeResource;
 
 // Subclasses of VulkanResource must provide this enum in their construction.
 enum class VulkanResourceType : uint8_t {
-    BUFFER_OBJECT,
-    INDEX_BUFFER,
-    PROGRAM,
-    RENDER_TARGET,
-    SAMPLER_GROUP,
-    SWAP_CHAIN,
-    RENDER_PRIMITIVE,
-    TEXTURE,
-    TIMER_QUERY,
-    VERTEX_BUFFER,
-    VERTEX_BUFFER_INFO,
-    DESCRIPTOR_SET,
+    BUFFER_OBJECT = 0,
+    INDEX_BUFFER = 1,
+    PROGRAM = 2,
+    RENDER_TARGET = 3,
+    SAMPLER_GROUP = 4,
+    SWAP_CHAIN = 5,
+    RENDER_PRIMITIVE = 6,
+    TEXTURE = 7,
+    TIMER_QUERY = 8,
+    VERTEX_BUFFER = 9,
+    VERTEX_BUFFER_INFO = 10,
+    DESCRIPTOR_SET_LAYOUT = 11,
+    DESCRIPTOR_SET = 12,
 
     // Below are resources that are managed manually (i.e. not ref counted).
-    FENCE,
-    HEAP_ALLOCATED,
+    FENCE = 13,
+    HEAP_ALLOCATED = 14,
 
-    END_TYPE,  // A placeholder
+    END_TYPE = 15,  // A placeholder
 };
 
 #define IS_HEAP_ALLOC_TYPE(f)                                                                      \
