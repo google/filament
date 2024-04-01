@@ -56,7 +56,7 @@ void RenderableManager::destroy(utils::Entity e) noexcept {
     return downcast(this)->destroy(e);
 }
 
-void RenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) noexcept {
+void RenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) {
     downcast(this)->setAxisAlignedBoundingBox(instance, aabb);
 }
 

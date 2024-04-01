@@ -3292,8 +3292,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
     SamplerMagFilter filterMag,
     SamplerMinFilter filterMin) noexcept {
 
-    assert_invariant(fg.getDescriptor(input).depth > 1);
-    assert_invariant(fg.getDescriptor(input).type == SamplerType::SAMPLER_2D_ARRAY);
+    auto& inputTextureDesc = fg.getDescriptor(input);
+    assert_invariant(inputTextureDesc.depth > 1);
+    assert_invariant(inputTextureDesc.type == SamplerType::SAMPLER_2D_ARRAY);
 
     // TODO: add support for sub-resources
     assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
@@ -3329,14 +3330,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                         .filterMag = filterMag,
                         .filterMin = filterMin
                     });
-                mi->setParameter("layerIndex", 0);
                 mi->setParameter("viewport", float4{
                         float(vp.left) / inputDesc.width,
                         float(vp.bottom) / inputDesc.height,
                         float(vp.width) / inputDesc.width,
                         float(vp.height) / inputDesc.height
                     });
-                mi->commit(driver);
                 mi->use(driver);
 
                 auto pipeline = material.getPipelineState(mEngine);
@@ -3347,18 +3346,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                     pipeline.first.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
                 }
 
-                // Blit the scene rendered to the first layer to the left half of the screen.
-                out.params.viewport.width /= 2;
-                render(out, pipeline, driver);
+                // The width of each view takes up 1/depth of the screen width.
+                out.params.viewport.width /= inputTextureDesc.depth;
 
-                // Blit the scene rendered to the second layer to the right half of the screen.
-                // Don't clear or discard the target to keep the previously rendered left half image.
-                mi->setParameter("layerIndex", 1);
-                mi->commit(driver);
-                out.params.flags.clear = filament::backend::TargetBufferFlags::NONE;
-                out.params.flags.discardStart = filament::backend::TargetBufferFlags::NONE;
-                out.params.viewport.left += out.params.viewport.width;
-                render(out, pipeline, driver);
+                // Render all layers of the texture to the screen side-by-side.
+                for (uint32_t i = 0; i < inputTextureDesc.depth; ++i) {
+                    mi->setParameter("layerIndex", i);
+                    mi->commit(driver);
+                    render(out, pipeline, driver);
+                    // From the second draw, don't clear the targetbuffer.
+                    out.params.flags.clear = filament::backend::TargetBufferFlags::NONE;
+                    out.params.flags.discardStart = filament::backend::TargetBufferFlags::NONE;
+                    out.params.viewport.left += out.params.viewport.width;
+                }
         });
 
     return ppQuadBlit->output;

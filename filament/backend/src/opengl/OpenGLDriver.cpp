@@ -2472,7 +2472,9 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
     size_t const stride = p.stride ? p.stride : width;
     size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
     size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-    void const* const buffer = static_cast<char const*>(p.buffer) + p.left * bpp + bpr * p.top;
+    size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
+    void const* const buffer = static_cast<char const*>(p.buffer)
+            + bpp* p.left + bpr * p.top + bpl * 0; // TODO: PBD should have a p.depth
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
