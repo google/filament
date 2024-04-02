@@ -44,27 +44,6 @@ PORT_CONSTANT(Program, SAMPLER_BINDING_COUNT)
 
 #undef PORT_CONSTANT
 
-// Use constexpr to statically generate a bit count table for 8-bit numbers.
-struct BitCountHelper {
-    constexpr BitCountHelper() : data{} {
-        for (uint16_t i = 0; i < 256; ++i) {
-            data[i] = 0;
-            for (auto j = i; j > 0; j /= 2) {
-                if (j & 1) {
-                    data[i]++;
-                }
-            }
-        }
-    }
-    uint8_t data[256];
-} BitCountImpl;
-
-inline uint8_t countBits(uint32_t num) {
-    static constexpr uint8_t const* BIT_COUNT = BitCountImpl.data;
-    return BIT_COUNT[num & 0xFF] + BIT_COUNT[(num >> 8) & 0xFF] + BIT_COUNT[(num >> 16) & 0xFF] +
-           BIT_COUNT[(num >> 24) & 0xFF];
-}
-
 struct SamplerSet {
     using Mask = UniformBufferBitmask;
     struct Key {
@@ -202,26 +181,26 @@ public:
 
 private:
     inline VulkanDescriptorSet* createSet(VkDescriptorSetLayout layout, VkDescriptorSet vkSet) {
-        return VulkanDescriptorSet::create(mResourceAllocator, vkSet, layout,
-                [this](VulkanDescriptorSet* set) {
-                    auto const layout = set->layout;
-                    auto const vkSet = set->vkSet;
-                    auto listIter = mUnused.find(layout);
-                    assert_invariant(listIter != mUnused.end());
-                    auto& unusedList = listIter->second;
+        auto handle = mResourceAllocator->initHandle<VulkanDescriptorSet>(
+            mResourceAllocator, vkSet, []() {
+                // auto const vkSet = set->vkSet;
+                // auto listIter = mUnused.find(layout);
+                // assert_invariant(listIter != mUnused.end());
+                // auto& unusedList = listIter->second;
 
-                    // At this point, we know that the pointer will be stale, and we need to remove
-                    // any non-ref-counted references to it.
-                    // TODO: this will be inefficient
-                    auto iter = std::find(unusedList.begin(), unusedList.end(), set);
-                    unusedList.erase(iter);
+                // // At this point, we know that the pointer will be stale, and we need to remove
+                // // any non-ref-counted references to it.
+                // // TODO: this will be inefficient
+                // auto iter = std::find(unusedList.begin(), unusedList.end(), set);
+                // unusedList.erase(iter);
 
-                    // We are recycling - release the vk resource back into the pool. Note that the
-                    // vk handle has not changed, but we need to change the backend handle to allow
-                    // for proper refcounting of resources referenced in this set.
-                    unusedList.push_back(createSet(layout, vkSet));
-                    mCount--;
-                });
+                // // We are recycling - release the vk resource back into the pool. Note that the
+                // // vk handle has not changed, but we need to change the backend handle to allow
+                // // for proper refcounting of resources referenced in this set.
+                // unusedList.push_back(createSet(layout, vkSet));
+                // mCount--;
+            });
+        return mResourceAllocator->handle_cast<VulkanDescriptorSet*>(handle);
     }
 
     VkDevice mDevice;
@@ -411,28 +390,6 @@ using UBOSetLayoutCache = LayoutCache<UBOSet::Mask>;
 using SamplerSetLayoutCache = LayoutCache<SamplerSet::Mask>;
 
 } // anonymous namespace
-
-VulkanDescriptorSet::VulkanDescriptorSet(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
-        VkDescriptorSetLayout layout, OnRecycle&& onRecycleFn)
-    : VulkanResource(VulkanResourceType::DESCRIPTOR_SET),
-      resources(allocator),
-      vkSet(rawSet),
-      layout(layout),
-      mOnRecycleFn(std::move(onRecycleFn)) {}
-
-VulkanDescriptorSet::~VulkanDescriptorSet() {
-    if (mOnRecycleFn) {
-        mOnRecycleFn(this);
-    }
-}
-
-VulkanDescriptorSet* VulkanDescriptorSet::create(VulkanResourceAllocator* allocator,
-        VkDescriptorSet rawSet, VkDescriptorSetLayout layout, OnRecycle&& onRecycleFn) {
-    auto handle = allocator->allocHandle<VulkanDescriptorSet>();
-    auto set = allocator->construct<VulkanDescriptorSet>(handle, allocator, rawSet, layout,
-            std::move(onRecycleFn));
-    return set;
-}
 
 class VulkanDescriptorSetManager::Impl {
 public:

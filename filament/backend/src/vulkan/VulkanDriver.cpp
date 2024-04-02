@@ -1771,14 +1771,13 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
     VulkanTexture* samplerTextures[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {nullptr};
 
     auto const& bindingToSamplerIndex = program->getBindingToSamplerIndex();
-    VulkanPipelineCache::UsageFlags usage = program->getUsage();
+    UsageFlags usage = program->getUsage();
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
     auto const& bindingToName = program->getBindingToName();
 #endif
 
-    UTILS_NOUNROLL
-    for (uint8_t binding = 0; binding < VulkanPipelineCache::SAMPLER_BINDING_COUNT; binding++) {
+    for (auto binding: program->getBindings()) {
         uint16_t const indexPair = bindingToSamplerIndex[binding];
 
         if (indexPair == 0xffff) {

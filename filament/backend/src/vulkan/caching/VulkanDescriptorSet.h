@@ -32,31 +32,6 @@
 
 namespace filament::backend {
 
-// We need to make this class public to enable allocation on the HandleAllocator.
-struct VulkanDescriptorSet : public VulkanResourceBase {
-public:
-    // Because we need to recycle descriptor set not used, we allow for a callback that the "Pool"
-    // can use to repackage the vk handle.
-    using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
-
-    VulkanDescriptorSet(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
-            VkDescriptorSetLayout layout, OnRecycle&& onRecycleFn);
-
-    ~VulkanDescriptorSet();
-
-    static VulkanDescriptorSet* create(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
-            VkDescriptorSetLayout layout, OnRecycle&& onRecycleFn);
-
-    // TODO: maybe change to fixed size for performance.
-    VulkanAcquireOnlyResourceManager resources;
-
-    VkDescriptorSet const vkSet;
-    VkDescriptorSetLayout const layout;
-
-private:
-    OnRecycle mOnRecycleFn;
-};
-
 // Abstraction over the pool and the layout cache.
 class VulkanDescriptorSetManager {
 public:

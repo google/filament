@@ -655,4 +655,6 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
     return mostSignificantBit((sampleCount - 1) & mask);
 }
 
+_BitCountHelper _BitCountHelper::BitCounter = {};
+
 } // namespace filament::backend
