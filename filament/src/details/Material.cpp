@@ -15,29 +15,58 @@
  */
 
 #include "details/Material.h"
+#include "details/Engine.h"
 
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 
-#include "details/Engine.h"
-
 #include "FilamentAPI-impl.h"
-
-#include <private/filament/Variant.h>
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/Variant.h>
+
+#include <filament/Material.h>
+#include <filament/MaterialEnums.h>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
+
+#include <filaflat/ChunkContainer.h>
+#include <filaflat/MaterialChunk.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/CallbackHandler.h>
 #include <backend/Program.h>
 
+#include <utils/BitmaskEnum.h>
+#include <utils/bitset.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Hash.h>
 
+#include <algorithm>
+#include <array>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <optional>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <variant>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -236,7 +265,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
             ? 1 : CONFIG_MAX_INSTANCES;
 
-    int const maxFroxelBufferHeight = std::min(
+    int const maxFroxelBufferHeight = (int)std::min(
             FROXEL_BUFFER_MAX_ENTRY_COUNT / 4,
             engine.getDriverApi().getMaxUniformBufferSize() / 16u);
 
