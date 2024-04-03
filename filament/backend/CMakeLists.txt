@@ -71,6 +71,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             include/backend/platforms/OpenGLPlatform.h
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
+            src/opengl/GLBufferObject.h
+            src/opengl/GLTexture.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
             src/opengl/OpenGLBlobCache.cpp
