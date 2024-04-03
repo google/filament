@@ -219,7 +219,7 @@ public:
     static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
 
     void checkProgramEdits() noexcept {
-        if (UTILS_UNLIKELY(mPendingEdits.load())) {
+        if (UTILS_UNLIKELY(hasPendingEdits())) {
             applyPendingEdits();
         }
     }
@@ -302,8 +302,21 @@ private:
     matdbg::MaterialKey mDebuggerId;
     mutable utils::Mutex mActiveProgramsLock;
     mutable VariantList mActivePrograms;
-    // FIXME: multi-threaded access to mPendingEdits is very broken
-    std::atomic<MaterialParser*> mPendingEdits = {};
+    mutable utils::Mutex mPendingEditsLock;
+    std::unique_ptr<MaterialParser> mPendingEdits;
+    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept {
+        std::lock_guard lock(mPendingEditsLock);
+        std::swap(pendingEdits, mPendingEdits);
+    }
+    bool hasPendingEdits() noexcept {
+        std::lock_guard lock(mPendingEditsLock);
+        return (bool)mPendingEdits;
+    }
+    void latchPendingEdits() noexcept {
+        std::lock_guard lock(mPendingEditsLock);
+        std::swap(mPendingEdits, mMaterialParser);
+    }
+
 #endif
 
     utils::CString mName;

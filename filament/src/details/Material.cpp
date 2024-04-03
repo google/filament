@@ -815,10 +815,7 @@ void FMaterial::applyPendingEdits() noexcept {
     const char* name = mName.c_str();
     slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
     destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
-
-    std::unique_ptr<MaterialParser> pending{ mPendingEdits };
-    std::swap(pending, mMaterialParser);
-    mPendingEdits = nullptr;
+    latchPendingEdits();
 }
 
 /**
@@ -837,7 +834,7 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void
     // and swapping out the MaterialParser until the next getProgram call.
     std::unique_ptr<MaterialParser> pending = createParser(
             engine.getBackend(), engine.getShaderLanguage(), packageData, packageSize);
-    material->mPendingEdits = pending.release();
+    material->setPendingEdits(std::move(pending));
 }
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
