@@ -140,6 +140,7 @@ public:
      * @param values        Array of values to set to the named parameter array.
      * @param count         Size of the array to set.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
+     * @see Material::hasParameter
      */
     template<typename T, typename = is_supported_parameter_t<T>>
     void setParameter(const char* UTILS_NONNULL name, size_t nameLength,
