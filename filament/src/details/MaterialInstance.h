@@ -232,7 +232,7 @@ private:
             FTexture const* texture, TextureSampler const& sampler);
 
     template<typename T>
-    T getParameterImpl(std::string_view name) const noexcept;
+    T getParameterImpl(std::string_view name) const;
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
