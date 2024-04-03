@@ -80,7 +80,8 @@ public:
           mCount(count),
           mCapacity(capacity),
           mSize(0),
-          mUnusedCount(0) {
+          mUnusedCount(0),
+          mDisableRecycling(false) {
         DescriptorCount const actual = mCount * capacity;
         VkDescriptorPoolSize sizes[4];
         uint8_t npools = 0;
@@ -123,7 +124,17 @@ public:
     DescriptorPool& operator=(DescriptorPool const&) = delete;
 
     ~DescriptorPool() {
+        // Note that these have to manually destroyed because they were not explicitly ref-counted.
+        for (auto const& [mask, sets]: mUnused) {
+            for (auto set: sets) {
+                mAllocator->destruct<VulkanDescriptorSet>(set);
+            }
+        }
         vkDestroyDescriptorPool(mDevice, mPool, VKALLOC);
+    }
+
+    void disableRecycling() noexcept {
+        mDisableRecycling = true;
     }
 
     uint16_t const& capacity() {
@@ -172,6 +183,9 @@ private:
     Handle<VulkanDescriptorSet> createSet(Bitmask const& layoutMask, VkDescriptorSet vkSet) {
         return mAllocator->initHandle<VulkanDescriptorSet>(mAllocator, vkSet,
                 [this, layoutMask, vkSet]() {
+                    if (mDisableRecycling) {
+                        return;
+                    }
                     // We are recycling - release the set back into the pool. Note that the
                     // vk handle has not changed, but we need to change the backend handle to allow
                     // for proper refcounting of resources referenced in this set.
@@ -200,6 +214,8 @@ private:
     using UnusedSetMap = std::unordered_map<Bitmask, std::vector<Handle<VulkanDescriptorSet>>,
             BitmaskHashFn, BitmaskEqual>;
     UnusedSetMap mUnused;
+
+    bool mDisableRecycling;
 };
 
 // This is an ever-expanding pool of sets where it
@@ -244,6 +260,12 @@ public:
         return ret;
     }
 
+    void disableRecycling() noexcept {
+        for (auto& pool: mPools) {
+            pool->disableRecycling();
+        }
+    }
+
 private:
     VkDevice mDevice;
     VulkanResourceAllocator* mAllocator;
@@ -267,21 +289,19 @@ public:
 
     ~LayoutCache() {
         for (auto [key, layout]: mLayouts) {
-            auto layoutPtr = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(layout);
-            vkDestroyDescriptorSetLayout(mDevice, layoutPtr->vklayout, VKALLOC);
+            mAllocator->destruct<VulkanDescriptorSetLayout>(layout);
         }
         mLayouts.clear();
     }
 
     void destroyLayout(Handle<VulkanDescriptorSetLayout> handle) {
-        auto layoutPtr = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(handle);
         for (auto [key, layout]: mLayouts) {
             if (layout == handle) {
                 mLayouts.erase(key);
                 break;
             }
         }
-        vkDestroyDescriptorSetLayout(mDevice, layoutPtr->vklayout, VKALLOC);
+        mAllocator->destruct<VulkanDescriptorSetLayout>(handle);
     }
 
     Handle<VulkanDescriptorSetLayout> getLayout(descset::DescriptorSetLayout const& layout) {
@@ -339,10 +359,8 @@ public:
                 .bindingCount = count,
                 .pBindings = toBind,
         };
-
-        VkDescriptorSetLayout outLayout;
-        vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &outLayout);
-        return (mLayouts[key] = mAllocator->initHandle<VulkanDescriptorSetLayout>(outLayout, key));
+        return (mLayouts[key] =
+                        mAllocator->initHandle<VulkanDescriptorSetLayout>(mDevice, dlinfo, key));
     }
 
 private:
@@ -627,29 +645,40 @@ class DescriptorSetCache {
 public:
     DescriptorSetCache(VkDevice device, VulkanResourceAllocator* allocator)
         : mAllocator(allocator),
-          mDescriptorPool(device, allocator),
-          mUBOCache(allocator),
-          mSamplerCache(allocator),
-          mInputAttachmentCache(allocator) {}
+          mDescriptorPool(std::make_unique<DescriptorInfinitePool>(device, allocator)),
+          mUBOCache(std::make_unique<LRUDescriptorSetCache<UBOKey>>(allocator)),
+          mSamplerCache(std::make_unique<LRUDescriptorSetCache<SamplerKey>>(allocator)),
+          mInputAttachmentCache(
+                  std::make_unique<LRUDescriptorSetCache<InputAttachmentKey>>(allocator)) {}
 
     template<typename Key>
     inline std::pair<VulkanDescriptorSet*, bool> get(Key const& key,
             VulkanDescriptorSetLayout* layout) {
         if constexpr (std::is_same_v<Key, UBOKey>) {
-            return get(key, mUBOCache, layout);
+            return get(key, *mUBOCache, layout);
         } else if constexpr (std::is_same_v<Key, SamplerKey>) {
-            return get(key, mSamplerCache, layout);
+            return get(key, *mSamplerCache, layout);
         } else if constexpr (std::is_same_v<Key, InputAttachmentKey>) {
-            return get(key, mInputAttachmentCache, layout);
+            return get(key, *mInputAttachmentCache, layout);
         }
         PANIC_POSTCONDITION("Unexpected key type");
     }
 
+    ~DescriptorSetCache() {
+        // This will prevent the descriptor sets recycling when we destroy descriptor set caches.
+        mDescriptorPool->disableRecycling();
+
+        mInputAttachmentCache.reset();
+        mSamplerCache.reset();
+        mUBOCache.reset();
+        mDescriptorPool.reset();
+    }
+
     // gc() should be called at the end of everyframe
     void gc() {
-        mUBOCache.gc();
-        mSamplerCache.gc();
-        mInputAttachmentCache.gc();
+        mUBOCache->gc();
+        mSamplerCache->gc();
+        mInputAttachmentCache->gc();
     }
 
 private:
@@ -660,16 +689,18 @@ private:
             return {set, true};
         }
         auto set = mAllocator->handle_cast<VulkanDescriptorSet*>(
-            mDescriptorPool.obtainSet(layout));
+            mDescriptorPool->obtainSet(layout));
         cache.put(key, set);
         return {set, false};
     }
 
     VulkanResourceAllocator* mAllocator;
-    DescriptorInfinitePool mDescriptorPool;
-    LRUDescriptorSetCache<UBOKey> mUBOCache;
-    LRUDescriptorSetCache<SamplerKey> mSamplerCache;
-    LRUDescriptorSetCache<InputAttachmentKey> mInputAttachmentCache;
+
+    // We need to heap-allocate so that the destruction can be strictly ordered.
+    std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
+    std::unique_ptr<LRUDescriptorSetCache<UBOKey>> mUBOCache;
+    std::unique_ptr<LRUDescriptorSetCache<SamplerKey>> mSamplerCache;
+    std::unique_ptr<LRUDescriptorSetCache<InputAttachmentKey>> mInputAttachmentCache;
 };
 
 } // anonymous namespace
@@ -1095,20 +1126,14 @@ private:
     VulkanResourceAllocator* mAllocator;
     LayoutCache mLayoutCache;
     DescriptorSetCache mDescriptorSetCache;
-
     bool mHaveDynamicUbos;
-
     UBOMap mUboMap;
     SamplerMap mSamplerMap;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
-
     VulkanResourceManager mResources;
-
     VkDescriptorBufferInfo mPlaceHolderBufferInfo;
     VkDescriptorImageInfo mPlaceHolderImageInfo;
-
     std::unordered_map<VulkanProgram*, VulkanDescriptorSetLayoutList> mLayoutStash;
-
     BoundState mBoundState;
     VulkanDescriptorSetLayoutList mPlaceholderLayout = {};
 };

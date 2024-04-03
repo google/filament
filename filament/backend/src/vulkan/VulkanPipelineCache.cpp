@@ -289,7 +289,6 @@ void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription cons
 }
 
 void VulkanPipelineCache::terminate() noexcept {
-    // Symmetric to createLayoutsAndDescriptors.
     for (auto& iter : mPipelines) {
         vkDestroyPipeline(mDevice, iter.second.handle, VKALLOC);
     }

@@ -55,4 +55,10 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
     return layout;
 }
 
+void VulkanPipelineLayoutCache::terminate() noexcept {
+    for (auto const& [key, entry]: mPipelineLayouts) {
+        vkDestroyPipelineLayout(mDevice, entry.handle, VKALLOC);
+    }
+}
+
 }// namespace filament::backend

@@ -33,6 +33,8 @@ public:
           mAllocator(allocator),
           mTimestamp(0) {}
 
+    void terminate() noexcept;
+
     using PipelineLayoutKey = std::array<VkDescriptorSetLayout,
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 

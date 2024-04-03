@@ -346,6 +346,7 @@ void VulkanDriver::terminate() {
     mFramebufferCache.reset();
     mSamplerCache.terminate();
     mDescriptorSetManager.terminate();
+    mPipelineLayoutCache.terminate();
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceAllocator.print();

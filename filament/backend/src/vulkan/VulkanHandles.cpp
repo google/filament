@@ -120,7 +120,29 @@ void addDescriptors(Bitmask mask,
     }
 }
 
+inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
+        VkDescriptorSetLayoutCreateInfo const& info) {
+    VkDescriptorSetLayout layout;
+    vkCreateDescriptorSetLayout(device, &info, VKALLOC, &layout);
+    return layout;
+}
+
 } // anonymous namespace
+
+
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayoutCreateInfo const& info,
+        Bitmask const& bitmask)
+    : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
+      mDevice(device),
+      vklayout(createDescriptorSetLayout(device, info)),
+      bitmask(bitmask),
+      bindings(getBindings(bitmask)),
+      count(Count::fromLayoutBitmask(bitmask)) {
+}
+
+VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
+    vkDestroyDescriptorSetLayout(mDevice, vklayout, VKALLOC);
+}
 
 VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
