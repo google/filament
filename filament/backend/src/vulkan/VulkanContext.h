@@ -19,7 +19,6 @@
 
 #include "VulkanConstants.h"
 #include "VulkanImageUtility.h"
-#include "VulkanPipelineCache.h"
 #include "VulkanUtility.h"
 
 #include <utils/bitset.h>
@@ -42,7 +41,7 @@ struct VulkanTimerQuery;
 struct VulkanCommandBuffer;
 
 struct VulkanAttachment {
-    VulkanTexture* texture;
+    VulkanTexture* texture = nullptr;
     uint8_t level = 0;
     uint16_t layer = 0;
     VkImage getImage() const;

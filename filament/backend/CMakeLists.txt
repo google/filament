@@ -168,8 +168,10 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
-            src/vulkan/caching/VulkanDescriptorSet.cpp
-            src/vulkan/caching/VulkanDescriptorSet.h
+            src/vulkan/caching/VulkanDescriptorSetManager.cpp
+            src/vulkan/caching/VulkanDescriptorSetManager.h
+            src/vulkan/caching/VulkanPipelineLayoutCache.cpp
+            src/vulkan/caching/VulkanPipelineLayoutCache.h
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h

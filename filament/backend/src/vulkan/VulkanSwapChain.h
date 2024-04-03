@@ -19,6 +19,7 @@
 
 #include "DriverBase.h"
 
+#include "VulkanCommands.h"
 #include "VulkanContext.h"
 #include "VulkanResources.h"
 

@@ -173,8 +173,24 @@ public:
         return mArray[ind];
     }
 
+    inline T const& operator[](uint16_t ind) const {
+        return mArray[ind];
+    }
+
     inline uint32_t size() const {
         return mInd;
+    }
+
+    T* data() {
+        return mArray.data();
+    }
+
+    T const* data() const {
+        return mArray.data();
+    }
+
+    bool operator==(CappedArray const& b) const {
+        return this->mArray == b.mArray;
     }
 
 private:

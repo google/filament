@@ -22,6 +22,7 @@
 #include "VulkanMemory.h"
 #include "VulkanUtility.h"
 #include "spirv/VulkanSpirvUtils.h"
+#include "utils/Log.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -140,7 +141,7 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     std::vector<uint32_t> shader;
 
     // TODO: this will be moved out of the shader as the descriptor set layout will be provided by
-    // Filament instead of parsed from the shaders.
+    // Filament instead of parsed from the shaders. See [GDSR] in VulkanDescriptorSetManager.h
     UniformBufferBitmask uboMask = 0;
     SamplerBitmask samplerMask = 0;
     InputAttachmentBitmask inputAttachmentMask = 0;
