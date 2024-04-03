@@ -64,7 +64,8 @@ class  FEngine;
 
 class FMaterial : public Material {
 public:
-    FMaterial(FEngine& engine, const Material::Builder& builder);
+    FMaterial(FEngine& engine, const Material::Builder& builder,
+            std::unique_ptr<MaterialParser> materialParser);
     ~FMaterial() noexcept;
 
     class DefaultMaterialBuilder : public Material::Builder {
@@ -301,6 +302,7 @@ private:
     matdbg::MaterialKey mDebuggerId;
     mutable utils::Mutex mActiveProgramsLock;
     mutable VariantList mActivePrograms;
+    // FIXME: multi-threaded access to mPendingEdits is very broken
     std::atomic<MaterialParser*> mPendingEdits = {};
 #endif
 
@@ -309,7 +311,7 @@ private:
     const uint32_t mMaterialId;
     uint64_t mCacheId = 0;
     mutable uint32_t mMaterialInstanceId = 0;
-    MaterialParser* mMaterialParser = nullptr;
+    std::unique_ptr<MaterialParser> mMaterialParser;
 };
 
 
