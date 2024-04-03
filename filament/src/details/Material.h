@@ -22,18 +22,39 @@
 #include "details/MaterialInstance.h"
 
 #include <filament/Material.h>
+#include <filament/MaterialEnums.h>
 
+#include <private/filament/EngineEnums.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 #include <private/filament/ConstantInfo.h>
 
+#include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Program.h>
+
 #include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
+#include <array>
 #include <atomic>
+#include <memory>
+#include <mutex>
 #include <optional>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
