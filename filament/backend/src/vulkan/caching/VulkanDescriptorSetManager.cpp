@@ -111,7 +111,7 @@ public:
         VkDescriptorPoolCreateInfo info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .pNext = nullptr,
-            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+            .flags = 0,
             .maxSets = capacity,
             .poolSizeCount = npools,
             .pPoolSizes = sizes,
@@ -416,7 +416,7 @@ struct SamplerKey {
                 ret.sampler[count] = info.sampler;
                 ret.imageView[count] = info.imageView;
                 ret.imageLayout[count] = info.imageLayout;
-            }// else keep them as VK_NULL_HANDLEs.
+            } // else keep them as VK_NULL_HANDLEs.
             count++;
         }
         return ret;
@@ -431,16 +431,16 @@ struct SamplerKey {
 struct InputAttachmentKey {
     // This count should be fixed.
     uint8_t count;
-    uint8_t padding[7];
-    VkImageView view = VK_NULL_HANDLE;
+    uint8_t padding[3];
     VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageView view = VK_NULL_HANDLE;
 
     static inline InputAttachmentKey key(VkDescriptorImageInfo const& info,
             VulkanDescriptorSetLayout* layout) {
         return {
                 .count = (uint8_t) layout->count.inputAttachment,
-                .view = info.imageView,
                 .imageLayout = info.imageLayout,
+                .view = info.imageView,
         };
     }
 
@@ -746,25 +746,38 @@ public:
             mLayoutStash[program] = layouts;
         }
 
+        VulkanDescriptorSetLayoutList outLayouts = layouts;
         DescriptorSetVkHandles vkDescSets = initDescSetHandles();
         VkWriteDescriptorSet descriptorWrites[MAX_BINDINGS];
         uint32_t nwrites = 0;
 
+        // Use placeholders when necessary
         for (uint8_t i = 0; i < VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
-            auto handle = layouts[i];
-            if (!handle) {
-                assert_invariant(i == INPUT_ATTACHMENT_SET_ID
-                                 && "Unexpectedly absent descriptor set layout");
+            if (!layouts[i]) {
+                if (i == INPUT_ATTACHMENT_SET_ID ||
+                        (i == SAMPLER_SET_ID && !layouts[INPUT_ATTACHMENT_SET_ID])) {
+                    continue;
+                }
+                outLayouts[i] = getPlaceHolderLayout(i);
+            } else {
+                outLayouts[i] = layouts[i];
+                auto p = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(layouts[i]);
+                if (!((i == UBO_SET_ID && p->bitmask.ubo)
+                        || (i == SAMPLER_SET_ID && p->bitmask.sampler)
+                        || (i == INPUT_ATTACHMENT_SET_ID && p->bitmask.inputAttachment
+                                && mInputAttachment.first.texture))) {
+                    outLayouts[i] = getPlaceHolderLayout(i);
+                }
+            }
+        }
+
+        for (uint8_t i = 0; i < VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
+            if (!outLayouts[i]) {
                 continue;
             }
             VulkanDescriptorSetLayout* layout
-                    = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(handle);
-            if (!((i == UBO_SET_ID && layout->bitmask.ubo)
-                        || (i == SAMPLER_SET_ID && layout->bitmask.sampler)
-                        || (i == INPUT_ATTACHMENT_SET_ID && layout->bitmask.inputAttachment
-                                && mInputAttachment.first.texture))) {
-                continue;
-            }
+                    = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(outLayouts[i]);
+            bool const usePlaceholder = layouts[i] != outLayouts[i];
 
             auto const& [set, cached] = getSet(i, layout);
             VkDescriptorSet const vkSet = set->vkSet;
@@ -773,7 +786,8 @@ public:
 
             // Note that we still need to bind the set, but 'cached' means that we found a set with
             // the exact same content already written, and we would just bind that one instead.
-            if (cached) {
+            // We also don't need to write to the placeholder set.
+            if (cached || usePlaceholder) {
                 continue;
             }
 
@@ -836,7 +850,7 @@ public:
             vkUpdateDescriptorSets(mDevice, nwrites, descriptorWrites, 0, nullptr);
         }
 
-        VkPipelineLayout const pipelineLayout = getPipelineLayoutFn(layouts);
+        VkPipelineLayout const pipelineLayout = getPipelineLayoutFn(outLayouts);
         VkCommandBuffer const cmdbuffer = commands->buffer();
 
         BoundState state{};
@@ -916,6 +930,10 @@ public:
         }
         mHaveDynamicUbos = false;
         FVK_SYSTRACE_END();
+    }
+
+    void clearProgram(VulkanProgram* program) noexcept {
+        mLayoutStash.erase(program);
     }
 
     Handle<VulkanDescriptorSetLayout> createLayout(
@@ -1031,6 +1049,48 @@ private:
         }
     }
 
+    inline Handle<VulkanDescriptorSetLayout> getPlaceHolderLayout(uint8_t setID) {
+        if (mPlaceholderLayout[setID]) {
+            return mPlaceholderLayout[setID];
+        }
+        descset::DescriptorSetLayout inputLayout {
+                .bindings = {{}},
+        };
+        switch (setID) {
+            case UBO_SET_ID:
+                inputLayout.bindings[0] = {
+                        .type = descset::DescriptorType::UNIFORM_BUFFER,
+                        .stageFlags = descset::ShaderStageFlags2::VERTEX,
+                        .binding = 0,
+                        .flags = descset::DescriptorFlags::NONE,
+                        .count = 0,
+                };
+                break;
+            case SAMPLER_SET_ID:
+                inputLayout.bindings[0] = {
+                        .type = descset::DescriptorType::SAMPLER,
+                        .stageFlags = descset::ShaderStageFlags2::FRAGMENT,
+                        .binding = 0,
+                        .flags = descset::DescriptorFlags::NONE,
+                        .count = 0,
+                };
+                break;
+            case INPUT_ATTACHMENT_SET_ID:
+                inputLayout.bindings[0] = {
+                        .type = descset::DescriptorType::INPUT_ATTACHMENT,
+                        .stageFlags = descset::ShaderStageFlags2::FRAGMENT,
+                        .binding = 0,
+                        .flags = descset::DescriptorFlags::NONE,
+                        .count = 0,
+                };
+                break;
+            default:
+                PANIC_POSTCONDITION("Unexpected set id=%d", setID);
+        }
+        mPlaceholderLayout[setID] = mLayoutCache.getLayout(inputLayout);
+        return mPlaceholderLayout[setID];
+    }
+
     VkDevice mDevice;
     VulkanResourceAllocator* mAllocator;
     LayoutCache mLayoutCache;
@@ -1050,6 +1110,7 @@ private:
     std::unordered_map<VulkanProgram*, VulkanDescriptorSetLayoutList> mLayoutStash;
 
     BoundState mBoundState;
+    VulkanDescriptorSetLayoutList mPlaceholderLayout = {};
 };
 
 VulkanDescriptorSetManager::VulkanDescriptorSetManager(VkDevice device,
@@ -1075,6 +1136,10 @@ VkPipelineLayout VulkanDescriptorSetManager::bind(VulkanCommandBuffer* commands,
 void VulkanDescriptorSetManager::dynamicBind(VulkanCommandBuffer* commands,
         Handle<VulkanDescriptorSetLayout> uboLayout) {
     mImpl->dynamicBind(commands, uboLayout);
+}
+
+void VulkanDescriptorSetManager::clearProgram(VulkanProgram* program) noexcept {
+    mImpl->clearProgram(program);
 }
 
 Handle<VulkanDescriptorSetLayout> VulkanDescriptorSetManager::createLayout(

@@ -47,7 +47,8 @@ VulkanCmdFence::VulkanCmdFence(VkFence ifence)
 
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device,
         VkCommandPool pool)
-    : mResourceManager(allocator) {
+    : mResourceManager(allocator),
+      mPipeline(VK_NULL_HANDLE) {
     // Create the low-level command buffer.
     const VkCommandBufferAllocateInfo allocateInfo{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,

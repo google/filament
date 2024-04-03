@@ -51,8 +51,8 @@ namespace filament::backend {
 class VulkanResourceAllocator {
 public:
     using AllocatorImpl = HandleAllocatorVK;
-    VulkanResourceAllocator(size_t arenaSize,  bool disableUseAfterFreeCheck)
-        : mHandleAllocatorImpl("Handles", arenaSize,  disableUseAfterFreeCheck)
+    VulkanResourceAllocator(size_t arenaSize, bool disableUseAfterFreeCheck)
+        : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck)
 #if DEBUG_RESOURCE_LEAKS
         , mDebugOnlyResourceCount(RESOURCE_TYPE_COUNT) {
         std::memset(mDebugOnlyResourceCount.data(), 0, sizeof(size_t) * RESOURCE_TYPE_COUNT);
