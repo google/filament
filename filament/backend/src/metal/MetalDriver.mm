@@ -1634,7 +1634,7 @@ void MetalDriver::bindPipeline(PipelineState ps) {
         return;
     }
 
-    ASSERT_PRECONDITION(bool(functions), "Attempting to bind an invalid Metal program.");
+    functions.validate();
 
     auto [fragment, vertex] = functions.getRasterFunctions();
 
