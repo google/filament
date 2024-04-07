@@ -667,12 +667,13 @@ function build_ios {
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
         build_ios_target "Release" "arm64" "iphoneos"
+
         if [[ "${IOS_BUILD_SIMULATOR}" == "true" ]]; then
             build_ios_target "Release" "arm64" "iphonesimulator"
             build_ios_target "Release" "x86_64" "iphonesimulator"
-        fi
-        
-        if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
+
+            # Create universal libraries - since simulator and iphone is both arm64
+            # we can create a universal library containing both platforms
             build/ios/create-universal-libs.sh \
                 -o ./out/ios-release/filament/lib/universal \
                 ./out/ios-release/filament/lib/arm64-iphonesimulator \
@@ -680,16 +681,25 @@ function build_ios {
 
             rm -rf out/ios-release/filament/lib/x86_64-iphonesimulator
             rm -rf out/ios-release/filament/lib/arm64-iphonesimulator
-            
+
+            # Create XC Frameworks
             build/ios/create-xc-frameworks.sh \
                 -o out/ios-release/filament/lib \
                 out/ios-release/filament/lib/arm64-iphoneos \
                 out/ios-release/filament/lib/universal            
-            
+
             rm -rf out/ios-release/filament/lib/universal
             rm -rf out/ios-release/filament/lib/arm64-iphoneos
-        fi
+        else
+            # Create XC Frameworks for arm64 only - no need to create
+            # universal libraries
+            build/ios/create-xc-frameworks.sh \
+                -o out/ios-release/filament/lib \
+                out/ios-release/filament/lib/arm64-iphoneos             
 
+            rm -rf out/ios-release/filament/lib/arm64-iphoneos
+        fi        
+                
         archive_ios "Release"
     fi
 }
