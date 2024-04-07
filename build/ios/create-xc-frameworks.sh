@@ -73,7 +73,7 @@ mkdir -p "${OUTPUT_DIR}"
 # the same names, so it doesn't matter which we chose.
 LEADER_PATH="${PATHS[0]}"
 
-echo "Creating universal libraries from path: ${LEADER_PATH}..."
+echo "Creating XC-Frameworks from path: ${LEADER_PATH}..."
 
 # Loop through each file in the leader path. For each library we find, we'll collect additional
 # architectures in the other paths and combine them all into a universal library.
