@@ -157,6 +157,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
             case BlendingMode::SCREEN:
                 CodeGenerator::generateDefine(out, "BLEND_MODE_SCREEN", true);
                 break;
+            case BlendingMode::CUSTOM:
+                CodeGenerator::generateDefine(out, "BLEND_MODE_CUSTOM", true);
+                break;
         }
 
         switch (material.postLightingBlendingMode) {
@@ -174,6 +177,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
                 break;
             case BlendingMode::SCREEN:
                 CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_SCREEN", true);
+                break;
+            case BlendingMode::CUSTOM:
+                CodeGenerator::generateDefine(out, "POST_LIGHTING_BLEND_MODE_CUSTOM", true);
                 break;
             default:
                 break;

@@ -107,7 +107,7 @@ void* HandleAllocator<P0, P1, P2>::handleToPointerSlow(HandleBase::HandleId id) 
 }
 
 template <size_t P0, size_t P1, size_t P2>
-HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size) noexcept {
+HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size) {
     void* p = ::malloc(size);
     std::unique_lock lock(mLock);
 

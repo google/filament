@@ -250,42 +250,71 @@ namespace utils {
  */
 class UTILS_PUBLIC Panic {
 public:
+
+    using PanicHandlerCallback = void(*)(void* user, Panic const& panic);
+
+    /**
+     * Sets a user-defined handler for the Panic. If exceptions are enabled, the concrete Panic
+     * object will be thrown upon return; moreover it is acceptable to throw from the provided
+     * callback, but it is unsafe to throw the Panic object itself, since it's just an interface.
+     * It is also acceptable to abort from the callback. If exceptions are not enabled, std::abort()
+     * will be automatically called upon return.
+     *
+     * The PanicHandlerCallback can be called from any thread.
+     *
+     * Caveat: this API can misbehave if is used as a static library in multiple translation units,
+     * some of these translation units might not see the callback.
+     *
+     * @param handler pointer to the user defined handler for the Panic
+     * @param user  user pointer given back to the callback
+     */
+    static void setPanicHandler(PanicHandlerCallback handler, void* user) noexcept;
+
+
     virtual ~Panic() noexcept;
 
     /**
-     * @return a detailed description of the error
+     * @return a formatted and detailed description of the error including all available
+     *         information.
      * @see std::exception
      */
     virtual const char* what() const noexcept = 0;
 
     /**
-     * Get the function name where the panic was detected
+     * Get the reason string for the panic
+     * @return a C string containing the reason for the panic
+     */
+    virtual const char* getReason() const noexcept = 0;
+
+    /**
+     * Get the function name where the panic was detected. On debug build the fully qualified
+     * function name is returned; on release builds only the function name is.
      * @return a C string containing the function name where the panic was detected
      */
     virtual const char* getFunction() const noexcept = 0;
 
     /**
-     * Get the file name where the panic was detected
+     * Get the file name where the panic was detected. Only available on debug builds.
      * @return a C string containing the file name where the panic was detected
      */
     virtual const char* getFile() const noexcept = 0;
 
     /**
-     * Get the line number in the file where the panic was detected
+     * Get the line number in the file where the panic was detected. Only available on debug builds.
      * @return an integer containing the line number in the file where the panic was detected
      */
     virtual int getLine() const noexcept = 0;
 
     /**
-     * Logs this exception to the system-log
-     */
-    virtual void log() const noexcept = 0;
-
-    /**
-     * Get the CallStack when the panic was detected
+     * Get the CallStack when the panic was detected if available.
      * @return the CallStack when the panic was detected
      */
     virtual const CallStack& getCallStack() const noexcept = 0;
+
+    /**
+     * Logs this exception to the system-log
+     */
+    virtual void log() const noexcept = 0;
 };
 
 // -----------------------------------------------------------------------------------------------
@@ -305,6 +334,7 @@ public:
     const char* what() const noexcept override;
 
     // Panic interface
+    const char* getReason() const noexcept override;
     const char* getFunction() const noexcept override;
     const char* getFile() const noexcept override;
     int getLine() const noexcept override;

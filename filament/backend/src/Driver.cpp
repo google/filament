@@ -214,7 +214,7 @@ size_t Driver::getElementTypeSize(ElementType type) noexcept {
 
 Driver::~Driver() noexcept = default;
 
-void Driver::execute(std::function<void(void)> const& fn) noexcept {
+void Driver::execute(std::function<void(void)> const& fn) {
     fn();
 }
 

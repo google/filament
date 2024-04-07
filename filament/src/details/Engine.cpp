@@ -356,8 +356,12 @@ void FEngine::init() {
                     MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
                 break;
             case StereoscopicType::MULTIVIEW:
+#ifdef FILAMENT_ENABLE_MULTIVIEW
                 defaultMaterialBuilder.package(
                     MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA, MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+#else
+                assert_invariant(false);
+#endif
                 break;
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
@@ -722,9 +726,10 @@ const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
  * Object created from a Builder
  */
 
-template<typename T>
-inline T* FEngine::create(ResourceList<T>& list, typename T::Builder const& builder) noexcept {
-    T* p = mHeapAllocator.make<T>(*this, builder);
+template<typename T, typename ... ARGS>
+inline T* FEngine::create(ResourceList<T>& list,
+        typename T::Builder const& builder, ARGS&& ... args) noexcept {
+    T* p = mHeapAllocator.make<T>(*this, builder, std::forward<ARGS>(args)...);
     if (UTILS_UNLIKELY(p)) { // this should never happen
         list.insert(p);
     }
@@ -763,8 +768,9 @@ FIndirectLight* FEngine::createIndirectLight(const IndirectLight::Builder& build
     return create(mIndirectLights, builder);
 }
 
-FMaterial* FEngine::createMaterial(const Material::Builder& builder) noexcept {
-    return create(mMaterials, builder);
+FMaterial* FEngine::createMaterial(const Material::Builder& builder,
+        std::unique_ptr<MaterialParser> materialParser) noexcept {
+    return create(mMaterials, builder, std::move(materialParser));
 }
 
 FSkybox* FEngine::createSkybox(const Skybox::Builder& builder) noexcept {

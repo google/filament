@@ -91,6 +91,11 @@ Program& Program::cacheId(uint64_t cacheId) noexcept {
     return *this;
 }
 
+Program& Program::multiview(bool multiview) noexcept {
+    mMultiview = multiview;
+    return *this;
+}
+
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
     out << "Program{";
     builder.mLogger(out);

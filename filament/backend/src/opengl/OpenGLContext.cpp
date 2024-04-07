@@ -64,7 +64,8 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 }
 
 OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
-        : mPlatform(platform) {
+        : mPlatform(platform),
+          mSamplerMap(32) {
 
     state.vao.p = &mDefaultVAO;
 
@@ -252,6 +253,15 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
 }
 
 OpenGLContext::~OpenGLContext() noexcept {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (!isES2()) {
+        for (auto& item: mSamplerMap) {
+            unbindSampler(item.second);
+            glDeleteSamplers(1, &item.second);
+        }
+        mSamplerMap.clear();
+    }
+#endif
     delete mTimerQueryFactory;
 }
 
@@ -933,6 +943,37 @@ void OpenGLContext::deleteVertexArray(GLuint vao) noexcept {
         }
     }
 }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+GLuint OpenGLContext::getSamplerSlow(SamplerParams params) const noexcept {
+    assert_invariant(mSamplerMap.find(params) == mSamplerMap.end());
+
+    using namespace GLUtils;
+
+    GLuint s;
+    glGenSamplers(1, &s);
+    glSamplerParameteri(s, GL_TEXTURE_MIN_FILTER,   (GLint)getTextureFilter(params.filterMin));
+    glSamplerParameteri(s, GL_TEXTURE_MAG_FILTER,   (GLint)getTextureFilter(params.filterMag));
+    glSamplerParameteri(s, GL_TEXTURE_WRAP_S,       (GLint)getWrapMode(params.wrapS));
+    glSamplerParameteri(s, GL_TEXTURE_WRAP_T,       (GLint)getWrapMode(params.wrapT));
+    glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       (GLint)getWrapMode(params.wrapR));
+    glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, (GLint)getTextureCompareMode(params.compareMode));
+    glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, (GLint)getTextureCompareFunc(params.compareFunc));
+
+#if defined(GL_EXT_texture_filter_anisotropic)
+    if (ext.EXT_texture_filter_anisotropic &&
+        !bugs.texture_filter_anisotropic_broken_on_sampler) {
+        GLfloat const anisotropy = float(1u << params.anisotropyLog2);
+        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                std::min(gets.max_anisotropy, anisotropy));
+    }
+#endif
+    CHECK_GL_ERROR(utils::slog.e)
+    mSamplerMap[params] = s;
+    return s;
+}
+#endif
+
 
 void OpenGLContext::resetState() noexcept {
     // Force GL state to match the Filament state

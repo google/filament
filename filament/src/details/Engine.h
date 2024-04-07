@@ -263,8 +263,8 @@ public:
         return mDefaultRenderTarget;
     }
 
-    template <typename T>
-    T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
+    template <typename T, typename ... ARGS>
+    T* create(ResourceList<T>& list, typename T::Builder const& builder, ARGS&& ... args) noexcept;
 
     FBufferObject* createBufferObject(const BufferObject::Builder& builder) noexcept;
     FVertexBuffer* createVertexBuffer(const VertexBuffer::Builder& builder) noexcept;
@@ -273,7 +273,7 @@ public:
     FMorphTargetBuffer* createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept;
     FInstanceBuffer* createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
-    FMaterial* createMaterial(const Material::Builder& builder) noexcept;
+    FMaterial* createMaterial(const Material::Builder& builder, std::unique_ptr<MaterialParser> materialParser) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
     FColorGrading* createColorGrading(const ColorGrading::Builder& builder) noexcept;

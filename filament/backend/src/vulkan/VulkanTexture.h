@@ -23,6 +23,7 @@
 #include "VulkanResources.h"
 #include "VulkanImageUtility.h"
 
+#include <utils/Hash.h>
 #include <utils/RangeMap.h>
 
 #include <unordered_map>

@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANBLITTER_H
 #define TNT_FILAMENT_BACKEND_VULKANBLITTER_H
 
+#include "VulkanCommands.h"
 #include "VulkanContext.h"
 
 #include <utils/compiler.h>

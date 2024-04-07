@@ -59,6 +59,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialFeatureLevel = charTo64bitNum("MAT_FEAT"),
     MaterialShading = charTo64bitNum("MAT_SHAD"),
     MaterialBlendingMode = charTo64bitNum("MAT_BLEN"),
+    MaterialBlendFunction = charTo64bitNum("MAT_BLFN"),
     MaterialTransparencyMode = charTo64bitNum("MAT_TRMD"),
     MaterialMaskThreshold = charTo64bitNum("MAT_THRS"),
     MaterialShadowMultiplier = charTo64bitNum("MAT_SHML"),

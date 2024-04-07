@@ -15,29 +15,58 @@
  */
 
 #include "details/Material.h"
+#include "details/Engine.h"
 
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 
-#include "details/Engine.h"
-
 #include "FilamentAPI-impl.h"
-
-#include <private/filament/Variant.h>
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/Variant.h>
+
+#include <filament/Material.h>
+#include <filament/MaterialEnums.h>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
+
+#include <filaflat/ChunkContainer.h>
+#include <filaflat/MaterialChunk.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/CallbackHandler.h>
 #include <backend/Program.h>
 
+#include <utils/BitmaskEnum.h>
+#include <utils/bitset.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Hash.h>
 
+#include <algorithm>
+#include <array>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <optional>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <variant>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -45,15 +74,15 @@ using namespace backend;
 using namespace filaflat;
 using namespace utils;
 
-static MaterialParser* createParser(Backend backend, ShaderLanguage language,
-                                    const void* data, size_t size) {
+static std::unique_ptr<MaterialParser> createParser(
+        Backend backend, ShaderLanguage language, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
     auto materialParser = std::make_unique<MaterialParser>(language, data, size);
 
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (backend == Backend::NOOP) {
-        return materialParser.release();
+        return materialParser;
     }
 
     ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
@@ -71,13 +100,12 @@ static MaterialParser* createParser(Backend backend, ShaderLanguage language,
 
     assert_invariant(backend != Backend::DEFAULT && "Default backend has not been resolved.");
 
-    return materialParser.release();
+    return materialParser;
 }
 
 struct Material::BuilderDetails {
     const void* mPayload = nullptr;
     size_t mSize = 0;
-    MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
     std::unordered_map<
         utils::CString,
@@ -115,11 +143,11 @@ template Material::Builder& Material::Builder::constant<float>(const char*, size
 template Material::Builder& Material::Builder::constant<bool>(const char*, size_t, bool);
 
 Material* Material::Builder::build(Engine& engine) {
-    std::unique_ptr<MaterialParser> materialParser{ createParser(
+    std::unique_ptr<MaterialParser> materialParser = createParser(
         downcast(engine).getBackend(), downcast(engine).getShaderLanguage(),
-        mImpl->mPayload, mImpl->mSize) };
+        mImpl->mPayload, mImpl->mSize);
 
-    if (materialParser == nullptr) {
+    if (!materialParser) {
         return nullptr;
     }
 
@@ -146,17 +174,16 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
-    mImpl->mMaterialParser = materialParser.release();
-
-    return downcast(engine).createMaterial(*this);
+    return downcast(engine).createMaterial(*this, std::move(materialParser));
 }
 
-FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
+FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
+        std::unique_ptr<MaterialParser> materialParser)
         : mEngine(engine),
-          mMaterialId(engine.getMaterialId())
+          mMaterialId(engine.getMaterialId()),
+          mMaterialParser(std::move(materialParser))
 {
-    MaterialParser* parser = builder->mMaterialParser;
-    mMaterialParser = parser;
+    MaterialParser* const parser = mMaterialParser.get();
 
     UTILS_UNUSED_IN_RELEASE bool const nameOk = parser->getName(&mName);
     assert_invariant(nameOk);
@@ -236,7 +263,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
             ? 1 : CONFIG_MAX_INSTANCES;
 
-    int const maxFroxelBufferHeight = std::min(
+    int const maxFroxelBufferHeight = (int)std::min(
             FROXEL_BUFFER_MAX_ENTRY_COUNT / 4,
             engine.getDriverApi().getMaxUniformBufferSize() / 16u);
 
@@ -323,12 +350,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         parser->getMaskThreshold(&mMaskThreshold);
     }
 
-    // The fade blending mode only affects shading. For proper sorting we need to
-    // treat this blending mode as a regular transparent blending operation.
-    if (UTILS_UNLIKELY(mBlendingMode == BlendingMode::FADE)) {
-        mRenderBlendingMode = BlendingMode::TRANSPARENT;
-    } else {
-        mRenderBlendingMode = mBlendingMode;
+    if (mBlendingMode == BlendingMode::CUSTOM) {
+        parser->getCustomBlendFunction(&mCustomBlendFunctions);
     }
 
     if (mShading == Shading::UNLIT) {
@@ -381,6 +404,12 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             mRasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_COLOR;
             mRasterState.depthWrite = false;
             break;
+        case BlendingMode::CUSTOM:
+            mRasterState.blendFunctionSrcRGB   = mCustomBlendFunctions[0];
+            mRasterState.blendFunctionSrcAlpha = mCustomBlendFunctions[1];
+            mRasterState.blendFunctionDstRGB   = mCustomBlendFunctions[2];
+            mRasterState.blendFunctionDstAlpha = mCustomBlendFunctions[3];
+            mRasterState.depthWrite = false;
     }
 
     bool depthWriteSet = false;
@@ -463,9 +492,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mDefaultInstance.initDefaultInstance(engine, this);
 }
 
-FMaterial::~FMaterial() noexcept {
-    delete mMaterialParser;
-}
+FMaterial::~FMaterial() noexcept = default;
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     if (mMaterialDomain == MaterialDomain::SURFACE) {
@@ -641,6 +668,9 @@ void FMaterial::getSurfaceProgramSlow(Variant variant,
 
     Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
     pb.priorityQueue(priorityQueue);
+    pb.multiview(
+            mEngine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
+            Variant::isStereoVariant(variant));
     createAndCacheProgram(std::move(pb), variant);
 }
 
@@ -785,9 +815,7 @@ void FMaterial::applyPendingEdits() noexcept {
     const char* name = mName.c_str();
     slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
     destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
-    delete mMaterialParser;
-    mMaterialParser = mPendingEdits;
-    mPendingEdits = nullptr;
+    latchPendingEdits();
 }
 
 /**
@@ -804,8 +832,9 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void
 
     // This is called on a web server thread, so we defer clearing the program cache
     // and swapping out the MaterialParser until the next getProgram call.
-    material->mPendingEdits = createParser(engine.getBackend(), engine.getShaderLanguage(),
-            packageData, packageSize);
+    std::unique_ptr<MaterialParser> pending = createParser(
+            engine.getBackend(), engine.getShaderLanguage(), packageData, packageSize);
+    material->setPendingEdits(std::move(pending));
 }
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {

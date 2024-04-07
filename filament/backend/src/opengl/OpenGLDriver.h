@@ -20,6 +20,8 @@
 #include "DriverBase.h"
 #include "OpenGLContext.h"
 #include "OpenGLTimerQuery.h"
+#include "GLBufferObject.h"
+#include "GLTexture.h"
 #include "ShaderCompilerService.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
@@ -92,25 +94,6 @@ public:
         bool rec709 = false;
     };
 
-    struct GLBufferObject : public HwBufferObject {
-        using HwBufferObject::HwBufferObject;
-        GLBufferObject(uint32_t size,
-                BufferObjectBinding bindingType, BufferUsage usage) noexcept
-                : HwBufferObject(size), usage(usage), bindingType(bindingType) {
-        }
-
-        struct {
-            GLuint id;
-            union {
-                GLenum binding;
-                void* buffer;
-            };
-        } gl;
-        BufferUsage usage;
-        BufferObjectBinding bindingType;
-        uint16_t age = 0;
-    };
-
     struct GLVertexBufferInfo : public HwVertexBufferInfo {
         GLVertexBufferInfo() noexcept = default;
         GLVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
@@ -140,7 +123,6 @@ public:
         } gl;
     };
 
-    struct GLTexture;
     struct GLSamplerGroup : public HwSamplerGroup {
         using HwSamplerGroup::HwSamplerGroup;
         struct Entry {
@@ -157,27 +139,9 @@ public:
         Handle<HwVertexBufferInfo> vbih;
     };
 
-    struct GLTexture : public HwTexture {
-        using HwTexture::HwTexture;
-        struct GL {
-            GL() noexcept : imported(false), sidecarSamples(1), reserved(0) {}
-            GLuint id = 0;          // texture or renderbuffer id
-            GLenum target = 0;
-            GLenum internalFormat = 0;
-            GLuint sidecarRenderBufferMS = 0;  // multi-sample sidecar renderbuffer
+    using GLBufferObject = filament::backend::GLBufferObject;
 
-            // texture parameters go here too
-            GLfloat anisotropy = 1.0;
-            int8_t baseLevel = 127;
-            int8_t maxLevel = -1;
-            uint8_t targetIndex = 0;    // optimization: index corresponding to target
-            bool imported           : 1;
-            uint8_t sidecarSamples  : 4;
-            uint8_t reserved        : 3;
-        } gl;
-
-        OpenGLPlatform::ExternalTexture* externalTexture = nullptr;
-    };
+    using GLTexture = filament::backend::GLTexture;
 
     using GLTimerQuery = filament::backend::GLTimerQuery;
 
@@ -268,13 +232,13 @@ private:
     HandleAllocatorGL mHandleAllocator;
 
     template<typename D, typename ... ARGS>
-    Handle<D> initHandle(ARGS&& ... args) noexcept {
+    Handle<D> initHandle(ARGS&& ... args) {
         return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args) ...);
     }
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-    construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
+    construct(Handle<B> const& handle, ARGS&& ... args) {
         return mHandleAllocator.destroyAndConstruct<D, B>(handle, std::forward<ARGS>(args) ...);
     }
 
@@ -288,7 +252,7 @@ private:
     typename std::enable_if_t<
             std::is_pointer_v<Dp> &&
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(Handle<B>& handle) noexcept {
+    handle_cast(Handle<B>& handle) {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
@@ -296,7 +260,7 @@ private:
     inline typename std::enable_if_t<
             std::is_pointer_v<Dp> &&
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(Handle<B> const& handle) noexcept {
+    handle_cast(Handle<B> const& handle) {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
@@ -348,22 +312,6 @@ private:
     void resolvePass(ResolveAction action, GLRenderTarget const* rt,
             TargetBufferFlags discardFlags) noexcept;
 
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    GLuint getSamplerSlow(SamplerParams sp) const noexcept;
-
-    inline GLuint getSampler(SamplerParams sp) const noexcept {
-        assert_invariant(!sp.padding0);
-        assert_invariant(!sp.padding1);
-        assert_invariant(!sp.padding2);
-        auto& samplerMap = mSamplerMap;
-        auto pos = samplerMap.find(sp);
-        if (UTILS_UNLIKELY(pos == samplerMap.end())) {
-            return getSamplerSlow(sp);
-        }
-        return pos->second;
-    }
-#endif
-
     const std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
@@ -390,13 +338,9 @@ private:
 
     // ES2 only. Uniform buffer emulation binding points
     GLuint mLastAssignedEmulatedUboId = 0;
-    std::array<std::tuple<GLuint, void const*, uint16_t>, Program::UNIFORM_BINDING_COUNT> mUniformBindings = {};
 
     // sampler buffer binding points (nullptr if not used)
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
-
-    mutable tsl::robin_map<SamplerParams, GLuint,
-            SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
     // this must be accessed from the driver thread only
     std::vector<GLTexture*> mTexturesWithStreamsAttached;

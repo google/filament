@@ -63,8 +63,7 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-ShadowMapManager::ShadowMapManager(FEngine& engine)
-        : mEngine(engine) {
+ShadowMapManager::ShadowMapManager(FEngine& engine) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
@@ -273,9 +272,26 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 if (!spotShadowCastersRange.empty()) {
                     for (auto& shadowMap : getSpotShadowMaps()) {
                         assert_invariant(!shadowMap.isDirectionalShadow());
-                        passList.push_back({
-                                {}, &shadowMap, spotShadowCastersRange,
-                                VISIBLE_DYN_SHADOW_RENDERABLE });
+
+                        switch (shadowMap.getShadowType()) {
+                            case ShadowType::DIRECTIONAL:
+                                // we should never be here
+                                break;
+                            case ShadowType::SPOT:
+                                prepareSpotShadowMap(shadowMap, engine, view, mainCameraInfo,
+                                        scene->getLightData(), mSceneInfo);
+                                break;
+                            case ShadowType::POINT:
+                                preparePointShadowMap(shadowMap, engine, view, mainCameraInfo,
+                                        scene->getLightData());
+                                break;
+                        }
+
+                        if (shadowMap.hasVisibleShadows()) {
+                            passList.push_back({
+                                    {}, &shadowMap, spotShadowCastersRange,
+                                    VISIBLE_DYN_SHADOW_RENDERABLE });
+                        }
                     }
                 }
 
@@ -289,6 +305,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 scene, mainCameraInfo, userTime, passBuilder = passBuilder](
                     FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
+
                 // Note: we could almost parallel_for the loop below, the problem currently is
                 // that updatePrimitivesLod() updates temporary global state.
                 // prepareSpotShadowMap() also update the visibility of renderable. These two
@@ -297,53 +314,54 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                 // Generate a RenderPass for each shadow map
                 for (auto const& entry : data.passList) {
-                    ShadowMap& shadowMap = *entry.shadowMap;
+                    ShadowMap const& shadowMap = *entry.shadowMap;
+                    assert_invariant(shadowMap.hasVisibleShadows());
 
-                    // for spot shadow map, we need to do the culling
+                    // Note: this loop can generate a lot of commands that come out of the
+                    //       "per frame command arena". The allocation persists until the
+                    //       end of the frame.
+                    //       One way to possibly mitigate this, would be to always use the
+                    //       same command buffer for all shadow map, but then we'd generate
+                    //       a lot of unneeded draw calls.
+                    //       To do this efficiently, we'd need a way to cull draw calls already
+                    //       recorded in the command buffer, per shadow map.
+
+                    // Note: the output of culling below is stored in scene->getRenderableData()
+
                     switch (shadowMap.getShadowType()) {
                         case ShadowType::DIRECTIONAL:
+                            // we should never be here
                             break;
                         case ShadowType::SPOT:
-                            prepareSpotShadowMap(shadowMap, engine, view, mainCameraInfo,
+                            ShadowMapManager::cullSpotShadowMap(shadowMap, engine, view,
                                     scene->getRenderableData(), entry.range,
-                                    scene->getLightData(), mSceneInfo);
+                                    scene->getLightData());
                             break;
                         case ShadowType::POINT:
-                            preparePointShadowMap(shadowMap, engine, view, mainCameraInfo,
+                            ShadowMapManager::cullPointShadowMap(shadowMap, view,
                                     scene->getRenderableData(), entry.range,
-                                    scene->getLightData(), mSceneInfo);
+                                    scene->getLightData());
                             break;
                     }
 
-                    if (shadowMap.hasVisibleShadows()) {
-                        // Note: this loop can generate a lot of commands that come out of the
-                        //       "per frame command arena". The allocation persists until the
-                        //       end of the frame.
-                        //       One way to possibly mitigate this, would be to always use the
-                        //       same command buffer for all shadow map, but then we'd generate
-                        //       a lot of unneeded draw calls.
-                        //       To do this efficiently, we'd need a way to cull draw calls already
-                        //       recorded in the command buffer, per shadow map.
+                    // cameraInfo only valid after calling update
+                    const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
+                    auto transaction = ShadowMap::open(driver);
+                    ShadowMap::prepareCamera(transaction, engine, cameraInfo);
+                    ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
+                    ShadowMap::prepareTime(transaction, engine, userTime);
+                    ShadowMap::prepareShadowMapping(transaction,
+                            vsmShadowOptions.highPrecision);
+                    shadowMap.commit(transaction, driver);
 
-                        // cameraInfo only valid after calling update
-                        const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
+                    // updatePrimitivesLod must be run before RenderPass::appendCommands.
+                    view.updatePrimitivesLod(engine,
+                            cameraInfo, scene->getRenderableData(), entry.range);
 
-                        auto transaction = ShadowMap::open(driver);
-                        ShadowMap::prepareCamera(transaction, engine, cameraInfo);
-                        ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
-                        ShadowMap::prepareTime(transaction, engine, userTime);
-                        ShadowMap::prepareShadowMapping(transaction,
-                                vsmShadowOptions.highPrecision);
-                        shadowMap.commit(transaction, driver);
+                    // generate and sort the commands for rendering the shadow map
 
-                        // updatePrimitivesLod must be run before RenderPass::appendCommands.
-                        view.updatePrimitivesLod(engine,
-                                cameraInfo, scene->getRenderableData(), entry.range);
-
-                        // generate and sort the commands for rendering the shadow map
-
-                        RenderPass const pass = passBuilder
+                    RenderPass const pass = passBuilder
                             .camera(cameraInfo)
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(),
@@ -351,16 +369,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine);
 
-                        entry.executor = pass.getExecutor();
+                    entry.executor = pass.getExecutor();
 
-                        if (!view.hasVSM()) {
-                            auto const* options = shadowMap.getShadowOptions();
-                            PolygonOffset const polygonOffset = { // handle reversed Z
-                                    .slope    = -options->polygonOffsetSlope,
-                                    .constant = -options->polygonOffsetConstant
-                            };
-                            entry.executor.overridePolygonOffset(&polygonOffset);
-                        }
+                    if (!view.hasVSM()) {
+                        auto const* options = shadowMap.getShadowOptions();
+                        PolygonOffset const polygonOffset = { // handle reversed Z
+                                .slope    = -options->polygonOffsetSlope,
+                                .constant = -options->polygonOffsetConstant
+                        };
+                        entry.executor.overridePolygonOffset(&polygonOffset);
                     }
                 }
 
@@ -385,10 +402,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
     auto const& passList = prepareShadowPass.getData().passList;
     for (auto const& entry: passList) {
-        if (!entry.shadowMap->hasVisibleShadows()) {
-            continue;
-        }
-        
+        assert_invariant(entry.shadowMap->hasVisibleShadows());
+
         const uint8_t layer = entry.shadowMap->getLayer();
         const auto* options = entry.shadowMap->getShadowOptions();
         const auto msaaSamples = textureRequirements.msaaSamples;
@@ -615,7 +630,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // Compute scene-dependent values shared across all cascades
         ShadowMap::updateSceneInfoDirectional(MvAtOrigin, *scene, sceneInfo);
 
-        shadowMap.updateDirectional(mEngine,
+        shadowMap.updateDirectional(engine,
                 lightData, 0, cameraInfo, shadowMapInfo, sceneInfo);
 
         hasVisibleShadows = shadowMap.hasVisibleShadows();
@@ -681,7 +696,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
             sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
 
-            auto shaderParameters = shadowMap.updateDirectional(mEngine,
+            auto shaderParameters = shadowMap.updateDirectional(engine,
                     lightData, 0, cameraInfo, shadowMapInfo, sceneInfo);
 
             if (shadowMap.hasVisibleShadows()) {
@@ -757,15 +772,58 @@ void ShadowMapManager::updateSpotVisibilityMasks(
     }
 }
 
-void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
-        FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engine, FView& view,
+        CameraInfo const& mainCameraInfo,
         FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept {
+
+    const size_t lightIndex = shadowMap.getLightIndex();
+    FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
+
+    // update the shadow map frustum/camera
+    const ShadowMap::ShadowMapInfo shadowMapInfo{
+            .atlasDimension      = mTextureAtlasRequirements.size,
+            .textureDimension    = uint16_t(options->mapSize),
+            .shadowDimension     = uint16_t(options->mapSize - 2u),
+            .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                   engine.getBackend() == Backend::VULKAN,
+            .vsm                 = view.hasVSM()
+    };
+
+    auto shaderParameters = shadowMap.updateSpot(engine,
+            lightData, lightIndex, mainCameraInfo, shadowMapInfo, *view.getScene(), sceneInfo);
+
+    // and if we need to generate it, update all the UBO data
+    if (shadowMap.hasVisibleShadows()) {
+        const size_t shadowIndex = shadowMap.getShadowIndex();
+        const float wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
+        // note: normalBias is set to zero for VSM
+        const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
+
+        auto& s = mShadowUb.edit();
+        const double n = shadowMap.getCamera().getNear();
+        const double f = shadowMap.getCamera().getCullingFar();
+        s.shadows[shadowIndex].layer = shadowMap.getLayer();
+        s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
+        s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
+        s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
+        s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
+        s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
+        s.shadows[shadowIndex].nearOverFarMinusNear = float(n / (f - n));
+        s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
+        s.shadows[shadowIndex].bulbRadiusLs =
+                mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
+                        / wsTexelSizeAtOneMeter;
+
+    }
+}
+
+void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap, FEngine& engine, FView& view,
+        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+        FScene::LightSoa& lightData) noexcept {
     auto& lcm = engine.getLightManager();
 
     const size_t lightIndex = shadowMap.getLightIndex();
     const FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(lightIndex);
-    FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
 
     // compute the frustum for this light
     // for spotlights, we cull shadow casters first because we already know the frustum,
@@ -802,19 +860,28 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
             visibility + range.first,
             visibleArray + range.first,
             range.size());
+}
+
+void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
+        FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
+        FScene::LightSoa& lightData) noexcept {
+
+    const uint8_t face = shadowMap.getFace();
+    const size_t lightIndex = shadowMap.getLightIndex();
+    FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
 
     // update the shadow map frustum/camera
     const ShadowMap::ShadowMapInfo shadowMapInfo{
             .atlasDimension      = mTextureAtlasRequirements.size,
             .textureDimension    = uint16_t(options->mapSize),
-            .shadowDimension     = uint16_t(options->mapSize - 2u),
+            .shadowDimension     = uint16_t(options->mapSize), // point-lights don't have a border
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
                                    engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
 
-    auto shaderParameters = shadowMap.updateSpot(mEngine,
-            lightData, lightIndex, mainCameraInfo, shadowMapInfo, *view.getScene(), sceneInfo);
+    auto shaderParameters = shadowMap.updatePoint(engine, lightData, lightIndex,
+            mainCameraInfo, shadowMapInfo, *view.getScene(), face);
 
     // and if we need to generate it, update all the UBO data
     if (shadowMap.hasVisibleShadows()) {
@@ -837,19 +904,15 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         s.shadows[shadowIndex].bulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
                         / wsTexelSizeAtOneMeter;
-
     }
 }
 
-void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
-        FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
+void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView& view,
         FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-        FScene::LightSoa& lightData,
-        ShadowMap::SceneInfo const&) noexcept {
+        FScene::LightSoa& lightData) noexcept {
 
     const uint8_t face = shadowMap.getFace();
     const size_t lightIndex = shadowMap.getLightIndex();
-    FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
 
     // compute the frustum for this light
     // for spotlights, we cull shadow casters first because we already know the frustum,
@@ -883,43 +946,6 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
             visibility + range.first,
             visibleArray + range.first,
             range.size());
-
-    // update the shadow map frustum/camera
-    const ShadowMap::ShadowMapInfo shadowMapInfo{
-            .atlasDimension      = mTextureAtlasRequirements.size,
-            .textureDimension    = uint16_t(options->mapSize),
-            .shadowDimension     = uint16_t(options->mapSize), // point-lights don't have a border
-            .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
-                                   engine.getBackend() == Backend::VULKAN,
-            .vsm                 = view.hasVSM()
-    };
-
-    auto shaderParameters = shadowMap.updatePoint(mEngine, lightData, lightIndex,
-            mainCameraInfo, shadowMapInfo, *view.getScene(), face);
-
-
-    // and if we need to generate it, update all the UBO data
-    if (shadowMap.hasVisibleShadows()) {
-        const size_t shadowIndex = shadowMap.getShadowIndex();
-        const float wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
-        // note: normalBias is set to zero for VSM
-        const float normalBias = shadowMapInfo.vsm ? 0.0f : options->normalBias;
-
-        auto& s = mShadowUb.edit();
-        const double n = shadowMap.getCamera().getNear();
-        const double f = shadowMap.getCamera().getCullingFar();
-        s.shadows[shadowIndex].layer = shadowMap.getLayer();
-        s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
-        s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
-        s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
-        s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
-        s.shadows[shadowIndex].nearOverFarMinusNear = float(n / (f - n));
-        s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
-        s.shadows[shadowIndex].bulbRadiusLs =
-                mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
-                        / wsTexelSizeAtOneMeter;
-    }
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,

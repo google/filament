@@ -19,6 +19,7 @@
 
 #include "VulkanContext.h"
 #include "VulkanStagePool.h"
+#include "VulkanMemory.h"
 
 namespace filament::backend {
 

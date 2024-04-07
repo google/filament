@@ -7,6 +7,4 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- engine: Add experimental APIs `Engine::builder::paused()` and `Engine::setPaused()`
 - ios: Add support for Apple Silicon (arm64) simulator

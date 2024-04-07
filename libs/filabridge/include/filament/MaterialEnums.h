@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 50;
+static constexpr size_t MATERIAL_VERSION = 51;
 
 /**
  * Supported shading models
@@ -80,6 +80,8 @@ enum class BlendingMode : uint8_t {
     MULTIPLY,
     //! material brightens what's behind it
     SCREEN,
+    //! custom blending function
+    CUSTOM,
 };
 
 /**
