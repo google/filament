@@ -227,6 +227,7 @@ public:
 
     using ShaderQuality = filament::ShaderQuality;
     using BlendingMode = filament::BlendingMode;
+    using BlendFunction = filament::backend::BlendFunction;
     using Shading = filament::Shading;
     using Interpolation = filament::Interpolation;
     using VertexDomain = filament::VertexDomain;
@@ -406,6 +407,15 @@ public:
      * You can override this behavior using alphaToCoverage(false).
      */
     MaterialBuilder& blending(BlendingMode blending) noexcept;
+
+    /**
+     * Set the blend function  for this material. blending must be et to CUSTOM.
+     */
+    MaterialBuilder& customBlendFunctions(
+            BlendFunction srcRGB,
+            BlendFunction srcA,
+            BlendFunction dstRGB,
+            BlendFunction dstA) noexcept;
 
     /**
      * Set the blending mode of the post-lighting color for this material.
@@ -828,6 +838,7 @@ private:
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
     BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
+    std::array<BlendFunction, 4> mCustomBlendFunctions = {};
     CullingMode mCullingMode = CullingMode::BACK;
     Shading mShading = Shading::LIT;
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;

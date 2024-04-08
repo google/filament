@@ -127,7 +127,6 @@ public:
     Shading getShading() const noexcept { return mShading; }
     Interpolation getInterpolation() const noexcept { return mInterpolation; }
     BlendingMode getBlendingMode() const noexcept { return mBlendingMode; }
-    BlendingMode getRenderBlendingMode() const noexcept { return mRenderBlendingMode; }
     VertexDomain getVertexDomain() const noexcept { return mVertexDomain; }
     MaterialDomain getMaterialDomain() const noexcept { return mMaterialDomain; }
     CullingMode getCullingMode() const noexcept { return mCullingMode; }
@@ -223,13 +222,13 @@ private:
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
     backend::RasterState mRasterState;
-    BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
     bool mIsVariantLit = false;
     backend::FeatureLevel mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
     Shading mShading = Shading::UNLIT;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    std::array<backend::BlendFunction, 4> mCustomBlendFunctions = {};
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;

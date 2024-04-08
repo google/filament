@@ -323,12 +323,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         parser->getMaskThreshold(&mMaskThreshold);
     }
 
-    // The fade blending mode only affects shading. For proper sorting we need to
-    // treat this blending mode as a regular transparent blending operation.
-    if (UTILS_UNLIKELY(mBlendingMode == BlendingMode::FADE)) {
-        mRenderBlendingMode = BlendingMode::TRANSPARENT;
-    } else {
-        mRenderBlendingMode = mBlendingMode;
+    if (mBlendingMode == BlendingMode::CUSTOM) {
+        parser->getCustomBlendFunction(&mCustomBlendFunctions);
     }
 
     if (mShading == Shading::UNLIT) {
@@ -381,6 +377,12 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             mRasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_COLOR;
             mRasterState.depthWrite = false;
             break;
+        case BlendingMode::CUSTOM:
+            mRasterState.blendFunctionSrcRGB   = mCustomBlendFunctions[0];
+            mRasterState.blendFunctionSrcAlpha = mCustomBlendFunctions[1];
+            mRasterState.blendFunctionDstRGB   = mCustomBlendFunctions[2];
+            mRasterState.blendFunctionDstAlpha = mCustomBlendFunctions[3];
+            mRasterState.depthWrite = false;
     }
 
     bool depthWriteSet = false;
