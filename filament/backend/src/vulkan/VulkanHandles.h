@@ -99,13 +99,12 @@ struct VulkanDescriptorSetLayout : public VulkanResource {
 
     static_assert(sizeof(Bitmask) % 8 == 0);
 
-    explicit VulkanDescriptorSetLayout(VkDescriptorSetLayout layout, Bitmask const& bitmask)
-        : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
-          vklayout(layout),
-          bitmask(bitmask),
-          bindings(getBindings(bitmask)),
-          count(Count::fromLayoutBitmask(bitmask)) {}
+    explicit VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayoutCreateInfo const& info,
+            Bitmask const& bitmask);
 
+    ~VulkanDescriptorSetLayout();
+
+    VkDevice const mDevice;
     VkDescriptorSetLayout const vklayout;
     Bitmask const bitmask;
 

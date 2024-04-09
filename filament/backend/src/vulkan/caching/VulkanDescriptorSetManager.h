@@ -69,6 +69,10 @@ public:
     // proper dynamic binding when Filament-side descriptor changes are completed.
     void dynamicBind(VulkanCommandBuffer* commands, Handle<VulkanDescriptorSetLayout> uboLayout);
 
+    // TODO: Obsolete after [GDSR].
+    // Since we use program pointer as cache key, we need to clear the cache when it's freed.
+    void clearProgram(VulkanProgram* program) noexcept;
+
     Handle<VulkanDescriptorSetLayout> createLayout(descset::DescriptorSetLayout const& layout);
 
     void destroyLayout(Handle<VulkanDescriptorSetLayout> layout);

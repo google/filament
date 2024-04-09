@@ -80,7 +80,8 @@ public:
           mCount(count),
           mCapacity(capacity),
           mSize(0),
-          mUnusedCount(0) {
+          mUnusedCount(0),
+          mDisableRecycling(false) {
         DescriptorCount const actual = mCount * capacity;
         VkDescriptorPoolSize sizes[4];
         uint8_t npools = 0;
@@ -111,7 +112,7 @@ public:
         VkDescriptorPoolCreateInfo info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .pNext = nullptr,
-            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+            .flags = 0,
             .maxSets = capacity,
             .poolSizeCount = npools,
             .pPoolSizes = sizes,
@@ -123,7 +124,17 @@ public:
     DescriptorPool& operator=(DescriptorPool const&) = delete;
 
     ~DescriptorPool() {
+        // Note that these have to manually destroyed because they were not explicitly ref-counted.
+        for (auto const& [mask, sets]: mUnused) {
+            for (auto set: sets) {
+                mAllocator->destruct<VulkanDescriptorSet>(set);
+            }
+        }
         vkDestroyDescriptorPool(mDevice, mPool, VKALLOC);
+    }
+
+    void disableRecycling() noexcept {
+        mDisableRecycling = true;
     }
 
     uint16_t const& capacity() {
@@ -172,6 +183,9 @@ private:
     Handle<VulkanDescriptorSet> createSet(Bitmask const& layoutMask, VkDescriptorSet vkSet) {
         return mAllocator->initHandle<VulkanDescriptorSet>(mAllocator, vkSet,
                 [this, layoutMask, vkSet]() {
+                    if (mDisableRecycling) {
+                        return;
+                    }
                     // We are recycling - release the set back into the pool. Note that the
                     // vk handle has not changed, but we need to change the backend handle to allow
                     // for proper refcounting of resources referenced in this set.
@@ -200,6 +214,8 @@ private:
     using UnusedSetMap = std::unordered_map<Bitmask, std::vector<Handle<VulkanDescriptorSet>>,
             BitmaskHashFn, BitmaskEqual>;
     UnusedSetMap mUnused;
+
+    bool mDisableRecycling;
 };
 
 // This is an ever-expanding pool of sets where it
@@ -244,6 +260,12 @@ public:
         return ret;
     }
 
+    void disableRecycling() noexcept {
+        for (auto& pool: mPools) {
+            pool->disableRecycling();
+        }
+    }
+
 private:
     VkDevice mDevice;
     VulkanResourceAllocator* mAllocator;
@@ -267,21 +289,19 @@ public:
 
     ~LayoutCache() {
         for (auto [key, layout]: mLayouts) {
-            auto layoutPtr = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(layout);
-            vkDestroyDescriptorSetLayout(mDevice, layoutPtr->vklayout, VKALLOC);
+            mAllocator->destruct<VulkanDescriptorSetLayout>(layout);
         }
         mLayouts.clear();
     }
 
     void destroyLayout(Handle<VulkanDescriptorSetLayout> handle) {
-        auto layoutPtr = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(handle);
         for (auto [key, layout]: mLayouts) {
             if (layout == handle) {
                 mLayouts.erase(key);
                 break;
             }
         }
-        vkDestroyDescriptorSetLayout(mDevice, layoutPtr->vklayout, VKALLOC);
+        mAllocator->destruct<VulkanDescriptorSetLayout>(handle);
     }
 
     Handle<VulkanDescriptorSetLayout> getLayout(descset::DescriptorSetLayout const& layout) {
@@ -339,10 +359,8 @@ public:
                 .bindingCount = count,
                 .pBindings = toBind,
         };
-
-        VkDescriptorSetLayout outLayout;
-        vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &outLayout);
-        return (mLayouts[key] = mAllocator->initHandle<VulkanDescriptorSetLayout>(outLayout, key));
+        return (mLayouts[key] =
+                        mAllocator->initHandle<VulkanDescriptorSetLayout>(mDevice, dlinfo, key));
     }
 
 private:
@@ -416,7 +434,7 @@ struct SamplerKey {
                 ret.sampler[count] = info.sampler;
                 ret.imageView[count] = info.imageView;
                 ret.imageLayout[count] = info.imageLayout;
-            }// else keep them as VK_NULL_HANDLEs.
+            } // else keep them as VK_NULL_HANDLEs.
             count++;
         }
         return ret;
@@ -431,16 +449,16 @@ struct SamplerKey {
 struct InputAttachmentKey {
     // This count should be fixed.
     uint8_t count;
-    uint8_t padding[7];
-    VkImageView view = VK_NULL_HANDLE;
+    uint8_t padding[3];
     VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageView view = VK_NULL_HANDLE;
 
     static inline InputAttachmentKey key(VkDescriptorImageInfo const& info,
             VulkanDescriptorSetLayout* layout) {
         return {
                 .count = (uint8_t) layout->count.inputAttachment,
-                .view = info.imageView,
                 .imageLayout = info.imageLayout,
+                .view = info.imageView,
         };
     }
 
@@ -627,29 +645,40 @@ class DescriptorSetCache {
 public:
     DescriptorSetCache(VkDevice device, VulkanResourceAllocator* allocator)
         : mAllocator(allocator),
-          mDescriptorPool(device, allocator),
-          mUBOCache(allocator),
-          mSamplerCache(allocator),
-          mInputAttachmentCache(allocator) {}
+          mDescriptorPool(std::make_unique<DescriptorInfinitePool>(device, allocator)),
+          mUBOCache(std::make_unique<LRUDescriptorSetCache<UBOKey>>(allocator)),
+          mSamplerCache(std::make_unique<LRUDescriptorSetCache<SamplerKey>>(allocator)),
+          mInputAttachmentCache(
+                  std::make_unique<LRUDescriptorSetCache<InputAttachmentKey>>(allocator)) {}
 
     template<typename Key>
     inline std::pair<VulkanDescriptorSet*, bool> get(Key const& key,
             VulkanDescriptorSetLayout* layout) {
         if constexpr (std::is_same_v<Key, UBOKey>) {
-            return get(key, mUBOCache, layout);
+            return get(key, *mUBOCache, layout);
         } else if constexpr (std::is_same_v<Key, SamplerKey>) {
-            return get(key, mSamplerCache, layout);
+            return get(key, *mSamplerCache, layout);
         } else if constexpr (std::is_same_v<Key, InputAttachmentKey>) {
-            return get(key, mInputAttachmentCache, layout);
+            return get(key, *mInputAttachmentCache, layout);
         }
         PANIC_POSTCONDITION("Unexpected key type");
     }
 
+    ~DescriptorSetCache() {
+        // This will prevent the descriptor sets recycling when we destroy descriptor set caches.
+        mDescriptorPool->disableRecycling();
+
+        mInputAttachmentCache.reset();
+        mSamplerCache.reset();
+        mUBOCache.reset();
+        mDescriptorPool.reset();
+    }
+
     // gc() should be called at the end of everyframe
     void gc() {
-        mUBOCache.gc();
-        mSamplerCache.gc();
-        mInputAttachmentCache.gc();
+        mUBOCache->gc();
+        mSamplerCache->gc();
+        mInputAttachmentCache->gc();
     }
 
 private:
@@ -660,16 +689,18 @@ private:
             return {set, true};
         }
         auto set = mAllocator->handle_cast<VulkanDescriptorSet*>(
-            mDescriptorPool.obtainSet(layout));
+            mDescriptorPool->obtainSet(layout));
         cache.put(key, set);
         return {set, false};
     }
 
     VulkanResourceAllocator* mAllocator;
-    DescriptorInfinitePool mDescriptorPool;
-    LRUDescriptorSetCache<UBOKey> mUBOCache;
-    LRUDescriptorSetCache<SamplerKey> mSamplerCache;
-    LRUDescriptorSetCache<InputAttachmentKey> mInputAttachmentCache;
+
+    // We need to heap-allocate so that the destruction can be strictly ordered.
+    std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
+    std::unique_ptr<LRUDescriptorSetCache<UBOKey>> mUBOCache;
+    std::unique_ptr<LRUDescriptorSetCache<SamplerKey>> mSamplerCache;
+    std::unique_ptr<LRUDescriptorSetCache<InputAttachmentKey>> mInputAttachmentCache;
 };
 
 } // anonymous namespace
@@ -746,25 +777,38 @@ public:
             mLayoutStash[program] = layouts;
         }
 
+        VulkanDescriptorSetLayoutList outLayouts = layouts;
         DescriptorSetVkHandles vkDescSets = initDescSetHandles();
         VkWriteDescriptorSet descriptorWrites[MAX_BINDINGS];
         uint32_t nwrites = 0;
 
+        // Use placeholders when necessary
         for (uint8_t i = 0; i < VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
-            auto handle = layouts[i];
-            if (!handle) {
-                assert_invariant(i == INPUT_ATTACHMENT_SET_ID
-                                 && "Unexpectedly absent descriptor set layout");
+            if (!layouts[i]) {
+                if (i == INPUT_ATTACHMENT_SET_ID ||
+                        (i == SAMPLER_SET_ID && !layouts[INPUT_ATTACHMENT_SET_ID])) {
+                    continue;
+                }
+                outLayouts[i] = getPlaceHolderLayout(i);
+            } else {
+                outLayouts[i] = layouts[i];
+                auto p = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(layouts[i]);
+                if (!((i == UBO_SET_ID && p->bitmask.ubo)
+                        || (i == SAMPLER_SET_ID && p->bitmask.sampler)
+                        || (i == INPUT_ATTACHMENT_SET_ID && p->bitmask.inputAttachment
+                                && mInputAttachment.first.texture))) {
+                    outLayouts[i] = getPlaceHolderLayout(i);
+                }
+            }
+        }
+
+        for (uint8_t i = 0; i < VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
+            if (!outLayouts[i]) {
                 continue;
             }
             VulkanDescriptorSetLayout* layout
-                    = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(handle);
-            if (!((i == UBO_SET_ID && layout->bitmask.ubo)
-                        || (i == SAMPLER_SET_ID && layout->bitmask.sampler)
-                        || (i == INPUT_ATTACHMENT_SET_ID && layout->bitmask.inputAttachment
-                                && mInputAttachment.first.texture))) {
-                continue;
-            }
+                    = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(outLayouts[i]);
+            bool const usePlaceholder = layouts[i] != outLayouts[i];
 
             auto const& [set, cached] = getSet(i, layout);
             VkDescriptorSet const vkSet = set->vkSet;
@@ -773,7 +817,8 @@ public:
 
             // Note that we still need to bind the set, but 'cached' means that we found a set with
             // the exact same content already written, and we would just bind that one instead.
-            if (cached) {
+            // We also don't need to write to the placeholder set.
+            if (cached || usePlaceholder) {
                 continue;
             }
 
@@ -836,7 +881,7 @@ public:
             vkUpdateDescriptorSets(mDevice, nwrites, descriptorWrites, 0, nullptr);
         }
 
-        VkPipelineLayout const pipelineLayout = getPipelineLayoutFn(layouts);
+        VkPipelineLayout const pipelineLayout = getPipelineLayoutFn(outLayouts);
         VkCommandBuffer const cmdbuffer = commands->buffer();
 
         BoundState state{};
@@ -916,6 +961,10 @@ public:
         }
         mHaveDynamicUbos = false;
         FVK_SYSTRACE_END();
+    }
+
+    void clearProgram(VulkanProgram* program) noexcept {
+        mLayoutStash.erase(program);
     }
 
     Handle<VulkanDescriptorSetLayout> createLayout(
@@ -1031,25 +1080,62 @@ private:
         }
     }
 
+    inline Handle<VulkanDescriptorSetLayout> getPlaceHolderLayout(uint8_t setID) {
+        if (mPlaceholderLayout[setID]) {
+            return mPlaceholderLayout[setID];
+        }
+        descset::DescriptorSetLayout inputLayout {
+                .bindings = {{}},
+        };
+        switch (setID) {
+            case UBO_SET_ID:
+                inputLayout.bindings[0] = {
+                        .type = descset::DescriptorType::UNIFORM_BUFFER,
+                        .stageFlags = descset::ShaderStageFlags2::VERTEX,
+                        .binding = 0,
+                        .flags = descset::DescriptorFlags::NONE,
+                        .count = 0,
+                };
+                break;
+            case SAMPLER_SET_ID:
+                inputLayout.bindings[0] = {
+                        .type = descset::DescriptorType::SAMPLER,
+                        .stageFlags = descset::ShaderStageFlags2::FRAGMENT,
+                        .binding = 0,
+                        .flags = descset::DescriptorFlags::NONE,
+                        .count = 0,
+                };
+                break;
+            case INPUT_ATTACHMENT_SET_ID:
+                inputLayout.bindings[0] = {
+                        .type = descset::DescriptorType::INPUT_ATTACHMENT,
+                        .stageFlags = descset::ShaderStageFlags2::FRAGMENT,
+                        .binding = 0,
+                        .flags = descset::DescriptorFlags::NONE,
+                        .count = 0,
+                };
+                break;
+            default:
+                PANIC_POSTCONDITION("Unexpected set id=%d", setID);
+        }
+        mPlaceholderLayout[setID] = mLayoutCache.getLayout(inputLayout);
+        return mPlaceholderLayout[setID];
+    }
+
     VkDevice mDevice;
     VulkanResourceAllocator* mAllocator;
     LayoutCache mLayoutCache;
     DescriptorSetCache mDescriptorSetCache;
-
     bool mHaveDynamicUbos;
-
     UBOMap mUboMap;
     SamplerMap mSamplerMap;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
-
     VulkanResourceManager mResources;
-
     VkDescriptorBufferInfo mPlaceHolderBufferInfo;
     VkDescriptorImageInfo mPlaceHolderImageInfo;
-
     std::unordered_map<VulkanProgram*, VulkanDescriptorSetLayoutList> mLayoutStash;
-
     BoundState mBoundState;
+    VulkanDescriptorSetLayoutList mPlaceholderLayout = {};
 };
 
 VulkanDescriptorSetManager::VulkanDescriptorSetManager(VkDevice device,
@@ -1075,6 +1161,10 @@ VkPipelineLayout VulkanDescriptorSetManager::bind(VulkanCommandBuffer* commands,
 void VulkanDescriptorSetManager::dynamicBind(VulkanCommandBuffer* commands,
         Handle<VulkanDescriptorSetLayout> uboLayout) {
     mImpl->dynamicBind(commands, uboLayout);
+}
+
+void VulkanDescriptorSetManager::clearProgram(VulkanProgram* program) noexcept {
+    mImpl->clearProgram(program);
 }
 
 Handle<VulkanDescriptorSetLayout> VulkanDescriptorSetManager::createLayout(

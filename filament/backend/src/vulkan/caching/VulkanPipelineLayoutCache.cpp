@@ -24,7 +24,7 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         VulkanDescriptorSetLayoutList const& descriptorSetLayouts) {
     PipelineLayoutKey key = {VK_NULL_HANDLE};
     uint8_t descSetLayoutCount = 0;
-    for (auto layoutHandle : descriptorSetLayouts) {
+    for (auto layoutHandle: descriptorSetLayouts) {
         if (layoutHandle) {
             auto layout = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(layoutHandle);
             key[descSetLayoutCount++] = layout->vklayout;
@@ -53,6 +53,12 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         .lastUsed = mTimestamp++,
     };
     return layout;
+}
+
+void VulkanPipelineLayoutCache::terminate() noexcept {
+    for (auto const& [key, entry]: mPipelineLayouts) {
+        vkDestroyPipelineLayout(mDevice, entry.handle, VKALLOC);
+    }
 }
 
 }// namespace filament::backend
