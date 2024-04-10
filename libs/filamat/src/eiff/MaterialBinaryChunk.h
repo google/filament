@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
- *DictionaryGlsl
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,21 +14,27 @@
  * limitations under the License.
  */
 
-#include "MaterialSpirvChunk.h"
+#ifndef TNT_FILAMAT_MATERIAL_BINARY_CHUNK_H
+#define TNT_FILAMAT_MATERIAL_BINARY_CHUNK_H
+
+#include "Chunk.h"
+#include "ShaderEntry.h"
+
+#include <vector>
 
 namespace filamat {
 
-MaterialSpirvChunk::MaterialSpirvChunk(const std::vector<SpirvEntry>&& entries) :
-        Chunk(ChunkType::MaterialSpirv), mEntries(entries) {}
+class MaterialBinaryChunk final : public Chunk {
+public:
+    explicit MaterialBinaryChunk(const std::vector<SpirvEntry>&& entries, ChunkType type);
+    ~MaterialBinaryChunk() = default;
 
-void MaterialSpirvChunk::flatten(Flattener &f) {
-    f.writeUint64(mEntries.size());
-    for (const SpirvEntry& entry : mEntries) {
-        f.writeUint8(uint8_t(entry.shaderModel));
-        f.writeUint8(entry.variant.key);
-        f.writeUint8(uint8_t(entry.stage));
-        f.writeUint32(entry.dictionaryIndex);
-    }
-}
+private:
+    void flatten(Flattener& f) override;
 
-}  // namespace filamat
+    const std::vector<SpirvEntry> mEntries;
+};
+
+} // namespace filamat
+
+#endif // TNT_FILAMAT_MATERIAL_BINARY_CHUNK_H

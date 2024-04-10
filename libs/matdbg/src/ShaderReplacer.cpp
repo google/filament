@@ -35,7 +35,7 @@
 #include "eiff/ChunkContainer.h"
 #include "eiff/DictionarySpirvChunk.h"
 #include "eiff/DictionaryTextChunk.h"
-#include "eiff/MaterialSpirvChunk.h"
+#include "eiff/MaterialBinaryChunk.h"
 #include "eiff/MaterialTextChunk.h"
 #include "eiff/LineDictionary.h"
 
@@ -73,7 +73,7 @@ private:
     vector<TextEntry> mShaderRecords;
 };
 
-// Tiny database of data blobs that can import / export MaterialSpirvChunk and DictionarySpirvChunk.
+// Tiny database of data blobs that can import / export MaterialBinaryChunk and DictionarySpirvChunk.
 // The blobs are stored *after* they have been compressed by SMOL-V.
 class BlobIndex {
 public:
@@ -391,7 +391,7 @@ void BlobIndex::writeChunks(ostream& stream) {
 
     // Apply SMOL-V compression and write out the results.
     filamat::ChunkContainer cc;
-    cc.push<MaterialSpirvChunk>(std::move(mShaderRecords));
+    cc.push<MaterialBinaryChunk>(std::move(mShaderRecords), ChunkType::MaterialSpirv);
     cc.push<DictionarySpirvChunk>(std::move(blobs), false);
 
     Flattener prepass = Flattener::getDryRunner();
