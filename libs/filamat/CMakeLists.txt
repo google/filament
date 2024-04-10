@@ -50,6 +50,7 @@ set(PRIVATE_HDRS
         ${COMMON_PRIVATE_HDRS}
         src/eiff/BlobDictionary.h
         src/eiff/DictionarySpirvChunk.h
+        src/eiff/DictionaryMetalLibraryChunk.h
         src/eiff/MaterialBinaryChunk.h
         src/GLSLPostProcessor.h
         src/MetalArgumentBuffer.h
@@ -63,6 +64,7 @@ set(SRCS
         ${COMMON_SRCS}
         src/eiff/BlobDictionary.cpp
         src/eiff/DictionarySpirvChunk.cpp
+        src/eiff/DictionaryMetalLibraryChunk.cpp
         src/eiff/MaterialBinaryChunk.cpp
         src/MetalArgumentBuffer.cpp
         src/sca/ASTHelpers.cpp
