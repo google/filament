@@ -26,13 +26,13 @@ namespace filamat {
 
 class MaterialBinaryChunk final : public Chunk {
 public:
-    explicit MaterialBinaryChunk(const std::vector<SpirvEntry>&& entries, ChunkType type);
+    explicit MaterialBinaryChunk(const std::vector<BinaryEntry>&& entries, ChunkType type);
     ~MaterialBinaryChunk() = default;
 
 private:
     void flatten(Flattener& f) override;
 
-    const std::vector<SpirvEntry> mEntries;
+    const std::vector<BinaryEntry> mEntries;
 };
 
 } // namespace filamat

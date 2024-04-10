@@ -90,7 +90,7 @@ public:
 private:
     const ChunkType mDictTag;
     const ChunkType mMatTag;
-    vector<SpirvEntry> mShaderRecords;
+    vector<BinaryEntry> mShaderRecords;
     filaflat::BlobDictionary mDataBlobs;
 };
 
@@ -364,7 +364,7 @@ BlobIndex::BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkC
     const auto& offsets = matChunk.getOffsets();
     mShaderRecords.reserve(offsets.size());
     for (auto [key, offset] : offsets) {
-        SpirvEntry info;
+        BinaryEntry info;
         filaflat::MaterialChunk::decodeKey(key, &info.shaderModel, &info.variant, &info.stage);
         info.dictionaryIndex = offset;
         mShaderRecords.emplace_back(info);

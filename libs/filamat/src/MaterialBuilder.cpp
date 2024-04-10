@@ -821,7 +821,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     Mutex entriesLock;
     std::vector<TextEntry> glslEntries;
     std::vector<TextEntry> essl1Entries;
-    std::vector<SpirvEntry> spirvEntries;
+    std::vector<BinaryEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
     LineDictionary textDictionary;
     BlobDictionary spirvDictionary;
@@ -872,7 +872,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
 
                 TextEntry glslEntry{};
-                SpirvEntry spirvEntry{};
+                BinaryEntry spirvEntry{};
                 TextEntry metalEntry{};
 
                 glslEntry.shaderModel  = params.shaderModel;
@@ -966,7 +966,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     case TargetApi::VULKAN:
                         assert(!spirv.empty());
                         spirvEntry.stage = v.stage;
-                        spirvEntry.spirv = std::move(spirv);
+                        spirvEntry.data = std::move(spirv);
                         spirvEntries.push_back(spirvEntry);
                         break;
                     case TargetApi::METAL:
@@ -1018,7 +1018,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         textDictionary.addText(s.shader);
     }
     for (auto& s : spirvEntries) {
-        std::vector<uint32_t> spirv = std::move(s.spirv);
+        std::vector<uint32_t> spirv = std::move(s.data);
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
     for (const auto& s : metalEntries) {
