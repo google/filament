@@ -96,7 +96,7 @@ static void printUsage(const char* name) {
             "       Print the Vulkan dictionary\n\n"
             "   --web-server=[port], -w\n"
             "       Serve a web page at the given port (e.g. 8080)\n\n"
-            "   --dump-binary=[index], -b\n"
+            "   --dump-spirv-binary=[index], -b\n"
             "       Dump binary SPIRV for the nth Vulkan shader to 'out.spv'\n\n"
             "   --license\n"
             "       Print copyright and license information\n\n"
@@ -125,20 +125,21 @@ static void license() {
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hla:g:G:s:v:b:m:b:w:Xxyz";
     static const struct option OPTIONS[] = {
-            { "help",            no_argument,       nullptr, 'h' },
-            { "license",         no_argument,       nullptr, 'l' },
-            { "analyze-spirv",   required_argument, nullptr, 'a' },
-            { "print-glsl",      required_argument, nullptr, 'g' },
-            { "print-essl1",      required_argument, nullptr, 'G' },
-            { "print-spirv",     required_argument, nullptr, 's' },
-            { "print-vkglsl",    required_argument, nullptr, 'v' },
-            { "print-metal",     required_argument, nullptr, 'm' },
-            { "print-dic-glsl",  no_argument,       nullptr, 'x' },
-            { "print-dic-essl1", no_argument,       nullptr, 'X' },
-            { "print-dic-metal", no_argument,       nullptr, 'y' },
-            { "print-dic-vk",    no_argument,       nullptr, 'z' },
-            { "dump-binary",     required_argument, nullptr, 'b' },
-            { "web-server",      required_argument, nullptr, 'w' },
+            { "help",               no_argument,       nullptr, 'h' },
+            { "license",            no_argument,       nullptr, 'l' },
+            { "analyze-spirv",      required_argument, nullptr, 'a' },
+            { "print-glsl",         required_argument, nullptr, 'g' },
+            { "print-essl1",        required_argument, nullptr, 'G' },
+            { "print-spirv",        required_argument, nullptr, 's' },
+            { "print-vkglsl",       required_argument, nullptr, 'v' },
+            { "print-metal",        required_argument, nullptr, 'm' },
+            { "print-dic-glsl",     no_argument,       nullptr, 'x' },
+            { "print-dic-essl1",    no_argument,       nullptr, 'X' },
+            { "print-dic-metal",    no_argument,       nullptr, 'y' },
+            { "print-dic-vk",       no_argument,       nullptr, 'z' },
+            { "dump-binary",        required_argument, nullptr, 'b' },  // backwards compatibility
+            { "dump-spirv-binary",  required_argument, nullptr, 'b' },
+            { "web-server",         required_argument, nullptr, 'w' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
