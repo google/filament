@@ -16,8 +16,6 @@
 
 #include "DictionaryMetalLibraryChunk.h"
 
-#include <smolv.h>
-
 namespace filamat {
 
 DictionaryMetalLibraryChunk::DictionaryMetalLibraryChunk(BlobDictionary&& dictionary)
