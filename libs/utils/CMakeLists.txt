@@ -115,6 +115,11 @@ if (WIN32)
     target_link_libraries(${TARGET} PUBLIC Shlwapi)
 endif()
 
+if (APPLE)
+    # Needed for NSTemporaryDirectory()
+    target_link_libraries(${TARGET} PRIVATE "-framework Foundation")
+endif()
+
 if (LINUX)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
     find_package(Threads REQUIRED)
