@@ -74,7 +74,7 @@ private:
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
             ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage);
 
-    bool getSpirvShader(
+    bool getBinaryShader(
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
             ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage);
 };

@@ -98,6 +98,8 @@ static void printUsage(const char* name) {
             "       Serve a web page at the given port (e.g. 8080)\n\n"
             "   --dump-spirv-binary=[index], -b\n"
             "       Dump binary SPIRV for the nth Vulkan shader to 'out.spv'\n\n"
+            "   --dump-metal-library=[index]\n"
+            "       Dump binary Metal library for the nth Metal precompiled library to 'out.metallib'\n\n"
             "   --license\n"
             "       Print copyright and license information\n\n"
             "   --analyze-spirv=[index], -a\n"
@@ -124,6 +126,7 @@ static void license() {
 
 static int handleArguments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "hla:g:G:s:v:b:m:b:w:Xxyz";
+    constexpr int DUMP_METAL_LIBRARY_OPTION = 1000;
     static const struct option OPTIONS[] = {
             { "help",               no_argument,       nullptr, 'h' },
             { "license",            no_argument,       nullptr, 'l' },
@@ -139,6 +142,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             { "print-dic-vk",       no_argument,       nullptr, 'z' },
             { "dump-binary",        required_argument, nullptr, 'b' },  // backwards compatibility
             { "dump-spirv-binary",  required_argument, nullptr, 'b' },
+            { "dump-metal-library",  required_argument, nullptr,  DUMP_METAL_LIBRARY_OPTION },
             { "web-server",         required_argument, nullptr, 'w' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
@@ -186,6 +190,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             case 'm':
                 config->printMetal = true;
                 config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
+                config->binary = false;
                 break;
             case 'w':
                 config->serverPort = std::stoi(arg);
@@ -201,6 +206,11 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 break;
             case 'z':
                 config->printDictionarySPIRV = true;
+                break;
+            case DUMP_METAL_LIBRARY_OPTION:
+                config->printMetal = true;
+                config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
+                config->binary = true;
                 break;
         }
     }
@@ -398,6 +408,11 @@ static void dumpSpirvBinary(const std::vector<uint32_t>& spirv, const std::strin
     std::cout << "Binary SPIR-V dumped to " << filename << std::endl;
 }
 
+static void dumpBinary(const uint8_t* data, size_t size, const std::string& filename) {
+    std::ofstream out(filename, std::ofstream::binary);
+    out.write(reinterpret_cast<const char*>(data), size);
+}
+
 static bool parseChunks(Config config, void* data, size_t size) {
     using namespace filament::matdbg;
     ChunkContainer container(data, size);
@@ -518,13 +533,20 @@ static bool parseChunks(Config config, void* data, size_t size) {
         }
 
         if (config.printMetal) {
-            ShaderExtractor parser(filament::backend::ShaderLanguage::MSL, data, size);
+            const filament::backend::ShaderLanguage language = config.binary
+                    ? filament::backend::ShaderLanguage::METAL_LIBRARY
+                    : filament::backend::ShaderLanguage::MSL;
+            ShaderExtractor parser(language, data, size);
             if (!parser.parse()) {
                 return false;
             }
 
-            info.resize(getShaderCount(container, filamat::ChunkType::MaterialMetal));
-            if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialMetal)) {
+            const filamat::ChunkType chunkType = config.binary
+                    ? filamat::ChunkType::MaterialMetalLibrary
+                    : filamat::ChunkType::MaterialMetal;
+            size_t shaderCount = getShaderCount(container, chunkType);
+            info.resize(shaderCount);
+            if (!getShaderInfo(container, info.data(), chunkType)) {
                 std::cerr << "Failed to parse Metal chunk." << std::endl;
                 return false;
             }
@@ -535,8 +557,15 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             const auto& item = info[config.shaderIndex];
-            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
-            std::cout << (const char*) content.data();
+            if (!parser.getShader(item.shaderModel, item.variant, item.pipelineStage, content)) {
+                return false;
+            }
+
+            if (config.binary) {
+                dumpBinary(content.data(), content.size(), "out.metallib");
+            } else {
+                std::cout << (const char*) content.data();
+            }
 
             return true;
         }

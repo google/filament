@@ -38,6 +38,7 @@
 #include "eiff/SimpleFieldChunk.h"
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
+#include "eiff/DictionaryMetalLibraryChunk.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>

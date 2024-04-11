@@ -158,14 +158,16 @@ static constexpr const char* backendToString(Backend backend) {
 }
 
 /**
- * Defines the shader language. Similar to the above backend enum, but the OpenGL backend can select
- * between two shader languages: ESSL 1.0 and ESSL 3.0.
+ * Defines the shader language. Similar to the above backend enum, with some differences:
+ * - The OpenGL backend can select between two shader languages: ESSL 1.0 and ESSL 3.0.
+ * - The Metal backend can prefer precompiled Metal libraries, while falling back to MSL.
  */
 enum class ShaderLanguage {
     ESSL1 = 0,
     ESSL3 = 1,
     SPIRV = 2,
     MSL = 3,
+    METAL_LIBRARY = 4,
 };
 
 static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) {
@@ -178,6 +180,8 @@ static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguag
             return "SPIR-V";
         case ShaderLanguage::MSL:
             return "MSL";
+        case ShaderLanguage::METAL_LIBRARY:
+            return "Metal precompiled library";
     }
 }
 
