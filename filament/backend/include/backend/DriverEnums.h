@@ -1241,9 +1241,6 @@ enum class Workaround : uint16_t {
     DISABLE_BLIT_INTO_TEXTURE_ARRAY,
     // Multiple workarounds needed for PowerVR GPUs
     POWER_VR_SHADER_WORKAROUNDS,
-    // The driver has some threads pinned, and we can't easily know on which core, it can hurt
-    // performance more if we end-up pinned on the same one.
-    DISABLE_THREAD_AFFINITY
 };
 
 //! The type of technique for stereoscopic rendering
