@@ -526,8 +526,6 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             bugs->delay_fbo_destruction = true;
             // PowerVR seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
-            // PowerVR has a shader compiler thread pinned on the last core
-            bugs->disable_thread_affinity = true;
         } else if (strstr(renderer, "Apple")) {
             // Apple GPU
         } else if (strstr(renderer, "Tegra") ||
