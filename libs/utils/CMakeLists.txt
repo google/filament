@@ -38,6 +38,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
 
