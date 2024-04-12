@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMAT_MATERIAL_SPIRV_CHUNK_H
-#define TNT_FILAMAT_MATERIAL_SPIRV_CHUNK_H
+#ifndef TNT_FILAMAT_MATERIAL_BINARY_CHUNK_H
+#define TNT_FILAMAT_MATERIAL_BINARY_CHUNK_H
 
 #include "Chunk.h"
 #include "ShaderEntry.h"
@@ -24,17 +24,17 @@
 
 namespace filamat {
 
-class MaterialSpirvChunk final : public Chunk {
+class MaterialBinaryChunk final : public Chunk {
 public:
-    explicit MaterialSpirvChunk(const std::vector<SpirvEntry>&& entries);
-    ~MaterialSpirvChunk() = default;
+    explicit MaterialBinaryChunk(const std::vector<BinaryEntry>&& entries, ChunkType type);
+    ~MaterialBinaryChunk() = default;
 
 private:
     void flatten(Flattener& f) override;
 
-    const std::vector<SpirvEntry> mEntries;
+    const std::vector<BinaryEntry> mEntries;
 };
 
 } // namespace filamat
 
-#endif // TNT_FILAMAT_MATERIAL_SPIRV_CHUNK_H
+#endif // TNT_FILAMAT_MATERIAL_BINARY_CHUNK_H
