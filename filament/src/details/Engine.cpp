@@ -926,8 +926,9 @@ void FEngine::cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list) {
 
 template<typename T>
 UTILS_ALWAYS_INLINE
-inline bool FEngine::isValid(const T* ptr, ResourceList<T>& list) {
-    return list.find(ptr) != list.end();
+inline bool FEngine::isValid(const T* ptr, ResourceList<T> const& list) const {
+    auto& l = const_cast<ResourceList<T>&>(list);
+    return l.find(ptr) != l.end();
 }
 
 template<typename T>
@@ -1097,75 +1098,99 @@ void FEngine::destroy(Entity e) {
     mCameraManager.destroy(*this, e);
 }
 
-bool FEngine::isValid(const FBufferObject* p) {
+bool FEngine::isValid(const FBufferObject* p) const {
     return isValid(p, mBufferObjects);
 }
 
-bool FEngine::isValid(const FVertexBuffer* p) {
+bool FEngine::isValid(const FVertexBuffer* p) const {
     return isValid(p, mVertexBuffers);
 }
 
-bool FEngine::isValid(const FFence* p) {
+bool FEngine::isValid(const FFence* p) const {
     return isValid(p, mFences);
 }
 
-bool FEngine::isValid(const FIndexBuffer* p) {
+bool FEngine::isValid(const FIndexBuffer* p) const {
     return isValid(p, mIndexBuffers);
 }
 
-bool FEngine::isValid(const FSkinningBuffer* p) {
+bool FEngine::isValid(const FSkinningBuffer* p) const {
     return isValid(p, mSkinningBuffers);
 }
 
-bool FEngine::isValid(const FMorphTargetBuffer* p) {
+bool FEngine::isValid(const FMorphTargetBuffer* p) const {
     return isValid(p, mMorphTargetBuffers);
 }
 
-bool FEngine::isValid(const FIndirectLight* p) {
+bool FEngine::isValid(const FIndirectLight* p) const {
     return isValid(p, mIndirectLights);
 }
 
-bool FEngine::isValid(const FMaterial* p) {
+bool FEngine::isValid(const FMaterial* p) const {
     return isValid(p, mMaterials);
 }
 
-bool FEngine::isValid(const FRenderer* p) {
+bool FEngine::isValid(const FMaterial* m, const FMaterialInstance* p) const {
+    // first make sure the material we're given is valid.
+    if (!isValid(m)) {
+        return false;
+    }
+
+    // then find the material instance list for that material
+    auto it = mMaterialInstances.find(m);
+    if (it == mMaterialInstances.end()) {
+        // this could happen if this material has no material instances at all
+        return false;
+    }
+
+    // finally validate the material instance
+    return isValid(p, it->second);
+}
+
+bool FEngine::isValidExpensive(const FMaterialInstance* p) const {
+    return std::any_of(mMaterialInstances.cbegin(), mMaterialInstances.cend(),
+            [this, p](auto&& entry) {
+        return isValid(p, entry.second);
+    });
+}
+
+bool FEngine::isValid(const FRenderer* p) const {
     return isValid(p, mRenderers);
 }
 
-bool FEngine::isValid(const FScene* p) {
+bool FEngine::isValid(const FScene* p) const {
     return isValid(p, mScenes);
 }
 
-bool FEngine::isValid(const FSkybox* p) {
+bool FEngine::isValid(const FSkybox* p) const {
     return isValid(p, mSkyboxes);
 }
 
-bool FEngine::isValid(const FColorGrading* p) {
+bool FEngine::isValid(const FColorGrading* p) const {
     return isValid(p, mColorGradings);
 }
 
-bool FEngine::isValid(const FSwapChain* p) {
+bool FEngine::isValid(const FSwapChain* p) const {
     return isValid(p, mSwapChains);
 }
 
-bool FEngine::isValid(const FStream* p) {
+bool FEngine::isValid(const FStream* p) const {
     return isValid(p, mStreams);
 }
 
-bool FEngine::isValid(const FTexture* p) {
+bool FEngine::isValid(const FTexture* p) const {
     return isValid(p, mTextures);
 }
 
-bool FEngine::isValid(const FRenderTarget* p) {
+bool FEngine::isValid(const FRenderTarget* p) const {
     return isValid(p, mRenderTargets);
 }
 
-bool FEngine::isValid(const FView* p) {
+bool FEngine::isValid(const FView* p) const {
     return isValid(p, mViews);
 }
 
-bool FEngine::isValid(const FInstanceBuffer* p) {
+bool FEngine::isValid(const FInstanceBuffer* p) const {
     return isValid(p, mInstanceBuffers);
 }
 
