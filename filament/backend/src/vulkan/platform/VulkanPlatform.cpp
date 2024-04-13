@@ -257,6 +257,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pEngineName = "Filament";
     appInfo.apiVersion
             = VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
