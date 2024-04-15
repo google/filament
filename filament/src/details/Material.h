@@ -238,6 +238,13 @@ private:
     backend::Program getProgramWithVariants(Variant variant,
             Variant vertexVariant, Variant fragmentVariant) const noexcept;
 
+    void processBlendingMode(MaterialParser const* const parser);
+
+    void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
+            MaterialParser const* const parser);
+
+    void processDepthVariants(FEngine& engine, MaterialParser const* const parser);
+
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
     // try to order by frequency of use
