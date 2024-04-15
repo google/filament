@@ -2966,9 +2966,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                         .filterMag = (dsrOptions.quality == QualityLevel::LOW) ?
                                 filter : SamplerMagFilter::LINEAR
                     });
-                    mi->setParameter("resolution",
-                            float4{ outputDesc.width, outputDesc.height,
-                                    1.0f / outputDesc.width, 1.0f / outputDesc.height });
                     mi->setParameter("viewport", float4{
                             (float)vp.left   / inputDesc.width,
                             (float)vp.bottom / inputDesc.height,
@@ -3050,7 +3047,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
                     auto const& data, DriverApi& driver) {
                 auto color = resources.getTexture(data.input);
                 auto const& inputDesc = resources.getDescriptor(data.input);
-                auto const& outputDesc = resources.getDescriptor(data.output);
                 auto out = resources.getRenderPassInfo();
 
                 // --------------------------------------------------------------------------------
@@ -3062,9 +3058,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
                         .filterMag = filterMag,
                         .filterMin = filterMin
                 });
-                mi->setParameter("resolution",
-                        float4{ outputDesc.width, outputDesc.height,
-                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
                 mi->setParameter("viewport", float4{
                         float(vp.left)   / inputDesc.width,
                         float(vp.bottom) / inputDesc.height,
