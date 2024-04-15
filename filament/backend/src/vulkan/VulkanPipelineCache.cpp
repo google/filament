@@ -34,7 +34,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags key, uint16_t binding) {
+static VkShaderStageFlags getShaderStageFlags(UsageFlags key, uint16_t binding) {
     // NOTE: if you modify this function, you also need to modify getUsageFlags.
     assert_invariant(binding < MAX_SAMPLER_COUNT);
     VkShaderStageFlags flags = 0;
@@ -47,24 +47,7 @@ static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags ke
     return flags;
 }
 
-VulkanPipelineCache::UsageFlags
-VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, UsageFlags src) {
-    // NOTE: if you modify this function, you also need to modify getShaderStageFlags.
-    assert_invariant(binding < MAX_SAMPLER_COUNT);
-    if (any(flags & ShaderStageFlags::VERTEX)) {
-        src.set(binding);
-    }
-    if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        src.set(MAX_SAMPLER_COUNT + binding);
-    }
-    // TODO: add support for compute by extending SHADER_MODULE_COUNT and ensuring UsageFlags
-    // has 186 bits (MAX_SAMPLER_COUNT * 3)
-    // assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
-    return src;
-}
-
-VulkanPipelineCache::UsageFlags VulkanPipelineCache::disableUsageFlags(uint16_t binding,
-        UsageFlags src) {
+UsageFlags VulkanPipelineCache::disableUsageFlags(uint16_t binding, UsageFlags src) {
     src.unset(binding);
     src.unset(MAX_SAMPLER_COUNT + binding);
     return src;

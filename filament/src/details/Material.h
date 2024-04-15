@@ -22,18 +22,39 @@
 #include "details/MaterialInstance.h"
 
 #include <filament/Material.h>
+#include <filament/MaterialEnums.h>
 
+#include <private/filament/EngineEnums.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 #include <private/filament/ConstantInfo.h>
 
+#include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Program.h>
+
 #include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
+#include <array>
 #include <atomic>
+#include <memory>
+#include <mutex>
 #include <optional>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -43,7 +64,8 @@ class  FEngine;
 
 class FMaterial : public Material {
 public:
-    FMaterial(FEngine& engine, const Material::Builder& builder);
+    FMaterial(FEngine& engine, const Material::Builder& builder,
+            std::unique_ptr<MaterialParser> materialParser);
     ~FMaterial() noexcept;
 
     class DefaultMaterialBuilder : public Material::Builder {
@@ -197,7 +219,7 @@ public:
     static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
 
     void checkProgramEdits() noexcept {
-        if (UTILS_UNLIKELY(mPendingEdits.load())) {
+        if (UTILS_UNLIKELY(hasPendingEdits())) {
             applyPendingEdits();
         }
     }
@@ -280,7 +302,21 @@ private:
     matdbg::MaterialKey mDebuggerId;
     mutable utils::Mutex mActiveProgramsLock;
     mutable VariantList mActivePrograms;
-    std::atomic<MaterialParser*> mPendingEdits = {};
+    mutable utils::Mutex mPendingEditsLock;
+    std::unique_ptr<MaterialParser> mPendingEdits;
+    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept {
+        std::lock_guard lock(mPendingEditsLock);
+        std::swap(pendingEdits, mPendingEdits);
+    }
+    bool hasPendingEdits() noexcept {
+        std::lock_guard lock(mPendingEditsLock);
+        return (bool)mPendingEdits;
+    }
+    void latchPendingEdits() noexcept {
+        std::lock_guard lock(mPendingEditsLock);
+        std::swap(mPendingEdits, mMaterialParser);
+    }
+
 #endif
 
     utils::CString mName;
@@ -288,7 +324,7 @@ private:
     const uint32_t mMaterialId;
     uint64_t mCacheId = 0;
     mutable uint32_t mMaterialInstanceId = 0;
-    MaterialParser* mMaterialParser = nullptr;
+    std::unique_ptr<MaterialParser> mMaterialParser;
 };
 
 

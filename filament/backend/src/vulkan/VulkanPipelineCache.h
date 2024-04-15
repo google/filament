@@ -89,8 +89,6 @@ public:
         VkSpecializationInfo* specializationInfos = nullptr;
     };
 
-    using UsageFlags = utils::bitset128;
-    static UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags stages, UsageFlags src = {});
     static UsageFlags disableUsageFlags(uint16_t binding, UsageFlags src);
 
     #pragma clang diagnostic push

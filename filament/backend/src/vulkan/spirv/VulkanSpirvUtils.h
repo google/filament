@@ -17,10 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSPIRVUTILS_H
 #define TNT_FILAMENT_BACKEND_VULKANSPIRVUTILS_H
 
-#include "backend/Program.h"
+#include <backend/Program.h>
 
 #include <utils/FixedCapacityVector.h>
 
+#include <tuple>
 #include <vector>
 
 namespace filament::backend {
@@ -41,6 +42,9 @@ using SpecConstantValue = Program::SpecializationConstant::Type;
 void workaroundSpecConstant(Program::ShaderBlob const& blob,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants,
         std::vector<uint32_t>& output);
+
+// bindings for UBO, samplers, input attachment
+std::tuple<uint32_t, uint32_t, uint32_t> getProgramBindings(Program::ShaderBlob const& blob);
 
 } // namespace filament::backend
 

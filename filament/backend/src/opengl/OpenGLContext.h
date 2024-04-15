@@ -34,6 +34,8 @@
 #include <math/vec2.h>
 #include <math/vec4.h>
 
+#include <tsl/robin_map.h>
+
 #include <array>
 #include <functional>
 #include <optional>
@@ -467,6 +469,29 @@ public:
 
     void unbindEverything() noexcept;
     void synchronizeStateAndCache(size_t index) noexcept;
+    void setEs2UniformBinding(size_t index, GLuint id, void const* data, uint16_t age) noexcept {
+        mUniformBindings[index] = { id, data, age };
+    }
+    auto getEs2UniformBinding(size_t index) const noexcept {
+        return mUniformBindings[index];
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    GLuint getSamplerSlow(SamplerParams sp) const noexcept;
+
+    inline GLuint getSampler(SamplerParams sp) const noexcept {
+        assert_invariant(!sp.padding0);
+        assert_invariant(!sp.padding1);
+        assert_invariant(!sp.padding2);
+        auto& samplerMap = mSamplerMap;
+        auto pos = samplerMap.find(sp);
+        if (UTILS_UNLIKELY(pos == samplerMap.end())) {
+            return getSamplerSlow(sp);
+        }
+        return pos->second;
+    }
+#endif
+
 
 private:
     OpenGLPlatform& mPlatform;
@@ -476,6 +501,11 @@ private:
     std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
     RenderPrimitive mDefaultVAO;
     std::optional<GLuint> mDefaultFbo[2];
+    std::array<
+            std::tuple<GLuint, void const*, uint16_t>,
+            CONFIG_UNIFORM_BINDING_COUNT> mUniformBindings = {};
+    mutable tsl::robin_map<SamplerParams, GLuint,
+            SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
     void bindFramebufferResolved(GLenum target, GLuint buffer) noexcept;
 
