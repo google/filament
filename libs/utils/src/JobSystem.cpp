@@ -423,13 +423,9 @@ void JobSystem::loop(ThreadState* state) noexcept {
     setThreadName("JobSystem::loop");
     setThreadPriority(Priority::DISPLAY);
 
-    // set a CPU affinity on each of our JobSystem thread to prevent them from jumping from core
-    // to core. On Android, it looks like the affinity needs to be reset from time to time.
-    setThreadAffinityById(state->id);
-
     // record our work queue
     mThreadMapLock.lock();
-    bool inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
+    bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
     mThreadMapLock.unlock();
     ASSERT_PRECONDITION(inserted, "This thread is already in a loop.");
 
@@ -439,7 +435,6 @@ void JobSystem::loop(ThreadState* state) noexcept {
             std::unique_lock<Mutex> lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
                 wait(lock);
-                setThreadAffinityById(state->id);
             }
         }
     } while (!exitRequested());
