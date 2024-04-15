@@ -213,8 +213,29 @@ static bool invokeScript(
 
 class ScopedTempFile {
 public:
-    ScopedTempFile(utils::Path&& path) noexcept : mPath(path) {}
-    ~ScopedTempFile() noexcept { mPath.unlinkFile(); }
+    ScopedTempFile(utils::Path&& path) noexcept {
+        auto segments = path.split();
+        auto ext = path.getExtension();
+        segments[segments.size() - 1] = path.getNameWithoutExtension() + ".XXXXXX." + ext;
+
+        utils::Path pathTemplate;
+        for (const auto& s : segments) {
+            pathTemplate += s;
+        }
+
+        std::string pathString = pathTemplate.getPath();
+        int fd = mkstemps(const_cast<char*>(pathString.c_str()), ext.size() + 1);
+        if (fd == -1) {
+            std::cerr << "Error creating temporary file: " << pathString << std::endl;
+            exit(1);
+        }
+        close(fd);  // close the file, it's been created for us
+
+        mPath = pathString;
+    }
+    ~ScopedTempFile() noexcept {
+        mPath.unlinkFile();
+    }
 
     const utils::Path& getPath() const noexcept { return mPath; }
 
@@ -237,8 +258,6 @@ bool compileMetalShaders(const std::vector<filamat::TextEntry>& mslEntries,
                 toString(mslEntry.stage) + "_" + toString(mslEntry.variant);
         const std::string inputFileName = fileName + ".metal";
         const std::string outputFileName = fileName + ".metallib";
-
-        // TODO: use mkstemps to create a temporary file name
 
         ScopedTempFile inputFile = tempDir + inputFileName;
         ScopedTempFile outputFile = tempDir + outputFileName;
