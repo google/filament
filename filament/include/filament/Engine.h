@@ -816,7 +816,7 @@ public:
     bool isValid(const IndirectLight* UTILS_NULLABLE p) const;
     /** Tells whether an Material object is valid */
     bool isValid(const Material* UTILS_NULLABLE p) const;
-    /** Tells whether an MaterialInstance object is valid. Use this is you already know
+    /** Tells whether an MaterialInstance object is valid. Use this if you already know
      * which Material this MaterialInstance belongs to. DO NOT USE getMaterial(), this would
      * defeat the purpose of validating the MaterialInstance.
      */
