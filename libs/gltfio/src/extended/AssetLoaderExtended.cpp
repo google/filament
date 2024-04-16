@@ -132,11 +132,7 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
 
     std::unordered_map<int, Params> jobs;
     auto getJob = [&jobs](int key) -> Params& {
-        auto result = jobs.find(key);
-        if (result == jobs.end()) {
-            return (jobs.emplace(key, Params{}).first)->second;
-        }
-        return result->second;
+        return jobs.try_emplace(key).first->second;
     };
 
     // Create a job description for each triangle-based primitive.
