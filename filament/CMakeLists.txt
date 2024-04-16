@@ -214,6 +214,7 @@ set(PRIVATE_HDRS
 set(MATERIAL_SRCS
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
+        src/materials/blitDepth.mat
         src/materials/blitLow.mat
         src/materials/blitArray.mat
         src/materials/bloom/bloomDownsample.mat

@@ -805,6 +805,10 @@ bool MetalDriver::isDepthStencilResolveSupported() {
     return false;
 }
 
+bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    return true;
+}
+
 bool MetalDriver::isProtectedTexturesSupported() {
     return false;
 }

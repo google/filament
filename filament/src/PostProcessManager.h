@@ -250,8 +250,15 @@ public:
             FrameGraphTexture::Descriptor const& outDesc,
             bool translucent);
 
-    // upscale/downscale blitter using shaders
+    // color blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
+            FrameGraphId<FrameGraphTexture> input,
+            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+            backend::SamplerMagFilter filterMag,
+            backend::SamplerMinFilter filterMin) noexcept;
+
+    // depth blitter using shaders
+    FrameGraphId<FrameGraphTexture> blitDepth(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filterMag,

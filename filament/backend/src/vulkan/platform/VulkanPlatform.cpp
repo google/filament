@@ -344,13 +344,13 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
     ExtensionSet newInstExts = instExts;
     ExtensionSet newDeviceExts = deviceExts;
 
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)    
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     // debugUtils and debugMarkers extensions are used mutually exclusively.
     if (newInstExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != newInstExts.end()
             && newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
-#endif    
+#endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // debugMarker must also request debugReport the instance extension. So check if that's present.
@@ -500,7 +500,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
     return device;
 }
 
-VkFormatList findAttachmentDepthFormats(VkPhysicalDevice device) {
+VkFormatList findAttachmentDepthStencilFormats(VkPhysicalDevice device) {
     VkFormatFeatureFlags const features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
     // The ordering here indicates the preference of choosing depth+stencil format.
@@ -517,6 +517,28 @@ VkFormatList findAttachmentDepthFormats(VkPhysicalDevice device) {
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
         if ((props.optimalTilingFeatures & features) == features) {
             selectedFormats.push_back(format);
+        }
+    }
+    VkFormatList ret(selectedFormats.size());
+    std::copy(selectedFormats.begin(), selectedFormats.end(), ret.begin());
+    return ret;
+}
+
+VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device) {
+    std::vector<VkFormat> selectedFormats;
+    VkFormatFeatureFlags const required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
+    for (VkFormat format = (VkFormat) 1;;) {
+        if (isVkDepthFormat(format)) {
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(device, format, &props);
+            if ((props.optimalTilingFeatures & required) == required) {
+                selectedFormats.push_back(format);
+            }
+        }
+        format = (VkFormat) (1 + (int) format);
+        if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
+            break;
         }
     }
     VkFormatList ret(selectedFormats.size());
@@ -669,9 +691,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             "Debug utils should not be enabled in release build.");
 #endif
 
-    context.mDepthFormats = findAttachmentDepthFormats(mImpl->mPhysicalDevice);
+    context.mDepthStencilFormats = findAttachmentDepthStencilFormats(mImpl->mPhysicalDevice);
+    context.mBlittableDepthStencilFormats =
+            findBlittableDepthStencilFormats(mImpl->mPhysicalDevice);
 
-    assert_invariant(context.mDepthFormats.size() > 0);
+    assert_invariant(context.mDepthStencilFormats.size() > 0);
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     printDepthFormats(mImpl->mPhysicalDevice);
