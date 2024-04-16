@@ -25,6 +25,8 @@
 #include <android/api-level.h>
 #include <android/hardware_buffer.h>
 
+#include <utils/android/PerformanceHintManager.h>
+
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 #include <utils/Log.h>
@@ -36,7 +38,10 @@
 
 #include <jni.h>
 
+#include <chrono>
 #include <new>
+
+#include <unistd.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -112,8 +117,38 @@ void PlatformEGLAndroid::terminate() noexcept {
     PlatformEGL::terminate();
 }
 
+void PlatformEGLAndroid::beginFrame(
+        int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs,
+        uint32_t frameId) noexcept {
+    if (mPerformanceHintSession.isValid()) {
+        if (refreshIntervalNs <= 0) {
+            // we're not provided with a target time, assume 16.67ms
+            refreshIntervalNs = 16'666'667;
+        }
+        mStartTimeOfActualWork = clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns));
+        mPerformanceHintSession.updateTargetWorkDuration(refreshIntervalNs);
+    }
+    PlatformEGL::beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
+}
+
+void backend::PlatformEGLAndroid::preCommit() noexcept {
+    if (mPerformanceHintSession.isValid()) {
+        auto const actualWorkDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                clock::now() - mStartTimeOfActualWork);
+        mPerformanceHintSession.reportActualWorkDuration(actualWorkDuration.count());
+    }
+    PlatformEGL::preCommit();
+}
+
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
+
+    // the refresh rate default value doesn't matter, we change it later
+    int32_t const tid = gettid();
+    mPerformanceHintSession = PerformanceHintManager::Session{
+            mPerformanceHintManager, &tid, 1, 16'666'667 };
+
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 

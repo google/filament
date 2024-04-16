@@ -62,6 +62,9 @@ void OpenGLPlatform::beginFrame(int64_t monotonic_clock_ns, int64_t refreshInter
 void OpenGLPlatform::endFrame(uint32_t frameId) noexcept {
 }
 
+void OpenGLPlatform::preCommit() noexcept {
+}
+
 OpenGLPlatform::ContextType OpenGLPlatform::getCurrentContextType() const noexcept {
     return ContextType::UNPROTECTED;
 }
