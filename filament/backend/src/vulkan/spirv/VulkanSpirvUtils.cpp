@@ -183,7 +183,7 @@ std::tuple<uint32_t,uint32_t, uint32_t> getProgramBindings(Program::ShaderBlob c
     constexpr uint32_t IATTACHMENT = 2;
     uint32_t ubo = 0, sampler = 0, inputAttachment = 0;
 
-    for (auto const [target, setId]: targetToSet) {
+    for (auto const& [target, setId]: targetToSet) {
         uint32_t const binding = targetToBinding[target];
         assert_invariant(binding < 32);
         switch(setId) {
