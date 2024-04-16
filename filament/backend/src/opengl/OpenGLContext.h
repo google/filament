@@ -92,7 +92,10 @@ public:
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
     explicit OpenGLContext(OpenGLPlatform& platform) noexcept;
+
     ~OpenGLContext() noexcept final;
+
+    void terminate() noexcept;
 
     // TimerQueryInterface ------------------------------------------------------------------------
 

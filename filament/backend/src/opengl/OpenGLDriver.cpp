@@ -232,6 +232,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
 }
 
 OpenGLDriver::~OpenGLDriver() noexcept { // NOLINT(modernize-use-equals-default)
+    // this is called from the main thread. Can't call GL.
 }
 
 Dispatcher OpenGLDriver::getDispatcher() const noexcept {
@@ -263,6 +264,8 @@ void OpenGLDriver::terminate() {
     // because we called glFinish(), all callbacks should have been executed
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
+
+    mContext.terminate();
 
     mPlatform.terminate();
 }
