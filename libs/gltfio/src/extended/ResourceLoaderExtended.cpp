@@ -31,7 +31,6 @@ static const auto FREE_CALLBACK = [](void* mem, size_t, void*) {
 
 namespace filament::gltfio {
 
-using filament::backend::BufferDescriptor;
 
 void ResourceLoaderExtended::loadResources(std::vector<BufferSlot> const& slots,
         filament::Engine* engine, std::vector<BufferObject*>& bufferObjects) {
