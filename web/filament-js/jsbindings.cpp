@@ -576,6 +576,12 @@ class_<Engine>("Engine")
     .function("isValidMaterial", EMBIND_LAMBDA(bool, (Engine* engine, Material* object), {
                 return engine->isValid(object);
             }), allow_raw_pointers())
+    .function("isValidMaterialInstance", EMBIND_LAMBDA(bool, (Engine* engine, Material* ma, MaterialInstance* mi), {
+                return engine->isValid(ma, mi);
+            }), allow_raw_pointers())
+    .function("isValidExpensiveMaterialInstance", EMBIND_LAMBDA(bool, (Engine* engine, MaterialInstance* object), {
+                return engine->isValidExpensive(object);
+            }), allow_raw_pointers())
     .function("isValidSkybox", EMBIND_LAMBDA(bool, (Engine* engine, Skybox* object), {
                 return engine->isValid(object);
             }), allow_raw_pointers())
