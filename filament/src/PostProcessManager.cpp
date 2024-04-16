@@ -450,11 +450,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         .levels = uint8_t(levelCount),
                         .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
 
-                // workaround: since we have levels, this implies SAMPLEABLE (because of the gl
-                // backend, which implements non-sampleables with renderbuffers, which don't have levels).
-                // (should the gl driver revert to textures, in that case?)
                 data.depth = builder.write(data.depth,
-                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT | FrameGraphTexture::Usage::SAMPLEABLE);
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 if (config.picking) {
                     data.picking = builder.createTexture("Picking Buffer", {
@@ -2969,9 +2966,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                         .filterMag = (dsrOptions.quality == QualityLevel::LOW) ?
                                 filter : SamplerMagFilter::LINEAR
                     });
-                    mi->setParameter("resolution",
-                            float4{ outputDesc.width, outputDesc.height,
-                                    1.0f / outputDesc.width, 1.0f / outputDesc.height });
+
+                    if (blitterNames[index] != "blitLow") {
+                        mi->setParameter("resolution",
+                                float4{outputDesc.width, outputDesc.height, 1.0f / outputDesc.width,
+                                    1.0f / outputDesc.height});
+                    }
+
                     mi->setParameter("viewport", float4{
                             (float)vp.left   / inputDesc.width,
                             (float)vp.bottom / inputDesc.height,
@@ -3053,7 +3054,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
                     auto const& data, DriverApi& driver) {
                 auto color = resources.getTexture(data.input);
                 auto const& inputDesc = resources.getDescriptor(data.input);
-                auto const& outputDesc = resources.getDescriptor(data.output);
                 auto out = resources.getRenderPassInfo();
 
                 // --------------------------------------------------------------------------------
@@ -3065,9 +3065,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
                         .filterMag = filterMag,
                         .filterMin = filterMin
                 });
-                mi->setParameter("resolution",
-                        float4{ outputDesc.width, outputDesc.height,
-                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
                 mi->setParameter("viewport", float4{
                         float(vp.left)   / inputDesc.width,
                         float(vp.bottom) / inputDesc.height,
@@ -3292,8 +3289,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
     SamplerMagFilter filterMag,
     SamplerMinFilter filterMin) noexcept {
 
-    assert_invariant(fg.getDescriptor(input).depth > 1);
-    assert_invariant(fg.getDescriptor(input).type == SamplerType::SAMPLER_2D_ARRAY);
+    auto& inputTextureDesc = fg.getDescriptor(input);
+    assert_invariant(inputTextureDesc.depth > 1);
+    assert_invariant(inputTextureDesc.type == SamplerType::SAMPLER_2D_ARRAY);
 
     // TODO: add support for sub-resources
     assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
@@ -3329,14 +3327,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                         .filterMag = filterMag,
                         .filterMin = filterMin
                     });
-                mi->setParameter("layerIndex", 0);
                 mi->setParameter("viewport", float4{
                         float(vp.left) / inputDesc.width,
                         float(vp.bottom) / inputDesc.height,
                         float(vp.width) / inputDesc.width,
                         float(vp.height) / inputDesc.height
                     });
-                mi->commit(driver);
                 mi->use(driver);
 
                 auto pipeline = material.getPipelineState(mEngine);
@@ -3347,18 +3343,19 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                     pipeline.first.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
                 }
 
-                // Blit the scene rendered to the first layer to the left half of the screen.
-                out.params.viewport.width /= 2;
-                render(out, pipeline, driver);
+                // The width of each view takes up 1/depth of the screen width.
+                out.params.viewport.width /= inputTextureDesc.depth;
 
-                // Blit the scene rendered to the second layer to the right half of the screen.
-                // Don't clear or discard the target to keep the previously rendered left half image.
-                mi->setParameter("layerIndex", 1);
-                mi->commit(driver);
-                out.params.flags.clear = filament::backend::TargetBufferFlags::NONE;
-                out.params.flags.discardStart = filament::backend::TargetBufferFlags::NONE;
-                out.params.viewport.left += out.params.viewport.width;
-                render(out, pipeline, driver);
+                // Render all layers of the texture to the screen side-by-side.
+                for (uint32_t i = 0; i < inputTextureDesc.depth; ++i) {
+                    mi->setParameter("layerIndex", i);
+                    mi->commit(driver);
+                    render(out, pipeline, driver);
+                    // From the second draw, don't clear the targetbuffer.
+                    out.params.flags.clear = filament::backend::TargetBufferFlags::NONE;
+                    out.params.flags.discardStart = filament::backend::TargetBufferFlags::NONE;
+                    out.params.viewport.left += out.params.viewport.width;
+                }
         });
 
     return ppQuadBlit->output;

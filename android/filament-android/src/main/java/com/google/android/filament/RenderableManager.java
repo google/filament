@@ -176,6 +176,32 @@ public class RenderableManager {
         }
 
         /**
+         * Type of geometry for a Renderable
+         */
+        public enum GeometryType {
+            /** dynamic gemoetry has no restriction */
+            DYNAMIC,
+            /** bounds and world space transform are immutable */
+            STATIC_BOUNDS,
+            /** skinning/morphing not allowed and Vertex/IndexBuffer immutables */
+            STATIC
+        }
+
+        /**
+         * Specify whether this renderable has static bounds. In this context his means that
+         * the renderable's bounding box cannot change and that the renderable's transform is
+         * assumed immutable. Changing the renderable's transform via the TransformManager
+         * can lead to corrupted graphics. Note that skinning and morphing are not forbidden.
+         * Disabled by default.
+         * @param enable whether this renderable has static bounds. false by default.
+         */
+        @NonNull
+        public Builder geometryType(GeometryType type) {
+            nBuilderGeometryType(mNativeBuilder, type.ordinal());
+            return this;
+        }
+
+        /**
          * Binds a material instance to the specified primitive.
          *
          * <p>If no material is specified for a given primitive, Filament will fall back to a basic
@@ -964,6 +990,7 @@ public class RenderableManager {
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer);
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int minIndex, int maxIndex, int count);
+    private static native void nBuilderGeometryType(long nativeBuilder, int type);
     private static native void nBuilderMaterial(long nativeBuilder, int index, long nativeMaterialInstance);
     private static native void nBuilderBlendOrder(long nativeBuilder, int index, int blendOrder);
     private static native void nBuilderGlobalBlendOrderEnabled(long nativeBuilder, int index, boolean enabled);

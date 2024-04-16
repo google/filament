@@ -28,6 +28,8 @@
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanUtility.h"
+#include "caching/VulkanDescriptorSetManager.h"
+#include "caching/VulkanPipelineLayoutCache.h"
 
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
@@ -70,6 +72,8 @@ public:
 #endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 private:
+    static constexpr uint8_t MAX_SAMPLER_BINDING_COUNT = Program::SAMPLER_BINDING_COUNT;
+
     void debugCommandBegin(CommandStream* cmds, bool synchronous,
             const char* methodName) noexcept override;
 
@@ -106,7 +110,9 @@ private:
     VulkanPlatform* mPlatform = nullptr;
     std::unique_ptr<VulkanTimestamps> mTimestamps;
 
+    // Placeholder resources
     VulkanTexture* mEmptyTexture;
+    VulkanBufferObject* mEmptyBufferObject;
 
     VulkanSwapChain* mCurrentSwapChain = nullptr;
     VulkanRenderTarget* mDefaultRenderTarget = nullptr;
@@ -123,13 +129,17 @@ private:
     VulkanThreadSafeResourceManager mThreadSafeResourceManager;
 
     VulkanCommands mCommands;
+    VulkanPipelineLayoutCache mPipelineLayoutCache;
     VulkanPipelineCache mPipelineCache;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
-    VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VulkanSamplerGroup* mSamplerBindings[MAX_SAMPLER_BINDING_COUNT] = {};
     VulkanReadPixels mReadPixels;
+    VulkanDescriptorSetManager mDescriptorSetManager;
+
+    VulkanDescriptorSetManager::GetPipelineLayoutFunction mGetPipelineFunction;
 
     bool const mIsSRGBSwapChainSupported;
 };

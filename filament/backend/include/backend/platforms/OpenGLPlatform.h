@@ -89,7 +89,7 @@ public:
      * @return              The driver's SwapChain object.
      *
      */
-    virtual SwapChain* UTILS_NONNULL createSwapChain(
+    virtual SwapChain* UTILS_NULLABLE createSwapChain(
             void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
 
     /**

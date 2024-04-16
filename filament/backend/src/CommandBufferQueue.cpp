@@ -39,10 +39,11 @@ using namespace utils;
 
 namespace filament::backend {
 
-CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize)
+CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize, bool paused)
         : mRequiredSize((requiredSize + (CircularBuffer::getBlockSize() - 1u)) & ~(CircularBuffer::getBlockSize() -1u)),
           mCircularBuffer(bufferSize),
-          mFreeSpace(mCircularBuffer.size()) {
+          mFreeSpace(mCircularBuffer.size()),
+          mPaused(paused) {
     assert_invariant(mCircularBuffer.size() > requiredSize);
 }
 
@@ -54,6 +55,16 @@ void CommandBufferQueue::requestExit() {
     std::lock_guard<utils::Mutex> const lock(mLock);
     mExitRequested = EXIT_REQUESTED;
     mCondition.notify_one();
+}
+
+void CommandBufferQueue::setPaused(bool paused) {
+    std::lock_guard<utils::Mutex> const lock(mLock);
+    if (paused) {
+        mPaused = true;
+    } else {
+        mPaused = false;
+        mCondition.notify_one();
+    }
 }
 
 bool CommandBufferQueue::isExitRequested() const {
@@ -115,6 +126,9 @@ void CommandBufferQueue::flush() noexcept {
 #endif
 
         SYSTRACE_NAME("waiting: CircularBuffer::flush()");
+        ASSERT_POSTCONDITION(!mPaused,
+                "CommandStream is full, but since the rendering thread is paused, "
+                "the buffer cannot flush and we will deadlock. Instead, abort.");
         mCondition.wait(lock, [this, requiredSize]() -> bool {
             // TODO: on macOS, we need to call pumpEvents from time to time
             return mFreeSpace >= requiredSize;
@@ -127,7 +141,7 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
         return std::move(mCommandBuffersToExecute);
     }
     std::unique_lock<utils::Mutex> lock(mLock);
-    while (mCommandBuffersToExecute.empty() && !mExitRequested) {
+    while ((mCommandBuffersToExecute.empty() || mPaused) && !mExitRequested) {
         mCondition.wait(lock);
     }
 

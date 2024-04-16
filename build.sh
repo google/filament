@@ -516,7 +516,7 @@ function build_android {
             if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
                 for sample in ${ANDROID_SAMPLES}; do
                     echo "Installing out/${sample}-debug.apk"
-                    cp samples/${sample}/build/outputs/apk/debug/${sample}-debug-unsigned.apk \
+                    cp samples/${sample}/build/outputs/apk/debug/${sample}-debug.apk \
                         ../out/${sample}-debug.apk
                 done
             fi

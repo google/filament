@@ -369,8 +369,8 @@ using EntityVector = std::vector<utils::Entity>;
 
 register_vector<std::string>("RegistryKeys");
 register_vector<utils::Entity>("EntityVector");
-register_vector<FilamentInstance*>("AssetInstanceVector");
-register_vector<MaterialInstance*>("MaterialInstanceVector");
+register_vector<allow_raw_pointer<FilamentInstance*>>("AssetInstanceVector");
+register_vector<allow_raw_pointer<MaterialInstance*>>("MaterialInstanceVector");
 
 // CORE FILAMENT CLASSES
 // ---------------------
@@ -937,6 +937,10 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             size_t maxIndex,
             size_t count), {
         return &builder->geometry(index, type, vertices, indices, offset, minIndex, maxIndex, count); })
+
+    .BUILDER_FUNCTION("geometryType", RenderableBuilder, (RenderableBuilder* builder,
+            RenderableManager::Builder::GeometryType type), {
+        return &builder->geometryType(type); })
 
     .BUILDER_FUNCTION("material", RenderableBuilder, (RenderableBuilder* builder,
             size_t index, MaterialInstance* mi), {

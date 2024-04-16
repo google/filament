@@ -14,16 +14,63 @@
  * limitations under the License.
  */
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 
-#include <atomic>
-#include <cstdarg>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
+#include <new>
+#include <string>
+#include <utility>
 
-#include <utils/Log.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 namespace utils {
+
+// ------------------------------------------------------------------------------------------------
+
+class UserPanicHandler {
+    struct CallBack {
+        Panic::PanicHandlerCallback handler = nullptr;
+        void* user = nullptr;
+        void call(Panic const& panic) const noexcept {
+            if (UTILS_UNLIKELY(handler)) {
+                handler(user, panic);
+            }
+        }
+    };
+
+    mutable std::mutex mLock{};
+    CallBack mCallBack{};
+
+    CallBack getCallback() const noexcept {
+        std::lock_guard const lock(mLock);
+        return mCallBack;
+    }
+
+public:
+    static UserPanicHandler& get() noexcept {
+        static UserPanicHandler data;
+        return data;
+    }
+
+    void call(Panic const& panic) const noexcept {
+        getCallback().call(panic);
+    }
+
+    void set(Panic::PanicHandlerCallback handler, void* user) noexcept {
+        std::lock_guard const lock(mLock);
+        mCallBack = { handler, user };
+    }
+};
+
+// ------------------------------------------------------------------------------------------------
 
 static std::string formatString(const char* format, va_list args) noexcept {
     std::string reason;
@@ -35,10 +82,12 @@ static std::string formatString(const char* format, va_list args) noexcept {
 
     if (n >= 0) {
         ++n; // for the nul-terminating char
-        char* buf = new char[n];
-        vsnprintf(buf, size_t(n), format, args);
-        reason.assign(buf);
-        delete [] buf;
+        char* const buf = new(std::nothrow) char[n];
+        if (buf) {
+            vsnprintf(buf, size_t(n), format, args);
+            reason.assign(buf);
+            delete [] buf;
+        }
     }
     return reason;
 }
@@ -63,7 +112,15 @@ static std::string panicString(
 #endif
 }
 
+// ------------------------------------------------------------------------------------------------
+
 Panic::~Panic() noexcept = default;
+
+void Panic::setPanicHandler(PanicHandlerCallback handler, void* user) noexcept {
+    UserPanicHandler::get().set(handler, user);
+}
+
+// ------------------------------------------------------------------------------------------------
 
 template<typename T>
 TPanic<T>::TPanic(std::string reason) :
@@ -86,6 +143,11 @@ TPanic<T>::~TPanic() {
 template<typename T>
 const char* TPanic<T>::what() const noexcept {
     return m_msg.c_str();
+}
+
+template<typename T>
+const char* TPanic<T>::getReason() const noexcept {
+    return m_reason.c_str();
 }
 
 template<typename T>
@@ -135,13 +197,22 @@ template<typename T>
 void TPanic<T>::panic(char const* function, char const* file, int line, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    std::string reason(formatString(format, args));
+    std::string const reason(formatString(format, args));
     va_end(args);
     T e(function, formatFile(file), line, reason);
+
+    // always log the Panic at the point it is detected
     e.log();
+
+    // Call the user provided handler
+    UserPanicHandler::get().call(e);
+
+    // if exceptions are enabled, throw now.
 #ifdef __EXCEPTIONS
-        throw e;
+    throw e;
 #endif
+
+    // and finally abort if we somehow get here
     std::abort();
 }
 
@@ -152,7 +223,7 @@ namespace details {
 void panicLog(char const* function, char const* file, int line, const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
-    std::string reason(formatString(format, args));
+    std::string const reason(formatString(format, args));
     va_end(args);
 
     const std::string msg = panicString("" /* no extra message */,

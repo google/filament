@@ -149,7 +149,7 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 
 // ------------------------------------------------------------------------------------------------
 
-void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) noexcept {
+void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) {
     *next = CustomCommand::align(sizeof(CustomCommand));
     static_cast<CustomCommand*>(base)->mCommand();
     static_cast<CustomCommand*>(base)->~CustomCommand();

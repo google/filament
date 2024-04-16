@@ -205,8 +205,9 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
         : mPlatform(*platform),
           mContext(mPlatform),
           mShaderCompilerService(*this),
-          mHandleAllocator("Handles", driverConfig.handleArenaSize),
-          mSamplerMap(32),
+          mHandleAllocator("Handles",
+                  driverConfig.handleArenaSize,
+                  driverConfig.disableHandleUseAfterFreeCheck),
           mDriverConfig(driverConfig) {
 
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
@@ -261,14 +262,6 @@ void OpenGLDriver::terminate() {
 
     // because we called glFinish(), all callbacks should have been executed
     assert_invariant(mGpuCommandCompleteOps.empty());
-
-    if (!getContext().isES2()) {
-        for (auto& item: mSamplerMap) {
-            mContext.unbindSampler(item.second);
-            glDeleteSamplers(1, &item.second);
-        }
-        mSamplerMap.clear();
-    }
 #endif
 
     mPlatform.terminate();
@@ -305,7 +298,7 @@ bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
 
     if (UTILS_UNLIKELY(mContext.isES2())) {
         for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-            auto [id, buffer, age] = mUniformBindings[i];
+            auto [id, buffer, age] = mContext.getEs2UniformBinding(i);
             if (buffer) {
                 p->updateUniforms(i, id, buffer, age);
             }
@@ -722,9 +715,18 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     GLenum internalFormat = getInternalFormat(format);
     assert_invariant(internalFormat);
 
-    if (UTILS_UNLIKELY(usage & TextureUsage::PROTECTED)) {
+    if (any(usage & TextureUsage::PROTECTED)) {
         // renderbuffers don't have a protected mode, so we need to use a texture
         // because protected textures are only supported on GLES 3.2, MSAA will be available.
+        usage |= TextureUsage::SAMPLEABLE;
+    } else if (any(usage & TextureUsage::UPLOADABLE)) {
+        // if we have the uploadable flag, we also need to use a texture
+        usage |= TextureUsage::SAMPLEABLE;
+    } else if (target != SamplerType::SAMPLER_2D) {
+        // renderbuffers can only be 2D
+        usage |= TextureUsage::SAMPLEABLE;
+    } else if (levels > 1) {
+        // renderbuffers can't have mip levels
         usage |= TextureUsage::SAMPLEABLE;
     }
 
@@ -801,13 +803,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             textureStorage(t, w, h, depth, bool(usage & TextureUsage::PROTECTED));
         }
     } else {
-        assert_invariant(any(usage & (
-                TextureUsage::COLOR_ATTACHMENT |
-                TextureUsage::DEPTH_ATTACHMENT |
-                TextureUsage::STENCIL_ATTACHMENT)));
-        assert_invariant(levels == 1);
-        assert_invariant(target == SamplerType::SAMPLER_2D);
-        assert_invariant(none(usage & TextureUsage::PROTECTED));
         t->gl.internalFormat = internalFormat;
         t->gl.target = GL_RENDERBUFFER;
         glGenRenderbuffers(1, &t->gl.id);
@@ -1461,9 +1456,13 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
+
+#if !defined(__EMSCRIPTEN__)
+    // note: in practice this should never happen on Android
     ASSERT_POSTCONDITION(sc->swapChain,
             "createSwapChain(%p, 0x%lx) failed. See logs for details.",
             nativeWindow, flags);
+#endif
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
@@ -1478,9 +1477,13 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+
+#if !defined(__EMSCRIPTEN__)
+    // note: in practice this should never happen on Android
     ASSERT_POSTCONDITION(sc->swapChain,
             "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
             width, height, flags);
+#endif
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
@@ -2053,8 +2056,6 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.disable_blit_into_texture_array;
         case Workaround::POWER_VR_SHADER_WORKAROUNDS:
             return mContext.bugs.powervr_shader_workarounds;
-        case Workaround::DISABLE_THREAD_AFFINITY:
-            return mContext.bugs.disable_thread_affinity;
         default:
             return false;
     }
@@ -2333,7 +2334,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 #endif
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_LIKELY(!es2)) {
-                samplerId = getSampler(params);
+                samplerId = mContext.getSampler(params);
             } else
 #endif
             {
@@ -2462,7 +2463,9 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
     size_t const stride = p.stride ? p.stride : width;
     size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
     size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-    void const* const buffer = static_cast<char const*>(p.buffer) + p.left * bpp + bpr * p.top;
+    size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
+    void const* const buffer = static_cast<char const*>(p.buffer)
+            + bpp* p.left + bpr * p.top + bpl * 0; // TODO: PBD should have a p.depth
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
@@ -3056,11 +3059,10 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
     assert_invariant(offset + size <= ub->byteCount);
 
     if (UTILS_UNLIKELY(ub->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        mUniformBindings[index] = {
+        gl.setEs2UniformBinding(index,
                 ub->gl.id,
                 static_cast<uint8_t const*>(ub->gl.buffer) + offset,
-                ub->age,
-        };
+                ub->age);
     } else {
         GLenum const target = GLUtils::getBufferBindingType(bindingType);
 
@@ -3078,7 +3080,7 @@ void OpenGLDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index)
     auto& gl = mContext;
 
     if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        mUniformBindings[index] = {};
+        gl.setEs2UniformBinding(index, 0, nullptr, 0);
         return;
     }
 
@@ -3094,36 +3096,6 @@ void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     mSamplerBindings[index] = sb;
     CHECK_GL_ERROR(utils::slog.e)
 }
-
-
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
-    assert_invariant(mSamplerMap.find(params) == mSamplerMap.end());
-
-    GLuint s;
-    glGenSamplers(1, &s);
-    glSamplerParameteri(s, GL_TEXTURE_MIN_FILTER,   (GLint)getTextureFilter(params.filterMin));
-    glSamplerParameteri(s, GL_TEXTURE_MAG_FILTER,   (GLint)getTextureFilter(params.filterMag));
-    glSamplerParameteri(s, GL_TEXTURE_WRAP_S,       (GLint)getWrapMode(params.wrapS));
-    glSamplerParameteri(s, GL_TEXTURE_WRAP_T,       (GLint)getWrapMode(params.wrapT));
-    glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       (GLint)getWrapMode(params.wrapR));
-    glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, (GLint)getTextureCompareMode(params.compareMode));
-    glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, (GLint)getTextureCompareFunc(params.compareFunc));
-
-#if defined(GL_EXT_texture_filter_anisotropic)
-    auto& gl = mContext;
-    if (gl.ext.EXT_texture_filter_anisotropic &&
-            !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
-        GLfloat const anisotropy = float(1u << params.anisotropyLog2);
-        glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                std::min(gl.gets.max_anisotropy, anisotropy));
-    }
-#endif
-    CHECK_GL_ERROR(utils::slog.e)
-    mSamplerMap[params] = s;
-    return s;
-}
-#endif
 
 void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 #ifndef __EMSCRIPTEN__

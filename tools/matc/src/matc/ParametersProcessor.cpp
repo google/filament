@@ -671,6 +671,7 @@ static bool processBlending(MaterialBuilder& builder, const JsonishValue& value)
         { "fade", MaterialBuilder::BlendingMode::FADE },
         { "multiply", MaterialBuilder::BlendingMode::MULTIPLY },
         { "screen", MaterialBuilder::BlendingMode::SCREEN },
+        { "custom", MaterialBuilder::BlendingMode::CUSTOM },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
@@ -678,6 +679,52 @@ static bool processBlending(MaterialBuilder& builder, const JsonishValue& value)
     }
 
     builder.blending(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
+static bool processBlendFunction(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::BlendFunction> strToEnum{
+            { "zero",             MaterialBuilder::BlendFunction::ZERO },
+            { "one",              MaterialBuilder::BlendFunction::ONE },
+            { "srcColor",         MaterialBuilder::BlendFunction::SRC_COLOR },
+            { "oneMinusSrcColor", MaterialBuilder::BlendFunction::ONE_MINUS_SRC_COLOR },
+            { "dstColor",         MaterialBuilder::BlendFunction::DST_COLOR },
+            { "oneMinusDstColor", MaterialBuilder::BlendFunction::ONE_MINUS_DST_COLOR },
+            { "srcAlpha",         MaterialBuilder::BlendFunction::SRC_ALPHA },
+            { "oneMinusSrcAlpha", MaterialBuilder::BlendFunction::ONE_MINUS_SRC_ALPHA },
+            { "dstAlpha",         MaterialBuilder::BlendFunction::DST_ALPHA },
+            { "oneMinusDstAlpha", MaterialBuilder::BlendFunction::ONE_MINUS_DST_ALPHA },
+            { "srcAlphaSaturate", MaterialBuilder::BlendFunction::SRC_ALPHA_SATURATE },
+    };
+
+    if (value.getType() != JsonishValue::Type::OBJECT) {
+        std::cerr << "blendFunction must be an OBJECT." << std::endl;
+    }
+
+    JsonishObject const* const jsonObject = value.toJsonObject();
+
+    MaterialBuilder::BlendFunction srcRGB, srcA, dstRGB, dstA;
+    std::pair<const char*, MaterialBuilder::BlendFunction*> functions[] = {
+            { "srcRGB", &srcRGB },
+            { "srcA",   &srcA },
+            { "dstRGB", &dstRGB },
+            { "dstA",   &dstA },
+    };
+
+    for (auto&& entry : functions) {
+        const char* key = entry.first;
+        const JsonishValue* v = jsonObject->getValue(key);
+        if (!v) {
+            std::cerr << "blendFunction: entry without '" << key << "' key." << std::endl;
+            return false;
+        }
+        if (v->getType() != JsonishValue::STRING) {
+            std::cerr << "blendFunction: '" << key << "' value must be STRING." << std::endl;
+            return false;
+        }
+        *entry.second = stringToEnum(strToEnum, v->toJsonString()->getString());
+    }
+    builder.customBlendFunctions(srcRGB, srcA, dstRGB, dstA);
     return true;
 }
 
@@ -1194,6 +1241,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["variables"]                     = { &processVariables, Type::ARRAY };
     mParameters["requires"]                      = { &processRequires, Type::ARRAY };
     mParameters["blending"]                      = { &processBlending, Type::STRING };
+    mParameters["blendFunction"]                 = { &processBlendFunction, Type::OBJECT };
     mParameters["postLightingBlending"]          = { &processPostLightingBlending, Type::STRING };
     mParameters["vertexDomain"]                  = { &processVertexDomain, Type::STRING };
     mParameters["culling"]                       = { &processCulling, Type::STRING };

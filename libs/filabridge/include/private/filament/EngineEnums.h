@@ -68,7 +68,7 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_POWER_VR_SHADER_WORKAROUNDS = 5,
     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP = 6,
     CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
-    CONFIG_STEREO_EYE_COUNT = 8,
+    CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.

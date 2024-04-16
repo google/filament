@@ -30,6 +30,7 @@
 #include <utils/Log.h>
 #include <utils/Systrace.h>
 
+#include <cctype>
 #include <chrono>
 #include <string>
 #include <string_view>
@@ -264,6 +265,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     compileShaders(gl,
                             std::move(program.getShadersSource()),
                             program.getSpecializationConstants(),
+                            program.isMultiview(),
                             shaders,
                             token->shaderSourceCode);
 
@@ -299,6 +301,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         compileShaders(gl,
                 std::move(program.getShadersSource()),
                 program.getSpecializationConstants(),
+                program.isMultiview(),
                 token->gl.shaders,
                 token->shaderSourceCode);
 
@@ -501,6 +504,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
 void ShaderCompilerService::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
+        bool multiview,
         std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
         UTILS_UNUSED_IN_RELEASE std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
@@ -514,8 +518,16 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
     };
 
     std::string specializationConstantString;
+    int32_t numViews = 2;
     for (auto const& sc : specializationConstants) {
         appendSpecConstantString(specializationConstantString, sc);
+        if (sc.id == 8) {
+            // This constant must match
+            // ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT
+            // which we can't use here because it's defined in EngineEnums.h.
+            // (we're breaking layering here, but it's for the good cause).
+            numViews = std::get<int32_t>(sc.value);
+        }
     }
     if (!specializationConstantString.empty()) {
         specializationConstantString += '\n';
@@ -544,17 +556,23 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
 
         if (UTILS_LIKELY(!shadersSource[i].empty())) {
             Program::ShaderBlob& shader = shadersSource[i];
+            char* shader_src = reinterpret_cast<char*>(shader.data());
+            size_t shader_len = shader.size();
 
             // remove GOOGLE_cpp_style_line_directive
-            std::string_view const source = process_GOOGLE_cpp_style_line_directive(context,
-                    reinterpret_cast<char*>(shader.data()), shader.size());
+            process_GOOGLE_cpp_style_line_directive(context, shader_src, shader_len);
+
+            // replace the value of layout(num_views = X) for multiview extension
+            if (multiview && stage == ShaderStage::VERTEX) {
+                process_OVR_multiview2(context, numViews, shader_src, shader_len);
+            }
 
             // add support for ARB_shading_language_packing if needed
             auto const packingFunctions = process_ARB_shading_language_packing(context);
 
             // split shader source, so we can insert the specialization constants and the packing
             // functions
-            auto const [prolog, body] = splitShaderSource(source);
+            auto const [prolog, body] = splitShaderSource({ shader_src, shader_len });
 
             const std::array<const char*, 4> sources = {
                     prolog.data(),
@@ -577,7 +595,7 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
 #ifndef NDEBUG
             // for debugging we return the original shader source (without the modifications we
             // made here), otherwise the line numbers wouldn't match.
-            outShaderSourceCode[i] = { source.data(), source.length() };
+            outShaderSourceCode[i] = { shader_src, shader_len };
 #endif
 
             outShaders[i] = shaderId;
@@ -586,15 +604,59 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
 }
 
 // If usages of the Google-style line directive are present, remove them, as some
-// drivers don't allow the quotation marks. This happens in-place.
-std::string_view ShaderCompilerService::process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+// drivers don't allow the quotation marks. This source modification happens in-place.
+void ShaderCompilerService::process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
         char* source, size_t len) noexcept {
     if (!context.ext.GOOGLE_cpp_style_line_directive) {
         if (UTILS_UNLIKELY(requestsGoogleLineDirectivesExtension({ source, len }))) {
             removeGoogleLineDirectives(source, len); // length is unaffected
         }
     }
-    return { source, len };
+}
+
+// Look up the `source` to replace the number of eyes for multiview with the given number. This is
+// necessary for OpenGL because OpenGL relies on the number specified in shader files to determine
+// the number of views, which is assumed as a single digit, for multiview.
+// This source modification happens in-place.
+void ShaderCompilerService::process_OVR_multiview2(OpenGLContext& context,
+        int32_t eyeCount, char* source, size_t len) noexcept {
+    // We don't use regular expression in favor of performance.
+    if (context.ext.OVR_multiview2) {
+        const std::string_view shader{ source, len };
+        const std::string_view layout = "layout";
+        const std::string_view num_views = "num_views";
+        size_t found = 0;
+        while (true) {
+            found = shader.find(layout, found);
+            if (found == std::string_view::npos) {
+                break;
+            }
+            found = shader.find_first_not_of(' ', found + layout.size());
+            if (found == std::string_view::npos || shader[found] != '(') {
+                continue;
+            }
+            found = shader.find_first_not_of(' ', found + 1);
+            if (found == std::string_view::npos) {
+                continue;
+            }
+            if (shader.compare(found, num_views.size(), num_views) != 0) {
+                continue;
+            }
+            found = shader.find_first_not_of(' ', found + num_views.size());
+            if (found == std::string_view::npos || shader[found] != '=') {
+                continue;
+            }
+            found = shader.find_first_not_of(' ', found + 1);
+            if (found == std::string_view::npos) {
+                continue;
+            }
+            // We assume the value should be one-digit number.
+            assert_invariant(eyeCount < 10);
+            assert_invariant(!::isdigit(source[found + 1]));
+            source[found] = '0' + eyeCount;
+            break;
+        }
+    }
 }
 
 // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 (appeared in 4.2) and

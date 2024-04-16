@@ -17,7 +17,7 @@
 #include "VulkanResources.h"
 #include "VulkanHandles.h"
 #include "VulkanResourceAllocator.h"
-#include "caching/VulkanDescriptorSet.h"
+#include "VulkanPipelineCache.h"
 
 namespace filament::backend {
 
@@ -61,6 +61,9 @@ void deallocateResource(VulkanResourceAllocator* allocator, VulkanResourceType t
             break;
         case VulkanResourceType::RENDER_PRIMITIVE:
             allocator->destruct<VulkanRenderPrimitive>(Handle<VulkanRenderPrimitive>(id));
+            break;
+        case VulkanResourceType::DESCRIPTOR_SET_LAYOUT:
+            allocator->destruct<VulkanDescriptorSetLayout>(Handle<VulkanDescriptorSetLayout>(id));
             break;
         case VulkanResourceType::DESCRIPTOR_SET:
             allocator->destruct<VulkanDescriptorSet>(Handle<VulkanDescriptorSet>(id));

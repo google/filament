@@ -45,6 +45,8 @@ option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 
 option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
+option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -539,6 +541,11 @@ set(FILAMENT_SAMPLES_STEREO_TYPE "instanced" CACHE STRING
 string(TOLOWER "${FILAMENT_SAMPLES_STEREO_TYPE}" FILAMENT_SAMPLES_STEREO_TYPE)
 if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced" AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
     message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\" or \"multiview\" ")
+endif ()
+
+# Compiling samples for multiview implies enabling multiview feature as well.
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set(FILAMENT_ENABLE_MULTIVIEW ON)
 endif ()
 
 # ==================================================================================================

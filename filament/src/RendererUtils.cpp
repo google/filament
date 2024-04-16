@@ -16,16 +16,34 @@
 
 #include "RendererUtils.h"
 
+#include "PostProcessManager.h"
+
 #include "details/Engine.h"
 #include "details/View.h"
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
 
+#include <filament/Options.h>
+#include <filament/RenderableManager.h>
+#include <filament/Viewport.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Panic.h>
+
+#include <algorithm>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -153,16 +171,9 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                 if (engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
-                    // Add sampleable usage flag for depth in multiview rendering, othewise it's
-                    // treated as renderbuffer in the backend and crashed.
-                    data.depth = builder.write(data.depth,
-                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
-                        FrameGraphTexture::Usage::SAMPLEABLE);
                     layerCount = engine.getConfig().stereoscopicEyeCount;
-                } else {
-                    data.depth = builder.write(data.depth,
-                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                 }
 
                 /*

@@ -421,6 +421,9 @@ static bool printShaderInfo(ostream& text, const ChunkContainer& container, Chun
         case ChunkType::MaterialMetal:
             text << "Metal shaders:" << endl;
             break;
+        case ChunkType::MaterialMetalLibrary:
+            text << "Metal precompiled shader libraries:" << endl;
+            break;
         default:
             assert(false && "Invalid shader ChunkType");
             break;
@@ -453,6 +456,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printShaderInfo(text, container, ChunkType::MaterialMetal)) {
+        return false;
+    }
+    if (!printShaderInfo(text, container, ChunkType::MaterialMetalLibrary)) {
         return false;
     }
 

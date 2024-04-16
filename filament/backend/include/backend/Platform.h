@@ -23,6 +23,7 @@
 #include <utils/Invocable.h>
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -59,6 +60,11 @@ public:
          * Currently only honored by the GL and Metal backends.
          */
         bool disableParallelShaderCompile = false;
+
+        /**
+         * Disable backend handles use-after-free checks.
+         */
+        bool disableHandleUseAfterFreeCheck = false;
     };
 
     Platform() noexcept;
@@ -188,9 +194,40 @@ public:
     size_t retrieveBlob(const void* UTILS_NONNULL key, size_t keySize,
             void* UTILS_NONNULL value, size_t valueSize);
 
+    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key, uint64_t value)>;
+
+    /**
+     * Sets the callback function that the backend can use to update backend-specific statistics
+     * to aid with debugging. This callback is guaranteed to be called on the Filament driver
+     * thread.
+     *
+     * @param debugUpdateStat   an Invocable that updates debug statistics
+     */
+    void setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept;
+
+    /**
+     * @return true if debugUpdateStat is valid.
+     */
+    bool hasDebugUpdateStatFunc() const noexcept;
+
+    /**
+     * To track backend-specific statistics, the backend implementation can call the
+     * application-provided callback function debugUpdateStatFunc to associate or update a value
+     * with a given key. It is possible for this function to be called multiple times with the
+     * same key, in which case newer values should overwrite older values.
+     *
+     * This function is guaranteed to be called only on a single thread, the Filament driver
+     * thread.
+     *
+     * @param key          a null-terminated C-string with the key of the debug statistic
+     * @param value        the updated value of key
+     */
+    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t value);
+
 private:
     InsertBlobFunc mInsertBlob;
     RetrieveBlobFunc mRetrieveBlob;
+    DebugUpdateStatFunc mDebugUpdateStat;
 };
 
 } // namespace filament

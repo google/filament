@@ -92,6 +92,7 @@ protected:
         std::pair<char*, size_t> grow(size_t s) noexcept;
         void advance(ssize_t n) noexcept;
         void reset() noexcept;
+        size_t length() const noexcept;
 
     private:
         void reserve(size_t newSize) noexcept;

@@ -102,6 +102,7 @@ public:
 
     bool getShading(Shading*) const noexcept;
     bool getBlendingMode(BlendingMode*) const noexcept;
+    bool getCustomBlendFunction(std::array<backend::BlendFunction, 4>*) const noexcept;
     bool getMaskThreshold(float*) const noexcept;
     bool getAlphaToCoverageSet(bool*) const noexcept;
     bool getAlphaToCoverage(bool*) const noexcept;

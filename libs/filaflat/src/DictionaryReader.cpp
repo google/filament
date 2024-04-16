@@ -78,6 +78,25 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
 
         }
         return true;
+    } else if (dictionaryTag == ChunkType::DictionaryMetalLibrary) {
+        uint32_t blobCount;
+        if (!unflattener.read(&blobCount)) {
+            return false;
+        }
+
+        dictionary.reserve(blobCount);
+        for (uint32_t i = 0; i < blobCount; i++) {
+            unflattener.skipAlignmentPadding();
+
+            const char* data;
+            size_t dataSize;
+            if (!unflattener.read(&data, &dataSize)) {
+                return false;
+            }
+            dictionary.emplace_back(dataSize);
+            memcpy(dictionary.back().data(), data, dictionary.back().size());
+        }
+        return true;
     } else if (dictionaryTag == ChunkType::DictionaryText) {
         uint32_t stringCount = 0;
         if (!unflattener.read(&stringCount)) {

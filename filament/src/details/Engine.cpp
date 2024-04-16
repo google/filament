@@ -69,6 +69,7 @@ struct Engine::BuilderDetails {
     Engine::Config mConfig;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
+    bool mPaused = false;
     static Config validateConfig(const Config* pConfig) noexcept;
 };
 
@@ -100,7 +101,8 @@ Engine* FEngine::create(Engine::Builder const& builder) {
         DriverConfig const driverConfig{
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
-                .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile
+                .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
+                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -200,7 +202,8 @@ FEngine::FEngine(Engine::Builder const& builder) :
         mCameraManager(*this),
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
-                builder->mConfig.commandBufferSizeMB * MiB),
+                builder->mConfig.commandBufferSizeMB * MiB,
+                builder->mPaused),
         mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
@@ -353,8 +356,12 @@ void FEngine::init() {
                     MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
                 break;
             case StereoscopicType::MULTIVIEW:
+#ifdef FILAMENT_ENABLE_MULTIVIEW
                 defaultMaterialBuilder.package(
                     MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA, MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+#else
+                assert_invariant(false);
+#endif
                 break;
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
@@ -663,7 +670,8 @@ int FEngine::loop() {
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
-            .disableParallelShaderCompile = mConfig.disableParallelShaderCompile
+            .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
+            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
@@ -674,18 +682,7 @@ int FEngine::loop() {
         return 0;
     }
 
-    // Set thread affinity for the backend thread.
-    //  see https://developer.android.com/agi/sys-trace/threads-scheduling#cpu_core_affinity
-    // Certain backends already have some threads pinned, and we can't easily know on which core.
-    const bool disableThreadAffinity
-            = mDriver->isWorkaroundNeeded(Workaround::DISABLE_THREAD_AFFINITY);
-
-    uint32_t const id = std::thread::hardware_concurrency() - 1;
     while (true) {
-        // looks like thread affinity needs to be reset regularly (on Android)
-        if (!disableThreadAffinity) {
-            JobSystem::setThreadAffinityById(id);
-        }
         if (!execute()) {
             break;
         }
@@ -718,9 +715,10 @@ const FMaterial* FEngine::getSkyboxMaterial() const noexcept {
  * Object created from a Builder
  */
 
-template<typename T>
-inline T* FEngine::create(ResourceList<T>& list, typename T::Builder const& builder) noexcept {
-    T* p = mHeapAllocator.make<T>(*this, builder);
+template<typename T, typename ... ARGS>
+inline T* FEngine::create(ResourceList<T>& list,
+        typename T::Builder const& builder, ARGS&& ... args) noexcept {
+    T* p = mHeapAllocator.make<T>(*this, builder, std::forward<ARGS>(args)...);
     if (UTILS_UNLIKELY(p)) { // this should never happen
         list.insert(p);
     }
@@ -759,8 +757,9 @@ FIndirectLight* FEngine::createIndirectLight(const IndirectLight::Builder& build
     return create(mIndirectLights, builder);
 }
 
-FMaterial* FEngine::createMaterial(const Material::Builder& builder) noexcept {
-    return create(mMaterials, builder);
+FMaterial* FEngine::createMaterial(const Material::Builder& builder,
+        std::unique_ptr<MaterialParser> materialParser) noexcept {
+    return create(mMaterials, builder, std::move(materialParser));
 }
 
 FSkybox* FEngine::createSkybox(const Skybox::Builder& builder) noexcept {
@@ -1194,6 +1193,10 @@ void FEngine::destroy(FEngine* engine) {
     }
 }
 
+void FEngine::setPaused(bool paused) {
+    mCommandBufferQueue.setPaused(paused);
+}
+
 Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
     FEngine::DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
     return driver.getFeatureLevel();
@@ -1244,6 +1247,11 @@ Engine::Builder& Engine::Builder::featureLevel(FeatureLevel featureLevel) noexce
 
 Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
     mImpl->mSharedContext = sharedContext;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::paused(bool paused) noexcept {
+    mImpl->mPaused = paused;
     return *this;
 }
 

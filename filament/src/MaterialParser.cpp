@@ -65,6 +65,10 @@ MaterialParser::MaterialParserDetails::MaterialParserDetails(ShaderLanguage lang
             mMaterialTag = ChunkType::MaterialSpirv;
             mDictionaryTag = ChunkType::DictionarySpirv;
             break;
+        case ShaderLanguage::METAL_LIBRARY:
+            mMaterialTag = ChunkType::MaterialMetalLibrary;
+            mDictionaryTag = ChunkType::DictionaryMetalLibrary;
+            break;
     }
 }
 
@@ -275,6 +279,16 @@ bool MaterialParser::getBlendingMode(BlendingMode* value) const noexcept {
     static_assert(sizeof(BlendingMode) == sizeof(uint8_t),
             "BlendingMode expected size is wrong");
     return mImpl.getFromSimpleChunk(ChunkType::MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
+}
+
+bool MaterialParser::getCustomBlendFunction(std::array<BlendFunction, 4>* value) const noexcept {
+    uint32_t blendFunctions = 0;
+    bool const result =  mImpl.getFromSimpleChunk(ChunkType::MaterialBlendFunction, &blendFunctions);
+    (*value)[0] = BlendFunction((blendFunctions >> 24) & 0xFF);
+    (*value)[1] = BlendFunction((blendFunctions >> 16) & 0xFF);
+    (*value)[2] = BlendFunction((blendFunctions >>  8) & 0xFF);
+    (*value)[3] = BlendFunction((blendFunctions >>  0) & 0xFF);
+    return result;
 }
 
 bool MaterialParser::getMaskThreshold(float* value) const noexcept {

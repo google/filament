@@ -28,4 +28,8 @@ const char* sstream::c_str() const noexcept {
     return buffer ? buffer : "";
 }
 
+size_t sstream::length() const noexcept {
+    return getBuffer().length();
+}
+
 } // namespace utils::io
