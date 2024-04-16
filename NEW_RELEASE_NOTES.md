@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - Add new matedit tool
+- filagui: Support rendering `GL_TEXTURE_EXTERNAL_OES` textures.
