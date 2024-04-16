@@ -1247,7 +1247,7 @@ public class View {
     private static native void nSetName(long nativeView, String name);
     private static native void nSetScene(long nativeView, long nativeScene);
     private static native void nSetCamera(long nativeView, long nativeCamera);
-    private static native void nHasCamera(long nativeView);
+    private static native boolean nHasCamera(long nativeView);
     private static native void nSetViewport(long nativeView, int left, int bottom, int width, int height);
     private static native void nSetVisibleLayers(long nativeView, int select, int value);
     private static native void nSetShadowingEnabled(long nativeView, boolean enabled);
