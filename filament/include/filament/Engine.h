@@ -822,7 +822,7 @@ public:
      */
     bool isValid(const Material* UTILS_NONNULL m, const MaterialInstance* UTILS_NULLABLE p) const;
     /** Tells whether an MaterialInstance object is valid. Use this if the Material the
-     * MaterialInstance belongs to in not known. This method can be expensive.
+     * MaterialInstance belongs to is not known. This method can be expensive.
      */
     bool isValidExpensive(const MaterialInstance* UTILS_NULLABLE p) const;
     /** Tells whether a Renderer object is valid */
