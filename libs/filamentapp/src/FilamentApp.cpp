@@ -455,18 +455,28 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             mReconfigureCameras = false;
         }
 
+        if (config.splitView) {
+            if(!window->mOrthoView->getView()->hasCamera()) {
+                Camera const* debugDirectionalShadowCamera =
+                        window->mMainView->getView()->getDirectionalShadowCamera();
+                if (debugDirectionalShadowCamera) {
+                    window->mOrthoView->setCamera(
+                            const_cast<Camera*>(debugDirectionalShadowCamera));
+                }
+            }
+        }
+
         if (renderer->beginFrame(window->getSwapChain())) {
-            for (filament::View* offscreenView : mOffscreenViews) {
+            for (filament::View* offscreenView: mOffscreenViews) {
                 renderer->render(offscreenView);
             }
-            for (auto const& view : window->mViews) {
+            for (auto const& view: window->mViews) {
                 renderer->render(view->getView());
             }
             if (postRender) {
                 postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
             }
             renderer->endFrame();
-
         } else {
             ++mSkippedFrames;
         }

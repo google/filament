@@ -646,6 +646,7 @@ class_<View>("View")
 
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
+    .function("hasCamera", &View::hasCamera)
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
     .function("setBlendMode", &View::setBlendMode)
     .function("getBlendMode", &View::getBlendMode)

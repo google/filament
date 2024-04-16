@@ -389,6 +389,10 @@ public:
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 
+    bool hasCamera() const noexcept {
+        return mCullingCamera != nullptr;
+    }
+
     backend::Handle<backend::HwRenderTarget> getRenderTargetHandle() const noexcept {
         backend::Handle<backend::HwRenderTarget> kEmptyHandle;
         return mRenderTarget == nullptr ? kEmptyHandle : mRenderTarget->getHwHandle();
