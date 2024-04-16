@@ -1,9 +1,19 @@
 material {
     name : uiBlit,
+    constants : [
+        {
+            name : external,
+            type : bool
+        }
+    ],
     parameters : [
         {
+            type : samplerExternal,
+            name : albedoExternal
+        },
+        {
             type : sampler2d,
-            name : albedo
+            name : albedo2d
         }
     ],
     requires : [
@@ -19,10 +29,12 @@ material {
 
 fragment {
     void material(inout MaterialInputs material) {
-	prepareMaterial(material);
+        prepareMaterial(material);
         vec2 uv = getUV0();
         uv.y = 1.0 - uv.y;
-        vec4 albedo = texture2D(materialParams_albedo, uv);
+        vec4 albedo = materialConstants_external
+                      ? texture2D(materialParams_albedoExternal, uv)
+                      : texture2D(materialParams_albedo2d, uv);
         material.baseColor = getColor() * albedo;
         material.baseColor.rgb *= material.baseColor.a;
     }
