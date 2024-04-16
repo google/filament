@@ -63,7 +63,7 @@ public:
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
-    Program() noexcept;
+    Program(ShaderLanguage language) noexcept;
 
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
@@ -136,6 +136,8 @@ public:
     utils::CString const& getName() const noexcept { return mName; }
     utils::CString& getName() noexcept { return mName; }
 
+    auto const& getShaderLanguage() const { return mShaderLanguage; }
+
     utils::FixedCapacityVector<SpecializationConstant> const& getSpecializationConstants() const noexcept {
         return mSpecializationConstants;
     }
@@ -155,6 +157,7 @@ private:
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;
+    ShaderLanguage mShaderLanguage;
     utils::CString mName;
     uint64_t mCacheId{};
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;

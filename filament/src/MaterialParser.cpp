@@ -42,35 +42,30 @@ using namespace filamat;
 
 namespace filament {
 
-// ------------------------------------------------------------------------------------------------
-
-MaterialParser::MaterialParserDetails::MaterialParserDetails(ShaderLanguage language, const void* data, size_t size)
-        : mManagedBuffer(data, size),
-          mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
-          mMaterialChunk(mChunkContainer) {
+constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage language) {
     switch (language) {
         case ShaderLanguage::ESSL3:
-            mMaterialTag = ChunkType::MaterialGlsl;
-            mDictionaryTag = ChunkType::DictionaryText;
-            break;
+            return { ChunkType::MaterialGlsl, ChunkType::DictionaryText };
         case ShaderLanguage::ESSL1:
-            mMaterialTag = ChunkType::MaterialEssl1;
-            mDictionaryTag = ChunkType::DictionaryText;
-            break;
+            return { ChunkType::MaterialEssl1, ChunkType::DictionaryText };
         case ShaderLanguage::MSL:
-            mMaterialTag = ChunkType::MaterialMetal;
-            mDictionaryTag = ChunkType::DictionaryText;
-            break;
+            return { ChunkType::MaterialMetal, ChunkType::DictionaryText };
         case ShaderLanguage::SPIRV:
-            mMaterialTag = ChunkType::MaterialSpirv;
-            mDictionaryTag = ChunkType::DictionarySpirv;
-            break;
+            return { ChunkType::MaterialSpirv, ChunkType::DictionarySpirv };
         case ShaderLanguage::METAL_LIBRARY:
-            mMaterialTag = ChunkType::MaterialMetalLibrary;
-            mDictionaryTag = ChunkType::DictionaryMetalLibrary;
-            break;
+            return { ChunkType::MaterialMetalLibrary, ChunkType::DictionaryMetalLibrary };
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialParser::MaterialParserDetails::MaterialParserDetails(
+        const utils::FixedCapacityVector<ShaderLanguage>& preferredLanguages, const void* data,
+        size_t size)
+    : mManagedBuffer(data, size),
+      mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
+      mPreferredLanguages(preferredLanguages),
+      mMaterialChunk(mChunkContainer) {}
 
 template<typename T>
 UTILS_NOINLINE
@@ -87,9 +82,9 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialParser::MaterialParser(ShaderLanguage language, const void* data, size_t size)
-        : mImpl(language, data, size) {
-}
+MaterialParser::MaterialParser(utils::FixedCapacityVector<ShaderLanguage> preferredLanguages,
+        const void* data, size_t size)
+    : mImpl(preferredLanguages, data, size) {}
 
 ChunkContainer& MaterialParser::getChunkContainer() noexcept {
     return mImpl.mChunkContainer;
@@ -104,18 +99,37 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
     if (UTILS_UNLIKELY(!cc.parse())) {
         return ParseResult::ERROR_OTHER;
     }
-    const ChunkType matTag = mImpl.mMaterialTag;
-    const ChunkType dictTag = mImpl.mDictionaryTag;
-    if (UTILS_UNLIKELY(!cc.hasChunk(matTag) || !cc.hasChunk(dictTag))) {
+
+    auto chooseLanguage =
+            [this, &cc]() -> std::optional<std::tuple<ShaderLanguage, ChunkType, ChunkType>> {
+        for (auto language : mImpl.mPreferredLanguages) {
+            const auto [matTag, dictTag] = shaderLanguageToTags(language);
+            if (cc.hasChunk(matTag) && cc.hasChunk(dictTag)) {
+                return std::make_tuple(language, matTag, dictTag);
+            }
+        }
+        return {};
+    };
+    const auto result = chooseLanguage();
+
+    if (!result.has_value()) {
         return ParseResult::ERROR_MISSING_BACKEND;
     }
+
+    const auto [chosenLanguage, matTag, dictTag] = result.value();
     if (UTILS_UNLIKELY(!DictionaryReader::unflatten(cc, dictTag, mImpl.mBlobDictionary))) {
         return ParseResult::ERROR_OTHER;
     }
     if (UTILS_UNLIKELY(!mImpl.mMaterialChunk.initialize(matTag))) {
         return ParseResult::ERROR_OTHER;
     }
+
+    mImpl.mChosenLanguage = chosenLanguage;
     return ParseResult::SUCCESS;
+}
+
+backend::ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
+    return mImpl.mChosenLanguage;
 }
 
 // Accessors

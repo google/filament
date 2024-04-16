@@ -21,7 +21,8 @@ namespace filament::backend {
 using namespace utils;
 
 // We want these in the .cpp file, so they're not inlined (not worth it)
-Program::Program() noexcept { // NOLINT(modernize-use-equals-default)
+Program::Program(ShaderLanguage language) noexcept
+    : mShaderLanguage(language) {  // NOLINT(modernize-use-equals-default)
 }
 
 Program::Program(Program&& rhs) noexcept = default;
