@@ -253,6 +253,12 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
 }
 
 OpenGLContext::~OpenGLContext() noexcept {
+    // note: this is called from the main thread. Can't do any GL calls.
+    delete mTimerQueryFactory;
+}
+
+void OpenGLContext::terminate() noexcept {
+    // note: this is called from the backend thread
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!isES2()) {
         for (auto& item: mSamplerMap) {
@@ -262,7 +268,6 @@ OpenGLContext::~OpenGLContext() noexcept {
         mSamplerMap.clear();
     }
 #endif
-    delete mTimerQueryFactory;
 }
 
 void OpenGLContext::destroyWithContext(
