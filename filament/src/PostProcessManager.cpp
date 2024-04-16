@@ -2966,6 +2966,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                         .filterMag = (dsrOptions.quality == QualityLevel::LOW) ?
                                 filter : SamplerMagFilter::LINEAR
                     });
+
+                    if (blitterNames[index] != "blitLow") {
+                        mi->setParameter("resolution",
+                                float4{outputDesc.width, outputDesc.height, 1.0f / outputDesc.width,
+                                    1.0f / outputDesc.height});
+                    }
+
                     mi->setParameter("viewport", float4{
                             (float)vp.left   / inputDesc.width,
                             (float)vp.bottom / inputDesc.height,
