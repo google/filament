@@ -31,7 +31,8 @@ if (CMAKE_CROSSCOMPILING)
 endif()
 
 set(MATERIAL_SRCS
-        src/materials/uiBlit.mat)
+        src/materials/uiBlit.mat
+        src/materials/uiBlitExternal.mat)
 
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
