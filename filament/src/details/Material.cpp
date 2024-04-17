@@ -52,7 +52,6 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-#include <utils/overload.h>
 
 #include <algorithm>
 #include <array>
