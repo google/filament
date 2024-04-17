@@ -34,6 +34,7 @@
 #include <utils/CString.h>
 
 #include <stdlib.h>
+#include <optional>
 
 using namespace utils;
 using namespace filament::backend;
