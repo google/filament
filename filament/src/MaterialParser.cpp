@@ -100,8 +100,9 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
         return ParseResult::ERROR_OTHER;
     }
 
-    auto chooseLanguage =
-            [this, &cc]() -> std::optional<std::tuple<ShaderLanguage, ChunkType, ChunkType>> {
+    using MaybeShaderLanguageAndChunks =
+            std::optional<std::tuple<ShaderLanguage, ChunkType, ChunkType>>;
+    auto chooseLanguage = [this, &cc]() -> MaybeShaderLanguageAndChunks {
         for (auto language : mImpl.mPreferredLanguages) {
             const auto [matTag, dictTag] = shaderLanguageToTags(language);
             if (cc.hasChunk(matTag) && cc.hasChunk(dictTag)) {
