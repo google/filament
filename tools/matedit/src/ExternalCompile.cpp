@@ -148,22 +148,24 @@ static std::string toString(backend::ShaderStage stage) {
 
 static std::string toString(Variant variant) { return std::to_string(variant.key); }
 
-static bool invokeScript(
-        const std::vector<std::string>& args, utils::Path inputPath, utils::Path outputPath) {
-    assert_invariant(!args.empty());
+static bool invokeScript(const std::vector<std::string>& userArgs, backend::ShaderStage stage,
+        backend::ShaderModel model, utils::Path inputPath, utils::Path outputPath) {
+    assert_invariant(!userArgs.empty());
 
     std::vector<char*> argv;
 
     // The first argument is the path to the script
-    argv.push_back(const_cast<char*>(args[0].c_str()));
+    argv.push_back(const_cast<char*>(userArgs[0].c_str()));
 
     // Temporary input and output files
     argv.push_back(const_cast<char*>(inputPath.c_str()));
     argv.push_back(const_cast<char*>(outputPath.c_str()));
+    argv.push_back(const_cast<char*>(toString(stage).c_str()));
+    argv.push_back(const_cast<char*>(toString(model).c_str()));
 
     // Optional user-supplied arguments
-    for (int i = 1; i < args.size(); i++) {
-        argv.push_back(const_cast<char*>(args[i].c_str()));
+    for (int i = 1; i < userArgs.size(); i++) {
+        argv.push_back(const_cast<char*>(userArgs[i].c_str()));
     }
 
     // execvp expects a null as the last element of the arguments array
@@ -256,7 +258,8 @@ bool compileMetalShaders(const std::vector<filamat::TextEntry>& mslEntries,
         ScopedTempFile outputFile = tempDir + outputFileName;
 
         dumpString(mslEntry.shader, inputFile.getPath());
-        if (!invokeScript(userArgs, inputFile.getPath(), outputFile.getPath())) {
+        if (!invokeScript(userArgs, mslEntry.stage, mslEntry.shaderModel, inputFile.getPath(),
+                    outputFile.getPath())) {
             return false;
         }
 
