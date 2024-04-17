@@ -57,7 +57,7 @@ kernel void main0() {}
             GTEST_FATAL_FAILURE_("unexpected backend");
     }
 
-    Program program;
+    Program program(ShaderLanguage::ESSL3);
     program.shader(ShaderStage::COMPUTE, shader.data(), shader.size() + 1);
 
     Handle<HwProgram> ph = driver.createProgram(std::move(program));
@@ -143,7 +143,7 @@ kernel void main0(device Output_data& output_data [[buffer(0)]],
     auto input_data = driver.createBufferObject(size, BufferObjectBinding::SHADER_STORAGE, BufferUsage::STATIC);
     driver.updateBufferObject(input_data, { data.data(), size }, 0);
 
-    Program program;
+    Program program(ShaderLanguage::ESSL3);
     program.shader(ShaderStage::COMPUTE, shader.data(), shader.size() + 1);
     Handle<HwProgram> ph = driver.createProgram(std::move(program));
 
