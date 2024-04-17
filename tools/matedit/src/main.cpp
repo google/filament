@@ -159,10 +159,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    for (int i = optionIndex; i < argc; ++i) {
-        if (strcmp(argv[i], "--") == 0) {
-            continue;
-        }
+    // Ignore any "--" arguments between "external-compile" and the name of the script.
+    int i = optionIndex;
+    while (i < argc && strcmp(argv[i], "--") == 0) {
+        i++;
+    }
+
+    for (; i < argc; ++i) {
         config.commandArgs.emplace_back(argv[i]);
     }
 
