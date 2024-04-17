@@ -36,10 +36,14 @@
 
 #include <filamat/Package.h>
 
-#include <fstream>
-#include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fstream>
+#include <iostream>
+
+using filamat::Flattener;
+using filamat::Package;
+using namespace filament;
 
 class PassthroughChunk final : public filamat::Chunk {
 public:
@@ -49,17 +53,11 @@ public:
     ~PassthroughChunk() = default;
 
 private:
-    void flatten(filamat::Flattener& f) override {
-        f.writeRaw(data, size);
-    }
+    void flatten(Flattener& f) override { f.writeRaw(data, size); }
 
     const char* data;
     size_t size;
 };
-
-
-using filamat::Package;
-using filamat::Flattener;
 
 namespace matedit {
 
@@ -87,7 +85,7 @@ static bool readBinary(utils::Path filename, std::vector<uint8_t>& buffer) {
     std::ifstream::pos_type size = in.tellg();
     in.seekg(0);
     buffer.resize(size);
-    if (!in.read((char*) buffer.data(), size)) {
+    if (!in.read((char*)buffer.data(), size)) {
         return false;
     }
     return true;
@@ -104,20 +102,19 @@ static std::vector<T> getShaderRecords(const filaflat::ChunkContainer& container
     materialChunk.initialize(chunkType);
     materialChunk.visitShaders(
             [&materialChunk, &dictionary, &shaderRecords](
-                    filament::backend::ShaderModel shaderModel, filament::Variant variant,
-                    filament::backend::ShaderStage stage) {
+                    backend::ShaderModel shaderModel, Variant variant, backend::ShaderStage stage) {
                 filaflat::ShaderContent content;
                 UTILS_UNUSED_IN_RELEASE bool success =
                         materialChunk.getShader(content, dictionary, shaderModel, variant, stage);
 
-                std::string source{content.data(), content.data() + content.size() - 1u};
+                std::string source { content.data(), content.data() + content.size() - 1u };
                 assert_invariant(success);
 
                 if constexpr (std::is_same_v<T, filamat::TextEntry>) {
-                    shaderRecords.push_back({shaderModel, variant, stage, std::move(source)});
+                    shaderRecords.push_back({ shaderModel, variant, stage, std::move(source) });
                 }
                 if constexpr (std::is_same_v<T, filamat::BinaryEntry>) {
-                    filamat::BinaryEntry e{};
+                    filamat::BinaryEntry e {};
                     e.shaderModel = shaderModel;
                     e.variant = variant;
                     e.stage = stage;
@@ -129,29 +126,27 @@ static std::vector<T> getShaderRecords(const filaflat::ChunkContainer& container
     return shaderRecords;
 }
 
-static std::string toString(filament::backend::ShaderModel model) {
+static std::string toString(backend::ShaderModel model) {
     switch (model) {
-        case filament::backend::ShaderModel::DESKTOP:
+        case backend::ShaderModel::DESKTOP:
             return "desktop";
-        case filament::backend::ShaderModel::MOBILE:
+        case backend::ShaderModel::MOBILE:
             return "mobile";
     }
 }
 
-static std::string toString(filament::backend::ShaderStage stage) {
+static std::string toString(backend::ShaderStage stage) {
     switch (stage) {
-        case filament::backend::ShaderStage::VERTEX:
+        case backend::ShaderStage::VERTEX:
             return "vertex";
-        case filament::backend::ShaderStage::FRAGMENT:
+        case backend::ShaderStage::FRAGMENT:
             return "fragment";
-        case filament::backend::ShaderStage::COMPUTE:
+        case backend::ShaderStage::COMPUTE:
             return "compute";
     }
 }
 
-static std::string toString(filament::Variant variant) {
-    return std::to_string(variant.key);
-}
+static std::string toString(Variant variant) { return std::to_string(variant.key); }
 
 static bool invokeScript(
         const std::vector<std::string>& args, utils::Path inputPath, utils::Path outputPath) {
@@ -191,7 +186,7 @@ static bool invokeScript(
     } else if (pid > 0) {
         // Parent process
         int status;
-        waitpid(pid, &status, 0); // Wait for the child to finish
+        waitpid(pid, &status, 0);  // Wait for the child to finish
 
         if (WIFEXITED(status)) {
             if (WEXITSTATUS(status) != 0) {
@@ -204,7 +199,7 @@ static bool invokeScript(
         execvp(argv[0], argv.data());
 
         // If execvp returns, it failed
-        std::cerr << "execvp failed" << std::endl;
+        std::cerr << "Unable to execute script: " << argv[0] << std::endl;
         exit(1);
     }
 
@@ -233,9 +228,7 @@ public:
 
         mPath = pathString;
     }
-    ~ScopedTempFile() noexcept {
-        mPath.unlinkFile();
-    }
+    ~ScopedTempFile() noexcept { mPath.unlinkFile(); }
 
     const utils::Path& getPath() const noexcept { return mPath; }
 
@@ -331,7 +324,7 @@ int externalCompile(utils::Path input, utils::Path output, std::vector<std::stri
     // Ask the user script to compile the MSL shaders into .metallib files.
     filamat::BlobDictionary metalBinaryDictionary;
     std::vector<filamat::BinaryEntry> metalBinaryEntries;
-    if (!compileMetalShaders(mslEntries, metalBinaryEntries, args) ) {
+    if (!compileMetalShaders(mslEntries, metalBinaryEntries, args)) {
         return 1;
     }
 
@@ -414,7 +407,7 @@ int externalCompile(utils::Path input, utils::Path output, std::vector<std::stri
 
     // Flatten into a Package and write to disk.
     Package package(outputChunks.getSize());
-    Flattener f{ package.getData() };
+    Flattener f { package.getData() };
     outputChunks.flatten(f);
 
     assert_invariant(package.isValid());
