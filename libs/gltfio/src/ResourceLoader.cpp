@@ -22,6 +22,7 @@
 #include "TangentsJob.h"
 #include "downcast.h"
 #include "Utility.h"
+#include "extended/ResourceLoaderExtended.h"
 
 #include <filament/BufferObject.h>
 #include <filament/Engine.h>
@@ -229,8 +230,8 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
 inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
         UriDataCacheHandle uriDataCache) {
     // Upload VertexBuffer and IndexBuffer data to the GPU.
-    auto& slots = asset->mBufferSlots;
-    for (auto slot: slots) {
+    auto& slots = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots;
+    for (auto const& slot: slots) {
         const cgltf_accessor* accessor = slot.accessor;
         if (!accessor->buffer_view) {
             continue;
@@ -390,6 +391,11 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
 
     // This is a workaround in case of using extended algo, please see description in
     // FFilamentAsset.h
+    if (fasset->isUsingExtendedAlgorithm()) {
+        pImpl->mUriDataCache =
+                std::get<FFilamentAsset::ResourceInfoExtended>(fasset->mResourceInfo).uriDataCache;
+    }
+
     return loadResources(fasset, false);
 }
 
@@ -401,6 +407,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         return false;
     }
     asset->mResourcesLoaded = true;
+
+    bool const isExtendedAlgo = asset->isUsingExtendedAlgorithm();
 
     // At this point, any entities that are created in the future (i.e. dynamically added instances)
     // will not need the progressive feature to be enabled. This simplifies the dependency graph and
@@ -414,30 +422,35 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
 
     cgltf_data const* gltf = asset->mSourceAsset->hierarchy;
 
-    utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache);
+    if (!isExtendedAlgo) {
+        utility::loadCgltfBuffers(gltf, pImpl->mGltfPath.c_str(), pImpl->mUriDataCache);
 
-    // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
-    // as tangent generation.
-    DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
-    auto& primitives =  asset->mPrimitives;
-    // Go through every primitive and check if it has a Draco mesh.
-    for (auto& [prim, vertexBuffer]: primitives) {
-        if (!prim->has_draco_mesh_compression) {
-            continue;
+        // Decompress Draco meshes early on, which allows us to exploit subsequent processing such
+        // as tangent generation.
+        DracoCache* dracoCache = &asset->mSourceAsset->dracoCache;
+        auto& primitives = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives;
+        // Go through every primitive and check if it has a Draco mesh.
+        for (auto& [prim, vertexBuffer]: primitives) {
+            if (!prim->has_draco_mesh_compression) {
+                continue;
+            }
+            utility::decodeDracoMeshes(gltf, prim, dracoCache);
         }
-        utility::decodeDracoMeshes(gltf, prim, dracoCache);
+        utility::decodeMeshoptCompression((cgltf_data*) gltf);
+
+        uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache);
+
+        // Compute surface orientation quaternions if necessary. This is similar to sparse data in
+        // that we need to generate the contents of a GPU buffer by processing one or more CPU
+        // buffer(s).
+        pImpl->computeTangents(asset);
+
+        std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots.clear();
+        std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives.clear();
+    } else {
+        auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(asset->mResourceInfo).slots;
+        ResourceLoaderExtended::loadResources(slots, pImpl->mEngine, asset->mBufferObjects);
     }
-    utility::decodeMeshoptCompression((cgltf_data*) gltf);
-
-    uploadBuffers(asset, *pImpl->mEngine, pImpl->mUriDataCache);
-
-    // Compute surface orientation quaternions if necessary. This is similar to sparse data in
-    // that we need to generate the contents of a GPU buffer by processing one or more CPU
-    // buffer(s).
-    pImpl->computeTangents(asset);
-
-    asset->mBufferSlots.clear();
-    asset->mPrimitives.clear();
 
     createSkins(gltf, pImpl->mNormalizeSkinningWeights, asset->mSkins);
 
@@ -663,7 +676,9 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
 
     // Collect all TANGENT vertex attribute slots that need to be populated.
     tsl::robin_map<VertexBuffer*, uint8_t> baseTangents;
-    for (auto slot : asset->mBufferSlots) {
+    auto& slots = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mBufferSlots;
+    auto& primitives = std::get<FFilamentAsset::ResourceInfo>(asset->mResourceInfo).mPrimitives;
+    for (auto const& slot: slots) {
         if (slot.accessor != kGenerateTangents && slot.accessor != kGenerateNormals) {
             continue;
         }
@@ -673,7 +688,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
     // Create a job description for each triangle-based primitive.
     using Params = TangentsJob::Params;
     std::vector<Params> jobParams;
-    for (auto [prim, vb] : asset->mPrimitives) {
+    for (auto const& [prim, vb] : primitives) {
         if (UTILS_UNLIKELY(prim->type != cgltf_primitive_type_triangles)) {
             continue;
         }
