@@ -140,6 +140,23 @@ public:
      */
     virtual uint32_t getDefaultFramebufferObject() noexcept;
 
+    /**
+     * Called by the backend when a frame starts.
+     * @param steady_clock_ns vsync time point on the monotonic clock
+     * @param refreshIntervalNs refresh interval in nanosecond
+     * @param frameId a frame id
+     */
+    virtual void beginFrame(
+            int64_t monotonic_clock_ns,
+            int64_t refreshIntervalNs,
+            uint32_t frameId) noexcept;
+
+    /**
+     * Called by the backend when a frame ends.
+     * @param frameId the frame id used in beginFrame
+     */
+    virtual void endFrame(
+            uint32_t frameId) noexcept;
 
     /**
      * Type of contexts available

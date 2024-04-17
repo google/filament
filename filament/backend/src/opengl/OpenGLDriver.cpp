@@ -3406,10 +3406,12 @@ void OpenGLDriver::tick(int) {
 
 void OpenGLDriver::beginFrame(
         UTILS_UNUSED int64_t monotonic_clock_ns,
+        UTILS_UNUSED int64_t refreshIntervalNs,
         UTILS_UNUSED uint32_t frameId) {
     DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
+    mPlatform.beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
     if (UTILS_UNLIKELY(!mTexturesWithStreamsAttached.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mTexturesWithStreamsAttached) {
@@ -3457,6 +3459,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
 #endif
     //SYSTRACE_NAME("glFinish");
     //glFinish();
+    mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
 }
 

@@ -298,7 +298,10 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = mEngine;
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
+        driver.beginFrame(
+                appVsync.time_since_epoch().count(),
+                int64_t(1'000'000'000.0 / mDisplayInfo.refreshRate),
+                mFrameId);
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
@@ -462,7 +465,10 @@ void FRenderer::renderStandaloneView(FView const* view) {
         engine.prepare();
 
         FEngine::DriverApi& driver = engine.getDriverApi();
-        driver.beginFrame(steady_clock::now().time_since_epoch().count(), mFrameId);
+        driver.beginFrame(
+                steady_clock::now().time_since_epoch().count(),
+                int64_t(1'000'000'000.0 / mDisplayInfo.refreshRate),
+                mFrameId);
 
         renderInternal(view);
 

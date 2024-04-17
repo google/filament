@@ -414,7 +414,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
 
     // Update samplers.
     SamplerGroup samplers(1);
@@ -486,7 +486,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
     api.update3DImage(texture, /* level*/ 1, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
 
     // Update samplers.
     SamplerGroup samplers(1);
@@ -570,7 +570,7 @@ TEST_F(BackendTest, UpdateImage3D) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 4, std::move(descriptor));
 
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
 
     // Update samplers.
     SamplerGroup samplers(1);

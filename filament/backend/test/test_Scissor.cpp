@@ -136,7 +136,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         ps.rasterState.depthWrite = false;
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0);
+        api.beginFrame(0, 0, 0);
 
         api.beginRenderPass(srcRenderTarget, params);
         api.scissor(scissor);
@@ -227,7 +227,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         ps.rasterState.depthWrite = false;
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0);
+        api.beginFrame(0, 0, 0);
 
         api.beginRenderPass(renderTarget, params);
         api.scissor(scissor);

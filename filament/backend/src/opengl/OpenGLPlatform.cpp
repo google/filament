@@ -55,6 +55,13 @@ uint32_t OpenGLPlatform::getDefaultFramebufferObject() noexcept {
     return 0;
 }
 
+void OpenGLPlatform::beginFrame(int64_t monotonic_clock_ns, int64_t refreshIntervalNs,
+        uint32_t frameId) noexcept {
+}
+
+void OpenGLPlatform::endFrame(uint32_t frameId) noexcept {
+}
+
 OpenGLPlatform::ContextType OpenGLPlatform::getCurrentContextType() const noexcept {
     return ContextType::UNPROTECTED;
 }
