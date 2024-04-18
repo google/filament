@@ -964,12 +964,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                             glslEntries.push_back(glslEntry);
                         }
                         break;
-                    case TargetApi::VULKAN:
+                    case TargetApi::VULKAN: {
                         assert(!spirv.empty());
+                        const std::vector<uint8_t> d(reinterpret_cast<uint8_t*>(spirv.data()),
+                                reinterpret_cast<uint8_t*>(spirv.data() + spirv.size()));
                         spirvEntry.stage = v.stage;
-                        spirvEntry.data = std::move(spirv);
+                        spirvEntry.data = std::move(d);
                         spirvEntries.push_back(spirvEntry);
                         break;
+                    }
                     case TargetApi::METAL:
                         assert(!spirv.empty());
                         assert(msl.length() > 0);
@@ -1019,7 +1022,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         textDictionary.addText(s.shader);
     }
     for (auto& s : spirvEntries) {
-        std::vector<uint32_t> spirv = std::move(s.data);
+        std::vector<uint8_t> spirv = std::move(s.data);
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
     for (const auto& s : metalEntries) {
