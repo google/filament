@@ -41,7 +41,7 @@ struct BinaryEntry {
     size_t dictionaryIndex;  // maps to an index in the blob dictionary
 
     // temporarily holds this entry's binary data until added to the dictionary
-    std::vector<uint32_t> data;
+    std::vector<uint8_t> data;
 };
 
 }  // namespace filamat
