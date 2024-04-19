@@ -629,6 +629,21 @@ void FMaterial::applyPendingEdits() noexcept {
     latchPendingEdits();
 }
 
+void FMaterial::setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept {
+    std::lock_guard const lock(mPendingEditsLock);
+    std::swap(pendingEdits, mPendingEdits);
+}
+
+bool FMaterial::hasPendingEdits() noexcept {
+    std::lock_guard const lock(mPendingEditsLock);
+    return (bool)mPendingEdits;
+}
+
+void FMaterial::latchPendingEdits() noexcept {
+    std::lock_guard const lock(mPendingEditsLock);
+    std::swap(mPendingEdits, mMaterialParser);
+}
+
 /**
  * Callback handlers for the debug server, potentially called from any thread. These methods are
  * never called during normal operation and exist for debugging purposes only.
@@ -655,9 +670,10 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
     material->mActivePrograms.reset();
 }
 
-#endif
-
 /** @}*/
+
+#endif // FILAMENT_ENABLE_MATDBG
+
 
 void FMaterial::destroyPrograms(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
