@@ -290,7 +290,7 @@ private:
     bool mIsDefaultMaterial = false;
     bool mSpecularAntiAliasing = false;
 
-    // reserve some sopce to construct the default material instance
+    // reserve some space to construct the default material instance
     std::aligned_storage<sizeof(FMaterialInstance), alignof(FMaterialInstance)>::type mDefaultInstanceStorage;
     static_assert(sizeof(mDefaultInstanceStorage) >= sizeof(mDefaultInstanceStorage));
 
