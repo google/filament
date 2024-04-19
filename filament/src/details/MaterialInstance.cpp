@@ -35,14 +35,61 @@ namespace filament {
 
 using namespace backend;
 
-FMaterialInstance::FMaterialInstance() noexcept
-        : mCulling(CullingMode::BACK),
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept
+        : mMaterial(material),
+          mCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),
           mColorWrite(false),
           mDepthWrite(false),
           mHasScissor(false),
           mIsDoubleSided(false),
           mTransparencyMode(TransparencyMode::DEFAULT) {
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    if (!material->getUniformInterfaceBlock().isEmpty()) {
+        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
+        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
+    }
+
+    if (!material->getSamplerInterfaceBlock().isEmpty()) {
+        mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
+        mSbHandle = driver.createSamplerGroup(
+                mSamplers.getSize(), utils::FixedSizeString<32>(mMaterial->getName().c_str_safe()));
+    }
+
+    const RasterState& rasterState = material->getRasterState();
+    // At the moment, only MaterialInstances have a stencil state, but in the future it should be
+    // possible to set the stencil state directly on a material (through material definitions, or
+    // MaterialBuilder).
+    // TODO: Here is where we'd "inherit" the stencil state from the Material.
+    // mStencilState = material->getStencilState();
+
+    // We inherit the resolved culling mode rather than the builder-set culling mode.
+    // This preserves the property whereby double-sidedness automatically disables culling.
+    mCulling = rasterState.culling;
+    mColorWrite = rasterState.colorWrite;
+    mDepthWrite = rasterState.depthWrite;
+    mDepthFunc = rasterState.depthFunc;
+
+    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
+            material->getId(), material->generateMaterialInstanceId());
+
+    if (material->getBlendingMode() == BlendingMode::MASKED) {
+        setMaskThreshold(material->getMaskThreshold());
+    }
+
+    if (material->hasDoubleSidedCapability()) {
+        setDoubleSided(material->isDoubleSided());
+    }
+
+    if (material->hasSpecularAntiAliasing()) {
+        setSpecularAntiAliasingVariance(material->getSpecularAntiAliasingVariance());
+        setSpecularAntiAliasingThreshold(material->getSpecularAntiAliasingThreshold());
+    }
+
+    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance::FMaterialInstance(FEngine& engine,
@@ -101,56 +148,6 @@ FMaterialInstance* FMaterialInstance::duplicate(
     FMaterial const* const material = other->getMaterial();
     FEngine& engine = material->getEngine();
     return engine.createMaterialInstance(material, other, name);
-}
-
-void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    mMaterial = material;
-
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
-    }
-
-    if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
-        mSbHandle = driver.createSamplerGroup(
-                mSamplers.getSize(), utils::FixedSizeString<32>(mMaterial->getName().c_str_safe()));
-    }
-
-    const RasterState& rasterState = material->getRasterState();
-    // At the moment, only MaterialInstances have a stencil state, but in the future it should be
-    // possible to set the stencil state directly on a material (through material definitions, or
-    // MaterialBuilder).
-    // TODO: Here is where we'd "inherit" the stencil state from the Material.
-    // mStencilState = material->getStencilState();
-
-    // We inherit the resolved culling mode rather than the builder-set culling mode.
-    // This preserves the property whereby double-sidedness automatically disables culling.
-    mCulling = rasterState.culling;
-    mColorWrite = rasterState.colorWrite;
-    mDepthWrite = rasterState.depthWrite;
-    mDepthFunc = rasterState.depthFunc;
-
-    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
-            material->getId(), material->generateMaterialInstanceId());
-
-    if (material->getBlendingMode() == BlendingMode::MASKED) {
-        setMaskThreshold(material->getMaskThreshold());
-    }
-
-    if (material->hasDoubleSidedCapability()) {
-        setDoubleSided(material->isDoubleSided());
-    }
-
-    if (material->hasSpecularAntiAliasing()) {
-        setSpecularAntiAliasingVariance(material->getSpecularAntiAliasingVariance());
-        setSpecularAntiAliasingThreshold(material->getSpecularAntiAliasingThreshold());
-    }
-
-    setTransparencyMode(material->getTransparencyMode());
 }
 
 FMaterialInstance::~FMaterialInstance() noexcept = default;

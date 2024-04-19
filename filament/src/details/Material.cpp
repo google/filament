@@ -290,7 +290,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
     processDepthVariants(engine, parser);
 
     // we can only initialize the default instance once we're initialized ourselves
-    mDefaultInstance.initDefaultInstance(engine, this);
+    new(&mDefaultInstanceStorage) FMaterialInstance(engine, this);
 
 
 #if FILAMENT_ENABLE_MATDBG
@@ -303,7 +303,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 #endif
 }
 
-FMaterial::~FMaterial() noexcept = default;
+FMaterial::~FMaterial() noexcept {
+    std::destroy_at(getDefaultInstance());
+}
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     if (mMaterialDomain == MaterialDomain::SURFACE) {
@@ -361,7 +363,8 @@ void FMaterial::terminate(FEngine& engine) {
 #endif
 
     destroyPrograms(engine);
-    mDefaultInstance.terminate(engine);
+
+    getDefaultInstance()->terminate(engine);
 }
 
 void FMaterial::compile(CompilerPriorityQueue priority,
@@ -408,7 +411,7 @@ void FMaterial::compile(CompilerPriorityQueue priority,
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    return FMaterialInstance::duplicate(&mDefaultInstance, name);
+    return FMaterialInstance::duplicate(getDefaultInstance(), name);
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
