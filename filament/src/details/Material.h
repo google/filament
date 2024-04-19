@@ -56,6 +56,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
+
 namespace filament {
 
 class MaterialParser;
@@ -238,12 +242,12 @@ private:
     backend::Program getProgramWithVariants(Variant variant,
             Variant vertexVariant, Variant fragmentVariant) const noexcept;
 
-    void processBlendingMode(MaterialParser const* const parser);
+    void processBlendingMode(MaterialParser const* parser);
 
     void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
-            MaterialParser const* const parser);
+            MaterialParser const* parser);
 
-    void processDepthVariants(FEngine& engine, MaterialParser const* const parser);
+    void processDepthVariants(FEngine& engine, MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
@@ -311,19 +315,9 @@ private:
     mutable VariantList mActivePrograms;
     mutable utils::Mutex mPendingEditsLock;
     std::unique_ptr<MaterialParser> mPendingEdits;
-    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept {
-        std::lock_guard lock(mPendingEditsLock);
-        std::swap(pendingEdits, mPendingEdits);
-    }
-    bool hasPendingEdits() noexcept {
-        std::lock_guard lock(mPendingEditsLock);
-        return (bool)mPendingEdits;
-    }
-    void latchPendingEdits() noexcept {
-        std::lock_guard lock(mPendingEditsLock);
-        std::swap(mPendingEdits, mMaterialParser);
-    }
-
+    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
+    bool hasPendingEdits() noexcept;
+    void latchPendingEdits() noexcept;
 #endif
 
     utils::CString mName;
