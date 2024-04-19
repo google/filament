@@ -48,6 +48,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -104,8 +105,13 @@ public:
 
     BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
 
-    FMaterialInstance const* getDefaultInstance() const noexcept { return &mDefaultInstance; }
-    FMaterialInstance* getDefaultInstance() noexcept { return &mDefaultInstance; }
+    FMaterialInstance const* getDefaultInstance() const noexcept {
+        return const_cast<FMaterial*>(this)->getDefaultInstance();
+    }
+
+    FMaterialInstance* getDefaultInstance() noexcept {
+        return std::launder(reinterpret_cast<FMaterialInstance*>(&mDefaultInstanceStorage));
+    }
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
@@ -284,7 +290,10 @@ private:
     bool mIsDefaultMaterial = false;
     bool mSpecularAntiAliasing = false;
 
-    FMaterialInstance mDefaultInstance;
+    // reserve some space to construct the default material instance
+    std::aligned_storage<sizeof(FMaterialInstance), alignof(FMaterialInstance)>::type mDefaultInstanceStorage;
+    static_assert(sizeof(mDefaultInstanceStorage) >= sizeof(mDefaultInstanceStorage));
+
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
