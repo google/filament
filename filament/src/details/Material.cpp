@@ -76,17 +76,17 @@ using namespace filaflat;
 using namespace utils;
 
 static std::unique_ptr<MaterialParser> createParser(Backend backend,
-        utils::FixedCapacityVector<ShaderLanguage> language, const void* data, size_t size) {
+        utils::FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
-    auto materialParser = std::make_unique<MaterialParser>(language, data, size);
+    auto materialParser = std::make_unique<MaterialParser>(languages, data, size);
 
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
         std::stringstream languageNames;
-        for (auto it = language.begin(); it != language.end(); ++it) {
+        for (auto it = languages.begin(); it != languages.end(); ++it) {
             languageNames << shaderLanguageToString(*it);
-            if (std::next(it) != language.end()) {
+            if (std::next(it) != languages.end()) {
                 languageNames << ", ";
             }
         }
@@ -538,9 +538,10 @@ Program FMaterial::getProgramWithVariants(
             "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variant.key, fragmentVariant.key);
 
-    Program program(mMaterialParser->getShaderLanguage());
+    Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+           .shaderLanguage(mMaterialParser->getShaderLanguage())
            .uniformBlockBindings(mUniformBlockBindings)
            .diagnostics(mName,
                     [this, variant](io::ostream& out) -> io::ostream& {
