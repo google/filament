@@ -238,22 +238,26 @@ public:
 
     struct PrimitiveInfo { // 56 bytes
         union {
-            FRenderPrimitive const* primitive;                          // 8 bytes;
-            uint64_t padding = {}; // ensures primitive is 8 bytes on all archs
-        };                                                              // 8 bytes
-        uint64_t rfu0;                                                  // 8 bytes
-        backend::RasterState rasterState;                               // 4 bytes
-        backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
-        backend::Handle<backend::HwSamplerGroup> skinningTexture;       // 4 bytes
-        backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
-        backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
-        backend::Handle<backend::HwBufferObject> instanceBufferHandle;  // 4 bytes
+            FMaterialInstance const* mi;
+            uint64_t padding; // make this field 64 bits on all platforms
+        };
+        backend::RenderPrimitiveHandle rph;                             // 4 bytes
+        backend::VertexBufferInfoHandle vbih;                           // 4 bytes
+        uint32_t indexOffset;                                           // 4 bytes
+        uint32_t indexCount;                                            // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
-        uint32_t skinningOffset = 0;                                    // 4 bytes
+        backend::SamplerGroupHandle morphTargetBuffer;                  // 4 bytes
+
+        backend::RasterState rasterState;                               // 4 bytes
+
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-        uint8_t rfu1;                                                   // 1 byte
-        uint32_t rfu2;                                                  // 4 byte
+        backend::PrimitiveType type : 3;                                // 1 byte       3 bits
+        bool hasSkinning : 1;                                           //              1 bit
+        bool hasMorphing : 1;                                           //              1 bit
+        bool hasHybridInstancing : 1;                                   //              1 bit
+
+        uint64_t rfu[2];                                                // 16 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
@@ -316,6 +320,7 @@ public:
         friend class RenderPassBuilder;
 
         // these fields are constant after creation
+        FScene::RenderableSoa const* mRenderableSoa = nullptr;
         utils::Slice<Command> mCommands;
         utils::Slice<CustomCommandFn> mCustomCommands;
         backend::Handle<backend::HwBufferObject> mUboHandle;
