@@ -33,11 +33,12 @@
 #include "eiff/LineDictionary.h"
 #include "eiff/MaterialInterfaceBlockChunk.h"
 #include "eiff/MaterialTextChunk.h"
-#include "eiff/MaterialSpirvChunk.h"
+#include "eiff/MaterialBinaryChunk.h"
 #include "eiff/ChunkContainer.h"
 #include "eiff/SimpleFieldChunk.h"
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
+#include "eiff/DictionaryMetalLibraryChunk.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -821,7 +822,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     Mutex entriesLock;
     std::vector<TextEntry> glslEntries;
     std::vector<TextEntry> essl1Entries;
-    std::vector<SpirvEntry> spirvEntries;
+    std::vector<BinaryEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
     LineDictionary textDictionary;
     BlobDictionary spirvDictionary;
@@ -872,7 +873,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
 
                 TextEntry glslEntry{};
-                SpirvEntry spirvEntry{};
+                BinaryEntry spirvEntry{};
                 TextEntry metalEntry{};
 
                 glslEntry.shaderModel  = params.shaderModel;
@@ -963,12 +964,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                             glslEntries.push_back(glslEntry);
                         }
                         break;
-                    case TargetApi::VULKAN:
+                    case TargetApi::VULKAN: {
                         assert(!spirv.empty());
+                        const std::vector<uint8_t> d(reinterpret_cast<uint8_t*>(spirv.data()),
+                                reinterpret_cast<uint8_t*>(spirv.data() + spirv.size()));
                         spirvEntry.stage = v.stage;
-                        spirvEntry.spirv = std::move(spirv);
+                        spirvEntry.data = std::move(d);
                         spirvEntries.push_back(spirvEntry);
                         break;
+                    }
                     case TargetApi::METAL:
                         assert(!spirv.empty());
                         assert(msl.length() > 0);
@@ -1018,7 +1022,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         textDictionary.addText(s.shader);
     }
     for (auto& s : spirvEntries) {
-        std::vector<uint32_t> spirv = std::move(s.spirv);
+        std::vector<uint8_t> spirv = std::move(s.data);
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
     for (const auto& s : metalEntries) {
@@ -1041,11 +1045,11 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 dictionaryChunk.getDictionary(), ChunkType::MaterialEssl1);
     }
 
-    // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
+    // Emit SPIRV chunks (SpirvDictionaryReader and MaterialBinaryChunk).
     if (!spirvEntries.empty()) {
         const bool stripInfo = !mGenerateDebugInfo;
         container.push<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
-        container.push<MaterialSpirvChunk>(std::move(spirvEntries));
+        container.push<MaterialBinaryChunk>(std::move(spirvEntries), ChunkType::MaterialSpirv);
     }
 
     // Emit Metal chunk (MaterialTextChunk).

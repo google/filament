@@ -36,7 +36,7 @@ public:
     BlobDictionary(BlobDictionary&&) = default;
 
     // Adds a blob if it's not already a duplicate and returns its index.
-    size_t addBlob(const std::vector<uint32_t>& blob) noexcept;
+    size_t addBlob(const std::vector<uint8_t>& blob) noexcept;
 
     size_t getBlobCount() const noexcept {
         return mBlobs.size();

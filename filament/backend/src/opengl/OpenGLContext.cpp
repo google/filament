@@ -253,6 +253,12 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
 }
 
 OpenGLContext::~OpenGLContext() noexcept {
+    // note: this is called from the main thread. Can't do any GL calls.
+    delete mTimerQueryFactory;
+}
+
+void OpenGLContext::terminate() noexcept {
+    // note: this is called from the backend thread
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!isES2()) {
         for (auto& item: mSamplerMap) {
@@ -262,7 +268,6 @@ OpenGLContext::~OpenGLContext() noexcept {
         mSamplerMap.clear();
     }
 #endif
-    delete mTimerQueryFactory;
 }
 
 void OpenGLContext::destroyWithContext(
@@ -526,8 +531,6 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             bugs->delay_fbo_destruction = true;
             // PowerVR seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
-            // PowerVR has a shader compiler thread pinned on the last core
-            bugs->disable_thread_affinity = true;
         } else if (strstr(renderer, "Apple")) {
             // Apple GPU
         } else if (strstr(renderer, "Tegra") ||

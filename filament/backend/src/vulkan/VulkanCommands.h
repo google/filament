@@ -89,6 +89,15 @@ struct VulkanCommandBuffer {
     inline void reset() {
         fence.reset();
         mResourceManager.clear();
+        mPipeline = VK_NULL_HANDLE;
+    }
+
+    inline void setPipeline(VkPipeline pipeline) {
+        mPipeline = pipeline;
+    }
+
+    inline VkPipeline pipeline() const {
+        return mPipeline;
     }
 
     inline VkCommandBuffer buffer() const {
@@ -103,6 +112,7 @@ struct VulkanCommandBuffer {
 private:
     VulkanAcquireOnlyResourceManager mResourceManager;
     VkCommandBuffer mBuffer;
+    VkPipeline mPipeline;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.

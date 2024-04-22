@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
- *DictionaryGlsl
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-#include "MaterialSpirvChunk.h"
+#include "MaterialBinaryChunk.h"
 
 namespace filamat {
 
-MaterialSpirvChunk::MaterialSpirvChunk(const std::vector<SpirvEntry>&& entries) :
-        Chunk(ChunkType::MaterialSpirv), mEntries(entries) {}
+MaterialBinaryChunk::MaterialBinaryChunk(
+        const std::vector<BinaryEntry>&& entries, ChunkType chunkType)
+    : Chunk(chunkType), mEntries(entries) {}
 
-void MaterialSpirvChunk::flatten(Flattener &f) {
+void MaterialBinaryChunk::flatten(Flattener &f) {
     f.writeUint64(mEntries.size());
-    for (const SpirvEntry& entry : mEntries) {
+    for (const BinaryEntry& entry : mEntries) {
         f.writeUint8(uint8_t(entry.shaderModel));
         f.writeUint8(entry.variant.key);
         f.writeUint8(uint8_t(entry.stage));

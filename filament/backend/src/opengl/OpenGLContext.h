@@ -92,7 +92,10 @@ public:
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
     explicit OpenGLContext(OpenGLPlatform& platform) noexcept;
+
     ~OpenGLContext() noexcept final;
+
+    void terminate() noexcept;
 
     // TimerQueryInterface ------------------------------------------------------------------------
 
@@ -307,10 +310,6 @@ public:
         // On PowerVR destroying the destination of a glBlitFramebuffer operation is equivalent to
         // a glFinish. So we must delay the destruction until we know the GPU is finished.
         bool delay_fbo_destruction;
-
-        // The driver has some threads pinned, and we can't easily know on which core, it can hurt
-        // performance more if we end-up pinned on the same one.
-        bool disable_thread_affinity;
 
         // Force feature level 0. Typically used for low end ES3 devices with significant driver
         // bugs or performance issues.
@@ -551,9 +550,6 @@ private:
                     ""},
             {   bugs.delay_fbo_destruction,
                     "delay_fbo_destruction",
-                    ""},
-            {   bugs.disable_thread_affinity,
-                    "disable_thread_affinity",
                     ""},
             {   bugs.force_feature_level0,
                     "force_feature_level0",

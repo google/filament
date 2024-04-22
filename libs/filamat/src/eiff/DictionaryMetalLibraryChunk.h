@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,30 @@
  * limitations under the License.
  */
 
-#include "BlobDictionary.h"
+#ifndef TNT_FILAMAT_DIC_METAL_LIBRARY_CHUNK_H
+#define TNT_FILAMAT_DIC_METAL_LIBRARY_CHUNK_H
 
-#include <assert.h>
+#include <stdint.h>
+#include <vector>
+
+#include "Chunk.h"
+#include "Flattener.h"
+#include "BlobDictionary.h"
 
 namespace filamat {
 
-size_t BlobDictionary::addBlob(const std::vector<uint8_t>& vblob) noexcept {
-    std::string_view blob((char*) vblob.data(), vblob.size());
-    auto iter = mBlobIndices.find(blob);
-    if (iter != mBlobIndices.end()) {
-        return iter->second;
-    }
-    mBlobs.emplace_back(std::make_unique<std::string>(blob));
-    mBlobIndices.emplace(*mBlobs.back(), mBlobs.size() - 1);
-    return mBlobs.size() - 1;
-}
+class DictionaryMetalLibraryChunk final : public Chunk {
+public:
+    explicit DictionaryMetalLibraryChunk(BlobDictionary&& dictionary);
+    ~DictionaryMetalLibraryChunk() = default;
+
+private:
+    void flatten(Flattener& f) override;
+
+    BlobDictionary mDictionary;
+    bool mStripDebugInfo;
+};
 
 } // namespace filamat
+
+#endif // TNT_FILAMAT_DIC_METAL_LIBRARY_CHUNK_H
