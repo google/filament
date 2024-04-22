@@ -42,16 +42,16 @@
 #include <backend/Program.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Hash.h>
+#include <utils/Invocable.h>
+#include <utils/Log.h>
+#include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/CString.h>
-#include <utils/FixedCapacityVector.h>
-#include <utils/Invocable.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
-#include <utils/Hash.h>
 
 #include <algorithm>
 #include <array>
@@ -60,6 +60,7 @@
 #include <mutex>
 #include <new>
 #include <optional>
+#include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -74,21 +75,31 @@ using namespace backend;
 using namespace filaflat;
 using namespace utils;
 
-static std::unique_ptr<MaterialParser> createParser(
-        Backend backend, ShaderLanguage language, const void* data, size_t size) {
+static std::unique_ptr<MaterialParser> createParser(Backend backend,
+        utils::FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
-    auto materialParser = std::make_unique<MaterialParser>(language, data, size);
+    auto materialParser = std::make_unique<MaterialParser>(languages, data, size);
 
     MaterialParser::ParseResult const materialResult = materialParser->parse();
+
+    if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
+        std::stringstream languageNames;
+        for (auto it = languages.begin(); it != languages.end(); ++it) {
+            languageNames << shaderLanguageToString(*it);
+            if (std::next(it) != languages.end()) {
+                languageNames << ", ";
+            }
+        }
+
+        ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
+                "the material was not built for any of the %s backend's supported shader "
+                "languages (%s)\n",
+                backendToString(backend), languageNames.str().c_str());
+    }
 
     if (backend == Backend::NOOP) {
         return materialParser;
     }
-
-    ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
-                "the material was not built for the %s backend and %s shader language\n",
-                backendToString(backend),
-                shaderLanguageToString(language));
 
     ASSERT_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS,
                 "could not parse the material package");
@@ -217,7 +228,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
     success = parser->getUIB(&mUniformInterfaceBlock);
     assert_invariant(success);
 
-    if (UTILS_UNLIKELY(engine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
+    if (UTILS_UNLIKELY(parser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         success = parser->getBindingUniformInfo(&mBindingUniformInfo);
         assert_invariant(success);
 
@@ -530,6 +541,7 @@ Program FMaterial::getProgramWithVariants(
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+           .shaderLanguage(mMaterialParser->getShaderLanguage())
            .uniformBlockBindings(mUniformBlockBindings)
            .diagnostics(mName,
                     [this, variant](io::ostream& out) -> io::ostream& {
@@ -551,8 +563,7 @@ Program FMaterial::getProgramWithVariants(
                     samplers.data(), info.count);
         }
     }
-
-    if (UTILS_UNLIKELY(mEngine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
+    if (UTILS_UNLIKELY(mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         assert_invariant(!mBindingUniformInfo.empty());
         for (auto const& [index, uniforms] : mBindingUniformInfo) {
             program.uniforms(uint32_t(index), uniforms);
@@ -861,7 +872,7 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
             (int)engine.getConfig().stereoscopicEyeCount });
-    if (UTILS_UNLIKELY(engine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
+    if (UTILS_UNLIKELY(parser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({
                 +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,

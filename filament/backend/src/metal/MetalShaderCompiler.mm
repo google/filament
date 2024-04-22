@@ -106,26 +106,41 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             continue;
         }
 
-        assert_invariant(source[source.size() - 1] == '\0');
-
-        // the shader string is null terminated and the length includes the null character
-        NSString* objcSource = [[NSString alloc] initWithBytes:source.data()
-                                                        length:source.size() - 1
-                                                      encoding:NSUTF8StringEncoding];
-
-        // By default, Metal uses the most recent language version.
-        MTLCompileOptions* options = [MTLCompileOptions new];
-
-        // Disable Fast Math optimizations.
-        // This ensures that operations adhere to IEEE standards for floating-point arithmetic,
-        // which is crucial for half precision floats in scenarios where fast math optimizations
-        // lead to inaccuracies, such as in handling special values like NaN or Infinity.
-        options.fastMathEnabled = NO;
-
         NSError* error = nil;
-        id<MTLLibrary> library = [device newLibraryWithSource:objcSource
-                                                      options:options
-                                                        error:&error];
+        id<MTLLibrary> library = nil;
+        switch (program.getShaderLanguage()) {
+            case ShaderLanguage::MSL: {
+                // By default, Metal uses the most recent language version.
+                MTLCompileOptions* options = [MTLCompileOptions new];
+
+                // Disable Fast Math optimizations.
+                // This ensures that operations adhere to IEEE standards for floating-point
+                // arithmetic, which is crucial for half precision floats in scenarios where fast
+                // math optimizations lead to inaccuracies, such as in handling special values like
+                // NaN or Infinity.
+                options.fastMathEnabled = NO;
+
+                assert_invariant(source[source.size() - 1] == '\0');
+                // the shader string is null terminated and the length includes the null character
+                NSString* objcSource = [[NSString alloc] initWithBytes:source.data()
+                                                                length:source.size() - 1
+                                                              encoding:NSUTF8StringEncoding];
+                library = [device newLibraryWithSource:objcSource options:options error:&error];
+                break;
+            }
+            case ShaderLanguage::METAL_LIBRARY: {
+                dispatch_data_t data = dispatch_data_create(source.data(), source.size(),
+                        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
+                        DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+                library = [device newLibraryWithData:data error:&error];
+                break;
+            }
+            case ShaderLanguage::ESSL1:
+            case ShaderLanguage::ESSL3:
+            case ShaderLanguage::SPIRV:
+                break;
+        }
+
         if (library == nil) {
             NSString* errorMessage = @"unknown error";
             if (error) {
