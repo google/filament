@@ -213,7 +213,7 @@ void RenderPass::appendCommands(FEngine& engine,
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            auto ma = first->primitive.primitive->getMaterialInstance()->getMaterial();
+            auto ma = first->primitive.mi->getMaterial();
             ma->prepareProgram(first->primitive.materialVariant);
         }
     }
@@ -290,19 +290,24 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
 
     while (curr != last) {
 
-        // we can't have nice things! No more than maxInstanceCount due to UBO size limits
-        Command const* const e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
-                [lhs = *curr](Command const& rhs) {
-            // primitives must be identical to be instanced. Currently, instancing doesn't support
-            // skinning/morphing.
-            return  lhs.primitive.primitive         == rhs.primitive.primitive          &&
-                    lhs.primitive.rasterState       == rhs.primitive.rasterState        &&
-                    lhs.primitive.skinningHandle    == rhs.primitive.skinningHandle     &&
-                    lhs.primitive.skinningOffset    == rhs.primitive.skinningOffset     &&
-                    lhs.primitive.morphWeightBuffer == rhs.primitive.morphWeightBuffer  &&
-                    lhs.primitive.morphTargetBuffer == rhs.primitive.morphTargetBuffer  &&
-                    lhs.primitive.skinningTexture   == rhs.primitive.skinningTexture    ;
-        });
+        // Currently, if we have skinnning or morphing, we can't use auto instancing. This is
+        // because the morphing/skinning data for comparison is not easily accessible.
+        // Additionally, we can't have a different skinning/morphing per instance anyway.
+        Command const* e = curr + 1;
+        if (UTILS_LIKELY(!curr->primitive.hasSkinning && !curr->primitive.hasMorphing)) {
+            // we can't have nice things! No more than maxInstanceCount due to UBO size limits
+            e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
+                    [lhs = *curr](Command const& rhs) {
+                        // primitives must be identical to be instanced.
+                        // Currently, instancing doesn't support skinning/morphing.
+                        return lhs.primitive.mi == rhs.primitive.mi &&
+                               lhs.primitive.rph == rhs.primitive.rph &&
+                               lhs.primitive.vbih == rhs.primitive.vbih &&
+                               lhs.primitive.indexOffset == rhs.primitive.indexOffset &&
+                               lhs.primitive.indexCount == rhs.primitive.indexCount &&
+                               lhs.primitive.rasterState == rhs.primitive.rasterState;
+                    });
+        }
 
         uint32_t const instanceCount = e - curr;
         assert_invariant(instanceCount > 0);
@@ -584,7 +589,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmdColor.primitive.index = i;
         cmdColor.primitive.instanceCount =
                 soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
-        cmdColor.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
+        cmdColor.primitive.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
@@ -614,14 +619,11 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.primitive.index = i;
             cmdDepth.primitive.instanceCount =
                     soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
-            cmdDepth.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
+            cmdDepth.primitive.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
-
-            cmdDepth.primitive.skinningHandle = skinning.handle;
-            cmdDepth.primitive.skinningOffset = skinning.offset;
-            cmdDepth.primitive.skinningTexture = skinning.handleSampler;
-            cmdDepth.primitive.morphWeightBuffer = morphing.handle;
+            cmdDepth.primitive.hasMorphing = (bool)morphing.handle;
+            cmdDepth.primitive.hasSkinning = (bool)skinning.handle;
 
             if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
@@ -631,11 +633,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         }
         if constexpr (isColorPass) {
             renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
-
-            cmdColor.primitive.skinningHandle = skinning.handle;
-            cmdColor.primitive.skinningOffset = skinning.offset;
-            cmdColor.primitive.skinningTexture = skinning.handleSampler;
-            cmdColor.primitive.morphWeightBuffer = morphing.handle;
+            cmdColor.primitive.hasMorphing = (bool)morphing.handle;
+            cmdColor.primitive.hasSkinning = (bool)skinning.handle;
         }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
@@ -656,7 +655,13 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             //       skinning or morphing.
 
             if constexpr (isColorPass) {
-                cmdColor.primitive.primitive = &primitive;
+                cmdColor.primitive.mi = mi;
+                cmdColor.primitive.rph = primitive.getHwHandle();
+                cmdColor.primitive.vbih = primitive.getVertexBufferInfoHandle();
+                cmdColor.primitive.indexOffset = primitive.getIndexOffset();
+                cmdColor.primitive.indexCount = primitive.getIndexCount();
+                cmdColor.primitive.type = primitive.getPrimitiveType();
+
                 RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
 
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
@@ -759,7 +764,13 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 cmdDepth.key |= mi->getSortingKey(); // already all set-up for direct or'ing
 
                 // unconditionally write the command
-                cmdDepth.primitive.primitive = &primitive;
+                cmdDepth.primitive.mi = mi;
+                cmdDepth.primitive.rph = primitive.getHwHandle();
+                cmdDepth.primitive.vbih = primitive.getVertexBufferInfoHandle();
+                cmdDepth.primitive.indexOffset = primitive.getIndexOffset();
+                cmdDepth.primitive.indexCount = primitive.getIndexCount();
+                cmdDepth.primitive.type = primitive.getPrimitiveType();
+
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
                 cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
@@ -915,20 +926,20 @@ void RenderPass::Executor::execute(FEngine& engine,
                 }
 
                 // primitiveHandle may be invalid if no geometry was set on the renderable.
-                if (UTILS_UNLIKELY(!first->primitive.primitive->getHwHandle())) {
+                if (UTILS_UNLIKELY(!first->primitive.rph)) {
                     continue;
                 }
 
                 // per-renderable uniform
                 PrimitiveInfo const info = first->primitive;
                 pipeline.rasterState = info.rasterState;
-                pipeline.vertexBufferInfo = info.primitive->getVertexBufferInfoHandle();
-                pipeline.primitiveType = info.primitive->getPrimitiveType();
+                pipeline.vertexBufferInfo = info.vbih;
+                pipeline.primitiveType = info.type;
                 assert_invariant(pipeline.vertexBufferInfo);
 
-                if (UTILS_UNLIKELY(mi != info.primitive->getMaterialInstance())) {
+                if (UTILS_UNLIKELY(mi != info.mi)) {
                     // this is always taken the first time
-                    mi = info.primitive->getMaterialInstance();
+                    mi = info.mi;
                     assert_invariant(mi);
 
                     ma = mi->getMaterial();
@@ -960,9 +971,10 @@ void RenderPass::Executor::execute(FEngine& engine,
                         info.instanceCount & PrimitiveInfo::INSTANCE_COUNT_MASK;
                 auto getPerObjectUboHandle =
                         [this, &info, &instanceCount]() -> std::pair<Handle<backend::HwBufferObject>, uint32_t> {
-                            if (info.instanceBufferHandle) {
+                            if (info.hasHybridInstancing) {
+                                FScene::RenderableSoa const& soa = *mRenderableSoa;
                                 // "hybrid" instancing -- instanceBufferHandle takes the place of the UBO
-                                return { info.instanceBufferHandle, 0 };
+                                return { soa.elementAt<FScene::INSTANCES>(info.index).handle, 0 };
                             }
                             bool const userInstancing =
                                     (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
@@ -987,16 +999,22 @@ void RenderPass::Executor::execute(FEngine& engine,
                         offset,
                         sizeof(PerRenderableUib));
 
-                if (UTILS_UNLIKELY(info.skinningHandle)) {
+                if (UTILS_UNLIKELY(info.hasSkinning)) {
+
+                    FScene::RenderableSoa const& soa = *mRenderableSoa;
+
+                    const FRenderableManager::SkinningBindingInfo& skinning =
+                            soa.elementAt<FScene::SKINNING_BUFFER>(info.index);
+
                     // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
                     driver.bindBufferRange(BufferObjectBinding::UNIFORM,
                             +UniformBindingPoints::PER_RENDERABLE_BONES,
-                            info.skinningHandle,
-                            info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
+                            skinning.handle,
+                            skinning.offset * sizeof(PerRenderableBoneUib::BoneData),
                             sizeof(PerRenderableBoneUib));
                     // note: always bind the skinningTexture because the shader needs it.
                     driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                            info.skinningTexture);
+                            skinning.handleSampler);
                     // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
                     driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                             info.morphTargetBuffer);
@@ -1006,16 +1024,25 @@ void RenderPass::Executor::execute(FEngine& engine,
                     rebindPipeline = true;
                 }
 
-                if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
+                if (UTILS_UNLIKELY(info.hasMorphing)) {
+
+                    FScene::RenderableSoa const& soa = *mRenderableSoa;
+
+                    const FRenderableManager::SkinningBindingInfo& skinning =
+                            soa.elementAt<FScene::SKINNING_BUFFER>(info.index);
+
+                    const FRenderableManager::MorphingBindingInfo& morphing =
+                            soa.elementAt<FScene::MORPHING_BUFFER>(info.index);
+
                     // Instead of using a UBO per primitive, we could also have a single UBO for all
                     // primitives and use bindUniformBufferRange which might be more efficient.
                     driver.bindUniformBuffer(+UniformBindingPoints::PER_RENDERABLE_MORPHING,
-                            info.morphWeightBuffer);
+                            morphing.handle);
                     driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                             info.morphTargetBuffer);
                     // note: even if only morphing is enabled, binding skinningTexture is needed.
                     driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                            info.skinningTexture);
+                            skinning.handleSampler);
 
                     // FIXME: Currently we need to rebind the PipelineState when texture or
                     //  UBO binding change.
@@ -1029,15 +1056,12 @@ void RenderPass::Executor::execute(FEngine& engine,
                     driver.bindPipeline(pipeline);
                 }
 
-                if (info.primitive->getHwHandle() != currentPrimitiveHandle) {
-                    currentPrimitiveHandle = info.primitive->getHwHandle();
-                    driver.bindRenderPrimitive(info.primitive->getHwHandle());
+                if (info.rph != currentPrimitiveHandle) {
+                    currentPrimitiveHandle = info.rph;
+                    driver.bindRenderPrimitive(info.rph);
                 }
 
-                driver.draw2(
-                        info.primitive->getIndexOffset(),
-                        info.primitive->getIndexCount(),
-                        instanceCount);
+                driver.draw2(info.indexOffset, info.indexCount, instanceCount);
             }
         }
 
@@ -1057,7 +1081,8 @@ void RenderPass::Executor::execute(FEngine& engine,
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-        : mCommands(b, e),
+        : mRenderableSoa(&pass->mRenderableSoa),
+          mCommands(b, e),
           mCustomCommands(pass->mCustomCommands.data(), pass->mCustomCommands.size()),
           mUboHandle(pass->mUboHandle),
           mInstancedUboHandle(pass->mInstancedUboHandle),
