@@ -160,8 +160,10 @@ static bool invokeScript(const std::vector<std::string>& userArgs, backend::Shad
     // Temporary input and output files
     argv.push_back(const_cast<char*>(inputPath.c_str()));
     argv.push_back(const_cast<char*>(outputPath.c_str()));
-    argv.push_back(const_cast<char*>(toString(stage).c_str()));
-    argv.push_back(const_cast<char*>(toString(model).c_str()));
+    auto stageString = toString(stage);
+    argv.push_back(const_cast<char*>(stageString.c_str()));
+    auto modelString = toString(model);
+    argv.push_back(const_cast<char*>(modelString.c_str()));
 
     // Optional user-supplied arguments
     for (int i = 1; i < userArgs.size(); i++) {
