@@ -47,6 +47,9 @@ static void printUsage(const char* name) {
         "   --help, -h\n"
         "       Print this message\n"
         "\n"
+        "   --license, -l\n"
+        "       Print copyright and license information\n"
+        "\n"
         "   --input=[input file], -i\n"
         "       Specify path to input compiled material file\n"
         "\n"
@@ -97,10 +100,22 @@ static void printUsage(const char* name) {
     printf("%s", usage.c_str());
 }
 
+static void license() {
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
+}
+
 static int handleArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hi:o:t:p";
+    static constexpr const char* OPTSTR = "hli:o:t:p";
     static const struct option OPTIONS[] = {
             { "help",                  no_argument,       nullptr, 'h' },
+            { "license",               no_argument,       nullptr, 'l' },
             { "input",                 required_argument, nullptr, 'i' },
             { "output",                required_argument, nullptr, 'o' },
             { "type",                  required_argument, nullptr, 't' },
@@ -117,6 +132,9 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             default:
             case 'h':
                 printUsage(argv[0]);
+                exit(0);
+            case 'l':
+                license();
                 exit(0);
             case 'i':
                 config->inputFile = arg;
