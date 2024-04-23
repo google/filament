@@ -24,7 +24,8 @@
 
 namespace matedit {
 
-int externalCompile(utils::Path input, utils::Path output, std::vector<std::string> args);
+int externalCompile(utils::Path input, utils::Path output, bool preserveTextShaders,
+        std::vector<std::string> args);
 
 } // namespace matedit
 
