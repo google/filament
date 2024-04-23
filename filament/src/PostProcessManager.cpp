@@ -721,53 +721,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
      * attachment, even if writes are not enabled. This restriction is lifted on desktop GL and
      * Vulkan. The Metal situation is unclear.
      * In this case, we need to duplicate the depth texture to use it as an attachment.
-     * The pass below that does this is automatically culled if not needed, which is decided by
-     * each backend.
+     *
+     * This is also needed in Vulkan for a similar reason.
      */
-    auto const& depthDesc = fg.getDescriptor(depth);
-    FrameGraphId<FrameGraphTexture> duplicateDepthOutput;
-    if (mEngine.getDriverApi().isDepthStencilBlitSupported(depthDesc.format)) {
-        struct DuplicateDepthPassData {
-            FrameGraphId<FrameGraphTexture> input;
-            FrameGraphId<FrameGraphTexture> output;
-        };
-
-        // Needed for Vulkan and GLES. Some GLES implementations don't need it. Never needed for
-        // Metal.
-        auto& duplicateDepthPass = fg.addPass<DuplicateDepthPassData>(
-                "Duplicate Depth Pass",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.input = builder.read(depth, FrameGraphTexture::Usage::BLIT_SRC);
-
-                    auto desc = builder.getDescriptor(data.input);
-                    desc.levels = 1;// only copy the base level
-
-                    // create a new buffer for the copy
-                    data.output = builder.createTexture("Depth Texture Copy", desc);
-
-                    // output is an attachment
-                    data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
-                },
-                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                    auto const& src = resources.getTexture(data.input);
-                    auto const& dst = resources.getTexture(data.output);
-                    auto const& srcSubDesc = resources.getSubResourceDescriptor(data.input);
-                    auto const& dstSubDesc = resources.getSubResourceDescriptor(data.output);
-                    auto const& desc = resources.getDescriptor(data.output);
-                    assert_invariant(desc.samples == resources.getDescriptor(data.input).samples);
-                    // here we can guarantee that src and dst format and size match, by
-                    // construction.
-                    driver.blit(dst, dstSubDesc.level, dstSubDesc.layer, {0, 0}, src,
-                            srcSubDesc.level, srcSubDesc.layer, {0, 0}, {desc.width, desc.height});
-                });
-        duplicateDepthOutput = duplicateDepthPass->output;
-    } else {
-        auto const outDesc = depthDesc;
-        duplicateDepthOutput = blitDepth(fg, depth, {0, 0, depthDesc.width, depthDesc.height},
-                outDesc, SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
+    FrameGraphId<FrameGraphTexture> duplicateDepthOutput = {};
+    if (!mWorkaroundAllowReadOnlyAncillaryFeedbackLoop) {
+        duplicateDepthOutput = blitDepth(fg, depth);
     }
 
-    auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
+    auto& SSAOPass = fg.addPass<SSAOPassData>(
+            "SSAO Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& desc = builder.getDescriptor(depth);
 
@@ -796,10 +759,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 // reading into it even though they were not written in the depth buffer.
                 // The bilateral filter in the blur pass will ignore pixels at infinity.
 
-                auto depthAttachment = data.depth;
-                if (!mWorkaroundAllowReadOnlyAncillaryFeedbackLoop) {
-                    depthAttachment = duplicateDepthOutput;
-                }
+                auto depthAttachment = duplicateDepthOutput ? duplicateDepthOutput : data.depth;
 
                 depthAttachment = builder.read(depthAttachment,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
@@ -809,8 +769,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },
-            [=](FrameGraphResources const& resources,
-                    auto const& data, DriverApi& driver) {
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderPassInfo();
                 auto const& desc = resources.getDescriptor(data.depth);
@@ -3095,32 +3054,62 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
     return ppQuadBlit->output;
 }
 
-// depth blitter using shaders
 FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-        FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filterMag,
-        backend::SamplerMinFilter filterMin) noexcept {
+        FrameGraphId<FrameGraphTexture> input) noexcept {
+    auto const& inputDesc = fg.getDescriptor(input);
+    filament::Viewport const vp = {0, 0, inputDesc.width, inputDesc.height};
+    bool const hardwareBlitSupported =
+            mEngine.getDriverApi().isDepthStencilBlitSupported(inputDesc.format);
 
-    // TODO: add support for sub-resources
-    assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
-    assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
-
-    struct QuadBlitData {
+    struct BlitData {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
     };
 
-    auto& ppQuadBlit = fg.addPass<QuadBlitData>(
-            "depth blitting",
+    if (hardwareBlitSupported) {
+        auto& depthPass = fg.addPass<BlitData>(
+                "Depth Blit",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
+
+                    auto desc = builder.getDescriptor(data.input);
+                    desc.levels = 1;// only copy the base level
+
+                    // create a new buffer for the copy
+                    data.output = builder.createTexture("depth blit output", desc);
+
+                    // output is an attachment
+                    data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
+                },
+                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                    auto const& src = resources.getTexture(data.input);
+                    auto const& dst = resources.getTexture(data.output);
+                    auto const& srcSubDesc = resources.getSubResourceDescriptor(data.input);
+                    auto const& dstSubDesc = resources.getSubResourceDescriptor(data.output);
+                    auto const& desc = resources.getDescriptor(data.output);
+                    assert_invariant(desc.samples == resources.getDescriptor(data.input).samples);
+                    // here we can guarantee that src and dst format and size match, by
+                    // construction.
+                    driver.blit(
+                            dst, dstSubDesc.level, dstSubDesc.layer, { 0, 0 },
+                            src, srcSubDesc.level, srcSubDesc.layer, { 0, 0 },
+                            { desc.width, desc.height });
+                });
+        return depthPass->output;
+    }
+    // Otherwise, we would do a shader-based blit.
+
+    auto& ppQuadBlit = fg.addPass<BlitData>(
+            "Depth Blit (Shader)",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
-                data.output = builder.createTexture("depth blit output", outDesc);
+                // Note that this is a same size/format blit.
+                auto const& outputDesc = inputDesc;
+                data.output = builder.createTexture("depth blit output", outputDesc);
                 data.output =
                         builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
                 builder.declareRenderPass(builder.getName(data.output),
-                        {
-                            .attachments = {.depth = {data.output}},
-                        });
+                        {.attachments = {.depth = {data.output}}});
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.input);
@@ -3131,16 +3120,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
                 // set uniforms
                 PostProcessMaterial const& material = getPostProcessMaterial("blitDepth");
                 auto* mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("depth", depth, {.filterMag = filterMag, .filterMin = filterMin});
+                mi->setParameter("depth", depth,
+                        {
+                            .filterMag = SamplerMagFilter::NEAREST,
+                            .filterMin = SamplerMinFilter::NEAREST,
+                        });
                 mi->setParameter("viewport",
                         float4{float(vp.left) / inputDesc.width,
                             float(vp.bottom) / inputDesc.height, float(vp.width) / inputDesc.width,
                             float(vp.height) / inputDesc.height});
-                mi->commit(driver);
-                mi->use(driver);
-
-                auto pipeline = material.getPipelineState(mEngine);
-                render(out, pipeline, driver);
+                commitAndRender(out, material, driver);
             });
 
     return ppQuadBlit->output;
