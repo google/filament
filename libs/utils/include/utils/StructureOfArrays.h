@@ -368,7 +368,7 @@ public:
         size_t last = mSize++;
         // Fold expression on the comma operator
         ([&]{
-            new(std::get<Indices>(mArrays) + last) Elements{std::get<Indices>(args)};
+            new(std::get<Indices>(mArrays) + last) Elements{std::get<Indices>(std::forward<Structure>(args))};
         }() , ...);
     }
 
