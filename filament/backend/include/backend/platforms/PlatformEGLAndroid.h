@@ -22,6 +22,10 @@
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/platforms/PlatformEGL.h>
 
+#include <utils/android/PerformanceHintManager.h>
+
+#include <chrono>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -58,6 +62,13 @@ protected:
 
     void terminate() noexcept override;
 
+    void beginFrame(
+            int64_t monotonic_clock_ns,
+            int64_t refreshIntervalNs,
+            uint32_t frameId) noexcept override;
+
+    void preCommit() noexcept override;
+
     /**
      * Set the presentation time using `eglPresentationTimeANDROID`
      * @param presentationTimeInNanosecond
@@ -81,6 +92,11 @@ protected:
 private:
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
+    utils::PerformanceHintManager mPerformanceHintManager;
+    utils::PerformanceHintManager::Session mPerformanceHintSession;
+
+    using clock = std::chrono::high_resolution_clock;
+    clock::time_point mStartTimeOfActualWork;
 };
 
 } // namespace filament::backend

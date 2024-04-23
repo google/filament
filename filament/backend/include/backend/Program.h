@@ -84,6 +84,9 @@ public:
     // null terminating character.
     Program& shader(ShaderStage shader, void const* data, size_t size);
 
+    // sets the language of the shader sources provided with shader() (defaults to ESSL3)
+    Program& shaderLanguage(ShaderLanguage shaderLanguage);
+
     // Note: This is only needed for GLES3.0 backends, because the layout(binding=) syntax is
     //       not permitted in glsl. The backend needs a way to associate a uniform block
     //       to a binding point.
@@ -136,6 +139,8 @@ public:
     utils::CString const& getName() const noexcept { return mName; }
     utils::CString& getName() noexcept { return mName; }
 
+    auto const& getShaderLanguage() const { return mShaderLanguage; }
+
     utils::FixedCapacityVector<SpecializationConstant> const& getSpecializationConstants() const noexcept {
         return mSpecializationConstants;
     }
@@ -155,6 +160,7 @@ private:
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;
+    ShaderLanguage mShaderLanguage = ShaderLanguage::ESSL3;
     utils::CString mName;
     uint64_t mCacheId{};
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;

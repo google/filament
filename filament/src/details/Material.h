@@ -48,6 +48,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <new>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -55,6 +56,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
 
 namespace filament {
 
@@ -100,8 +105,13 @@ public:
 
     BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
 
-    FMaterialInstance const* getDefaultInstance() const noexcept { return &mDefaultInstance; }
-    FMaterialInstance* getDefaultInstance() noexcept { return &mDefaultInstance; }
+    FMaterialInstance const* getDefaultInstance() const noexcept {
+        return const_cast<FMaterial*>(this)->getDefaultInstance();
+    }
+
+    FMaterialInstance* getDefaultInstance() noexcept {
+        return std::launder(reinterpret_cast<FMaterialInstance*>(&mDefaultInstanceStorage));
+    }
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
@@ -238,12 +248,12 @@ private:
     backend::Program getProgramWithVariants(Variant variant,
             Variant vertexVariant, Variant fragmentVariant) const noexcept;
 
-    void processBlendingMode(MaterialParser const* const parser);
+    void processBlendingMode(MaterialParser const* parser);
 
     void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
-            MaterialParser const* const parser);
+            MaterialParser const* parser);
 
-    void processDepthVariants(FEngine& engine, MaterialParser const* const parser);
+    void processDepthVariants(FEngine& engine, MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
@@ -280,7 +290,10 @@ private:
     bool mIsDefaultMaterial = false;
     bool mSpecularAntiAliasing = false;
 
-    FMaterialInstance mDefaultInstance;
+    // reserve some space to construct the default material instance
+    std::aligned_storage<sizeof(FMaterialInstance), alignof(FMaterialInstance)>::type mDefaultInstanceStorage;
+    static_assert(sizeof(mDefaultInstanceStorage) >= sizeof(mDefaultInstanceStorage));
+
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
@@ -311,19 +324,9 @@ private:
     mutable VariantList mActivePrograms;
     mutable utils::Mutex mPendingEditsLock;
     std::unique_ptr<MaterialParser> mPendingEdits;
-    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept {
-        std::lock_guard lock(mPendingEditsLock);
-        std::swap(pendingEdits, mPendingEdits);
-    }
-    bool hasPendingEdits() noexcept {
-        std::lock_guard lock(mPendingEditsLock);
-        return (bool)mPendingEdits;
-    }
-    void latchPendingEdits() noexcept {
-        std::lock_guard lock(mPendingEditsLock);
-        std::swap(mPendingEdits, mMaterialParser);
-    }
-
+    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
+    bool hasPendingEdits() noexcept;
+    void latchPendingEdits() noexcept;
 #endif
 
     utils::CString mName;

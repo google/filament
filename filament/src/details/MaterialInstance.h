@@ -234,8 +234,8 @@ private:
     template<typename T>
     T getParameterImpl(std::string_view name) const;
 
-    FMaterialInstance() noexcept;
-    void initDefaultInstance(FEngine& engine, FMaterial const* material);
+    // initialize the default instance
+    FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept;
 
     void commitSlow(FEngine::DriverApi& driver) const;
 

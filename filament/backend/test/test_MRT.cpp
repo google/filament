@@ -127,7 +127,7 @@ TEST_F(BackendTest, MRT) {
         getDriverApi().startCapture(0);
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
+        getDriverApi().beginFrame(0, 0, 0);
 
         // Draw a triangle.
         getDriverApi().beginRenderPass(renderTarget, params);

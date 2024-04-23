@@ -238,13 +238,13 @@ TEST_F(BackendTest, ColorMagnify) {
             {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
 
     // Push through an empty frame to allow the texture to upload and the blit to execute.
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
     api.commit(swapChain);
     api.endFrame(0);
 
     // Grab a screenshot.
     ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMagnify.png" };
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
     dumpScreenshot(api, dstRenderTargets[0], &params);
     api.commit(swapChain);
     api.endFrame(0);
@@ -402,7 +402,7 @@ TEST_F(BackendTest, ColorResolve) {
     });
 
     // FIXME: on Metal this triangle is not drawn. Can't understand why.
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
         api.beginRenderPass(srcRenderTarget, params);
             api.bindUniformBuffer(0, ubuffer);
             api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
@@ -484,13 +484,13 @@ TEST_F(BackendTest, Blit2DTextureArray) {
             {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
 
     // Push through an empty frame to allow the texture to upload and the blit to execute.
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
     api.commit(swapChain);
     api.endFrame(0);
 
     // Grab a screenshot.
     ScreenshotParams params { kDstTexWidth, kDstTexHeight, "Blit2DTextureArray.png" };
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
     dumpScreenshot(api, dstRenderTarget, &params);
     api.commit(swapChain);
     api.endFrame(0);
@@ -574,13 +574,13 @@ TEST_F(BackendTest, BlitRegion) {
             SamplerMagFilter::LINEAR);
 
     // Push through an empty frame to allow the texture to upload and the blit to execute.
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
     api.commit(swapChain);
     api.endFrame(0);
 
     // Grab a screenshot.
     ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegion.png" };
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
     dumpScreenshot(api, dstRenderTarget, &params);
     api.commit(swapChain);
     api.endFrame(0);
@@ -655,7 +655,7 @@ TEST_F(BackendTest, BlitRegionToSwapChain) {
         .height = kDstTexHeight - 10,
     };
 
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
 
     api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
             dstRect, srcRenderTargets[srcLevel],

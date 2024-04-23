@@ -881,17 +881,26 @@ default_case:
     }
 }
 
-void OpenGLContext::unbindTexture(GLenum target, GLuint texture_id) noexcept {
+void OpenGLContext::unbindTexture(
+        UTILS_UNUSED_IN_RELEASE GLenum target, GLuint texture_id) noexcept {
     // unbind this texture from all the units it might be bound to
     // no need unbind the texture from FBOs because we're not tracking that state (and there is
     // no need to).
-    const size_t index = getIndexForTextureTarget(target);
     UTILS_NOUNROLL
     for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
-        if (state.textures.units[unit].targets[index].texture_id == texture_id) {
-            bindTexture(unit, target, (GLuint)0, index);
+        if (state.textures.units[unit].id == texture_id) {
+            // if this texture is bound, it should be at the same target
+            assert_invariant(state.textures.units[unit].target == target);
+            unbindTextureUnit(unit);
         }
     }
+}
+
+void OpenGLContext::unbindTextureUnit(GLuint unit) noexcept {
+    update_state(state.textures.units[unit].id, 0u, [&]() {
+        activeTexture(unit);
+        glBindTexture(state.textures.units[unit].target, 0u);
+    });
 }
 
 void OpenGLContext::unbindSampler(GLuint sampler) noexcept {

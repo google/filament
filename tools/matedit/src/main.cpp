@@ -28,6 +28,7 @@ struct Config {
     utils::Path inputFile;
     utils::Path outputFile;
     std::vector<std::string> commandArgs;
+    bool preserveTextShaders = false;
 };
 
 static void printUsage(const char* name) {
@@ -55,6 +56,9 @@ static void printUsage(const char* name) {
         "   --type=[shader type], -t\n"
         "       Specify the shader type, currently only metal is supported\n"
         "\n"
+        "   --preserve-text-shaders, -p\n"
+        "       Keep the text-based shaders when writing the output file\n"
+        "\n"
         "Commands:\n"
         "   external-compile\n"
         "       Transforms all the text-based shaders of the specified type in the input file into binaries\n"
@@ -76,7 +80,8 @@ static void printUsage(const char* name) {
         "               <input shader> is guaranteed to have a .metal extension.\n"
         "               <output binary> is guaranteed to have a .metallib extension.\n"
         "\n"
-        "       This command will remove the text-based shaders when writing the output material file.\n"
+        "       This command will remove the text-based shaders when writing the output material file, unless\n"
+        "       the --preserve-text-shaders option is specified.\n"
         "\n"
         "       If script exits with a non-zero exit code, MATEDIT will terminate with error. Multiple\n"
         "       invocations of script may be launched in parallel.\n"
@@ -93,12 +98,13 @@ static void printUsage(const char* name) {
 }
 
 static int handleArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hi:o:t:";
+    static constexpr const char* OPTSTR = "hi:o:t:p";
     static const struct option OPTIONS[] = {
-            { "help",               no_argument,       nullptr, 'h' },
-            { "input",              required_argument, nullptr, 'i' },
-            { "output",             required_argument, nullptr, 'o' },
-            { "type",               required_argument, nullptr, 't' },
+            { "help",                  no_argument,       nullptr, 'h' },
+            { "input",                 required_argument, nullptr, 'i' },
+            { "output",                required_argument, nullptr, 'o' },
+            { "type",                  required_argument, nullptr, 't' },
+            { "preserve-text-shaders", no_argument,       nullptr, 'p' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -126,6 +132,10 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                               << std::endl;
                     exit(1);
                 }
+                break;
+            case 'p':
+                config->preserveTextShaders = true;
+                break;
         }
     }
 
@@ -176,5 +186,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    return matedit::externalCompile(config.inputFile, config.outputFile, config.commandArgs);
+    return matedit::externalCompile(
+            config.inputFile, config.outputFile, config.preserveTextShaders, config.commandArgs);
 }
