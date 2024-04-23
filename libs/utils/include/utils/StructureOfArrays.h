@@ -513,7 +513,7 @@ public:
             return (soa.elementAt<E>(i) = other);
         }
         UTILS_ALWAYS_INLINE Type const& operator = (Type&& other) noexcept {
-            return (soa.elementAt<E>(i) = other);
+            return (soa.elementAt<E>(i) = std::forward<Type>(other));
         }
         // comparisons
         UTILS_ALWAYS_INLINE bool operator==(Type const& other) const {
