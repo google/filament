@@ -163,6 +163,7 @@ set(PRIVATE_HDRS
         src/ResourceList.h
         src/ShadowMap.h
         src/ShadowMapManager.h
+        src/SharedHandle.h
         src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
