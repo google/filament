@@ -26,8 +26,6 @@
 
 #include <smolv.h>
 
-#include "generated/vkshaders/vkshaders.h"
-
 using namespace bluevk;
 using namespace utils;
 
@@ -40,7 +38,6 @@ namespace {
 inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect, VkFilter filter,
         VulkanAttachment src, VulkanAttachment dst,
         const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
-
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
         utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
@@ -93,7 +90,6 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
 
 inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
         VulkanAttachment src, VulkanAttachment dst) {
-
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
         utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()

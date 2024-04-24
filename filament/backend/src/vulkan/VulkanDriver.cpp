@@ -921,6 +921,11 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
     return false;
 }
 
+bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    auto const& formats = mContext.getBlittableDepthStencilFormats();
+    return std::find(formats.begin(), formats.end(), getVkFormat(format)) != formats.end();
+}
+
 bool VulkanDriver::isProtectedTexturesSupported() {
     return false;
 }
@@ -1807,7 +1812,7 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
         // This fallback path is very flaky because the dummy texture might not have
         // matching characteristics. (e.g. if the missing texture is a 3D texture)
         if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
-#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE) && FVK_ENABLED_DEBUG_SAMPLER_NAME
             utils::slog.w << "Uninitialized texture bound to '" << bindingToName[binding] << "'";
             utils::slog.w << " in material '" << program->name.c_str() << "'";
             utils::slog.w << " at binding point " << +binding << utils::io::endl;
