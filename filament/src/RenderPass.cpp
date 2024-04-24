@@ -213,8 +213,8 @@ void RenderPass::appendCommands(FEngine& engine,
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            auto ma = first->primitive.mi->getMaterial();
-            ma->prepareProgram(first->primitive.materialVariant);
+            auto ma = first->info.mi->getMaterial();
+            ma->prepareProgram(first->info.materialVariant);
         }
     }
 }
@@ -294,18 +294,18 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
         // because the morphing/skinning data for comparison is not easily accessible.
         // Additionally, we can't have a different skinning/morphing per instance anyway.
         Command const* e = curr + 1;
-        if (UTILS_LIKELY(!curr->primitive.hasSkinning && !curr->primitive.hasMorphing)) {
+        if (UTILS_LIKELY(!curr->info.hasSkinning && !curr->info.hasMorphing)) {
             // we can't have nice things! No more than maxInstanceCount due to UBO size limits
             e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
                     [lhs = *curr](Command const& rhs) {
                         // primitives must be identical to be instanced.
                         // Currently, instancing doesn't support skinning/morphing.
-                        return lhs.primitive.mi == rhs.primitive.mi &&
-                               lhs.primitive.rph == rhs.primitive.rph &&
-                               lhs.primitive.vbih == rhs.primitive.vbih &&
-                               lhs.primitive.indexOffset == rhs.primitive.indexOffset &&
-                               lhs.primitive.indexCount == rhs.primitive.indexCount &&
-                               lhs.primitive.rasterState == rhs.primitive.rasterState;
+                        return lhs.info.mi == rhs.info.mi &&
+                               lhs.info.rph == rhs.info.rph &&
+                               lhs.info.vbih == rhs.info.vbih &&
+                               lhs.info.indexOffset == rhs.info.indexOffset &&
+                               lhs.info.indexCount == rhs.info.indexCount &&
+                               lhs.info.rasterState == rhs.info.rasterState;
                     });
         }
 
@@ -331,12 +331,12 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
             assert_invariant(instancedPrimitiveOffset + instanceCount
                              <= stagingBufferSize / sizeof(PerRenderableData));
             for (uint32_t i = 0; i < instanceCount; i++) {
-                stagingBuffer[instancedPrimitiveOffset + i] = uboData[curr[i].primitive.index];
+                stagingBuffer[instancedPrimitiveOffset + i] = uboData[curr[i].info.index];
             }
 
             // make the first command instanced
-            curr[0].primitive.instanceCount = instanceCount;
-            curr[0].primitive.index = instancedPrimitiveOffset;
+            curr[0].info.instanceCount = instanceCount;
+            curr[0].info.index = instancedPrimitiveOffset;
             instancedPrimitiveOffset += instanceCount;
 
             // cancel commands that are now instances
@@ -414,22 +414,22 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     keyDraw |= makeField(ma->getRasterState().alphaToCoverage, BLENDING_MASK, BLENDING_SHIFT);
 
     cmdDraw.key = isBlendingCommand ? keyBlending : keyDraw;
-    cmdDraw.primitive.rasterState = ma->getRasterState();
+    cmdDraw.info.rasterState = ma->getRasterState();
 
     // for SSR pass, the blending mode of opaques (including MASKED) must be off
     // see Material.cpp.
     const bool blendingMustBeOff = !isBlendingCommand && Variant::isSSRVariant(variant);
-    cmdDraw.primitive.rasterState.blendFunctionSrcAlpha = blendingMustBeOff ?
-            BlendFunction::ONE : cmdDraw.primitive.rasterState.blendFunctionSrcAlpha;
-    cmdDraw.primitive.rasterState.blendFunctionDstAlpha = blendingMustBeOff ?
-            BlendFunction::ZERO : cmdDraw.primitive.rasterState.blendFunctionDstAlpha;
+    cmdDraw.info.rasterState.blendFunctionSrcAlpha = blendingMustBeOff ?
+            BlendFunction::ONE : cmdDraw.info.rasterState.blendFunctionSrcAlpha;
+    cmdDraw.info.rasterState.blendFunctionDstAlpha = blendingMustBeOff ?
+            BlendFunction::ZERO : cmdDraw.info.rasterState.blendFunctionDstAlpha;
 
-    cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
-    cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
-    cmdDraw.primitive.rasterState.colorWrite = mi->isColorWriteEnabled();
-    cmdDraw.primitive.rasterState.depthWrite = mi->isDepthWriteEnabled();
-    cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
-    cmdDraw.primitive.materialVariant = variant;
+    cmdDraw.info.rasterState.inverseFrontFaces = inverseFrontFaces;
+    cmdDraw.info.rasterState.culling = mi->getCullingMode();
+    cmdDraw.info.rasterState.colorWrite = mi->isColorWriteEnabled();
+    cmdDraw.info.rasterState.depthWrite = mi->isDepthWriteEnabled();
+    cmdDraw.info.rasterState.depthFunc = mi->getDepthFunc();
+    cmdDraw.info.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
 
@@ -501,53 +501,54 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
 
-    // generateCommands() writes both the draw and depth commands simultaneously such that
-    // we go throw the list of renderables just once.
-    // (in principle, we could have split this method into two, at the cost of going through
-    // the list twice)
-
     constexpr bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
     constexpr bool isDepthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
-
     static_assert(isColorPass != isDepthPass, "only color or depth pass supported");
 
-    const bool depthContainsShadowCasters       = bool(extraFlags & CommandTypeFlags::DEPTH_CONTAINS_SHADOW_CASTERS);
-    const bool depthFilterAlphaMaskedObjects    = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
-    const bool filterTranslucentObjects         = bool(extraFlags & CommandTypeFlags::FILTER_TRANSLUCENT_OBJECTS);
+    bool const depthContainsShadowCasters =
+            bool(extraFlags & CommandTypeFlags::DEPTH_CONTAINS_SHADOW_CASTERS);
 
-    auto const* const UTILS_RESTRICT soaWorldAABBCenter     = soa.data<FScene::WORLD_AABB_CENTER>();
-    auto const* const UTILS_RESTRICT soaVisibility          = soa.data<FScene::VISIBILITY_STATE>();
-    auto const* const UTILS_RESTRICT soaPrimitives          = soa.data<FScene::PRIMITIVES>();
-    auto const* const UTILS_RESTRICT soaSkinning            = soa.data<FScene::SKINNING_BUFFER>();
-    auto const* const UTILS_RESTRICT soaMorphing            = soa.data<FScene::MORPHING_BUFFER>();
-    auto const* const UTILS_RESTRICT soaVisibilityMask      = soa.data<FScene::VISIBLE_MASK>();
-    auto const* const UTILS_RESTRICT soaInstanceInfo        = soa.data<FScene::INSTANCES>();
+    bool const depthFilterAlphaMaskedObjects =
+            bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
 
-    const bool hasShadowing = renderFlags & HAS_SHADOWING;
-    const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
-    const bool hasInstancedStereo = renderFlags & IS_INSTANCED_STEREOSCOPIC;
+    bool const filterTranslucentObjects =
+            bool(extraFlags & CommandTypeFlags::FILTER_TRANSLUCENT_OBJECTS);
 
-    Command cmdColor;
+    bool const hasShadowing =
+            renderFlags & HAS_SHADOWING;
 
-    Command cmdDepth;
+    bool const viewInverseFrontFaces =
+            renderFlags & HAS_INVERSE_FRONT_FACES;
+
+    bool const hasInstancedStereo =
+            renderFlags & IS_INSTANCED_STEREOSCOPIC;
+
+    float const cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
+
+    auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
+    auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
+    auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
+    auto const* const UTILS_RESTRICT soaSkinning        = soa.data<FScene::SKINNING_BUFFER>();
+    auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
+    auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
+    auto const* const UTILS_RESTRICT soaInstanceInfo    = soa.data<FScene::INSTANCES>();
+
+    Command cmd;
+
     if constexpr (isDepthPass) {
-        cmdDepth.primitive.materialVariant = variant;
-        cmdDepth.primitive.rasterState = {};
-        cmdDepth.primitive.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isVSMVariant(variant);
-        cmdDepth.primitive.rasterState.depthWrite = true;
-        cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::GE;
-        cmdDepth.primitive.rasterState.alphaToCoverage = false;
+        cmd.info.materialVariant = variant;
+        cmd.info.rasterState = {};
+        cmd.info.rasterState.colorWrite = Variant::isPickingVariant(variant) || Variant::isVSMVariant(variant);
+        cmd.info.rasterState.depthWrite = true;
+        cmd.info.rasterState.depthFunc = RasterState::DepthFunc::GE;
+        cmd.info.rasterState.alphaToCoverage = false;
     }
-
-    const float cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Check if this renderable passes the visibilityMask.
         if (UTILS_UNLIKELY(!(soaVisibilityMask[i] & visibilityMask))) {
             continue;
         }
-
-        Variant renderableVariant = variant;
 
         // Signed distance from camera plane to object's center. Positive distances are in front of
         // the camera. Some objects with a center behind the camera can still be visible
@@ -563,7 +564,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // float3 d = soaWorldAABBCenter[i] - cameraPosition;
         // float distance = dot(d, cameraForward);
         // but saves a couple of instruction, because part of the math is done outside the loop.
-        float distance = dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward;
 
         // We negate the distance to the camera in order to create a bit pattern that will
         // be sorted properly, this works because:
@@ -575,66 +575,52 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         //   Here, objects close to the camera (but behind) will be drawn first.
         // An alternative that keeps the mathematical ordering is given here:
         //   distanceBits ^= ((int32_t(distanceBits) >> 31) | 0x80000000u);
-        distance = -distance;
-        const uint32_t distanceBits = reinterpret_cast<uint32_t&>(distance);
+        float const distance = -dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward;
+        uint32_t const distanceBits = reinterpret_cast<uint32_t const&>(distance);
 
         // calculate the per-primitive face winding order inversion
-        const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
-        const bool hasMorphing = soaVisibility[i].morphing;
-        const bool hasSkinning = soaVisibility[i].skinning;
-        const bool hasSkinningOrMorphing = hasSkinning || hasMorphing;
+        bool const inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
+        bool const hasMorphing = soaVisibility[i].morphing;
+        bool const hasSkinning = soaVisibility[i].skinning;
+        bool const hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
-        cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
-        cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
-        cmdColor.primitive.index = i;
-        cmdColor.primitive.instanceCount =
-                soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
-        cmdColor.primitive.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
+        // if we are already an SSR variant, the SRE bit is already set,
+        // there is no harm setting it again
+        static_assert(Variant::SPECIAL_SSR & Variant::SRE);
+        Variant renderableVariant = variant;
+        renderableVariant.setShadowReceiver(
+                Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
+        renderableVariant.setSkinning(hasSkinningOrMorphing);
+
+        FRenderableManager::SkinningBindingInfo const& skinning = soaSkinning[i];
+        FRenderableManager::MorphingBindingInfo const& morphing = soaMorphing[i];
+
+        if constexpr (isColorPass) {
+            renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
+            cmd.key = uint64_t(Pass::COLOR);
+        } else if constexpr (isDepthPass) {
+            cmd.key = uint64_t(Pass::DEPTH);
+            cmd.key |= uint64_t(CustomCommand::PASS);
+            cmd.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
+            cmd.info.materialVariant.setSkinning(hasSkinningOrMorphing);
+            cmd.info.rasterState.inverseFrontFaces = inverseFrontFaces;
+        }
+
+        cmd.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
+        cmd.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
+        cmd.info.index = i;
+        cmd.info.instanceCount = soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
+        cmd.info.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
+        cmd.info.hasMorphing = (bool)morphing.handle;
+        cmd.info.hasSkinning = (bool)skinning.handle;
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
         if (UTILS_UNLIKELY(hasInstancedStereo)) {
-            cmdColor.primitive.instanceCount =
+            cmd.info.instanceCount =
                     (soaInstanceInfo[i].count * stereoEyeCount) |
                     PrimitiveInfo::USER_INSTANCE_MASK;
-        }
-
-        // if we are already an SSR variant, the SRE bit is already set,
-        // there is no harm setting it again
-        static_assert(Variant::SPECIAL_SSR & Variant::SRE);
-        renderableVariant.setShadowReceiver(
-                Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
-        renderableVariant.setSkinning(hasSkinningOrMorphing);
-
-        const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
-        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
-
-        if constexpr (isDepthPass) {
-            cmdDepth.key = uint64_t(Pass::DEPTH);
-            cmdDepth.key |= uint64_t(CustomCommand::PASS);
-            cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
-            cmdDepth.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
-            cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
-            cmdDepth.primitive.index = i;
-            cmdDepth.primitive.instanceCount =
-                    soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
-            cmdDepth.primitive.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
-            cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
-            cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
-            cmdDepth.primitive.hasMorphing = (bool)morphing.handle;
-            cmdDepth.primitive.hasSkinning = (bool)skinning.handle;
-
-            if (UTILS_UNLIKELY(hasInstancedStereo)) {
-                cmdColor.primitive.instanceCount =
-                        (soaInstanceInfo[i].count * stereoEyeCount) |
-                        PrimitiveInfo::USER_INSTANCE_MASK;
-            }
-        }
-        if constexpr (isColorPass) {
-            renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
-            cmdColor.primitive.hasMorphing = (bool)morphing.handle;
-            cmdColor.primitive.hasSkinning = (bool)skinning.handle;
         }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
@@ -654,19 +640,17 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             // TODO: we should disable the SKN variant if this primitive doesn't have either
             //       skinning or morphing.
 
+            cmd.info.mi = mi;
+            cmd.info.rph = primitive.getHwHandle();
+            cmd.info.vbih = primitive.getVertexBufferInfoHandle();
+            cmd.info.indexOffset = primitive.getIndexOffset();
+            cmd.info.indexCount = primitive.getIndexCount();
+            cmd.info.type = primitive.getPrimitiveType();
+            cmd.info.morphTargetBuffer = morphTargets.buffer->getHwHandle();
+
             if constexpr (isColorPass) {
-                cmdColor.primitive.mi = mi;
-                cmdColor.primitive.rph = primitive.getHwHandle();
-                cmdColor.primitive.vbih = primitive.getVertexBufferInfoHandle();
-                cmdColor.primitive.indexOffset = primitive.getIndexOffset();
-                cmdColor.primitive.indexCount = primitive.getIndexCount();
-                cmdColor.primitive.type = primitive.getPrimitiveType();
-
-                RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
-
-                cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
-
-                const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
+                RenderPass::setupColorCommand(cmd, renderableVariant, mi, inverseFrontFaces);
+                const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
                     // TODO: at least for transparent objects, AABB should be per primitive
                     //       but that would break the "local" blend-order, which relies on
@@ -674,16 +658,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                     // blend pass:
                     //   This will sort back-to-front for blended, and honor explicit ordering
                     //   for a given Z value, or globally.
-                    cmdColor.key &= ~BLEND_ORDER_MASK;
-                    cmdColor.key &= ~BLEND_DISTANCE_MASK;
+                    cmd.key &= ~BLEND_ORDER_MASK;
+                    cmd.key &= ~BLEND_DISTANCE_MASK;
                     // write the distance
-                    cmdColor.key |= makeField(~distanceBits,
+                    cmd.key |= makeField(~distanceBits,
                             BLEND_DISTANCE_MASK, BLEND_DISTANCE_SHIFT);
                     // clear the distance if global ordering is enabled
-                    cmdColor.key &= ~select(primitive.isGlobalBlendOrderEnabled(),
+                    cmd.key &= ~select(primitive.isGlobalBlendOrderEnabled(),
                             BLEND_DISTANCE_MASK);
                     // write blend order
-                    cmdColor.key |= makeField(primitive.getBlendOrder(),
+                    cmd.key |= makeField(primitive.getBlendOrder(),
                             BLEND_ORDER_MASK, BLEND_ORDER_SHIFT);
 
 
@@ -700,11 +684,11 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                     //     In this mode, we override the user's culling mode.
 
                     // TWO_PASSES_TWO_SIDES: this command will be issued 2nd, draw front faces
-                    cmdColor.primitive.rasterState.culling =
+                    cmd.info.rasterState.culling =
                             (mode == TransparencyMode::TWO_PASSES_TWO_SIDES) ?
-                            CullingMode::BACK : cmdColor.primitive.rasterState.culling;
+                            CullingMode::BACK : cmd.info.rasterState.culling;
 
-                    uint64_t key = cmdColor.key;
+                    uint64_t key = cmd.key;
 
                     // draw this command AFTER THE NEXT ONE
                     key |= makeField(1, BLEND_TWO_PASS_MASK, BLEND_TWO_PASS_SHIFT);
@@ -718,76 +702,51 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                     // cancel command if both front and back faces are culled
                     key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
 
-                    *curr = cmdColor;
+                    *curr = cmd;
                     curr->key = key;
                     ++curr;
 
                     // TWO_PASSES_TWO_SIDES: this command will be issued first, draw back sides (i.e. cull front)
-                    cmdColor.primitive.rasterState.culling =
+                    cmd.info.rasterState.culling =
                             (mode == TransparencyMode::TWO_PASSES_TWO_SIDES) ?
-                            CullingMode::FRONT : cmdColor.primitive.rasterState.culling;
+                            CullingMode::FRONT : cmd.info.rasterState.culling;
 
                     // TWO_PASSES_ONE_SIDE: this command will be issued first, draw (back side) in depth buffer only
-                    cmdColor.primitive.rasterState.depthWrite |=  select(mode == TransparencyMode::TWO_PASSES_ONE_SIDE);
-                    cmdColor.primitive.rasterState.colorWrite &= ~select(mode == TransparencyMode::TWO_PASSES_ONE_SIDE);
-                    cmdColor.primitive.rasterState.depthFunc =
+                    cmd.info.rasterState.depthWrite |=  select(mode == TransparencyMode::TWO_PASSES_ONE_SIDE);
+                    cmd.info.rasterState.colorWrite &= ~select(mode == TransparencyMode::TWO_PASSES_ONE_SIDE);
+                    cmd.info.rasterState.depthFunc =
                             (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
-                            SamplerCompareFunc::GE : cmdColor.primitive.rasterState.depthFunc;
-
+                            SamplerCompareFunc::GE : cmd.info.rasterState.depthFunc;
                 } else {
                     // color pass:
                     // This will bucket objects by Z, front-to-back and then sort by material
                     // in each buckets. We use the top 10 bits of the distance, which
                     // bucketizes the depth by its log2 and in 4 linear chunks in each bucket.
-                    cmdColor.key &= ~Z_BUCKET_MASK;
-                    cmdColor.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
+                    cmd.key &= ~Z_BUCKET_MASK;
+                    cmd.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
                 }
-
-                *curr = cmdColor;
-
-                // cancel command if both front and back faces are culled
-                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
-
-                ++curr;
-            }
-
-            if constexpr (isDepthPass) {
+            } else if constexpr (isDepthPass) {
                 const RasterState rs = ma->getRasterState();
                 const TransparencyMode mode = mi->getTransparencyMode();
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
 
-                // TODO: we should disable the SKN variant if this primitive doesn't have either
-                //       skinning or morphing.
-
-                cmdDepth.key |= mi->getSortingKey(); // already all set-up for direct or'ing
-
-                // unconditionally write the command
-                cmdDepth.primitive.mi = mi;
-                cmdDepth.primitive.rph = primitive.getHwHandle();
-                cmdDepth.primitive.vbih = primitive.getVertexBufferInfoHandle();
-                cmdDepth.primitive.indexOffset = primitive.getIndexOffset();
-                cmdDepth.primitive.indexCount = primitive.getIndexCount();
-                cmdDepth.primitive.type = primitive.getPrimitiveType();
-
-                cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
-                cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
+                cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
+                cmd.info.rasterState.culling = mi->getCullingMode();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
-                cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
+                cmd.info.rasterState.depthWrite = (1 // only keep bit 0
                         & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
-                        & !(filterTranslucentObjects & translucent)
-                        & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
-                            | writeDepthForShadowCasters;
-
-                *curr = cmdDepth;
-
-                // cancel command if both front and back faces are culled
-                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
-
-                ++curr;
+                                                   & !(filterTranslucentObjects & translucent)
+                                                   & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
+                                                  | writeDepthForShadowCasters;
             }
+
+            *curr = cmd;
+            // cancel command if both front and back faces are culled
+            curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+            ++curr;
         }
     }
     return curr;
@@ -926,12 +885,12 @@ void RenderPass::Executor::execute(FEngine& engine,
                 }
 
                 // primitiveHandle may be invalid if no geometry was set on the renderable.
-                if (UTILS_UNLIKELY(!first->primitive.rph)) {
+                if (UTILS_UNLIKELY(!first->info.rph)) {
                     continue;
                 }
 
                 // per-renderable uniform
-                PrimitiveInfo const info = first->primitive;
+                PrimitiveInfo const info = first->info;
                 pipeline.rasterState = info.rasterState;
                 pipeline.vertexBufferInfo = info.vbih;
                 pipeline.primitiveType = info.type;
