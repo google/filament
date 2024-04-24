@@ -42,6 +42,25 @@ namespace filament::backend {
 class VulkanPlatform;
 struct VulkanSamplerGroup;
 
+// The maximum number of attachments for any renderpass (color + resolve + depth)
+constexpr uint8_t MAX_RENDERTARGET_ATTACHMENT_TEXTURES =
+        MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT * 2 + 1;
+
+// We need to store information about a render pass to enable better barriers at the end of a
+// renderpass.
+struct RenderPassFboBundle {
+    using AttachmentArray =
+            CappedArray<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
+
+    AttachmentArray attachments;
+    bool hasColorResolve = false;
+
+    void clear() {
+        attachments.clear();
+        hasColorResolve = false;
+    }
+};
+
 class VulkanDriver final : public DriverBase {
 public:
     static Driver* create(VulkanPlatform* platform, VulkanContext const& context,
@@ -140,6 +159,8 @@ private:
     VulkanDescriptorSetManager mDescriptorSetManager;
 
     VulkanDescriptorSetManager::GetPipelineLayoutFunction mGetPipelineFunction;
+
+    RenderPassFboBundle mRenderPassFboInfo;
 
     bool const mIsSRGBSwapChainSupported;
 };

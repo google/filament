@@ -33,8 +33,6 @@ bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     if (k1.initialColorLayoutMask != k2.initialColorLayoutMask) return false;
     if (k1.initialDepthLayout != k2.initialDepthLayout) return false;
-    if (k1.renderPassDepthLayout != k2.renderPassDepthLayout) return false;
-    if (k1.finalDepthLayout != k2.finalDepthLayout) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.colorFormat[i] != k2.colorFormat[i]) return false;
     }
@@ -243,7 +241,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .initialLayout = ((!discard && config.initialColorLayoutMask & (1 << i)) || clear)
                                      ? imgutil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT)
                                      : imgutil::getVkLayout(VulkanLayout::UNDEFINED),
-            .finalLayout = imgutil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
+            .finalLayout = imgutil::getVkLayout(FINAL_COLOR_ATTACHMENT_LAYOUT),
         };
     }
 
@@ -281,7 +279,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
             .initialLayout = imgutil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
-            .finalLayout = imgutil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
+            .finalLayout = imgutil::getVkLayout(FINAL_COLOR_ATTACHMENT_LAYOUT),
         };
     }
 
@@ -290,7 +288,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
         const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
         const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
-        depthAttachmentRef.layout = imgutil::getVkLayout(config.renderPassDepthLayout);
+        depthAttachmentRef.layout = imgutil::getVkLayout(VulkanLayout::DEPTH_ATTACHMENT);
         depthAttachmentRef.attachment = attachmentIndex;
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
@@ -300,7 +298,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = imgutil::getVkLayout(config.initialDepthLayout),
-            .finalLayout = imgutil::getVkLayout(config.finalDepthLayout),
+            .finalLayout = imgutil::getVkLayout(FINAL_DEPTH_ATTACHMENT_LAYOUT),
         };
     }
     renderPassInfo.attachmentCount = attachmentIndex;

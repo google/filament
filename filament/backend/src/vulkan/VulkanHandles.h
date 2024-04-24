@@ -274,10 +274,11 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;
     VkExtent2D getExtent() const;
-    VulkanAttachment getColor(int target) const;
-    VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth() const;
-    VulkanAttachment getMsaaDepth() const;
+    // We return references in the following methods to avoid a copy.
+    VulkanAttachment& getColor(int target);
+    VulkanAttachment& getMsaaColor(int target);
+    VulkanAttachment& getDepth();
+    VulkanAttachment& getMsaaDepth();
     uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
     bool hasDepth() const { return mDepth.texture; }
