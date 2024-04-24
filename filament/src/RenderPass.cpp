@@ -18,8 +18,8 @@
 
 #include "RenderPrimitive.h"
 #include "ShadowMap.h"
+#include "SharedHandle.h"
 
-#include "details/Camera.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/View.h"
@@ -88,24 +88,26 @@ RenderPass RenderPassBuilder::build(FEngine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
+void RenderPass::BufferObjectHandleDeleter::operator()(
+        backend::BufferObjectHandle handle) noexcept {
+    if (handle) {
+        driver.get().destroyBufferObject(handle);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
 RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
-          mVisibleRenderables(builder.mVisibleRenderables),
-          mUboHandle(builder.mUboHandle),
-          mCameraPosition(builder.mCameraPosition),
-          mCameraForwardVector(builder.mCameraForwardVector),
-          mFlags(builder.mFlags),
-          mVariant(builder.mVariant),
-          mVisibilityMask(builder.mVisibilityMask),
           mScissorViewport(builder.mScissorViewport),
           mCustomCommands(engine.getPerRenderPassArena()) {
 
     // compute the number of commands we need
     updateSummedPrimitiveCounts(
-            const_cast<FScene::RenderableSoa&>(mRenderableSoa), mVisibleRenderables);
+            const_cast<FScene::RenderableSoa&>(mRenderableSoa), builder.mVisibleRenderables);
 
     uint32_t commandCount =
-            FScene::getPrimitiveCount(mRenderableSoa, mVisibleRenderables.last);
+            FScene::getPrimitiveCount(mRenderableSoa, builder.mVisibleRenderables.last);
     const bool colorPass  = bool(builder.mCommandTypeFlags & CommandTypeFlags::COLOR);
     const bool depthPass  = bool(builder.mCommandTypeFlags & CommandTypeFlags::DEPTH);
     commandCount *= uint32_t(colorPass * 2 + depthPass);
@@ -129,7 +131,15 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     mCommandBegin = curr;
     mCommandEnd = curr + commandCount + customCommandCount;
 
-    appendCommands(engine, { curr, commandCount }, builder.mCommandTypeFlags);
+    appendCommands(engine, { curr, commandCount },
+            builder.mUboHandle,
+            builder.mVisibleRenderables,
+            builder.mCommandTypeFlags,
+            builder.mFlags,
+            builder.mVisibilityMask,
+            builder.mVariant,
+            builder.mCameraPosition,
+            builder.mCameraForwardVector);
 
     if (builder.mCustomCommands.has_value()) {
         Command* p = curr + commandCount;
@@ -147,7 +157,8 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
 }
 
 // this destructor is actually heavy because it inlines ~vector<>
-RenderPass::~RenderPass() noexcept = default;
+RenderPass::~RenderPass() noexcept {
+}
 
 void RenderPass::resize(Arena& arena, size_t count) noexcept {
     if (mCommandBegin) {
@@ -157,11 +168,18 @@ void RenderPass::resize(Arena& arena, size_t count) noexcept {
 }
 
 void RenderPass::appendCommands(FEngine& engine,
-        Slice<Command> commands, CommandTypeFlags const commandTypeFlags) noexcept {
+        Slice<Command> commands,
+        backend::BufferObjectHandle const uboHandle,
+        utils::Range<uint32_t> const vr,
+        CommandTypeFlags const commandTypeFlags,
+        RenderFlags const renderFlags,
+        FScene::VisibleMaskType const visibilityMask,
+        Variant const variant,
+        float3 const cameraPosition,
+        float3 const cameraForwardVector) noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
-    utils::Range<uint32_t> const vr = mVisibleRenderables;
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());
     if (UTILS_UNLIKELY(vr.empty())) {
@@ -174,9 +192,6 @@ void RenderPass::appendCommands(FEngine& engine,
     }
 
     JobSystem& js = engine.getJobSystem();
-    const RenderFlags renderFlags = mFlags;
-    const Variant variant = mVariant;
-    const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
 
     // up-to-date summed primitive counts needed for generateCommands()
     FScene::RenderableSoa const& soa = mRenderableSoa;
@@ -186,13 +201,14 @@ void RenderPass::appendCommands(FEngine& engine,
 
     auto stereoscopicEyeCount = engine.getConfig().stereoscopicEyeCount;
 
-    const float3 cameraPosition(mCameraPosition);
-    const float3 cameraForwardVector(mCameraForwardVector);
-    auto work = [commandTypeFlags, curr, &soa, variant, renderFlags, visibilityMask, cameraPosition,
-                 cameraForwardVector, stereoscopicEyeCount]
+    auto work = [commandTypeFlags, curr, &soa,
+                 boh = uboHandle,
+                 variant, renderFlags, visibilityMask,
+                 cameraPosition, cameraForwardVector, stereoscopicEyeCount]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
-                soa, { startIndex, startIndex + indexCount }, variant, renderFlags, visibilityMask,
+                soa, { startIndex, startIndex + indexCount }, boh,
+                variant, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector, stereoscopicEyeCount);
     };
 
@@ -204,8 +220,8 @@ void RenderPass::appendCommands(FEngine& engine,
         js.runAndWait(jobCommandsParallel);
     }
 
-    // always add an "eof" command
-    // "eof" command. these commands are guaranteed to be sorted last in the
+    // Always add an "eof" command
+    // "eof" command. These commands are guaranteed to be sorted last in the
     // command buffer.
     curr[commandCount - 1].key = uint64_t(Pass::SENTINEL);
 
@@ -293,6 +309,8 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
         // Currently, if we have skinnning or morphing, we can't use auto instancing. This is
         // because the morphing/skinning data for comparison is not easily accessible.
         // Additionally, we can't have a different skinning/morphing per instance anyway.
+        // And thirdly, the info.index meaning changes with instancing, it is the index into
+        // the instancing buffer no longer the index into the soa.
         Command const* e = curr + 1;
         if (UTILS_LIKELY(!curr->info.hasSkinning && !curr->info.hasMorphing)) {
             // we can't have nice things! No more than maxInstanceCount due to UBO size limits
@@ -318,6 +336,15 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
 
             // allocate our staging buffer only if needed
             if (UTILS_UNLIKELY(!stagingBuffer)) {
+
+                // create a temporary UBO for instancing
+                size_t const count = mCommandEnd - mCommandBegin;
+                mInstancedUboHandle = BufferObjectSharedHandle{
+                        engine.getDriverApi().createBufferObject(
+                                count * sizeof(PerRenderableData) + sizeof(PerRenderableUib),
+                                BufferObjectBinding::UNIFORM, BufferUsage::STATIC),
+                        engine.getDriverApi() };
+
                 // TODO: use stream inline buffer for small sizes
                 // TODO: use a pool for larger heap buffers
                 // buffer large enough for all instances data
@@ -337,6 +364,8 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
             // make the first command instanced
             curr[0].info.instanceCount = instanceCount;
             curr[0].info.index = instancedPrimitiveOffset;
+            curr[0].info.boh = mInstancedUboHandle;
+
             instancedPrimitiveOffset += instanceCount;
 
             // cancel commands that are now instances
@@ -355,12 +384,6 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
 
         // we have instanced primitives
         DriverApi& driver = engine.getDriverApi();
-
-        // TODO: maybe use a pool? so we can reuse the buffer.
-        // create a ubo to hold the instanced primitive data
-        mInstancedUboHandle = driver.createBufferObject(
-                sizeof(PerRenderableData) * instancedPrimitiveOffset + sizeof(PerRenderableUib),
-                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
 
         // copy our instanced ubo data
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
@@ -437,6 +460,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
 UTILS_NOINLINE
 void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
+        backend::BufferObjectHandle renderablesUbo,
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
         uint8_t stereoEyeCount) noexcept {
@@ -470,12 +494,14 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
-                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
+                    soa, range, renderablesUbo,
+                    variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
                     stereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
-                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
+                    soa, range, renderablesUbo,
+                    variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
                     stereoEyeCount);
             break;
         default:
@@ -498,6 +524,7 @@ UTILS_NOINLINE
 RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
+        backend::BufferObjectHandle renderablesUbo,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
 
@@ -609,18 +636,25 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmd.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmd.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmd.info.index = i;
-        cmd.info.instanceCount = soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
         cmd.info.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
+        cmd.info.instanceCount = soaInstanceInfo[i].count;
         cmd.info.hasMorphing = (bool)morphing.handle;
         cmd.info.hasSkinning = (bool)skinning.handle;
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
-        if (UTILS_UNLIKELY(hasInstancedStereo)) {
-            cmd.info.instanceCount =
-                    (soaInstanceInfo[i].count * stereoEyeCount) |
-                    PrimitiveInfo::USER_INSTANCE_MASK;
+        if (hasInstancedStereo) {
+            cmd.info.instanceCount *= stereoEyeCount;
+        }
+
+        if (cmd.info.hasHybridInstancing) {
+            // with hybrid instancing, we already know which UBO to use
+            cmd.info.boh = soaInstanceInfo[i].handle;
+        } else {
+            // with no- or user- instancing, we can only know after instanceify()
+            assert_invariant(cmd.info.instanceCount <= 1);
+            cmd.info.boh = renderablesUbo;
         }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
@@ -926,37 +960,16 @@ void RenderPass::Executor::execute(FEngine& engine,
                 assert_invariant(ma);
                 pipeline.program = ma->getProgram(info.materialVariant);
 
-                uint16_t const instanceCount =
-                        info.instanceCount & PrimitiveInfo::INSTANCE_COUNT_MASK;
-                auto getPerObjectUboHandle =
-                        [this, &info, &instanceCount]() -> std::pair<Handle<backend::HwBufferObject>, uint32_t> {
-                            if (info.hasHybridInstancing) {
-                                FScene::RenderableSoa const& soa = *mRenderableSoa;
-                                // "hybrid" instancing -- instanceBufferHandle takes the place of the UBO
-                                return { soa.elementAt<FScene::INSTANCES>(info.index).handle, 0 };
-                            }
-                            bool const userInstancing =
-                                    (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
-                            if (!userInstancing && instanceCount > 1) {
-                                // automatic instancing
-                                return {
-                                        mInstancedUboHandle,
-                                        info.index * sizeof(PerRenderableData) };
-                            } else {
-                                // manual instancing
-                                return { mUboHandle, info.index * sizeof(PerRenderableData) };
-                            }
-                        };
-
                 // Bind per-renderable uniform block. There is no need to attempt to skip this command
                 // because the backends already do this.
-                auto const [perObjectUboHandle, offset] = getPerObjectUboHandle();
-                assert_invariant(perObjectUboHandle);
+                size_t const offset = info.hasHybridInstancing ?
+                                      0 : info.index * sizeof(PerRenderableData);
+
+                assert_invariant(info.boh);
+
                 driver.bindBufferRange(BufferObjectBinding::UNIFORM,
                         +UniformBindingPoints::PER_RENDERABLE,
-                        perObjectUboHandle,
-                        offset,
-                        sizeof(PerRenderableUib));
+                        info.boh, offset, sizeof(PerRenderableUib));
 
                 if (UTILS_UNLIKELY(info.hasSkinning)) {
 
@@ -1020,7 +1033,7 @@ void RenderPass::Executor::execute(FEngine& engine,
                     driver.bindRenderPrimitive(info.rph);
                 }
 
-                driver.draw2(info.indexOffset, info.indexCount, instanceCount);
+                driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
             }
         }
 
@@ -1030,21 +1043,16 @@ void RenderPass::Executor::execute(FEngine& engine,
             engine.flush();
         }
     }
-
-    if (mInstancedUboHandle) {
-        driver.destroyBufferObject(mInstancedUboHandle);
-    }
-
 }
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
+RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e,
+        BufferObjectSharedHandle instancedUbo) noexcept
         : mRenderableSoa(&pass->mRenderableSoa),
           mCommands(b, e),
           mCustomCommands(pass->mCustomCommands.data(), pass->mCustomCommands.size()),
-          mUboHandle(pass->mUboHandle),
-          mInstancedUboHandle(pass->mInstancedUboHandle),
+          mInstancedUboHandle(std::move(instancedUbo)),
           mScissorViewport(pass->mScissorViewport),
           mPolygonOffsetOverride(false),
           mScissorOverride(false) {
@@ -1052,7 +1060,14 @@ RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command
     assert_invariant(e <= pass->end());
 }
 
-RenderPass::Executor::Executor(Executor const& rhs) = default;
+RenderPass::Executor::Executor() noexcept
+        : mPolygonOffsetOverride(false),
+          mScissorOverride(false) {
+}
+
+RenderPass::Executor::Executor(Executor&& rhs) noexcept = default;
+
+RenderPass::Executor& RenderPass::Executor::operator=(Executor&& rhs) noexcept = default;
 
 // this destructor is actually heavy because it inlines ~vector<>
 RenderPass::Executor::~Executor() noexcept = default;

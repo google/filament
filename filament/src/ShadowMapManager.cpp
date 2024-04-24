@@ -365,7 +365,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             .camera(cameraInfo)
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(),
-                                    entry.range, scene->getRenderableUBO())
+                                    entry.range,
+                                    view.getRenderableUBO())
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine);
 
