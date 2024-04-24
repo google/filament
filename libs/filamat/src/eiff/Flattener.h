@@ -127,6 +127,13 @@ public:
         mCursor += nbytes;
     }
 
+    void writeRaw(const char* raw, size_t nbytes) {
+        if (mStart != nullptr) {
+            memcpy(reinterpret_cast<char*>(mCursor), raw, nbytes);
+        }
+        mCursor += nbytes;
+    }
+
     void writeSizePlaceholder() {
         mSizePlaceholders.push_back(mCursor);
         if (mStart != nullptr) {

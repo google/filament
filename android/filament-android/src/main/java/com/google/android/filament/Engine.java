@@ -854,6 +854,24 @@ public class Engine {
      * @param object Object to check for validity
      * @return returns true if the specified object is valid.
      */
+    public boolean isValidMaterialInstance(@NonNull Material ma, MaterialInstance mi) {
+        return nIsValidMaterialInstance(getNativeObject(), ma.getNativeObject(), mi.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidExpensiveMaterialInstance(@NonNull MaterialInstance object) {
+        return nIsValidExpensiveMaterialInstance(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
     public boolean isValidSkybox(@NonNull Skybox object) {
         return nIsValidSkybox(getNativeObject(), object.getNativeObject());
     }
@@ -1291,6 +1309,8 @@ public class Engine {
     private static native boolean nIsValidSkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
     private static native boolean nIsValidIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nIsValidMaterial(long nativeEngine, long nativeMaterial);
+    private static native boolean nIsValidMaterialInstance(long nativeEngine, long nativeMaterial, long nativeMaterialInstance);
+    private static native boolean nIsValidExpensiveMaterialInstance(long nativeEngine, long nativeMaterialInstance);
     private static native boolean nIsValidSkybox(long nativeEngine, long nativeSkybox);
     private static native boolean nIsValidColorGrading(long nativeEngine, long nativeColorGrading);
     private static native boolean nIsValidTexture(long nativeEngine, long nativeTexture);

@@ -83,11 +83,13 @@ public:
       filament::Engine* mEngine;
       filament::View* mView; // The view is owned by the client.
       filament::Scene* mScene;
-      filament::Material* mMaterial = nullptr;
+      filament::Material* mMaterial2d = nullptr;
+      filament::Material* mMaterialExternal = nullptr;
       filament::Camera* mCamera = nullptr;
       std::vector<filament::VertexBuffer*> mVertexBuffers;
       std::vector<filament::IndexBuffer*> mIndexBuffers;
-      std::vector<filament::MaterialInstance*> mMaterialInstances;
+      std::vector<filament::MaterialInstance*> mMaterial2dInstances;
+      std::vector<filament::MaterialInstance*> mMaterialExternalInstances;
       utils::Entity mRenderable;
       utils::Entity mCameraEntity;
       filament::Texture* mTexture = nullptr;

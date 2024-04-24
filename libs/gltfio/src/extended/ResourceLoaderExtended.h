@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
-#include "BlobDictionary.h"
+#ifndef GLTFIO_RESOURCELOADEREXTENDED_H
+#define GLTFIO_RESOURCELOADEREXTENDED_H
 
-#include <assert.h>
 
-namespace filamat {
+#include "AssetLoaderExtended.h"
+#include "../FFilamentAsset.h"
 
-size_t BlobDictionary::addBlob(const std::vector<uint8_t>& vblob) noexcept {
-    std::string_view blob((char*) vblob.data(), vblob.size());
-    auto iter = mBlobIndices.find(blob);
-    if (iter != mBlobIndices.end()) {
-        return iter->second;
-    }
-    mBlobs.emplace_back(std::make_unique<std::string>(blob));
-    mBlobIndices.emplace(*mBlobs.back(), mBlobs.size() - 1);
-    return mBlobs.size() - 1;
-}
+#include <vector>
 
-} // namespace filamat
+namespace filament::gltfio {
+
+struct ResourceLoaderExtended {
+    using BufferSlot = AssetLoaderExtended::BufferSlot;
+    static void loadResources(
+        std::vector<BufferSlot> const& slots, filament::Engine* engine,
+        std::vector<BufferObject*>& bufferObjects);
+};
+
+} // namespace filament::gltfio
+
+#endif // GLTFIO_RESOURCELOADEREXTENDED_H

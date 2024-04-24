@@ -295,7 +295,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         params.viewport.width = t.getRenderTargetSize();
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
+        getDriverApi().beginFrame(0, 0, 0);
 
         // Render a white triangle over blue.
         getDriverApi().beginRenderPass(renderTarget, params);
@@ -434,7 +434,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
         }
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
+        getDriverApi().beginFrame(0, 0, 0);
 
         // Render some content, just so we don't read back uninitialized data.
         getDriverApi().beginRenderPass(renderTarget, params);

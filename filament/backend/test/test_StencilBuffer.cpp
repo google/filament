@@ -110,7 +110,7 @@ public:
         ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0);
+        api.beginFrame(0, 0, 0);
 
         api.beginRenderPass(renderTarget, params);
         api.draw(ps, smallTriangle.getRenderPrimitive(), 0, 3, 1);
@@ -237,7 +237,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
     api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0);
+    api.beginFrame(0, 0, 0);
 
     api.beginRenderPass(renderTarget0, params);
     api.draw(ps, smallTriangle.getRenderPrimitive(), 0, 3, 1);

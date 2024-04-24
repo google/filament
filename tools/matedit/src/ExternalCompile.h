@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-#include "BlobDictionary.h"
+#ifndef TNT_MATEDIT_EXTERNALCOMPILE_H
+#define TNT_MATEDIT_EXTERNALCOMPILE_H
 
-#include <assert.h>
+#include <utils/Path.h>
 
-namespace filamat {
+#include <string>
+#include <vector>
 
-size_t BlobDictionary::addBlob(const std::vector<uint8_t>& vblob) noexcept {
-    std::string_view blob((char*) vblob.data(), vblob.size());
-    auto iter = mBlobIndices.find(blob);
-    if (iter != mBlobIndices.end()) {
-        return iter->second;
-    }
-    mBlobs.emplace_back(std::make_unique<std::string>(blob));
-    mBlobIndices.emplace(*mBlobs.back(), mBlobs.size() - 1);
-    return mBlobs.size() - 1;
-}
+namespace matedit {
 
-} // namespace filamat
+int externalCompile(utils::Path input, utils::Path output, bool preserveTextShaders,
+        std::vector<std::string> args);
+
+} // namespace matedit
+
+#endif

@@ -31,6 +31,10 @@ void View::setCamera(Camera* camera) noexcept {
     downcast(this)->setCameraUser(downcast(camera));
 }
 
+bool View::hasCamera() const noexcept {
+    return downcast(this)->hasCamera();
+}
+
 Camera& View::getCamera() noexcept {
     return downcast(this)->getCameraUser();
 }

@@ -391,7 +391,8 @@ void VulkanDriver::collectGarbage() {
 
     FVK_SYSTRACE_END();
 }
-void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs, uint32_t frameId) {
     // Do nothing.
 }
 

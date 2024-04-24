@@ -29,10 +29,12 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/compiler.h>
 
 #include <inttypes.h>
+#include <utility>
 
 namespace filaflat {
 class ChunkContainer;
@@ -48,7 +50,8 @@ struct MaterialConstant;
 
 class MaterialParser {
 public:
-    MaterialParser(backend::ShaderLanguage language, const void* data, size_t size);
+    MaterialParser(utils::FixedCapacityVector<backend::ShaderLanguage> preferredLanguages,
+            const void* data, size_t size);
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
@@ -60,6 +63,7 @@ public:
     };
 
     ParseResult parse() noexcept;
+    backend::ShaderLanguage getShaderLanguage() const noexcept;
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
@@ -130,7 +134,9 @@ public:
 
 private:
     struct MaterialParserDetails {
-        MaterialParserDetails(backend::ShaderLanguage language, const void* data, size_t size);
+        MaterialParserDetails(
+                const utils::FixedCapacityVector<backend::ShaderLanguage>& preferredLanguages,
+                const void* data, size_t size);
 
         template<typename T>
         bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
@@ -157,12 +163,12 @@ private:
 
         ManagedBuffer mManagedBuffer;
         filaflat::ChunkContainer mChunkContainer;
+        utils::FixedCapacityVector<backend::ShaderLanguage> mPreferredLanguages;
+        backend::ShaderLanguage mChosenLanguage;
 
         // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
         filaflat::MaterialChunk mMaterialChunk;
         filaflat::BlobDictionary mBlobDictionary;
-        filamat::ChunkType mMaterialTag = filamat::ChunkType::Unknown;
-        filamat::ChunkType mDictionaryTag = filamat::ChunkType::Unknown;
     };
 
     filaflat::ChunkContainer& getChunkContainer() noexcept;

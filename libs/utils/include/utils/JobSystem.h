@@ -230,7 +230,7 @@ public:
      *
      * This job MUST BE waited on with waitAndRelease(), or released with release().
      */
-    Job* retain(Job* job) noexcept;
+    static Job* retain(Job* job) noexcept;
 
     /*
      * Releases a reference from a Job obtained with runAndRetain() or a call to retain().
@@ -245,7 +245,7 @@ public:
 
     /*
      * Add job to this thread's execution queue. It's reference will drop automatically.
-     * Current thread must be owned by JobSystem's thread pool. See adopt().
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * The job can't be used after this call.
      */
@@ -259,7 +259,7 @@ public:
 
     /*
      * Add job to this thread's execution queue and keep a reference to it.
-     * Current thread must be owned by JobSystem's thread pool. See adopt().
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * This job MUST BE waited on with wait(), or released with release().
      */
@@ -267,7 +267,7 @@ public:
 
     /*
      * Wait on a job and destroys it.
-     * Current thread must be owned by JobSystem's thread pool. See adopt().
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * The job must first be obtained from runAndRetain() or retain().
      * The job can't be used after this call.
@@ -331,11 +331,10 @@ private:
         WorkQueue workQueue;
 
         // these are not accessed by the worker threads
-        alignas(CACHELINE_SIZE)     // this causes 56-bytes padding
-        JobSystem* js;
-        std::thread thread;
+        alignas(CACHELINE_SIZE)         // this causes 56-bytes padding
+        JobSystem* js;                  // this is in fact const and always initialized
+        std::thread thread;             // unused for adopted threads
         default_random_engine rndGen;
-        uint32_t id;
     };
 
     static_assert(sizeof(ThreadState) % CACHELINE_SIZE == 0,
@@ -343,12 +342,12 @@ private:
 
     ThreadState& getState() noexcept;
 
-    void incRef(Job const* job) noexcept;
+    static void incRef(Job const* job) noexcept;
     void decRef(Job const* job) noexcept;
 
     Job* allocateJob() noexcept;
     JobSystem::ThreadState* getStateToStealFrom(JobSystem::ThreadState& state) noexcept;
-    bool hasJobCompleted(Job const* job) noexcept;
+    static bool hasJobCompleted(Job const* job) noexcept;
 
     void requestExit() noexcept;
     bool exitRequested() const noexcept;
@@ -364,20 +363,20 @@ private:
     Job* steal(WorkQueue& workQueue) noexcept;
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
+    void wake(size_t hint) noexcept;
     void wakeAll() noexcept;
-    void wakeOne() noexcept;
 
     // these have thread contention, keep them together
     utils::Mutex mWaiterLock;
     utils::Condition mWaiterCondition;
 
-    std::atomic<uint32_t> mActiveJobs = { 0 };
+    std::atomic<int32_t> mActiveJobs = { 0 };
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>
     using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
 
-    // these are essentially const, make sure they're on a different cache-lines than the
+    // These are essentially const, make sure they're on a different cache-lines than the
     // read-write atomics.
     // We can't use "alignas(CACHELINE_SIZE)" because the standard allocator can't make this
     // guarantee.

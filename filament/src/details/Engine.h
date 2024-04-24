@@ -59,10 +59,11 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
-#include <utils/compiler.h>
 #include <utils/Allocator.h>
-#include <utils/JobSystem.h>
 #include <utils/CountDownLatch.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/JobSystem.h>
+#include <utils/compiler.h>
 
 #include <chrono>
 #include <memory>
@@ -231,19 +232,21 @@ public:
         return mPlatform;
     }
 
-    backend::ShaderLanguage getShaderLanguage() const noexcept {
+    // Return a vector of shader languages, in order of preference.
+    utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
         switch (mBackend) {
             case Backend::DEFAULT:
             case Backend::NOOP:
             default:
-                return backend::ShaderLanguage::ESSL3;
+                return { backend::ShaderLanguage::ESSL3 };
             case Backend::OPENGL:
-                return getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
-                        ? backend::ShaderLanguage::ESSL1 : backend::ShaderLanguage::ESSL3;
+                return { getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
+                                ? backend::ShaderLanguage::ESSL1
+                                : backend::ShaderLanguage::ESSL3 };
             case Backend::VULKAN:
-                return backend::ShaderLanguage::SPIRV;
+                return { backend::ShaderLanguage::SPIRV };
             case Backend::METAL:
-                return backend::ShaderLanguage::MSL;
+                return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
     }
 
@@ -318,25 +321,26 @@ public:
     bool destroy(const FView* p);
     bool destroy(const FInstanceBuffer* p);
 
-    bool isValid(const FBufferObject* p);
-    bool isValid(const FVertexBuffer* p);
-    bool isValid(const FFence* p);
-    bool isValid(const FIndexBuffer* p);
-    bool isValid(const FSkinningBuffer* p);
-    bool isValid(const FMorphTargetBuffer* p);
-    bool isValid(const FIndirectLight* p);
-    bool isValid(const FMaterial* p);
-    bool isValid(const FMaterialInstance* p);
-    bool isValid(const FRenderer* p);
-    bool isValid(const FScene* p);
-    bool isValid(const FSkybox* p);
-    bool isValid(const FColorGrading* p);
-    bool isValid(const FSwapChain* p);
-    bool isValid(const FStream* p);
-    bool isValid(const FTexture* p);
-    bool isValid(const FRenderTarget* p);
-    bool isValid(const FView* p);
-    bool isValid(const FInstanceBuffer* p);
+    bool isValid(const FBufferObject* p) const;
+    bool isValid(const FVertexBuffer* p) const;
+    bool isValid(const FFence* p) const;
+    bool isValid(const FIndexBuffer* p) const;
+    bool isValid(const FSkinningBuffer* p) const;
+    bool isValid(const FMorphTargetBuffer* p) const;
+    bool isValid(const FIndirectLight* p) const;
+    bool isValid(const FMaterial* p) const;
+    bool isValid(const FMaterial* m, const FMaterialInstance* p) const;
+    bool isValidExpensive(const FMaterialInstance* p) const;
+    bool isValid(const FRenderer* p) const;
+    bool isValid(const FScene* p) const;
+    bool isValid(const FSkybox* p) const;
+    bool isValid(const FColorGrading* p) const;
+    bool isValid(const FSwapChain* p) const;
+    bool isValid(const FStream* p) const;
+    bool isValid(const FTexture* p) const;
+    bool isValid(const FRenderTarget* p) const;
+    bool isValid(const FView* p) const;
+    bool isValid(const FInstanceBuffer* p) const;
 
     void destroy(utils::Entity e);
 
@@ -444,7 +448,7 @@ private:
     backend::Driver& getDriver() const noexcept { return *mDriver; }
 
     template<typename T>
-    bool isValid(const T* ptr, ResourceList<T>& list);
+    bool isValid(const T* ptr, ResourceList<T> const& list) const;
 
     template<typename T>
     bool terminateAndDestroy(const T* p, ResourceList<T>& list);

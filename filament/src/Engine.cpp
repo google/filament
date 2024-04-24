@@ -31,17 +31,24 @@
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
 #include "details/View.h"
-#include "filament/Engine.h"
 
+#include <filament/Engine.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
+#include <stddef.h>
+#include <stdint.h>
+
 using namespace utils;
 
 namespace filament {
+
+namespace backend {
+class Platform;
+}
 
 using namespace math;
 using namespace backend;
@@ -196,58 +203,64 @@ void Engine::destroy(Entity e) {
     downcast(this)->destroy(e);
 }
 
-bool Engine::isValid(const BufferObject* p) {
+bool Engine::isValid(const BufferObject* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const VertexBuffer* p) {
+bool Engine::isValid(const VertexBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Fence* p) {
+bool Engine::isValid(const Fence* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const IndexBuffer* p) {
+bool Engine::isValid(const IndexBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const SkinningBuffer* p) {
+bool Engine::isValid(const SkinningBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const MorphTargetBuffer* p) {
+bool Engine::isValid(const MorphTargetBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const IndirectLight* p) {
+bool Engine::isValid(const IndirectLight* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Material* p) {
+bool Engine::isValid(const Material* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Renderer* p) {
+bool Engine::isValid(const Material* m, const MaterialInstance* p) const {
+    return downcast(this)->isValid(downcast(m), downcast(p));
+}
+bool Engine::isValidExpensive(const MaterialInstance* p) const {
+    return downcast(this)->isValidExpensive(downcast(p));
+}
+bool Engine::isValid(const Renderer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Scene* p) {
+bool Engine::isValid(const Scene* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Skybox* p) {
+bool Engine::isValid(const Skybox* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const ColorGrading* p) {
+bool Engine::isValid(const ColorGrading* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const SwapChain* p) {
+bool Engine::isValid(const SwapChain* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Stream* p) {
+bool Engine::isValid(const Stream* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const Texture* p) {
+bool Engine::isValid(const Texture* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const RenderTarget* p) {
+bool Engine::isValid(const RenderTarget* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const View* p) {
+bool Engine::isValid(const View* p) const {
     return downcast(this)->isValid(downcast(p));
 }
-bool Engine::isValid(const InstanceBuffer* p) {
+bool Engine::isValid(const InstanceBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
 

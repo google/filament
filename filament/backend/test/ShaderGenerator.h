@@ -60,6 +60,7 @@ private:
     Blob mFragmentBlob;
     std::string mCompiledVertexShader;
     std::string mCompiledFragmentShader;
+    filament::backend::ShaderLanguage mShaderLanguage;
 
 };
 

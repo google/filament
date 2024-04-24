@@ -60,8 +60,13 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     io.IniFilename = mSettingsPath.c_str();
 
     // Create a simple alpha-blended 2D blitting material.
-    mMaterial = Material::Builder()
+    mMaterial2d = Material::Builder()
             .package(FILAGUI_RESOURCES_UIBLIT_DATA, FILAGUI_RESOURCES_UIBLIT_SIZE)
+            .constant("external", false)
+            .build(*engine);
+    mMaterialExternal = Material::Builder()
+            .package(FILAGUI_RESOURCES_UIBLIT_DATA, FILAGUI_RESOURCES_UIBLIT_SIZE)
+            .constant("external", true)
             .build(*engine);
 
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
@@ -74,7 +79,7 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     // For proggy, switch to NEAREST for pixel-perfect text.
     if (!fontPath.isFile() && !imGuiContext) {
         mSampler = TextureSampler(MinFilter::NEAREST, MagFilter::NEAREST);
-        mMaterial->setDefaultParameter("albedo", mTexture, mSampler);
+        mMaterial2d->setDefaultParameter("albedo2d", mTexture, mSampler);
     }
 
     utils::EntityManager& em = utils::EntityManager::get();
@@ -117,7 +122,7 @@ void ImGuiHelper::createAtlasTexture(Engine* engine) {
     mTexture->setImage(*engine, 0, std::move(pb));
 
     mSampler = TextureSampler(MinFilter::LINEAR, MagFilter::LINEAR);
-    mMaterial->setDefaultParameter("albedo", mTexture, mSampler);
+    mMaterial2d->setDefaultParameter("albedo2d", mTexture, mSampler);
 }
 
 ImGuiHelper::~ImGuiHelper() {
@@ -125,10 +130,14 @@ ImGuiHelper::~ImGuiHelper() {
     mEngine->destroy(mRenderable);
     mEngine->destroyCameraComponent(mCameraEntity);
 
-    for (auto& mi : mMaterialInstances) {
+    for (auto& mi : mMaterial2dInstances) {
         mEngine->destroy(mi);
     }
-    mEngine->destroy(mMaterial);
+    mEngine->destroy(mMaterial2d);
+    for (auto& mi : mMaterialExternalInstances) {
+        mEngine->destroy(mi);
+    }
+    mEngine->destroy(mMaterialExternal);
     mEngine->destroy(mTexture);
     for (auto& vb : mVertexBuffers) {
         mEngine->destroy(vb);
@@ -202,19 +211,12 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
     auto rbuilder = RenderableManager::Builder(nPrims);
     rbuilder.boundingBox({{ 0, 0, 0 }, { 10000, 10000, 10000 }}).culling(false);
 
-    // Ensure that we have a material instance for each primitive.
-    size_t previousSize = mMaterialInstances.size();
-    if (nPrims > mMaterialInstances.size()) {
-        mMaterialInstances.resize(nPrims);
-        for (size_t i = previousSize; i < mMaterialInstances.size(); i++) {
-            mMaterialInstances[i] = mMaterial->createInstance();
-        }
-    }
-
     // Recreate the Renderable component and point it to the vertex buffers.
     rcm.destroy(mRenderable);
     int bufferIndex = 0;
     int primIndex = 0;
+    int material2dIndex = 0;
+    int materialExternalIndex = 0;
     for (int cmdListIndex = 0; cmdListIndex < commands->CmdListsCount; cmdListIndex++) {
         const ImDrawList* cmds = commands->CmdLists[cmdListIndex];
         populateVertexData(bufferIndex,
@@ -224,18 +226,32 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
             if (pcmd.UserCallback) {
                 pcmd.UserCallback(cmds, &pcmd);
             } else {
-                MaterialInstance* materialInstance = mMaterialInstances[primIndex];
+                auto texture = (Texture const*)pcmd.TextureId;
+                const char* uniformName;
+                MaterialInstance* materialInstance;
+                if (texture && texture->getTarget() == Texture::Sampler::SAMPLER_EXTERNAL) {
+                    if (materialExternalIndex == mMaterialExternalInstances.size()) {
+                        mMaterialExternalInstances.push_back(mMaterialExternal->createInstance());
+                    }
+                    uniformName = "albedoExternal";
+                    materialInstance = mMaterialExternalInstances[materialExternalIndex++];
+                } else {
+                    if (material2dIndex == mMaterial2dInstances.size()) {
+                        mMaterial2dInstances.push_back(mMaterial2d->createInstance());
+                    }
+                    uniformName = "albedo2d";
+                    materialInstance = mMaterial2dInstances[material2dIndex++];
+                }
                 materialInstance->setScissor(
                         pcmd.ClipRect.x,
                         mFlipVertical ? pcmd.ClipRect.y :  (fbheight - pcmd.ClipRect.w),
                         (uint16_t) (pcmd.ClipRect.z - pcmd.ClipRect.x),
                         (uint16_t) (pcmd.ClipRect.w - pcmd.ClipRect.y));
-                if (pcmd.TextureId) {
+                if (texture) {
                     TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
-                    materialInstance->setParameter("albedo",
-                            (Texture const*)pcmd.TextureId, sampler);
+                    materialInstance->setParameter(uniformName, texture, sampler);
                 } else {
-                    materialInstance->setParameter("albedo", mTexture, mSampler);
+                    materialInstance->setParameter(uniformName, mTexture, mSampler);
                 }
                 rbuilder
                         .geometry(primIndex, RenderableManager::PrimitiveType::TRIANGLES,

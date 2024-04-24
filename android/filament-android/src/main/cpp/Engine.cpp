@@ -343,6 +343,21 @@ Java_com_google_android_filament_Engine_nIsValidMaterial(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidMaterialInstance(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeMaterial, jlong nativeMaterialInstance) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Material*)nativeMaterial,
+            (MaterialInstance*)nativeMaterialInstance);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+        Java_com_google_android_filament_Engine_nIsValidExpensiveMaterialInstance(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeMaterialInstance) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValidExpensive((MaterialInstance*)nativeMaterialInstance);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nIsValidSkybox(JNIEnv*, jclass,
         jlong nativeEngine, jlong nativeSkybox) {
     Engine* engine = (Engine *)nativeEngine;
