@@ -344,6 +344,7 @@ public:
 
     void destroy(utils::Entity e);
 
+    bool isPaused() const noexcept;
     void setPaused(bool paused);
 
     void flushAndWait();

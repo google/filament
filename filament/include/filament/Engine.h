@@ -868,6 +868,15 @@ public:
     void flush();
 
     /**
+     * Get paused state of rendering thread.
+     *
+     * <p>Warning: This is an experimental API.
+     *
+     * @see setPaused
+     */
+    bool isPaused() const noexcept;
+
+    /**
      * Pause or resume rendering thread.
      *
      * <p>Warning: This is an experimental API. In particular, note the following caveats.
