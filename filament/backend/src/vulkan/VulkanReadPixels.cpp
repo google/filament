@@ -118,7 +118,7 @@ void VulkanReadPixels::terminate() noexcept {
 VulkanReadPixels::VulkanReadPixels(VkDevice device)
     : mDevice(device) {}
 
-void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x, uint32_t const y,
+void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint32_t const y,
         uint32_t const width, uint32_t const height, uint32_t const graphicsQueueFamilyIndex,
         PixelBufferDescriptor&& pbd, SelecteMemoryFunction const& selectMemoryFunc,
         OnReadCompleteFunction const& readCompleteFunc) {
@@ -232,8 +232,7 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     });
 
     VulkanAttachment const srcAttachment = srcTarget->getColor(0);
-    const VkImageSubresourceRange srcRange
-            = srcAttachment.getSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    VkImageSubresourceRange const srcRange = srcAttachment.getSubresourceRange();
     srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
 
     VkImageCopy const imageCopyRegion = {
