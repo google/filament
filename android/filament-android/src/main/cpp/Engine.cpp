@@ -406,6 +406,13 @@ Java_com_google_android_filament_Engine_nFlush(JNIEnv*, jclass,
     engine->flush();
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsPaused(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)engine->isPaused();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Engine_nSetPaused(JNIEnv*, jclass,
         jlong nativeEngine, jboolean paused) {

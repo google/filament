@@ -1228,6 +1228,17 @@ public class Engine {
     }
 
     /**
+     * Get paused state of rendering thread.
+     *
+     * <p>Warning: This is an experimental API.
+     *
+     * @see #setPaused
+     */
+    public boolean isPaused() {
+        return nIsPaused(getNativeObject());
+    }
+
+    /**
      * Pause or resume the rendering thread.
      *
      * <p>Warning: This is an experimental API. In particular, note the following caveats.
@@ -1319,6 +1330,7 @@ public class Engine {
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
     private static native void nFlush(long nativeEngine);
+    private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);

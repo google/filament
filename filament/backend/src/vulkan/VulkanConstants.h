@@ -47,7 +47,7 @@
 // granualarity of a renderpass. You can enable this along with FVK_DEBUG_DEBUG_UTILS to take
 // advantage of vkCmdBegin/EndDebugUtilsLabelEXT. You can also just enable this with
 // FVK_DEBUG_PRINT_GROUP_MARKERS to print the current marker to stdout.
-#define FVK_DEBUG_GROUP_MARKERS 0x00000002
+#define FVK_DEBUG_GROUP_MARKERS           0x00000002
 
 #define FVK_DEBUG_TEXTURE                 0x00000004
 #define FVK_DEBUG_LAYOUT_TRANSITION       0x00000008
@@ -112,7 +112,7 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 // end dependcy checks
 
 // Shorthand for combination of enabled debug flags
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) || FVK_ENABLED(FVK_DEBUG_TEXTURE)
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) && FVK_ENABLED(FVK_DEBUG_TEXTURE)
 #define FVK_ENABLED_DEBUG_SAMPLER_NAME 1
 #else
 #define FVK_ENABLED_DEBUG_SAMPLER_NAME 0

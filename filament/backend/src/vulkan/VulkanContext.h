@@ -101,8 +101,12 @@ public:
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline VkFormatList const& getAttachmentDepthFormats() const {
-        return mDepthFormats;
+    inline VkFormatList const& getAttachmentDepthStencilFormats() const {
+        return mDepthStencilFormats;
+    }
+
+    inline VkFormatList const& getBlittableDepthStencilFormats() const {
+        return mBlittableDepthStencilFormats;
     }
 
     inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
@@ -131,7 +135,8 @@ private:
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
 
-    VkFormatList mDepthFormats;
+    VkFormatList mDepthStencilFormats;
+    VkFormatList mBlittableDepthStencilFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

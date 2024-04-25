@@ -2023,6 +2023,10 @@ bool OpenGLDriver::isDepthStencilResolveSupported() {
     return true;
 }
 
+bool OpenGLDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    return true;
+}
+
 bool OpenGLDriver::isProtectedTexturesSupported() {
     return getContext().ext.EXT_protected_textures;
 }

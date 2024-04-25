@@ -243,7 +243,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
-            selectDepthFormat(mContext.getAttachmentDepthFormats(), mHasStencil);
+            selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
 
     slog.i << "vkCreateSwapchain"
@@ -330,7 +330,7 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
 
     bool const hasStencil = (flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
     mSwapChainBundle.depthFormat =
-            selectDepthFormat(mContext.getAttachmentDepthFormats(), hasStencil);
+            selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), hasStencil);
     mSwapChainBundle.depth = createImage(extent, mSwapChainBundle.depthFormat);
 }
 
