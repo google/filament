@@ -61,6 +61,11 @@ function print_help {
     echo "    -b"
     echo "        Enable Address and Undefined Behavior Sanitizers (asan/ubsan) for debugging."
     echo "        This is only for the desktop build."
+    echo "    -x value"
+    echo "        Define a preprocessor flag FILAMENT_BACKEND_DEBUG_FLAG with [value]. This is useful for"
+    echo "        enabling debug paths in the backend from the build script. For example, make a"
+    echo "        systrace-enabled build without directly changing #defines. Remember to add -f when"
+    echo "        changing this option."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -172,6 +177,8 @@ MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
 
+BACKEND_DEBUG_FLAG_OPTION=""
+
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
 
@@ -231,6 +238,7 @@ function build_desktop_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
+            ${BACKEND_DEBUG_FLAG_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -289,6 +297,7 @@ function build_webgl_with_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
             -DWEBGL=1 \
+            ${BACKEND_DEBUG_FLAG_OPTION} \
             ../..
         ln -sf "out/cmake-webgl-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
@@ -363,6 +372,7 @@ function build_android_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
+            ${BACKEND_DEBUG_FLAG_OPTION} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -597,6 +607,7 @@ function build_ios_target {
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
+            ${BACKEND_DEBUG_FLAG_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -730,6 +741,13 @@ function validate_build_command {
             exit 1
         fi
     fi
+
+    # Make sure FILAMENT_BACKEND_DEBUG_FLAG is only meant for debug builds
+    if [[ "${ISSUE_DEBUG_BUILD}" != "true" ]] && [[ ! -z "${BACKEND_DEBUG_FLAG_OPTION}" ]]; then
+        echo "Error: cannot specify FILAMENT_BACKEND_DEBUG_FLAG in non-debug build"
+        exit 1
+    fi
+
     set -e
 }
 
@@ -776,7 +794,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
+while getopts ":hacCfgijmp:q:uvslwtedk:bx:" opt; do
     case ${opt} in
         h)
             print_help
@@ -840,7 +858,7 @@ while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
                         echo "Platform must be one of [desktop|android|ios|webgl|all]"
                         echo ""
                         exit 1
-                    ;;    
+                    ;;
                 esac
             done
             ;;
@@ -917,6 +935,8 @@ while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
             ;;
         b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
             echo "Enabled ASAN/UBSAN"
+            ;;
+        x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2
