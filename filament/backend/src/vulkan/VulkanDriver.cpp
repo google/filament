@@ -22,7 +22,6 @@
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
-#include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
 
@@ -205,8 +204,6 @@ void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
     vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
 }
 #endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
-
-using ImgUtil = VulkanImageUtility;
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
@@ -1820,15 +1817,12 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
             texture = mEmptyTexture;
         }
 
+        VkSampler const vksampler = mSamplerCache.getSampler(boundSampler->s);
+
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
         VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SAMPLER,
                 reinterpret_cast<uint64_t>(vksampler), bindingToName[binding].c_str());
-        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SAMPLER,
-                reinterpret_cast<uint64_t>(samplerInfo.sampler), bindingToName[binding].c_str());
 #endif
-
-        VkSampler const vksampler = mSamplerCache.getSampler(boundSampler->s);
-
         mDescriptorSetManager.updateSampler({}, binding, texture, vksampler);
     }
 

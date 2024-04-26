@@ -198,10 +198,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->bindingToSamplerIndex;
     }
 
-    inline UsageFlags getUsage() const {
-        return mInfo->usage;
-    }
-
     // Get a list of the sampler binding indices so that we don't have to loop through all possible
     // samplers.
     inline BindingList const& getBindings() const { return mInfo->bindings; }
@@ -234,10 +230,6 @@ private:
             , bindingToName(MAX_SAMPLER_COUNT, "")
 #endif
             {}
-
-        // This bitset maps to each of the sampler in the sampler groups associated with this
-        // program, and whether each sampler is used in which shader (i.e. vert, frag, compute).
-        UsageFlags usage;
 
         BindingList bindings;
 

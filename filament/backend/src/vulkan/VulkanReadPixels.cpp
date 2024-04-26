@@ -28,7 +28,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-using ImgUtil = VulkanImageUtility;
 using TaskHandler = VulkanReadPixels::TaskHandler;
 using WorkloadFunc = TaskHandler::WorkloadFunc;
 using OnCompleteFunc = TaskHandler::OnCompleteFunc;
@@ -218,7 +217,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
     };
     vkBeginCommandBuffer(cmdbuffer, &binfo);
 
-    ImgUtil::transitionLayout(cmdbuffer, {
+    imgutil::transitionLayout(cmdbuffer, {
         .image = stagingImage,
         .oldLayout = VulkanLayout::UNDEFINED,
         .newLayout = VulkanLayout::TRANSFER_DST,
@@ -265,8 +264,8 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
             imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= srcExtent.height);
 
     vkCmdCopyImage(cmdbuffer, srcAttachment.getImage(),
-            ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingImage,
-            ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
+            imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingImage,
+            imgutil::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
 
     // Restore the source image layout.
     srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::COLOR_ATTACHMENT);

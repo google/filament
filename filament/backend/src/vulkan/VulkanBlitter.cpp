@@ -31,8 +31,6 @@ using namespace utils;
 
 namespace filament::backend {
 
-using ImgUtil = VulkanImageUtility;
-
 namespace {
 
 inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect, VkFilter filter,
@@ -61,15 +59,15 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
             .dstOffsets = { dstRect[0], dstRect[1] },
     }};
     vkCmdBlitImage(cmdbuffer,
-            src.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            dst.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST),
+            src.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            dst.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, blitRegions, filter);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
-        oldSrcLayout = ImgUtil::getDefaultLayout(src.texture->usage);
+        oldSrcLayout = imgutil::getDefaultLayout(src.texture->usage);
     }
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
-        oldDstLayout = ImgUtil::getDefaultLayout(dst.texture->usage);
+        oldDstLayout = imgutil::getDefaultLayout(dst.texture->usage);
     }
     src.texture->transitionLayout(cmdbuffer, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(cmdbuffer, dstRange, oldDstLayout);
@@ -103,15 +101,15 @@ inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspe
             .extent = { src.getExtent2D().width, src.getExtent2D().height, 1 },
     }};
     vkCmdResolveImage(cmdbuffer,
-            src.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            dst.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST),
+            src.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            dst.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, resolveRegions);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
-        oldSrcLayout = ImgUtil::getDefaultLayout(src.texture->usage);
+        oldSrcLayout = imgutil::getDefaultLayout(src.texture->usage);
     }
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
-        oldDstLayout = ImgUtil::getDefaultLayout(dst.texture->usage);
+        oldDstLayout = imgutil::getDefaultLayout(dst.texture->usage);
     }
     src.texture->transitionLayout(cmdbuffer, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(cmdbuffer, dstRange, oldDstLayout);
