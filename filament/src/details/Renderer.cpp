@@ -840,7 +840,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     passBuilder.camera(cameraInfo);
     passBuilder.geometry(scene.getRenderableData(),
-            view.getVisibleRenderables(), scene.getRenderableUBO());
+            view.getVisibleRenderables(),
+            view.getRenderableUBO());
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",

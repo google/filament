@@ -19,16 +19,19 @@
 
 #include "Allocators.h"
 
+#include "SharedHandle.h"
+
 #include "details/Camera.h"
 #include "details/Scene.h"
 
 #include "private/filament/Variant.h"
-#include "utils/BitmaskEnum.h"
 
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
+#include <utils/BitmaskEnum.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
 #include <utils/architecture.h>
@@ -243,6 +246,7 @@ public:
         };
         backend::RenderPrimitiveHandle rph;                             // 4 bytes
         backend::VertexBufferInfoHandle vbih;                           // 4 bytes
+        backend::BufferObjectHandle boh;                                // 4 bytes
         uint32_t indexOffset;                                           // 4 bytes
         uint32_t indexCount;                                            // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
@@ -257,16 +261,13 @@ public:
         bool hasMorphing : 1;                                           //              1 bit
         bool hasHybridInstancing : 1;                                   //              1 bit
 
-        uint64_t rfu[2];                                                // 16 bytes
-
-        static const uint16_t USER_INSTANCE_MASK = 0x8000u;
-        static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
+        uint32_t rfu[3];                                                // 16 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 56);
 
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 56 bytes
+        PrimitiveInfo info;    // 56 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (size_t, void* ptr) {
@@ -292,11 +293,11 @@ public:
 
     // RenderPass can only be moved
     RenderPass(RenderPass&& rhs) = default;
+    RenderPass& operator=(RenderPass&& rhs) = delete;  // could be supported if needed
 
     // RenderPass can't be copied
     RenderPass(RenderPass const& rhs) = delete;
     RenderPass& operator=(RenderPass const& rhs) = delete;
-    RenderPass& operator=(RenderPass&& rhs) = delete;
 
     // allocated commands ARE NOT freed, they're owned by the Arena
     ~RenderPass() noexcept;
@@ -311,6 +312,17 @@ public:
             backend::Handle<backend::HwRenderTarget> renderTarget,
             backend::RenderPassParams params) noexcept;
 
+
+    class BufferObjectHandleDeleter {
+        std::reference_wrapper<backend::DriverApi> driver;
+    public:
+        explicit BufferObjectHandleDeleter(backend::DriverApi& driver) noexcept : driver(driver) { }
+        void operator()(backend::BufferObjectHandle handle) noexcept;
+    };
+
+    using BufferObjectSharedHandle = SharedHandle<
+            backend::HwBufferObject, BufferObjectHandleDeleter>;
+
     /*
      * Executor holds the range of commands to execute for a given pass
      */
@@ -323,8 +335,7 @@ public:
         FScene::RenderableSoa const* mRenderableSoa = nullptr;
         utils::Slice<Command> mCommands;
         utils::Slice<CustomCommandFn> mCustomCommands;
-        backend::Handle<backend::HwBufferObject> mUboHandle;
-        backend::Handle<backend::HwBufferObject> mInstancedUboHandle;
+        BufferObjectSharedHandle mInstancedUboHandle;
         backend::Viewport mScissorViewport;
 
         backend::Viewport mScissor{};            // value of scissor override
@@ -332,7 +343,8 @@ public:
         bool mPolygonOffsetOverride : 1;         // whether to override the polygon offset setting
         bool mScissorOverride : 1;               // whether to override the polygon offset setting
 
-        Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
+        Executor(RenderPass const* pass, Command const* b, Command const* e,
+                BufferObjectSharedHandle instancedUbo) noexcept;
 
         void execute(FEngine& engine, const Command* first, const Command* last) const noexcept;
 
@@ -341,9 +353,16 @@ public:
                 backend::Viewport const& scissor) noexcept;
 
     public:
-        Executor() = default;
-        Executor(Executor const& rhs);
-        Executor& operator=(Executor const& rhs) = default;
+        Executor() noexcept;
+
+        // can't be copied
+        Executor(Executor const& rhs) noexcept = delete;
+        Executor& operator=(Executor const& rhs) noexcept = delete;
+
+        // can be moved
+        Executor(Executor&& rhs) noexcept;
+        Executor& operator=(Executor&& rhs) noexcept;
+
         ~Executor() noexcept;
 
         // if non-null, overrides the material's polygon offset
@@ -358,11 +377,11 @@ public:
 
     // returns a new executor for this pass
     Executor getExecutor() const {
-        return { this, mCommandBegin, mCommandEnd };
+        return getExecutor(mCommandBegin, mCommandEnd);
     }
 
     Executor getExecutor(Command const* b, Command const* e) const {
-        return { this, b, e };
+        return { this, b, e, mInstancedUboHandle };
     }
 
 private:
@@ -373,7 +392,15 @@ private:
     // This is the main function of this class, this appends commands to the pass using
     // the current camera, geometry and flags set. This can be called multiple times if needed.
     void appendCommands(FEngine& engine,
-            utils::Slice<Command> commands, CommandTypeFlags commandTypeFlags) noexcept;
+            utils::Slice<Command> commands,
+            backend::BufferObjectHandle uboHandle,
+            utils::Range<uint32_t> const visibleRenderables,
+            CommandTypeFlags commandTypeFlags,
+            RenderFlags renderFlags,
+            FScene::VisibleMaskType visibilityMask,
+            Variant variant,
+            math::float3 cameraPosition,
+            math::float3 cameraForwardVector) noexcept;
 
     // Appends a custom command.
     void appendCustomCommand(Command* commands,
@@ -399,6 +426,7 @@ private:
 
     static inline void generateCommands(CommandTypeFlags commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
+            backend::BufferObjectHandle renderablesUbo,
             Variant variant, RenderFlags renderFlags,
             FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
@@ -407,6 +435,7 @@ private:
     template<RenderPass::CommandTypeFlags commandTypeFlags>
     static inline Command* generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags, Command* curr,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
+            backend::BufferObjectHandle renderablesUbo,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
             uint8_t instancedStereoEyeCount) noexcept;
@@ -417,23 +446,12 @@ private:
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
 
-
     FScene::RenderableSoa const& mRenderableSoa;
-    utils::Range<uint32_t> const mVisibleRenderables;
-    backend::Handle<backend::HwBufferObject> const mUboHandle;
-    math::float3 const mCameraPosition;
-    math::float3 const mCameraForwardVector;
-    RenderFlags const mFlags;
-    Variant const mVariant;
-    FScene::VisibleMaskType const mVisibilityMask;
     backend::Viewport const mScissorViewport;
-
-    // Pointer to the first command
-    Command* mCommandBegin = nullptr;
-    // Pointer to one past the last command
-    Command* mCommandEnd = nullptr;
+    Command* mCommandBegin = nullptr;   // Pointer to the first command
+    Command* mCommandEnd = nullptr;     // Pointer to one past the last command
     // a UBO for instanced primitives
-    backend::Handle<backend::HwBufferObject> mInstancedUboHandle;
+    BufferObjectSharedHandle mInstancedUboHandle;
     // a vector for our custom commands
     using CustomCommandVector = std::vector<Executor::CustomCommandFn,
             utils::STLAllocator<Executor::CustomCommandFn, LinearAllocatorArena>>;
