@@ -45,21 +45,8 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
                       << " layout=" << dst.getLayout() << utils::io::endl;
     }
 
-    const VkImageSubresourceRange srcRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = src.level,
-            .levelCount = 1,
-            .baseArrayLayer = src.layer,
-            .layerCount = 1,
-    };
-
-    const VkImageSubresourceRange dstRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = dst.level,
-            .levelCount = 1,
-            .baseArrayLayer = dst.layer,
-            .layerCount = 1,
-    };
+    VkImageSubresourceRange const srcRange = src.getSubresourceRange();
+    VkImageSubresourceRange const dstRange = dst.getSubresourceRange();
 
     VulkanLayout oldSrcLayout = src.getLayout();
     VulkanLayout oldDstLayout = dst.getLayout();
@@ -97,21 +84,8 @@ inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspe
                       << " layout=" << dst.getLayout() << utils::io::endl;
     }
 
-    const VkImageSubresourceRange srcRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = src.level,
-            .levelCount = 1,
-            .baseArrayLayer = src.layer,
-            .layerCount = 1,
-    };
-
-    const VkImageSubresourceRange dstRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = dst.level,
-            .levelCount = 1,
-            .baseArrayLayer = dst.layer,
-            .layerCount = 1,
-    };
+    VkImageSubresourceRange const srcRange = src.getSubresourceRange();
+    VkImageSubresourceRange const dstRange = dst.getSubresourceRange();
 
     VulkanLayout oldSrcLayout = src.getLayout();
     VulkanLayout oldDstLayout = dst.getLayout();

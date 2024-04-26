@@ -1017,7 +1017,7 @@ public:
 
     void updateInputAttachment(Handle<VulkanDescriptorSet>, VulkanAttachment attachment) noexcept {
         VkDescriptorImageInfo info = {
-                .imageView = attachment.getImageView(VK_IMAGE_ASPECT_COLOR_BIT),
+                .imageView = attachment.getImageView(),
                 .imageLayout = ImgUtil::getVkLayout(attachment.getLayout()),
         };
         mInputAttachment = {attachment, info};
