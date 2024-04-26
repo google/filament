@@ -405,7 +405,7 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
         case VK_PHYSICAL_DEVICE_TYPE_OTHER:
             return 1;
         default:
-            utils::slog.w << "devcieTypeOrder: Unexpected deviceType: " << deviceType
+            utils::slog.w << "deviceTypeOrder: Unexpected deviceType: " << deviceType
                           << utils::io::endl;
             return -1;
     }

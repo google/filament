@@ -90,9 +90,6 @@ utils::FixedCapacityVector<OutType> enumerate(
 #undef EXPAND_ENUM_NO_ARGS
 #undef EXPAND_ENUM_ARGS
 
-// Used across pipeline related classes.
-using UsageFlags = utils::bitset128;
-
 // Useful shorthands
 using VkFormatList = utils::FixedCapacityVector<VkFormat>;
 
