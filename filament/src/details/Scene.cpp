@@ -388,9 +388,6 @@ void FScene::updateUBOs(
     SYSTRACE_CALL();
     FEngine::DriverApi& driver = mEngine.getDriverApi();
 
-    // store the UBO handle
-    mRenderableViewUbh = renderableUbh;
-
     // don't allocate more than 16 KiB directly into the render stream
     static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
     const size_t count = visibleRenderables.size();
@@ -450,8 +447,6 @@ void FScene::updateUBOs(
 }
 
 void FScene::terminate(FEngine&) {
-    // DO NOT destroy this UBO, it's owned by the View
-    mRenderableViewUbh.clear();
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera,
