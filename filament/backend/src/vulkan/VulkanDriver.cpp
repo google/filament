@@ -22,7 +22,6 @@
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
-#include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
 
@@ -205,8 +204,6 @@ void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
     vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
 }
 #endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
-
-using ImgUtil = VulkanImageUtility;
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();

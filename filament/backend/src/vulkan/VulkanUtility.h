@@ -281,6 +281,7 @@ struct DescriptorSetLayout {
 
 } // namespace descset
 
+namespace {
 // Use constexpr to statically generate a bit count table for 8-bit numbers.
 struct _BitCountHelper {
     constexpr _BitCountHelper() : data{} {
@@ -303,14 +304,15 @@ struct _BitCountHelper {
         return count;
     }
 
-    static _BitCountHelper BitCounter;
 private:
     uint8_t data[256];
 };
+} // namespace anonymous
 
 template<typename MaskType>
 inline uint8_t countBits(MaskType num) {
-    return _BitCountHelper::BitCounter.count(num);
+    static _BitCountHelper BitCounter = {};
+    return BitCounter.count(num);
 }
 
 // This is useful for counting the total number of descriptors for both vertex and fragment stages.
