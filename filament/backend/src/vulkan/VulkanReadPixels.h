@@ -26,9 +26,7 @@
 #include <functional>
 #include <mutex>
 #include <queue>
-#include <set>
 #include <thread>
-#include <vector>
 
 namespace filament::backend {
 
@@ -74,8 +72,8 @@ public:
 
     void terminate() noexcept;
 
-    void run(VulkanRenderTarget const* srcTarget, uint32_t x, uint32_t y, uint32_t width,
-            uint32_t height, uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
+    void run(VulkanRenderTarget* srcTarget, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+            uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
             SelecteMemoryFunction const& selectMemoryFunc,
             OnReadCompleteFunction const& readCompleteFunc);
 

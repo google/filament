@@ -57,15 +57,19 @@ VkExtent2D VulkanAttachment::getExtent2D() const {
     return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };
 }
 
-VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) {
+VkImageView VulkanAttachment::getImageView() {
     assert_invariant(texture);
-    return texture->getAttachmentView(getSubresourceRange(aspect));
+    return texture->getAttachmentView(getSubresourceRange());
 }
 
-VkImageSubresourceRange VulkanAttachment::getSubresourceRange(VkImageAspectFlags aspect) const {
+bool VulkanAttachment::isDepth() const {
+    return texture->getImageAspect() & VK_IMAGE_ASPECT_DEPTH_BIT;
+}
+
+VkImageSubresourceRange VulkanAttachment::getSubresourceRange() const {
     assert_invariant(texture);
     return {
-            .aspectMask = aspect,
+            .aspectMask = texture->getImageAspect(),
             .baseMipLevel = uint32_t(level),
             .levelCount = 1,
             .baseArrayLayer = uint32_t(layer),

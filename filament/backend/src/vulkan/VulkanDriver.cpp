@@ -1250,7 +1250,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             discardEndVal &= ~TargetBufferFlags::DEPTH;
             clearVal &= ~TargetBufferFlags::DEPTH;
         }
-        auto const attachmentSubresourceRange = depth.getSubresourceRange(VK_IMAGE_ASPECT_DEPTH_BIT);
+        auto const attachmentSubresourceRange = depth.getSubresourceRange();
         depth.texture->setLayout(attachmentSubresourceRange, VulkanLayout::DEPTH_ATTACHMENT);
     }
 
@@ -1276,9 +1276,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 rpkey.needsResolveMask |= (1 << i);
             }
             if (info.texture->getPrimaryImageLayout() != VulkanLayout::COLOR_ATTACHMENT) {
-                ((VulkanTexture*) info.texture)->transitionLayout(cmdbuffer,
-                        info.getSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT),
-                        VulkanLayout::COLOR_ATTACHMENT);
+                ((VulkanTexture*) info.texture)
+                        ->transitionLayout(cmdbuffer, info.getSubresourceRange(),
+                                VulkanLayout::COLOR_ATTACHMENT);
             }
         } else {
             rpkey.colorFormat[i] = VK_FORMAT_UNDEFINED;
@@ -1301,21 +1301,21 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             fbkey.color[i] = VK_NULL_HANDLE;
             fbkey.resolve[i] = VK_NULL_HANDLE;
         } else if (fbkey.samples == 1) {
-            fbkey.color[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+            fbkey.color[i] = rt->getColor(i).getImageView();
             fbkey.resolve[i] = VK_NULL_HANDLE;
             assert_invariant(fbkey.color[i]);
         } else {
-            fbkey.color[i] = rt->getMsaaColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+            fbkey.color[i] = rt->getMsaaColor(i).getImageView();
             VulkanTexture* texture = (VulkanTexture*) rt->getColor(i).texture;
             if (texture->samples == 1) {
-                fbkey.resolve[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+                fbkey.resolve[i] = rt->getColor(i).getImageView();
                 assert_invariant(fbkey.resolve[i]);
             }
             assert_invariant(fbkey.color[i]);
         }
     }
     if (depth.texture) {
-        fbkey.depth = depth.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
+        fbkey.depth = depth.getImageView();
         assert_invariant(fbkey.depth);
 
         // Vulkan 1.1 does not support multisampled depth resolve, so let's check here
