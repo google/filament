@@ -137,18 +137,14 @@ void printDepthFormats(VkPhysicalDevice device) {
     const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
                                               | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     utils::slog.i << "Sampleable depth formats: ";
-    for (VkFormat format = (VkFormat) 1;;) {
+    for (VkFormat format : ALL_VK_FORMATS) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
         if ((props.optimalTilingFeatures & required) == required) {
             utils::slog.i << format << " ";
         }
-        if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
-            utils::slog.i << utils::io::endl;
-            break;
-        }
-        format = (VkFormat) (1 + (int) format);
     }
+    utils::slog.i << utils::io::endl;
 }
 #endif
 
@@ -528,17 +524,13 @@ VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device) {
     std::vector<VkFormat> selectedFormats;
     VkFormatFeatureFlags const required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
-    for (VkFormat format = (VkFormat) 1;;) {
+    for (VkFormat format : ALL_VK_FORMATS) {
         if (isVkDepthFormat(format)) {
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(device, format, &props);
             if ((props.optimalTilingFeatures & required) == required) {
                 selectedFormats.push_back(format);
             }
-        }
-        format = (VkFormat) (1 + (int) format);
-        if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
-            break;
         }
     }
     VkFormatList ret(selectedFormats.size());
