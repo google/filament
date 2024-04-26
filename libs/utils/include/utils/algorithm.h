@@ -22,6 +22,7 @@
 #include <type_traits>      // for std::enable_if
 
 #include <limits.h>
+#include <stddef.h>
 #include <stdint.h>
 
 namespace utils {
@@ -43,9 +44,15 @@ constexpr inline T clz(T x) noexcept {
     static_assert(sizeof(T) * CHAR_BIT <= 128, "details::clz() only support up to 128 bits");
     x |= (x >> 1u);
     x |= (x >> 2u);
-    x |= (x >> 4u);
-    x |= (x >> 8u);
-    x |= (x >> 16u);
+    if constexpr (sizeof(T) * CHAR_BIT >= 8) {   // just to silence compiler warning
+        x |= (x >> 4u);
+    }
+    if constexpr (sizeof(T) * CHAR_BIT >= 16) {   // just to silence compiler warning
+        x |= (x >> 8u);
+    }
+    if constexpr (sizeof(T) * CHAR_BIT >= 32) {   // just to silence compiler warning
+        x |= (x >> 16u);
+    }
     if constexpr (sizeof(T) * CHAR_BIT >= 64) {   // just to silence compiler warning
         x |= (x >> 32u);
     }
@@ -67,11 +74,15 @@ constexpr inline T ctz(T x) noexcept {
     x &= -x;
 #endif
     if (x) c--;
-    if (sizeof(T) * CHAR_BIT >= 64) {
+    if constexpr (sizeof(T) * CHAR_BIT >= 64) {
         if (x & T(0x00000000FFFFFFFF)) c -= 32;
     }
-    if (x & T(0x0000FFFF0000FFFF)) c -= 16;
-    if (x & T(0x00FF00FF00FF00FF)) c -= 8;
+    if constexpr (sizeof(T) * CHAR_BIT >= 32) {
+        if (x & T(0x0000FFFF0000FFFF)) c -= 16;
+    }
+    if constexpr (sizeof(T) * CHAR_BIT >= 16) {
+        if (x & T(0x00FF00FF00FF00FF)) c -= 8;
+    }
     if (x & T(0x0F0F0F0F0F0F0F0F)) c -= 4;
     if (x & T(0x3333333333333333)) c -= 2;
     if (x & T(0x5555555555555555)) c -= 1;
@@ -79,6 +90,24 @@ constexpr inline T ctz(T x) noexcept {
 }
 
 } // namespace details
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE clz(unsigned char x) noexcept {
+#if __has_builtin(__builtin_clz)
+    return __builtin_clz((unsigned int)x) - 24;
+#else
+    return details::clz(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE clz(unsigned short x) noexcept {
+#if __has_builtin(__builtin_clz)
+    return __builtin_clz((unsigned int)x) - 16;
+#else
+    return details::clz(x);
+#endif
+}
 
 constexpr inline UTILS_PUBLIC UTILS_PURE
 unsigned int UTILS_ALWAYS_INLINE clz(unsigned int x) noexcept {
@@ -104,6 +133,24 @@ unsigned long long UTILS_ALWAYS_INLINE clz(unsigned long long x) noexcept {
     return __builtin_clzll(x);
 #else
     return details::clz(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE ctz(unsigned char x) noexcept {
+#if __has_builtin(__builtin_ctz)
+    return __builtin_ctz(x);
+#else
+    return details::ctz(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE ctz(unsigned short x) noexcept {
+#if __has_builtin(__builtin_ctz)
+    return __builtin_ctz(x);
+#else
+    return details::ctz(x);
 #endif
 }
 
@@ -135,6 +182,24 @@ unsigned long long UTILS_ALWAYS_INLINE ctz(unsigned long long x) noexcept {
 }
 
 constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE popcount(unsigned char x) noexcept {
+#if __has_builtin(__builtin_popcount)
+    return __builtin_popcount(x);
+#else
+    return details::popcount(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE popcount(unsigned short x) noexcept {
+#if __has_builtin(__builtin_popcount)
+    return __builtin_popcount(x);
+#else
+    return details::popcount(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
 unsigned int UTILS_ALWAYS_INLINE popcount(unsigned int x) noexcept {
 #if __has_builtin(__builtin_popcount)
     return __builtin_popcount(x);
@@ -159,11 +224,6 @@ unsigned long long UTILS_ALWAYS_INLINE popcount(unsigned long long x) noexcept {
 #else
     return details::popcount(x);
 #endif
-}
-
-constexpr inline UTILS_PUBLIC UTILS_PURE
-uint8_t UTILS_ALWAYS_INLINE popcount(uint8_t x) noexcept {
-    return (uint8_t)popcount((unsigned int)x);
 }
 
 template<typename T,
