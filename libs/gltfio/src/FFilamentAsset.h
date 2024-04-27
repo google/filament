@@ -49,6 +49,7 @@
 
 #include <tsl/htrie_map.h>
 
+#include <variant>
 #include <vector>
 
 #ifdef NDEBUG
@@ -73,16 +74,6 @@ namespace utils {
 namespace filament::gltfio {
 
 struct Wireframe;
-
-// Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
-struct BufferSlot {
-    const cgltf_accessor* accessor;
-    cgltf_attribute_type attribute;
-    int bufferIndex; // for vertex buffer and morph target buffer only
-    VertexBuffer* vertexBuffer;
-    IndexBuffer* indexBuffer;
-    MorphTargetBuffer* morphTargetBuffer;
-};
 
 // Stores a connection between Texture and MaterialInstance; consumed by resource loader so that it
 // can call "setParameter" on the given MaterialInstance after the Texture has been created.
@@ -110,14 +101,24 @@ struct Primitive {
 using MeshCache = utils::FixedCapacityVector<utils::FixedCapacityVector<Primitive>>;
 
 struct FFilamentAsset : public FilamentAsset {
+    struct ResourceInfo;
+    struct ResourceInfoExtended;
+
     FFilamentAsset(Engine* engine, utils::NameComponentManager* names,
             utils::EntityManager* entityManager, NodeManager* nodeManager,
-            TrsTransformManager* trsTransformManager, const cgltf_data* srcAsset) :
+            TrsTransformManager* trsTransformManager, const cgltf_data* srcAsset,
+            bool useExtendedAlgo) :
             mEngine(engine), mNameManager(names), mEntityManager(entityManager),
             mNodeManager(nodeManager), mTrsTransformManager(trsTransformManager),
             mSourceAsset(new SourceAsset {(cgltf_data*)srcAsset}),
             mTextures(srcAsset->textures_count),
-            mMeshCache(srcAsset->meshes_count) {}
+            mMeshCache(srcAsset->meshes_count) {
+        if (!useExtendedAlgo) {
+            mResourceInfo = ResourceInfo{};
+        } else {
+            mResourceInfo = ResourceInfoExtended{};
+        }
+    }
 
     ~FFilamentAsset();
 
@@ -228,6 +229,10 @@ struct FFilamentAsset : public FilamentAsset {
         mDetachedFilamentComponents = true;
     }
 
+    bool isUsingExtendedAlgorithm() {
+        return std::holds_alternative<ResourceInfoExtended>(mResourceInfo);
+    }
+
     // end public API
 
     // If a Filament Texture for the given args already exists, calls setParameter() and returns
@@ -315,8 +320,50 @@ struct FFilamentAsset : public FilamentAsset {
     MeshCache mMeshCache;
 
     // Asset information that is produced by AssetLoader and consumed by ResourceLoader:
-    std::vector<BufferSlot> mBufferSlots;
-    std::vector<std::pair<const cgltf_primitive*, VertexBuffer*> > mPrimitives;
+    struct ResourceInfo {
+        // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
+        struct BufferSlot {
+            const cgltf_accessor* accessor;
+            cgltf_attribute_type attribute;
+            int bufferIndex;// for vertex buffer and morph target buffer only
+            VertexBuffer* vertexBuffer;
+            IndexBuffer* indexBuffer;
+            MorphTargetBuffer* morphTargetBuffer;
+        };
+
+        std::vector<BufferSlot> mBufferSlots;
+        std::vector<std::pair<const cgltf_primitive*, VertexBuffer*>> mPrimitives;
+    };
+    struct ResourceInfoExtended {
+        // Used to denote a generated buffer. Set as `index in `CgltfAttribute`.
+        static constexpr int const GENERATED_0_INDEX = -1;
+        static constexpr int const GENERATED_1_INDEX = -2;
+
+        struct BufferSlot {
+            VertexBuffer* vertices = nullptr;
+            IndexBuffer* indices = nullptr;
+            MorphTargetBuffer* target = nullptr;
+            int slot = -1;
+            size_t sizeInBytes = 0;
+
+            void* data = nullptr;
+
+            // MorphTarget-only data;
+            struct {
+                short4* tbn = nullptr;
+                float3* positions = nullptr;
+            } targetData;
+        };
+
+        std::vector<BufferSlot> slots;
+
+        // This is to workaround the fact that the original ResourceLoader owns the UriDataCache. In
+        // the extended implementation, we create it in AssetLoader. We pass it along to
+        // ResourceLoader here.
+        UriDataCacheHandle uriDataCache;
+    };
+
+    std::variant<ResourceInfo, ResourceInfoExtended> mResourceInfo;
 };
 
 FILAMENT_DOWNCAST(FilamentAsset)

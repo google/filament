@@ -41,9 +41,8 @@ constexpr uint8_t const VERTEX_JOB = 0x1;
 constexpr uint8_t const INDEX_JOB = 0x2;
 constexpr uint8_t const MORPH_TARGET_JOB = 0x4;
 
-// TODO: will be updated on proper integration
-constexpr int const GENERATED_0 = TmpBufferSlot::GENERATED_0_INDEX;
-constexpr int const GENERATED_1 = TmpBufferSlot::GENERATED_1_INDEX;
+constexpr int const GENERATED_0 = FFilamentAsset::ResourceInfoExtended::GENERATED_0_INDEX;
+constexpr int const GENERATED_1 = FFilamentAsset::ResourceInfoExtended::GENERATED_1_INDEX;
 
 using BufferSlot = AssetLoaderExtended::BufferSlot;
 using BufferType = std::variant<short4*, ushort4*, float2*, float3*, float4*>;

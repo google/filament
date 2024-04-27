@@ -28,6 +28,9 @@ namespace {
 using AuxType = TangentSpaceMeshWrapper::AuxType;
 using Builder = TangentSpaceMeshWrapper::Builder;
 
+template<typename T>
+using is_supported_aux_t = TangentSpaceMeshWrapper::is_supported_aux_t<T>;
+
 struct Passthrough {
     static constexpr int POSITION = 256;
     static constexpr int UV0 = 257;
@@ -184,18 +187,11 @@ struct TangentSpaceMeshWrapper::Impl {
         return data;
     }
 
-    template<typename T>
-    using is_supported_aux_t =
-            typename std::enable_if<std::is_same<float2*, T>::value ||
-                                    std::is_same<float3*, T>::value ||
-                                    std::is_same<float4*, T>::value ||
-                                    std::is_same<ushort3*, T>::value ||
-                                    std::is_same<ushort4*, T>::value>::type;
     template<typename T, typename = is_supported_aux_t<T>>
     T getAux(AuxType attribute) noexcept {
         size_t const nbytes = getVertexCount() * sizeof(std::remove_pointer_t<T>);
         auto data = (T) malloc(nbytes);
-        DO_MESH_IMPL(getAux, data);
+        DO_MESH_IMPL(getAux, attribute, data);
         return data;
     }
 
@@ -234,7 +230,7 @@ struct TangentSpaceMeshWrapper::Builder::Impl {
     void triangles(uint3 const* triangles) noexcept { DO_BUILDER_IMPL(triangles, triangles); }
     void triangleCount(size_t count) noexcept { DO_BUILDER_IMPL(triangleCount, count); }
 
-    template<typename T>
+    template<typename T, typename = is_supported_aux_t<T>>
     void aux(AuxType type, T data) {
         DO_BUILDER_IMPL(aux, type, data);
     }
@@ -295,7 +291,13 @@ Builder& Builder::triangles(uint3 const* triangles) noexcept {
     return *this;
 }
 
-template<typename T>
+template Builder& Builder::aux<float2*>(AuxType attribute, float2* data);
+template Builder& Builder::aux<float3*>(AuxType attribute, float3* data);
+template Builder& Builder::aux<float4*>(AuxType attribute, float4* data);
+template Builder& Builder::aux<ushort3*>(AuxType attribute, ushort3* data);
+template Builder& Builder::aux<ushort4*>(AuxType attribute, ushort4* data);
+
+template<typename T, typename>
 Builder& Builder::aux(AuxType type, T data) {
     mImpl->aux<T>(type, data);
     return *this;
@@ -317,6 +319,12 @@ float2* TangentSpaceMeshWrapper::getUVs() noexcept { return mImpl->getUVs(); }
 short4* TangentSpaceMeshWrapper::getQuats() noexcept { return mImpl->getQuats(); }
 uint3* TangentSpaceMeshWrapper::getTriangles() { return mImpl->getTriangles(); }
 size_t TangentSpaceMeshWrapper::getVertexCount() const noexcept { return mImpl->getVertexCount(); }
+
+template float2* TangentSpaceMeshWrapper::getAux<float2*>(AuxType attribute) noexcept;
+template float3* TangentSpaceMeshWrapper::getAux<float3*>(AuxType attribute) noexcept;
+template float4* TangentSpaceMeshWrapper::getAux<float4*>(AuxType attribute) noexcept;
+template ushort3* TangentSpaceMeshWrapper::getAux<ushort3*>(AuxType attribute) noexcept;
+template ushort4* TangentSpaceMeshWrapper::getAux<ushort4*>(AuxType attribute) noexcept;
 
 template<typename T, typename>
 T TangentSpaceMeshWrapper::getAux(AuxType attribute) noexcept {

@@ -30,6 +30,12 @@ using namespace math;
 struct TangentSpaceMeshWrapper {
     using AuxType = geometry::TangentSpaceMesh::AuxAttribute;
 
+    template<typename T>
+    using is_supported_aux_t = typename std::enable_if<
+            std::is_same<float2*, T>::value || std::is_same<float3*, T>::value ||
+            std::is_same<float4*, T>::value || std::is_same<ushort3*, T>::value ||
+            std::is_same<ushort4*, T>::value>::type;
+
     struct Builder {
         struct Impl;
 
@@ -42,8 +48,10 @@ struct TangentSpaceMeshWrapper {
         Builder& positions(float3 const* positions) noexcept;
         Builder& triangleCount(size_t triangleCount) noexcept;
         Builder& triangles(uint3 const* triangles) noexcept;
-        template<typename T>
+
+        template<typename T, typename = is_supported_aux_t<T>>
         Builder& aux(AuxType type, T data);
+
         TangentSpaceMeshWrapper* build();
 
     private:
@@ -51,7 +59,7 @@ struct TangentSpaceMeshWrapper {
     };
 
     explicit TangentSpaceMeshWrapper() = default;
-    
+
     static void destroy(TangentSpaceMeshWrapper* mesh);
 
     float3* getPositions() noexcept;
