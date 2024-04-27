@@ -20,24 +20,22 @@
 #include "downcast.h"
 
 #include "HwRenderPrimitiveFactory.h"
-#include "UniformBuffer.h"
 
 #include <details/InstanceBuffer.h>
 
 #include <filament/Box.h>
+#include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
-
-#include <private/filament/UibStructs.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/EntityInstance.h>
 #include <utils/Panic.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
-#include <utils/Range.h>
 
 #include <math/mat4.h>
 

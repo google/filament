@@ -143,7 +143,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         TrianglePrimitive triangle(api);
 
-        api.beginFrame(0, 0);
+        api.beginFrame(0, 0, 0);
 
         // We set the base mip to 1, and the max mip to 3
         // Level 0: 128x128 (red)

@@ -58,6 +58,7 @@ kernel void main0() {}
     }
 
     Program program;
+    program.shaderLanguage(ShaderLanguage::ESSL3);
     program.shader(ShaderStage::COMPUTE, shader.data(), shader.size() + 1);
 
     Handle<HwProgram> ph = driver.createProgram(std::move(program));
@@ -144,6 +145,7 @@ kernel void main0(device Output_data& output_data [[buffer(0)]],
     driver.updateBufferObject(input_data, { data.data(), size }, 0);
 
     Program program;
+    program.shaderLanguage(ShaderLanguage::ESSL3);
     program.shader(ShaderStage::COMPUTE, shader.data(), shader.size() + 1);
     Handle<HwProgram> ph = driver.createProgram(std::move(program));
 

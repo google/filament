@@ -71,6 +71,10 @@ set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
     "Size of the Metal handle arena, default 8."
 )
 
+set(FILAMENT_BACKEND_DEBUG_FLAG "" CACHE STRING
+    "A debug flag meant for enabling/disabling backend debugging paths"
+)
+
 # Enable exceptions by default in spirv-cross.
 set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF)
 
@@ -548,6 +552,12 @@ if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
     set(FILAMENT_ENABLE_MULTIVIEW ON)
 endif ()
 
+# Define backend flag for debug only
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT FILAMENT_BACKEND_DEBUG_FLAG STREQUAL "")
+    add_definitions(-DFILAMENT_BACKEND_DEBUG_FLAG=${FILAMENT_BACKEND_DEBUG_FLAG})
+    unset(FILAMENT_BACKEND_DEBUG_FLAG)
+endif()
+
 # ==================================================================================================
 # Material compilation flags
 # ==================================================================================================
@@ -819,6 +829,9 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/glslminifier)
     add_subdirectory(${TOOLS}/matc)
     add_subdirectory(${TOOLS}/matinfo)
+    if (NOT WIN32)  # matedit not yet supported on Windows
+        add_subdirectory(${TOOLS}/matedit)
+    endif()
     add_subdirectory(${TOOLS}/mipgen)
     add_subdirectory(${TOOLS}/normal-blending)
     add_subdirectory(${TOOLS}/resgen)

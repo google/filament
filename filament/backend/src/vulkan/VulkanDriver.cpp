@@ -22,7 +22,6 @@
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
-#include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
 
@@ -205,8 +204,6 @@ void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
     vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
 }
 #endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
-
-using ImgUtil = VulkanImageUtility;
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
@@ -391,7 +388,8 @@ void VulkanDriver::collectGarbage() {
 
     FVK_SYSTRACE_END();
 }
-void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs, uint32_t frameId) {
     // Do nothing.
 }
 
@@ -920,6 +918,11 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
     return false;
 }
 
+bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    auto const& formats = mContext.getBlittableDepthStencilFormats();
+    return std::find(formats.begin(), formats.end(), getVkFormat(format)) != formats.end();
+}
+
 bool VulkanDriver::isProtectedTexturesSupported() {
     return false;
 }
@@ -1247,7 +1250,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             discardEndVal &= ~TargetBufferFlags::DEPTH;
             clearVal &= ~TargetBufferFlags::DEPTH;
         }
-        auto const attachmentSubresourceRange = depth.getSubresourceRange(VK_IMAGE_ASPECT_DEPTH_BIT);
+        auto const attachmentSubresourceRange = depth.getSubresourceRange();
         depth.texture->setLayout(attachmentSubresourceRange, VulkanLayout::DEPTH_ATTACHMENT);
     }
 
@@ -1273,9 +1276,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 rpkey.needsResolveMask |= (1 << i);
             }
             if (info.texture->getPrimaryImageLayout() != VulkanLayout::COLOR_ATTACHMENT) {
-                ((VulkanTexture*) info.texture)->transitionLayout(cmdbuffer,
-                        info.getSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT),
-                        VulkanLayout::COLOR_ATTACHMENT);
+                ((VulkanTexture*) info.texture)
+                        ->transitionLayout(cmdbuffer, info.getSubresourceRange(),
+                                VulkanLayout::COLOR_ATTACHMENT);
             }
         } else {
             rpkey.colorFormat[i] = VK_FORMAT_UNDEFINED;
@@ -1298,21 +1301,21 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             fbkey.color[i] = VK_NULL_HANDLE;
             fbkey.resolve[i] = VK_NULL_HANDLE;
         } else if (fbkey.samples == 1) {
-            fbkey.color[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+            fbkey.color[i] = rt->getColor(i).getImageView();
             fbkey.resolve[i] = VK_NULL_HANDLE;
             assert_invariant(fbkey.color[i]);
         } else {
-            fbkey.color[i] = rt->getMsaaColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+            fbkey.color[i] = rt->getMsaaColor(i).getImageView();
             VulkanTexture* texture = (VulkanTexture*) rt->getColor(i).texture;
             if (texture->samples == 1) {
-                fbkey.resolve[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
+                fbkey.resolve[i] = rt->getColor(i).getImageView();
                 assert_invariant(fbkey.resolve[i]);
             }
             assert_invariant(fbkey.color[i]);
         }
     }
     if (depth.texture) {
-        fbkey.depth = depth.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT);
+        fbkey.depth = depth.getImageView();
         assert_invariant(fbkey.depth);
 
         // Vulkan 1.1 does not support multisampled depth resolve, so let's check here
@@ -1806,7 +1809,7 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
         // This fallback path is very flaky because the dummy texture might not have
         // matching characteristics. (e.g. if the missing texture is a 3D texture)
         if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
-#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE) && FVK_ENABLED_DEBUG_SAMPLER_NAME
             utils::slog.w << "Uninitialized texture bound to '" << bindingToName[binding] << "'";
             utils::slog.w << " in material '" << program->name.c_str() << "'";
             utils::slog.w << " at binding point " << +binding << utils::io::endl;
@@ -1814,15 +1817,12 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
             texture = mEmptyTexture;
         }
 
+        VkSampler const vksampler = mSamplerCache.getSampler(boundSampler->s);
+
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
         VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SAMPLER,
                 reinterpret_cast<uint64_t>(vksampler), bindingToName[binding].c_str());
-        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SAMPLER,
-                reinterpret_cast<uint64_t>(samplerInfo.sampler), bindingToName[binding].c_str());
 #endif
-
-        VkSampler const vksampler = mSamplerCache.getSampler(boundSampler->s);
-
         mDescriptorSetManager.updateSampler({}, binding, texture, vksampler);
     }
 

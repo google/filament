@@ -287,7 +287,7 @@ void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     assert_invariant(t != nullptr);
-    mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.targetIndex);
+    mContext.bindTexture(unit, t->gl.target, t->gl.id);
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
@@ -749,7 +749,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             if (t->externalTexture) {
                 t->gl.target = t->externalTexture->target;
                 t->gl.id = t->externalTexture->id;
-                t->gl.targetIndex = (uint8_t)OpenGLContext::getIndexForTextureTarget(t->gl.target);
                 // internalFormat actually depends on the external image, but it doesn't matter
                 // because it's not used anywhere for anything important.
                 t->gl.internalFormat = internalFormat;
@@ -761,30 +760,23 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
             t->gl.internalFormat = internalFormat;
 
-            // We DO NOT update targetIndex at function exit to take advantage of the fact that
-            // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
             switch (target) {
                 case SamplerType::SAMPLER_EXTERNAL:
                     // we can't be here -- doesn't matter what we do
                 case SamplerType::SAMPLER_2D:
                     t->gl.target = GL_TEXTURE_2D;
-                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
                     break;
                 case SamplerType::SAMPLER_3D:
                     t->gl.target = GL_TEXTURE_3D;
-                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_3D);
                     break;
                 case SamplerType::SAMPLER_2D_ARRAY:
                     t->gl.target = GL_TEXTURE_2D_ARRAY;
-                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
                     break;
                 case SamplerType::SAMPLER_CUBEMAP:
                     t->gl.target = GL_TEXTURE_CUBE_MAP;
-                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
                     break;
                 case SamplerType::SAMPLER_CUBEMAP_ARRAY:
                     t->gl.target = GL_TEXTURE_CUBE_MAP_ARRAY;
-                    t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP_ARRAY);
                     break;
             }
 
@@ -795,8 +787,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
                     t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
-                    t->gl.targetIndex = (uint8_t)
-                            OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
@@ -855,32 +845,24 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     t->gl.internalFormat = getInternalFormat(format);
     assert_invariant(t->gl.internalFormat);
 
-    // We DO NOT update targetIndex at function exit to take advantage of the fact that
-    // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
     switch (target) {
         case SamplerType::SAMPLER_EXTERNAL:
             t->gl.target = GL_TEXTURE_EXTERNAL_OES;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
             break;
         case SamplerType::SAMPLER_2D:
             t->gl.target = GL_TEXTURE_2D;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
             break;
         case SamplerType::SAMPLER_3D:
             t->gl.target = GL_TEXTURE_3D;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_3D);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
             t->gl.target = GL_TEXTURE_2D_ARRAY;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_ARRAY);
             break;
         case SamplerType::SAMPLER_CUBEMAP:
             t->gl.target = GL_TEXTURE_CUBE_MAP;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP);
             break;
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
             t->gl.target = GL_TEXTURE_CUBE_MAP_ARRAY;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_CUBE_MAP_ARRAY);
             break;
     }
 
@@ -891,7 +873,6 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
             t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
-            t->gl.targetIndex = OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D_MULTISAMPLE);
         } else {
             // Turn off multi-sampling for that texture. It's just not supported.
         }
@@ -1781,7 +1762,6 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                         // the target and id can be reset each time
                         t->gl.target = t->externalTexture->target;
                         t->gl.id = t->externalTexture->id;
-                        t->gl.targetIndex = (uint8_t)OpenGLContext::getIndexForTextureTarget(t->gl.target);
                         bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
                     }
                 }
@@ -2040,6 +2020,10 @@ bool OpenGLDriver::isParallelShaderCompileSupported() {
 }
 
 bool OpenGLDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
+bool OpenGLDriver::isDepthStencilBlitSupported(TextureFormat format) {
     return true;
 }
 
@@ -2667,7 +2651,6 @@ void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
         // the target and id can be reset each time
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
-        t->gl.targetIndex = (uint8_t)OpenGLContext::getIndexForTextureTarget(t->gl.target);
         bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
     }
 }
@@ -3406,10 +3389,12 @@ void OpenGLDriver::tick(int) {
 
 void OpenGLDriver::beginFrame(
         UTILS_UNUSED int64_t monotonic_clock_ns,
+        UTILS_UNUSED int64_t refreshIntervalNs,
         UTILS_UNUSED uint32_t frameId) {
     DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
+    mPlatform.beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
     if (UTILS_UNLIKELY(!mTexturesWithStreamsAttached.empty())) {
         OpenGLPlatform& platform = mPlatform;
         for (GLTexture const* t : mTexturesWithStreamsAttached) {
@@ -3418,7 +3403,7 @@ void OpenGLDriver::beginFrame(
                 assert_invariant(t->hwStream->stream);
                 platform.updateTexImage(t->hwStream->stream,
                         &static_cast<GLStream*>(t->hwStream)->user_thread.timestamp); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-                // NOTE: We assume that updateTexImage() binds the texture on our behalf
+                // NOTE: We assume that OpenGLPlatform::updateTexImage() binds the texture on our behalf
                 gl.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
             }
         }
@@ -3457,6 +3442,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
 #endif
     //SYSTRACE_NAME("glFinish");
     //glFinish();
+    mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
 }
 

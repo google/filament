@@ -20,8 +20,8 @@
 
 namespace filamat {
 
-size_t BlobDictionary::addBlob(const std::vector<uint32_t>& vblob) noexcept {
-    std::string_view blob((char*) vblob.data(), vblob.size() * 4);
+size_t BlobDictionary::addBlob(const std::vector<uint8_t>& vblob) noexcept {
+    std::string_view blob((char*) vblob.data(), vblob.size());
     auto iter = mBlobIndices.find(blob);
     if (iter != mBlobIndices.end()) {
         return iter->second;

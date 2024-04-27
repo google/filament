@@ -26,15 +26,40 @@
 #include "details/InstanceBuffer.h"
 #include "details/Material.h"
 
-#include "filament/RenderableManager.h"
+#include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 
+#include <filament/Box.h>
+#include <filament/FilamentAPI.h>
+#include <filament/MaterialEnums.h>
+#include <filament/RenderableManager.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
-#include <utils/Log.h>
-#include <utils/Panic.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/EntityManager.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
+#include <utils/Slice.h>
+
+#include <math/mat4.h>
+#include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec4.h>
+
+#include <algorithm>
+#include <memory>
 #include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace filament::math;
 using namespace utils;

@@ -308,6 +308,11 @@ utils::JobSystem& Engine::getJobSystem() noexcept {
     return downcast(this)->getJobSystem();
 }
 
+bool Engine::isPaused() const noexcept {
+    ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
+    return downcast(this)->isPaused();
+}
+
 void Engine::setPaused(bool paused) {
     ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
     downcast(this)->setPaused(paused);

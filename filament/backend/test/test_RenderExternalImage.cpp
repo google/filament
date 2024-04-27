@@ -109,7 +109,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     getDriverApi().startCapture(0);
     getDriverApi().makeCurrent(swapChain, swapChain);
-    getDriverApi().beginFrame(0, 0);
+    getDriverApi().beginFrame(0, 0, 0);
 
     SamplerGroup samplers(1);
     samplers.setSampler(0, { texture, {} });
@@ -231,7 +231,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     getDriverApi().startCapture(0);
     getDriverApi().makeCurrent(swapChain, swapChain);
-    getDriverApi().beginFrame(0, 0);
+    getDriverApi().beginFrame(0, 0, 0);
 
     SamplerGroup samplers(1);
     samplers.setSampler(0, { texture, {} });

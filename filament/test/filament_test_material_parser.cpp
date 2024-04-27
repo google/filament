@@ -31,7 +31,7 @@ using namespace filament;
 // This will re-compile the test material with the current version of matc.
 // To verify, rebuild and re-run test_material_parser (this test suite).
 TEST(MaterialParser, Parse) {
-    MaterialParser parser(backend::ShaderLanguage::ESSL3,
+    MaterialParser parser({ backend::ShaderLanguage::ESSL3 },
             FILAMENT_TEST_RESOURCES_TEST_MATERIAL_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_SIZE);
     MaterialParser::ParseResult materialOk = parser.parse();
 

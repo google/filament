@@ -378,7 +378,7 @@ void BlobIndex::writeChunks(ostream& stream) {
         const auto& src = mDataBlobs[record.dictionaryIndex];
         assert(src.size() % 4 == 0);
         const uint32_t* ptr = (const uint32_t*) src.data();
-        record.dictionaryIndex = blobs.addBlob(vector<uint32_t>(ptr, ptr + src.size() / 4));
+        record.dictionaryIndex = blobs.addBlob(vector<uint8_t>(ptr, ptr + src.size()));
     }
 
     // Adjust start cursor of flatteners to match alignment of output stream.

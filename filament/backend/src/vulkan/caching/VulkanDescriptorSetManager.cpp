@@ -42,8 +42,6 @@ constexpr uint8_t MAX_INPUT_ATTACHMENT_BINDING = 1;
 constexpr uint8_t MAX_BINDINGS =
         MAX_SAMPLER_BINDING + MAX_UBO_BINDING + MAX_INPUT_ATTACHMENT_BINDING;
 
-using ImgUtil = VulkanImageUtility;
-
 using Bitmask = VulkanDescriptorSetLayout::Bitmask;
 using DescriptorCount = VulkanDescriptorSetLayout::Count;
 using UBOMap = std::array<std::pair<VkDescriptorBufferInfo, VulkanBufferObject*>, MAX_UBO_BINDING>;
@@ -1010,15 +1008,15 @@ public:
         } else {
             info.imageView = texture->getViewForType(range, expectedType);
         }
-        info.imageLayout = ImgUtil::getVkLayout(texture->getPrimaryImageLayout());
+        info.imageLayout = imgutil::getVkLayout(texture->getPrimaryImageLayout());
         mSamplerMap[binding] = {info, texture};
         mResources.acquire(texture);
     }
 
     void updateInputAttachment(Handle<VulkanDescriptorSet>, VulkanAttachment attachment) noexcept {
         VkDescriptorImageInfo info = {
-                .imageView = attachment.getImageView(VK_IMAGE_ASPECT_COLOR_BIT),
-                .imageLayout = ImgUtil::getVkLayout(attachment.getLayout()),
+                .imageView = attachment.getImageView(),
+                .imageLayout = imgutil::getVkLayout(attachment.getLayout()),
         };
         mInputAttachment = {attachment, info};
         mResources.acquire(attachment.texture);
@@ -1042,7 +1040,7 @@ public:
         mPlaceHolderImageInfo = {
                 .sampler = sampler,
                 .imageView = texture->getPrimaryImageView(),
-                .imageLayout = ImgUtil::getVkLayout(texture->getPrimaryImageLayout()),
+                .imageLayout = imgutil::getVkLayout(texture->getPrimaryImageLayout()),
         };
     }
 

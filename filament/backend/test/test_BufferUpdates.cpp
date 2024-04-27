@@ -143,7 +143,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         }
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
+        getDriverApi().beginFrame(0, 0, 0);
 
         // Draw 10 triangles, updating the vertex buffer / index buffer each time.
         size_t triangleIndex = 0;

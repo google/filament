@@ -44,13 +44,15 @@ struct VulkanAttachment {
     VulkanTexture* texture = nullptr;
     uint8_t level = 0;
     uint16_t layer = 0;
+
+    bool isDepth() const;
     VkImage getImage() const;
     VkFormat getFormat() const;
     VulkanLayout getLayout() const;
     VkExtent2D getExtent2D() const;
-    VkImageView getImageView(VkImageAspectFlags aspect);
+    VkImageView getImageView();
     // TODO: maybe embed aspect into the attachment or texture itself.
-    VkImageSubresourceRange getSubresourceRange(VkImageAspectFlags aspect) const;
+    VkImageSubresourceRange getSubresourceRange() const;
 };
 
 class VulkanTimestamps {
@@ -101,8 +103,12 @@ public:
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline VkFormatList const& getAttachmentDepthFormats() const {
-        return mDepthFormats;
+    inline VkFormatList const& getAttachmentDepthStencilFormats() const {
+        return mDepthStencilFormats;
+    }
+
+    inline VkFormatList const& getBlittableDepthStencilFormats() const {
+        return mBlittableDepthStencilFormats;
     }
 
     inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
@@ -131,7 +137,8 @@ private:
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
 
-    VkFormatList mDepthFormats;
+    VkFormatList mDepthStencilFormats;
+    VkFormatList mBlittableDepthStencilFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

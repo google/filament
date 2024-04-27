@@ -17,18 +17,13 @@
 #ifndef TNT_FILAMENT_PERSHADOWMAPUNIFORMS_H
 #define TNT_FILAMENT_PERSHADOWMAPUNIFORMS_H
 
-#include <filament/Viewport.h>
-
 #include <private/filament/UibStructs.h>
-#include <private/backend/SamplerGroup.h>
 
-#include "TypedUniformBuffer.h"
-
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/EntityInstance.h>
-
-#include <random>
+#include <math/vec4.h>
 
 namespace filament {
 
@@ -40,12 +35,10 @@ class LightManager;
 /*
  * PerShadowMapUniforms manages the UBO needed to generate our shadow maps. Internally it just
  * holds onto a `PerViewUniform` UBO handle, but doesn't keep any shadow copy of it, instead it
- * writes the data directly into the commandstream, for this reason partial update of the data
+ * writes the data directly into the CommandStream, for this reason partial update of the data
  * is not possible.
  */
 class PerShadowMapUniforms {
-
-    using LightManagerInstance = utils::EntityInstance<LightManager>;
 
 public:
     class Transaction {
