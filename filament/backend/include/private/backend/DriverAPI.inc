@@ -138,8 +138,8 @@ DECL_DRIVER_API_N(beginFrame,
 
 DECL_DRIVER_API_N(setFrameScheduledCallback,
         backend::SwapChainHandle, sch,
-        backend::FrameScheduledCallback, callback,
-        void*, user)
+        backend::CallbackHandler*, handler,
+        backend::FrameScheduledCallback&&, callback)
 
 DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::SwapChainHandle, sch,
