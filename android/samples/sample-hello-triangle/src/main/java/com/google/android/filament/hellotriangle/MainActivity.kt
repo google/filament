@@ -321,7 +321,7 @@ class MainActivity : Activity() {
             var flags = uiHelper.swapChainFlags
             if (engine.activeFeatureLevel == Engine.FeatureLevel.FEATURE_LEVEL_0) {
                 if (SwapChain.isSRGBSwapChainSupported(engine)) {
-                    flags = flags or SwapChain.CONFIG_SRGB_COLORSPACE
+                    flags = flags or SwapChainFlags.CONFIG_SRGB_COLORSPACE
                 }
             }
 

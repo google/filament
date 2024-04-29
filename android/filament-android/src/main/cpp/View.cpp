@@ -49,6 +49,12 @@ Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass,
     view->setCamera(camera);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nHasCamera(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jboolean)view->hasCamera();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetColorGrading(JNIEnv*, jclass,
         jlong nativeView, jlong nativeColorGrading) {

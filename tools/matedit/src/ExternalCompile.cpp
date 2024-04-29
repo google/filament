@@ -160,8 +160,10 @@ static bool invokeScript(const std::vector<std::string>& userArgs, backend::Shad
     // Temporary input and output files
     argv.push_back(const_cast<char*>(inputPath.c_str()));
     argv.push_back(const_cast<char*>(outputPath.c_str()));
-    argv.push_back(const_cast<char*>(toString(stage).c_str()));
-    argv.push_back(const_cast<char*>(toString(model).c_str()));
+    auto stageString = toString(stage);
+    argv.push_back(const_cast<char*>(stageString.c_str()));
+    auto modelString = toString(model);
+    argv.push_back(const_cast<char*>(modelString.c_str()));
 
     // Optional user-supplied arguments
     for (int i = 1; i < userArgs.size(); i++) {
@@ -285,7 +287,8 @@ bool compileMetalShaders(const std::vector<filamat::TextEntry>& mslEntries,
     return true;
 }
 
-int externalCompile(utils::Path input, utils::Path output, std::vector<std::string> args) {
+int externalCompile(utils::Path input, utils::Path output, bool preserveTextShaders,
+        std::vector<std::string> args) {
     std::ifstream in(input.c_str(), std::ifstream::in | std::ios::binary);
     if (!in.is_open()) {
         std::cerr << "Could not open the source material " << input << std::endl;
@@ -331,18 +334,7 @@ int externalCompile(utils::Path input, utils::Path output, std::vector<std::stri
         return 1;
     }
 
-    // Since we're modifying text shaders, we'll need to regenerate the text dictionary.
-    // We'll also need to re-emit text based shaders that rely on the dictionary.
-    // Here we ONLY add GLSL and ESSL 1 types, as we're removing MSL completely.
-    filamat::LineDictionary textDictionary;
-    for (const auto& s : glslEntries) {
-        textDictionary.addText(s.shader);
-    }
-    for (const auto& s : essl1Entries) {
-        textDictionary.addText(s.shader);
-    }
-
-    // We'll also need to regenerate the SPIRV dictionary and SPIRV shaders.
+    // We always need to regenerate the SPIRV dictionary and SPIRV shaders.
     // This is required, as the SPIRV blobs have alignment requirements. Since we're modifying other
     // chunks, their alignment might have changed.
     filamat::BlobDictionary spirvDictionary;
@@ -357,19 +349,28 @@ int externalCompile(utils::Path input, utils::Path output, std::vector<std::stri
         e.dictionaryIndex = metalBinaryDictionary.addBlob(data);
     }
 
+    bool removingMslShaders = !preserveTextShaders;
+
     // Pass through chunks that don't need to change.
     filamat::ChunkContainer outputChunks;
     for (int i = 0; i < container.getChunkCount(); i++) {
         filaflat::ChunkContainer::Chunk c = container.getChunk(i);
-        if (c.type == filamat::ChunkType::MaterialMetal) {
-            // This chunk is being removed, skip it.
-            continue;
+
+        if (removingMslShaders) {
+            if (c.type == filamat::ChunkType::MaterialMetal) {
+                // This chunk is being removed, skip it.
+                continue;
+            }
+            if (c.type == filamat::ChunkType::MaterialGlsl ||
+                    c.type == filamat::ChunkType::MaterialEssl1 ||
+                    c.type == filamat::ChunkType::DictionaryText) {
+                // These shader / dictionary chunks will be re-added below.
+                continue;
+            }
         }
-        if (c.type == filamat::ChunkType::MaterialGlsl ||
-                c.type == filamat::ChunkType::MaterialEssl1 ||
-                c.type == filamat::ChunkType::MaterialSpirv ||
-                c.type == filamat::ChunkType::DictionarySpirv ||
-                c.type == filamat::ChunkType::DictionaryText) {
+
+        if (c.type == filamat::ChunkType::MaterialSpirv ||
+                c.type == filamat::ChunkType::DictionarySpirv) {
             // These shader / dictionary chunks will be re-added below.
             continue;
         }
@@ -377,21 +378,34 @@ int externalCompile(utils::Path input, utils::Path output, std::vector<std::stri
                 reinterpret_cast<const char*>(c.desc.start), c.desc.size, c.type);
     }
 
-    // Add the re-generated text dictionary chunk and text-based shaders.
-    if (!textDictionary.isEmpty()) {
-        const auto& dictionaryChunk = outputChunks.push<filamat::DictionaryTextChunk>(
-                std::move(textDictionary), filamat::ChunkType::DictionaryText);
-
-        // Re-emit GLSL chunk (MaterialTextChunk).
-        if (!glslEntries.empty()) {
-            outputChunks.push<filamat::MaterialTextChunk>(std::move(glslEntries),
-                    dictionaryChunk.getDictionary(), filamat::ChunkType::MaterialGlsl);
+    if (removingMslShaders) {
+        // Since we're modifying text shaders, we'll need to regenerate the text dictionary.
+        // We'll also need to re-emit text based shaders that rely on the dictionary.
+        // Here we ONLY add GLSL and ESSL 1 types, as we're removing MSL completely.
+        filamat::LineDictionary textDictionary;
+        for (const auto& s : glslEntries) {
+            textDictionary.addText(s.shader);
+        }
+        for (const auto& s : essl1Entries) {
+            textDictionary.addText(s.shader);
         }
 
-        // Re-emit ESSL1 chunk (MaterialTextChunk).
-        if (!essl1Entries.empty()) {
-            outputChunks.push<filamat::MaterialTextChunk>(std::move(essl1Entries),
-                    dictionaryChunk.getDictionary(), filamat::ChunkType::MaterialEssl1);
+        // Add the re-generated text dictionary chunk and text-based shaders.
+        if (!textDictionary.isEmpty()) {
+            const auto& dictionaryChunk = outputChunks.push<filamat::DictionaryTextChunk>(
+                    std::move(textDictionary), filamat::ChunkType::DictionaryText);
+
+            // Re-emit GLSL chunk (MaterialTextChunk).
+            if (!glslEntries.empty()) {
+                outputChunks.push<filamat::MaterialTextChunk>(std::move(glslEntries),
+                        dictionaryChunk.getDictionary(), filamat::ChunkType::MaterialGlsl);
+            }
+
+            // Re-emit ESSL1 chunk (MaterialTextChunk).
+            if (!essl1Entries.empty()) {
+                outputChunks.push<filamat::MaterialTextChunk>(std::move(essl1Entries),
+                        dictionaryChunk.getDictionary(), filamat::ChunkType::MaterialEssl1);
+            }
         }
     }
 

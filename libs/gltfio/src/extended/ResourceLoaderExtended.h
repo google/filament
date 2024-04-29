@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef TNT_MATEDIT_EXTERNALCOMPILE_H
-#define TNT_MATEDIT_EXTERNALCOMPILE_H
+#ifndef GLTFIO_RESOURCELOADEREXTENDED_H
+#define GLTFIO_RESOURCELOADEREXTENDED_H
 
-#include <utils/Path.h>
 
-#include <string>
+#include "AssetLoaderExtended.h"
+#include "../FFilamentAsset.h"
+
 #include <vector>
 
-namespace matedit {
+namespace filament::gltfio {
 
-int externalCompile(utils::Path input, utils::Path output, bool preserveTextShaders,
-        std::vector<std::string> args);
+struct ResourceLoaderExtended {
+    using BufferSlot = AssetLoaderExtended::BufferSlot;
+    static void loadResources(
+        std::vector<BufferSlot> const& slots, filament::Engine* engine,
+        std::vector<BufferObject*>& bufferObjects);
+};
 
-} // namespace matedit
+} // namespace filament::gltfio
 
-#endif
+#endif // GLTFIO_RESOURCELOADEREXTENDED_H

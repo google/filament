@@ -28,6 +28,7 @@ struct Config {
     utils::Path inputFile;
     utils::Path outputFile;
     std::vector<std::string> commandArgs;
+    bool preserveTextShaders = false;
 };
 
 static void printUsage(const char* name) {
@@ -46,6 +47,9 @@ static void printUsage(const char* name) {
         "   --help, -h\n"
         "       Print this message\n"
         "\n"
+        "   --license, -l\n"
+        "       Print copyright and license information\n"
+        "\n"
         "   --input=[input file], -i\n"
         "       Specify path to input compiled material file\n"
         "\n"
@@ -54,6 +58,9 @@ static void printUsage(const char* name) {
         "\n"
         "   --type=[shader type], -t\n"
         "       Specify the shader type, currently only metal is supported\n"
+        "\n"
+        "   --preserve-text-shaders, -p\n"
+        "       Keep the text-based shaders when writing the output file\n"
         "\n"
         "Commands:\n"
         "   external-compile\n"
@@ -76,7 +83,8 @@ static void printUsage(const char* name) {
         "               <input shader> is guaranteed to have a .metal extension.\n"
         "               <output binary> is guaranteed to have a .metallib extension.\n"
         "\n"
-        "       This command will remove the text-based shaders when writing the output material file.\n"
+        "       This command will remove the text-based shaders when writing the output material file, unless\n"
+        "       the --preserve-text-shaders option is specified.\n"
         "\n"
         "       If script exits with a non-zero exit code, MATEDIT will terminate with error. Multiple\n"
         "       invocations of script may be launched in parallel.\n"
@@ -92,13 +100,26 @@ static void printUsage(const char* name) {
     printf("%s", usage.c_str());
 }
 
+static void license() {
+    static const char *license[] = {
+        #include "licenses/licenses.inc"
+        nullptr
+    };
+
+    const char **p = &license[0];
+    while (*p)
+        std::cout << *p++ << std::endl;
+}
+
 static int handleArguments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hi:o:t:";
+    static constexpr const char* OPTSTR = "hli:o:t:p";
     static const struct option OPTIONS[] = {
-            { "help",               no_argument,       nullptr, 'h' },
-            { "input",              required_argument, nullptr, 'i' },
-            { "output",             required_argument, nullptr, 'o' },
-            { "type",               required_argument, nullptr, 't' },
+            { "help",                  no_argument,       nullptr, 'h' },
+            { "license",               no_argument,       nullptr, 'l' },
+            { "input",                 required_argument, nullptr, 'i' },
+            { "output",                required_argument, nullptr, 'o' },
+            { "type",                  required_argument, nullptr, 't' },
+            { "preserve-text-shaders", no_argument,       nullptr, 'p' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -111,6 +132,9 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             default:
             case 'h':
                 printUsage(argv[0]);
+                exit(0);
+            case 'l':
+                license();
                 exit(0);
             case 'i':
                 config->inputFile = arg;
@@ -126,6 +150,10 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                               << std::endl;
                     exit(1);
                 }
+                break;
+            case 'p':
+                config->preserveTextShaders = true;
+                break;
         }
     }
 
@@ -176,5 +204,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    return matedit::externalCompile(config.inputFile, config.outputFile, config.commandArgs);
+    return matedit::externalCompile(
+            config.inputFile, config.outputFile, config.preserveTextShaders, config.commandArgs);
 }

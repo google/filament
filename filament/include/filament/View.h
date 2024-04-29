@@ -190,6 +190,13 @@ public:
     void setCamera(Camera* UTILS_NONNULL camera) noexcept;
 
     /**
+     * Returns whether a Camera is set.
+     * @return true if a camera is set.
+     * @see setCamera()
+     */
+    bool hasCamera() const noexcept;
+
+    /**
      * Returns the Camera currently associated with this View.
      * @return A reference to the Camera associated to this View.
      */

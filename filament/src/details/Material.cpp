@@ -301,7 +301,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
     processDepthVariants(engine, parser);
 
     // we can only initialize the default instance once we're initialized ourselves
-    mDefaultInstance.initDefaultInstance(engine, this);
+    new(&mDefaultInstanceStorage) FMaterialInstance(engine, this);
 
 
 #if FILAMENT_ENABLE_MATDBG
@@ -314,7 +314,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 #endif
 }
 
-FMaterial::~FMaterial() noexcept = default;
+FMaterial::~FMaterial() noexcept {
+    std::destroy_at(getDefaultInstance());
+}
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     if (mMaterialDomain == MaterialDomain::SURFACE) {
@@ -372,7 +374,8 @@ void FMaterial::terminate(FEngine& engine) {
 #endif
 
     destroyPrograms(engine);
-    mDefaultInstance.terminate(engine);
+
+    getDefaultInstance()->terminate(engine);
 }
 
 void FMaterial::compile(CompilerPriorityQueue priority,
@@ -419,7 +422,7 @@ void FMaterial::compile(CompilerPriorityQueue priority,
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    return FMaterialInstance::duplicate(&mDefaultInstance, name);
+    return FMaterialInstance::duplicate(getDefaultInstance(), name);
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
@@ -640,6 +643,21 @@ void FMaterial::applyPendingEdits() noexcept {
     latchPendingEdits();
 }
 
+void FMaterial::setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept {
+    std::lock_guard const lock(mPendingEditsLock);
+    std::swap(pendingEdits, mPendingEdits);
+}
+
+bool FMaterial::hasPendingEdits() noexcept {
+    std::lock_guard const lock(mPendingEditsLock);
+    return (bool)mPendingEdits;
+}
+
+void FMaterial::latchPendingEdits() noexcept {
+    std::lock_guard const lock(mPendingEditsLock);
+    std::swap(mPendingEdits, mMaterialParser);
+}
+
 /**
  * Callback handlers for the debug server, potentially called from any thread. These methods are
  * never called during normal operation and exist for debugging purposes only.
@@ -666,9 +684,10 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
     material->mActivePrograms.reset();
 }
 
-#endif
-
 /** @}*/
+
+#endif // FILAMENT_ENABLE_MATDBG
+
 
 void FMaterial::destroyPrograms(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();

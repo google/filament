@@ -576,6 +576,12 @@ class_<Engine>("Engine")
     .function("isValidMaterial", EMBIND_LAMBDA(bool, (Engine* engine, Material* object), {
                 return engine->isValid(object);
             }), allow_raw_pointers())
+    .function("isValidMaterialInstance", EMBIND_LAMBDA(bool, (Engine* engine, Material* ma, MaterialInstance* mi), {
+                return engine->isValid(ma, mi);
+            }), allow_raw_pointers())
+    .function("isValidExpensiveMaterialInstance", EMBIND_LAMBDA(bool, (Engine* engine, MaterialInstance* object), {
+                return engine->isValidExpensive(object);
+            }), allow_raw_pointers())
     .function("isValidSkybox", EMBIND_LAMBDA(bool, (Engine* engine, Skybox* object), {
                 return engine->isValid(object);
             }), allow_raw_pointers())
@@ -640,6 +646,7 @@ class_<View>("View")
 
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
+    .function("hasCamera", &View::hasCamera)
     .function("setColorGrading", &View::setColorGrading, allow_raw_pointers())
     .function("setBlendMode", &View::setBlendMode)
     .function("getBlendMode", &View::getBlendMode)

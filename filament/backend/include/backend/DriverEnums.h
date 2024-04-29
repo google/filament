@@ -686,7 +686,7 @@ enum class TextureUsage : uint16_t {
     SUBPASS_INPUT       = 0x0020,            //!< Texture can be used as a subpass input
     BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
     BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
-    PROTECTED           = 0x0100,            //!< Texture can be used the destination of a blit()
+    PROTECTED           = 0x0100,            //!< Texture can be used for protected content
     DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
 

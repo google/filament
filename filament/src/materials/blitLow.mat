@@ -8,11 +8,6 @@ material {
         },
         {
             type : float4,
-            name : resolution,
-            precision: high
-        },
-        {
-            type : float4,
             name : viewport,
             precision: high
         }
