@@ -285,13 +285,13 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
-    const auto& limits = context.getPhysicalDeviceLimits();
+    auto const& limits = context.getPhysicalDeviceLimits();
     mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
             limits.framebufferColorSampleCounts);
 
     // Create sidecar MSAA textures for color attachments if they don't already exist.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        const VulkanAttachment& spec = color[index];
+        VulkanAttachment const& spec = color[index];
         VulkanTexture* texture = (VulkanTexture*) spec.texture;
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
@@ -354,19 +354,19 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
     return {width, height};
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(int target) const {
+VulkanAttachment& VulkanRenderTarget::getColor(int target) {
     return mColor[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
+VulkanAttachment& VulkanRenderTarget::getMsaaColor(int target) {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth() const {
+VulkanAttachment& VulkanRenderTarget::getDepth() {
     return mDepth;
 }
 
-VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
+VulkanAttachment& VulkanRenderTarget::getMsaaDepth() {
     return mMsaaDepthAttachment;
 }
 

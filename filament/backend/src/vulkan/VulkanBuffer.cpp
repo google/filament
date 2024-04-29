@@ -27,8 +27,8 @@ VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
         VkBufferUsageFlags usage, uint32_t numBytes)
     : mAllocator(allocator),
       mStagePool(stagePool),
-      mUsage(usage) {
-
+      mUsage(usage),
+      mUpdatedBytes(0) {
     // for now make sure that only 1 bit is set in usage
     // (because loadFromCpu() assumes that somewhat)
     assert_invariant(usage && !(usage & (usage - 1)));
@@ -49,7 +49,7 @@ VulkanBuffer::~VulkanBuffer() {
 }
 
 void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
-        uint32_t numBytes) const {
+        uint32_t numBytes) {
     assert_invariant(byteOffset == 0);
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
@@ -58,8 +58,39 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
     vmaUnmapMemory(mAllocator, stage->memory);
     vmaFlushAllocation(mAllocator, stage->memory, byteOffset, numBytes);
 
+    // If there was a previous update, then we need to make sure the following write is properly
+    // synced with the previous read.
+    if (mUpdatedBytes > 0) {
+        VkAccessFlags srcAccess = 0;
+        VkPipelineStageFlags srcStage = 0;
+        if (mUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
+            srcAccess = VK_ACCESS_SHADER_READ_BIT;
+            srcStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        } else if (mUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+            srcAccess = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+            srcStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        } else if (mUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
+            srcAccess = VK_ACCESS_INDEX_READ_BIT;
+            srcStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        }
+
+        VkBufferMemoryBarrier barrier{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            .srcAccessMask = srcAccess,
+            .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .buffer = mGpuBuffer,
+            .size = mUpdatedBytes,
+        };
+        vkCmdPipelineBarrier(cmdbuf, srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
+                &barrier, 0, nullptr);
+    }
+
     VkBufferCopy region{ .size = numBytes };
     vkCmdCopyBuffer(cmdbuf, stage->buffer, mGpuBuffer, 1, &region);
+
+    mUpdatedBytes = numBytes;
 
     // Firstly, ensure that the copy finishes before the next draw call.
     // Secondly, in case the user decides to upload another chunk (without ever using the first one)
@@ -67,6 +98,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
     // dstStageMask=VK_PIPELINE_STAGE_TRANSFER_BIT).
     VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
     if (mUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
         dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
@@ -75,26 +107,24 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
     } else if (mUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
         dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
-        // NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but
-        // this seems to be insufficient on Mali devices. To work around this we are using a more
-        // aggressive ALL_GRAPHICS_BIT barrier.
-        dstStageMask |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+        dstStageMask |=
+                (VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     } else if (mUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
         // TODO: implement me
     }
 
     VkBufferMemoryBarrier barrier{
-	    .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-	    .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-	    .dstAccessMask = dstAccessMask,
-	    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-	    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-	    .buffer = mGpuBuffer,
-	    .size = VK_WHOLE_SIZE,
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstAccessMask = dstAccessMask,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .buffer = mGpuBuffer,
+        .size = VK_WHOLE_SIZE,
     };
 
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0, nullptr, 1,
-	    &barrier, 0, nullptr);
+            &barrier, 0, nullptr);
 }
 
 } // namespace filament::backend
