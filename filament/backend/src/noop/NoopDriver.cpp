@@ -54,7 +54,7 @@ void NoopDriver::beginFrame(int64_t monotonic_clock_ns,
 }
 
 void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
 
 }
 

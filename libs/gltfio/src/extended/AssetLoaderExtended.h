@@ -47,33 +47,6 @@ struct FilamentAttribute {
     int slot;
 };
 
-// This will be removed when the extended classes are properly integrated.
-struct TmpBufferSlot {
-    // Used to denote a generated buffer. Set as `index in `CgltfAttribute`.
-    static constexpr int const GENERATED_0_INDEX = -1;
-    static constexpr int const GENERATED_1_INDEX = -2;
-
-    VertexBuffer* vertices = nullptr;
-    IndexBuffer* indices = nullptr;
-    MorphTargetBuffer* target = nullptr;
-    int slot = -1;
-    size_t sizeInBytes = 0;
-
-    void* data = nullptr;
-
-    // MorphTarget-only data;
-    struct {
-        short4* tbn = nullptr;
-        float3* positions = nullptr;
-    } targetData;
-};
-
-// This will be removed when the extended classes are properly integrated.
-struct TmpAssetConfigurationExtended {
-    //! gltfio/ResourceLoader.h
-    char const* gltfPath;
-};
-
 // AssetLoaderExtended performs the same task as AssetLoader. Specifically, it takes the data from
 // cgltf and store them in CPU memory. These buffers are then forwarded to ResourceLoader for
 // uplaoding to GPU. The difference between this class AssetLoader is that tangent space computation
@@ -81,8 +54,7 @@ struct TmpAssetConfigurationExtended {
 // TangentSpaceMesh will remesh the input and possibly change the indices, vertex count, and
 // triangle counts, and so those changes must be resolved before the buffers are sent to the GPU.
 struct AssetLoaderExtended {
-    using BufferSlot = TmpBufferSlot;
-    using AssetConfigurationExtended = TmpAssetConfigurationExtended;
+    using BufferSlot = FFilamentAsset::ResourceInfoExtended::BufferSlot;
     using Output = Primitive;
 
     struct Input {

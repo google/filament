@@ -78,9 +78,10 @@ public:
       return mHwSwapChain;
     }
 
-    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
+    void setFrameScheduledCallback(
+            backend::CallbackHandler* handler, FrameScheduledCallback&& callback);
 
-    FrameScheduledCallback getFrameScheduledCallback() const noexcept;
+    bool isFrameScheduledCallbackSet() const noexcept;
 
     void setFrameCompletedCallback(backend::CallbackHandler* handler,
                 utils::Invocable<void(SwapChain*)>&& callback) noexcept;
@@ -96,7 +97,7 @@ public:
 private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mHwSwapChain;
-    FrameScheduledCallback mFrameScheduledCallback{};
+    bool mFrameScheduledCallbackIsSet = false;
     void* mNativeWindow{};
     uint32_t mWidth{};
     uint32_t mHeight{};

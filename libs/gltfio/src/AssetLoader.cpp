@@ -24,6 +24,7 @@
 #include "FTrsTransformManager.h"
 #include "GltfEnums.h"
 #include "Utility.h"
+#include "extended/AssetLoaderExtended.h"
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -56,6 +57,8 @@
 #include <cgltf.h>
 
 #include "downcast.h"
+
+#include <memory>
 
 using namespace filament;
 using namespace filament::math;
@@ -202,14 +205,21 @@ private:
 };
 
 struct FAssetLoader : public AssetLoader {
-    FAssetLoader(const AssetConfiguration& config) :
+    FAssetLoader(AssetConfiguration const& config) :
             mEntityManager(config.entities ? *config.entities : EntityManager::get()),
             mRenderableManager(config.engine->getRenderableManager()),
             mNameManager(config.names),
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(*config.materials),
             mEngine(*config.engine),
-            mDefaultNodeName(config.defaultNodeName) {}
+            mDefaultNodeName(config.defaultNodeName) {
+        if (config.ext) {
+            ASSERT_PRECONDITION(AssetConfigurationExtended::isSupported(),
+                    "Extend asset loading is not supported on this platform");
+            mLoaderExtended = std::make_unique<AssetLoaderExtended>(
+                    *config.ext, config.engine, mMaterials);
+        }
+    }
 
     FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
@@ -292,6 +302,9 @@ public:
 
     // Weak reference to the largest dummy buffer so far in the current loading phase.
     BufferObject* mDummyBufferObject = nullptr;
+
+public:
+    std::unique_ptr<AssetLoaderExtended> mLoaderExtended;
 };
 
 FILAMENT_DOWNCAST(AssetLoader)
@@ -422,7 +435,7 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
 
     mDummyBufferObject = nullptr;
     FFilamentAsset* fAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager,
-            &mNodeManager, &mTrsTransformManager, srcAsset);
+            &mNodeManager, &mTrsTransformManager, srcAsset, (bool) mLoaderExtended);
 
     // It is not an error for a glTF file to have zero scenes.
     fAsset->mScenes.clear();
@@ -620,12 +633,41 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
 
     for (cgltf_size index = 0, n = mesh->primitives_count; index < n; ++index) {
         Primitive& outputPrim = prims[index];
-        const cgltf_primitive& inputPrim = mesh->primitives[index];
+        cgltf_primitive& inputPrim = mesh->primitives[index];
 
-        // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim.vertices && !createPrimitive(inputPrim, name, &outputPrim, fAsset)) {
-            mError = true;
-            return;
+        if (!outputPrim.vertices) {
+            if (mLoaderExtended) {
+                auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+                resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+                AssetLoaderExtended::Input input{
+                        .gltf = gltf,
+                        .prim = &inputPrim,
+                        .name = name,
+                        .dracoCache = &fAsset->mSourceAsset->dracoCache,
+                        .material = getMaterial(gltf, inputPrim.material, &outputPrim.uvmap,
+                                utility::primitiveHasVertexColor(&inputPrim)),
+                };
+
+                mError = !mLoaderExtended->createPrimitive(&input, &outputPrim, resourceInfo.slots);
+                if (!mError) {
+                    if (outputPrim.vertices) {
+                        fAsset->mVertexBuffers.push_back(outputPrim.vertices);
+                    }
+                    if (outputPrim.indices) {
+                        fAsset->mIndexBuffers.push_back(outputPrim.indices);
+                    }
+                    if (outputPrim.targets) {
+                        fAsset->mMorphTargetBuffers.push_back(outputPrim.targets);
+                    }
+                }
+            } else {
+                // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't
+                // already.
+                mError = !createPrimitive(inputPrim, name, &outputPrim, fAsset);
+            }
+            if (mError) {
+                return;
+            }
         }
 
         // Expand the object-space bounding box.
@@ -777,6 +819,8 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
 bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* name,
         Primitive* outPrim, FFilamentAsset* fAsset) {
 
+    using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+
     Material* material = getMaterial(fAsset->mSourceAsset->hierarchy,
                 inPrim.material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
     AttributeBitset requiredAttributes = material->getRequiredAttributes();
@@ -787,8 +831,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     // request from Google.
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
-    auto slots = &fAsset->mBufferSlots;
-    auto addBufferSlot = [slots](BufferSlot entry) {
+    auto slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
+    auto addBufferSlot = [slots](FFilamentAsset::ResourceInfo::BufferSlot entry) {
         slots->push_back(entry);
     };
 
@@ -807,7 +851,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             .bufferType(indexType)
             .build(mEngine);
 
-        BufferSlot slot = { accessor };
+        FFilamentAsset::ResourceInfo::BufferSlot slot = { accessor };
         slot.indexBuffer = indices;
         addBufferSlot(slot);
     } else if (inPrim.attributes_count > 0) {
@@ -1049,7 +1093,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
-    fAsset->mPrimitives.push_back({&inPrim, vertices});
+    auto& primitives = std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mPrimitives;
+    primitives.push_back({&inPrim, vertices});
     fAsset->mVertexBuffers.push_back(vertices);
 
     for (size_t i = firstSlot; i < slots->size(); ++i) {
@@ -1547,6 +1592,14 @@ void FAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* gl
             dstSkin.joints[i] = nodeMap[srcSkin.joints[i] - gltf->nodes];
         }
     }
+}
+
+bool AssetConfigurationExtended::isSupported() {
+#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
+    return false;
+#else
+    return true;
+#endif
 }
 
 AssetLoader* AssetLoader::create(const AssetConfiguration& config) {

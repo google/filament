@@ -2110,6 +2110,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                 mi->setParameter("source", hwOut, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST});
+                mi->commit(driver);
                 mi->use(driver);
 
                 auto pipeline = material.getPipelineState(mEngine);
