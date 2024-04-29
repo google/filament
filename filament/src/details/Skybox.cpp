@@ -17,21 +17,28 @@
 #include "details/Skybox.h"
 
 #include "details/Engine.h"
-#include "details/Texture.h"
-#include "details/VertexBuffer.h"
-#include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
-#include "details/MaterialInstance.h"
+#include "details/Texture.h"
+#include "details/VertexBuffer.h"
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
 #include <filament/TextureSampler.h>
+#include <filament/Skybox.h>
 
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
-#include <filament/Skybox.h>
+
+#include <math/vec4.h>
+
+#include <stdint.h>
 
 
 #include "generated/resources/materials.h"
@@ -162,10 +169,6 @@ void FSkybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
 
 void FSkybox::setColor(math::float4 color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
-}
-
-void FSkybox::commit(backend::DriverApi& driver) noexcept {
-    mSkyboxMaterialInstance->commit(driver);
 }
 
 } // namespace filament
