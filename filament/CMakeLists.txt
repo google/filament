@@ -163,6 +163,7 @@ set(PRIVATE_HDRS
         src/ResourceList.h
         src/ShadowMap.h
         src/ShadowMapManager.h
+        src/SharedHandle.h
         src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
@@ -214,6 +215,7 @@ set(PRIVATE_HDRS
 set(MATERIAL_SRCS
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
+        src/materials/blitDepth.mat
         src/materials/blitLow.mat
         src/materials/blitArray.mat
         src/materials/bloom/bloomDownsample.mat

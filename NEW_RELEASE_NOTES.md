@@ -11,3 +11,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - Add new matedit tool
 - filagui: Support rendering `GL_TEXTURE_EXTERNAL_OES` textures.
 - `setFrameScheduledCallback` now takes a `utils::Invocable`.
+- engine: Add `isPaused()`

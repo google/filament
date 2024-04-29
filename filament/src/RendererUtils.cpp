@@ -54,7 +54,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
         FrameGraph& fg, const char* name, FEngine& engine, FView const& view,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
         ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass::Executor const& passExecutor) noexcept {
+        RenderPass::Executor passExecutor) noexcept {
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> shadows;
@@ -200,7 +200,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                         .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags});
                 blackboard["depth"] = data.depth;
             },
-            [=, &view, &engine](FrameGraphResources const& resources,
+            [=, passExecutor = std::move(passExecutor), &view, &engine](FrameGraphResources const& resources,
                     ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderPassInfo();
 

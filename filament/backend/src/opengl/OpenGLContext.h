@@ -137,7 +137,6 @@ public:
 #endif
     }
 
-    constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 
@@ -149,10 +148,10 @@ public:
 
           void pixelStore(GLenum, GLint) noexcept;
     inline void activeTexture(GLuint unit) noexcept;
-    inline void bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept;
     inline void bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
 
            void unbindTexture(GLenum target, GLuint id) noexcept;
+           void unbindTextureUnit(GLuint unit) noexcept;
     inline void bindVertexArray(RenderPrimitive const* p) noexcept;
     inline void bindSampler(GLuint unit, GLuint sampler) noexcept;
            void unbindSampler(GLuint sampler) noexcept;
@@ -322,8 +321,14 @@ public:
 
     // function to handle state changes we don't control
     void updateTexImage(GLenum target, GLuint id) noexcept {
-        const size_t index = getIndexForTextureTarget(target);
-        state.textures.units[state.textures.active].targets[index].texture_id = id;
+        assert_invariant(target == GL_TEXTURE_EXTERNAL_OES);
+        // if another target is bound to this texture unit, unbind that texture
+        if (UTILS_UNLIKELY(state.textures.units[state.textures.active].target != target)) {
+            glBindTexture(state.textures.units[state.textures.active].target, 0);
+            state.textures.units[state.textures.active].target = GL_TEXTURE_EXTERNAL_OES;
+        }
+        // the texture is already bound to `target`, we just update our internal state
+        state.textures.units[state.textures.active].id = id;
     }
     void resetProgram() noexcept { state.program.use = 0; }
 
@@ -426,9 +431,8 @@ public:
             GLuint active = 0;      // zero-based
             struct {
                 GLuint sampler = 0;
-                struct {
-                    GLuint texture_id = 0;
-                } targets[7];  // this must match getIndexForTextureTarget()
+                GLuint target = 0;
+                GLuint id = 0;
             } units[MAX_TEXTURE_UNIT_COUNT];
         } textures;
 
@@ -598,30 +602,9 @@ private:
     }
 
     void setDefaultState() noexcept;
-
-    static constexpr const size_t TEXTURE_TARGET_COUNT =
-            sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);
-
 };
 
 // ------------------------------------------------------------------------------------------------
-
-constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept {
-    // this must match state.textures[].targets[]
-    switch (target) {
-        case GL_TEXTURE_2D:                     return 0;
-        case GL_TEXTURE_2D_ARRAY:               return 1;
-        case GL_TEXTURE_CUBE_MAP:               return 2;
-#if defined(BACKEND_OPENGL_LEVEL_GLES31)
-        case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
-#endif
-        case GL_TEXTURE_EXTERNAL_OES:           return 4;
-        case GL_TEXTURE_3D:                     return 5;
-        case GL_TEXTURE_CUBE_MAP_ARRAY:         return 6;
-        default:
-            return 0;
-    }
-}
 
 constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
     size_t index = 0;
@@ -770,17 +753,15 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
 #endif
 }
 
-void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept {
-    assert_invariant(targetIndex == getIndexForTextureTarget(target));
-    assert_invariant(targetIndex < TEXTURE_TARGET_COUNT);
-    update_state(state.textures.units[unit].targets[targetIndex].texture_id, texId, [&]() {
+void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
+    update_state(state.textures.units[unit].target, target, [&]() {
+        activeTexture(unit);
+        glBindTexture(state.textures.units[unit].target, 0);
+    });
+    update_state(state.textures.units[unit].id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
     }, target == GL_TEXTURE_EXTERNAL_OES);
-}
-
-void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
-    bindTexture(unit, target, texId, getIndexForTextureTarget(target));
 }
 
 void OpenGLContext::useProgram(GLuint program) noexcept {

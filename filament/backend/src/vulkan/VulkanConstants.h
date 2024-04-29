@@ -47,7 +47,7 @@
 // granualarity of a renderpass. You can enable this along with FVK_DEBUG_DEBUG_UTILS to take
 // advantage of vkCmdBegin/EndDebugUtilsLabelEXT. You can also just enable this with
 // FVK_DEBUG_PRINT_GROUP_MARKERS to print the current marker to stdout.
-#define FVK_DEBUG_GROUP_MARKERS 0x00000002
+#define FVK_DEBUG_GROUP_MARKERS           0x00000002
 
 #define FVK_DEBUG_TEXTURE                 0x00000004
 #define FVK_DEBUG_LAYOUT_TRANSITION       0x00000008
@@ -75,18 +75,14 @@
 #define FVK_DEBUG_PERFORMANCE     \
     FVK_DEBUG_SYSTRACE
 
-#define FVK_DEBUG_CORRECTNESS     \
-    FVK_DEBUG_VALIDATION |        \
-    FVK_DEBUG_SHADER_MODULE |     \
-    FVK_DEBUG_TEXTURE |           \
-    FVK_DEBUG_LAYOUT_TRANSITION
-
-#define FVK_DEBUG_RENDER_PASSES   \
-    FVK_DEBUG_GROUP_MARKERS |     \
-    FVK_DEBUG_PRINT_GROUP_MARKERS
+#if defined(FILAMENT_BACKEND_DEBUG_FLAG)
+#define FVK_DEBUG_FORWARDED_FLAG (FILAMENT_BACKEND_DEBUG_FLAG & FVK_DEBUG_EVERYTHING)
+#else
+#define FVK_DEBUG_FORWARDED_FLAG 0
+#endif
 
 #ifndef NDEBUG
-#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE)
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE | FVK_DEBUG_FORWARDED_FLAG)
 #else
 #define FVK_DEBUG_FLAGS 0
 #endif
@@ -112,7 +108,7 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 // end dependcy checks
 
 // Shorthand for combination of enabled debug flags
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) || FVK_ENABLED(FVK_DEBUG_TEXTURE)
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS) && FVK_ENABLED(FVK_DEBUG_TEXTURE)
 #define FVK_ENABLED_DEBUG_SAMPLER_NAME 1
 #else
 #define FVK_ENABLED_DEBUG_SAMPLER_NAME 0

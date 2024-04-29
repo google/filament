@@ -26,21 +26,16 @@
 
 #include <smolv.h>
 
-#include "generated/vkshaders/vkshaders.h"
-
 using namespace bluevk;
 using namespace utils;
 
 namespace filament::backend {
-
-using ImgUtil = VulkanImageUtility;
 
 namespace {
 
 inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect, VkFilter filter,
         VulkanAttachment src, VulkanAttachment dst,
         const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
-
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
         utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
@@ -48,21 +43,8 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
                       << " layout=" << dst.getLayout() << utils::io::endl;
     }
 
-    const VkImageSubresourceRange srcRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = src.level,
-            .levelCount = 1,
-            .baseArrayLayer = src.layer,
-            .layerCount = 1,
-    };
-
-    const VkImageSubresourceRange dstRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = dst.level,
-            .levelCount = 1,
-            .baseArrayLayer = dst.layer,
-            .layerCount = 1,
-    };
+    VkImageSubresourceRange const srcRange = src.getSubresourceRange();
+    VkImageSubresourceRange const dstRange = dst.getSubresourceRange();
 
     VulkanLayout oldSrcLayout = src.getLayout();
     VulkanLayout oldDstLayout = dst.getLayout();
@@ -77,15 +59,15 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
             .dstOffsets = { dstRect[0], dstRect[1] },
     }};
     vkCmdBlitImage(cmdbuffer,
-            src.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            dst.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST),
+            src.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            dst.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, blitRegions, filter);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
-        oldSrcLayout = ImgUtil::getDefaultLayout(src.texture->usage);
+        oldSrcLayout = imgutil::getDefaultLayout(src.texture->usage);
     }
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
-        oldDstLayout = ImgUtil::getDefaultLayout(dst.texture->usage);
+        oldDstLayout = imgutil::getDefaultLayout(dst.texture->usage);
     }
     src.texture->transitionLayout(cmdbuffer, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(cmdbuffer, dstRange, oldDstLayout);
@@ -93,7 +75,6 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
 
 inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
         VulkanAttachment src, VulkanAttachment dst) {
-
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
         utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
@@ -101,21 +82,8 @@ inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspe
                       << " layout=" << dst.getLayout() << utils::io::endl;
     }
 
-    const VkImageSubresourceRange srcRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = src.level,
-            .levelCount = 1,
-            .baseArrayLayer = src.layer,
-            .layerCount = 1,
-    };
-
-    const VkImageSubresourceRange dstRange = {
-            .aspectMask = aspect,
-            .baseMipLevel = dst.level,
-            .levelCount = 1,
-            .baseArrayLayer = dst.layer,
-            .layerCount = 1,
-    };
+    VkImageSubresourceRange const srcRange = src.getSubresourceRange();
+    VkImageSubresourceRange const dstRange = dst.getSubresourceRange();
 
     VulkanLayout oldSrcLayout = src.getLayout();
     VulkanLayout oldDstLayout = dst.getLayout();
@@ -133,15 +101,15 @@ inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspe
             .extent = { src.getExtent2D().width, src.getExtent2D().height, 1 },
     }};
     vkCmdResolveImage(cmdbuffer,
-            src.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            dst.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST),
+            src.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            dst.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, resolveRegions);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
-        oldSrcLayout = ImgUtil::getDefaultLayout(src.texture->usage);
+        oldSrcLayout = imgutil::getDefaultLayout(src.texture->usage);
     }
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
-        oldDstLayout = ImgUtil::getDefaultLayout(dst.texture->usage);
+        oldDstLayout = imgutil::getDefaultLayout(dst.texture->usage);
     }
     src.texture->transitionLayout(cmdbuffer, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(cmdbuffer, dstRange, oldDstLayout);

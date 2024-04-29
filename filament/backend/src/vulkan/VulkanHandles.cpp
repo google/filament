@@ -65,21 +65,6 @@ static constexpr Bitmask fromStageFlags(ShaderStageFlags2 flags, uint8_t binding
     return ret;
 }
 
-UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags flags, UsageFlags src) {
-    // NOTE: if you modify this function, you also need to modify getShaderStageFlags.
-    assert_invariant(binding < MAX_SAMPLER_COUNT);
-    if (any(flags & ShaderStageFlags::VERTEX)) {
-        src.set(binding);
-    }
-    if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        src.set(MAX_SAMPLER_COUNT + binding);
-    }
-    // TODO: add support for compute by extending SHADER_MODULE_COUNT and ensuring UsageFlags
-    // has 186 bits (MAX_SAMPLER_COUNT * 3)
-    // assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
-    return src;
-}
-
 constexpr decltype(VulkanProgram::MAX_SHADER_MODULES) MAX_SHADER_MODULES =
         VulkanProgram::MAX_SHADER_MODULES;
 
@@ -236,7 +221,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     auto& groupInfo = builder.getSamplerGroupInfo();
     auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
     auto& bindings = mInfo->bindings;
-    auto& usage = mInfo->usage;
     for (uint8_t groupInd = 0; groupInd < Program::SAMPLER_BINDING_COUNT; groupInd++) {
         auto const& group = groupInfo[groupInd];
         auto const& samplers = group.samplers;
@@ -245,7 +229,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             bindingToSamplerIndex[binding] = (groupInd << 8) | (0xff & i);
             assert_invariant(bindings.find(binding) == bindings.end());
             bindings.insert(binding);
-            usage = getUsageFlags(binding, group.stageFlags, usage);
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
             bindingToName[binding] = samplers[i].name.c_str();

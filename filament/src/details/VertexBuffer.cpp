@@ -314,7 +314,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 void FVertexBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (!mBufferObjectsEnabled) {
-        for (BufferObjectHandle const bo : mBufferObjects) {
+        for (BufferObjectHandle bo : mBufferObjects) {
             driver.destroyBufferObject(bo);
         }
     }

@@ -75,6 +75,19 @@ protected:
     HandleBase(HandleBase const& rhs) noexcept = default;
     HandleBase& operator=(HandleBase const& rhs) noexcept = default;
 
+    HandleBase(HandleBase&& rhs) noexcept
+            : object(rhs.object) {
+        rhs.object = nullid;
+    }
+
+    HandleBase& operator=(HandleBase&& rhs) noexcept {
+        if (this != &rhs) {
+            object = rhs.object;
+            rhs.object = nullid;
+        }
+        return *this;
+    }
+
 private:
     HandleId object;
 };
@@ -89,8 +102,10 @@ struct Handle : public HandleBase {
     Handle() noexcept = default;
 
     Handle(Handle const& rhs) noexcept = default;
+    Handle(Handle&& rhs) noexcept = default;
 
     Handle& operator=(Handle const& rhs) noexcept = default;
+    Handle& operator=(Handle&& rhs) noexcept = default;
 
     explicit Handle(HandleId id) noexcept : HandleBase(id) { }
 

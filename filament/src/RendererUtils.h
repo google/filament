@@ -76,7 +76,7 @@ public:
             FrameGraphTexture::Descriptor const& colorBufferDesc,
             ColorPassConfig const& config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
-            RenderPass::Executor const& passExecutor) noexcept;
+            RenderPass::Executor passExecutor) noexcept;
 
     static std::pair<FrameGraphId<FrameGraphTexture>, bool> refractionPass(
             FrameGraph& fg, FEngine& engine, FView const& view,

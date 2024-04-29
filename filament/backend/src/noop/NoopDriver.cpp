@@ -49,7 +49,8 @@ void NoopDriver::terminate() {
 void NoopDriver::tick(int) {
 }
 
-void NoopDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void NoopDriver::beginFrame(int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs, uint32_t frameId) {
 }
 
 void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -190,6 +191,10 @@ bool NoopDriver::isParallelShaderCompileSupported() {
 }
 
 bool NoopDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
+bool NoopDriver::isDepthStencilBlitSupported(TextureFormat format) {
     return true;
 }
 

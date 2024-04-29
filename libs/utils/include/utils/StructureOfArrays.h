@@ -368,7 +368,7 @@ public:
         size_t last = mSize++;
         // Fold expression on the comma operator
         ([&]{
-            new(std::get<Indices>(mArrays) + last) Elements{std::get<Indices>(args)};
+            new(std::get<Indices>(mArrays) + last) Elements{std::get<Indices>(std::forward<Structure>(args))};
         }() , ...);
     }
 
@@ -513,7 +513,7 @@ public:
             return (soa.elementAt<E>(i) = other);
         }
         UTILS_ALWAYS_INLINE Type const& operator = (Type&& other) noexcept {
-            return (soa.elementAt<E>(i) = other);
+            return (soa.elementAt<E>(i) = std::forward<Type>(other));
         }
         // comparisons
         UTILS_ALWAYS_INLINE bool operator==(Type const& other) const {

@@ -17,6 +17,7 @@
 #include "VulkanStagePool.h"
 
 #include "VulkanConstants.h"
+#include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
 #include "VulkanUtility.h"
 
@@ -118,7 +119,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL layout. Calling
     // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
     // valid for either of those image layouts."
-    VulkanImageUtility::transitionLayout(cmdbuffer, {
+    imgutil::transitionLayout(cmdbuffer, {
             .image = image->image,
             .oldLayout = VulkanLayout::UNDEFINED,
             .newLayout = VulkanLayout::READ_WRITE, // (= VK_IMAGE_LAYOUT_GENERAL)

@@ -80,10 +80,6 @@ public:
     void prepareDynamicLights(const CameraInfo& camera,
             backend::Handle<backend::HwBufferObject> lightUbh) noexcept;
 
-    backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
-        return mRenderableViewUbh;
-    }
-
     /*
      * Storage for per-frame renderable data
      */
@@ -228,7 +224,6 @@ private:
      */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    backend::Handle<backend::HwBufferObject> mRenderableViewUbh; // This is actually owned by the view.
     bool mHasContactShadows = false;
 
     // State shared between Scene and driver callbacks.
