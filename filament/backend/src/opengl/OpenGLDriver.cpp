@@ -285,6 +285,9 @@ void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
     mContext.bindSampler(unit, sampler);
 }
 
+void OpenGLDriver::writePushConstants(backend::ShaderStage stage,
+        backend::PushConstantArray pushConstants) {}
+
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     assert_invariant(t != nullptr);
     mContext.bindTexture(unit, t->gl.target, t->gl.id);

@@ -18,7 +18,10 @@
 
 #include "MaterialInfo.h"
 
+#include "backend/DriverEnums.h"
 #include "generated/shaders.h"
+#include "private/filament/EngineEnums.h"
+#include "utils/Panic.h"
 
 #include <utils/sstream.h>
 
@@ -33,6 +36,53 @@ namespace filamat {
 using namespace filament;
 using namespace backend;
 using namespace utils;
+
+namespace {
+
+io::sstream& generatePushConstant(PushConstantStruct const& pushConstant,
+        size_t const layoutLocation, bool const outputSpirv, io::sstream& out) {
+    if (!pushConstant.constants[0].name) {
+        return out;
+    }
+    auto const getTypeAndValue = [](PushConstant::Variant const& constantValue) -> char const* {
+        if (std::holds_alternative<bool>(constantValue)) {
+            return "bool";
+        } else if (std::holds_alternative<int>(constantValue)) {
+            return "int";
+        } else if (std::holds_alternative<float>(constantValue)) {
+            return "float";
+        } else {
+            PANIC_POSTCONDITION("unexpected push constant type");
+        }
+    };
+
+    if (outputSpirv) {
+        out << "layout(push_constant) uniform constants {\n ";
+    } else {
+        out << "struct Constant_" << pushConstant.name << " {\n";
+    }
+
+    auto const& constants = pushConstant.constants;
+    uint8_t i = 0;
+    while (i < constants.size() && constants[i].name) {
+        auto const& constant = constants[i];
+        char const* type = getTypeAndValue(constant.value);
+        out << type << " " << constant.name << ";\n";
+        i++;
+    }
+
+    if (outputSpirv) {
+        out << "} " << pushConstant.name << ";\n";
+    } else {
+        out << "};\n";
+        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform Constant_"
+            << pushConstant.name << " " << pushConstant.name << ";\n";
+    }
+
+    return out;
+}
+
+} // anonymous namespace
 
 io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     out << '\n';
@@ -455,7 +505,6 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
 
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
         const AttributeBitset& attributes, Interpolation interpolation) const {
-
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
     const char* shading = getInterpolationQualifier(interpolation);
@@ -479,6 +528,9 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
             }
             out << getTypeName(attribute.type) << " " << attribute.getAttributeName() << ";\n";
         });
+
+        out << "\n";
+        generateVertexPushConstants(out, attributes.size());
     }
 
     out << "\n";
@@ -906,6 +958,19 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
+utils::io::sstream& CodeGenerator::generateVertexPushConstants(utils::io::sstream& out,
+        size_t const layoutLocation) const {
+    // TODO: for testing and illustrating push constants. To be removed.
+    // bool const outputSpirv = mTargetLanguage == TargetLanguage::SPIRV
+    //         && mTargetApi != TargetApi::OPENGL;
+    // generatePushConstant(SKINNING_PUSH_CONSTANTS, layoutLocation, outputSpirv, out);
+    return out;
+}
+
+utils::io::sstream& CodeGenerator::generateFragmentPushConstants(utils::io::sstream& out,
+        size_t const layoutLocation) const {
+    return out;
+}
 
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
         MaterialBuilder::Property property, bool isSet) {

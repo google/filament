@@ -253,6 +253,8 @@ private:
     void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
             MaterialParser const* parser);
 
+    void processPushConstants(FEngine& engine, Material::Builder const& builder);
+
     void processDepthVariants(FEngine& engine, MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
@@ -313,10 +315,25 @@ private:
     SamplerBindingToNameMap mSamplerBindingToNameMap;
     // Constants defined by this Material
     utils::FixedCapacityVector<MaterialConstant> mMaterialConstants;
+
     // A map from the Constant name to the mMaterialConstant index
     std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
+
     // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+
+    // current push constants for the HwProgram
+    backend::Program::PushConstantStruct mFragmentPushConstants = {
+            .name = nullptr,
+            .stage = backend::ShaderStage::FRAGMENT,
+            .constants = {},
+    };
+
+    backend::Program::PushConstantStruct mVertexPushConstants = {
+            .name = nullptr,
+            .stage = backend::ShaderStage::VERTEX,
+            .constants = {},
+    };
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

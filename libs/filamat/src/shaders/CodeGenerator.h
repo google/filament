@@ -51,6 +51,7 @@ class UTILS_PRIVATE CodeGenerator {
     using TargetApi = MaterialBuilder::TargetApi;
     using TargetLanguage = MaterialBuilder::TargetLanguage;
     using ShaderQuality = MaterialBuilder::ShaderQuality;
+
 public:
     CodeGenerator(ShaderModel shaderModel,
             TargetApi targetApi,
@@ -155,6 +156,11 @@ public:
 
     utils::io::sstream& generateSpecializationConstant(utils::io::sstream& out,
             const char* name, uint32_t id, std::variant<int, float, bool> value) const;
+
+    utils::io::sstream& generateVertexPushConstants(utils::io::sstream& out,
+            size_t const layoutLocation) const;
+    utils::io::sstream& generateFragmentPushConstants(utils::io::sstream& out,
+            size_t const layoutLocation) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);
     static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderStage stage);

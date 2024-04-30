@@ -112,6 +112,17 @@ inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
     return layout;
 }
 
+inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
+    switch(stage) {
+        case backend::ShaderStage::VERTEX:
+            return VK_SHADER_STAGE_VERTEX_BIT;
+        case backend::ShaderStage::FRAGMENT:
+            return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case backend::ShaderStage::COMPUTE:
+            PANIC_POSTCONDITION("Unsupported stage");
+    }
+}
+
 } // anonymous namespace
 
 
@@ -129,10 +140,63 @@ VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
     vkDestroyDescriptorSetLayout(mDevice, vklayout, VKALLOC);
 }
 
+PushConstantDescription::PushConstantDescription(
+        Program::PushConstantStructArray const& pushConstants) {
+    mRangeCount = 0;
+    for (uint8_t i = 0; i < pushConstants.size(); ++i) {
+        if (!pushConstants[i].name) {
+            continue;
+        }
+        auto const& constants = pushConstants[i].constants;
+        NameOffsetMap& nameOffsets = mOffsets[i];
+        for (size_t j = 0; j < constants.size(); j++) {
+            if (!constants[j].name) {
+                break;
+            }
+            nameOffsets[constants[j].name] = j;
+        }
+
+        mRanges[mRangeCount++] = {
+            .stageFlags = getVkStage(static_cast<backend::ShaderStage>(i)),
+            .offset = 0,
+            .size = (uint32_t) nameOffsets.size() * 4,
+        };
+    }
+}
+
+void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout layout,
+        backend::ShaderStage stage, backend::PushConstantArray const& constants) {
+    VulkanCommandBuffer* cmdbuf = &(commands->get());
+    NameOffsetMap const& nameOffsets = mOffsets[static_cast<int>(stage)];
+    for (auto const& constant: constants) {
+        if (!constant.name) {
+            break;
+        }
+        auto res = nameOffsets.find(constant.name);
+        assert_invariant(res != nameOffsets.end());
+
+        uint32_t const offset = res->second;
+        auto const& value = constant.value;
+        uint32_t binaryValue = 0;
+        if (std::holds_alternative<bool>(value)) {
+            bool const bval = std::get<bool>(value);
+            binaryValue = reinterpret_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
+        } else if (std::holds_alternative<float>(value)) {
+            float const fval = std::get<float>(value);
+            binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
+        } else {
+            int const ival = std::get<int>(value);
+            binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
+        }
+        vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), offset * 4, 4,
+                &binaryValue);
+    }
+}
+
 VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
-      mInfo(new PipelineInfo()),
+      mInfo(new PipelineInfo(builder.getPushConstants())),
       mDevice(device) {
 
     constexpr uint8_t UBO_MODULE_OFFSET = (sizeof(UniformBufferBitmask) * 8) / MAX_SHADER_MODULES;

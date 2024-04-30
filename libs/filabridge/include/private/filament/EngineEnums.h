@@ -71,6 +71,24 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
 };
 
+// TODO: for testing and illustrating push constants. To be removed.
+// constexpr filament::backend::PushConstantStruct SKINNING_PUSH_CONSTANTS = {
+//         .name = "skinning",
+//         .stage = filament::backend::ShaderStage::VERTEX,
+//         .constants = {
+//                 {
+//                         {
+//                                 .name = "test",
+//                                 .value = 0.f, // Note that "value" is a variant.  We need to set an
+//                                               // initial value to identify the type.
+//                         },
+//                         // Unused push constant slots.
+//                         {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+//                         {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+//                 },
+//         },
+// };
+
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // It's also limited by the Froxelizer's record buffer data type (uint8_t).
 constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;

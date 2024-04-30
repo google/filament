@@ -35,13 +35,28 @@ public:
 
     void terminate() noexcept;
 
-    using PipelineLayoutKey = std::array<VkDescriptorSetLayout,
-            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+    struct PushConstantKey {
+        uint8_t stage;// We have one set of push constant per shader stage (fragment, vertex, etc).
+        uint8_t size;
+        // Note that there is also an offset parameter for push constants, but
+        // we always assume our update range will have the offset 0.
+    };
+
+    struct PipelineLayoutKey {
+        using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout, VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+        DescriptorSetLayoutArray descSetLayouts = {};
+
+        // We use the shader handles as a shorthand for the push constant ranges.
+        PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};
+    };
 
     VulkanPipelineLayoutCache(VulkanPipelineLayoutCache const&) = delete;
     VulkanPipelineLayoutCache& operator=(VulkanPipelineLayoutCache const&) = delete;
 
-    VkPipelineLayout getLayout(VulkanDescriptorSetLayoutList const& descriptorSetLayouts);
+    // A pipeline layout depends on the descriptor set layout and the push constant ranges, which
+    // are described in the program.
+    VkPipelineLayout getLayout(VulkanDescriptorSetLayoutList const& descriptorSetLayouts,
+            VulkanProgram* program);
 
 private:
     using Timestamp = uint64_t;

@@ -91,6 +91,12 @@ Program& Program::specializationConstants(
     return *this;
 }
 
+
+Program& Program::pushConstants(PushConstantStruct const& pushConstants) noexcept {
+    mPushConstants[static_cast<int>(pushConstants.stage)] = pushConstants;
+    return *this;
+}
+
 Program& Program::cacheId(uint64_t cacheId) noexcept {
     mCacheId = cacheId;
     return *this;

@@ -91,11 +91,14 @@ static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = SWAP_CHAIN_CON
  */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
 
-
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
 static constexpr size_t MAX_SSBO_COUNT              = 4;    // This is guaranteed by OpenGL ES.
+
+static constexpr size_t MAX_PUSH_CONSTANT_COUNT     = 32;   // Vulkan 1.1 spec allows for 128-byte
+                                                            // of push constant (we assume 4-byte
+                                                            // types).
 
 // Per feature level caps
 // Use (int)FeatureLevel to index this array
@@ -1217,6 +1220,20 @@ struct StencilState {
     bool stencilWrite = false;
 
     uint8_t padding = 0;
+};
+
+struct PushConstant {
+    using Variant = std::variant<int, float, bool>;
+    char const* name = nullptr;
+    Variant value;
+};
+
+using PushConstantArray = std::array<PushConstant, MAX_PUSH_CONSTANT_COUNT>;
+
+struct PushConstantStruct {
+    char const* name = nullptr;
+    ShaderStage stage;
+    PushConstantArray constants;
 };
 
 static_assert(sizeof(StencilState::StencilOperations) == 5u,

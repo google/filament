@@ -57,7 +57,6 @@
 #include <array>
 #include <iterator>
 #include <memory>
-#include <mutex>
 #include <new>
 #include <optional>
 #include <sstream>
@@ -298,6 +297,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
+    processPushConstants(engine, builder);
     processDepthVariants(engine, parser);
 
     // we can only initialize the default instance once we're initialized ourselves
@@ -575,6 +575,9 @@ Program FMaterial::getProgramWithVariants(
     }
 
     program.specializationConstants(mSpecializationConstants);
+
+    program.pushConstants(mFragmentPushConstants);
+    program.pushConstants(mVertexPushConstants);
 
     program.cacheId(utils::hash::combine(size_t(mCacheId), variant.key));
 
@@ -926,6 +929,11 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
         uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
         mSpecializationConstants.push_back({ index, value });
     }
+}
+
+void FMaterial::processPushConstants(FEngine& engine, Material::Builder const& builder) {
+    // TODO: for testing and illustrating push constants. To be removed.
+    // mVertexPushConstants = SKINNING_PUSH_CONSTANTS;
 }
 
 void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {
