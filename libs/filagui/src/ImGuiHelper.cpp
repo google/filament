@@ -64,10 +64,12 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
             .package(FILAGUI_RESOURCES_UIBLIT_DATA, FILAGUI_RESOURCES_UIBLIT_SIZE)
             .constant("external", false)
             .build(*engine);
+#ifdef __ANDROID__
     mMaterialExternal = Material::Builder()
             .package(FILAGUI_RESOURCES_UIBLIT_DATA, FILAGUI_RESOURCES_UIBLIT_SIZE)
             .constant("external", true)
             .build(*engine);
+#endif
 
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
     // tiny "pixel art" texture that is compiled into the library.
@@ -134,10 +136,12 @@ ImGuiHelper::~ImGuiHelper() {
         mEngine->destroy(mi);
     }
     mEngine->destroy(mMaterial2d);
+#ifdef __ANDROID__
     for (auto& mi : mMaterialExternalInstances) {
         mEngine->destroy(mi);
     }
     mEngine->destroy(mMaterialExternal);
+#endif
     mEngine->destroy(mTexture);
     for (auto& vb : mVertexBuffers) {
         mEngine->destroy(vb);
@@ -229,13 +233,16 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                 auto texture = (Texture const*)pcmd.TextureId;
                 const char* uniformName;
                 MaterialInstance* materialInstance;
+#ifdef __ANDROID__
                 if (texture && texture->getTarget() == Texture::Sampler::SAMPLER_EXTERNAL) {
                     if (materialExternalIndex == mMaterialExternalInstances.size()) {
                         mMaterialExternalInstances.push_back(mMaterialExternal->createInstance());
                     }
                     uniformName = "albedoExternal";
                     materialInstance = mMaterialExternalInstances[materialExternalIndex++];
-                } else {
+                } else
+#endif
+                {
                     if (material2dIndex == mMaterial2dInstances.size()) {
                         mMaterial2dInstances.push_back(mMaterial2d->createInstance());
                     }
