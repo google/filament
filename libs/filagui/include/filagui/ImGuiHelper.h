@@ -84,12 +84,14 @@ public:
       filament::View* mView; // The view is owned by the client.
       filament::Scene* mScene;
       filament::Material* mMaterial2d = nullptr;
+      std::vector<filament::MaterialInstance*> mMaterial2dInstances;
+#ifdef __ANDROID__
       filament::Material* mMaterialExternal = nullptr;
+      std::vector<filament::MaterialInstance*> mMaterialExternalInstances;
+#endif
       filament::Camera* mCamera = nullptr;
       std::vector<filament::VertexBuffer*> mVertexBuffers;
       std::vector<filament::IndexBuffer*> mIndexBuffers;
-      std::vector<filament::MaterialInstance*> mMaterial2dInstances;
-      std::vector<filament::MaterialInstance*> mMaterialExternalInstances;
       utils::Entity mRenderable;
       utils::Entity mCameraEntity;
       filament::Texture* mTexture = nullptr;
