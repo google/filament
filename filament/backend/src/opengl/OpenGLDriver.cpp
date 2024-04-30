@@ -3382,7 +3382,9 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
 
 void OpenGLDriver::tick(int) {
     DEBUG_MARKER()
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     executeGpuCommandsCompleteOps();
+#endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
 }
