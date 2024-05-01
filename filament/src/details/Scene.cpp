@@ -439,11 +439,6 @@ void FScene::updateUBOs(
                 delete weakShared;
             }, weakShared
     }, 0);
-
-    // update skybox
-    if (mSkybox) {
-        mSkybox->commit(driver);
-    }
 }
 
 void FScene::terminate(FEngine&) {

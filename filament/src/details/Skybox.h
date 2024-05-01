@@ -53,9 +53,6 @@ public:
 
     void setColor(math::float4 color) noexcept;
 
-    // commits UBOs
-    void commit(backend::DriverApi& driver) noexcept;
-
 private:
     // we don't own these
     FTexture const* mSkyboxTexture = nullptr;
