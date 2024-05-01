@@ -246,6 +246,10 @@ public:
             case Backend::VULKAN:
                 return { backend::ShaderLanguage::SPIRV };
             case Backend::METAL:
+                const auto& lang = mConfig.preferredShaderLanguage;
+                if (lang.has_value() && *lang == ShaderLanguage::MSL) {
+                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
+                }
                 return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
     }

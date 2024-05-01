@@ -28,6 +28,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <optional>
+
 namespace utils {
 class Entity;
 class EntityManager;
@@ -179,6 +181,7 @@ public:
     using DriverConfig = backend::Platform::DriverConfig;
     using FeatureLevel = backend::FeatureLevel;
     using StereoscopicType = backend::StereoscopicType;
+    using ShaderLanguage = backend::ShaderLanguage;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -340,6 +343,25 @@ public:
          * Disable backend handles use-after-free checks.
          */
         bool disableHandleUseAfterFreeCheck = false;
+
+        /*
+         * Sets a preferred shader language for Filament to use.
+         *
+         * The Metal backend supports two shader languages: MSL (Metal Shading Language) and
+         * METAL_LIBRARY (precompiled .metallib). This option controls which shader language is
+         * used when materials contain both.
+         *
+         * By default, when preferredShaderLanguage is unset, Filament will prefer METAL_LIBRARY
+         * shaders if present within a material, falling back to MSL. Setting
+         * preferredShaderLanguage to ShaderLanguage::MSL will instead instruct Filament to check
+         * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
+         * present.
+         *
+         * Currently, the only supported values are ShaderLanguage::MSL or
+         * ShaderLanguage::METAL_LIBRARY. When using a non-Metal backend, setting this has no
+         * effect.
+         */
+        std::optional<ShaderLanguage> preferredShaderLanguage;
     };
 
 
