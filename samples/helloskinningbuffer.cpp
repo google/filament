@@ -102,7 +102,7 @@ static void printUsage(char* name) {
             "   --api, -a\n"
             "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
     );
-    const std::string from("HEIGHTFIELD");
+    const std::string from("SAMPLE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
