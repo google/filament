@@ -160,7 +160,7 @@ void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout l
     uint32_t binaryValue = 0;
     if (std::holds_alternative<bool>(value)) {
         bool const bval = std::get<bool>(value);
-        binaryValue = reinterpret_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
+        binaryValue = static_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
     } else if (std::holds_alternative<float>(value)) {
         float const fval = std::get<float>(value);
         binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
