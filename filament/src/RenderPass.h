@@ -413,7 +413,7 @@ private:
     void sortCommands(Arena& arena) noexcept;
 
     // instanceify commands then trims sentinels
-    void instanceify(FEngine& engine, Arena& arena) noexcept;
+    void instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
     // On a Pixel 4, 2048 commands is about half a millisecond of processing.
