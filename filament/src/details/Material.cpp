@@ -576,8 +576,8 @@ Program FMaterial::getProgramWithVariants(
 
     program.specializationConstants(mSpecializationConstants);
 
-    program.pushConstants(mFragmentPushConstants);
-    program.pushConstants(mVertexPushConstants);
+    program.pushConstants(ShaderStage::VERTEX, mPushConstants[(uint8_t) ShaderStage::VERTEX]);
+    program.pushConstants(ShaderStage::FRAGMENT, mPushConstants[(uint8_t) ShaderStage::FRAGMENT]);
 
     program.cacheId(utils::hash::combine(size_t(mCacheId), variant.key));
 
@@ -933,7 +933,7 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
 
 void FMaterial::processPushConstants(FEngine& engine, Material::Builder const& builder) {
     // TODO: for testing and illustrating push constants. To be removed.
-    // mVertexPushConstants = SKINNING_PUSH_CONSTANTS;
+    // mPushConstants[(uint8_t) ShaderStage::VERTEX] = SKINNING_VERTEX_PUSH_CONSTANTS.names;
 }
 
 void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {

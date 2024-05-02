@@ -20,6 +20,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -71,22 +72,23 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
 };
 
+enum class PushConstantType : uint8_t {
+    BOOL   = 0,
+    INT    = 1,
+    FLOAT  = 2,
+};
+
+struct PushConstantStruct {
+    static constexpr char const* VAR_NAME = "pushConstants";
+
+    utils::FixedCapacityVector<char const*> names;
+    utils::FixedCapacityVector<PushConstantType> types;
+};
+
 // TODO: for testing and illustrating push constants. To be removed.
-// constexpr filament::backend::PushConstantStruct SKINNING_PUSH_CONSTANTS = {
-//         .name = "skinning",
-//         .stage = filament::backend::ShaderStage::VERTEX,
-//         .constants = {
-//                 {
-//                         {
-//                                 .name = "test",
-//                                 .value = 0.f, // Note that "value" is a variant.  We need to set an
-//                                               // initial value to identify the type.
-//                         },
-//                         // Unused push constant slots.
-//                         {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-//                         {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-//                 },
-//         },
+// const PushConstantStruct SKINNING_VERTEX_PUSH_CONSTANTS = {
+//     .names = {"test"},
+//     .types = {PushConstantType::FLOAT},
 // };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.

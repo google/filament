@@ -323,17 +323,8 @@ private:
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
 
     // current push constants for the HwProgram
-    backend::Program::PushConstantStruct mFragmentPushConstants = {
-            .name = nullptr,
-            .stage = backend::ShaderStage::FRAGMENT,
-            .constants = {},
-    };
-
-    backend::Program::PushConstantStruct mVertexPushConstants = {
-            .name = nullptr,
-            .stage = backend::ShaderStage::VERTEX,
-            .constants = {},
-    };
+    std::array<utils::FixedCapacityVector<char const*>, backend::Program::SHADER_TYPE_COUNT>
+            mPushConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

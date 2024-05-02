@@ -41,44 +41,40 @@ namespace {
 
 io::sstream& generatePushConstant(PushConstantStruct const& pushConstant,
         size_t const layoutLocation, bool const outputSpirv, io::sstream& out) {
-    if (!pushConstant.constants[0].name) {
+    static constexpr char const* STRUCT_NAME = "Constants";
+    if (pushConstant.names.empty()) {
         return out;
     }
-    auto const getTypeAndValue = [](PushConstant::Variant const& constantValue) -> char const* {
-        if (std::holds_alternative<bool>(constantValue)) {
-            return "bool";
-        } else if (std::holds_alternative<int>(constantValue)) {
-            return "int";
-        } else if (std::holds_alternative<float>(constantValue)) {
-            return "float";
-        } else {
-            PANIC_POSTCONDITION("unexpected push constant type");
+    auto const getType = [](PushConstantType const& type) {
+        switch (type) {
+            case PushConstantType::BOOL:
+                return "bool";
+            case PushConstantType::INT:
+                return "int";
+            case PushConstantType::FLOAT:
+                return "float";
         }
     };
 
     if (outputSpirv) {
-        out << "layout(push_constant) uniform constants {\n ";
+        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
     } else {
-        out << "struct Constant_" << pushConstant.name << " {\n";
+        out << "struct " << STRUCT_NAME << " {\n";
     }
 
-    auto const& constants = pushConstant.constants;
-    uint8_t i = 0;
-    while (i < constants.size() && constants[i].name) {
-        auto const& constant = constants[i];
-        char const* type = getTypeAndValue(constant.value);
-        out << type << " " << constant.name << ";\n";
+    for (size_t i = 0; i < pushConstant.names.size(); ++i) {
+        char const* type = getType(pushConstant.types[i]);
+        out << type << " " << pushConstant.names[i] << ";\n";
         i++;
     }
 
     if (outputSpirv) {
-        out << "} " << pushConstant.name << ";\n";
+        out << "} " << PushConstantStruct::VAR_NAME << ";\n";
     } else {
         out << "};\n";
-        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform Constant_"
-            << pushConstant.name << " " << pushConstant.name << ";\n";
+        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
+            << " " << PushConstantStruct::VAR_NAME << ";\n";
     }
-
     return out;
 }
 
@@ -963,7 +959,7 @@ utils::io::sstream& CodeGenerator::generateVertexPushConstants(utils::io::sstrea
     // TODO: for testing and illustrating push constants. To be removed.
     // bool const outputSpirv = mTargetLanguage == TargetLanguage::SPIRV
     //         && mTargetApi != TargetApi::OPENGL;
-    // generatePushConstant(SKINNING_PUSH_CONSTANTS, layoutLocation, outputSpirv, out);
+    // generatePushConstant(SKINNING_VERTEX_PUSH_CONSTANTS, layoutLocation, outputSpirv, out);
     return out;
 }
 

@@ -312,8 +312,9 @@ void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
 void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
-void NoopDriver::writePushConstants(backend::ShaderStage stage,
-        backend::PushConstantArray pushConstants) {}
+void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+}
 
 void NoopDriver::insertEventMarker(char const* string, uint32_t len) {
 }

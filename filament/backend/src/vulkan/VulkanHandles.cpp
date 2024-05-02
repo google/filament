@@ -126,77 +126,55 @@ inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
 } // anonymous namespace
 
 
-VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayoutCreateInfo const& info,
-        Bitmask const& bitmask)
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device,
+        VkDescriptorSetLayoutCreateInfo const& info, Bitmask const& bitmask)
     : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
       mDevice(device),
       vklayout(createDescriptorSetLayout(device, info)),
       bitmask(bitmask),
       bindings(getBindings(bitmask)),
-      count(Count::fromLayoutBitmask(bitmask)) {
-}
+      count(Count::fromLayoutBitmask(bitmask)) {}
 
 VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
     vkDestroyDescriptorSetLayout(mDevice, vklayout, VKALLOC);
 }
 
-PushConstantDescription::PushConstantDescription(
-        Program::PushConstantStructArray const& pushConstants) {
+PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
     mRangeCount = 0;
-    for (uint8_t i = 0; i < pushConstants.size(); ++i) {
-        if (!pushConstants[i].name) {
+    for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
+        auto const& names = program.getPushConstants(stage);
+        if (names.empty()) {
             continue;
         }
-        auto const& constants = pushConstants[i].constants;
-        NameOffsetMap& nameOffsets = mOffsets[i];
-        for (size_t j = 0; j < constants.size(); j++) {
-            if (!constants[j].name) {
-                break;
-            }
-            nameOffsets[constants[j].name] = j;
-        }
-
         mRanges[mRangeCount++] = {
-            .stageFlags = getVkStage(static_cast<backend::ShaderStage>(i)),
+            .stageFlags = getVkStage(stage),
             .offset = 0,
-            .size = (uint32_t) nameOffsets.size() * 4,
+            .size = (uint32_t) names.size() * 4,
         };
     }
 }
 
 void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout layout,
-        backend::ShaderStage stage, backend::PushConstantArray const& constants) {
+        backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
     VulkanCommandBuffer* cmdbuf = &(commands->get());
-    NameOffsetMap const& nameOffsets = mOffsets[static_cast<int>(stage)];
-    for (auto const& constant: constants) {
-        if (!constant.name) {
-            break;
-        }
-        auto res = nameOffsets.find(constant.name);
-        assert_invariant(res != nameOffsets.end());
-
-        uint32_t const offset = res->second;
-        auto const& value = constant.value;
-        uint32_t binaryValue = 0;
-        if (std::holds_alternative<bool>(value)) {
-            bool const bval = std::get<bool>(value);
-            binaryValue = reinterpret_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
-        } else if (std::holds_alternative<float>(value)) {
-            float const fval = std::get<float>(value);
-            binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
-        } else {
-            int const ival = std::get<int>(value);
-            binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
-        }
-        vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), offset * 4, 4,
-                &binaryValue);
+    uint32_t binaryValue = 0;
+    if (std::holds_alternative<bool>(value)) {
+        bool const bval = std::get<bool>(value);
+        binaryValue = reinterpret_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
+    } else if (std::holds_alternative<float>(value)) {
+        float const fval = std::get<float>(value);
+        binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
+    } else {
+        int const ival = std::get<int>(value);
+        binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
     }
+    vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), index * 4, 4, &binaryValue);
 }
 
 VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
-      mInfo(new PipelineInfo(builder.getPushConstants())),
+      mInfo(new PipelineInfo(builder)),
       mDevice(device) {
 
     constexpr uint8_t UBO_MODULE_OFFSET = (sizeof(UniformBufferBitmask) * 8) / MAX_SHADER_MODULES;

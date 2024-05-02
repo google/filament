@@ -31,6 +31,7 @@
 
 #include <array>        // FIXME: STL headers are not allowed in public headers
 #include <type_traits>  // FIXME: STL headers are not allowed in public headers
+#include <variant>      // FIXME: STL headers are not allowed in public headers
 
 #include <stddef.h>
 #include <stdint.h>
@@ -1222,19 +1223,7 @@ struct StencilState {
     uint8_t padding = 0;
 };
 
-struct PushConstant {
-    using Variant = std::variant<int, float, bool>;
-    char const* name = nullptr;
-    Variant value;
-};
-
-using PushConstantArray = std::array<PushConstant, MAX_PUSH_CONSTANT_COUNT>;
-
-struct PushConstantStruct {
-    char const* name = nullptr;
-    ShaderStage stage;
-    PushConstantArray constants;
-};
+using PushConstantVariant = std::variant<int32_t, float, bool>;
 
 static_assert(sizeof(StencilState::StencilOperations) == 5u,
         "StencilOperations size not what was intended");

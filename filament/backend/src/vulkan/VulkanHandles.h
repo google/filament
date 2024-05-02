@@ -180,23 +180,20 @@ private:
 using VulkanDescriptorSetList = std::array<Handle<VulkanDescriptorSet>,
         VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
+using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
+using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
+
 struct PushConstantDescription {
-    PushConstantDescription(Program::PushConstantStructArray const& pushConstants);
+    explicit PushConstantDescription(backend::Program const& program) noexcept;
 
-    VkPushConstantRange const* getVkRanges() const {
-        return mRanges;
-    }
+    VkPushConstantRange const* getVkRanges() const noexcept { return mRanges; }
 
-    uint32_t getVkRangeCount() const {
-        return mRangeCount;
-    }
+    uint32_t getVkRangeCount() const noexcept { return mRangeCount; }
 
     void write(VulkanCommands* commands, VkPipelineLayout layout, backend::ShaderStage stage,
-            backend::PushConstantArray const& constants);
+            uint8_t index, backend::PushConstantVariant const& value);
 
 private:
-    using NameOffsetMap = std::unordered_map<std::string_view, uint8_t>;
-    std::array<NameOffsetMap, Program::SHADER_TYPE_COUNT> mOffsets;
     VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
     uint32_t mRangeCount;
 };
@@ -242,8 +239,8 @@ struct VulkanProgram : public HwProgram, VulkanResource {
     }
 
     inline void writePushConstant(VulkanCommands* commands, VkPipelineLayout layout,
-            backend::ShaderStage stage, backend::PushConstantArray const& pushConstants) {
-        mInfo->pushConstantDescription.write(commands, layout, stage, pushConstants);
+            backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
+        mInfo->pushConstantDescription.write(commands, layout, stage, index, value);
     }
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
@@ -258,9 +255,9 @@ struct VulkanProgram : public HwProgram, VulkanResource {
 
 private:
     struct PipelineInfo {
-        PipelineInfo(Program::PushConstantStructArray const& pushConstants)
+        explicit PipelineInfo(backend::Program const& program) noexcept
             : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff),
-              pushConstantDescription(pushConstants)
+              pushConstantDescription(program)
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
             , bindingToName(MAX_SAMPLER_COUNT, "")
 #endif

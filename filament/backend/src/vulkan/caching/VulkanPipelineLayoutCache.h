@@ -43,10 +43,9 @@ public:
     };
 
     struct PipelineLayoutKey {
-        using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout, VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
+        using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
+                VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
         DescriptorSetLayoutArray descSetLayouts = {};
-
-        // We use the shader handles as a shorthand for the push constant ranges.
         PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};
     };
 

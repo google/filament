@@ -91,9 +91,9 @@ Program& Program::specializationConstants(
     return *this;
 }
 
-
-Program& Program::pushConstants(PushConstantStruct const& pushConstants) noexcept {
-    mPushConstants[static_cast<int>(pushConstants.stage)] = pushConstants;
+Program& Program::pushConstants(ShaderStage stage,
+        utils::FixedCapacityVector<char const*> constants) noexcept {
+    mPushConstants[static_cast<uint8_t>(stage)] = constants;
     return *this;
 }
 

@@ -1572,12 +1572,12 @@ void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     mSamplerBindings[index] = hwsb;
 }
 
-void VulkanDriver::writePushConstants(backend::ShaderStage stage,
-        backend::PushConstantArray pushConstants) {
+void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
     assert_invariant(mBoundPipeline.program && "Expect a program when writing to push constants");
     VulkanCommands* commands = &mCommands;
-    mBoundPipeline.program->writePushConstant(commands, mBoundPipeline.pipelineLayout, stage,
-            pushConstants);
+    mBoundPipeline.program->writePushConstant(commands, mBoundPipeline.pipelineLayout, stage, index,
+            value);
 }
 
 void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {

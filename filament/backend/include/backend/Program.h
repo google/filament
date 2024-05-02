@@ -62,9 +62,6 @@ public:
     using SamplerGroupInfo = std::array<SamplerGroupData, SAMPLER_BINDING_COUNT>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
-    using PushConstantArray = filament::backend::PushConstantArray;
-    using PushConstantStruct = filament::backend::PushConstantStruct;
-    using PushConstantStructArray = std::array<PushConstantStruct, SHADER_TYPE_COUNT>;
 
     Program() noexcept;
 
@@ -120,7 +117,8 @@ public:
     Program& specializationConstants(
             utils::FixedCapacityVector<SpecializationConstant> specConstants) noexcept;
 
-    Program& pushConstants(PushConstantStruct const& pushConstants) noexcept;
+    Program& pushConstants(ShaderStage stage,
+            utils::FixedCapacityVector<char const*> constants) noexcept;
 
     Program& cacheId(uint64_t cacheId) noexcept;
 
@@ -153,9 +151,14 @@ public:
         return mSpecializationConstants;
     }
 
-    PushConstantStructArray const& getPushConstants() const noexcept { return mPushConstants; }
+    utils::FixedCapacityVector<char const*> const& getPushConstants(
+            ShaderStage stage) const noexcept {
+        return mPushConstants[static_cast<uint8_t>(stage)];
+    }
 
-    PushConstantStructArray& getPushConstants() noexcept { return mPushConstants; }
+    utils::FixedCapacityVector<char const*>& getPushConstants(ShaderStage stage) noexcept {
+        return mPushConstants[static_cast<uint8_t>(stage)];
+    }
 
     uint64_t getCacheId() const noexcept { return mCacheId; }
 
@@ -174,7 +177,7 @@ private:
     uint64_t mCacheId{};
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
     utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
-    PushConstantStructArray mPushConstants;
+    std::array<utils::FixedCapacityVector<char const*>, SHADER_TYPE_COUNT> mPushConstants;
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mAttributes;
     std::array<UniformInfo, Program::UNIFORM_BINDING_COUNT> mBindingUniformInfo;
     CompilerPriorityQueue mPriorityQueue = CompilerPriorityQueue::HIGH;
