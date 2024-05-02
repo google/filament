@@ -157,9 +157,7 @@ public:
     utils::io::sstream& generateSpecializationConstant(utils::io::sstream& out,
             const char* name, uint32_t id, std::variant<int, float, bool> value) const;
 
-    utils::io::sstream& generateVertexPushConstants(utils::io::sstream& out,
-            size_t const layoutLocation) const;
-    utils::io::sstream& generateFragmentPushConstants(utils::io::sstream& out,
+    utils::io::sstream& generatePushConstants(utils::io::sstream& out,
             size_t const layoutLocation) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);

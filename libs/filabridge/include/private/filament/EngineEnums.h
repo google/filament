@@ -72,24 +72,22 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
 };
 
-enum class PushConstantType : uint8_t {
-    BOOL   = 0,
-    INT    = 1,
-    FLOAT  = 2,
+
+using PushConstantType = backend::ConstantType;
+
+// Note that the following enum/arrays should be ordered so that the ids correspond to indices in
+// the two vectors.
+enum class PushConstantIds {
+    MORPHING_BUFFER_OFFSET = 0,
+};
+const utils::FixedCapacityVector<char const*> PUSH_CONSTANT_NAMES = {
+    "morphingBufferOffset",
+};
+const utils::FixedCapacityVector<PushConstantType> PUSH_CONSTANT_TYPES = {
+    PushConstantType::INT,
 };
 
-struct PushConstantStruct {
-    static constexpr char const* VAR_NAME = "pushConstants";
-
-    utils::FixedCapacityVector<char const*> names;
-    utils::FixedCapacityVector<PushConstantType> types;
-};
-
-// TODO: for testing and illustrating push constants. To be removed.
-// const PushConstantStruct SKINNING_VERTEX_PUSH_CONSTANTS = {
-//     .names = {"test"},
-//     .types = {PushConstantType::FLOAT},
-// };
+constexpr char const* PUSH_CONSTANT_STRUCT_VAR_NAME = "pushConstants";
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // It's also limited by the Froxelizer's record buffer data type (uint8_t).

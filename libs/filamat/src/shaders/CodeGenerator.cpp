@@ -39,12 +39,9 @@ using namespace utils;
 
 namespace {
 
-io::sstream& generatePushConstant(PushConstantStruct const& pushConstant,
-        size_t const layoutLocation, bool const outputSpirv, io::sstream& out) {
+io::sstream& generatePushConstantImpl(size_t const layoutLocation, bool const outputSpirv,
+        io::sstream& out) {
     static constexpr char const* STRUCT_NAME = "Constants";
-    if (pushConstant.names.empty()) {
-        return out;
-    }
     auto const getType = [](PushConstantType const& type) {
         switch (type) {
             case PushConstantType::BOOL:
@@ -62,18 +59,18 @@ io::sstream& generatePushConstant(PushConstantStruct const& pushConstant,
         out << "struct " << STRUCT_NAME << " {\n";
     }
 
-    for (size_t i = 0; i < pushConstant.names.size(); ++i) {
-        char const* type = getType(pushConstant.types[i]);
-        out << type << " " << pushConstant.names[i] << ";\n";
+    for (size_t i = 0; i < PUSH_CONSTANT_NAMES.size(); ++i) {
+        char const* type = getType(PUSH_CONSTANT_TYPES[i]);
+        out << type << " " << PUSH_CONSTANT_NAMES[i] << ";\n";
         i++;
     }
 
     if (outputSpirv) {
-        out << "} " << PushConstantStruct::VAR_NAME << ";\n";
+        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
     } else {
         out << "};\n";
         out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
-            << " " << PushConstantStruct::VAR_NAME << ";\n";
+            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
     }
     return out;
 }
@@ -526,7 +523,7 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
         });
 
         out << "\n";
-        generateVertexPushConstants(out, attributes.size());
+        generatePushConstants(out, attributes.size());
     }
 
     out << "\n";
@@ -954,17 +951,12 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateVertexPushConstants(utils::io::sstream& out,
+utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
         size_t const layoutLocation) const {
     // TODO: for testing and illustrating push constants. To be removed.
     // bool const outputSpirv = mTargetLanguage == TargetLanguage::SPIRV
     //         && mTargetApi != TargetApi::OPENGL;
-    // generatePushConstant(SKINNING_VERTEX_PUSH_CONSTANTS, layoutLocation, outputSpirv, out);
-    return out;
-}
-
-utils::io::sstream& CodeGenerator::generateFragmentPushConstants(utils::io::sstream& out,
-        size_t const layoutLocation) const {
+    // generatePushConstantImpl(layoutLocation, outputSpirv, out);
     return out;
 }
 
