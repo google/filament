@@ -35,18 +35,32 @@ class TrackedMetalBuffer {
 public:
 
     enum class Type {
-        NONE,
-        GENERIC,
-        RING,
-        STAGING,
+        NONE = 0,
+        GENERIC = 1,
+        RING = 2,
+        STAGING = 3,
     };
+    static constexpr size_t TypeCount = 3;
+
+    static constexpr auto toIndex(Type t) {
+        assert_invariant(t != Type::NONE);
+        switch (t) {
+            case Type::NONE:
+            case Type::GENERIC:
+                return 0;
+            case Type::RING:
+                return 1;
+            case Type::STAGING:
+                return 2;
+        }
+    }
 
     TrackedMetalBuffer() noexcept : mBuffer(nil) {}
     TrackedMetalBuffer(nullptr_t) noexcept : mBuffer(nil) {}
     TrackedMetalBuffer(id<MTLBuffer> buffer, Type type) : mBuffer(buffer), mType(type) {
         assert_invariant(type != Type::NONE);
         if (buffer) {
-            aliveBuffers[type]++;
+            aliveBuffers[toIndex(type)]++;
             mType = type;
         }
     }
@@ -54,7 +68,7 @@ public:
     ~TrackedMetalBuffer() {
         if (mBuffer) {
             assert_invariant(mType != Type::NONE);
-            aliveBuffers[mType]--;
+            aliveBuffers[toIndex(mType)]--;
         }
     }
 
@@ -72,7 +86,7 @@ public:
 
     static uint64_t getAliveBuffers() {
         uint64_t sum = 0;
-        for (const auto& [_, v] : aliveBuffers) {
+        for (const auto& v : aliveBuffers) {
             sum += v;
         }
         return sum;
@@ -80,7 +94,7 @@ public:
 
     static uint64_t getAliveBuffers(Type type) {
         assert_invariant(type != Type::NONE);
-        return aliveBuffers[type];
+        return aliveBuffers[toIndex(type)];
     }
 
 private:
@@ -92,7 +106,7 @@ private:
     id<MTLBuffer> mBuffer;
     Type mType = Type::NONE;
 
-    static std::unordered_map<TrackedMetalBuffer::Type, std::atomic<uint64_t>> aliveBuffers;
+    static std::array<uint64_t, TypeCount> aliveBuffers;
 };
 
 class MetalBuffer {
