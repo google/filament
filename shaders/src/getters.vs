@@ -266,3 +266,16 @@ vec4 computeWorldPosition() {
 #error Unknown Vertex Domain
 #endif
 }
+
+/**
+ * Index of the eye being rendered, starting at 0.
+ * @public-api
+ */
+int getEyeIndex() {
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
+    return instance_index % CONFIG_STEREO_EYE_COUNT;
+#elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
+    return gl_ViewID_OVR;
+#endif
+    return 0;
+}
