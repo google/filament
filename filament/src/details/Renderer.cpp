@@ -719,10 +719,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
-    if (view.hasStereo() &&
-           engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED) {
-        renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
-    }
 
     RenderPassBuilder passBuilder(commandArena);
     passBuilder.renderFlags(renderFlags);
@@ -997,6 +993,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::COLOR);
+
+
+    // RenderPass::IS_INSTANCED_STEREOSCOPIC only applies to the color pass
+    if (view.hasStereo() &&
+        engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED) {
+        renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
+        passBuilder.renderFlags(renderFlags);
+    }
 
     RenderPass const pass{ passBuilder.build(engine) };
 
