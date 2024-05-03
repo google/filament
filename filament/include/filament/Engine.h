@@ -28,8 +28,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include <optional>
-
 namespace utils {
 class Entity;
 class EntityManager;
@@ -181,7 +179,6 @@ public:
     using DriverConfig = backend::Platform::DriverConfig;
     using FeatureLevel = backend::FeatureLevel;
     using StereoscopicType = backend::StereoscopicType;
-    using ShaderLanguage = backend::ShaderLanguage;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -357,11 +354,14 @@ public:
          * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
          * present.
          *
-         * Currently, the only supported values are ShaderLanguage::MSL or
-         * ShaderLanguage::METAL_LIBRARY. When using a non-Metal backend, setting this has no
-         * effect.
+         * When using a non-Metal backend, setting this has no effect.
          */
-        std::optional<ShaderLanguage> preferredShaderLanguage;
+        enum class ShaderLanguage {
+            DEFAULT = 0,
+            MSL = 1,
+            METAL_LIBRARY = 2,
+        };
+        ShaderLanguage preferredShaderLanguage = ShaderLanguage::DEFAULT;
     };
 
 
