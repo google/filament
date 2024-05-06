@@ -63,7 +63,8 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 #endif
 }
 
-OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
+OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
+        Platform::DriverConfig const& driverConfig) noexcept
         : mPlatform(platform),
           mSamplerMap(32) {
 
@@ -84,6 +85,13 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform) noexcept
      */
 
     queryOpenGLVersion(&state.major, &state.minor);
+
+    #if defined(BACKEND_OPENGL_VERSION_GLES)
+    if (UTILS_UNLIKELY(driverConfig.forceGLES2Context)) {
+        state.major = 2;
+        state.minor = 0;
+    }
+    #endif
 
     OpenGLContext::initExtensions(&ext, state.major, state.minor);
 

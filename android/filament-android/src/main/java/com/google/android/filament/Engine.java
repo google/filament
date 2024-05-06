@@ -225,7 +225,8 @@ public class Engine {
                     config.textureUseAfterFreePoolSize, config.disableParallelShaderCompile,
                     config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
                     config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
-                    config.disableHandleUseAfterFreeCheck);
+                    config.disableHandleUseAfterFreeCheck,
+                    config.forceGLES2Context);
             return this;
         }
 
@@ -428,6 +429,13 @@ public class Engine {
          * Disable backend handles use-after-free checks.
          */
         public boolean disableHandleUseAfterFreeCheck = false;
+
+        /*
+         * When the OpenGL ES backend is used, setting this value to true will force a GLES2.0
+         * context if supported by the Platform, or if not, will have the backend pretend
+         * it's a GLES2 context. Ignored on other backends.
+         */
+        public boolean forceGLES2Context = false;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1353,7 +1361,8 @@ public class Engine {
             long textureUseAfterFreePoolSize, boolean disableParallelShaderCompile,
             int stereoscopicType, long stereoscopicEyeCount,
             long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,
-            boolean disableHandleUseAfterFreeCheck);
+            boolean disableHandleUseAfterFreeCheck,
+            boolean forceGLES2Context);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
