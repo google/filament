@@ -22,7 +22,8 @@
 namespace filament {
 namespace backend {
 
-std::atomic<uint64_t> TrackedMetalBuffer::aliveBuffers = 0;
+uint64_t TrackedMetalBuffer::aliveBuffers = 0;
+MetalPlatform* TrackedMetalBuffer::platform = nullptr;
 
 MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
         size_t size, bool forceGpuBuffer) : mBufferSize(size), mContext(context) {
