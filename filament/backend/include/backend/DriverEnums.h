@@ -336,7 +336,7 @@ enum class UniformType : uint8_t {
 /**
  * Supported constant parameter types
  */
- enum class ConstantType : uint8_t {
+enum class ConstantType : uint8_t {
   INT,
   FLOAT,
   BOOL

@@ -70,6 +70,8 @@ struct TargetBufferInfo;
 class OpenGLProgram;
 class TimerQueryFactoryInterface;
 
+struct PushConstantBundle;
+
 class OpenGLDriver final : public DriverBase {
     inline explicit OpenGLDriver(OpenGLPlatform* platform,
             const Platform::DriverConfig& driverConfig) noexcept;
@@ -375,6 +377,9 @@ private:
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;
     bool mRec709OutputColorspace = false;
+
+    utils::FixedCapacityVector<PushConstantBundle> const* mCurrentPushConstants =
+            nullptr;
 };
 
 // ------------------------------------------------------------------------------------------------

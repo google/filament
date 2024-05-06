@@ -45,9 +45,11 @@ public:
     struct PipelineLayoutKey {
         using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
                 VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
-        DescriptorSetLayoutArray descSetLayouts = {};
-        PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};
+        DescriptorSetLayoutArray descSetLayouts = {};                   // 8 * 3
+        PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};  // 2 * 3
+        uint16_t padding = 0;
     };
+    static_assert(sizeof(PipelineLayoutKey) == 32);
 
     VulkanPipelineLayoutCache(VulkanPipelineLayoutCache const&) = delete;
     VulkanPipelineLayoutCache& operator=(VulkanPipelineLayoutCache const&) = delete;

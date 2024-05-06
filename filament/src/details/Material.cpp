@@ -933,7 +933,13 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
 
 void FMaterial::processPushConstants(FEngine& engine, Material::Builder const& builder) {
     // TODO: for testing and illustrating push constants. To be removed.
-    // mPushConstants[(uint8_t) ShaderStage::VERTEX] = PUSH_CONSTANT_NAMES;
+    // auto& vertexPushConstant = mPushConstants[(uint8_t) ShaderStage::VERTEX];
+    // vertexPushConstant.reserve(PUSH_CONSTANT_NAMES.size());
+    // assert_invariant(PUSH_CONSTANT_NAMES.size() == PUSH_CONSTANT_TYPES.size());
+    // for (size_t i = 0; i < PUSH_CONSTANT_NAMES.size(); i++) {
+    //     vertexPushConstant.push_back(
+    //             { utils::CString(PUSH_CONSTANT_NAMES[i]), PUSH_CONSTANT_TYPES[i] });
+    // }
 }
 
 void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {

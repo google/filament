@@ -51,7 +51,6 @@ class UTILS_PRIVATE CodeGenerator {
     using TargetApi = MaterialBuilder::TargetApi;
     using TargetLanguage = MaterialBuilder::TargetLanguage;
     using ShaderQuality = MaterialBuilder::ShaderQuality;
-
 public:
     CodeGenerator(ShaderModel shaderModel,
             TargetApi targetApi,

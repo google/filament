@@ -38,6 +38,13 @@ namespace filament::backend {
 
 class OpenGLDriver;
 
+// Holds information needed to write to push constants. This struct cannot nest within OpenGLProgram
+// due to the need for forward declaration.
+struct PushConstantBundle {
+    GLint location = -1;
+    ConstantType type;
+};
+
 class OpenGLProgram : public HwProgram {
 public:
 
@@ -78,6 +85,13 @@ public:
         GLuint program = 0;
     } gl;                                               // 4 bytes
 
+    utils::FixedCapacityVector<PushConstantBundle> const* getPushConstants() {
+        if (mVertexPushConstants.empty()) {
+            return nullptr;
+        }
+        return &mVertexPushConstants;
+    }
+
 private:
     // keep these away from of other class attributes
     struct LazyInitializationData;
@@ -97,7 +111,6 @@ private:
     uint8_t mUsedBindingsCount = 0u;                    // 1 byte
     UTILS_UNUSED uint8_t padding[3] = {};               // 3 bytes
 
-
     // only needed for ES2
     GLint mRec709Location = -1; // 4 bytes
     using LocationInfo = utils::FixedCapacityVector<GLint>;
@@ -108,10 +121,12 @@ private:
         mutable uint16_t age = std::numeric_limits<uint16_t>::max();
     };
     UniformsRecord const* mUniformsRecords = nullptr;
+
+    utils::FixedCapacityVector<PushConstantBundle> mVertexPushConstants;
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
-static_assert(sizeof(OpenGLProgram) <= 64); // currently 48 bytes
+static_assert(sizeof(OpenGLProgram) <= 64); // currently 54 bytes
 
 } // namespace filament::backend
 

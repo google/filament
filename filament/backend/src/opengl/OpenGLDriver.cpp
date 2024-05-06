@@ -285,8 +285,30 @@ void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
     mContext.bindSampler(unit, sampler);
 }
 
-void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+void OpenGLDriver::setPushConstant(backend::ShaderStage, uint8_t index,
         backend::PushConstantVariant value) {
+    assert_invariant(mCurrentPushConstants &&
+                     "Calling setPushConstant() when program does not define push constants");
+
+    // Note that stage is not applicable to the GL backend.
+
+    auto const& constants = *mCurrentPushConstants;
+    ASSERT_PRECONDITION(index < constants.size(), "Push constant index=%d is out-of-bounds", index);
+    auto const& constant = constants[index];
+
+    if (std::holds_alternative<bool>(value)) {
+        assert_invariant(constant.type == ConstantType::BOOL);
+        bool const bval = std::get<bool>(value);
+        glUniform1i(constant.location, bval ? 1 : 0);
+    } else if (std::holds_alternative<float>(value)) {
+        assert_invariant(constant.type == ConstantType::FLOAT);
+        float const fval = std::get<float>(value);
+        glUniform1f(constant.location, fval);
+    } else {
+        assert_invariant(constant.type == ConstantType::INT);
+        int const ival = std::get<int>(value);
+        glUniform1i(constant.location, ival);
+    }
 }
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
@@ -3806,6 +3828,7 @@ void OpenGLDriver::bindPipeline(PipelineState state) {
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(state.program);
     mValidProgram = useProgram(p);
+    mCurrentPushConstants = p->getPushConstants();
 }
 
 void OpenGLDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {

@@ -184,6 +184,7 @@ using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
 
 struct PushConstantDescription {
+
     explicit PushConstantDescription(backend::Program const& program) noexcept;
 
     VkPushConstantRange const* getVkRanges() const noexcept { return mRanges; }
@@ -194,6 +195,9 @@ struct PushConstantDescription {
             uint8_t index, backend::PushConstantVariant const& value);
 
 private:
+    static constexpr uint32_t ENTRY_SIZE = sizeof(uint32_t);
+
+    utils::FixedCapacityVector<backend::ConstantType> mTypes[Program::SHADER_TYPE_COUNT];
     VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
     uint32_t mRangeCount;
 };

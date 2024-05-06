@@ -315,15 +315,14 @@ private:
     SamplerBindingToNameMap mSamplerBindingToNameMap;
     // Constants defined by this Material
     utils::FixedCapacityVector<MaterialConstant> mMaterialConstants;
-
     // A map from the Constant name to the mMaterialConstant index
     std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
-
     // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
 
     // current push constants for the HwProgram
-    std::array<utils::FixedCapacityVector<char const*>, backend::Program::SHADER_TYPE_COUNT>
+    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
+            backend::Program::SHADER_TYPE_COUNT>
             mPushConstants;
 
 #if FILAMENT_ENABLE_MATDBG

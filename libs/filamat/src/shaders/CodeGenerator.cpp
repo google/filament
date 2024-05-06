@@ -18,7 +18,7 @@
 
 #include "MaterialInfo.h"
 
-#include "backend/DriverEnums.h"
+#include "backend/Program.h"
 #include "generated/shaders.h"
 #include "private/filament/EngineEnums.h"
 #include "utils/Panic.h"
@@ -66,11 +66,11 @@ io::sstream& generatePushConstantImpl(size_t const layoutLocation, bool const ou
     }
 
     if (outputSpirv) {
-        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+        out << "} " << backend::Program::PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
     } else {
         out << "};\n";
         out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
-            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+            << " " << backend::Program::PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
     }
     return out;
 }

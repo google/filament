@@ -92,8 +92,8 @@ Program& Program::specializationConstants(
 }
 
 Program& Program::pushConstants(ShaderStage stage,
-        utils::FixedCapacityVector<char const*> constants) noexcept {
-    mPushConstants[static_cast<uint8_t>(stage)] = constants;
+        utils::FixedCapacityVector<PushConstant> constants) noexcept {
+    mPushConstants[static_cast<uint8_t>(stage)] = std::move(constants);
     return *this;
 }
 

@@ -142,14 +142,22 @@ VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
 PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
     mRangeCount = 0;
     for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
-        auto const& names = program.getPushConstants(stage);
-        if (names.empty()) {
+        auto const& constants = program.getPushConstants(stage);
+        if (constants.empty()) {
             continue;
         }
+
+        // We store the type of the constant for type-checking when writing.
+        auto& types = mTypes[(uint8_t) stage];
+        types.reserve(constants.size());
+        std::for_each(constants.cbegin(), constants.cend(), [&types] (Program::PushConstant t) {
+            types.push_back(t.type);
+        });
+
         mRanges[mRangeCount++] = {
             .stageFlags = getVkStage(stage),
             .offset = 0,
-            .size = (uint32_t) names.size() * 4,
+            .size = (uint32_t) constants.size() * ENTRY_SIZE,
         };
     }
 }
@@ -158,23 +166,28 @@ void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout l
         backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
     VulkanCommandBuffer* cmdbuf = &(commands->get());
     uint32_t binaryValue = 0;
+    UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
     if (std::holds_alternative<bool>(value)) {
+        assert_invariant(types[index] == ConstantType::BOOL);
         bool const bval = std::get<bool>(value);
         binaryValue = static_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
     } else if (std::holds_alternative<float>(value)) {
+        assert_invariant(types[index] == ConstantType::FLOAT);
         float const fval = std::get<float>(value);
         binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
     } else {
+        assert_invariant(types[index] == ConstantType::INT);
         int const ival = std::get<int>(value);
         binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
     }
-    vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), index * 4, 4, &binaryValue);
+    vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), index * ENTRY_SIZE, ENTRY_SIZE,
+            &binaryValue);
 }
 
 VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
-      mInfo(new PipelineInfo(builder)),
+      mInfo(new(std::nothrow) PipelineInfo(builder)),
       mDevice(device) {
 
     constexpr uint8_t UBO_MODULE_OFFSET = (sizeof(UniformBufferBitmask) * 8) / MAX_SHADER_MODULES;

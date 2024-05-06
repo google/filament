@@ -30,6 +30,7 @@
 #include <utils/Systrace.h>
 
 #include <array>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <new>
@@ -46,6 +47,7 @@ struct OpenGLProgram::LazyInitializationData {
     Program::UniformBlockInfo uniformBlockInfo;
     Program::SamplerGroupInfo samplerGroupInfo;
     std::array<Program::UniformInfo, Program::UNIFORM_BINDING_COUNT> bindingUniformInfo;
+    utils::FixedCapacityVector<Program::PushConstant> pushConstants;
 };
 
 
@@ -61,6 +63,11 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
     } else {
         lazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     }
+
+    // We only keep the push constants for vertex stage because we'd like to keep this class a
+    // certain size.
+    lazyInitializationData->pushConstants =
+            std::move(program.getPushConstants(ShaderStage::VERTEX));
 
     ShaderCompilerService& compiler = gld.getShaderCompilerService();
     mToken = compiler.createProgram(name, std::move(program));
@@ -203,6 +210,29 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         }
     }
     mUsedBindingsCount = usedBindingCount;
+
+    // Push constant initialization
+    auto& constants = lazyInitializationData.pushConstants;
+    if (!constants.empty()) {
+        mVertexPushConstants.reserve(constants.size());
+        mVertexPushConstants.resize(constants.size());
+        // The constants are defined in a struct of name PUSH_CONSTANT_STRUCT_VAR_NAME. We prepend
+        // the prefix here to avoid string manipulation in a the draw loop.
+        std::stringbuf constantPrefix;
+        constantPrefix.sputn(Program::PUSH_CONSTANT_STRUCT_VAR_NAME,
+                strlen(Program::PUSH_CONSTANT_STRUCT_VAR_NAME));
+        constantPrefix.sputn(".", 1);
+
+        std::transform(constants.begin(), constants.end(), mVertexPushConstants.begin(),
+                [&constantPrefix, program](Program::PushConstant& constant) -> PushConstantBundle {
+                    constant.name.insert(0, utils::CString(constantPrefix.str().c_str()));
+                    auto const loc = glGetUniformLocation(program, constant.name.c_str());
+                    return {
+                        .location = loc,
+                        .type = constant.type,
+                    };
+                });
+    }
 }
 
 void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {

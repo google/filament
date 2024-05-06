@@ -73,21 +73,21 @@ enum class ReservedSpecializationConstants : uint8_t {
 };
 
 
-using PushConstantType = backend::ConstantType;
 
 // Note that the following enum/arrays should be ordered so that the ids correspond to indices in
 // the two vectors.
 enum class PushConstantIds {
     MORPHING_BUFFER_OFFSET = 0,
 };
+
+using PushConstantType = backend::ConstantType;
+
 const utils::FixedCapacityVector<char const*> PUSH_CONSTANT_NAMES = {
     "morphingBufferOffset",
 };
 const utils::FixedCapacityVector<PushConstantType> PUSH_CONSTANT_TYPES = {
     PushConstantType::INT,
 };
-
-constexpr char const* PUSH_CONSTANT_STRUCT_VAR_NAME = "pushConstants";
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // It's also limited by the Froxelizer's record buffer data type (uint8_t).
