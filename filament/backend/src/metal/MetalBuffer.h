@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_METALBUFFER_H
 
 #include "MetalContext.h"
+#include "MetalPlatform.h"
 
 #include <backend/DriverEnums.h>
 
@@ -33,6 +34,8 @@ namespace filament::backend {
 
 class TrackedMetalBuffer {
 public:
+
+    static constexpr size_t EXCESS_BUFFER_COUNT = 30000;
 
     enum class Type {
         NONE = 0,
@@ -62,6 +65,12 @@ public:
         if (buffer) {
             aliveBuffers[toIndex(type)]++;
             mType = type;
+            if (getAliveBuffers() >= EXCESS_BUFFER_COUNT) {
+                if (platform && platform->hasDebugUpdateStatFunc()) {
+                    platform->debugUpdateStat("filament.metal.excess_buffers_allocated",
+                            TrackedMetalBuffer::getAliveBuffers());
+                }
+            }
         }
     }
 
@@ -96,6 +105,7 @@ public:
         assert_invariant(type != Type::NONE);
         return aliveBuffers[toIndex(type)];
     }
+    static void setPlatform(MetalPlatform* p) { platform = p; }
 
 private:
     void swap(TrackedMetalBuffer& other) noexcept {
@@ -106,6 +116,7 @@ private:
     id<MTLBuffer> mBuffer;
     Type mType = Type::NONE;
 
+    static MetalPlatform* platform;
     static std::array<uint64_t, TypeCount> aliveBuffers;
 };
 
