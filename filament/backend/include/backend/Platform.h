@@ -68,7 +68,7 @@ public:
 
         /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
-         * GLES 3.x backendds
+         * GLES 3.x backends.
          */
         bool forceGLES2Context = false;
     };
