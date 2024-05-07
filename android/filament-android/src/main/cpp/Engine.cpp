@@ -517,7 +517,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jlong textureUseAfterFreePoolSize, jboolean disableParallelShaderCompile,
         jint stereoscopicType, jlong stereoscopicEyeCount,
         jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge,
-        jboolean disableHandleUseAfterFreeCheck) {
+        jboolean disableHandleUseAfterFreeCheck,
+        jboolean forceGLES2Context) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -533,6 +534,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .resourceAllocatorCacheSizeMB = (uint32_t) resourceAllocatorCacheSizeMB,
             .resourceAllocatorCacheMaxAge = (uint8_t) resourceAllocatorCacheMaxAge,
             .disableHandleUseAfterFreeCheck = (bool) disableHandleUseAfterFreeCheck,
+            .forceGLES2Context = (bool) forceGLES2Context
     };
     builder->config(&config);
 }

@@ -102,7 +102,8 @@ Engine* FEngine::create(Engine::Builder const& builder) {
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
-                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck
+                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
+                .forceGLES2Context = instance->getConfig().forceGLES2Context
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -673,7 +674,8 @@ int FEngine::loop() {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
-            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck
+            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
+            .forceGLES2Context = mConfig.forceGLES2Context
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
