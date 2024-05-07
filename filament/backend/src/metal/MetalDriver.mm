@@ -105,6 +105,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
                   driverConfig.disableHandleUseAfterFreeCheck) {
     mContext->driver = this;
 
+    TrackedMetalBuffer::setPlatform(platform);
+
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
 
@@ -198,6 +200,7 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 }
 
 MetalDriver::~MetalDriver() noexcept {
+    TrackedMetalBuffer::setPlatform(nullptr);
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
