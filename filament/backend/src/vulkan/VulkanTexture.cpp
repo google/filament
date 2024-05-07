@@ -28,7 +28,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-using ImgUtil = VulkanImageUtility;
 VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
         VkImage image, VkFormat format, uint8_t samples, uint32_t width, uint32_t height,
         TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated)
@@ -37,7 +36,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanComm
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
       mVkFormat(format),
-      mViewType(ImgUtil::getViewType(target)),
+      mViewType(imgutil::getViewType(target)),
       mSwizzle({}),
       mTextureImage(image),
       mFullViewRange{
@@ -62,7 +61,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
       mVkFormat(backend::getVkFormat(tformat)),
-      mViewType(ImgUtil::getViewType(target)),
+      mViewType(imgutil::getViewType(target)),
       mSwizzle(swizzle),
       mStagePool(stagePool),
       mDevice(device),
@@ -236,7 +235,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanCommandBuffer& commands = mCommands->get();
         VkCommandBuffer const cmdbuf = commands.buffer();
         commands.acquire(this);
-        transitionLayout(cmdbuf, mFullViewRange, ImgUtil::getDefaultLayout(imageInfo.usage));
+        transitionLayout(cmdbuf, mFullViewRange, imgutil::getDefaultLayout(imageInfo.usage));
     }
 }
 
@@ -327,10 +326,10 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
     VulkanLayout nextLayout = getLayout(transitionRange.baseArrayLayer, miplevel);
-    VkImageLayout const newVkLayout = ImgUtil::getVkLayout(newLayout);
+    VkImageLayout const newVkLayout = imgutil::getVkLayout(newLayout);
 
     if (nextLayout == VulkanLayout::UNDEFINED) {
-        nextLayout = ImgUtil::getDefaultLayout(this->usage);
+        nextLayout = imgutil::getDefaultLayout(this->usage);
     }
 
     transitionLayout(cmdbuf, transitionRange, newLayout);
@@ -374,8 +373,8 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(cmdbuf, range, newLayout);
 
-    vkCmdBlitImage(cmdbuf, stage->image, ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            mTextureImage, ImgUtil::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
+    vkCmdBlitImage(cmdbuf, stage->image, imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            mTextureImage, imgutil::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
 
     transitionLayout(cmdbuf, range, oldLayout);
 }
@@ -467,7 +466,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
         for (uint32_t i = firstLayer; i < lastLayer; ++i) {
             for (uint32_t j = firstLevel; j < lastLevel; ++j) {
                 VulkanLayout const layout = getLayout(i, j);
-                ImgUtil::transitionLayout(cmdbuf, {
+                imgutil::transitionLayout(cmdbuf, {
                         .image = mTextureImage,
                         .oldLayout = layout,
                         .newLayout = newLayout,
@@ -482,7 +481,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
             }
         }
     } else {
-        ImgUtil::transitionLayout(cmdbuf, {
+        imgutil::transitionLayout(cmdbuf, {
             .image = mTextureImage,
             .oldLayout = oldLayout,
             .newLayout = newLayout,

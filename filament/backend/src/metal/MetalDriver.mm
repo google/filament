@@ -105,6 +105,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
                   driverConfig.disableHandleUseAfterFreeCheck) {
     mContext->driver = this;
 
+    TrackedMetalBuffer::setPlatform(platform);
+
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
 
@@ -198,6 +200,7 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 }
 
 MetalDriver::~MetalDriver() noexcept {
+    TrackedMetalBuffer::setPlatform(nullptr);
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
@@ -212,19 +215,26 @@ void MetalDriver::tick(int) {
     executeTickOps();
 }
 
-void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs, uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
     if (mPlatform.hasDebugUpdateStatFunc()) {
         mPlatform.debugUpdateStat("filament.metal.alive_buffers", TrackedMetalBuffer::getAliveBuffers());
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.generic",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::GENERIC));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.ring",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::RING));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::STAGING));
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+void MetalDriver::setFrameScheduledCallback(
+        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(callback, user);
+    swapChain->setFrameScheduledCallback(handler, std::move(callback));
 }
 
 void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
@@ -803,6 +813,10 @@ bool MetalDriver::isParallelShaderCompileSupported() {
 
 bool MetalDriver::isDepthStencilResolveSupported() {
     return false;
+}
+
+bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    return true;
 }
 
 bool MetalDriver::isProtectedTexturesSupported() {

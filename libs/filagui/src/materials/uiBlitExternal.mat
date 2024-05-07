@@ -1,8 +1,8 @@
 material {
-    name : uiBlit,
+    name : uiBlitExternal,
     parameters : [
         {
-            type : sampler2d,
+            type : samplerExternal,
             name : albedo
         }
     ],

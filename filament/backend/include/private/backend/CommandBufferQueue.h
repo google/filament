@@ -82,6 +82,7 @@ public:
     void requestExit();
 
     // suspend or unsuspend the queue.
+    bool isPaused() const noexcept;
     void setPaused(bool paused);
 
     bool isExitRequested() const;

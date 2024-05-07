@@ -298,7 +298,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         FEngine& engine = mEngine;
         FEngine::DriverApi& driver = engine.getDriverApi();
 
-        driver.beginFrame(appVsync.time_since_epoch().count(), mFrameId);
+        driver.beginFrame(
+                appVsync.time_since_epoch().count(),
+                mDisplayInfo.refreshRate == 0.0 ? 0 : int64_t(
+                        1'000'000'000.0 / mDisplayInfo.refreshRate),
+                mFrameId);
 
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
@@ -462,7 +466,11 @@ void FRenderer::renderStandaloneView(FView const* view) {
         engine.prepare();
 
         FEngine::DriverApi& driver = engine.getDriverApi();
-        driver.beginFrame(steady_clock::now().time_since_epoch().count(), mFrameId);
+        driver.beginFrame(
+                steady_clock::now().time_since_epoch().count(),
+                mDisplayInfo.refreshRate == 0.0 ? 0 : int64_t(
+                        1'000'000'000.0 / mDisplayInfo.refreshRate),
+                mFrameId);
 
         renderInternal(view);
 
@@ -832,7 +840,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     passBuilder.camera(cameraInfo);
     passBuilder.geometry(scene.getRenderableData(),
-            view.getVisibleRenderables(), scene.getRenderableUBO());
+            view.getVisibleRenderables(),
+            view.getRenderableUBO());
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",

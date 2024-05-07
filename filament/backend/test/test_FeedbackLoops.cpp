@@ -200,7 +200,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);
-            api.beginFrame(0, 0);
+            api.beginFrame(0, 0, 0);
             api.bindSamplers(0, sgroup);
             api.bindUniformBuffer(0, ubuffer);
 

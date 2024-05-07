@@ -221,9 +221,10 @@ void MetalSwapChain::ensureDepthStencilTexture() {
     depthStencilTexture = [context.device newTextureWithDescriptor:descriptor];
 }
 
-void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
-    frameScheduledCallback = callback;
-    frameScheduledUserData = user;
+void MetalSwapChain::setFrameScheduledCallback(
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
+    frameScheduled.handler = handler;
+    frameScheduled.callback = std::move(callback);
 }
 
 void MetalSwapChain::setFrameCompletedCallback(CallbackHandler* handler,
@@ -238,7 +239,7 @@ void MetalSwapChain::present() {
         scheduleFrameCompletedCallback();
     }
     if (drawable) {
-        if (frameScheduledCallback) {
+        if (frameScheduled.callback) {
             scheduleFrameScheduledCallback();
         } else  {
             [getPendingCommandBuffer(&context) presentDrawable:drawable];
@@ -296,21 +297,38 @@ void presentDrawable(bool presentFrame, void* user) {
 }
 
 void MetalSwapChain::scheduleFrameScheduledCallback() {
-    if (!frameScheduledCallback) {
+    if (!frameScheduled.callback) {
         return;
     }
 
     assert_invariant(drawable);
 
-    // Destroy this by calling maybePresentAndDestroyAsync() later.
-    auto* presentData = PresentDrawableData::create(drawable, context.driver);
+    struct Callback {
+        Callback(FrameScheduledCallback&& callback, id<CAMetalDrawable> drawable,
+                MetalDriver* driver)
+            : f(std::move(callback)), data(PresentDrawableData::create(drawable, driver)) {}
+        FrameScheduledCallback f;
+        // PresentDrawableData* is destroyed by maybePresentAndDestroyAsync() later.
+        std::unique_ptr<PresentDrawableData> data;
+        static void func(void* user) {
+            auto* const c = reinterpret_cast<Callback*>(user);
+            PresentDrawableData* presentDrawableData = c->data.release();
+            PresentCallable presentCallable(presentDrawable, presentDrawableData);
+            c->f(presentCallable);
+            delete c;
+        }
+    };
 
-    FrameScheduledCallback userCallback = frameScheduledCallback;
-    void* userData = frameScheduledUserData;
+    // This callback pointer will be captured by the block. Even if the scheduled handler is never
+    // called, the unique_ptr will still ensure we don't leak memory.
+    __block auto callback =
+            std::make_unique<Callback>(std::move(frameScheduled.callback), drawable, context.driver);
 
+    backend::CallbackHandler* handler = frameScheduled.handler;
+    MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-        PresentCallable callable(presentDrawable, static_cast<void*>(presentData));
-        userCallback(callable, userData);
+        Callback* user = callback.release();
+        driver->scheduleCallback(handler, user, &Callback::func);
     }];
 }
 

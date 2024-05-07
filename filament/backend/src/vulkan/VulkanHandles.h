@@ -198,10 +198,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->bindingToSamplerIndex;
     }
 
-    inline UsageFlags getUsage() const {
-        return mInfo->usage;
-    }
-
     // Get a list of the sampler binding indices so that we don't have to loop through all possible
     // samplers.
     inline BindingList const& getBindings() const { return mInfo->bindings; }
@@ -234,10 +230,6 @@ private:
             , bindingToName(MAX_SAMPLER_COUNT, "")
 #endif
             {}
-
-        // This bitset maps to each of the sampler in the sampler groups associated with this
-        // program, and whether each sampler is used in which shader (i.e. vert, frag, compute).
-        UsageFlags usage;
 
         BindingList bindings;
 
@@ -282,10 +274,11 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;
     VkExtent2D getExtent() const;
-    VulkanAttachment getColor(int target) const;
-    VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth() const;
-    VulkanAttachment getMsaaDepth() const;
+    // We return references in the following methods to avoid a copy.
+    VulkanAttachment& getColor(int target);
+    VulkanAttachment& getMsaaColor(int target);
+    VulkanAttachment& getDepth();
+    VulkanAttachment& getMsaaDepth();
     uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
     bool hasDepth() const { return mDepth.texture; }

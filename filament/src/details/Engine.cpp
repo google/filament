@@ -581,6 +581,8 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
+    ASSERT_PRECONDITION(!mCommandBufferQueue.isPaused(),
+            "Cannot call flushAndWait() when rendering thread is paused!");
 
 #if defined(__ANDROID__)
 
@@ -1216,6 +1218,10 @@ void FEngine::destroy(FEngine* engine) {
         engine->shutdown();
         delete engine;
     }
+}
+
+bool FEngine::isPaused() const noexcept {
+    return mCommandBufferQueue.isPaused();
 }
 
 void FEngine::setPaused(bool paused) {

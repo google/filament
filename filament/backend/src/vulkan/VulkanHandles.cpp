@@ -65,21 +65,6 @@ static constexpr Bitmask fromStageFlags(ShaderStageFlags2 flags, uint8_t binding
     return ret;
 }
 
-UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags flags, UsageFlags src) {
-    // NOTE: if you modify this function, you also need to modify getShaderStageFlags.
-    assert_invariant(binding < MAX_SAMPLER_COUNT);
-    if (any(flags & ShaderStageFlags::VERTEX)) {
-        src.set(binding);
-    }
-    if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        src.set(MAX_SAMPLER_COUNT + binding);
-    }
-    // TODO: add support for compute by extending SHADER_MODULE_COUNT and ensuring UsageFlags
-    // has 186 bits (MAX_SAMPLER_COUNT * 3)
-    // assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
-    return src;
-}
-
 constexpr decltype(VulkanProgram::MAX_SHADER_MODULES) MAX_SHADER_MODULES =
         VulkanProgram::MAX_SHADER_MODULES;
 
@@ -236,7 +221,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     auto& groupInfo = builder.getSamplerGroupInfo();
     auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
     auto& bindings = mInfo->bindings;
-    auto& usage = mInfo->usage;
     for (uint8_t groupInd = 0; groupInd < Program::SAMPLER_BINDING_COUNT; groupInd++) {
         auto const& group = groupInfo[groupInd];
         auto const& samplers = group.samplers;
@@ -245,7 +229,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             bindingToSamplerIndex[binding] = (groupInd << 8) | (0xff & i);
             assert_invariant(bindings.find(binding) == bindings.end());
             bindings.insert(binding);
-            usage = getUsageFlags(binding, group.stageFlags, usage);
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
             bindingToName[binding] = samplers[i].name.c_str();
@@ -302,13 +285,13 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
-    const auto& limits = context.getPhysicalDeviceLimits();
+    auto const& limits = context.getPhysicalDeviceLimits();
     mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
             limits.framebufferColorSampleCounts);
 
     // Create sidecar MSAA textures for color attachments if they don't already exist.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        const VulkanAttachment& spec = color[index];
+        VulkanAttachment const& spec = color[index];
         VulkanTexture* texture = (VulkanTexture*) spec.texture;
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
@@ -371,19 +354,19 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
     return {width, height};
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(int target) const {
+VulkanAttachment& VulkanRenderTarget::getColor(int target) {
     return mColor[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
+VulkanAttachment& VulkanRenderTarget::getMsaaColor(int target) {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth() const {
+VulkanAttachment& VulkanRenderTarget::getDepth() {
     return mDepth;
 }
 
-VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
+VulkanAttachment& VulkanRenderTarget::getMsaaDepth() {
     return mMsaaDepthAttachment;
 }
 

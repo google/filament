@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_METALBUFFER_H
 
 #include "MetalContext.h"
+#include "MetalPlatform.h"
 
 #include <backend/DriverEnums.h>
 
@@ -33,15 +34,50 @@ namespace filament::backend {
 
 class TrackedMetalBuffer {
 public:
-    TrackedMetalBuffer() noexcept : mBuffer(nil) {}
-    TrackedMetalBuffer(id<MTLBuffer> buffer) noexcept : mBuffer(buffer) {
-        if (buffer) {
-            aliveBuffers++;
+
+    static constexpr size_t EXCESS_BUFFER_COUNT = 30000;
+
+    enum class Type {
+        NONE = 0,
+        GENERIC = 1,
+        RING = 2,
+        STAGING = 3,
+    };
+    static constexpr size_t TypeCount = 3;
+
+    static constexpr auto toIndex(Type t) {
+        assert_invariant(t != Type::NONE);
+        switch (t) {
+            case Type::NONE:
+            case Type::GENERIC:
+                return 0;
+            case Type::RING:
+                return 1;
+            case Type::STAGING:
+                return 2;
         }
     }
+
+    TrackedMetalBuffer() noexcept : mBuffer(nil) {}
+    TrackedMetalBuffer(nullptr_t) noexcept : mBuffer(nil) {}
+    TrackedMetalBuffer(id<MTLBuffer> buffer, Type type) : mBuffer(buffer), mType(type) {
+        assert_invariant(type != Type::NONE);
+        if (buffer) {
+            aliveBuffers[toIndex(type)]++;
+            mType = type;
+            if (getAliveBuffers() >= EXCESS_BUFFER_COUNT) {
+                if (platform && platform->hasDebugUpdateStatFunc()) {
+                    platform->debugUpdateStat("filament.metal.excess_buffers_allocated",
+                            TrackedMetalBuffer::getAliveBuffers());
+                }
+            }
+        }
+    }
+
     ~TrackedMetalBuffer() {
         if (mBuffer) {
-            aliveBuffers--;
+            assert_invariant(mType != Type::NONE);
+            aliveBuffers[toIndex(mType)]--;
         }
     }
 
@@ -57,18 +93,31 @@ public:
     id<MTLBuffer> get() const noexcept { return mBuffer; }
     operator bool() const noexcept { return bool(mBuffer); }
 
-    static uint64_t getAliveBuffers() { return aliveBuffers; }
+    static uint64_t getAliveBuffers() {
+        uint64_t sum = 0;
+        for (const auto& v : aliveBuffers) {
+            sum += v;
+        }
+        return sum;
+    }
+
+    static uint64_t getAliveBuffers(Type type) {
+        assert_invariant(type != Type::NONE);
+        return aliveBuffers[toIndex(type)];
+    }
+    static void setPlatform(MetalPlatform* p) { platform = p; }
 
 private:
     void swap(TrackedMetalBuffer& other) noexcept {
-        id<MTLBuffer> temp = mBuffer;
-        mBuffer = other.mBuffer;
-        other.mBuffer = temp;
+        std::swap(mBuffer, other.mBuffer);
+        std::swap(mType, other.mType);
     }
 
     id<MTLBuffer> mBuffer;
+    Type mType = Type::NONE;
 
-    static std::atomic<uint64_t> aliveBuffers;
+    static MetalPlatform* platform;
+    static std::array<uint64_t, TypeCount> aliveBuffers;
 };
 
 class MetalBuffer {
@@ -171,7 +220,8 @@ public:
           mBufferOptions(options),
           mSlotSizeBytes(computeSlotSize(layout)),
           mSlotCount(slotCount) {
-        mBuffer = [device newBufferWithLength:mSlotSizeBytes * mSlotCount options:mBufferOptions];
+        mBuffer = { [device newBufferWithLength:mSlotSizeBytes * mSlotCount options:mBufferOptions],
+            TrackedMetalBuffer::Type::RING };
         assert_invariant(mBuffer);
     }
 
@@ -189,9 +239,10 @@ public:
             // If we already have an aux buffer, it will get freed here, unless it has been retained
             // by a MTLCommandBuffer. In that case, it will be freed when the command buffer
             // finishes executing.
-            mAuxBuffer = [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions];
+            mAuxBuffer = { [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions],
+                TrackedMetalBuffer::Type::RING };
             assert_invariant(mAuxBuffer);
-            return {mAuxBuffer.get(), 0};
+            return { mAuxBuffer.get(), 0 };
         }
         mCurrentSlot = (mCurrentSlot + 1) % mSlotCount;
         mOccupiedSlots->fetch_add(1, std::memory_order_relaxed);
