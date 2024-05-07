@@ -68,6 +68,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
         return getLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
     }
 
+    uint32_t getLayerCount();
     // Gets or creates a cached VkImageView for a single subresource that can be used as a render
     // target attachment.  Unlike the primary image view, this always has type VK_IMAGE_VIEW_TYPE_2D
     // and the identity swizzle.
@@ -160,6 +161,7 @@ private:
     VkDevice mDevice;
     VmaAllocator mAllocator;
     VulkanCommands* mCommands;
+    uint32_t mLayerCount;
 };
 
 } // namespace filament::backend

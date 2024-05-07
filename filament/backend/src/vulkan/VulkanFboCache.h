@@ -64,6 +64,7 @@ public:
         uint8_t samples; // 1 byte
         uint8_t needsResolveMask; // 1 byte
         uint8_t subpassMask; // 1 byte
+        uint8_t viewCount; // 1 byte
         uint8_t padding2; // 1 byte
     };
     struct RenderPassVal {
@@ -74,7 +75,7 @@ public:
     static_assert(sizeof(RenderPassKey::initialColorLayoutMask) == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT / 8);
     static_assert(sizeof(TargetBufferFlags) == 4, "TargetBufferFlags has unexpected size.");
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
-    static_assert(sizeof(RenderPassKey) == 56, "RenderPassKey has unexpected size.");
+    static_assert(sizeof(RenderPassKey) == 64, "RenderPassKey has unexpected size.");
     using RenderPassHash = utils::hash::MurmurHashFn<RenderPassKey>;
     struct RenderPassEq {
         bool operator()(const RenderPassKey& k1, const RenderPassKey& k2) const;

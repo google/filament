@@ -23,6 +23,7 @@
 #include <private/backend/BackendUtils.h>
 
 #include <utils/Panic.h>
+#include <iostream>
 
 using namespace bluevk;
 
@@ -66,22 +67,32 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       mStagePool(stagePool),
       mDevice(device),
       mAllocator(allocator),
-      mCommands(commands) {
-
+      mCommands(commands),
+      mLayerCount(depth)
+      {
+    std::cout << "HERE, CREATE IMAGE" << std::endl;
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo{.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = target == SamplerType::SAMPLER_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
             .format = mVkFormat,
             .extent = {w, h, depth},
             .mipLevels = levels,
+            #ifdef FILAMENT_ENABLE_MULTIVIEW
+            .arrayLayers = 2,
+            #else
             .arrayLayers = 1,
+            #endif
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = 0};
+    std::cout << "HERE, CREATE IMAGE INFO layerCount: " << mLayerCount << std::endl;
     if (target == SamplerType::SAMPLER_CUBEMAP) {
+        std::cout << "HERE, SAMPLER_CUBEMAP" << std::endl;
         imageInfo.arrayLayers = 6;
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
     if (target == SamplerType::SAMPLER_2D_ARRAY) {
+        std::cout << "HERE, SAMPLER_2D_ARRAY" << std::endl;
+        std::cout << "HERE, depth: " << depth << std::endl;
         imageInfo.arrayLayers = depth;
         imageInfo.extent.depth = 1;
         // NOTE: We do not use VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT here because:
@@ -93,9 +104,16 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         // not the VkImage.
     }
     if (target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
+        std::cout << "HERE, SAMPLER_CUBEMAP_ARRAY" << std::endl;
         imageInfo.arrayLayers = depth * 6;
         imageInfo.extent.depth = 1;
     }
+    if (target == SamplerType::SAMPLER_3D) {
+        std::cout << "HERE, SAMPLER_3D" << std::endl;
+        imageInfo.arrayLayers = 1;
+    }
+
+    mLayerCount = imageInfo.arrayLayers;
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
@@ -389,6 +407,9 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
 VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange range) {
     // Attachments should only have one mipmap level and one layer.
     range.levelCount = 1;
+    if (range.layerCount > 1) {
+      return getImageView(range, VK_IMAGE_VIEW_TYPE_2D_ARRAY, {});
+    }
     range.layerCount = 1;
     return getImageView(range, VK_IMAGE_VIEW_TYPE_2D, {});
 }
@@ -523,6 +544,10 @@ VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
         return VulkanLayout::UNDEFINED;
     }
     return mSubresourceLayouts.get(key);
+}
+
+uint32_t VulkanTexture::getLayerCount() {
+    return mLayerCount;
 }
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)

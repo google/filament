@@ -43,6 +43,7 @@ bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
     if (k1.samples != k2.samples) return false;
     if (k1.needsResolveMask != k2.needsResolveMask) return false;
     if (k1.subpassMask != k2.subpassMask) return false;
+    if (k1.viewCount != k2.viewCount) return false;
     return true;
 }
 
@@ -165,7 +166,38 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
     VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
 
-    // We support 2 subpasses, which means we need to supply 1 dependency struct.
+    // We support 2 subpasses, which means we need to supply 3 dependency structs in multiview and 1 without multiview.
+    #ifdef FILAMENT_ENABLE_MULTIVIEW
+    VkSubpassDependency dependencies[3] = {
+        {
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = 0,
+        },
+        {
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        },
+        {
+        .srcSubpass = 0,
+        .dstSubpass = 1,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        }
+    };
+    #else
     VkSubpassDependency dependencies[1] = {{
         .srcSubpass = 0,
         .dstSubpass = 1,
@@ -175,6 +207,31 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
     }};
+    #endif
+
+    void *pNext_for_renderPass = NULL;
+    VkRenderPassMultiviewCreateInfo multiviewCreateInfo = {};
+    
+    if (config.viewCount > 1) {
+      // Enable all the views.
+      uint32_t subpass_view_mask = (1 << config.viewCount) - 1;
+
+      // Prepare a view mask array for the maximum number of subpasses.
+      // All subpasses have all views activated.
+      uint32_t view_masks[2] = {subpass_view_mask, subpass_view_mask};
+      // Fill the multiview create info.
+      multiviewCreateInfo.sType =
+          VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+      multiviewCreateInfo.pNext = nullptr;
+      multiviewCreateInfo.subpassCount = hasSubpasses ? 2u : 1u;
+      multiviewCreateInfo.pViewMasks = view_masks;
+      multiviewCreateInfo.dependencyCount = 0;
+      multiviewCreateInfo.pViewOffsets = nullptr;
+      multiviewCreateInfo.correlationMaskCount = 1;
+      multiviewCreateInfo.pCorrelationMasks = &subpass_view_mask;
+
+      pNext_for_renderPass = &multiviewCreateInfo;
+    }
 
     VkRenderPassCreateInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -182,9 +239,17 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .pAttachments = attachments,
         .subpassCount = hasSubpasses ? 2u : 1u,
         .pSubpasses = subpasses,
+        #ifdef FILAMENT_ENABLE_MULTIVIEW
+        .dependencyCount = hasSubpasses ? 3u : 2u,
+        #else
         .dependencyCount = hasSubpasses ? 1u : 0u,
-        .pDependencies = dependencies
+        #endif
+        .pDependencies = dependencies,
     };
+
+    if (pNext_for_renderPass) {
+        renderPassInfo.pNext = pNext_for_renderPass;
+    }
 
     int attachmentIndex = 0;
 
@@ -288,16 +353,25 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
         const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
         const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
+        const VkAttachmentLoadOp loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep);
         depthAttachmentRef.layout = imgutil::getVkLayout(VulkanLayout::DEPTH_ATTACHMENT);
         depthAttachmentRef.attachment = attachmentIndex;
+        VkImageLayout initialLayout = imgutil::getVkLayout(config.initialDepthLayout);
+        
+        #ifdef FILAMENT_ENABLE_MULTIVIEW
+        if (loadOp == VK_ATTACHMENT_LOAD_OP_LOAD && imgutil::getVkLayout(config.initialDepthLayout) == VK_IMAGE_LAYOUT_UNDEFINED) {
+            initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        }
+        #endif
+
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
+            .loadOp = loadOp,
             .storeOp = discardEnd ? kDisableStore : kEnableStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = imgutil::getVkLayout(config.initialDepthLayout),
+            .initialLayout = initialLayout,
             .finalLayout = imgutil::getVkLayout(FINAL_DEPTH_ATTACHMENT_LAYOUT),
         };
     }

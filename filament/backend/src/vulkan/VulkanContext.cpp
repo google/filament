@@ -73,7 +73,7 @@ VkImageSubresourceRange VulkanAttachment::getSubresourceRange() const {
             .baseMipLevel = uint32_t(level),
             .levelCount = 1,
             .baseArrayLayer = uint32_t(layer),
-            .layerCount = 1,
+            .layerCount = uint32_t(viewCount) > 0 ? uint32_t(viewCount) : texture->getLayerCount() > 1 ? texture->getLayerCount() : 1,
     };
 }
 
