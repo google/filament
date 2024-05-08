@@ -24,6 +24,7 @@ namespace backend {
 
 std::array<uint64_t, TrackedMetalBuffer::TypeCount> TrackedMetalBuffer::aliveBuffers = { 0 };
 MetalPlatform* TrackedMetalBuffer::platform = nullptr;
+MetalPlatform* ScopedAllocationTimer::platform = nullptr;
 
 MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
         size_t size, bool forceGpuBuffer) : mBufferSize(size), mContext(context) {
@@ -38,8 +39,11 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
     }
 
     // Otherwise, we allocate a private GPU buffer.
-    mBuffer = { [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate],
-        TrackedMetalBuffer::Type::GENERIC };
+    {
+        ScopedAllocationTimer timer("generic");
+        mBuffer = { [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate],
+            TrackedMetalBuffer::Type::GENERIC };
+    }
     ASSERT_POSTCONDITION(mBuffer, "Could not allocate Metal buffer of size %zu.", size);
 }
 

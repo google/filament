@@ -29,8 +29,41 @@
 #include <utility>
 #include <memory>
 #include <atomic>
+#include <chrono>
 
 namespace filament::backend {
+
+class ScopedAllocationTimer {
+public:
+    ScopedAllocationTimer(const char* name) : mBeginning(clock_t::now()), mName(name) {}
+    ~ScopedAllocationTimer() {
+        using namespace std::literals::chrono_literals;
+        static constexpr std::chrono::seconds LONG_TIME_THRESHOLD = 10s;
+
+        auto end = clock_t::now();
+        std::chrono::duration<double, std::micro> allocationTimeMicroseconds = end - mBeginning;
+
+        if (UTILS_UNLIKELY(allocationTimeMicroseconds > LONG_TIME_THRESHOLD)) {
+            if (platform && platform->hasDebugUpdateStatFunc()) {
+                char buffer[64];
+                snprintf(buffer, sizeof(buffer), "filament.metal.long_buffer_allocation_time.%s",
+                        mName);
+                platform->debugUpdateStat(
+                        buffer, static_cast<uint64_t>(allocationTimeMicroseconds.count()));
+            }
+        }
+    }
+
+    static void setPlatform(MetalPlatform* p) { platform = p; }
+
+private:
+    typedef std::chrono::steady_clock clock_t;
+
+    static MetalPlatform* platform;
+
+    std::chrono::time_point<clock_t> mBeginning;
+    const char* mName;
+};
 
 class TrackedMetalBuffer {
 public:
@@ -220,6 +253,7 @@ public:
           mBufferOptions(options),
           mSlotSizeBytes(computeSlotSize(layout)),
           mSlotCount(slotCount) {
+        ScopedAllocationTimer timer("ring");
         mBuffer = { [device newBufferWithLength:mSlotSizeBytes * mSlotCount options:mBufferOptions],
             TrackedMetalBuffer::Type::RING };
         assert_invariant(mBuffer);
@@ -239,8 +273,11 @@ public:
             // If we already have an aux buffer, it will get freed here, unless it has been retained
             // by a MTLCommandBuffer. In that case, it will be freed when the command buffer
             // finishes executing.
-            mAuxBuffer = { [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions],
-                TrackedMetalBuffer::Type::RING };
+            {
+                ScopedAllocationTimer timer("ring");
+                mAuxBuffer = { [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions],
+                    TrackedMetalBuffer::Type::RING };
+            }
             assert_invariant(mAuxBuffer);
             return { mAuxBuffer.get(), 0 };
         }
