@@ -107,7 +107,8 @@ public:
 
     // generate declarations for non-custom "in" variables
     utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderStage type,
-        const filament::AttributeBitset& attributes, filament::Interpolation interpolation) const;
+            const filament::AttributeBitset& attributes, filament::Interpolation interpolation,
+            MaterialBuilder::PushConstantList const& pushConstants) const;
     static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderStage type);
 
     // generate declarations for custom output variables
@@ -157,6 +158,7 @@ public:
             const char* name, uint32_t id, std::variant<int, float, bool> value) const;
 
     utils::io::sstream& generatePushConstants(utils::io::sstream& out,
+            MaterialBuilder::PushConstantList const& pushConstants,
             size_t const layoutLocation) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);

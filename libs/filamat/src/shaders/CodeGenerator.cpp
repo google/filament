@@ -17,9 +17,9 @@
 #include "CodeGenerator.h"
 
 #include "MaterialInfo.h"
+#include "../PushConstantDefinitions.h"
 
 #include "generated/shaders.h"
-#include "private/filament/EngineEnums.h"
 
 #include <utils/sstream.h>
 
@@ -34,44 +34,6 @@ namespace filamat {
 using namespace filament;
 using namespace backend;
 using namespace utils;
-
-namespace {
-
-io::sstream& generatePushConstantImpl(size_t const layoutLocation, bool const outputSpirv,
-        io::sstream& out) {
-    static constexpr char const* STRUCT_NAME = "Constants";
-    auto const getType = [](PushConstantType const& type) {
-        switch (type) {
-            case PushConstantType::BOOL:
-                return "bool";
-            case PushConstantType::INT:
-                return "int";
-            case PushConstantType::FLOAT:
-                return "float";
-        }
-    };
-
-    if (outputSpirv) {
-        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
-    } else {
-        out << "struct " << STRUCT_NAME << " {\n";
-    }
-
-    for (auto const& [name, type] : PUSH_CONSTANTS) {
-        out << getType(type) << " " << name << ";\n";
-    }
-
-    if (outputSpirv) {
-        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
-    } else {
-        out << "};\n";
-        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
-            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
-    }
-    return out;
-}
-
-} // anonymous namespace
 
 io::sstream& CodeGenerator::generateSeparator(io::sstream& out) {
     out << '\n';
@@ -493,7 +455,8 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
 }
 
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
-        const AttributeBitset& attributes, Interpolation interpolation) const {
+        const AttributeBitset& attributes, Interpolation interpolation,
+        MaterialBuilder::PushConstantList const& pushConstants) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
     const char* shading = getInterpolationQualifier(interpolation);
@@ -519,7 +482,7 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
         });
 
         out << "\n";
-        generatePushConstants(out, attributes.size());
+        generatePushConstants(out, pushConstants, attributes.size());
     }
 
     out << "\n";
@@ -948,11 +911,38 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
 }
 
 utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
-        size_t const layoutLocation) const {
-    // TODO: for testing and illustrating push constants. To be removed.
-    // bool const outputSpirv = mTargetLanguage == TargetLanguage::SPIRV
-    //         && mTargetApi != TargetApi::OPENGL;
-    // generatePushConstantImpl(layoutLocation, outputSpirv, out);
+        MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
+    static constexpr char const* STRUCT_NAME = "Constants";
+
+    bool const outputSpirv =
+            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
+    auto const getType = [](ConstantType const& type) {
+        switch (type) {
+            case ConstantType::BOOL:
+                return "bool";
+            case ConstantType::INT:
+                return "int";
+            case ConstantType::FLOAT:
+                return "float";
+        }
+    };
+    if (outputSpirv) {
+        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
+    } else {
+        out << "struct " << STRUCT_NAME << " {\n";
+    }
+
+    for (auto const& constant: pushConstants) {
+        out << getType(constant.type) << " " << constant.name.c_str() << ";\n";
+    }
+
+    if (outputSpirv) {
+        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    } else {
+        out << "};\n";
+        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
+            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    }
     return out;
 }
 

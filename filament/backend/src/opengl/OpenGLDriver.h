@@ -66,10 +66,8 @@ namespace filament::backend {
 class OpenGLPlatform;
 class PixelBufferDescriptor;
 struct TargetBufferInfo;
-
 class OpenGLProgram;
 class TimerQueryFactoryInterface;
-
 struct PushConstantBundle;
 
 class OpenGLDriver final : public DriverBase {

@@ -304,6 +304,7 @@ ShaderGenerator::ShaderGenerator(
         MaterialBuilder::OutputList const& outputs,
         MaterialBuilder::PreprocessorDefineList const& defines,
         MaterialBuilder::ConstantList const& constants,
+        MaterialBuilder::PushConstantList const& pushConstants,
         CString const& materialCode, size_t lineOffset,
         CString const& materialVertexCode, size_t vertexLineOffset,
         MaterialBuilder::MaterialDomain materialDomain) noexcept {
@@ -325,6 +326,7 @@ ShaderGenerator::ShaderGenerator(
     mMaterialDomain = materialDomain;
     mDefines = defines;
     mConstants = constants;
+    mPushConstants = pushConstants;
 
     if (mMaterialFragmentCode.empty()) {
         if (mMaterialDomain == MaterialBuilder::MaterialDomain::SURFACE) {
@@ -418,7 +420,15 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
             attributes.set(VertexAttribute::MORPH_TANGENTS_3);
         }
     }
-    cg.generateShaderInputs(vs, ShaderStage::VERTEX, attributes, interpolation);
+
+    MaterialBuilder::PushConstantList vertexPushConstants;
+    std::copy_if(mPushConstants.begin(), mPushConstants.end(),
+            std::back_insert_iterator<MaterialBuilder::PushConstantList>(vertexPushConstants),
+            [](MaterialBuilder::PushConstant const& constant) {
+                return constant.stage == ShaderStage::VERTEX;
+            });
+    cg.generateShaderInputs(vs, ShaderStage::VERTEX, attributes, interpolation,
+            vertexPushConstants);
 
     CodeGenerator::generateCommonTypes(vs, ShaderStage::VERTEX);
 
@@ -519,9 +529,14 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
-
-    cg.generateShaderInputs(fs, ShaderStage::FRAGMENT,
-            material.requiredAttributes, interpolation);
+    MaterialBuilder::PushConstantList fragmentPushConstants;
+    std::copy_if(mPushConstants.begin(), mPushConstants.end(),
+            std::back_insert_iterator<MaterialBuilder::PushConstantList>(fragmentPushConstants),
+            [](MaterialBuilder::PushConstant const& constant) {
+                return constant.stage == ShaderStage::FRAGMENT;
+            });
+    cg.generateShaderInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes, interpolation,
+            fragmentPushConstants);
 
     CodeGenerator::generateCommonTypes(fs, ShaderStage::FRAGMENT);
 

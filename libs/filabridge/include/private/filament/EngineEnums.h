@@ -72,17 +72,8 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
 };
 
-// Note that the following enum/arrays should be ordered so that the ids correspond to indices in
-// the two vectors.
 enum class PushConstantIds {
     MORPHING_BUFFER_OFFSET = 0,
-};
-
-using PushConstantType = backend::ConstantType;
-
-constexpr char const PUSH_CONSTANT_STRUCT_VAR_NAME[] = "pushConstants";
-const utils::FixedCapacityVector<std::pair<char const*, PushConstantType>> PUSH_CONSTANTS = {
-    { "morphingBufferOffset", PushConstantType::INT },
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.

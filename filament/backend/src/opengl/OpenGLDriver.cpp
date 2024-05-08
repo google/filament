@@ -294,7 +294,16 @@ void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
     assert_invariant(mCurrentPushConstants &&
                      "Calling setPushConstant() before binding a pipeline");
 
-    auto const& [location, type] = mCurrentPushConstants->get(stage, index);
+    assert_invariant(stage == ShaderStage::VERTEX || stage == ShaderStage::FRAGMENT);
+    utils::Slice<std::pair<GLint, ConstantType>> constants;
+    if (stage == ShaderStage::VERTEX) {
+        constants = mCurrentPushConstants->vertexConstants;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        constants = mCurrentPushConstants->fragmentConstants;
+    }
+
+    assert_invariant(index < constants.size());
+    auto const& [location, type] = constants[index];
 
     // This push constant wasn't found in the shader. It's ok to return without error-ing here.
     if (location < 0) {

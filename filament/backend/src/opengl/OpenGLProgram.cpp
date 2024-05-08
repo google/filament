@@ -46,9 +46,10 @@ struct OpenGLProgram::LazyInitializationData {
     Program::UniformBlockInfo uniformBlockInfo;
     Program::SamplerGroupInfo samplerGroupInfo;
     std::array<Program::UniformInfo, Program::UNIFORM_BINDING_COUNT> bindingUniformInfo;
-    utils::FixedCapacityVector<Program::PushConstant> pushConstants;
-    uint8_t pushConstantFragmentStageOffset;
+    utils::FixedCapacityVector<Program::PushConstant> vertexPushConstants;
+    utils::FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
 };
+
 
 OpenGLProgram::OpenGLProgram() noexcept = default;
 
@@ -61,30 +62,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
     } else {
         lazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     }
-
-    lazyInitializationData->pushConstantFragmentStageOffset = 0;
-
-    auto& vertexConstants = program.getPushConstants(ShaderStage::VERTEX);
-    auto& fragmentConstants = program.getPushConstants(ShaderStage::FRAGMENT);
-
-    size_t const totalConstantCount = vertexConstants.size() + fragmentConstants.size();
-    if (totalConstantCount > 0) {
-        auto& allConstants = lazyInitializationData->pushConstants;
-        size_t const numVertexConstants = vertexConstants.size();
-
-        if (numVertexConstants > 0) {
-            allConstants = std::move(vertexConstants);
-            lazyInitializationData->pushConstantFragmentStageOffset = numVertexConstants;
-        }
-
-        allConstants.reserve(totalConstantCount);
-        allConstants.resize(totalConstantCount);
-
-        std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(),
-                [&allConstants](Program::PushConstant const& constant) {
-                    allConstants.push_back(constant);
-                });
-    }
+    lazyInitializationData->vertexPushConstants = std::move(program.getPushConstants(ShaderStage::VERTEX));
+    lazyInitializationData->fragmentPushConstants = std::move(program.getPushConstants(ShaderStage::FRAGMENT));
 
     ShaderCompilerService& compiler = gld.getShaderCompilerService();
     mToken = compiler.createProgram(name, std::move(program));
@@ -113,6 +92,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
 }
 
 void OpenGLProgram::initialize(OpenGLDriver& gld) {
+
     SYSTRACE_CALL();
 
     assert_invariant(gl.program == 0);
@@ -227,18 +207,19 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     }
     mUsedBindingsCount = usedBindingCount;
 
-    // Push constant initialization
-    mPushConstantFragmentStageOffset = lazyInitializationData.pushConstantFragmentStageOffset;
-    auto const& constants = lazyInitializationData.pushConstants;
-    if (!constants.empty()) {
-        mPushConstants.reserve(constants.size());
-        mPushConstants.resize(constants.size());
+    auto& vertexConstants = lazyInitializationData.vertexPushConstants;
+    auto& fragmentConstants = lazyInitializationData.fragmentPushConstants;
 
-        std::transform(constants.cbegin(), constants.cend(), mPushConstants.begin(),
-                [program](Program::PushConstant const& constant) -> std::pair<GLint, ConstantType> {
-                    GLint const loc = glGetUniformLocation(program, constant.name.c_str());
-                    return {loc, constant.type};
-                });
+    size_t const totalConstantCount = vertexConstants.size() + fragmentConstants.size();
+    if (totalConstantCount > 0) {
+        mPushConstants.reserve(totalConstantCount);
+        mPushConstantFragmentStageOffset = vertexConstants.size();
+        auto const transformAndAdd = [&](Program::PushConstant const& constant) {
+            GLint const loc = glGetUniformLocation(program, constant.name.c_str());
+            mPushConstants.push_back({loc, constant.type});
+        };
+        std::for_each(vertexConstants.cbegin(), vertexConstants.cend(), transformAndAdd);
+        std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(), transformAndAdd);
     }
 }
 

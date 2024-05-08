@@ -30,6 +30,7 @@
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 #include <private/filament/ConstantInfo.h>
+#include <private/filament/PushConstantInfo.h>
 
 #include <utils/CString.h>
 
@@ -223,6 +224,14 @@ bool MaterialParser::getConstants(utils::FixedCapacityVector<MaterialConstant>* 
     if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkMaterialConstants::unflatten(unflattener, value);
+}
+
+bool MaterialParser::getPushConstants(utils::CString* structVarName,
+        utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(filamat::MaterialPushConstants);
+    if (start == end) return false;
+    Unflattener unflattener(start, end);
+    return ChunkMaterialPushConstants::unflatten(unflattener, structVarName, value);
 }
 
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
@@ -706,6 +715,48 @@ bool ChunkMaterialConstants::unflatten(filaflat::Unflattener& unflattener,
         (*materialConstants)[i].type = static_cast<backend::ConstantType>(constantType);
     }
 
+    return true;
+}
+
+bool ChunkMaterialPushConstants::unflatten(filaflat::Unflattener& unflattener,
+        utils::CString* structVarName,
+        utils::FixedCapacityVector<MaterialPushConstant>* materialPushConstants) {
+    assert_invariant(materialPushConstants);
+
+    if (!unflattener.read(structVarName)) {
+        return false;
+    }
+
+    // Read number of constants.
+    uint64_t numConstants = 0;
+    if (!unflattener.read(&numConstants)) {
+        return false;
+    }
+
+    materialPushConstants->reserve(numConstants);
+    materialPushConstants->resize(numConstants);
+
+    for (uint64_t i = 0; i < numConstants; i++) {
+        CString constantName;
+        uint8_t constantType = 0;
+        uint8_t shaderStage = 0;
+
+        if (!unflattener.read(&constantName)) {
+            return false;
+        }
+
+        if (!unflattener.read(&constantType)) {
+            return false;
+        }
+
+        if (!unflattener.read(&shaderStage)) {
+            return false;
+        }
+
+        (*materialPushConstants)[i].name = constantName;
+        (*materialPushConstants)[i].type = static_cast<backend::ConstantType>(constantType);
+        (*materialPushConstants)[i].stage = static_cast<backend::ShaderStage>(shaderStage);
+    }
     return true;
 }
 

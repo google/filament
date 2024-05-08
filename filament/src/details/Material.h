@@ -253,7 +253,7 @@ private:
     void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
             MaterialParser const* parser);
 
-    void processPushConstants(FEngine& engine, Material::Builder const& builder);
+    void processPushConstants(FEngine& engine, MaterialParser const* parser);
 
     void processDepthVariants(FEngine& engine, MaterialParser const* parser);
 

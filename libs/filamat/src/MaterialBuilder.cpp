@@ -20,6 +20,7 @@
 
 #include "Includes.h"
 #include "MaterialVariants.h"
+#include "PushConstantDefinitions.h"
 #include "shaders/SibGenerator.h"
 #include "shaders/UibGenerator.h"
 
@@ -173,6 +174,8 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
 MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
     std::fill_n(mProperties, MATERIAL_PROPERTIES_COUNT, false);
     mShaderModels.reset();
+
+    initPushConstants();
 }
 
 MaterialBuilder::~MaterialBuilder() = default;
@@ -660,6 +663,19 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.userMaterialHasCustomDepth = false;
 }
 
+void MaterialBuilder::initPushConstants() noexcept {
+    mPushConstants.reserve(PUSH_CONSTANTS.size());
+    mPushConstants.resize(PUSH_CONSTANTS.size());
+    std::transform(PUSH_CONSTANTS.cbegin(), PUSH_CONSTANTS.cend(), mPushConstants.begin(),
+            [](filament::MaterialPushConstant const& inConstant) -> PushConstant {
+                return {
+                    .name = inConstant.name,
+                    .type = inConstant.type,
+                    .stage = inConstant.stage,
+                };
+            });
+}
+
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
         MaterialBuilder::PropertyList& allProperties,
         CodeGenParams const& semanticCodeGenParams) noexcept {
@@ -828,7 +844,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     BlobDictionary spirvDictionary;
     // End: must be protected by lock
 
-    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants,
+    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants, mPushConstants,
             mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
@@ -1358,7 +1374,7 @@ bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
 std::string MaterialBuilder::peek(backend::ShaderStage stage,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mConstants,
+    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mConstants, mPushConstants,
             mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
@@ -1511,6 +1527,14 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     std::transform(mConstants.begin(), mConstants.end(), constantsEntry.begin(),
             [](Constant const& c) { return MaterialConstant(c.name.c_str(), c.type); });
     container.push<MaterialConstantParametersChunk>(std::move(constantsEntry));
+
+    utils::FixedCapacityVector<MaterialPushConstant> pushConstantsEntry(mPushConstants.size());
+    std::transform(mPushConstants.begin(), mPushConstants.end(), pushConstantsEntry.begin(),
+            [](PushConstant const& c) {
+                return MaterialPushConstant(c.name.c_str(), c.type, c.stage);
+            });
+    container.push<MaterialPushConstantParametersChunk>(
+            utils::CString(PUSH_CONSTANT_STRUCT_VAR_NAME), std::move(pushConstantsEntry));
 
     // TODO: should we write the SSBO info? this would only be needed if we wanted to provide
     //       an interface to set [get?] values in the buffer. But we can do that easily

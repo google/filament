@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Slice.h>
 
 #include <array>
 #include <limits>
@@ -39,21 +40,8 @@ namespace filament::backend {
 class OpenGLDriver;
 
 struct PushConstantBundle {
-    uint8_t fragmentStageOffset = 0;
-    utils::FixedCapacityVector<std::pair<GLint, ConstantType>> const* constants = nullptr;
-
-    inline std::pair<GLint, ConstantType> const& get(ShaderStage stage, uint8_t index) const {
-        assert_invariant(stage == ShaderStage::VERTEX ||stage == ShaderStage::FRAGMENT);
-
-        // Either we're asking for a fragment stage constant or we're asking for a vertex stage
-        // constant and the number of vertex stage constants is greater than 0.
-        assert_invariant(stage == ShaderStage::FRAGMENT || fragmentStageOffset > 0);
-
-        uint8_t const offset = (stage == ShaderStage::VERTEX ? 0 : fragmentStageOffset) + index;
-
-        assert_invariant(offset < constants->size());
-        return (*constants)[offset];
-    }
+    utils::Slice<std::pair<GLint, ConstantType>> vertexConstants;
+    utils::Slice<std::pair<GLint, ConstantType>> fragmentConstants;
 };
 
 class OpenGLProgram : public HwProgram {
@@ -97,9 +85,10 @@ public:
     } gl;                                               // 4 bytes
 
     PushConstantBundle getPushConstants() {
+        auto fragBegin = mPushConstants.begin() + mPushConstantFragmentStageOffset;
         return {
-            .fragmentStageOffset = mPushConstantFragmentStageOffset,
-            .constants = &mPushConstants,
+            .vertexConstants = utils::Slice(mPushConstants.begin(), fragBegin),
+            .fragmentConstants = utils::Slice(fragBegin, mPushConstants.end()),
         };
     }
 
@@ -137,8 +126,9 @@ private:
     };
     UniformsRecord const* mUniformsRecords = nullptr;               // 8 bytes
 
-    // Store [location, type] pairs.
-    utils::FixedCapacityVector<std::pair<GLint, ConstantType>> mPushConstants;  // 16 bytes
+    // Note that this can be replaced with a raw pointer and an uint8_t (for size) to reduce the
+    // size of the container to 9 bytes if there is a need in the future.
+    utils::FixedCapacityVector<std::pair<GLint, ConstantType>> mPushConstants;// 16 bytes
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.

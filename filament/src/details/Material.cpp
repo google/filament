@@ -25,6 +25,7 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/PushConstantInfo.h>
 #include <private/filament/Variant.h>
 
 #include <filament/Material.h>
@@ -297,7 +298,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
-    processPushConstants(engine, builder);
+    processPushConstants(engine, parser);
     processDepthVariants(engine, parser);
 
     // we can only initialize the default instance once we're initialized ourselves
@@ -931,29 +932,40 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
     }
 }
 
-void FMaterial::processPushConstants(FEngine& engine, Material::Builder const& builder) {
-    // TODO: for testing and illustrating push constants. To be removed.
-    // auto& vertexPushConstant = mPushConstants[(uint8_t) ShaderStage::VERTEX];
-    // vertexPushConstant.reserve(PUSH_CONSTANTS.size());
-    // vertexPushConstant.resize(PUSH_CONSTANTS.size());
+void FMaterial::processPushConstants(FEngine& engine, MaterialParser const* parser) {
+    utils::FixedCapacityVector<backend::Program::PushConstant>& vertexConstants =
+            mPushConstants[(uint8_t) ShaderStage::VERTEX];
+    utils::FixedCapacityVector<backend::Program::PushConstant>& fragmentConstants =
+            mPushConstants[(uint8_t) ShaderStage::FRAGMENT];
 
-    // constexpr size_t PREFIX_LEN = sizeof(PUSH_CONSTANT_STRUCT_VAR_NAME);
-    // constexpr size_t MAX_VAR_LEN = 30;
-    // constexpr size_t TOTAL_NAME_LEN =
-    //         PREFIX_LEN + MAX_VAR_LEN + 2; // additional chars for '.' and for the ending 0.
-    // char buf[TOTAL_NAME_LEN];
+    CString structVarName;
+    utils::FixedCapacityVector<MaterialPushConstant> pushConstants;
+    parser->getPushConstants(&structVarName, &pushConstants);
 
-    // std::transform(PUSH_CONSTANTS.cbegin(), PUSH_CONSTANTS.cend(), vertexPushConstant.begin(),
-    //         [&buf](std::pair<char const*, ConstantType> const& constant)
-    //                 -> backend::Program::PushConstant {
-    //             assert_invariant(strlen(constant.first) <= MAX_VAR_LEN);
-    //             // The following will be pass to Program, where the "name" is needed for GL to
-    //             // identify the location of the uniform. We prepend the struct name here to save
-    //             // some work in the backend.
-    //             snprintf(buf, TOTAL_NAME_LEN, "%s.%s", PUSH_CONSTANT_STRUCT_VAR_NAME,
-    //                     constant.first);
-    //             return { utils::CString(buf), constant.second };
-    //         });
+    vertexConstants.reserve(pushConstants.size());
+    fragmentConstants.reserve(pushConstants.size());
+
+    constexpr size_t MAX_NAME_LEN = 60;
+    char buf[MAX_NAME_LEN];
+    uint8_t vertexCount = 0, fragmentCount = 0;
+
+    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
+            [&](MaterialPushConstant const& constant) {
+                snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
+
+                switch (constant.stage) {
+                    case ShaderStage::VERTEX:
+                        vertexConstants.push_back({utils::CString(buf), constant.type});
+                        vertexCount++;
+                        break;
+                    case ShaderStage::FRAGMENT:
+                        fragmentConstants.push_back({utils::CString(buf), constant.type});
+                        fragmentCount++;
+                        break;
+                    case ShaderStage::COMPUTE:
+                        break;
+                }
+            });
 }
 
 void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {

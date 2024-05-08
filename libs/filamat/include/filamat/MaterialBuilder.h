@@ -245,6 +245,7 @@ public:
     using CullingMode = filament::backend::CullingMode;
     using FeatureLevel = filament::backend::FeatureLevel;
     using StereoscopicType = filament::backend::StereoscopicType;
+    using ShaderStage = filament::backend::ShaderStage;
 
     enum class VariableQualifier : uint8_t {
         OUT
@@ -692,6 +693,12 @@ public:
         } defaultValue;
     };
 
+    struct PushConstant {
+        utils::CString name;
+        ConstantType type;
+        ShaderStage stage;
+    };
+
     static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
     using Property = filament::Property;
 
@@ -720,6 +727,7 @@ public:
     using SubpassList = Parameter[MAX_SUBPASS_COUNT];
     using BufferList = std::vector<std::unique_ptr<filament::BufferInterfaceBlock>>;
     using ConstantList = std::vector<Constant>;
+    using PushConstantList = std::vector<PushConstant>;
 
     // returns the number of parameters declared in this material
     uint8_t getParameterCount() const noexcept { return mParameterCount; }
@@ -762,6 +770,10 @@ private:
     static const AttributeDatabase sAttributeDatabase;
 
     void prepareToBuild(MaterialInfo& info) noexcept;
+
+    // Initialize internal push constants that will both be written to the shaders and material
+    // chunks (like user-defined spec constants).
+    void initPushConstants() noexcept;
 
     // Return true if the shader is syntactically and semantically valid.
     // This method finds all the properties defined in the fragment and
@@ -829,6 +841,7 @@ private:
     PropertyList mProperties;
     ParameterList mParameters;
     ConstantList mConstants;
+    PushConstantList mPushConstants;
     SubpassList mSubpasses;
     VariableList mVariables;
     OutputList mOutputs;
