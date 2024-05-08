@@ -39,9 +39,6 @@ public:
     static constexpr size_t SHADER_TYPE_COUNT = 3;
     static constexpr size_t UNIFORM_BINDING_COUNT = CONFIG_UNIFORM_BINDING_COUNT;
     static constexpr size_t SAMPLER_BINDING_COUNT = CONFIG_SAMPLER_BINDING_COUNT;
-
-    static constexpr char const* PUSH_CONSTANT_STRUCT_VAR_NAME = "pushConstants";
-
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
         uint32_t binding = 0;       // binding point of the sampler in the shader

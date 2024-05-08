@@ -378,8 +378,7 @@ private:
     GLSwapChain* mCurrentDrawSwapChain = nullptr;
     bool mRec709OutputColorspace = false;
 
-    utils::FixedCapacityVector<PushConstantBundle> const* mCurrentPushConstants =
-            nullptr;
+    PushConstantBundle* mCurrentPushConstants = nullptr;
 };
 
 // ------------------------------------------------------------------------------------------------

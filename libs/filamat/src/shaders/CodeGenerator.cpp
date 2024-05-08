@@ -18,10 +18,8 @@
 
 #include "MaterialInfo.h"
 
-#include "backend/Program.h"
 #include "generated/shaders.h"
 #include "private/filament/EngineEnums.h"
-#include "utils/Panic.h"
 
 #include <utils/sstream.h>
 
@@ -59,18 +57,16 @@ io::sstream& generatePushConstantImpl(size_t const layoutLocation, bool const ou
         out << "struct " << STRUCT_NAME << " {\n";
     }
 
-    for (size_t i = 0; i < PUSH_CONSTANT_NAMES.size(); ++i) {
-        char const* type = getType(PUSH_CONSTANT_TYPES[i]);
-        out << type << " " << PUSH_CONSTANT_NAMES[i] << ";\n";
-        i++;
+    for (auto const& [name, type] : PUSH_CONSTANTS) {
+        out << getType(type) << " " << name << ";\n";
     }
 
     if (outputSpirv) {
-        out << "} " << backend::Program::PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
     } else {
         out << "};\n";
         out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
-            << " " << backend::Program::PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
     }
     return out;
 }

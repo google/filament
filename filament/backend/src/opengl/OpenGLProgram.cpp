@@ -30,7 +30,6 @@
 #include <utils/Systrace.h>
 
 #include <array>
-#include <sstream>
 #include <string_view>
 #include <utility>
 #include <new>
@@ -48,14 +47,13 @@ struct OpenGLProgram::LazyInitializationData {
     Program::SamplerGroupInfo samplerGroupInfo;
     std::array<Program::UniformInfo, Program::UNIFORM_BINDING_COUNT> bindingUniformInfo;
     utils::FixedCapacityVector<Program::PushConstant> pushConstants;
+    uint8_t pushConstantFragmentStageOffset;
 };
-
 
 OpenGLProgram::OpenGLProgram() noexcept = default;
 
 OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
         : HwProgram(std::move(program.getName())) {
-
     auto* const lazyInitializationData = new(std::nothrow) LazyInitializationData();
     lazyInitializationData->samplerGroupInfo = std::move(program.getSamplerGroupInfo());
     if (UTILS_UNLIKELY(gld.getContext().isES2())) {
@@ -64,10 +62,29 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
         lazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     }
 
-    // We only keep the push constants for vertex stage because we'd like to keep this class a
-    // certain size.
-    lazyInitializationData->pushConstants =
-            std::move(program.getPushConstants(ShaderStage::VERTEX));
+    lazyInitializationData->pushConstantFragmentStageOffset = 0;
+
+    auto& vertexConstants = program.getPushConstants(ShaderStage::VERTEX);
+    auto& fragmentConstants = program.getPushConstants(ShaderStage::FRAGMENT);
+
+    size_t const totalConstantCount = vertexConstants.size() + fragmentConstants.size();
+    if (totalConstantCount > 0) {
+        auto& allConstants = lazyInitializationData->pushConstants;
+        size_t const numVertexConstants = vertexConstants.size();
+
+        if (numVertexConstants > 0) {
+            allConstants = std::move(vertexConstants);
+            lazyInitializationData->pushConstantFragmentStageOffset = numVertexConstants;
+        }
+
+        allConstants.reserve(totalConstantCount);
+        allConstants.resize(totalConstantCount);
+
+        std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(),
+                [&allConstants](Program::PushConstant const& constant) {
+                    allConstants.push_back(constant);
+                });
+    }
 
     ShaderCompilerService& compiler = gld.getShaderCompilerService();
     mToken = compiler.createProgram(name, std::move(program));
@@ -96,7 +113,6 @@ OpenGLProgram::~OpenGLProgram() noexcept {
 }
 
 void OpenGLProgram::initialize(OpenGLDriver& gld) {
-
     SYSTRACE_CALL();
 
     assert_invariant(gl.program == 0);
@@ -212,25 +228,16 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     mUsedBindingsCount = usedBindingCount;
 
     // Push constant initialization
-    auto& constants = lazyInitializationData.pushConstants;
+    mPushConstantFragmentStageOffset = lazyInitializationData.pushConstantFragmentStageOffset;
+    auto const& constants = lazyInitializationData.pushConstants;
     if (!constants.empty()) {
-        mVertexPushConstants.reserve(constants.size());
-        mVertexPushConstants.resize(constants.size());
-        // The constants are defined in a struct of name PUSH_CONSTANT_STRUCT_VAR_NAME. We prepend
-        // the prefix here to avoid string manipulation in a the draw loop.
-        std::stringbuf constantPrefix;
-        constantPrefix.sputn(Program::PUSH_CONSTANT_STRUCT_VAR_NAME,
-                strlen(Program::PUSH_CONSTANT_STRUCT_VAR_NAME));
-        constantPrefix.sputn(".", 1);
+        mPushConstants.reserve(constants.size());
+        mPushConstants.resize(constants.size());
 
-        std::transform(constants.begin(), constants.end(), mVertexPushConstants.begin(),
-                [&constantPrefix, program](Program::PushConstant& constant) -> PushConstantBundle {
-                    constant.name.insert(0, utils::CString(constantPrefix.str().c_str()));
-                    auto const loc = glGetUniformLocation(program, constant.name.c_str());
-                    return {
-                        .location = loc,
-                        .type = constant.type,
-                    };
+        std::transform(constants.cbegin(), constants.cend(), mPushConstants.begin(),
+                [program](Program::PushConstant const& constant) -> std::pair<GLint, ConstantType> {
+                    GLint const loc = glGetUniformLocation(program, constant.name.c_str());
+                    return {loc, constant.type};
                 });
     }
 }

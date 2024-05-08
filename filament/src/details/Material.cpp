@@ -934,12 +934,26 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
 void FMaterial::processPushConstants(FEngine& engine, Material::Builder const& builder) {
     // TODO: for testing and illustrating push constants. To be removed.
     // auto& vertexPushConstant = mPushConstants[(uint8_t) ShaderStage::VERTEX];
-    // vertexPushConstant.reserve(PUSH_CONSTANT_NAMES.size());
-    // assert_invariant(PUSH_CONSTANT_NAMES.size() == PUSH_CONSTANT_TYPES.size());
-    // for (size_t i = 0; i < PUSH_CONSTANT_NAMES.size(); i++) {
-    //     vertexPushConstant.push_back(
-    //             { utils::CString(PUSH_CONSTANT_NAMES[i]), PUSH_CONSTANT_TYPES[i] });
-    // }
+    // vertexPushConstant.reserve(PUSH_CONSTANTS.size());
+    // vertexPushConstant.resize(PUSH_CONSTANTS.size());
+
+    // constexpr size_t PREFIX_LEN = sizeof(PUSH_CONSTANT_STRUCT_VAR_NAME);
+    // constexpr size_t MAX_VAR_LEN = 30;
+    // constexpr size_t TOTAL_NAME_LEN =
+    //         PREFIX_LEN + MAX_VAR_LEN + 2; // additional chars for '.' and for the ending 0.
+    // char buf[TOTAL_NAME_LEN];
+
+    // std::transform(PUSH_CONSTANTS.cbegin(), PUSH_CONSTANTS.cend(), vertexPushConstant.begin(),
+    //         [&buf](std::pair<char const*, ConstantType> const& constant)
+    //                 -> backend::Program::PushConstant {
+    //             assert_invariant(strlen(constant.first) <= MAX_VAR_LEN);
+    //             // The following will be pass to Program, where the "name" is needed for GL to
+    //             // identify the location of the uniform. We prepend the struct name here to save
+    //             // some work in the backend.
+    //             snprintf(buf, TOTAL_NAME_LEN, "%s.%s", PUSH_CONSTANT_STRUCT_VAR_NAME,
+    //                     constant.first);
+    //             return { utils::CString(buf), constant.second };
+    //         });
 }
 
 void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {

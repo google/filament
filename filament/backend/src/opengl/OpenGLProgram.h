@@ -38,11 +38,22 @@ namespace filament::backend {
 
 class OpenGLDriver;
 
-// Holds information needed to write to push constants. This struct cannot nest within OpenGLProgram
-// due to the need for forward declaration.
 struct PushConstantBundle {
-    GLint location = -1;
-    ConstantType type;
+    uint8_t fragmentStageOffset = 0;
+    utils::FixedCapacityVector<std::pair<GLint, ConstantType>> const* constants = nullptr;
+
+    inline std::pair<GLint, ConstantType> const& get(ShaderStage stage, uint8_t index) const {
+        assert_invariant(stage == ShaderStage::VERTEX ||stage == ShaderStage::FRAGMENT);
+
+        // Either we're asking for a fragment stage constant or we're asking for a vertex stage
+        // constant and the number of vertex stage constants is greater than 0.
+        assert_invariant(stage == ShaderStage::FRAGMENT || fragmentStageOffset > 0);
+
+        uint8_t const offset = (stage == ShaderStage::VERTEX ? 0 : fragmentStageOffset) + index;
+
+        assert_invariant(offset < constants->size());
+        return (*constants)[offset];
+    }
 };
 
 class OpenGLProgram : public HwProgram {
@@ -85,11 +96,11 @@ public:
         GLuint program = 0;
     } gl;                                               // 4 bytes
 
-    utils::FixedCapacityVector<PushConstantBundle> const* getPushConstants() {
-        if (mVertexPushConstants.empty()) {
-            return nullptr;
-        }
-        return &mVertexPushConstants;
+    PushConstantBundle getPushConstants() {
+        return {
+            .fragmentStageOffset = mPushConstantFragmentStageOffset,
+            .constants = &mPushConstants,
+        };
     }
 
 private:
@@ -109,10 +120,14 @@ private:
     ShaderCompilerService::program_token_t mToken{};    // 16 bytes
 
     uint8_t mUsedBindingsCount = 0u;                    // 1 byte
-    UTILS_UNUSED uint8_t padding[3] = {};               // 3 bytes
+    UTILS_UNUSED uint8_t padding[2] = {};               // 2 byte
+
+    // Push constant array offset for fragment stage constants.
+    uint8_t mPushConstantFragmentStageOffset = 0u;      // 1 byte
 
     // only needed for ES2
-    GLint mRec709Location = -1; // 4 bytes
+    GLint mRec709Location = -1;                         // 4 bytes
+
     using LocationInfo = utils::FixedCapacityVector<GLint>;
     struct UniformsRecord {
         Program::UniformInfo uniforms;
@@ -120,13 +135,14 @@ private:
         mutable GLuint id = 0;
         mutable uint16_t age = std::numeric_limits<uint16_t>::max();
     };
-    UniformsRecord const* mUniformsRecords = nullptr;
+    UniformsRecord const* mUniformsRecords = nullptr;               // 8 bytes
 
-    utils::FixedCapacityVector<PushConstantBundle> mVertexPushConstants;
+    // Store [location, type] pairs.
+    utils::FixedCapacityVector<std::pair<GLint, ConstantType>> mPushConstants;  // 16 bytes
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
-static_assert(sizeof(OpenGLProgram) <= 64); // currently 54 bytes
+static_assert(sizeof(OpenGLProgram) <= 64); // currently 64 bytes
 
 } // namespace filament::backend
 
