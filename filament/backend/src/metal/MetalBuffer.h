@@ -38,7 +38,7 @@ public:
     ScopedAllocationTimer(const char* name) : mBeginning(clock_t::now()), mName(name) {}
     ~ScopedAllocationTimer() {
         using namespace std::literals::chrono_literals;
-        static constexpr auto LONG_TIME_THRESHOLD = 10s;
+        static constexpr std::chrono::seconds LONG_TIME_THRESHOLD = 10s;
 
         auto end = clock_t::now();
         std::chrono::duration<double, std::micro> allocationTimeMicroseconds = end - mBeginning;
@@ -57,7 +57,7 @@ public:
     static void setPlatform(MetalPlatform* p) { platform = p; }
 
 private:
-    typedef std::chrono::high_resolution_clock clock_t;
+    typedef std::chrono::steady_clock clock_t;
 
     static MetalPlatform* platform;
 
