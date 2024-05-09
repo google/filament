@@ -269,6 +269,10 @@ void OpenGLDriver::terminate() {
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
 
+    if (mCurrentPushConstants) {
+        delete mCurrentPushConstants;
+    }
+
     mContext.terminate();
 
     mPlatform.terminate();
@@ -287,6 +291,42 @@ void OpenGLDriver::resetState(int) {
 
 void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
     mContext.bindSampler(unit, sampler);
+}
+
+void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+    assert_invariant(mCurrentPushConstants &&
+                     "Calling setPushConstant() before binding a pipeline");
+
+    assert_invariant(stage == ShaderStage::VERTEX || stage == ShaderStage::FRAGMENT);
+    utils::Slice<std::pair<GLint, ConstantType>> constants;
+    if (stage == ShaderStage::VERTEX) {
+        constants = mCurrentPushConstants->vertexConstants;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        constants = mCurrentPushConstants->fragmentConstants;
+    }
+
+    assert_invariant(index < constants.size());
+    auto const& [location, type] = constants[index];
+
+    // This push constant wasn't found in the shader. It's ok to return without error-ing here.
+    if (location < 0) {
+        return;
+    }
+
+    if (std::holds_alternative<bool>(value)) {
+        assert_invariant(type == ConstantType::BOOL);
+        bool const bval = std::get<bool>(value);
+        glUniform1i(location, bval ? 1 : 0);
+    } else if (std::holds_alternative<float>(value)) {
+        assert_invariant(type == ConstantType::FLOAT);
+        float const fval = std::get<float>(value);
+        glUniform1f(location, fval);
+    } else {
+        assert_invariant(type == ConstantType::INT);
+        int const ival = std::get<int>(value);
+        glUniform1i(location, ival);
+    }
 }
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
@@ -3808,6 +3848,12 @@ void OpenGLDriver::bindPipeline(PipelineState state) {
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(state.program);
     mValidProgram = useProgram(p);
+
+    if (!mCurrentPushConstants) {
+        mCurrentPushConstants = new (std::nothrow) PushConstantBundle{p->getPushConstants()};
+    } else {
+        (*mCurrentPushConstants) = p->getPushConstants();
+    }
 }
 
 void OpenGLDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {

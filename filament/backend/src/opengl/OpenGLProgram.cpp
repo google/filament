@@ -46,6 +46,8 @@ struct OpenGLProgram::LazyInitializationData {
     Program::UniformBlockInfo uniformBlockInfo;
     Program::SamplerGroupInfo samplerGroupInfo;
     std::array<Program::UniformInfo, Program::UNIFORM_BINDING_COUNT> bindingUniformInfo;
+    utils::FixedCapacityVector<Program::PushConstant> vertexPushConstants;
+    utils::FixedCapacityVector<Program::PushConstant> fragmentPushConstants;
 };
 
 
@@ -53,7 +55,6 @@ OpenGLProgram::OpenGLProgram() noexcept = default;
 
 OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
         : HwProgram(std::move(program.getName())) {
-
     auto* const lazyInitializationData = new(std::nothrow) LazyInitializationData();
     lazyInitializationData->samplerGroupInfo = std::move(program.getSamplerGroupInfo());
     if (UTILS_UNLIKELY(gld.getContext().isES2())) {
@@ -61,6 +62,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
     } else {
         lazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     }
+    lazyInitializationData->vertexPushConstants = std::move(program.getPushConstants(ShaderStage::VERTEX));
+    lazyInitializationData->fragmentPushConstants = std::move(program.getPushConstants(ShaderStage::FRAGMENT));
 
     ShaderCompilerService& compiler = gld.getShaderCompilerService();
     mToken = compiler.createProgram(name, std::move(program));
@@ -203,6 +206,21 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         }
     }
     mUsedBindingsCount = usedBindingCount;
+
+    auto& vertexConstants = lazyInitializationData.vertexPushConstants;
+    auto& fragmentConstants = lazyInitializationData.fragmentPushConstants;
+
+    size_t const totalConstantCount = vertexConstants.size() + fragmentConstants.size();
+    if (totalConstantCount > 0) {
+        mPushConstants.reserve(totalConstantCount);
+        mPushConstantFragmentStageOffset = vertexConstants.size();
+        auto const transformAndAdd = [&](Program::PushConstant const& constant) {
+            GLint const loc = glGetUniformLocation(program, constant.name.c_str());
+            mPushConstants.push_back({loc, constant.type});
+        };
+        std::for_each(vertexConstants.cbegin(), vertexConstants.cend(), transformAndAdd);
+        std::for_each(fragmentConstants.cbegin(), fragmentConstants.cend(), transformAndAdd);
+    }
 }
 
 void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {

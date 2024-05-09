@@ -25,6 +25,7 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/PushConstantInfo.h>
 #include <private/filament/Variant.h>
 
 #include <filament/Material.h>
@@ -57,7 +58,6 @@
 #include <array>
 #include <iterator>
 #include <memory>
-#include <mutex>
 #include <new>
 #include <optional>
 #include <string>
@@ -298,6 +298,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
+    processPushConstants(engine, parser);
     processDepthVariants(engine, parser);
 
     // we can only initialize the default instance once we're initialized ourselves
@@ -575,6 +576,9 @@ Program FMaterial::getProgramWithVariants(
     }
 
     program.specializationConstants(mSpecializationConstants);
+
+    program.pushConstants(ShaderStage::VERTEX, mPushConstants[(uint8_t) ShaderStage::VERTEX]);
+    program.pushConstants(ShaderStage::FRAGMENT, mPushConstants[(uint8_t) ShaderStage::FRAGMENT]);
 
     program.cacheId(utils::hash::combine(size_t(mCacheId), variant.key));
 
@@ -926,6 +930,42 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
         uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
         mSpecializationConstants.push_back({ index, value });
     }
+}
+
+void FMaterial::processPushConstants(FEngine& engine, MaterialParser const* parser) {
+    utils::FixedCapacityVector<backend::Program::PushConstant>& vertexConstants =
+            mPushConstants[(uint8_t) ShaderStage::VERTEX];
+    utils::FixedCapacityVector<backend::Program::PushConstant>& fragmentConstants =
+            mPushConstants[(uint8_t) ShaderStage::FRAGMENT];
+
+    CString structVarName;
+    utils::FixedCapacityVector<MaterialPushConstant> pushConstants;
+    parser->getPushConstants(&structVarName, &pushConstants);
+
+    vertexConstants.reserve(pushConstants.size());
+    fragmentConstants.reserve(pushConstants.size());
+
+    constexpr size_t MAX_NAME_LEN = 60;
+    char buf[MAX_NAME_LEN];
+    uint8_t vertexCount = 0, fragmentCount = 0;
+
+    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
+            [&](MaterialPushConstant const& constant) {
+                snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
+
+                switch (constant.stage) {
+                    case ShaderStage::VERTEX:
+                        vertexConstants.push_back({utils::CString(buf), constant.type});
+                        vertexCount++;
+                        break;
+                    case ShaderStage::FRAGMENT:
+                        fragmentConstants.push_back({utils::CString(buf), constant.type});
+                        fragmentCount++;
+                        break;
+                    case ShaderStage::COMPUTE:
+                        break;
+                }
+            });
 }
 
 void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {

@@ -22,6 +22,7 @@
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/ConstantInfo.h>
+#include <private/filament/PushConstantInfo.h>
 
 #include <utility>
 
@@ -99,6 +100,24 @@ void MaterialConstantParametersChunk::flatten(Flattener& f) {
     for (const auto& constant : mConstants) {
         f.writeString(constant.name.c_str());
         f.writeUint8(static_cast<uint8_t>(constant.type));
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialPushConstantParametersChunk::MaterialPushConstantParametersChunk(
+        CString const& structVarName, utils::FixedCapacityVector<MaterialPushConstant> constants)
+    : Chunk(ChunkType::MaterialPushConstants),
+      mStructVarName(structVarName),
+      mConstants(std::move(constants)) {}
+
+void MaterialPushConstantParametersChunk::flatten(Flattener& f) {
+    f.writeString(mStructVarName.c_str());
+    f.writeUint64(mConstants.size());
+    for (const auto& constant: mConstants) {
+        f.writeString(constant.name.c_str());
+        f.writeUint8(static_cast<uint8_t>(constant.type));
+        f.writeUint8(static_cast<uint8_t>(constant.stage));
     }
 }
 

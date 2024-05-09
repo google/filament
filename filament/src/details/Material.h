@@ -253,6 +253,8 @@ private:
     void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
             MaterialParser const* parser);
 
+    void processPushConstants(FEngine& engine, MaterialParser const* parser);
+
     void processDepthVariants(FEngine& engine, MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
@@ -317,6 +319,11 @@ private:
     std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
     // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+
+    // current push constants for the HwProgram
+    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
+            backend::Program::SHADER_TYPE_COUNT>
+            mPushConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

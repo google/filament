@@ -1252,6 +1252,9 @@ void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     mContext->samplerBindings[index] = sb;
 }
 
+void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {}
+
 void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
 
 }

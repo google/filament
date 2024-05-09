@@ -434,6 +434,11 @@ DECL_DRIVER_API_N(bindSamplers,
         uint32_t, index,
         backend::SamplerGroupHandle, sbh)
 
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
+
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string,
         uint32_t, len = 0)

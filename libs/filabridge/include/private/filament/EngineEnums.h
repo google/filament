@@ -20,6 +20,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -69,6 +70,10 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP = 6,
     CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
+};
+
+enum class PushConstantIds {
+    MORPHING_BUFFER_OFFSET = 0,
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
