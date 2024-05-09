@@ -173,6 +173,10 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
         PANIC_LOG("OpenGL ES 2.0 minimum needed (current %d.%d)", major, minor);
         goto cleanup;
     }
+    if (UTILS_UNLIKELY(driverConfig.forceGLES2Context)) {
+        major = 2;
+        minor = 0;
+    }
 #else
     // we require GL 4.1 headers and minimum version
     if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
@@ -203,7 +207,7 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
-          mContext(mPlatform),
+          mContext(mPlatform, driverConfig),
           mShaderCompilerService(*this),
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
@@ -3422,7 +3426,9 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
 
 void OpenGLDriver::tick(int) {
     DEBUG_MARKER()
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     executeGpuCommandsCompleteOps();
+#endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
 }
@@ -3694,7 +3700,7 @@ void OpenGLDriver::blit(
         case SamplerType::SAMPLER_EXTERNAL:
             break;
     }
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
 
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, fbo[1]);
     switch (s->target) {
@@ -3720,7 +3726,7 @@ void OpenGLDriver::blit(
         case SamplerType::SAMPLER_EXTERNAL:
             break;
     }
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
 
     gl.disable(GL_SCISSOR_TEST);
     glBlitFramebuffer(

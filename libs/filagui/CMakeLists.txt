@@ -33,6 +33,11 @@ endif()
 set(MATERIAL_SRCS
         src/materials/uiBlit.mat)
 
+if (ANDROID)
+    list(APPEND MATERIAL_SRCS
+            src/materials/uiBlitExternal.mat)
+endif()
+
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
 foreach (mat_src ${MATERIAL_SRCS})

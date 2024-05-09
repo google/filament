@@ -91,7 +91,8 @@ public:
 
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
-    explicit OpenGLContext(OpenGLPlatform& platform) noexcept;
+    explicit OpenGLContext(OpenGLPlatform& platform,
+            Platform::DriverConfig const& driverConfig) noexcept;
 
     ~OpenGLContext() noexcept final;
 

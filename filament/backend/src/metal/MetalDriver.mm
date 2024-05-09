@@ -105,6 +105,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
                   driverConfig.disableHandleUseAfterFreeCheck) {
     mContext->driver = this;
 
+    TrackedMetalBuffer::setPlatform(platform);
+    ScopedAllocationTimer::setPlatform(platform);
+
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
 
@@ -198,6 +201,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 }
 
 MetalDriver::~MetalDriver() noexcept {
+    TrackedMetalBuffer::setPlatform(nullptr);
+    ScopedAllocationTimer::setPlatform(nullptr);
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
@@ -219,6 +224,12 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
 #endif
     if (mPlatform.hasDebugUpdateStatFunc()) {
         mPlatform.debugUpdateStat("filament.metal.alive_buffers", TrackedMetalBuffer::getAliveBuffers());
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.generic",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::GENERIC));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.ring",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::RING));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::STAGING));
     }
 }
 

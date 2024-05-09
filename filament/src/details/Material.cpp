@@ -60,7 +60,7 @@
 #include <memory>
 #include <new>
 #include <optional>
-#include <sstream>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -83,18 +83,18 @@ static std::unique_ptr<MaterialParser> createParser(Backend backend,
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
-        std::stringstream languageNames;
+        std::string languageNames;
         for (auto it = languages.begin(); it != languages.end(); ++it) {
-            languageNames << shaderLanguageToString(*it);
+            languageNames.append(shaderLanguageToString(*it));
             if (std::next(it) != languages.end()) {
-                languageNames << ", ";
+                languageNames.append(", ");
             }
         }
 
         ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
                 "the material was not built for any of the %s backend's supported shader "
                 "languages (%s)\n",
-                backendToString(backend), languageNames.str().c_str());
+                backendToString(backend), languageNames.c_str());
     }
 
     if (backend == Backend::NOOP) {

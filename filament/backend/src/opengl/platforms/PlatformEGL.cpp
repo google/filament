@@ -174,7 +174,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     };
 
 #ifdef __ANDROID__
-    bool requestES2Context = false;
+    bool requestES2Context = driverConfig.forceGLES2Context;
     char property[PROP_VALUE_MAX];
     int const length = __system_property_get("debug.filament.es2", property);
     if (length > 0) {
