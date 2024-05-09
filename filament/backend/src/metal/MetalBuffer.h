@@ -65,9 +65,12 @@ private:
     const char* mName;
 };
 
-class TrackedMetalBuffer {
-public:
+#ifndef FILAMENT_METAL_BUFFER_TRACKING
+#define FILAMENT_METAL_BUFFER_TRACKING 0
+#endif
 
+class MetalBufferTracking {
+public:
     static constexpr size_t EXCESS_BUFFER_COUNT = 30000;
 
     enum class Type {
@@ -91,66 +94,58 @@ public:
         }
     }
 
-    TrackedMetalBuffer() noexcept : mBuffer(nil) {}
-    TrackedMetalBuffer(nullptr_t) noexcept : mBuffer(nil) {}
-    TrackedMetalBuffer(id<MTLBuffer> buffer, Type type) : mBuffer(buffer), mType(type) {
+#if FILAMENT_METAL_BUFFER_TRACKING
+    static void initialize() {
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            for (size_t i = 0; i < TypeCount; i++) {
+                aliveBuffers[i] = [NSHashTable weakObjectsHashTable];
+            }
+        });
+    }
+
+    static void setPlatform(MetalPlatform* p) { platform = p; }
+
+    static id<MTLBuffer> track(id<MTLBuffer> buffer, Type type) {
         assert_invariant(type != Type::NONE);
-        if (buffer) {
-            aliveBuffers[toIndex(type)]++;
-            mType = type;
-            if (getAliveBuffers() >= EXCESS_BUFFER_COUNT) {
-                if (platform && platform->hasDebugUpdateStatFunc()) {
-                    platform->debugUpdateStat("filament.metal.excess_buffers_allocated",
-                            TrackedMetalBuffer::getAliveBuffers());
-                }
+        if (UTILS_UNLIKELY(getAliveBuffers() >= EXCESS_BUFFER_COUNT)) {
+            if (platform && platform->hasDebugUpdateStatFunc()) {
+                platform->debugUpdateStat("filament.metal.excess_buffers_allocated",
+                        MetalBufferTracking::getAliveBuffers());
             }
         }
+        [aliveBuffers[toIndex(type)] addObject:buffer];
+        return buffer;
     }
-
-    ~TrackedMetalBuffer() {
-        if (mBuffer) {
-            assert_invariant(mType != Type::NONE);
-            aliveBuffers[toIndex(mType)]--;
-        }
-    }
-
-    TrackedMetalBuffer(TrackedMetalBuffer&&) = delete;
-    TrackedMetalBuffer(TrackedMetalBuffer const&) = delete;
-    TrackedMetalBuffer& operator=(TrackedMetalBuffer const&) = delete;
-
-    TrackedMetalBuffer& operator=(TrackedMetalBuffer&& rhs) noexcept {
-        swap(rhs);
-        return *this;
-    }
-
-    id<MTLBuffer> get() const noexcept { return mBuffer; }
-    operator bool() const noexcept { return bool(mBuffer); }
 
     static uint64_t getAliveBuffers() {
         uint64_t sum = 0;
-        for (const auto& v : aliveBuffers) {
-            sum += v;
+        for (size_t i = 1; i < TypeCount; i++) {
+            sum += getAliveBuffers(static_cast<Type>(i));
         }
         return sum;
     }
 
     static uint64_t getAliveBuffers(Type type) {
         assert_invariant(type != Type::NONE);
-        return aliveBuffers[toIndex(type)];
+        NSHashTable* hashTable = aliveBuffers[toIndex(type)];
+        // Caution! We can't simply use hashTable.count here, which is inaccurate.
+        // See http://cocoamine.net/blog/2013/12/13/nsmaptable-and-zeroing-weak-references/
+        return hashTable.objectEnumerator.allObjects.count;
     }
-    static void setPlatform(MetalPlatform* p) { platform = p; }
+#else
+    static void initialize() {}
+    static void setPlatform(MetalPlatform* p) {}
+    static id<MTLBuffer> track(id<MTLBuffer> buffer, Type type) { return buffer; }
+    static uint64_t getAliveBuffers() { return 0; }
+    static uint64_t getAliveBuffers(Type type) { return 0; }
+#endif
 
 private:
-    void swap(TrackedMetalBuffer& other) noexcept {
-        std::swap(mBuffer, other.mBuffer);
-        std::swap(mType, other.mType);
-    }
-
-    id<MTLBuffer> mBuffer;
-    Type mType = Type::NONE;
-
+#if FILAMENT_METAL_BUFFER_TRACKING
+    static std::array<NSHashTable<id<MTLBuffer>>*, TypeCount> aliveBuffers;
     static MetalPlatform* platform;
-    static std::array<uint64_t, TypeCount> aliveBuffers;
+#endif
 };
 
 class MetalBuffer {
@@ -204,7 +199,7 @@ public:
 
 private:
 
-    TrackedMetalBuffer mBuffer;
+    id<MTLBuffer> mBuffer;
     size_t mBufferSize = 0;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
@@ -253,9 +248,11 @@ public:
           mBufferOptions(options),
           mSlotSizeBytes(computeSlotSize(layout)),
           mSlotCount(slotCount) {
-        ScopedAllocationTimer timer("ring");
-        mBuffer = { [device newBufferWithLength:mSlotSizeBytes * mSlotCount options:mBufferOptions],
-            TrackedMetalBuffer::Type::RING };
+        {
+            ScopedAllocationTimer timer("ring");
+            mBuffer = [device newBufferWithLength:mSlotSizeBytes * mSlotCount options:mBufferOptions];
+        }
+        MetalBufferTracking::track(mBuffer, MetalBufferTracking::Type::RING);
         assert_invariant(mBuffer);
     }
 
@@ -275,11 +272,11 @@ public:
             // finishes executing.
             {
                 ScopedAllocationTimer timer("ring");
-                mAuxBuffer = { [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions],
-                    TrackedMetalBuffer::Type::RING };
+                mAuxBuffer = [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions];
             }
+            MetalBufferTracking::track(mAuxBuffer, MetalBufferTracking::Type::RING);
             assert_invariant(mAuxBuffer);
-            return { mAuxBuffer.get(), 0 };
+            return { mAuxBuffer, 0 };
         }
         mCurrentSlot = (mCurrentSlot + 1) % mSlotCount;
         mOccupiedSlots->fetch_add(1, std::memory_order_relaxed);
@@ -308,9 +305,9 @@ public:
      */
     std::pair<id<MTLBuffer>, NSUInteger> getCurrentAllocation() const {
         if (UTILS_UNLIKELY(mAuxBuffer)) {
-            return { mAuxBuffer.get(), 0 };
+            return { mAuxBuffer, 0 };
         }
-        return { mBuffer.get(), mCurrentSlot * mSlotSizeBytes };
+        return { mBuffer, mCurrentSlot * mSlotSizeBytes };
     }
 
     bool canAccomodateLayout(MTLSizeAndAlign layout) const {
@@ -319,8 +316,8 @@ public:
 
 private:
     id<MTLDevice> mDevice;
-    TrackedMetalBuffer mBuffer;
-    TrackedMetalBuffer mAuxBuffer;
+    id<MTLBuffer> mBuffer;
+    id<MTLBuffer> mAuxBuffer;
 
     MTLResourceOptions mBufferOptions;
 
