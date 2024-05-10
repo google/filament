@@ -894,12 +894,16 @@ void OpenGLContext::unbindTexture(
     // unbind this texture from all the units it might be bound to
     // no need unbind the texture from FBOs because we're not tracking that state (and there is
     // no need to).
-    UTILS_NOUNROLL
-    for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
-        if (state.textures.units[unit].id == texture_id) {
-            // if this texture is bound, it should be at the same target
-            assert_invariant(state.textures.units[unit].target == target);
-            unbindTextureUnit(unit);
+    // Never attempt to unbind texture 0. This could happen with external textures w/ streaming if
+    // never populated.
+    if (texture_id) {
+        UTILS_NOUNROLL
+        for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
+            if (state.textures.units[unit].id == texture_id) {
+                // if this texture is bound, it should be at the same target
+                assert_invariant(state.textures.units[unit].target == target);
+                unbindTextureUnit(unit);
+            }
         }
     }
 }
