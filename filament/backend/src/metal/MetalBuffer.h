@@ -106,7 +106,7 @@ public:
 
     static void setPlatform(MetalPlatform* p) { platform = p; }
 
-    static id<MTLBuffer> track(id<MTLBuffer> buffer, Type type) {
+    static void track(id<MTLBuffer> buffer, Type type) {
         assert_invariant(type != Type::NONE);
         if (UTILS_UNLIKELY(getAliveBuffers() >= EXCESS_BUFFER_COUNT)) {
             if (platform && platform->hasDebugUpdateStatFunc()) {
@@ -115,7 +115,6 @@ public:
             }
         }
         [aliveBuffers[toIndex(type)] addObject:buffer];
-        return buffer;
     }
 
     static uint64_t getAliveBuffers() {
