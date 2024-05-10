@@ -229,10 +229,10 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         const uint64_t ring = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::RING);
         const uint64_t staging = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::STAGING);
         const uint64_t total = generic + ring + staging;
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers2", total);
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers2.generic", generic);
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers2.ring", ring);
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers2.staging", staging);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers", total);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.generic", generic);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.ring", ring);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging", staging);
 #endif
     }
 }
