@@ -212,7 +212,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
                   driverConfig.disableHandleUseAfterFreeCheck),
-          mDriverConfig(driverConfig) {
+          mDriverConfig(driverConfig),
+          mCurrentPushConstants(new(std::nothrow) PushConstantBundle{}) {
 
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
@@ -269,9 +270,8 @@ void OpenGLDriver::terminate() {
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
 
-    if (mCurrentPushConstants) {
-        delete mCurrentPushConstants;
-    }
+    delete mCurrentPushConstants;
+    mCurrentPushConstants = nullptr;
 
     mContext.terminate();
 
@@ -295,9 +295,6 @@ void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
 
 void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
-    assert_invariant(mCurrentPushConstants &&
-                     "Calling setPushConstant() before binding a pipeline");
-
     assert_invariant(stage == ShaderStage::VERTEX || stage == ShaderStage::FRAGMENT);
     utils::Slice<std::pair<GLint, ConstantType>> constants;
     if (stage == ShaderStage::VERTEX) {
@@ -3848,12 +3845,7 @@ void OpenGLDriver::bindPipeline(PipelineState state) {
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(state.program);
     mValidProgram = useProgram(p);
-
-    if (!mCurrentPushConstants) {
-        mCurrentPushConstants = new (std::nothrow) PushConstantBundle{p->getPushConstants()};
-    } else {
-        (*mCurrentPushConstants) = p->getPushConstants();
-    }
+    (*mCurrentPushConstants) = p->getPushConstants();
 }
 
 void OpenGLDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
