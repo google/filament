@@ -69,14 +69,13 @@ void FSwapChain::terminate(FEngine& engine) noexcept {
     engine.getDriverApi().destroySwapChain(mHwSwapChain);
 }
 
-void FSwapChain::setFrameScheduledCallback(
-        backend::CallbackHandler* handler, FrameScheduledCallback&& callback) {
-    mFrameScheduledCallbackIsSet = bool(callback);
-    mEngine.getDriverApi().setFrameScheduledCallback(mHwSwapChain, handler, std::move(callback));
+void FSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
+    mFrameScheduledCallback = callback;
+    mEngine.getDriverApi().setFrameScheduledCallback(mHwSwapChain, callback, user);
 }
 
-bool FSwapChain::isFrameScheduledCallbackSet() const noexcept {
-    return mFrameScheduledCallbackIsSet;
+SwapChain::FrameScheduledCallback FSwapChain::getFrameScheduledCallback() const noexcept {
+    return mFrameScheduledCallback;
 }
 
 void FSwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,

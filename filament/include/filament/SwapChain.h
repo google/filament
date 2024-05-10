@@ -21,7 +21,6 @@
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
-#include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
@@ -265,22 +264,13 @@ public:
      * backend.
      *
      * A FrameScheduledCallback can be set on an individual SwapChain through
-     * SwapChain::setFrameScheduledCallback. If the callback is set for a given frame, then the
-     * SwapChain will *not* automatically schedule itself for presentation. Instead, the application
-     * must call the PresentCallable passed to the FrameScheduledCallback.
+     * SwapChain::setFrameScheduledCallback. If the callback is set, then the SwapChain will *not*
+     * automatically schedule itself for presentation. Instead, the application must call the
+     * PresentCallable passed to the FrameScheduledCallback.
      *
-     * Each SwapChain can have only one FrameScheduledCallback set per frame. If
-     * setFrameScheduledCallback is called multiple times on the same SwapChain before
-     * Renderer::endFrame(), the most recent call effectively overwrites any previously set
-     * callback. This allows the callback to be updated as needed before the frame has finished
-     * encoding.
-     *
-     * The "last" callback set by setFrameScheduledCallback gets "latched" when Renderer::endFrame()
-     * is executed. At this point, the state of the callback is fixed and is the one used for the
-     * frame that was just encoded. Subsequent changes to the callback using
-     * setFrameScheduledCallback after endFrame() apply to the next frame.
-     *
-     * Use \c setFrameScheduledCallback() (with default arguments) to unset the callback.
+     * There may be only one FrameScheduledCallback set per SwapChain. A call to
+     * SwapChain::setFrameScheduledCallback will overwrite any previous FrameScheduledCallbacks set
+     * on the same SwapChain.
      *
      * If your application delays the call to the PresentCallable by, for example, calling it on a
      * separate thread, you must ensure all PresentCallables have been called before shutting down
@@ -288,26 +278,28 @@ public:
      * Engine::shutdown. This is necessary to ensure the Filament Engine has had a chance to clean
      * up all memory related to frame presentation.
      *
-     * @param handler     Handler to dispatch the callback or nullptr for the default handler.
-     * @param callback    Callback called when the frame is scheduled.
+     * @param callback    A callback, or nullptr to unset.
+     * @param user        An optional pointer to user data passed to the callback function.
      *
      * @remark Only Filament's Metal backend supports PresentCallables and frame callbacks. Other
      * backends ignore the callback (which will never be called) and proceed normally.
      *
-     * @see CallbackHandler
+     * @remark The SwapChain::FrameScheduledCallback is called on an arbitrary thread.
+     *
      * @see PresentCallable
      */
-    void setFrameScheduledCallback(backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
-            FrameScheduledCallback&& callback = {});
+    void setFrameScheduledCallback(FrameScheduledCallback UTILS_NULLABLE callback,
+            void* UTILS_NULLABLE user = nullptr);
 
     /**
-     * Returns whether or not this SwapChain currently has a FrameScheduledCallback set.
+     * Returns the SwapChain::FrameScheduledCallback that was previously set with
+     * SwapChain::setFrameScheduledCallback, or nullptr if one is not set.
      *
-     * @return true, if the last call to setFrameScheduledCallback set a callback
+     * @return the previously-set FrameScheduledCallback, or nullptr
      *
      * @see SwapChain::setFrameCompletedCallback
      */
-    bool isFrameScheduledCallbackSet() const noexcept;
+    UTILS_NULLABLE FrameScheduledCallback getFrameScheduledCallback() const noexcept;
 
     /**
      * FrameCompletedCallback is a callback function that notifies an application when a frame's

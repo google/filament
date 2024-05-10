@@ -24,7 +24,6 @@
 
 #include <backend/PresentCallable.h>
 
-#include <utils/Invocable.h>
 #include <utils/ostream.h>
 
 #include <math/vec4.h>
@@ -1225,7 +1224,7 @@ static_assert(sizeof(StencilState::StencilOperations) == 5u,
 static_assert(sizeof(StencilState) == 12u,
         "StencilState size not what was intended");
 
-using FrameScheduledCallback = utils::Invocable<void(backend::PresentCallable)>;
+using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 
 enum class Workaround : uint16_t {
     // The EASU pass must split because shader compiler flattens early-exit branch

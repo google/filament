@@ -31,8 +31,6 @@
 
 #include "private/backend/SamplerGroup.h"
 
-#include <backend/DriverEnums.h>
-
 #include <utils/bitset.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
@@ -73,9 +71,9 @@ public:
 
     void releaseDrawable();
 
-    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback);
-    void setFrameCompletedCallback(
-            CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
+    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
+    void setFrameCompletedCallback(CallbackHandler* handler,
+            CallbackHandler::Callback callback, void* user);
 
     // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
     // FrameScheduledCallback.
@@ -112,15 +110,14 @@ private:
     MetalExternalImage externalImage;
     SwapChainType type;
 
-    // These fields store a callback to notify the client that a frame is ready for presentation. If
-    // !frameScheduled.callback, then the Metal backend automatically calls presentDrawable when the
-    // frame is committed. Otherwise, the Metal backend will not automatically present the frame.
-    // Instead, clients bear the responsibility of presenting the frame by calling the
-    // PresentCallable object.
-    struct {
-        CallbackHandler* handler = nullptr;
-        FrameScheduledCallback callback = {};
-    } frameScheduled;
+    // These two fields store a callback and user data to notify the client that a frame is ready
+    // for presentation.
+    // If frameScheduledCallback is nullptr, then the Metal backend automatically calls
+    // presentDrawable when the frame is committed.
+    // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
+    // the responsibility of presenting the frame by calling the PresentCallable object.
+    FrameScheduledCallback frameScheduledCallback = nullptr;
+    void* frameScheduledUserData = nullptr;
 
     struct {
         CallbackHandler* handler = nullptr;

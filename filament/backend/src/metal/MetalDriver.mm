@@ -237,10 +237,10 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(
-        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
+        FrameScheduledCallback callback, void* user) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(handler, std::move(callback));
+    swapChain->setFrameScheduledCallback(callback, user);
 }
 
 void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
