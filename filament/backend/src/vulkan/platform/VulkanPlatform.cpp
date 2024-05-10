@@ -44,7 +44,11 @@ namespace {
 
 constexpr uint32_t const INVALID_VK_INDEX = 0xFFFFFFFF;
 
-typedef std::unordered_set<std::string_view> ExtensionSet;
+using ExtensionSet = VulkanPlatform::ExtensionSet;
+
+inline bool setContains(ExtensionSet const& set, utils::CString const& extension) {
+    return set.find(extension) != set.end();
+};
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 // These strings need to be allocated outside a function stack
@@ -80,7 +84,7 @@ FixedCapacityVector<const char*> getEnabledLayers() {
 
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     // Print some driver or MoltenVK information if it is available.
-    if (vkGetPhysicalDeviceProperties2KHR) {
+    if (vkGetPhysicalDeviceProperties2) {
         VkPhysicalDeviceDriverProperties driverProperties = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
         };
@@ -88,7 +92,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
                 .pNext = &driverProperties,
         };
-        vkGetPhysicalDeviceProperties2KHR(device, &physicalDeviceProperties2);
+        vkGetPhysicalDeviceProperties2(device, &physicalDeviceProperties2);
         utils::slog.i << "Vulkan device driver: " << driverProperties.driverName << " "
                       << driverProperties.driverInfo << utils::io::endl;
     }
@@ -148,38 +152,37 @@ void printDepthFormats(VkPhysicalDevice device) {
 }
 #endif
 
-ExtensionSet getInstanceExtensions() {
-    std::string_view const TARGET_EXTS[] = {
-            // Request all cross-platform extensions.
-            VK_KHR_SURFACE_EXTENSION_NAME,
-            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = {}) {
+    ExtensionSet const TARGET_EXTS = {
+        // Request all cross-platform extensions.
+        VK_KHR_SURFACE_EXTENSION_NAME,
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 
-            // Request these if available.
+    // Request these if available.
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
-            VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-            VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
     };
     ExtensionSet exts;
-    FixedCapacityVector<VkExtensionProperties> const availableExts
-            = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+    FixedCapacityVector<VkExtensionProperties> const availableExts =
+            filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
                     static_cast<char const*>(nullptr) /* pLayerName */);
     for (auto const& extProps: availableExts) {
-        for (auto const& targetExt: TARGET_EXTS) {
-            if (targetExt == extProps.extensionName) {
-                exts.insert(targetExt);
-            }
+        utils::CString name { extProps.extensionName };
+        if (setContains(TARGET_EXTS, name) || setContains(externallyRequiredExts, name)) {
+            exts.insert(name);
         }
     }
     return exts;
 }
 
 ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
-    std::string_view const TARGET_EXTS[] = {
+    ExtensionSet const TARGET_EXTS = {
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
             VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
@@ -194,10 +197,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
             = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties, device,
                     static_cast<const char*>(nullptr) /* pLayerName */);
     for (auto const& extension: extensions) {
-        for (auto const& targetExt: TARGET_EXTS) {
-            if (targetExt == extension.extensionName) {
-                exts.insert(targetExt);
-            }
+        utils::CString name { extension.extensionName };
+        if (setContains(TARGET_EXTS, name)) {
+            exts.insert(name);
         }
     }
     return exts;
@@ -245,7 +247,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
         ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
     }
     // Request platform-specific extensions.
-    for (auto const requiredExt: requiredExts) {
+    for (auto const& requiredExt: requiredExts) {
         assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
         ppEnabledExtensions[enabledExtensionCount++] = requiredExt.data();
     }
@@ -260,7 +262,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
     instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
-    if (requiredExts.find(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) != requiredExts.end()) {
+    if (setContains(requiredExts, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
         instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     }
 
@@ -283,8 +285,8 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 }
 
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
-        const VkPhysicalDeviceFeatures& features, uint32_t graphicsQueueFamilyIndex,
-        const ExtensionSet& deviceExtensions) {
+        VkPhysicalDeviceFeatures const& features, uint32_t graphicsQueueFamilyIndex,
+        ExtensionSet const& deviceExtensions) {
     VkDevice device;
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
     const float queuePriority[] = {1.0f};
@@ -292,9 +294,9 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     FixedCapacityVector<const char*> requestExtensions;
     requestExtensions.reserve(deviceExtensions.size() + 1);
 
-    // TODO:We don't really need this if we only ever expect headless swapchains.
+    // TODO: We don't really need this if we only ever expect headless swapchains.
     requestExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    for (auto ext: deviceExtensions) {
+    for (auto const& ext: deviceExtensions) {
         requestExtensions.push_back(ext.data());
     }
     deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -323,12 +325,12 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
             .imageViewFormatSwizzle = VK_TRUE,
             .mutableComparisonSamplers = VK_TRUE,
     };
-    if (deviceExtensions.find(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) != deviceExtensions.end()) {
+    if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
         deviceCreateInfo.pNext = &portability;
     }
 
     VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error.");
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error=%d.", result);
 
     return device;
 }
@@ -342,16 +344,16 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     // debugUtils and debugMarkers extensions are used mutually exclusively.
-    if (newInstExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != newInstExts.end()
-            && newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
+    if (setContains(newInstExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) &&
+            setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
 #endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // debugMarker must also request debugReport the instance extension. So check if that's present.
-    if (newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()
-            && newInstExts.find(VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == newInstExts.end()) {
+    if (setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) &&
+            !setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
 #endif
@@ -557,6 +559,7 @@ struct VulkanPlatformPrivate {
     std::unordered_set<SwapChainPtr> mHeadlessSwapChains;
 
     bool mSharedContext = false;
+    bool mForceXCBSwapchain = false;
 };
 
 void VulkanPlatform::terminate() {
@@ -610,7 +613,25 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
-        instExts = getInstanceExtensions();
+        // This constains instance extensions that are required for the platform, which includes
+        // swapchain surface extensions.
+        auto const& swapchainExts = getSwapchainInstanceExtensions();
+        instExts = getInstanceExtensions(swapchainExts);
+
+#if defined(FILAMENT_SUPPORTS_XCB) && defined(FILAMENT_SUPPORTS_XLIB)
+        // For the special case where we're on linux and both xcb and xlib are "required", then we
+        // check if the set of supported extensions contain both of them.  If only xcb is supported,
+        // we force XCB surface creation.  This workaround is needed for the default swiftshader
+        // build where only XCB is available.
+        if (setContains(swapchainExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME) &&
+                setContains(swapchainExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME)) {
+            // Assume only XCB is left, then we force the XCB path in the swapchain creation.
+            mImpl->mForceXCBSwapchain = !setContains(instExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+            assert_invariant(!mImpl->mForceXCBSwapchain ||
+                             setContains(instExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME));
+        }
+#endif
+
         instExts.merge(getRequiredInstanceExtensions());
     }
 
@@ -672,10 +693,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
 
     // Store the extension support in the context
-    context.mDebugUtilsSupported
-            = instExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != instExts.end();
-    context.mDebugMarkersSupported
-            = deviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != deviceExts.end();
+    context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 
 #ifdef NDEBUG
     // If we are in release build, we should not have turned on debug extensions
@@ -746,6 +765,10 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
                 mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueue, extent, flags);
         mImpl->mHeadlessSwapChains.insert(swapchain);
         return swapchain;
+    }
+
+    if (mImpl->mForceXCBSwapchain) {
+        flags |= SWAP_CHAIN_CONFIG_ENABLE_XCB;
     }
 
     auto [surface, fallbackExtent] = createVkSurfaceKHR(nativeWindow, mImpl->mInstance, flags);

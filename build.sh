@@ -44,8 +44,6 @@ function print_help {
     echo "        Exclude Vulkan support from the Android build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
-    echo "    -t"
-    echo "        Enable SwiftShader support for Vulkan in desktop builds."
     echo "    -e"
     echo "        Enable EGL on Linux support for desktop builds."
     echo "    -l"
@@ -165,8 +163,6 @@ INSTALL_COMMAND=
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
-SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
-
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
@@ -233,7 +229,6 @@ function build_desktop_target {
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
-            ${SWIFTSHADER_OPTION} \
             ${EGL_ON_LINUX_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
@@ -794,7 +789,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgijmp:q:uvslwtedk:bx:" opt; do
+while getopts ":hacCfgijmp:q:uvslwedk:bx:" opt; do
     case ${opt} in
         h)
             print_help
@@ -912,10 +907,6 @@ while getopts ":hacCfgijmp:q:uvslwtedk:bx:" opt; do
         s)
             IOS_BUILD_SIMULATOR=true
             echo "iOS simulator support enabled."
-            ;;
-        t)
-            SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=ON"
-            echo "SwiftShader support enabled."
             ;;
         e)
             EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=ON -DFILAMENT_SKIP_SDL2=ON -DFILAMENT_SKIP_SAMPLES=ON"

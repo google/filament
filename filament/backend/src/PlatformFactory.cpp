@@ -29,21 +29,21 @@
         #include "backend/platforms/PlatformCocoaTouchGL.h"
     #endif
 #elif defined(__APPLE__)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include <backend/platforms/PlatformCocoaGL.h>
     #endif
 #elif defined(__linux__)
     #if defined(FILAMENT_SUPPORTS_X11)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
             #include "backend/platforms/PlatformGLX.h"
         #endif
     #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
-        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
             #include "backend/platforms/PlatformEGLHeadless.h"
         #endif
     #endif
 #elif defined(WIN32)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "backend/platforms/PlatformWGL.h"
     #endif
 #elif defined(__EMSCRIPTEN__)
@@ -111,8 +111,7 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     }
     assert_invariant(*backend == Backend::OPENGL);
     #if defined(FILAMENT_SUPPORTS_OPENGL)
-        #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
-            // Swiftshader OpenGLES support is deprecated and incomplete
+        #if defined(FILAMENT_USE_EXTERNAL_GLES3)
             return nullptr;
         #elif defined(__ANDROID__)
             return new PlatformEGLAndroid();
