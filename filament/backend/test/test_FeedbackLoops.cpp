@@ -265,7 +265,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
     }
 
-    const uint32_t expected = 0xe93a4a07;
+    const uint32_t expected = 0x70695aa1;
     printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
     EXPECT_TRUE(sPixelHashResult == expected);
 }

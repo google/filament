@@ -29,17 +29,36 @@ namespace filament::backend {
 //! \privatesection
 
 struct TargetBufferInfo {
+    // note: the parameters of this constructor are not in the order of this structure's fields
+    TargetBufferInfo(Handle<HwTexture> handle, uint8_t level, uint16_t layer, uint8_t baseViewIndex) noexcept
+        : handle(handle), baseViewIndex(baseViewIndex), level(level), layer(layer) {
+    }
+
+    TargetBufferInfo(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
+            : handle(handle), level(level), layer(layer) {
+    }
+
+    TargetBufferInfo(Handle<HwTexture> handle, uint8_t level) noexcept
+            : handle(handle), level(level) {
+    }
+
+    TargetBufferInfo(Handle<HwTexture> handle) noexcept // NOLINT(*-explicit-constructor)
+            : handle(handle) {
+    }
+
+    TargetBufferInfo() noexcept = default;
+
     // texture to be used as render target
     Handle<HwTexture> handle;
 
-    // starting layer index for multiview. This value is only used when the `layerCount` for the
+    // Starting layer index for multiview. This value is only used when the `layerCount` for the
     // render target is greater than 1.
     uint8_t baseViewIndex = 0;
 
     // level to be used
     uint8_t level = 0;
 
-    // for cubemaps and 3D textures. See TextureCubemapFace for the face->layer mapping
+    // For cubemaps and 3D textures. See TextureCubemapFace for the face->layer mapping
     uint16_t layer = 0;
 };
 
@@ -64,7 +83,7 @@ public:
 
     MRT() noexcept = default;
 
-    MRT(TargetBufferInfo const& color) noexcept // NOLINT(hicpp-explicit-conversions)
+    MRT(TargetBufferInfo const& color) noexcept // NOLINT(hicpp-explicit-conversions, *-explicit-constructor)
             : mInfos{ color } {
     }
 
@@ -84,7 +103,7 @@ public:
 
     // this is here for backward compatibility
     MRT(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
-            : mInfos{{ handle, 0, level, layer }} {
+            : mInfos{{ handle, level, layer, 0 }} {
     }
 };
 
