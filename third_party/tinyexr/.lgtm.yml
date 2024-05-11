@@ -1,5 +1,0 @@
-# FIXME(syoyo): Following settings does not work well.
-path_classifiers:
-  - exclude: "deps/*"
-  - exclude: kuroga.py
-

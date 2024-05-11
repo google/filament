@@ -1,4 +1,0 @@
-@PACKAGE_INIT@
-
-include("${CMAKE_CURRENT_LIST_DIR}/meshoptimizerTargets.cmake")
-check_required_components(meshoptimizer)

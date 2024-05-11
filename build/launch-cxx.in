@@ -1,9 +1,0 @@
-#!/bin/bash
-
-if [[ "$1" = "${CMAKE_CXX_COMPILER}" ]]; then
-    shift
-fi
-
-export CCACHE_CPP2=true
-export CCACHE_SLOPPINESS=file_macro,time_macros,locale,file_stat_matches
-exec "${CXX_LAUNCHER}" "${CMAKE_CXX_COMPILER}" "$@"

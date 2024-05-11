@@ -1,4 +1,0 @@
-LIBFILAMENT_UTILS {
-  global: Java_com_google_android_filament_*; JNI*;
-  local: *;
-};

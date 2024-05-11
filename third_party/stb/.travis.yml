@@ -1,5 +1,0 @@
-language: C
-install: true
-script:
-  - cd tests
-  - make all

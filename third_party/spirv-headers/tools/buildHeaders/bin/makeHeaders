@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-python3 bin/makeExtinstHeaders.py
-
-cd ../../include/spirv/unified1
-../../../tools/buildHeaders/build/install/bin/buildSpvHeaders -H spirv.core.grammar.json
-dos2unix spirv.* spv.*

@@ -1,1 +1,0 @@
-../../docs/viewer/filament-viewer.js
