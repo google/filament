@@ -1,0 +1,31 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 11
+#endif
+const int _10 = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 12
+#endif
+const int _11 = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 13
+#endif
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 14
+#endif
+const uint _29 = (uint(int(gl_WorkGroupSize.x)) + 3u);
+const uvec3 _30 = uvec3(_29, int(gl_WorkGroupSize.y), 2u);
+
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_3, local_size_y = SPIRV_CROSS_CONSTANT_ID_4, local_size_z = 2) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    vec4 values[];
+} _8;
+
+void main()
+{
+    _8.values[gl_GlobalInvocationID.x] = ((((_8.values[gl_GlobalInvocationID.x] + vec4(2.0)) + vec3(_30).xyzz) * float(int(gl_WorkGroupSize.x))) * float(int(gl_WorkGroupSize.y))) * float(int(2u));
+}
+

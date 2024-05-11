@@ -1,0 +1,33 @@
+# Auto detect text files and perform LF normalization
+* -text
+
+# Custom for Visual Studio
+*.cs     diff=csharp
+*.sln    merge=union
+*.csproj merge=union
+*.vbproj merge=union
+*.fsproj merge=union
+*.dbproj merge=union
+
+# Standard to msysgit
+*.doc    diff=astextplain
+*.DOC    diff=astextplain
+*.docx   diff=astextplain
+*.DOCX   diff=astextplain
+*.dot    diff=astextplain
+*.DOT    diff=astextplain
+*.pdf    diff=astextplain
+*.PDF    diff=astextplain
+*.rtf    diff=astextplain
+*.RTF    diff=astextplain
+
+# Preserver Windows specfic lines endings
+*.cmd text eol=crlf
+
+
+# Settings for github syntax highlighting
+# see https://github.com/github/linguist/blob/master/README.md
+docs/* linguist-documentation
+*.inl linguist-language=C
+*.h linguist-language=C
+include/CivetServer.h linguist-language=C++

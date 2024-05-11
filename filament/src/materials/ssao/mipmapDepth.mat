@@ -1,0 +1,33 @@
+material {
+    name : mipmapDepth,
+    parameters : [
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high
+        }
+    ],
+    variables : [
+    ],
+    outputs : [
+        {
+            name : depth,
+            target : depth,
+            type : float
+        }
+    ],
+    domain : postprocess,
+    depthWrite : true,
+    depthCulling : false,
+    culling: none
+}
+
+fragment {
+    // We use a rotated grid sub-sample as it's cheap and gives good results
+    // See Scalable Ambient Obscurance by McGuire and al.
+    void postProcess(inout PostProcessInputs postProcess) {
+        ivec2 icoord = ivec2(gl_FragCoord.xy);
+        postProcess.depth = texelFetch(materialParams_depth,
+                2 * icoord + ivec2(icoord.y & 1, icoord.x & 1), 0).r;
+    }
+}

@@ -1,0 +1,34 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct cb1_struct
+{
+    float4 _RESERVED_IDENTIFIER_FIXUP_m0[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 16u, 1u);
+
+static inline __attribute__((always_inline))
+int2 get_texcoord(thread const int2& base, thread const int2& index, thread uint3& gl_LocalInvocationID)
+{
+    return (base * int3(gl_LocalInvocationID).xy) + index;
+}
+
+kernel void main0(constant cb1_struct& cb0_1 [[buffer(0)]], texture2d<float, access::write> u0 [[texture(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+{
+    int2 r0 = int2(int2(u0.get_width(), u0.get_height()) >> int2(uint2(4u)));
+    for (int i = 0; i < r0.y; i++)
+    {
+        for (int j = 0; j < r0.x; j++)
+        {
+            int2 param = r0;
+            int2 param_1 = int2(i, j);
+            u0.write(cb0_1._RESERVED_IDENTIFIER_FIXUP_m0[0].xxxx, uint2(get_texcoord(param, param_1, gl_LocalInvocationID)));
+        }
+    }
+}
+

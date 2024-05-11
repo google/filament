@@ -1,0 +1,74 @@
+# Copyright 2020-2021 The Khronos Group, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  build:
+    name: "Build ${{ matrix.platform }}"
+    strategy:
+      matrix:
+        platform: [windows-latest, ubuntu-20.04, ubuntu-22.04, macos-latest]
+    env:
+      PARALLEL: -j 2
+
+    runs-on: "${{ matrix.platform }}"
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Pull glslang / SPIRV-Tools
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: ./checkout_glslang_spirv_tools.sh
+
+      - name: Build glslang / SPIRV-Tools
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: ./build_glslang_spirv_tools.sh Release
+
+      - name: Configure SPIRV-Cross
+        shell: bash
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DSPIRV_CROSS_WERROR=ON -DSPIRV_CROSS_MISC_WARNINGS=ON -DSPIRV_CROSS_SHARED=ON -DCMAKE_INSTALL_PREFIX=output -DCMAKE_BUILD_TYPE=Release -DSPIRV_CROSS_ENABLE_TESTS=ON
+
+      - name: Build SPIRV-Cross
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . --config Release
+          cmake --build . --config Release --target install
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.platform }}-binaries
+          path: build/output
+      - name: Test SPIRV-Cross
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: ctest --verbose -C Release
+  reuse:
+    name: "REUSE license check"
+    runs-on: ubuntu-latest
+    container: khronosgroup/docker-images:asciidoctor-spec
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # REUSE license checker
+      - name: license-check
+        run: |
+          reuse lint
+
+

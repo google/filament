@@ -1,0 +1,40 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 20
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %Block "Block"
+               OpMemberName %Block 0 "f"
+               OpName %block "block"
+               OpMemberDecorate %Block 0 Offset 0
+               OpDecorate %Block BufferBlock
+               OpDecorate %block DescriptorSet 0
+               OpDecorate %block Binding 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+      %Block = OpTypeStruct %v4float
+%_ptr_Uniform_Block = OpTypePointer Uniform %Block
+      %block = OpVariable %_ptr_Uniform_Block Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%float_0_100000001 = OpConstant %float 0.100000001
+%float_0_200000003 = OpConstant %float 0.200000003
+%float_0_300000012 = OpConstant %float 0.300000012
+         %15 = OpUndef %float
+         %16 = OpConstantComposite %v4float %float_0_100000001 %float_0_200000003 %float_0_300000012 %15
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+       %main = OpFunction %void None %6
+         %18 = OpLabel
+         %19 = OpAccessChain %_ptr_Uniform_v4float %block %int_0
+               OpStore %19 %16
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 45
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+ %ResTypeMod = OpTypeStruct %float %float
+%_ptr_Function_ResTypeMod = OpTypePointer Function %ResTypeMod
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+   %float_20 = OpConstant %float 20
+      %int_1 = OpConstant %int 1
+%_ptr_Function_float = OpTypePointer Function %float
+%ResTypeFrexp = OpTypeStruct %float %int
+%_ptr_Function_ResTypeFrexp = OpTypePointer Function %ResTypeFrexp
+   %float_40 = OpConstant %float 40
+%_ptr_Function_int = OpTypePointer Function %int
+       %SSBO = OpTypeStruct %float %int
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %modres = OpExtInst %ResTypeMod %1 ModfStruct %float_20
+         %frexpres = OpExtInst %ResTypeFrexp %1 FrexpStruct %float_40
+
+		 %modres_f = OpCompositeExtract %float %modres 0
+		 %modres_i = OpCompositeExtract %float %modres 1
+		 %frexpres_f = OpCompositeExtract %float %frexpres 0
+		 %frexpres_i = OpCompositeExtract %int %frexpres 1
+
+         %float_ptr = OpAccessChain %_ptr_Uniform_float %_ %int_0
+         %int_ptr = OpAccessChain %_ptr_Uniform_int %_ %int_1
+
+               OpStore %float_ptr %modres_f
+               OpStore %float_ptr %modres_i
+               OpStore %float_ptr %frexpres_f
+               OpStore %int_ptr %frexpres_i
+
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,124 @@
+material {
+    name : colorGradingAsSubpass,
+    parameters : [
+        {
+            type : sampler3d,
+            name : lut,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : lutSize
+        },
+        {
+            type : int,
+            name : dithering
+        },
+        {
+            type : int,
+            name : fxaa
+        },
+        {
+            type : float,
+            name : temporalNoise,
+            precision: high
+        },
+        {
+            type : float4,
+            name : vignette
+        },
+        {
+            type : float4,
+            name : vignetteColor
+        }
+    ],
+    subpasses : [
+        {
+            type : subpassInput,
+            format : float,
+            precision : medium,
+            name : colorBuffer,
+        }
+    ],
+    outputs : [
+        {
+            name : dummy,
+            target : color,
+            type : float4,
+            location : 0
+        },
+        {
+            name : tonemappedOutput,
+            target : color,
+            type : float4,
+            location : 1
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess,
+    framebufferFetch: true
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+#include "../../../../shaders/src/dithering.fs"
+#include "../../../../shaders/src/vignette.fs"
+#include "colorGrading.fs"
+
+void dummy(){}
+
+vec4 resolveFragment() {
+#if POST_PROCESS_OPAQUE
+    return vec4(subpassLoad(materialParams_colorBuffer).rgb, 1.0);
+#else
+    vec4 color = subpassLoad(materialParams_colorBuffer);
+    color.rgb *= 1.0 / (color.a + FLT_EPS);
+    return color;
+#endif
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+
+    vec4 color = resolveFragment();
+
+    // Vignette
+    if (materialParams.vignette.x < MEDIUMP_FLT_MAX) {
+        color.rgb = vignette(color.rgb, uv, materialParams.vignette, materialParams.vignetteColor);
+    }
+
+    // Color grading
+    color.rgb  = colorGrade(materialParams_lut, color.rgb);
+
+    // output in premultiplied alpha
+#if !POST_PROCESS_OPAQUE
+    color.rgb *= color.a + FLT_EPS;
+#endif
+
+    // dithering
+    if (materialParams.dithering > 0) {
+        color = dither(color, materialParams.temporalNoise);
+    }
+
+    // kill alpha computations when opaque / fxaa luminance
+#if POST_PROCESS_OPAQUE
+    color.a = 1.0;
+    if (materialParams.fxaa > 0) {
+        color.a = luminance(color.rgb);
+    }
+#endif
+
+    postProcess.tonemappedOutput = color;
+}
+
+}

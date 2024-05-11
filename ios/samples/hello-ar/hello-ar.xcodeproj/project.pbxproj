@@ -1,0 +1,699 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 52;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4FAC85567A730FCCB7B3B6EC /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */; };
+		5432120E716355C4A519ABC6 /* FilamentArViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = AA47852B486CBD549FA68729 /* FilamentArViewController.mm */; };
+		66754FE8EF26B5335C0CC9FF /* FullScreenTriangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */; };
+		99BD70EFF08A1419FE539A44 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE684A73135705C4EDAA7C53 /* Assets.xcassets */; };
+		ACF87F0F3989EF583E90E499 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B6B92BD0FA8E6F9CFEAE1707 /* main.m */; };
+		AEEFE325E8BDB00E30FDEC93 /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = DD0010D60097DEAA82DAA089 /* Resources.S */; };
+		B28ED2F81785F13E0B9A3607 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = EC652AC3D2C91759215320C3 /* AppDelegate.m */; };
+		B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 33B2CBA1A0F654632B39A45D /* ARKit.framework */; };
+		CE6AB7B76D5EB580EFD90897 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AFCB91D87494B7FC879A7A5E /* Main.storyboard */; };
+		DEF78081F52F6A776242A599 /* FilamentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 53D025A0625708CC50AEA0DB /* FilamentView.m */; };
+		F933D6701B0A0E90381E8030 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FullScreenTriangle.cpp; sourceTree = "<group>"; };
+		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = clear_coat.mat; sourceTree = "<group>"; };
+		2AFF66F1228C5F1079042FE2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		33B2CBA1A0F654632B39A45D /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
+		4F8E6B508F8C5DE284DA2E34 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		53D025A0625708CC50AEA0DB /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
+		5B5D3E611DCDD9CD2C13B825 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
+		6938BE21CFB8BEB2422BD490 /* FilamentArViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentArViewController.h; sourceTree = "<group>"; };
+		7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = camera_feed.mat; sourceTree = "<group>"; };
+		8832D93E678057F9940A226D /* shadow_plane.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadow_plane.mat; sourceTree = "<group>"; };
+		973EB840E804440B2AA0F93A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		A85B9D53F72DEE0374F8EBDF /* FullScreenTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FullScreenTriangle.h; sourceTree = "<group>"; };
+		AA47852B486CBD549FA68729 /* FilamentArViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentArViewController.mm; sourceTree = "<group>"; };
+		AE684A73135705C4EDAA7C53 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AF451D7D0FAAD069F916F51C /* MathHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MathHelpers.h; sourceTree = "<group>"; };
+		B6B92BD0FA8E6F9CFEAE1707 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FilamentApp.cpp; sourceTree = "<group>"; };
+		D0800F9FE0C390D084082637 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		D7BA0AA38645722DCFA3490D /* hello-ar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD0010D60097DEAA82DAA089 /* Resources.S */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = Resources.S; sourceTree = "<group>"; };
+		EC652AC3D2C91759215320C3 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		FCF16FE1B4146DE87F2B76F3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FA9CC5F2D3E84FB632557A2E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		316A56C698744769908E6F88 = {
+			isa = PBXGroup;
+			children = (
+				64EC9708BC3BF5967095E27F /* hello-ar */,
+				4696851BF71615FF7128AFA5 /* Materials */,
+				A9AE7CB2486E4723006E1784 /* Frameworks */,
+				E2EC9706948EC07E74121EF1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4696851BF71615FF7128AFA5 /* Materials */ = {
+			isa = PBXGroup;
+			children = (
+				7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */,
+				2AFEFBF6FE91628599F70817 /* clear_coat.mat */,
+				8832D93E678057F9940A226D /* shadow_plane.mat */,
+			);
+			path = Materials;
+			sourceTree = "<group>";
+		};
+		64EC9708BC3BF5967095E27F /* hello-ar */ = {
+			isa = PBXGroup;
+			children = (
+				2AFF66F1228C5F1079042FE2 /* AppDelegate.h */,
+				EC652AC3D2C91759215320C3 /* AppDelegate.m */,
+				C4B733EC024C3C9FDDFAB19F /* FilamentArView */,
+				BB5BFAE028DB5F16FB3DEADF /* SupportFiles */,
+			);
+			path = "hello-ar";
+			sourceTree = "<group>";
+		};
+		A9AE7CB2486E4723006E1784 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				33B2CBA1A0F654632B39A45D /* ARKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BB5BFAE028DB5F16FB3DEADF /* SupportFiles */ = {
+			isa = PBXGroup;
+			children = (
+				AE684A73135705C4EDAA7C53 /* Assets.xcassets */,
+				FCF16FE1B4146DE87F2B76F3 /* Info.plist */,
+				C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */,
+				B6B92BD0FA8E6F9CFEAE1707 /* main.m */,
+				AFCB91D87494B7FC879A7A5E /* Main.storyboard */,
+				DD0010D60097DEAA82DAA089 /* Resources.S */,
+			);
+			path = SupportFiles;
+			sourceTree = "<group>";
+		};
+		C4B733EC024C3C9FDDFAB19F /* FilamentArView */ = {
+			isa = PBXGroup;
+			children = (
+				CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */,
+				5B5D3E611DCDD9CD2C13B825 /* FilamentApp.h */,
+				6938BE21CFB8BEB2422BD490 /* FilamentArViewController.h */,
+				AA47852B486CBD549FA68729 /* FilamentArViewController.mm */,
+				D0800F9FE0C390D084082637 /* FilamentView.h */,
+				53D025A0625708CC50AEA0DB /* FilamentView.m */,
+				05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */,
+				A85B9D53F72DEE0374F8EBDF /* FullScreenTriangle.h */,
+				AF451D7D0FAAD069F916F51C /* MathHelpers.h */,
+			);
+			path = FilamentArView;
+			sourceTree = "<group>";
+		};
+		E2EC9706948EC07E74121EF1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D7BA0AA38645722DCFA3490D /* hello-ar.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F06A8CFDD9D8F92512DA0ED7 /* hello-ar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D545B7D86B4767069C2A3E9B /* Build configuration list for PBXNativeTarget "hello-ar" */;
+			buildPhases = (
+				109D7489D01CBE89003014DF /* Build Resources */,
+				A5598850636B6208AE64E95E /* Sources */,
+				77189A28CB88A4753728F549 /* Resources */,
+				FA9CC5F2D3E84FB632557A2E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "hello-ar";
+			productName = "hello-ar";
+			productReference = D7BA0AA38645722DCFA3490D /* hello-ar.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		392626AFF36D607FEB6176BE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1200;
+			};
+			buildConfigurationList = 281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */;
+			compatibilityVersion = "Xcode 11.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 316A56C698744769908E6F88;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F06A8CFDD9D8F92512DA0ED7 /* hello-ar */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		77189A28CB88A4753728F549 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				99BD70EFF08A1419FE539A44 /* Assets.xcassets in Resources */,
+				F933D6701B0A0E90381E8030 /* LaunchScreen.storyboard in Resources */,
+				CE6AB7B76D5EB580EFD90897 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		109D7489D01CBE89003014DF /* Build Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Resources";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#/usr/bin/env/bash\n\nset -e\n\n# Compile resources.\n\n# The hello-ar app requires four resources:\n# 1. The cube mesh\n# 2. The Filament material definition\n# 3. The Filament camera feed material definition\n# 4. The Filament shadow plane material definition\n# 5. The IBL image\n# These will be compiled into the final binary via the resgen tool.\n\nHOST_TOOLS_PATH=\"${HOST_TOOLS_PATH:-../../../out/release/filament/bin}\"\n\nfilamesh_path=`find ${HOST_TOOLS_PATH} -name filamesh -type f | head -n 1`\nmatc_path=`find ${HOST_TOOLS_PATH} -name matc -type f | head -n 1`\nresgen_path=`find ${HOST_TOOLS_PATH} -name resgen -type f | head -n 1`\ncmgen_path=`find ${HOST_TOOLS_PATH} -name cmgen -type f | head -n 1`\n\n# Ensure that the required tools are present in the out/ directory.\n# These can be built by running ./build.sh -p desktop -i release at Filament's root directory.\n\nif [[ ! -e \"${filamesh_path}\" ]]; then\n  echo \"No filamesh binary could be found in ${HOST_TOOLS_PATH}.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ${HOST_TOOLS_PATH}.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${resgen_path}\" ]]; then\n  echo \"No resgen binary could be found in ${HOST_TOOLS_PATH}.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${cmgen_path}\" ]]; then\n  echo \"No cmgen binary could be found in ${HOST_TOOLS_PATH}.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\n# The filamesh tool converts the .obj file into a Filament-specific filamesh file that has been\n# optimized for loading into Filament.\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${filamesh_path}\" \\\n    \"${PROJECT_DIR}/../../../assets/models/rounded_cube/rounded_cube.obj\" \\\n    \"${PROJECT_DIR}/generated/cube.filamesh\"\n\n# The matc tool compiles the clear_coat.mat, shadow_plane.mat, and camera_feed.mat materials into\n# Filament material BLOBs.\n\n\"${matc_path}\" \\\n    --api all \\\n    --platform mobile \\\n    -o \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/Materials/clear_coat.mat\"\n\n\"${matc_path}\" \\\n    --api all \\\n    --platform mobile \\\n    -o \"${PROJECT_DIR}/generated/shadow_plane.filamat\" \\\n    \"${PROJECT_DIR}/Materials/shadow_plane.mat\"\n\n\"${matc_path}\" \\\n    --api all \\\n    --platform mobile \\\n    -o \"${PROJECT_DIR}/generated/camera_feed.filamat\" \\\n    \"${PROJECT_DIR}/Materials/camera_feed.mat\"\n\n# cmgen consumes an HDR environment map and generates two mipmapped KTX files (IBL and skybox)\n\"${cmgen_path}\" \\\n    --quiet \\\n    --deploy=\"${PROJECT_DIR}/generated/venetian_crossroads_2k\" \\\n    --format=ktx --size=256 \\\n    \"${PROJECT_DIR}/../../../third_party/environments/venetian_crossroads_2k.hdr\"\n\n# The resgen tool generates an assembly file, resources.apple.S that gets compiled and linked\n# into the final binary. It contains all the resources consumed by the app.\n\"${resgen_path}\" \\\n    --deploy=\"${PROJECT_DIR}/generated\" \\\n    \"${PROJECT_DIR}/generated/cube.filamesh\" \\\n    \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/generated/shadow_plane.filamat\" \\\n    \"${PROJECT_DIR}/generated/camera_feed.filamat\" \\\n    \"${PROJECT_DIR}/generated/venetian_crossroads_2k/venetian_crossroads_2k_ibl.ktx\"\n\n# FilamentApp.cpp and Resources.S include files generated by resgen.\n# Touch them to force Xcode to recompile.\ntouch \"${PROJECT_DIR}/hello-ar/FilamentArView/FullScreenTriangle.cpp\"\ntouch \"${PROJECT_DIR}/hello-ar/FilamentArView/FilamentApp.cpp\"\ntouch \"${PROJECT_DIR}/hello-ar/SupportFiles/Resources.S\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A5598850636B6208AE64E95E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B28ED2F81785F13E0B9A3607 /* AppDelegate.m in Sources */,
+				4FAC85567A730FCCB7B3B6EC /* FilamentApp.cpp in Sources */,
+				5432120E716355C4A519ABC6 /* FilamentArViewController.mm in Sources */,
+				DEF78081F52F6A776242A599 /* FilamentView.m in Sources */,
+				66754FE8EF26B5335C0CC9FF /* FullScreenTriangle.cpp in Sources */,
+				AEEFE325E8BDB00E30FDEC93 /* Resources.S in Sources */,
+				ACF87F0F3989EF583E90E499 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		AFCB91D87494B7FC879A7A5E /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				973EB840E804440B2AA0F93A /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				4F8E6B508F8C5DE284DA2E34 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		25CCBC1E7ADEECEC7B80A157 /* Metal Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-debug/filament/lib/universal",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lktxreader",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-libl",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Metal Debug";
+		};
+		3E34E13E60EAC9644531A64F /* OpenGL Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-release/filament/lib/universal",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lktxreader",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-libl",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "OpenGL Release";
+		};
+		510CA72D57CE7F601B4877DC /* Metal Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Metal Debug";
+		};
+		522C7F662C006F36780B6201 /* Metal Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-release/filament/lib/universal",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lktxreader",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-libl",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Metal Release";
+		};
+		7BBE70B18CB95075E67F6ECB /* OpenGL Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "OpenGL Debug";
+		};
+		9223CF86FC2F726304C85702 /* Metal Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Metal Release";
+		};
+		ABBA5402E000BE1D718F54DE /* OpenGL Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-ar/SupportFiles/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+					"../../../out/ios-debug/filament/lib/universal",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lktxreader",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-libl",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
+				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "OpenGL Debug";
+		};
+		FA62ABBB14EC57FFF7FF858D /* OpenGL Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = "OpenGL Release";
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				510CA72D57CE7F601B4877DC /* Metal Debug */,
+				9223CF86FC2F726304C85702 /* Metal Release */,
+				7BBE70B18CB95075E67F6ECB /* OpenGL Debug */,
+				FA62ABBB14EC57FFF7FF858D /* OpenGL Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = "Metal Debug";
+		};
+		D545B7D86B4767069C2A3E9B /* Build configuration list for PBXNativeTarget "hello-ar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				25CCBC1E7ADEECEC7B80A157 /* Metal Debug */,
+				522C7F662C006F36780B6201 /* Metal Release */,
+				ABBA5402E000BE1D718F54DE /* OpenGL Debug */,
+				3E34E13E60EAC9644531A64F /* OpenGL Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = "Metal Debug";
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 392626AFF36D607FEB6176BE /* Project object */;
+}

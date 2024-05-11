@@ -1,0 +1,24 @@
+RWByteAddressBuffer _5 : register(u0);
+
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    uint _24;
+    _5.InterlockedAdd(0, 1u, _24);
+    if (_24 < 1024u)
+    {
+        _5.Store(_24 * 4 + 4, gl_GlobalInvocationID.x);
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}

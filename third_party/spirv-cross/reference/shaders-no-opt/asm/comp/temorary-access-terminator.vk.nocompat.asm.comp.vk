@@ -1,0 +1,36 @@
+#version 450
+#extension GL_KHR_shader_subgroup_ballot : require
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform usamplerBuffer _4;
+layout(set = 0, binding = 0, r32ui) uniform writeonly uimageBuffer _5;
+
+uvec4 WaveMatch(uint _45)
+{
+    uvec4 _52;
+    for (;;)
+    {
+        bool _51 = _45 == subgroupBroadcastFirst(_45);
+        _52 = subgroupBallot(_51);
+        if (_51)
+        {
+            break;
+        }
+        else
+        {
+            continue;
+        }
+    }
+    return _52;
+}
+
+void main()
+{
+    uvec4 _32 = WaveMatch(texelFetch(_4, int(gl_GlobalInvocationID.x)).x);
+    uint _37 = gl_GlobalInvocationID.x * 4u;
+    imageStore(_5, int(_37), uvec4(_32.x));
+    imageStore(_5, int(_37 + 1u), uvec4(_32.y));
+    imageStore(_5, int(_37 + 2u), uvec4(_32.z));
+    imageStore(_5, int(_37 + 3u), uvec4(_32.w));
+}
+

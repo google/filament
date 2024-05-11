@@ -1,0 +1,58 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_ray_flags_primitive_culling : require
+layout(primitive_culling);
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT AS0;
+layout(set = 0, binding = 1) uniform accelerationStructureEXT AS1;
+
+layout(set = 0, binding = 2) uniform Params
+{
+	uint ray_flags;
+	uint cull_mask;
+	vec3 origin;
+	float tmin;
+	vec3 dir;
+	float tmax;
+	float thit;
+};
+
+rayQueryEXT q2[2];
+
+void main()
+{
+	rayQueryEXT q;
+	bool res;
+	uint type;
+	float fval;
+	vec3 fvals;
+	int ival;
+	mat4x3 matrices;
+
+	rayQueryInitializeEXT(q, AS0, ray_flags, cull_mask, origin, tmin, dir, tmax);
+	rayQueryInitializeEXT(q2[1], AS1, ray_flags, cull_mask, origin, tmin, dir, tmax);
+
+	res = rayQueryProceedEXT(q);
+	rayQueryTerminateEXT(q2[0]);
+	rayQueryGenerateIntersectionEXT(q, thit);
+	rayQueryConfirmIntersectionEXT(q2[1]);
+	fval = rayQueryGetRayTMinEXT(q);
+	fvals = rayQueryGetWorldRayDirectionEXT(q);
+	fvals = rayQueryGetWorldRayOriginEXT(q);
+	type = rayQueryGetIntersectionTypeEXT(q2[1], true);
+	type = rayQueryGetIntersectionTypeEXT(q2[0], false);
+	res = rayQueryGetIntersectionCandidateAABBOpaqueEXT(q2[1]);
+	fval = rayQueryGetIntersectionTEXT(q2[1], true);
+	fval = rayQueryGetIntersectionTEXT(q2[1], false);
+	ival = rayQueryGetIntersectionInstanceCustomIndexEXT(q, true);
+	ival = rayQueryGetIntersectionInstanceIdEXT(q2[0], false);
+	ival = rayQueryGetIntersectionGeometryIndexEXT(q2[1], false);
+	ival = rayQueryGetIntersectionPrimitiveIndexEXT(q, true);
+	fvals.xy = rayQueryGetIntersectionBarycentricsEXT(q2[0], false);
+	res = rayQueryGetIntersectionFrontFaceEXT(q, true);
+	fvals = rayQueryGetIntersectionObjectRayDirectionEXT(q, false);
+	fvals = rayQueryGetIntersectionObjectRayOriginEXT(q2[0], true);
+	matrices = rayQueryGetIntersectionObjectToWorldEXT(q, false);
+	matrices = rayQueryGetIntersectionWorldToObjectEXT(q2[1], true);
+}

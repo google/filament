@@ -1,0 +1,92 @@
+material {
+    name : dofCoc,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : cocParams
+        },
+        {
+            type : float2,
+            name : cocClamp
+        },
+        {
+            type : float2,
+            name : texelSize,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4
+        },
+        {
+            name : coc,
+            target : color,
+            type : float
+        }
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+
+    void dummy(){}
+
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+
+#include "dofUtils.fs"
+
+void dummy(){}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+
+    vec4 outColor = textureLod(materialParams_color, uv, 0.0);
+    float d = textureLod(materialParams_depth, uv, 0.0).r;
+
+    // Get the CoC radius.
+    // We multiply by 0.5 to convert from diameter to radius.
+    float outCoc = getCOC(d, materialParams.cocParams) * 0.5;
+
+    // Clamp to maximum allowable CoC radius.
+    outCoc = clamp(outCoc, materialParams.cocClamp[0], materialParams.cocClamp[1]);
+
+    // If CoC is less that 0.5 full resolution pixel, we clamp to 0, this will reduce
+    // artifacts in the "in focus" area and allow us to skip more tiles trivially.
+    if (abs(outCoc) < MAX_IN_FOCUS_COC) {
+        outCoc = 0.0;
+    }
+
+#if POST_PROCESS_OPAQUE
+    // kill the work performed above
+    outColor.a = 1.0;
+#endif
+
+    // Output to MRTs
+    postProcess.color = outColor;
+    postProcess.coc   = outCoc;
+}
+
+}

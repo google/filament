@@ -1,0 +1,17 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(shaderRecordEXT, std430) buffer sbt
+{
+    vec3 direction;
+    float tmax;
+} _20;
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT as;
+layout(location = 0) rayPayloadEXT float payload;
+
+void main()
+{
+    traceRayEXT(as, 0u, 255u, 0u, 1u, 0u, vec3(0.0), 0.0, _20.direction, _20.tmax, 0);
+}
+

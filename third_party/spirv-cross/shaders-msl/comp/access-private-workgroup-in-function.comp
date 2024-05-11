@@ -1,0 +1,31 @@
+#version 450
+layout(local_size_x = 1) in;
+
+int f;
+shared int u;
+
+void set_f()
+{
+	f = 40;
+}
+
+void set_shared_u()
+{
+	u = 50;
+}
+
+void main()
+{
+	set_f();
+	set_shared_u();
+	if (gl_LocalInvocationIndex == 0u)
+	{
+		f = 10;
+	}
+	else
+	{
+		f = 30;
+		u = 20;
+	}
+}
+

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Filament Parquet</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="favicon.png" rel="icon" type="image/x-icon" />
+<style>
+body { margin: 0; overflow: hidden; }
+canvas { touch-action: none; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas></canvas>
+<script src="filament.js"></script>
+<script src="gl-matrix-min.js"></script>
+<script>
+
+const iblfile = 'default_env/default_env_ibl.ktx';
+const skyfile = 'default_env/default_env_skybox.ktx';
+
+Filament.init([
+    'parquet.filamat',
+    'shader_ball.filamesh',
+    'floor_ao_roughness_metallic.png',
+    'floor_basecolor.jpg',
+    'floor_normal.png',
+    iblfile, skyfile
+], () => {
+    window.VertexAttribute = Filament.VertexAttribute;
+    window.AttributeType = Filament.VertexBuffer$AttributeType;
+    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+    window.IndexType = Filament.IndexBuffer$IndexType;
+    window.Fov = Filament.Camera$Fov;
+    window.LightType = Filament.LightManager$Type;
+    window.app = new App(document.getElementsByTagName('canvas')[0]);
+});
+
+class App {
+    constructor(canvas) {
+        this.canvas = canvas;
+        const engine = this.engine = Filament.Engine.create(this.canvas);
+        this.scene = engine.createScene();
+
+        const sunlight = Filament.EntityManager.get().create();
+        Filament.LightManager.Builder(LightType.SUN)
+            .color([0.98, 0.92, 0.89])
+            .intensity(100000.0)
+            .direction([0.6, -1.0, -0.8])
+            .castShadows(true)
+            .sunAngularRadius(1.9)
+            .sunHaloSize(10.0)
+            .sunHaloFalloff(80.0)
+            .build(engine, sunlight);
+        this.scene.addEntity(sunlight);
+
+        const indirectLight = this.ibl = engine.createIblFromKtx1(iblfile);
+        this.scene.setIndirectLight(indirectLight);
+
+        const radians = 1.0;
+        indirectLight.setRotation(mat3.fromRotation(mat3.create(), radians, [0, 1, 0]))
+        indirectLight.setIntensity(10000);
+
+        const skybox = engine.createSkyFromKtx1(skyfile);
+        this.scene.setSkybox(skybox);
+
+        const material = engine.createMaterial('parquet.filamat');
+        const matinstance = material.createInstance();
+
+        const sampler = new Filament.TextureSampler(
+            Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+            Filament.MagFilter.LINEAR,
+            Filament.WrapMode.REPEAT);
+
+        const ao = engine.createTextureFromPng('floor_ao_roughness_metallic.png');
+        const basecolor = engine.createTextureFromJpeg('floor_basecolor.jpg', {'srgb': true});
+        const normal = engine.createTextureFromPng('floor_normal.png');
+        matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
+        matinstance.setTextureParameter('baseColor', basecolor, sampler)
+        matinstance.setTextureParameter('normal', normal, sampler)
+
+        const mesh = engine.loadFilamesh('shader_ball.filamesh', matinstance);
+        this.shaderball = mesh.renderable;
+        this.scene.addEntity(mesh.renderable);
+
+        this.swapChain = engine.createSwapChain();
+        this.renderer = engine.createRenderer();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
+        this.view = engine.createView();
+        this.view.setCamera(this.camera);
+        this.view.setScene(this.scene);
+        this.resize();
+        this.render = this.render.bind(this);
+        this.resize = this.resize.bind(this);
+        window.addEventListener('resize', this.resize);
+        window.requestAnimationFrame(this.render);
+    }
+
+    render() {
+        const radians = Date.now() / 1000;
+        const transform = mat4.fromRotation(mat4.create(), radians, [0, 1, 0]);
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(this.shaderball);
+        tcm.setTransform(inst, transform);
+        inst.delete();
+        this.renderer.render(this.swapChain, this.view);
+        window.requestAnimationFrame(this.render);
+    }
+
+    resize() {
+        const dpr = window.devicePixelRatio;
+        const width = this.canvas.width = window.innerWidth * dpr;
+        const height = this.canvas.height = window.innerHeight * dpr;
+        this.view.setViewport([0, 0, width, height]);
+        const eye = [0, 1.8, 5], center = [0, 1, -1], up = [0, 1, 0];
+        this.camera.lookAt(eye, center, up);
+        const aspect = width / height;
+        const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
+        this.camera.setProjectionFov(45, aspect, 1.0, 10.0, fov);
+    }
+}
+</script>
+</body>
+</html>

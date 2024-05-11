@@ -1,0 +1,15 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+layout(local_size_x = 1) in;
+
+layout(binding = 2, std430) buffer SSBO
+{
+    float f32;
+} ssbo;
+
+void main()
+{
+	// note: only works on ssbo targets
+    atomicAdd(ssbo.f32, 1.0);
+}
+

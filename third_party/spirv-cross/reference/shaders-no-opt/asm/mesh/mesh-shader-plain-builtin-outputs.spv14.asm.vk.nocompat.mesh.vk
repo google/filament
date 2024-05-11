@@ -1,0 +1,44 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+layout(local_size_x = 2, local_size_y = 3, local_size_z = 4) in;
+layout(max_vertices = 24, max_primitives = 8, triangles) out;
+
+struct _12
+{
+    float _m0;
+};
+
+layout(location = 1) out vec4 B[24];
+layout(location = 3) perprimitiveEXT out vec4 C[8];
+shared float _9[64];
+taskPayloadSharedEXT _12 _11;
+
+void main()
+{
+    _9[gl_LocalInvocationIndex] = float(gl_LocalInvocationIndex);
+    barrier();
+    SetMeshOutputsEXT(24u, 8u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.x = _9[gl_LocalInvocationIndex];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.y = _9[gl_LocalInvocationIndex];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.z = _9[gl_LocalInvocationIndex];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.w = _9[gl_LocalInvocationIndex];
+    float _63 = _11._m0 + _9[gl_LocalInvocationIndex ^ 1u];
+    B[gl_LocalInvocationIndex].x = _63;
+    B[gl_LocalInvocationIndex].y = _63;
+    B[gl_LocalInvocationIndex].z = _63;
+    B[gl_LocalInvocationIndex].w = _63;
+    if (gl_LocalInvocationIndex < 8u)
+    {
+        uint _71 = gl_LocalInvocationIndex * 3u;
+        gl_PrimitiveTriangleIndicesEXT[gl_LocalInvocationIndex] = uvec3(_71, _71 + 1u, _71 + 2u);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_CullPrimitiveEXT = (gl_LocalInvocationIndex & 1u) != 0u;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveID = int(gl_LocalInvocationIndex);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_Layer = int(gl_LocalInvocationIndex);
+        uint _81 = gl_LocalInvocationIndex ^ 2u;
+        C[gl_LocalInvocationIndex].x = _9[_81];
+        C[gl_LocalInvocationIndex].y = _9[_81];
+        C[gl_LocalInvocationIndex].z = _9[_81];
+        C[gl_LocalInvocationIndex].w = _9[_81];
+    }
+}
+

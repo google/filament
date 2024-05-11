@@ -1,0 +1,11 @@
+#version 450
+#extension GL_AMD_shader_trinary_minmax : require
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    int t11 = min3(0, 3, 2);
+    int t12 = max3(0, 3, 2);
+    int t13 = mid3(0, 3, 2);
+}
+

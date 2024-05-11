@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    int4 ints;
+    uint4 uints;
+};
+
+kernel void main0(device SSBO& _3 [[buffer(0)]])
+{
+    int4 _19 = _3.ints;
+    uint4 _20 = _3.uints;
+    _3.ints = popcount(_19);
+    _3.uints = uint4(popcount(_19));
+    _3.ints = int4(popcount(_20));
+    _3.uints = popcount(_20);
+    _3.ints = reverse_bits(_19);
+    _3.uints = reverse_bits(_20);
+    _3.ints = extract_bits(_19, uint(1), 11u);
+    _3.uints = uint4(extract_bits(int4(_20), 11u, uint(1)));
+    _3.ints = int4(extract_bits(uint4(_19), uint(1), 11u));
+    _3.uints = extract_bits(_20, 11u, uint(1));
+    _3.ints = insert_bits(_19, _19.wzyx, uint(1), 11u);
+    _3.uints = insert_bits(_20, _20.wzyx, 11u, uint(1));
+}
+

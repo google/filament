@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct StorageBuffer
+{
+    float values[1];
+};
+
+constant int foo_tmp [[function_constant(0)]];
+constant int foo = is_function_constant_defined(foo_tmp) ? foo_tmp : 1;
+constant float bar = is_function_constant_defined(foo_tmp) ? as_type<float>(foo_tmp) : 2.0;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device StorageBuffer& ssbo [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+{
+    ssbo.values[gl_LocalInvocationIndex] = float(foo) + bar;
+}
+

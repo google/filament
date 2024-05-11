@@ -1,0 +1,233 @@
+// This script accepts the following parameters:
+//
+// com.google.android.filament.dist-dir
+//     Path to the Filament distribution/install directory for Android
+//     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
+//
+// com.google.android.filament.tools-dir
+//     Path to the Filament distribution/install directory for desktop.
+//     This directory must contain bin/matc.
+//
+// com.google.android.filament.exclude-vulkan
+//     When set, support for Vulkan will be excluded.
+//
+// com.google.android.filament.matdbg
+//     When set, enables matdbg
+//
+// com.google.android.filament.matnopt
+//     When set, disable shader optimizations.
+//
+// com.google.android.filament.skip-samples
+//     Exclude samples from the project. Useful to speed up compilation.
+//
+// com.google.android.filament.abis
+//     List of supported ABIs to build as a comma separated list. Available options are:
+//         arm64-v8a, armeabi-v7a, x86_64, x86, all
+//     Defaults to all.
+//
+// Example:
+//     ./gradlew -Pcom.google.android.filament.dist-dir=../dist-android-release \
+//               -Pcom.google.android.filament.abis=x86 \
+//               assembleRelease
+
+// Publishing to Maven Central:
+//   - Build and upload artifacts with ./gradlew publish
+//   - Close and release staging repo on Nexus with ./gradlew closeAndReleaseStagingRepository
+//
+// The following is needed in ~/gradle/gradle.properties:
+//
+//     sonatypeUsername=nexus_user
+//     sonatypePassword=nexus_password
+//
+//     signing.keyId=pgp_key_id
+//     signing.password=pgp_key_password
+//     signing.secretKeyRingFile=/Users/user/.gnupg/maven_signing.key
+//
+
+buildscript {
+    def path = providers
+            .gradleProperty("com.google.android.filament.dist-dir")
+            .get()
+
+    def directory = objects.fileProperty().fileValue(new File(path)).getAsFile().get()
+    def filamentPath = directory.absolutePath
+
+    // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
+    // variable, so here we convert the native path to a forward-slash path.
+    filamentPath = filamentPath.replace(File.separator, '/')
+
+    // Warning: changing this property does not work well with incremental builds.
+    def excludeVulkan = providers
+            .gradleProperty("com.google.android.filament.exclude-vulkan")
+            .isPresent()
+
+    def matdbg = providers
+            .gradleProperty("com.google.android.filament.matdbg")
+            .isPresent()
+
+    def matnopt = providers
+            .gradleProperty("com.google.android.filament.matnopt")
+            .isPresent()
+
+    def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+    def newAbis = providers
+            .gradleProperty("com.google.android.filament.abis")
+            .get()
+            .split(',')
+    if (!newAbis.contains("all")) {
+        abis = newAbis
+    }
+
+    ext.versions = [
+        'jdk': 17,
+        'minSdk': 21,
+        'targetSdk': 34,
+        'compileSdk': 34,
+        'kotlin': '1.9.21',
+        'kotlin_coroutines': '1.7.3',
+        'buildTools': '34.0.0',
+        'ndk': '26.1.10909125',
+        'androidx_core': '1.12.0',
+        'androidx_annotations': '1.7.0'
+    ]
+
+    ext.deps = [
+        'androidx': [
+            'annotations': "androidx.annotation:annotation:${versions.androidx_annotations}",
+            'core': "androidx.core:core:${versions.androidx_core}",
+        ],
+        'kotlin': "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}",
+        'coroutines': [
+            'core': "org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions.kotlin_coroutines}",
+            'android': "org.jetbrains.kotlinx:kotlinx-coroutines-android:${versions.kotlin_coroutines}",
+        ]
+    ]
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
+    }
+
+    ext.cmakeArgs = [
+        "--no-warn-unused-cli",
+        "-DANDROID_PIE=ON",
+        "-DANDROID_PLATFORM=21",
+        "-DANDROID_STL=c++_static",
+        "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
+        "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
+        "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
+        "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString()
+    ]
+
+    ext.cppFlags = [
+        "-std=c++17",
+        "-fno-stack-protector",
+        "-fno-exceptions",
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+        "-fno-rtti",
+        "-ffast-math",
+        "-fno-finite-math-only",
+        "-ffp-contract=fast",
+        "-fvisibility-inlines-hidden",
+        "-fvisibility=hidden",
+        "-fomit-frame-pointer",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-no-canonical-prefixes",
+        "-Wformat",
+        "-Werror=format-security",
+        "-Wno-unused-command-line-argument",
+        "-Wl,--gc-sections",
+        "-Wl,-Bsymbolic-functions",
+        "-Wl,--hash-style=both", // Required to support API levels below 23
+    ]
+
+    ext.abis = abis
+
+    repositories {
+        mavenCentral()
+        google()
+    }
+}
+
+plugins {
+    id "io.github.gradle-nexus.publish-plugin" version "1.3.0"
+}
+
+// See https://github.com/gradle-nexus/publish-plugin
+// Publish to https://oss.sonatype.org/ (not s01)
+nexusPublishing {
+    packageGroup = 'com.google.android'
+    repositories {
+        sonatype {
+            stagingProfileId = '9a75a224a4f17b'
+        }
+    }
+}
+
+subprojects {
+    group = GROUP
+    version = VERSION_NAME
+
+    repositories {
+        mavenCentral()
+        google()
+    }
+
+    if (!name.startsWith("sample")) {
+        apply plugin: 'com.android.library'
+
+        android {
+            buildToolsVersion versions.buildTools
+            compileSdkVersion versions.compileSdk
+            ndkVersion versions.ndk
+
+            defaultConfig {
+                minSdkVersion versions.minSdk
+                targetSdkVersion versions.targetSdk
+
+                externalNativeBuild {
+                    cmake {
+                        arguments.addAll(rootProject.ext.cmakeArgs)
+                        cppFlags.addAll(rootProject.ext.cppFlags)
+                    }
+                }
+
+                ndk {
+                    //noinspection ChromeOsAbiSupport
+                    abiFilters(*rootProject.ext.abis)
+                }
+
+                consumerProguardFiles '../proguard-rules.pro'
+            }
+
+            externalNativeBuild {
+                cmake {
+                    version "3.19.0+"
+                    path "CMakeLists.txt"
+                }
+            }
+
+            sourceSets {
+                main {
+                    jni.srcDirs "src/main/cpp"
+                }
+            }
+
+            compileOptions {
+                sourceCompatibility versions.jdk
+                targetCompatibility versions.jdk
+            }
+        }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    gradle.taskGraph.allTasks.each {
+        it.onlyIf {
+            !it.project.ext.has('isSample') ||
+                    !project.hasProperty('com.google.android.filament.skip-samples')
+         }
+    }
+}

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>glTF Morphing</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="favicon.png" rel="icon" type="image/x-icon" />
+<style>
+body { margin: 0; overflow: hidden; }
+canvas { touch-action: none; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas></canvas>
+<script src="filament.js"></script>
+<script src="gl-matrix-min.js"></script>
+<script src="gltumble.min.js"></script>
+<script>
+
+const mesh_url = "AnimatedMorphCube.glb";
+
+Filament.init([mesh_url], () => {
+    window.gltfio = Filament.gltfio;
+    window.Fov = Filament.Camera$Fov;
+    window.app = new App(document.querySelector("canvas"));
+});
+
+class App {
+    constructor(canvas) {
+        this.canvas = canvas;
+        const engine = this.engine = Filament.Engine.create(this.canvas);
+        const scene = this.scene = engine.createScene();
+        this.trackball = new Trackball(canvas, {startSpin: 0.035});
+
+        const loader = engine.createAssetLoader();
+        const asset = this.asset = loader.createAsset(mesh_url);
+
+        const onDone = () => {
+            loader.delete();
+            scene.addEntities(asset.getEntities());
+            this.animator = asset.getAnimator();
+            this.animationStartTime = Date.now();
+        };
+        asset.loadResources(onDone);
+
+        this.swapChain = engine.createSwapChain();
+        this.renderer = engine.createRenderer();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
+
+        this.view = engine.createView();
+        this.view.setCamera(this.camera);
+        this.view.setScene(this.scene);
+
+        this.renderer.setClearOptions({clearColor: [0.6, 0.6, 0.6, 1.0], clear: true});
+
+        this.resize();
+        this.render = this.render.bind(this);
+        this.resize = this.resize.bind(this);
+        window.addEventListener("resize", this.resize);
+        window.requestAnimationFrame(this.render);
+    }
+
+    render() {
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(this.asset.getRoot());
+        tcm.setTransform(inst, this.trackball.getMatrix());
+        inst.delete();
+
+        if (this.animator) {
+            const ms = Date.now() - this.animationStartTime;
+            this.animator.applyAnimation(0, ms / 1000);
+            this.animator.updateBoneMatrices();
+        }
+
+        this.renderer.render(this.swapChain, this.view);
+        window.requestAnimationFrame(this.render);
+    }
+
+    resize() {
+        const dpr = window.devicePixelRatio;
+        const width = this.canvas.width = window.innerWidth * dpr;
+        const height = this.canvas.height = window.innerHeight * dpr;
+        this.view.setViewport([0, 0, width, height]);
+        const eye = [0, 0, 5], center = [0, 0, 0], up = [0, 1, 0];
+        this.camera.lookAt(eye, center, up);
+        const aspect = width / height;
+        const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
+        this.camera.setProjectionFov(30, aspect, 1.0, 20.0, fov);
+    }
+}
+</script>
+</body>
+</html>

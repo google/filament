@@ -1,0 +1,32 @@
+name: gltf-viewer
+options:
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
+include: ../app-template.yml
+targets:
+    gltf-viewer:
+        sources: gltf-viewer/
+        sources:
+            - path: '../../../third_party/models/BusterDrone'
+              type: folder
+              buildPhase: resources
+            - path: 'generated/default_env/default_env_ibl.ktx'
+              buildPhase: resources
+              optional: true
+            - path: 'generated/default_env/default_env_skybox.ktx'
+              buildPhase: resources
+              optional: true
+        templates:
+            - FilamentApp
+        settings:
+            base:
+                OTHER_LDFLAGS: ["-lgltfio_core", "-luberarchive", "-limage", "-lstb", "-lbasis_transcoder",
+                                "-lzstd", "-lcamutils", "-ldracodec", "-lmeshoptimizer", "-lviewer", "-lcivetweb",
+                                "-luberzlib"]
+        preBuildScripts:
+            - path: build-resources.sh
+              name: Build Resources
+              inputFiles:
+                - $(SRCROOT)/../../../third_party/environments/lightroom_14b.hdr
+              outputFiles:
+                - $(SRCROOT)/generated/default_env/default_env_ibl.ktx
+                - $(SRCROOT)/generated/default_env/default_env_skybox.ktx

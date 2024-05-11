@@ -1,0 +1,17 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+rayPayloadInNV float payload;
+
+void main()
+{
+    if (payload > 0.0)
+    {
+        ignoreIntersectionNV();
+    }
+    else
+    {
+        terminateRayNV();
+    }
+}
+

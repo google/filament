@@ -1,0 +1,61 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer DATA_IN
+{
+	int data_in_int[128];
+	ivec2 data_in_ivec2[128];
+	ivec3 data_in_ivec3[128];
+	ivec4 data_in_ivec4[128];
+	uint data_in_uint[128];
+	uvec2 data_in_uvec2[128];
+	uvec3 data_in_uvec3[128];
+	uvec4 data_in_uvec4[128];
+};
+
+layout(std430, binding = 1) buffer DATA_OUT
+{
+	int data_out_int;
+	ivec2 data_out_ivec2;
+	ivec3 data_out_ivec3;
+	ivec4 data_out_ivec4;
+	uint data_out_uint;
+	uvec2 data_out_uvec2;
+	uvec3 data_out_uvec3;
+	uvec4 data_out_uvec4;
+};
+
+void main()
+{
+	data_out_int = subgroupAdd(data_in_int[gl_LocalInvocationID.x]);
+	data_out_ivec2 = subgroupAdd(data_in_ivec2[gl_LocalInvocationID.x]);
+	data_out_ivec3 = subgroupAdd(data_in_ivec3[gl_LocalInvocationID.x]);
+	data_out_ivec4 = subgroupAdd(data_in_ivec4[gl_LocalInvocationID.x]);
+
+	data_out_uint = subgroupAdd(data_in_uint[gl_LocalInvocationID.x]);
+	data_out_uvec2 = subgroupAdd(data_in_uvec2[gl_LocalInvocationID.x]);
+	data_out_uvec3 = subgroupAdd(data_in_uvec3[gl_LocalInvocationID.x]);
+	data_out_uvec4 = subgroupAdd(data_in_uvec4[gl_LocalInvocationID.x]);
+
+	data_out_int = subgroupExclusiveAdd(data_in_int[gl_LocalInvocationID.x]);
+	data_out_ivec2 = subgroupExclusiveAdd(data_in_ivec2[gl_LocalInvocationID.x]);
+	data_out_ivec3 = subgroupExclusiveAdd(data_in_ivec3[gl_LocalInvocationID.x]);
+	data_out_ivec4 = subgroupExclusiveAdd(data_in_ivec4[gl_LocalInvocationID.x]);
+
+	data_out_uint = subgroupExclusiveAdd(data_in_uint[gl_LocalInvocationID.x]);
+	data_out_uvec2 = subgroupExclusiveAdd(data_in_uvec2[gl_LocalInvocationID.x]);
+	data_out_uvec3 = subgroupExclusiveAdd(data_in_uvec3[gl_LocalInvocationID.x]);
+	data_out_uvec4 = subgroupExclusiveAdd(data_in_uvec4[gl_LocalInvocationID.x]);
+
+	data_out_int = subgroupInclusiveAdd(data_in_int[gl_LocalInvocationID.x]);
+	data_out_ivec2 = subgroupInclusiveAdd(data_in_ivec2[gl_LocalInvocationID.x]);
+	data_out_ivec3 = subgroupInclusiveAdd(data_in_ivec3[gl_LocalInvocationID.x]);
+	data_out_ivec4 = subgroupInclusiveAdd(data_in_ivec4[gl_LocalInvocationID.x]);
+
+	data_out_uint = subgroupInclusiveAdd(data_in_uint[gl_LocalInvocationID.x]);
+	data_out_uvec2 = subgroupInclusiveAdd(data_in_uvec2[gl_LocalInvocationID.x]);
+	data_out_uvec3 = subgroupInclusiveAdd(data_in_uvec3[gl_LocalInvocationID.x]);
+	data_out_uvec4 = subgroupInclusiveAdd(data_in_uvec4[gl_LocalInvocationID.x]);
+}

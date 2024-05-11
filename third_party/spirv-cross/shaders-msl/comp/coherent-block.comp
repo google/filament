@@ -1,0 +1,12 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(binding = 1) coherent restrict writeonly buffer SSBO
+{
+	vec4 value;	
+};
+
+void main()
+{
+	value = vec4(20.0);
+}

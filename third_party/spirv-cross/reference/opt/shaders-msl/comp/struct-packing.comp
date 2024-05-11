@@ -1,0 +1,152 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct S0
+{
+    float2 a[1];
+    float b;
+    char _m0_final_padding[4];
+};
+
+struct S1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct S2
+{
+    float3 a[1];
+    float b;
+    char _m0_final_padding[12];
+};
+
+struct S3
+{
+    float2 a;
+    float b;
+};
+
+struct S4
+{
+    float2 c;
+};
+
+struct Content
+{
+    S0 m0s[1];
+    S1 m1s[1];
+    S2 m2s[1];
+    S0 m0;
+    S1 m1;
+    S2 m2;
+    S3 m3;
+    float m4;
+    S4 m3s[8];
+    char _m0_final_padding[8];
+};
+
+struct SSBO1
+{
+    Content content;
+    Content content1[2];
+    Content content2;
+    float2x2 m0;
+    float2x2 m1;
+    float2x3 m2[4];
+    float3x2 m3;
+    float2x2 m4;
+    float2x2 m5[9];
+    float3x2 m6[4][2];
+    float2x3 m7;
+    float array[1];
+};
+
+struct S0_1
+{
+    float2 a[1];
+    char _m1_pad[8];
+    float b;
+    char _m0_final_padding[12];
+};
+
+struct S1_1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct S2_1
+{
+    float3 a[1];
+    float b;
+    char _m0_final_padding[12];
+};
+
+struct S3_1
+{
+    float2 a;
+    float b;
+};
+
+struct S4_1
+{
+    float2 c;
+    char _m0_final_padding[8];
+};
+
+struct Content_1
+{
+    S0_1 m0s[1];
+    S1_1 m1s[1];
+    S2_1 m2s[1];
+    S0_1 m0;
+    S1_1 m1;
+    S2_1 m2;
+    S3_1 m3;
+    float m4;
+    char _m8_pad[8];
+    S4_1 m3s[8];
+};
+
+struct SSBO0
+{
+    Content_1 content;
+    Content_1 content1[2];
+    Content_1 content2;
+    float4 array[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO1& ssbo_430 [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]])
+{
+    Content_1 _60 = ssbo_140.content;
+    ssbo_430.content.m0s[0].a[0] = _60.m0s[0].a[0];
+    ssbo_430.content.m0s[0].b = _60.m0s[0].b;
+    ssbo_430.content.m1s[0].a = float3(_60.m1s[0].a);
+    ssbo_430.content.m1s[0].b = _60.m1s[0].b;
+    ssbo_430.content.m2s[0].a[0] = _60.m2s[0].a[0];
+    ssbo_430.content.m2s[0].b = _60.m2s[0].b;
+    ssbo_430.content.m0.a[0] = _60.m0.a[0];
+    ssbo_430.content.m0.b = _60.m0.b;
+    ssbo_430.content.m1.a = float3(_60.m1.a);
+    ssbo_430.content.m1.b = _60.m1.b;
+    ssbo_430.content.m2.a[0] = _60.m2.a[0];
+    ssbo_430.content.m2.b = _60.m2.b;
+    ssbo_430.content.m3.a = _60.m3.a;
+    ssbo_430.content.m3.b = _60.m3.b;
+    ssbo_430.content.m4 = _60.m4;
+    ssbo_430.content.m3s[0].c = _60.m3s[0].c;
+    ssbo_430.content.m3s[1].c = _60.m3s[1].c;
+    ssbo_430.content.m3s[2].c = _60.m3s[2].c;
+    ssbo_430.content.m3s[3].c = _60.m3s[3].c;
+    ssbo_430.content.m3s[4].c = _60.m3s[4].c;
+    ssbo_430.content.m3s[5].c = _60.m3s[5].c;
+    ssbo_430.content.m3s[6].c = _60.m3s[6].c;
+    ssbo_430.content.m3s[7].c = _60.m3s[7].c;
+    ssbo_430.content.m1.a = ssbo_430.content.m3.a * ssbo_430.m6[1][1];
+}
+

@@ -1,0 +1,114 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0) buffer SSBO_A
+{
+	float data[];
+} ssbo_a;
+
+layout(set = 0, binding = 0) buffer SSBO_B
+{
+	uvec2 data[];
+} ssbo_b;
+
+layout(set = 0, binding = 0) readonly buffer SSBO_BRO
+{
+	uvec2 data[];
+} ssbo_b_readonly;
+
+layout(set = 0, binding = 1) uniform UBO_C
+{
+	float data[1024];
+} ubo_c;
+
+layout(set = 0, binding = 1) uniform UBO_D
+{
+	uvec2 data[1024];
+} ubo_d;
+
+layout(set = 0, binding = 2) buffer SSBO_As 
+{
+	float data[];
+} ssbo_as[4];
+
+layout(set = 0, binding = 2) buffer SSBO_Bs
+{
+	uvec2 data[1024];
+} ssbo_bs[4];
+
+layout(set = 0, binding = 2) readonly buffer SSBO_BsRO
+{
+	uvec2 data[1024];
+} ssbo_bs_readonly[4];
+
+layout(set = 0, binding = 3) uniform UBO_Cs
+{
+	float data[1024];
+} ubo_cs[4];
+
+layout(set = 0, binding = 3) uniform UBO_Ds
+{
+	uvec2 data[1024];
+} ubo_ds[4];
+
+layout(set = 2, binding = 0) buffer SSBO_E
+{
+	float data[];
+} ssbo_e;
+
+layout(set = 2, binding = 0) buffer SSBO_F
+{
+	uvec2 data[];
+} ssbo_f;
+
+layout(set = 2, binding = 1) uniform UBO_G
+{
+	float data[1024];
+} ubo_g;
+
+layout(set = 2, binding = 1) uniform UBO_H
+{
+	uvec2 data[1024];
+} ubo_h;
+
+layout(set = 2, binding = 0) readonly buffer SSBO_I
+{
+	uvec2 data[];
+} ssbo_i;
+
+layout(push_constant) uniform Registers
+{
+	float reg;
+};
+
+void func0()
+{
+	ssbo_a.data[gl_GlobalInvocationID.x] = ubo_c.data[gl_WorkGroupID.x] + reg;
+	ssbo_b.data[gl_GlobalInvocationID.x] =
+		ubo_d.data[gl_WorkGroupID.y] + ssbo_b_readonly.data[gl_GlobalInvocationID.x];
+}
+
+void func1()
+{
+	ssbo_as[gl_WorkGroupID.x].data[gl_GlobalInvocationID.x] = ubo_cs[gl_WorkGroupID.x].data[0];
+}
+
+void func2()
+{
+	ssbo_bs[gl_WorkGroupID.x].data[gl_GlobalInvocationID.x] =
+		ubo_ds[gl_WorkGroupID.x].data[0] + ssbo_bs_readonly[gl_WorkGroupID.x].data[gl_GlobalInvocationID.x];
+}
+
+void func3()
+{
+	ssbo_e.data[gl_GlobalInvocationID.x] = ubo_g.data[gl_WorkGroupID.x];
+	ssbo_f.data[gl_GlobalInvocationID.x] = ubo_h.data[gl_WorkGroupID.y] + ssbo_i.data[gl_GlobalInvocationID.x];
+}
+
+void main()
+{
+	func0();
+	func1();
+	func2();
+	func3();
+}

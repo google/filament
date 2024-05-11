@@ -1,0 +1,307 @@
+# NOTE: This workflow was ported from Travis.
+# Travis was using Ubuntu 14.04. Ubuntu 14.04 is not supportted by GitHub workflows. Ubuntu 20.04 is recommended.
+# Travis was using Clang 3.6. The earliest version support by Ubuntu 20.04 is Clang 6.0.
+# Travis was caching the clang package. APT package caching is not natively supported by GitHub actions/cache.
+# Travis was using Mac OS X 10.13.6 / Xcode 9.4.1 / LLVM 9.1.0
+#
+name: Continuous Integration
+
+on:
+    workflow_dispatch:
+    pull_request:
+        branches:
+            - main
+
+permissions: read-all
+
+jobs:
+    linux:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                compiler: [{cc: clang, cxx: clang++}, {cc: gcc, cxx: g++}]
+                cmake_build_type: [Debug, Release]
+        steps:
+            - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+            - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+              with:
+                  python-version: '3.7'
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@6d1841ec156c39a52b1b23a810da917ab98da1f4 # v1.2.10
+              with:
+                  key: ubuntu-22-${{ matrix.cmake_build_type }}-${{ matrix.compiler.cc }}-${{matrix.compiler.cxx}}
+            - name: Install GoogleTest
+              run: |
+                  # check out pre-breakage version of googletest; can be deleted when
+                  # issue 3128 is fixed
+                  # git clone --depth=1 https://github.com/google/googletest.git External/googletest
+                  mkdir -p External/googletest
+                  cd External/googletest
+                  git init
+                  git remote add origin https://github.com/google/googletest.git
+                  git fetch --depth 1 origin 0c400f67fcf305869c5fb113dd296eca266c9725
+                  git reset --hard FETCH_HEAD
+                  cd ../..
+            - name: Update Glslang Sources
+              run: ./update_glslang_sources.py
+            - name: Configure
+              run: cmake -S . -B build -D CMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}
+              env:
+                CC: ${{matrix.compiler.cc}}
+                CXX: ${{matrix.compiler.cxx}}
+                CMAKE_GENERATOR: Ninja
+                CMAKE_C_COMPILER_LAUNCHER: ccache
+                CMAKE_CXX_COMPILER_LAUNCHER: ccache
+            - name: Build
+              run: cmake --build build
+            - name: Install
+              run: cmake --install build --prefix build/install
+            - name: Test
+              run: |
+                  cd build
+                  ctest --output-on-failure &&
+                  cd ../Test && ./runtests
+
+    linux-asan:
+        runs-on: ubuntu-22.04
+        strategy:
+            fail-fast: false
+            matrix:
+                compiler: [{cc: gcc, cxx: g++}]
+                cmake_build_type: [Debug]
+                flags: ['-fsanitize=address', '-fsanitize=thread']
+        steps:
+            - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+            - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+              with:
+                  python-version: '3.7'
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@6d1841ec156c39a52b1b23a810da917ab98da1f4 # v1.2.10
+              with:
+                  key: ubuntu-22-${{ matrix.cmake_build_type }}-${{ matrix.compiler.cc }}-${{matrix.compiler.cxx}}-${{matrix.flags}}
+            - name: Install GoogleTest
+              run: |
+                  # check out pre-breakage version of googletest; can be deleted when
+                  # issue 3128 is fixed
+                  # git clone --depth=1 https://github.com/google/googletest.git External/googletest
+                  mkdir -p External/googletest
+                  cd External/googletest
+                  git init
+                  git remote add origin https://github.com/google/googletest.git
+                  git fetch --depth 1 origin 0c400f67fcf305869c5fb113dd296eca266c9725
+                  git reset --hard FETCH_HEAD
+                  cd ../..
+            - name: Update Glslang Sources
+              run: ./update_glslang_sources.py
+            - name: Configure
+              run: cmake -S . -B build -D CMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}
+              env:
+                CC: ${{matrix.compiler.cc}}
+                CXX: ${{matrix.compiler.cxx}}
+                CMAKE_GENERATOR: Ninja
+                CMAKE_C_COMPILER_LAUNCHER: ccache
+                CMAKE_CXX_COMPILER_LAUNCHER: ccache
+                CFLAGS: ${{matrix.flags}}
+                CXXFLAGS: ${{matrix.flags}}
+                LDFLAGS: ${{matrix.flags}}
+            - name: Build
+              run: cmake --build build
+            - name: Install
+              run: cmake --install build --prefix build/install
+            - name: Test
+              run: |
+                  cd build
+                  ctest --output-on-failure &&
+                  cd ../Test && ./runtests
+
+    # Ensure we can compile/run on an older distro
+    linux_min:
+      name: Linux Backcompat
+      runs-on: ubuntu-20.04
+      steps:
+          - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+          - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+            with:
+                python-version: '3.7'
+          - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            with:
+              cmakeVersion: 3.17.2
+          - name: Setup ccache
+            uses: hendrikmuhs/ccache-action@6d1841ec156c39a52b1b23a810da917ab98da1f4 # v1.2.10
+            with:
+              key: linux_backcompat
+          - name: Install GoogleTest
+            run: |
+                # check out pre-breakage version of googletest; can be deleted when
+                # issue 3128 is fixed
+                # git clone --depth=1 https://github.com/google/googletest.git External/googletest
+                mkdir -p External/googletest
+                cd External/googletest
+                git init
+                git remote add origin https://github.com/google/googletest.git
+                git fetch --depth 1 origin 0c400f67fcf305869c5fb113dd296eca266c9725
+                git reset --hard FETCH_HEAD
+                cd ../..
+          - name: Update Glslang Sources
+            run: ./update_glslang_sources.py
+          - name: Configure
+            run: cmake -S . -B build -D CMAKE_BUILD_TYPE=Release
+            env:
+              CMAKE_C_COMPILER_LAUNCHER: ccache
+              CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          - name: Build
+            run: cmake --build build
+          - name: Install
+            run: cmake --install build --prefix build/install
+          - name: Test
+            run: |
+                cd build
+                ctest --output-on-failure &&
+                cd ../Test && ./runtests
+
+    macos:
+        runs-on: ${{matrix.os}}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [macos-11, macos-12]
+                compiler: [{cc: clang, cxx: clang++}, {cc: gcc, cxx: g++}]
+                cmake_build_type: [Debug, Release]
+        steps:
+            - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+            - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+              with:
+                  python-version: '3.7'
+            - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            - name: Install GoogleTest
+              run: |
+                  # check out pre-breakage version of googletest; can be deleted when
+                  # issue 3128 is fixed
+                  # git clone --depth=1 https://github.com/google/googletest.git External/googletest
+                  mkdir -p External/googletest
+                  cd External/googletest
+                  git init
+                  git remote add origin https://github.com/google/googletest.git
+                  git fetch --depth 1 origin 0c400f67fcf305869c5fb113dd296eca266c9725
+                  git reset --hard FETCH_HEAD
+                  cd ../..
+            - name: Update Glslang Sources
+              run: ./update_glslang_sources.py
+            - name: Configure
+              run: cmake -S . -B build -D CMAKE_BUILD_TYPE=${{matrix.cmake_build_type}} -G "Ninja"
+              env:
+                  CC: ${{matrix.compiler.cc}}
+                  CXX: ${{matrix.compiler.cxx}}
+            - name: Build
+              run: cmake --build build
+            - name: Install
+              run: cmake --install build --prefix build/install
+            - name: Test
+              run: |
+                  cd build
+                  ctest --output-on-failure &&
+                  cd ../Test && ./runtests
+
+    windows:
+        runs-on: ${{matrix.os.genus}}
+        permissions:
+            contents: write
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [{genus: windows-2019, family: windows}]
+                cmake_build_type: [Debug, Release]
+        steps:
+            - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+            - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+              with:
+                  python-version: '3.7'
+            - name: Install GoogleTest
+              run: |
+                  # check out pre-breakage version of googletest; can be deleted when
+                  # issue 3128 is fixed
+                  # git clone --depth=1 https://github.com/google/googletest.git External/googletest
+                  mkdir -p External/googletest
+                  cd External/googletest
+                  git init
+                  git remote add origin https://github.com/google/googletest.git
+                  git fetch --depth 1 origin 0c400f67fcf305869c5fb113dd296eca266c9725
+                  git reset --hard FETCH_HEAD
+                  cd ../..
+            - name: Update Glslang Sources
+              run: |
+                  python update_glslang_sources.py
+            - name: Build
+              run: |
+                  cmake -S. -Bbuild -G "Visual Studio 16 2019" -A x64 -DCMAKE_INSTALL_PREFIX="$PWD/build/install"
+                  cmake --build build --config ${{matrix.cmake_build_type}} --target install
+            - name: Test
+              run: |
+                  cd build
+                  ctest -C ${{matrix.cmake_build_type}} --output-on-failure
+                  cd ../Test && bash runtests
+
+    android:
+        runs-on: ubuntu-22.04
+        strategy:
+          matrix:
+            # Android NDK currently offers 2 different toolchains.
+            # Test both to ensure we are compatible with either approach.
+            LEGACY: [ON, OFF]
+            # Oldest/newest NDK currently provided by GitHub runners
+            # https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md#android
+            NDK: [23.2.8568313, 25.2.9519653]
+        steps:
+            - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+            - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+              with:
+                  python-version: '3.7'
+            - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@6d1841ec156c39a52b1b23a810da917ab98da1f4 # v1.2.10
+              with:
+                  key: android-${{ matrix.LEGACY }}-${{ matrix.NDK }}
+            - name: Update Glslang Sources
+              run: ./update_glslang_sources.py
+            - name: Configure
+              run: |
+                cmake -S . -B build/ \
+                --toolchain $ANDROID_HOME/ndk/${{ matrix.NDK }}/build/cmake/android.toolchain.cmake \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D ANDROID_ABI=armeabi-v7a \
+                -D ANDROID_USE_LEGACY_TOOLCHAIN_FILE=${{ matrix.LEGACY }} \
+                -D BUILD_TESTING=OFF
+              env:
+                CMAKE_GENERATOR: Ninja
+                CMAKE_C_COMPILER_LAUNCHER: ccache
+                CMAKE_CXX_COMPILER_LAUNCHER: ccache
+            - name: Build
+              run: cmake --build build/
+
+    emscripten:
+        runs-on: ubuntu-22.04
+        steps:
+            - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+            - uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+              with:
+                  python-version: '3.7'
+            - uses: lukka/get-cmake@8be6cca406b575906541e8e3b885d46f416bba39 # v3.27.7
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@6d1841ec156c39a52b1b23a810da917ab98da1f4 # v1.2.10
+              with:
+                  key: ubuntu-emscripten
+            - uses: mymindstorm/setup-emsdk@ab889da2abbcbb280f91ec4c215d3bb4f3a8f775 # v12
+            - name: Update Glslang Sources
+              run: ./update_glslang_sources.py
+            - name: Configure
+              run: emcmake cmake -GNinja -Bbuild/web -DCMAKE_BUILD_TYPE=Release -DENABLE_GLSLANG_JS=ON -DBUILD_TESTING=OFF -DENABLE_OPT=OFF
+              env:
+                CMAKE_GENERATOR: Ninja
+                CMAKE_C_COMPILER_LAUNCHER: ccache
+                CMAKE_CXX_COMPILER_LAUNCHER: ccache
+            - name: Build
+              run: cmake --build build/web

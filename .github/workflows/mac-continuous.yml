@@ -1,0 +1,26 @@
+name: macOS
+
+on:
+  push:
+    branches:
+      - main
+      - release
+      - rc/**
+
+jobs:
+  build-mac:
+    name: build-mac
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v3.3.0
+      - name: Run build script
+        run: |
+          cd build/mac && printf "y" | ./build.sh continuous
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: filament-mac
+          path: out/filament-release-darwin.tgz
+      - name: Check public headers
+        run: |
+          build/common/check-headers.sh out/release/filament/include

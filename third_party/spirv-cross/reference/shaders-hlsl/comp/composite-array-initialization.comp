@@ -1,0 +1,63 @@
+struct Data
+{
+    float a;
+    float b;
+};
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 4.0f
+#endif
+static const float X = SPIRV_CROSS_CONSTANT_ID_0;
+
+static const uint3 gl_WorkGroupSize = uint3(2u, 1u, 1u);
+
+static const Data _21 = { 1.0f, 2.0f };
+static const Data _24 = { 3.0f, 4.0f };
+static const Data _25[2] = { { 1.0f, 2.0f }, { 3.0f, 4.0f } };
+static const Data _30 = { 3.0f, 5.0f };
+
+RWByteAddressBuffer _61 : register(u0);
+
+static uint3 gl_WorkGroupID;
+static uint3 gl_LocalInvocationID;
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_WorkGroupID : SV_GroupID;
+    uint3 gl_LocalInvocationID : SV_GroupThreadID;
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+static Data data[2];
+static Data data2[2];
+
+Data combine(Data a, Data b)
+{
+    Data _46 = { a.a + b.a, a.b + b.b };
+    return _46;
+}
+
+void comp_main()
+{
+    data = _25;
+    Data _28 = { X, 2.0f };
+    Data _31[2] = { _28, _30 };
+    data2 = _31;
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        Data param = data[gl_LocalInvocationID.x];
+        Data param_1 = data2[gl_LocalInvocationID.x];
+        Data _79 = combine(param, param_1);
+        _61.Store(gl_WorkGroupID.x * 8 + 0, asuint(_79.a));
+        _61.Store(gl_WorkGroupID.x * 8 + 4, asuint(_79.b));
+    }
+}
+
+[numthreads(2, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_WorkGroupID = stage_input.gl_WorkGroupID;
+    gl_LocalInvocationID = stage_input.gl_LocalInvocationID;
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    comp_main();
+}

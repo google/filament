@@ -1,0 +1,46 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_16bit_storage : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) buffer SSBO
+{
+    int s32;
+    uint u32;
+    int16_t s16;
+    uint16_t u16;
+    float f32;
+} _4;
+
+void main()
+{
+    int _29 = _4.s32;
+    uint _30 = _4.u32;
+    int16_t _31 = _4.s16;
+    uint16_t _32 = _4.u16;
+    float _33 = _4.f32;
+    _4.s32 = int(_31);
+    _4.u32 = uint(_31);
+    _4.s32 = int(int16_t(_32));
+    _4.u32 = uint(int16_t(_32));
+    _4.u32 = uint(uint16_t(_31));
+    _4.u32 = uint(_32);
+    _4.s16 = int16_t(_29);
+    _4.u16 = uint16_t(_29);
+    _4.s16 = int16_t(_30);
+    _4.u16 = uint16_t(_30);
+    _4.u16 = uint16_t(_29);
+    _4.u16 = uint16_t(_30);
+    _4.f32 = float(_31);
+    _4.f32 = float(int16_t(_32));
+    _4.f32 = float(_29);
+    _4.f32 = float(int(_30));
+    _4.f32 = float(uint16_t(_31));
+    _4.f32 = float(_32);
+    _4.f32 = float(uint(_29));
+    _4.f32 = float(_30);
+    _4.s16 = int16_t(_33);
+    _4.u16 = uint16_t(int16_t(_33));
+    _4.u16 = uint16_t(_33);
+}
+

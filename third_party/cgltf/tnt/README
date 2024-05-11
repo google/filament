@@ -1,0 +1,10 @@
+This folder was last updated as follows:
+
+    export tag=v1.13
+    cd third_party
+    curl -L -O https://github.com/jkuhlmann/cgltf/archive/refs/tags/${tag}.zip
+    unzip ${tag}.zip
+    mv cgltf-* cgltf_new
+    rsync -r cgltf_new/ cgltf/ --delete --exclude tnt
+    rm -rf ${tag}.zip cgltf_new
+    git add cgltf ; git status

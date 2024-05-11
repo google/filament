@@ -1,0 +1,186 @@
+material {
+    name : iblprefilter,
+    parameters : [
+        {
+            type : samplerCubemap,
+            name : environment,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : kernel,
+            precision: high
+        },
+        {
+            type : float2,
+            name : compress,
+            precision: medium
+        },
+        {
+            type : float,
+            name : side,
+            precision: medium
+        },
+        {
+            type : float,
+            name : lodOffset,
+            precision: medium
+        },
+        {
+            type : uint,
+            name : sampleCount,
+            precision: medium
+        },
+        {
+            type : uint,
+            name : attachmentLevel,
+            precision: medium
+        }
+    ],
+    outputs : [
+        {
+            name : outx,
+            target : color,
+            type : float3
+        },
+        {
+            name : outy,
+            target : color,
+            type : float3
+        },
+        {
+            name : outz,
+            target : color,
+            type : float3
+        }
+    ],
+    constants : [
+        {
+            name : irradiance,
+            type : bool,
+            default : false
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+
+void dummy() {}
+
+precision highp float;
+precision highp int;
+
+mat3 tangentSpace(const vec3 N) {
+    vec3 up = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    mat3 R;
+    R[0] = normalize(cross(up, N));
+    R[1] = cross(N, R[0]);
+    R[2] = N;
+    return R;
+}
+
+float random(const highp vec2 w) {
+    const vec3 m = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(m.z * fract(dot(w, m.xy)));
+}
+
+// See: http://graphicrants.blogspot.com/2013/12/tone-mapping.html, By Brian Karis
+vec3 compress(const vec3 color, const float linear, const float compressed) {
+    const mediump vec3 rec709 = vec3(0.2126, 0.7152, 0.0722);
+    float luma = dot(color, rec709);  // REC 709
+    float s = 1.0;
+    if (luma > linear) {
+        s = ((linear * linear - compressed * luma) / ((2.0 * linear - compressed - luma) * luma));
+    }
+    return color * s;
+}
+
+vec3 sampleEnvironment(mediump samplerCube environment, highp vec3 r, mediump float lod) {
+    mediump float linear = materialParams.compress.x;
+    mediump float compressed = materialParams.compress.y;
+    mediump vec3 c = textureLod(environment, r, lod).rgb;
+    return compress(c, linear, compressed);
+    // return c * (compressed / (compressed + luma));       // cheaper
+    // return clamp(c, 0.0, compressed);                    // cheapest
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    vec2 uv = variable_vertex.xy; // interpolated at pixel's center
+    vec2 p = uv * 2.0 - 1.0;
+    float side = materialParams.side;
+
+    // compute the view (and normal, since v = n) direction for each face
+    vec3 rx = normalize(vec3(      side,  -p.y, side * -p.x));
+    vec3 ry = normalize(vec3(       p.x,  side, side *  p.y));
+    vec3 rz = normalize(vec3(side * p.x,  -p.y, side));
+
+    // random rotation around r
+    mediump float a = 2.0 * PI * random(gl_FragCoord.xy);
+    mediump float c = cos(a);
+    mediump float s = sin(a);
+    mat3 R;
+    R[0] = vec3( c, s, 0);
+    R[1] = vec3(-s, c, 0);
+    R[2] = vec3( 0, 0, 1);
+
+    // compute the rotation by which to transform our sample locations for each face
+    mat3 Tx = tangentSpace(rx) * R;
+    mat3 Ty = tangentSpace(ry) * R;
+    mat3 Tz = tangentSpace(rz) * R;
+
+    // accumulated environment light for each face
+    vec3 Lx = vec3(0);
+    vec3 Ly = vec3(0);
+    vec3 Lz = vec3(0);
+
+    float kernelWeight = 0.0;
+
+    if (materialConstants_irradiance) {
+        for (uint i = 0u; i < materialParams.sampleCount; i++) {
+            // { L, lod }, with L.z == NoL
+            mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(0u, i), 0);
+            if (entry.z > 0.0) {
+                float l = entry.w + materialParams.lodOffset;// we don't need to clamp, the h/w does it for us
+                Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l);
+                Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l);
+                Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l);
+            }
+        }
+        kernelWeight = float(materialParams.sampleCount);
+    } else {
+        for (uint i = 0u; i < materialParams.sampleCount; i++) {
+            // { L, lod }, with L.z == NoL
+            mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
+            if (entry.z > 0.0) {
+                float l = entry.w + materialParams.lodOffset;// we don't need to clamp, the h/w does it for us
+                Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
+                Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
+                Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;
+                kernelWeight += entry.z;
+            }
+        }
+    }
+
+    float invKernelWeight = 1.0 / kernelWeight;
+    Lx *= invKernelWeight;
+    Ly *= invKernelWeight;
+    Lz *= invKernelWeight;
+
+    postProcess.outx = Lx;
+    postProcess.outy = Ly;
+    postProcess.outz = Lz;
+}
+
+}

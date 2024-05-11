@@ -1,0 +1,40 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+const vec4 _66[2] = vec4[](vec4(10.0), vec4(30.0));
+
+struct Composite
+{
+    vec4 a[2];
+    vec4 b[2];
+};
+
+const float _94[2][3] = float[][](float[](1.0, 1.0, 1.0), float[](2.0, 2.0, 2.0));
+
+layout(binding = 0, std430) buffer SSBO0
+{
+    vec4 as[];
+} _41;
+
+layout(binding = 1, std430) buffer SSBO1
+{
+    vec4 bs[];
+} _55;
+
+vec4 summe(vec4 values[3][2])
+{
+    return ((values[0][0] + values[2][1]) + values[0][1]) + values[1][0];
+}
+
+void main()
+{
+    vec4 values[2] = vec4[](_41.as[gl_GlobalInvocationID.x], _55.bs[gl_GlobalInvocationID.x]);
+    vec4 copy_values[2] = _66;
+    vec4 copy_values2[2] = values;
+    vec4 param[3][2] = vec4[][](values, copy_values, copy_values2);
+    _41.as[gl_GlobalInvocationID.x] = summe(param);
+    Composite c = Composite(values, copy_values);
+    float b = 10.0;
+    float values_scalar[4] = float[](b, b, b, b);
+}
+

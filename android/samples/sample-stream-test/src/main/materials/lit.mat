@@ -1,0 +1,88 @@
+// Simple lit material that defines 3 parameters:
+// - baseColor
+// - roughness
+// - metallic
+//
+// These parameters can be used by the application to change the appearance of the material.
+//
+// This source material must be compiled to a binary material using the matc tool.
+// The command used to compile this material is:
+// matc -p mobile -a opengl -o app/src/main/assets/lit.filamat app/src/materials/lit.mat
+//
+// See build.gradle for an example of how to compile materials automatically
+// Please refer to the documentation for more information about matc and the materials system.
+
+material {
+    name : lit,
+
+    // Dynamic lighting is enabled on this material
+    shadingModel : lit,
+
+    // We don't need to declare a "requires" array, lit materials
+    // always requires the "tangents" vertex attribute (the normal
+    // is required for lighting, tangent/bitangent for normal mapping
+    // and anisotropy)
+
+    // Custom vertex shader outputs
+    variables : [
+        uv
+    ],
+
+    // List of parameters exposed by this material
+    parameters : [
+        // The color must be passed in linear space, not sRGB
+        {
+            type : float3,
+            name : baseColor
+        },
+        {
+            type : float,
+            name : roughness
+        },
+        {
+            type : float,
+            name : uvOffset
+        },
+        {
+            type : samplerExternal,
+            name : videoTexture
+        },
+        {
+            type : mat4,
+            name : textureTransform
+        }
+    ],
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.uv = 0.5 * (getPosition() + vec4(1));
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.roughness = materialParams.roughness;
+        material.metallic = 0.0;
+
+        // Apply the video stream to the +Z face on the cube.
+        if (variable_uv.z >= 1.0) {
+            vec2 uv = (materialParams.textureTransform * vec4(variable_uv.xy, 0, 1)).xy;
+
+            // If in right-hand side (in portrait mode), apply an offset.
+            if (uv.y < 0.5) {
+                uv.x += materialParams.uvOffset;
+            }
+
+            material.baseColor.rgb = inverseTonemapSRGB(texture(materialParams_videoTexture, uv).rgb);
+
+            if (uv.y < 0.5) {
+                material.baseColor.rgb *= 0.3;
+            }
+
+        } else {
+            material.baseColor.rgb = materialParams.baseColor;
+        }
+    }
+}

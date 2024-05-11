@@ -1,0 +1,27 @@
+android {
+    namespace 'com.google.android.filament'
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
+
+dependencies {
+    implementation deps.androidx.annotations
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+
+afterEvaluate { project ->
+    publishing {
+        publications {
+            release(MavenPublication) {
+                artifactId = POM_ARTIFACT_ID
+                from components.release
+            }
+        }
+    }
+}

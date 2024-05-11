@@ -1,0 +1,13 @@
+libs/viewer/test_settings
+filament/test/test_filament --gtest_filter=-FilamentTest.FroxelData:FilamentExposureWithEngineTest.SetExposure:FilamentExposureWithEngineTest.ComputeEV100:RenderingTest.*
+filament/test/test_material_parser
+libs/math/test_math
+libs/image/test_image compare libs/image/tests/reference/
+libs/utils/test_utils
+libs/filamat/test_filamat
+tools/matc/test_matc
+tools/cmgen/test_cmgen compare
+tools/glslminifier/test_glslminifier
+libs/filameshio/test_filameshio
+libs/camutils/test_camutils
+libs/ktxreader/test_ktxreader

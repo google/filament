@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float in_data[1];
+};
+
+struct SSBO2
+{
+    float out_data[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
+
+kernel void main0(const device SSBO& _22 [[buffer(0)]], device SSBO2& _44 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+{
+    threadgroup float sShared[4];
+    sShared[gl_LocalInvocationIndex] = _22.in_data[gl_GlobalInvocationID.x];
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    _44.out_data[gl_GlobalInvocationID.x] = sShared[3u - gl_LocalInvocationIndex];
+}
+

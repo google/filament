@@ -1,0 +1,107 @@
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %id 
+OpExecutionMode %main LocalSize 1 1 1
+OpName %main           "main"
+OpName %id             "gl_GlobalInvocationID"
+OpDecorate %id BuiltIn GlobalInvocationId
+OpDecorate %sc_0  SpecId 0
+OpDecorate %sc_1  SpecId 1
+OpDecorate %sc_2  SpecId 2
+OpDecorate %i32arr ArrayStride 4
+OpDecorate %buf BufferBlock
+OpDecorate %indata DescriptorSet 0
+OpDecorate %indata Binding 0
+OpDecorate %outdata DescriptorSet 0
+OpDecorate %outdata Binding 1
+OpDecorate %f32arr ArrayStride 4
+OpMemberDecorate %buf 0 Offset 0
+%bool      = OpTypeBool
+%void      = OpTypeVoid
+%voidf     = OpTypeFunction %void
+%u32       = OpTypeInt 32 0
+%i32       = OpTypeInt 32 1
+%f32       = OpTypeFloat 32
+%uvec3     = OpTypeVector %u32 3
+%fvec3     = OpTypeVector %f32 3
+%uvec3ptr  = OpTypePointer Input %uvec3
+%i32ptr    = OpTypePointer Uniform %i32
+%f32ptr    = OpTypePointer Uniform %f32
+%i32arr    = OpTypeRuntimeArray %i32
+%f32arr    = OpTypeRuntimeArray %f32
+%ivec3       = OpTypeVector %i32 3
+%zero        = OpConstant %i32 0
+%one         = OpConstant %i32 1
+%two         = OpConstant %i32 2
+%three       = OpConstant %i32 3
+%iarr3       = OpTypeArray %i32 %three
+%imat3       = OpTypeArray %iarr3 %three
+%struct      = OpTypeStruct %imat3
+%buf         = OpTypeStruct %i32arr
+%bufptr      = OpTypePointer Uniform %buf
+%indata      = OpVariable %bufptr Uniform
+%outdata     = OpVariable %bufptr Uniform
+%id          = OpVariable %uvec3ptr Input
+%ivec3_0     = OpConstantComposite %ivec3 %zero %zero %zero
+%vec3_undef  = OpUndef %ivec3
+%iarr3_0     = OpConstantComposite %iarr3 %zero %zero %zero
+%imat3_0     = OpConstantComposite %imat3 %iarr3_0 %iarr3_0 %iarr3_0
+%struct_0    = OpConstantComposite %struct %imat3_0
+%sc_0        = OpSpecConstant %i32 0
+%sc_1        = OpSpecConstant %i32 0
+%sc_2        = OpSpecConstant %i32 0
+%iarr3_a     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_0        %iarr3_0     0
+%iarr3_b     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_1        %iarr3_a     1
+%iarr3_c     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_2        %iarr3_b     2
+%iarr3_d     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_1        %iarr3_0     0
+%iarr3_e     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_2        %iarr3_d     1
+%iarr3_f     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_0        %iarr3_e     2
+%iarr3_g     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_2        %iarr3_0     0
+%iarr3_h     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_0        %iarr3_g     1
+%iarr3_i     = OpSpecConstantOp %iarr3  CompositeInsert  %sc_1        %iarr3_h     2
+%imat3_a     = OpSpecConstantOp %imat3  CompositeInsert  %iarr3_c     %imat3_0     0
+%imat3_b     = OpSpecConstantOp %imat3  CompositeInsert  %iarr3_f     %imat3_a     1
+%imat3_c     = OpSpecConstantOp %imat3  CompositeInsert  %iarr3_i     %imat3_b     2
+%struct_a    = OpSpecConstantOp %struct CompositeInsert  %imat3_c     %struct_0    0
+%struct_b    = OpSpecConstantOp %struct CompositeInsert  %sc_2        %struct_a    0 1 2
+%comp_0_0    = OpSpecConstantOp %i32    CompositeExtract %struct_a    0 0 0
+%comp_1_0    = OpSpecConstantOp %i32    CompositeExtract %struct_a    0 1 0
+%comp_0_1    = OpSpecConstantOp %i32    CompositeExtract %struct_a    0 0 1
+%comp_2_2    = OpSpecConstantOp %i32    CompositeExtract %struct_a    0 2 2
+%comp_2_0    = OpSpecConstantOp %i32    CompositeExtract %struct_a    0 2 0
+%comp_1_1    = OpSpecConstantOp %i32    CompositeExtract %struct_a    0 1 1
+%cmpres_0    = OpSpecConstantOp %bool   IEqual %comp_0_0 %comp_1_0
+%cmpres_1    = OpSpecConstantOp %bool   IEqual %comp_0_1 %comp_2_2
+%cmpres_2    = OpSpecConstantOp %bool   IEqual %comp_2_0 %comp_1_1
+%mustbe_0    = OpSpecConstantOp %i32    Select %cmpres_0 %one %zero
+%mustbe_1    = OpSpecConstantOp %i32    Select %cmpres_1 %one %zero
+%mustbe_2    = OpSpecConstantOp %i32    Select %cmpres_2 %two %one
+%sc_vec3_0   = OpSpecConstantOp %ivec3 CompositeInsert  %sc_0        %ivec3_0     0
+%sc_vec3_1   = OpSpecConstantOp %ivec3 CompositeInsert  %sc_1        %ivec3_0     1
+%sc_vec3_2   = OpSpecConstantOp %ivec3 CompositeInsert  %sc_2        %ivec3_0     2
+%sc_vec3_0_s = OpSpecConstantOp %ivec3 VectorShuffle    %sc_vec3_0   %vec3_undef  0          0xFFFFFFFF 2
+%sc_vec3_1_s = OpSpecConstantOp %ivec3 VectorShuffle    %sc_vec3_1   %vec3_undef  0xFFFFFFFF 1          0
+%sc_vec3_2_s = OpSpecConstantOp %ivec3 VectorShuffle    %vec3_undef  %sc_vec3_2   5          0xFFFFFFFF 5
+%sc_vec3_01  = OpSpecConstantOp %ivec3 VectorShuffle    %sc_vec3_0_s %sc_vec3_1_s 1 0 4
+%sc_vec3_012 = OpSpecConstantOp %ivec3 VectorShuffle    %sc_vec3_01  %sc_vec3_2_s 5 1 2
+%sc_ext_0    = OpSpecConstantOp %i32   CompositeExtract %sc_vec3_012              0
+%sc_ext_1    = OpSpecConstantOp %i32   CompositeExtract %sc_vec3_012              1
+%sc_ext_2    = OpSpecConstantOp %i32   CompositeExtract %sc_vec3_012              2
+%sc_sub      = OpSpecConstantOp %i32   ISub             %sc_ext_0    %sc_ext_1
+%sc_factor   = OpSpecConstantOp %i32   IMul             %sc_sub      %sc_ext_2
+%main      = OpFunction %void None %voidf
+%label     = OpLabel
+%subf_a      = OpISub %i32 %one %mustbe_0
+%subf_b      = OpIMul %i32 %subf_a %mustbe_1
+%subf_c      = OpISub %i32 %mustbe_2 %one
+%factor      = OpIMul %i32 %subf_b %subf_c
+%sc_final    = OpIMul %i32 %factor %sc_factor
+%idval     = OpLoad %uvec3 %id
+%x         = OpCompositeExtract %u32 %idval 0
+%inloc     = OpAccessChain %i32ptr %indata %zero %x
+%inval     = OpLoad %i32 %inloc
+%final     = OpIAdd %i32 %inval %sc_final
+%outloc    = OpAccessChain %i32ptr %outdata %zero %x
+             OpStore %outloc %final
+             OpReturn
+             OpFunctionEnd

@@ -1,0 +1,224 @@
+struct Ray
+{
+    float3 pos;
+    float tmin;
+    float3 dir;
+    float tmax;
+};
+
+RWByteAddressBuffer _17 : register(u0);
+RWByteAddressBuffer _257 : register(u2);
+uniform RaytracingAccelerationStructure rtas : register(t1);
+
+static RayQuery<RAY_FLAG_NONE> rayQuery;
+
+Ray makeRayDesc()
+{
+    Ray ray;
+    ray.pos = 0.0f.xxx;
+    ray.dir = float3(1.0f, 0.0f, 0.0f);
+    ray.tmin = 0.0f;
+    ray.tmax = 9999.0f;
+    return ray;
+}
+
+void doSomething()
+{
+    _17.Store(0, 0u);
+    _17.Store(4, 0u);
+}
+
+void comp_main()
+{
+    Ray ray = makeRayDesc();
+    RayDesc _1ident = {ray.pos, ray.tmin, ray.dir, ray.tmax};
+    rayQuery.TraceRayInline(rtas, 0u, 255u, _1ident);
+    float4x3 _mat4x3;
+    float3x4 _mat3x4;
+    for (;;)
+    {
+        bool _67 = rayQuery.Proceed();
+        if (_67)
+        {
+            uint _71 = rayQuery.CandidateType();
+            uint candidateType = _71;
+            switch (candidateType)
+            {
+                case 0u:
+                {
+                    rayQuery.Abort();
+                    float4x3 _79 = rayQuery.CandidateObjectToWorld4x3();
+                    _mat4x3 = _79;
+                    _mat3x4 = transpose(_mat4x3);
+                    rayQuery.CommitNonOpaqueTriangleHit();
+                    bool _87 = rayQuery.CommittedTriangleFrontFace();
+                    if (_87)
+                    {
+                        doSomething();
+                    }
+                    float2 _92 = rayQuery.CommittedTriangleBarycentrics();
+                    if (_92.x == 0.0f)
+                    {
+                        doSomething();
+                    }
+                    int _98 = rayQuery.CommittedInstanceID();
+                    if (_98 > 0)
+                    {
+                        doSomething();
+                    }
+                    int _103 = rayQuery.CommittedInstanceIndex();
+                    if (_103 > 0)
+                    {
+                        doSomething();
+                    }
+                    float3 _108 = rayQuery.CommittedObjectRayDirection();
+                    if (_108.x > 0.0f)
+                    {
+                        doSomething();
+                    }
+                    float3 _114 = rayQuery.CommittedObjectRayOrigin();
+                    if (_114.x > 0.0f)
+                    {
+                        doSomething();
+                    }
+                    int _120 = rayQuery.CommittedPrimitiveIndex();
+                    if (_120 > 0)
+                    {
+                        doSomething();
+                    }
+                    float _125 = rayQuery.CommittedRayT();
+                    if (_125 > 0.0f)
+                    {
+                        doSomething();
+                    }
+                    uint _130 = rayQuery.CommittedInstanceContributionToHitGroupIndex();
+                    if (_130 > 0u)
+                    {
+                        doSomething();
+                    }
+                    break;
+                }
+                case 1u:
+                {
+                    float4x3 _136 = rayQuery.CandidateObjectToWorld4x3();
+                    _mat4x3 = _136;
+                    _mat3x4 = transpose(_mat4x3);
+                    bool _139 = rayQuery.CandidateProceduralPrimitiveNonOpaque();
+                    if (_139)
+                    {
+                        doSomething();
+                    }
+                    float t = 0.5f;
+                    rayQuery.CommitProceduralPrimitiveHit(t);
+                    rayQuery.Abort();
+                    break;
+                }
+            }
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+    if (_mat3x4[0].x == _mat4x3[0].x)
+    {
+        doSomething();
+    }
+    uint _157 = rayQuery.CommittedStatus();
+    uint committedStatus = _157;
+    switch (committedStatus)
+    {
+        case 0u:
+        {
+            float4x3 _163 = rayQuery.CandidateWorldToObject4x3();
+            _mat4x3 = _163;
+            _mat3x4 = transpose(_mat4x3);
+            break;
+        }
+        case 1u:
+        {
+            float4x3 _167 = rayQuery.CommittedWorldToObject4x3();
+            _mat4x3 = _167;
+            _mat3x4 = transpose(_mat4x3);
+            bool _170 = rayQuery.CommittedTriangleFrontFace();
+            if (_170)
+            {
+                doSomething();
+            }
+            float2 _174 = rayQuery.CommittedTriangleBarycentrics();
+            if (_174.y == 0.0f)
+            {
+                doSomething();
+            }
+            break;
+        }
+        case 2u:
+        {
+            int _182 = rayQuery.CommittedGeometryIndex();
+            if (_182 > 0)
+            {
+                doSomething();
+            }
+            int _187 = rayQuery.CommittedInstanceIndex();
+            if (_187 > 0)
+            {
+                doSomething();
+            }
+            int _192 = rayQuery.CommittedInstanceID();
+            if (_192 > 0)
+            {
+                doSomething();
+            }
+            float3 _197 = rayQuery.CommittedObjectRayDirection();
+            if (_197.z > 0.0f)
+            {
+                doSomething();
+            }
+            float3 _204 = rayQuery.CommittedObjectRayOrigin();
+            if (_204.x > 0.0f)
+            {
+                doSomething();
+            }
+            int _210 = rayQuery.CommittedPrimitiveIndex();
+            if (_210 > 0)
+            {
+                doSomething();
+            }
+            float _215 = rayQuery.CommittedRayT();
+            if (_215 > 0.0f)
+            {
+                doSomething();
+            }
+            break;
+        }
+    }
+    if (_mat3x4[0].x == _mat4x3[0].x)
+    {
+        doSomething();
+    }
+    uint _230 = rayQuery.RayFlags();
+    if (_230 > 256u)
+    {
+        doSomething();
+    }
+    float _236 = rayQuery.RayTMin();
+    if (_236 > 0.0f)
+    {
+        doSomething();
+    }
+    float3 _242 = rayQuery.WorldRayOrigin();
+    float3 o = _242;
+    float3 _244 = rayQuery.WorldRayDirection();
+    float3 d = _244;
+    if (o.x == d.z)
+    {
+        doSomething();
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

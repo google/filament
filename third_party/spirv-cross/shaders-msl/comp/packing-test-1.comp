@@ -1,0 +1,18 @@
+#version 450
+struct T1
+{
+    vec3 a;
+    float b;
+};
+
+layout(std430, binding = 1) buffer Buffer0 { T1 buf0[]; };
+layout(std430, binding = 2) buffer Buffer1 { float buf1[]; };
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    // broken case in Metal!
+    T1 v = buf0[0];
+    float x = v.b;
+    buf1[gl_GlobalInvocationID.x] = x;
+}

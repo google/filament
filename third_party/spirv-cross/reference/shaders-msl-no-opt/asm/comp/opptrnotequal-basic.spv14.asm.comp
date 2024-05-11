@@ -1,0 +1,33 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _7
+{
+    uint _m0[1];
+};
+
+kernel void main0(device _7& _2 [[buffer(0)]], device _7& _3 [[buffer(1)]], device _7& _4 [[buffer(2)]], device _7& _5 [[buffer(3)]])
+{
+    uint _18 = 0u;
+    uint _28 = _18 + 1u;
+    _5._m0[_18] = uint(&_2 != &_3);
+    uint _32 = _28 + 1u;
+    _5._m0[_28] = uint(&_2._m0 != &_3._m0);
+    uint _36 = _32 + 1u;
+    _5._m0[_32] = uint(&_2._m0[0u] != &_3._m0[0u]);
+    uint _40 = _36 + 1u;
+    _5._m0[_36] = uint(&_2 != &_4);
+    uint _44 = _40 + 1u;
+    _5._m0[_40] = uint(&_2._m0 != &_4._m0);
+    uint _48 = _44 + 1u;
+    _5._m0[_44] = uint(&_2._m0[0u] != &_4._m0[0u]);
+    uint _52 = _48 + 1u;
+    _5._m0[_48] = uint(&_3 != &_4);
+    uint _56 = _52 + 1u;
+    _5._m0[_52] = uint(&_3._m0 != &_4._m0);
+    _5._m0[_56] = uint(&_3._m0[0u] != &_4._m0[0u]);
+    _5._m0[_56 + 1u] = uint(&_2 != &_2);
+}
+

@@ -1,0 +1,39 @@
+name: Android
+
+on:
+  push:
+    branches:
+      - main
+      - release
+      - rc/**
+
+jobs:
+  build-android:
+    name: build-android
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v3.3.0
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Run build script
+        run: |
+          cd build/android && printf "y" | ./build.sh continuous
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: filament-android
+          path: out/filament-android-release.aar
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: filamat-android-full
+          path: out/filamat-android-release.aar
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: gltfio-android-release
+          path: out/gltfio-android-release.aar
+      - uses: actions/upload-artifact@v1.0.0
+        with:
+          name: filament-utils-android-release
+          path: out/filament-utils-android-release.aar

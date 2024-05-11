@@ -1,0 +1,35 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+layout(local_size_x = 4, local_size_y = 3, local_size_z = 2) in;
+
+struct Payload
+{
+	float v[3];
+};
+taskPayloadSharedEXT Payload p;
+shared float vs[24];
+
+void main()
+{
+	vs[gl_LocalInvocationIndex] = 10.0;
+	barrier();
+	if (gl_LocalInvocationIndex < 12)
+		vs[gl_LocalInvocationIndex] += vs[gl_LocalInvocationIndex + 12];
+	barrier();
+	if (gl_LocalInvocationIndex < 6)
+		vs[gl_LocalInvocationIndex] += vs[gl_LocalInvocationIndex + 6];
+	barrier();
+	if (gl_LocalInvocationIndex < 3)
+		vs[gl_LocalInvocationIndex] += vs[gl_LocalInvocationIndex + 3];
+	barrier();
+
+	p.v[gl_LocalInvocationIndex] = vs[gl_LocalInvocationIndex];
+	if (vs[5] > 20.0)
+	{
+		EmitMeshTasksEXT(int(vs[4]), int(vs[6]), int(vs[8]));
+	}
+	else
+	{
+		EmitMeshTasksEXT(int(vs[6]), 10, 50u);
+	}
+}

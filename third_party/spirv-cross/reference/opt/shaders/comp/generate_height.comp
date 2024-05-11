@@ -1,0 +1,56 @@
+#version 310 es
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) readonly buffer Distribution
+{
+    vec2 distribution[];
+} _137;
+
+layout(binding = 2, std140) uniform UBO
+{
+    vec4 uModTime;
+} _166;
+
+layout(binding = 1, std430) writeonly buffer HeightmapFFT
+{
+    uint heights[];
+} _225;
+
+void main()
+{
+    uvec2 _265 = uvec2(64u, 1u) * gl_NumWorkGroups.xy;
+    uvec2 _270 = _265 - gl_GlobalInvocationID.xy;
+    bvec2 _272 = equal(gl_GlobalInvocationID.xy, uvec2(0u));
+    uint _460;
+    if (_272.x)
+    {
+        _460 = 0u;
+    }
+    else
+    {
+        _460 = _270.x;
+    }
+    uint _461;
+    if (_272.y)
+    {
+        _461 = 0u;
+    }
+    else
+    {
+        _461 = _270.y;
+    }
+    uint _277 = _265.x;
+    uint _281 = (gl_GlobalInvocationID.y * _277) + gl_GlobalInvocationID.x;
+    uint _291 = (_461 * _277) + _460;
+    vec2 _298 = vec2(gl_GlobalInvocationID.xy);
+    vec2 _300 = vec2(_265);
+    float _310 = sqrt(9.81000041961669921875 * length(_166.uModTime.xy * mix(_298, _298 - _300, greaterThan(_298, _300 * 0.5)))) * _166.uModTime.z;
+    vec2 _317 = vec2(cos(_310), sin(_310));
+    vec2 _391 = _317.xx;
+    vec2 _396 = _317.yy;
+    vec2 _399 = _396 * _137.distribution[_281].yx;
+    vec2 _426 = _396 * _137.distribution[_291].yx;
+    vec2 _434 = _137.distribution[_291] * _391 + vec2(-_426.x, _426.y);
+    _225.heights[_281] = packHalf2x16((_137.distribution[_281] * _391 + vec2(-_399.x, _399.y)) + vec2(_434.x, -_434.y));
+}
+

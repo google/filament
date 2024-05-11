@@ -1,0 +1,91 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct Sub
+{
+    float4 f[2];
+    float4 f2[2];
+    float3 f3[2];
+    float4 f4[2];
+};
+
+struct SSBO
+{
+    Sub sub[2];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _27 [[buffer(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    spvUnsafeArray<float, 2> _155;
+    _155[0] = _27.sub[gl_WorkGroupID.x].f[0].x;
+    _155[1] = _27.sub[gl_WorkGroupID.x].f[1].x;
+    spvUnsafeArray<float2, 2> _156;
+    _156[0] = _27.sub[gl_WorkGroupID.x].f2[0].xy;
+    _156[1] = _27.sub[gl_WorkGroupID.x].f2[1].xy;
+    spvUnsafeArray<float3, 2> _157;
+    _157[0] = _27.sub[gl_WorkGroupID.x].f3[0];
+    _157[1] = _27.sub[gl_WorkGroupID.x].f3[1];
+    spvUnsafeArray<float4, 2> _158;
+    _158[0] = _27.sub[gl_WorkGroupID.x].f4[0];
+    _158[1] = _27.sub[gl_WorkGroupID.x].f4[1];
+    _155[gl_GlobalInvocationID.x] += 1.0;
+    _156[gl_GlobalInvocationID.x] += float2(2.0);
+    _157[gl_GlobalInvocationID.x] += float3(3.0);
+    _158[gl_GlobalInvocationID.x] += float4(4.0);
+    (device float&)_27.sub[gl_WorkGroupID.x].f[0] = _155[0];
+    (device float&)_27.sub[gl_WorkGroupID.x].f[1] = _155[1];
+    (device float2&)_27.sub[gl_WorkGroupID.x].f2[0] = _156[0];
+    (device float2&)_27.sub[gl_WorkGroupID.x].f2[1] = _156[1];
+    _27.sub[gl_WorkGroupID.x].f3[0] = _157[0];
+    _27.sub[gl_WorkGroupID.x].f3[1] = _157[1];
+    _27.sub[gl_WorkGroupID.x].f4[0] = _158[0];
+    _27.sub[gl_WorkGroupID.x].f4[1] = _158[1];
+    (device float&)_27.sub[0].f[0] = _27.sub[0].f[0].x + 5.0;
+    (device float2&)_27.sub[0].f2[1] = _27.sub[0].f2[1].xy + float2(5.0);
+}
+

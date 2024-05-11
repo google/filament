@@ -1,0 +1,137 @@
+material {
+    name : generateKernel,
+    parameters : [
+        {
+            type : uint2,
+            name : size,
+            precision: high
+        },
+        {
+            type : float,
+            name : sampleCount,
+        },
+        {
+            type : float[16],
+            name : roughness,
+        }
+    ],
+    outputs : [
+        {
+            name : weight,
+            target : color,
+            type : float4
+        }
+    ],
+    constants : [
+        {
+            name : irradiance,
+            type : bool,
+            default : false
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV) * vec2(materialParams.size);
+    }
+}
+
+fragment {
+
+void dummy() {}
+
+#if defined(TARGET_MOBILE)
+#   define MIN_ROUGHNESS            0.007921
+#else
+#   define MIN_ROUGHNESS            0.002025
+#endif
+
+// we default to highp in this shader
+precision highp float;
+precision highp int;
+
+float log4(const float x) {
+    return log2(x) * 0.5;
+}
+
+vec2 hammersley(const uint index, const float sampleCount) {
+    float invNumSamples = 1.0 / sampleCount;
+    const float tof = 0.5 / float(0x80000000U);
+    uint bits = index;
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return vec2(float(index) * invNumSamples, float(bits) * tof);
+}
+
+float DistributionGGX(const float NoH, const float a) {
+    // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
+    float f = (a - 1.0) * ((a + 1.0) * (NoH * NoH)) + 1.0;
+    return (a * a) / (PI * f * f);
+}
+
+vec3 hemisphereImportanceSampleDggx(const vec2 u, const float a) { // pdf = D(a) * cosTheta
+    float phi = 2.0 * PI * u.x;
+    // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
+    float cosTheta2 = (1.0 - u.y) / (1.0 + (a + 1.0) * ((a - 1.0) * u.y));
+    float cosTheta = sqrt(cosTheta2);
+    float sinTheta = sqrt(1.0 - cosTheta2);
+    return vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+}
+
+vec3 hemisphereCosSample(float2 u) { // pdf = cosTheta / PI;
+    float phi = 2.0 * PI * u.x;
+    float cosTheta2 = 1.0 - u.y;
+    float cosTheta = sqrt(cosTheta2);
+    float sinTheta = sqrt(1.0 - cosTheta2);
+    return vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+}
+
+vec4 computeWeight(const uint index, const float roughness) {
+    float sampleCount = materialParams.sampleCount;
+    vec2 u = hammersley(index, sampleCount);
+    vec3 H = hemisphereImportanceSampleDggx(u, roughness);
+    float NoH = H.z;
+    float NoH2 = H.z * H.z;
+    float NoL = saturate(2.0 * NoH2 - 1.0);
+    vec3 L = vec3(2.0 * NoH * H.x, 2.0 * NoH * H.y, NoL);
+    float pdf = DistributionGGX(NoH, max(MIN_ROUGHNESS, roughness)) * 0.25;
+    float invOmegaS = sampleCount * pdf;
+    float l = -log4(invOmegaS);
+    return vec4(L, l);
+}
+
+vec4 computeWeightIrradiance(const uint index) {
+    float sampleCount = materialParams.sampleCount;
+    vec2 u = hammersley(index, sampleCount);
+    vec3 L = hemisphereCosSample(u);
+    float pdf = L.z / PI;
+    float invOmegaS = sampleCount * pdf;
+    float l = -log4(invOmegaS);
+    return vec4(L, l);
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    vec2 uv = variable_vertex.xy; // interpolated at pixel's center
+
+    uint lod = uint(uv.x);
+    uint index = uint(uv.y);
+
+    if (materialConstants_irradiance) {
+        postProcess.weight = computeWeightIrradiance(index);
+    } else {
+        float roughness = materialParams.roughness[lod];
+        postProcess.weight = computeWeight(index, roughness);
+    }
+}
+
+}

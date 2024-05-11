@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _6
+{
+    int4 _m0;
+    uint4 _m1;
+};
+
+struct _7
+{
+    uint4 _m0;
+    int4 _m1;
+};
+
+kernel void main0(device _6& __restrict _8 [[buffer(0)]], device _7& __restrict _9 [[buffer(1)]])
+{
+    _9._m0 = _8._m1 + uint4(_8._m0);
+    _9._m0 = uint4(_8._m0) + _8._m1;
+    _9._m0 = _8._m1 + _8._m1;
+    _9._m0 = uint4(_8._m0 + _8._m0);
+    _9._m1 = int4(_8._m1 + _8._m1);
+    _9._m1 = _8._m0 + _8._m0;
+    _9._m1 = int4(_8._m1) + _8._m0;
+    _9._m1 = _8._m0 + int4(_8._m1);
+}
+

@@ -1,0 +1,19 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+static inline __attribute__((always_inline))
+void myfunc(threadgroup int (&foo)[1337])
+{
+    foo[0] = 13;
+}
+
+kernel void main0()
+{
+    threadgroup int foo[1337];
+    myfunc(foo);
+}
+

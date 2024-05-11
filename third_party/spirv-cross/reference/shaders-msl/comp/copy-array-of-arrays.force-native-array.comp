@@ -1,0 +1,364 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, uint A>
+inline void spvArrayCopyFromConstantToStack1(thread T (&dst)[A], constant T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromConstantToThreadGroup1(threadgroup T (&dst)[A], constant T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromStackToStack1(thread T (&dst)[A], thread const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromStackToThreadGroup1(threadgroup T (&dst)[A], thread const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromThreadGroupToStack1(thread T (&dst)[A], threadgroup const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromThreadGroupToThreadGroup1(threadgroup T (&dst)[A], threadgroup const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromDeviceToDevice1(device T (&dst)[A], device const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromConstantToDevice1(device T (&dst)[A], constant T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromStackToDevice1(device T (&dst)[A], thread const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromThreadGroupToDevice1(device T (&dst)[A], threadgroup const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromDeviceToStack1(thread T (&dst)[A], device const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A>
+inline void spvArrayCopyFromDeviceToThreadGroup1(threadgroup T (&dst)[A], device const T (&src)[A])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        dst[i] = src[i];
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromConstantToStack2(thread T (&dst)[A][B], constant T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstantToStack1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromConstantToThreadGroup2(threadgroup T (&dst)[A][B], constant T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstantToThreadGroup1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromStackToStack2(thread T (&dst)[A][B], thread const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStackToStack1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromStackToThreadGroup2(threadgroup T (&dst)[A][B], thread const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStackToThreadGroup1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromThreadGroupToStack2(thread T (&dst)[A][B], threadgroup const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromThreadGroupToStack1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromThreadGroupToThreadGroup2(threadgroup T (&dst)[A][B], threadgroup const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromThreadGroupToThreadGroup1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromDeviceToDevice2(device T (&dst)[A][B], device const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromDeviceToDevice1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromConstantToDevice2(device T (&dst)[A][B], constant T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstantToDevice1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromStackToDevice2(device T (&dst)[A][B], thread const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStackToDevice1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromThreadGroupToDevice2(device T (&dst)[A][B], threadgroup const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromThreadGroupToDevice1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromDeviceToStack2(thread T (&dst)[A][B], device const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromDeviceToStack1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+inline void spvArrayCopyFromDeviceToThreadGroup2(threadgroup T (&dst)[A][B], device const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromDeviceToThreadGroup1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromConstantToStack3(thread T (&dst)[A][B][C], constant T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstantToStack2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromConstantToThreadGroup3(threadgroup T (&dst)[A][B][C], constant T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstantToThreadGroup2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromStackToStack3(thread T (&dst)[A][B][C], thread const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStackToStack2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromStackToThreadGroup3(threadgroup T (&dst)[A][B][C], thread const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStackToThreadGroup2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromThreadGroupToStack3(thread T (&dst)[A][B][C], threadgroup const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromThreadGroupToStack2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromThreadGroupToThreadGroup3(threadgroup T (&dst)[A][B][C], threadgroup const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromThreadGroupToThreadGroup2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromDeviceToDevice3(device T (&dst)[A][B][C], device const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromDeviceToDevice2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromConstantToDevice3(device T (&dst)[A][B][C], constant T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstantToDevice2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromStackToDevice3(device T (&dst)[A][B][C], thread const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStackToDevice2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromThreadGroupToDevice3(device T (&dst)[A][B][C], threadgroup const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromThreadGroupToDevice2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromDeviceToStack3(thread T (&dst)[A][B][C], device const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromDeviceToStack2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+inline void spvArrayCopyFromDeviceToThreadGroup3(threadgroup T (&dst)[A][B][C], device const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromDeviceToThreadGroup2(dst[i], src[i]);
+    }
+}
+
+struct BUF
+{
+    int a;
+    float b;
+    float c;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+constant float _16[2] = { 1.0, 2.0 };
+constant float _19[2] = { 3.0, 4.0 };
+constant float _20[2][2] = { { 1.0, 2.0 }, { 3.0, 4.0 } };
+constant float _21[2][2][2] = { { { 1.0, 2.0 }, { 3.0, 4.0 } }, { { 1.0, 2.0 }, { 3.0, 4.0 } } };
+
+kernel void main0(device BUF& o [[buffer(0)]])
+{
+    float c[2][2][2];
+    spvArrayCopyFromConstantToStack3(c, _21);
+    o.a = int(c[1][1][1]);
+    float _43[2] = { o.b, o.c };
+    float _48[2] = { o.b, o.b };
+    float _49[2][2] = { { _43[0], _43[1] }, { _48[0], _48[1] } };
+    float _54[2] = { o.c, o.c };
+    float _59[2] = { o.c, o.b };
+    float _60[2][2] = { { _54[0], _54[1] }, { _59[0], _59[1] } };
+    float _61[2][2][2] = { { { _49[0][0], _49[0][1] }, { _49[1][0], _49[1][1] } }, { { _60[0][0], _60[0][1] }, { _60[1][0], _60[1][1] } } };
+    float d[2][2][2];
+    spvArrayCopyFromStackToStack3(d, _61);
+    float e[2][2][2];
+    spvArrayCopyFromStackToStack3(e, d);
+    o.b = e[1][0][1];
+}
+

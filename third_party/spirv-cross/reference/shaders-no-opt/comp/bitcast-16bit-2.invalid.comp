@@ -1,0 +1,47 @@
+#version 450
+#if defined(GL_EXT_shader_explicit_arithmetic_types_int16)
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#elif defined(GL_AMD_gpu_shader_int16)
+#extension GL_AMD_gpu_shader_int16 : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for Int16.
+#endif
+#if defined(GL_AMD_gpu_shader_half_float)
+#extension GL_AMD_gpu_shader_half_float : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for FP16.
+#endif
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 1, std430) buffer SSBO1
+{
+    i16vec4 outputs[];
+} _21;
+
+layout(binding = 0, std430) buffer SSBO0
+{
+    ivec4 inputs[];
+} _29;
+
+layout(binding = 2, std140) uniform UBO
+{
+    f16vec4 const0;
+} _40;
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    int _33 = _29.inputs[ident].x;
+    i16vec2 _47 = unpackInt2x16(_33) + float16BitsToInt16(_40.const0.xy);
+    _21.outputs[ident].x = _47.x;
+    _21.outputs[ident].y = _47.y;
+    int _57 = _29.inputs[ident].y;
+    i16vec2 _67 = i16vec2(unpackUint2x16(uint(_57)) - float16BitsToUint16(_40.const0.zw));
+    _21.outputs[ident].z = _67.x;
+    _21.outputs[ident].w = _67.y;
+}
+

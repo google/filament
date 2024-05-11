@@ -1,0 +1,171 @@
+material {
+    name : sao,
+    parameters : [
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high
+        },
+        {
+            type : mat4,
+            name : screenFromViewMatrix
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        },
+        {
+            type : float2,
+            name : positionParams,
+            precision: high
+        },
+        {
+            type : float,
+            name : invRadiusSquared
+        },
+        {
+            type : float,
+            name : minHorizonAngleSineSquared
+        },
+        {
+            type : float,
+            name : peak2
+        },
+        {
+            type : float,
+            name : projectionScale
+        },
+        {
+            type : float,
+            name : projectionScaleRadius
+        },
+        {
+            type : float,
+            name : bias
+        },
+        {
+            type : float,
+            name : power
+        },
+        {
+            type : float,
+            name : intensity
+        },
+        {
+            type : float,
+            name : spiralTurns
+        },
+        {
+            type : float2,
+            name : sampleCount
+        },
+        {
+            type : float2,
+            name : angleIncCosSin
+        },
+        {
+            type : float,
+            name : invFarPlane
+        },
+        {
+            type : int,
+            name : maxLevel
+        },
+        {
+            type : float2,
+            name : reserved
+        },
+        {
+            type : float,
+            name : ssctShadowDistance
+        },
+        {
+            type : float,
+            name : ssctConeAngleTangeant
+        },
+        {
+            type : float,
+            name : ssctContactDistanceMaxInv
+        },
+        {
+            type : float3,
+            name : ssctVsLightDirection
+        },
+        {
+            type : float,
+            name : ssctIntensity
+        },
+        {
+            type : float2,
+            name : ssctDepthBias
+        },
+        {
+            type : float2,
+            name : ssctRayCount
+        },
+        {
+            type : uint,
+            name : ssctSampleCount
+        }
+    ],
+    variables : [
+         vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : true
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        // we don't use use uvToRenderTargetUV() here to compensate for metal/vulkan texture
+        // coordinates differences because this is done in sampleDepth()
+        postProcess.vertex.xy = postProcess.normalizedUV;
+    }
+}
+
+fragment {
+
+#define COMPUTE_BENT_NORMAL 0
+
+    #include "saoImpl.fs"
+    #include "ssctImpl.fs"
+    #include "../utils/geometry.fs"
+    #include "ssaoUtils.fs"
+
+    void dummy(){}
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = variable_vertex.xy; // interpolated to pixel center
+
+        highp float depth = sampleDepth(materialParams_depth, uv, 0.0);
+        highp float z = linearizeDepth(depth);
+        highp vec3 origin = computeViewSpacePositionFromDepth(uv, z, materialParams.positionParams);
+
+        vec3 normal = computeViewSpaceNormal(materialParams_depth, uv, depth, origin,
+                materialParams.resolution.zw,
+                materialParams.positionParams);
+
+        float occlusion = 0.0;
+        vec3 bentNormal; // will be discarded
+
+        if (materialParams.intensity > 0.0) {
+            scalableAmbientObscurance(occlusion, bentNormal, uv, origin, normal);
+        }
+
+        if (materialParams.ssctIntensity > 0.0) {
+            occlusion = max(occlusion, dominantLightShadowing(uv, origin, normal));
+        }
+
+        // occlusion to visibility
+        float aoVisibility = pow(saturate(1.0 - occlusion), materialParams.power);
+
+#if defined(TARGET_MOBILE)
+        // this line is needed to workaround what seems to be a bug on qualcomm hardware
+        aoVisibility += gl_FragCoord.x * MEDIUMP_FLT_MIN;
+#endif
+
+        postProcess.color.rgb = vec3(aoVisibility, pack(origin.z * materialParams.invFarPlane));
+    }
+}

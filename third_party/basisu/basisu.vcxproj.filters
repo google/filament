@@ -1,0 +1,201 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="basisu_tool.cpp" />
+    <ClCompile Include="transcoder\basisu_transcoder.cpp">
+      <Filter>transcoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_backend.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_basis_file.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_bc7enc.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_comp.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_enc.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_etc.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_frontend.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_gpu_texture.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_pvrtc1_4.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_resampler.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_uastc_enc.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\jpgd.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_resample_filters.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_ssim.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_kernels_sse.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="zstd\zstd.c">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\basisu_opencl.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+    <ClCompile Include="encoder\pvpngreader.cpp">
+      <Filter>encoder</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="transcoder\basisu.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="transcoder\basisu_transcoder_internal.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="transcoder\basisu_transcoder.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="transcoder\basisu_transcoder_uastc.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_backend.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_basis_file.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_bc7enc.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_comp.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_enc.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_etc.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_frontend.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_gpu_texture.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_miniz.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_pvrtc1_4.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_resampler.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_uastc_enc.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\jpgd.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_ssim.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_resampler_filters.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_kernels_declares.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_kernels_imp.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\cppspmd_flow.h">
+      <Filter>encoder\cppspmd</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\cppspmd_math.h">
+      <Filter>encoder\cppspmd</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\cppspmd_math_declares.h">
+      <Filter>encoder\cppspmd</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\cppspmd_sse.h">
+      <Filter>encoder\cppspmd</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\cppspmd_type_aliases.h">
+      <Filter>encoder\cppspmd</Filter>
+    </ClInclude>
+    <ClInclude Include="transcoder\basisu_containers.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="transcoder\basisu_containers_impl.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="transcoder\basisu_file_headers.h">
+      <Filter>transcoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_opencl.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\basisu_ocl_kernels.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+    <ClInclude Include="encoder\pvpngreader.h">
+      <Filter>encoder</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="transcoder\basisu_transcoder_tables_dxt1_6.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_dxt1_5.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_astc.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_astc_0_255.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_bc7_m5_alpha.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_bc7_m5_color.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_atc_55.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="transcoder\basisu_transcoder_tables_atc_56.inc">
+      <Filter>transcoder</Filter>
+    </None>
+    <None Include="bin\ocl_kernels.cl">
+      <Filter>encoder</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="transcoder">
+      <UniqueIdentifier>{7a54aaad-1d10-4bdf-b8e9-c14ed2263ed8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="encoder">
+      <UniqueIdentifier>{518dd5c5-a7e1-4e79-8bb4-253e2d540c2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="encoder\cppspmd">
+      <UniqueIdentifier>{ab12ac82-9c39-494d-a36b-129dd1b2dec5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

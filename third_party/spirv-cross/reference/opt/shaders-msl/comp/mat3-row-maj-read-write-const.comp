@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct model_t
+{
+    float3x3 mtx_rm;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device model_t& model [[buffer(0)]])
+{
+    if ((transpose(model.mtx_rm) * float3x3(float3(4.0, -3.0, 1.0), float3(-7.0, 7.0, -7.0), float3(-5.0, 6.0, -8.0)))[0].x != 0.0)
+    {
+        model.mtx_rm = transpose(float3x3(float3(-5.0, -3.0, -5.0), float3(-2.0, 2.0, -5.0), float3(6.0, 3.0, -8.0)));
+    }
+}
+

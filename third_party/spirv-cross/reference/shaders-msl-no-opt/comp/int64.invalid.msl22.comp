@@ -1,0 +1,106 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct M0
+{
+    long v;
+    spvUnsafeArray<long2, 2> b;
+    ulong c;
+    spvUnsafeArray<ulong, 5> d;
+};
+
+struct SSBO0_Type
+{
+    long4 a;
+    M0 m0;
+};
+
+struct SSBO1_Type
+{
+    ulong4 b;
+    M0 m0;
+};
+
+struct SSBO2_Type
+{
+    spvUnsafeArray<long, 4> a;
+    spvUnsafeArray<long2, 4> b;
+};
+
+struct SSBO3_Type
+{
+    spvUnsafeArray<long, 4> a;
+    spvUnsafeArray<long2, 4> b;
+};
+
+struct SSBO
+{
+    int s32;
+    uint u32;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _96 [[buffer(0)]])
+{
+    SSBO0_Type ssbo_0;
+    ssbo_0.a += long4(10l, 20l, 30l, 40l);
+    SSBO1_Type ssbo_1;
+    ssbo_1.b += ulong4(999999999999999999ul, 8888888888888888ul, 77777777777777777ul, 6666666666666666ul);
+    ssbo_0.a += long4(20l);
+    ssbo_0.a = abs(ssbo_0.a + long4(ssbo_1.b));
+    ssbo_0.a += long4(1l);
+    ssbo_1.b += ulong4(long4(1l));
+    ssbo_0.a -= long4(1l);
+    ssbo_1.b -= ulong4(long4(1l));
+    SSBO2_Type ssbo_2;
+    ssbo_2.a[0] += 1l;
+    SSBO3_Type ssbo_3;
+    ssbo_3.a[0] += 2l;
+    _96.s32 = int(uint(((ulong(ssbo_0.a.x) + ssbo_1.b.y) + ulong(ssbo_2.a[1])) + ulong(ssbo_3.a[2])));
+    _96.u32 = uint(((ulong(ssbo_0.a.y) + ssbo_1.b.z) + ulong(ssbo_2.a[0])) + ulong(ssbo_3.a[1]));
+}
+

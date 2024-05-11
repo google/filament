@@ -1,0 +1,41 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+struct Foo0
+{
+    float a;
+};
+
+struct Foo1
+{
+	Foo0 a;
+};
+
+void Zero(out Foo0 v)
+{
+	v.a = 0.0;
+}
+
+struct Foo2
+{
+    Foo1 a;
+	float weight;
+};
+
+layout(std430, binding = 0) buffer SSBO
+{
+    Foo2 outputs[];
+};
+
+shared Foo2 coeffs[64];
+
+void main()
+{
+    Foo2 data;
+    data.weight = 0.0;
+    Zero(data.a.a);
+    coeffs[gl_LocalInvocationIndex] = data;
+	barrier();
+    if (gl_LocalInvocationIndex == 0u)
+        outputs[gl_WorkGroupID.x] = coeffs[0];
+}

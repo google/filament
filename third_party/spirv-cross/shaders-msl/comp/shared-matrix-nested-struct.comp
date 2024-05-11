@@ -1,0 +1,141 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(std140, binding = 0) buffer block { highp uint passed; };
+struct sA
+{
+	highp mat4 mA;
+	bvec3 mB;
+	bvec4 mC;
+};
+struct sB
+{
+	bvec2 mA;
+};
+struct sC
+{
+	highp float mA;
+	mediump uvec4 mB;
+	mediump float mC;
+};
+struct sD
+{
+	sA mA;
+	sB mB;
+	sC mC;
+};
+struct sE
+{
+	sD mA;
+};
+struct sF
+{
+	lowp uvec3 mA;
+	bool mB;
+};
+struct sG
+{
+	sF mA;
+	highp mat3x2 mB;
+};
+struct sH
+{
+	sG mA;
+	mediump vec2 mB;
+};
+struct sI
+{
+	mediump mat2 mA;
+	bvec3 mB;
+	bvec4 mC;
+};
+struct sJ
+{
+	sI mA;
+	bvec3 mB;
+};
+struct sK
+{
+	bvec2 mA;
+	sJ mB;
+	mediump ivec2 mC;
+};
+struct S1 {
+	lowp uint a;
+	mediump vec4 b;
+};
+struct S2 {
+	sE a;
+	highp ivec3 b;
+	sH c;
+	sK d;
+};
+
+bool compare_float    (highp float a, highp float b)  { return abs(a - b) < 0.05; }
+bool compare_vec2     (highp vec2 a, highp vec2 b)    { return compare_float(a.x, b.x)&&compare_float(a.y, b.y); }
+bool compare_vec4     (highp vec4 a, highp vec4 b)    { return compare_float(a.x, b.x)&&compare_float(a.y, b.y)&&compare_float(a.z, b.z)&&compare_float(a.w, b.w); }
+bool compare_mat2     (highp mat2 a, highp mat2 b)    { return compare_vec2(a[0], b[0])&&compare_vec2(a[1], b[1]); }
+bool compare_mat3x2   (highp mat3x2 a, highp mat3x2 b){ return compare_vec2(a[0], b[0])&&compare_vec2(a[1], b[1])&&compare_vec2(a[2], b[2]); }
+bool compare_mat4     (highp mat4 a, highp mat4 b)    { return compare_vec4(a[0], b[0])&&compare_vec4(a[1], b[1])&&compare_vec4(a[2], b[2])&&compare_vec4(a[3], b[3]); }
+bool compare_ivec2    (highp ivec2 a, highp ivec2 b)  { return a == b; }
+bool compare_ivec3    (highp ivec3 a, highp ivec3 b)  { return a == b; }
+bool compare_uint     (highp uint a, highp uint b)    { return a == b; }
+bool compare_uvec3    (highp uvec3 a, highp uvec3 b)  { return a == b; }
+bool compare_uvec4    (highp uvec4 a, highp uvec4 b)  { return a == b; }
+bool compare_bool     (bool a, bool b)                { return a == b; }
+bool compare_bvec2    (bvec2 a, bvec2 b)              { return a == b; }
+bool compare_bvec3    (bvec3 a, bvec3 b)              { return a == b; }
+bool compare_bvec4    (bvec4 a, bvec4 b)              { return a == b; }
+
+shared S1 s1;
+shared S2 s2;
+
+void main (void) {
+	s1.a = 0u;
+	s1.b = vec4(8.0, 8.0, 0.0, -4.0);
+	s2.a.mA.mA.mA = mat4(-5.0, 9.0, -4.0, -6.0, -1.0, -1.0, -2.0, 1.0, 6.0, 5.0, 7.0, -2.0, -4.0, -9.0, 8.0, 3.0);
+	s2.a.mA.mA.mB = bvec3(true, false, false);
+	s2.a.mA.mA.mC = bvec4(true, true, true, false);
+	s2.a.mA.mB.mA = bvec2(true, true);
+	s2.a.mA.mC.mA = 7.0;
+	s2.a.mA.mC.mB = uvec4(8u, 6u, 2u, 0u);
+	s2.a.mA.mC.mC = -9.0;
+	s2.b = ivec3(1, -4, 0);
+	s2.c.mA.mA.mA = uvec3(4u, 9u, 1u);
+	s2.c.mA.mA.mB = false;
+	s2.c.mA.mB = mat3x2(3.0, -5.0, -1.0, -5.0, -1.0, -9.0);
+	s2.c.mB = vec2(-6.0, -9.0);
+	s2.d.mA = bvec2(true, false);
+	s2.d.mB.mA.mA = mat2(-2.0, 3.0, 7.0, 2.0);
+	s2.d.mB.mA.mB = bvec3(false, false, false);
+	s2.d.mB.mA.mC = bvec4(false, false, false, true);
+	s2.d.mB.mB = bvec3(true, false, false);
+	s2.d.mC = ivec2(-9, 0);
+
+	barrier();
+	memoryBarrier();
+	bool allOk = true;
+	allOk = allOk && compare_uint(0u, s1.a);
+	allOk = allOk && compare_vec4(vec4(8.0, 8.0, 0.0, -4.0), s1.b);
+	allOk = allOk && compare_mat4(mat4(-5.0, 9.0, -4.0, -6.0, -1.0, -1.0, -2.0, 1.0, 6.0, 5.0, 7.0, -2.0, -4.0, -9.0, 8.0, 3.0), s2.a.mA.mA.mA);
+	allOk = allOk && compare_bvec3(bvec3(true, false, false), s2.a.mA.mA.mB);
+	allOk = allOk && compare_bvec4(bvec4(true, true, true, false), s2.a.mA.mA.mC);
+	allOk = allOk && compare_bvec2(bvec2(true, true), s2.a.mA.mB.mA);
+	allOk = allOk && compare_float(7.0, s2.a.mA.mC.mA);
+	allOk = allOk && compare_uvec4(uvec4(8u, 6u, 2u, 0u), s2.a.mA.mC.mB);
+	allOk = allOk && compare_float(-9.0, s2.a.mA.mC.mC);
+	allOk = allOk && compare_ivec3(ivec3(1, -4, 0), s2.b);
+	allOk = allOk && compare_uvec3(uvec3(4u, 9u, 1u), s2.c.mA.mA.mA);
+	allOk = allOk && compare_bool(false, s2.c.mA.mA.mB);
+	allOk = allOk && compare_mat3x2(mat3x2(3.0, -5.0, -1.0, -5.0, -1.0, -9.0), s2.c.mA.mB);
+	allOk = allOk && compare_vec2(vec2(-6.0, -9.0), s2.c.mB);
+	allOk = allOk && compare_bvec2(bvec2(true, false), s2.d.mA);
+	allOk = allOk && compare_mat2(mat2(-2.0, 3.0, 7.0, 2.0), s2.d.mB.mA.mA);
+	allOk = allOk && compare_bvec3(bvec3(false, false, false), s2.d.mB.mA.mB);
+	allOk = allOk && compare_bvec4(bvec4(false, false, false, true), s2.d.mB.mA.mC);
+	allOk = allOk && compare_bvec3(bvec3(true, false, false), s2.d.mB.mB);
+	allOk = allOk && compare_ivec2(ivec2(-9, 0), s2.d.mC);
+	if (allOk)
+		passed++;
+
+}

@@ -1,0 +1,414 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     17333,        406]
+NotebookOptionsPosition[     16438,        381]
+NotebookOutlinePosition[     16793,        397]
+CellTagsIndexPosition[     16750,        394]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[TextData[{
+ StyleBox["Fresnel for Conductors\n", "Title"],
+ StyleBox["\nThis document explores a new Fresnel model based on the Laz\
+\[AAcute]nyi-Schlick approximation proposed by Naty Hoffman in \
+\[OpenCurlyDoubleQuote]Fresnel Equations Considered Harmful\
+\[CloseCurlyDoubleQuote] (http://renderwonk.com/publications/mam2019/).\nThe \
+regular Schlick approximation expressed as ", "Text"],
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"r", "+", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "-", "r"}], ")"}], 
+     SuperscriptBox[
+      RowBox[{"(", 
+       RowBox[{"1", "-", 
+        RowBox[{"cos", " ", "\[Theta]"}]}], ")"}], "5"]}]}], 
+   TraditionalForm]], "DisplayFormula",ExpressionUUID->
+  "39527512-d41b-45c5-9d7c-312b07981f4b"],
+ " ",
+ StyleBox["lacks the \[OpenCurlyDoubleQuote]dip\[CloseCurlyDoubleQuote] at \
+grazing angle for conductors. The Laz\[AAcute]nyi-Schlick approximation \
+improves this behavior by adding an error term: ", "Text"],
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"r", "+", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "-", "r"}], ")"}], 
+     SuperscriptBox[
+      RowBox[{"(", 
+       RowBox[{"1", "-", 
+        RowBox[{"cos", " ", "\[Theta]"}]}], ")"}], "5"], 
+     StyleBox[
+      RowBox[{"-", "a"}], "DisplayFormula"], 
+     StyleBox[" ", "DisplayFormula"], 
+     StyleBox["cos", "DisplayFormula"], 
+     StyleBox[" ", "DisplayFormula"], 
+     RowBox[{
+      StyleBox["\[Theta]", "DisplayFormula"], 
+      StyleBox["(", "DisplayFormula"], 
+      RowBox[{
+       StyleBox["1", "DisplayFormula"], 
+       StyleBox["-", "DisplayFormula"], 
+       RowBox[{
+        StyleBox["cos", "DisplayFormula"], 
+        StyleBox[" ", "DisplayFormula"], 
+        FormBox[
+         SuperscriptBox[
+          RowBox[{"\[Theta]", ")"}], "\[Alpha]"],
+         TraditionalForm]}]}]}]}]}], TraditionalForm]], "DisplayFormula",
+  ExpressionUUID->"cd916a6c-9a4e-4038-ac5a-5236b2e9f999"],
+ StyleBox[".", "Text"],
+ "\n",
+ StyleBox["Hoffman proposes to use ", "Text"],
+ StyleBox["\[Alpha]=6 ", "DisplayFormula"],
+ StyleBox["and explains how to compute ", "Text"],
+ StyleBox["a", "DisplayFormula"],
+ StyleBox[" from ", "Text"],
+ StyleBox["h", "DisplayFormula"],
+ StyleBox[", the reflectance at the peak angle for the Laz\[AAcute]nyi term \
+when ", "Text"],
+ StyleBox["\[Alpha]=6", "DisplayFormula"],
+ StyleBox[". That peak angle is equal to 81.7\[Degree]. If ", "Text"],
+ StyleBox["r", "DisplayFormula"],
+ StyleBox[" is also called ", "Text"],
+ StyleBox["f0", "DisplayFormula"],
+ StyleBox[", ", "Text"],
+ StyleBox["h", "DisplayFormula"],
+ StyleBox[" can be called ", "Text"],
+ StyleBox["f82", "DisplayFormula"],
+ StyleBox[". That reflectance can either be computed from spectral data or \
+set manually by the artist to control the \[OpenCurlyDoubleQuote]edge tint\
+\[CloseCurlyDoubleQuote].", "Text"]
+}], "Subtitle",
+ CellChangeTimes->{{3.6472069892556753`*^9, 3.647206992644547*^9}, {
+  3.64720706386841*^9, 3.64720723066249*^9}, {3.647207262730607*^9, 
+  3.647207325235694*^9}, {3.661121273814883*^9, 3.6611212811271257`*^9}, {
+  3.6611836316553793`*^9, 3.661183634470564*^9}, {3.6815771809416018`*^9, 
+  3.681577182173439*^9}, {3.7730850034895563`*^9, 3.7730852630855627`*^9}, {
+  3.773085298305088*^9, 3.7730853327595*^9}, {3.7730853865642033`*^9, 
+  3.7730857257190323`*^9}, {3.7730859525366783`*^9, 3.773085982175263*^9}, {
+  3.773089012395978*^9, 
+  3.7730890134679823`*^9}},ExpressionUUID->"36b5e568-c52a-4f52-9551-\
+81d4c06f91c8"],
+
+Cell[BoxData[{
+ RowBox[{"ClearAll", "[", "\"\<Global`*\>\"", "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"F", "[", 
+    RowBox[{"r_", ",", "\[Theta]_", ",", " ", "a_"}], "]"}], ":=", 
+   RowBox[{"r", "+", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "-", "r"}], ")"}], 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "-", 
+        RowBox[{"Cos", "[", "\[Theta]", "]"}]}], ")"}], "^", "5"}]}], "-", 
+    RowBox[{"a", "*", 
+     RowBox[{"Cos", "[", "\[Theta]", "]"}], "*", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "-", 
+        RowBox[{"Cos", "[", "\[Theta]", "]"}]}], ")"}], "^", "6"}]}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Ferror", "[", 
+   RowBox[{"r_", ",", "h_"}], "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "\[Theta]", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"\[Theta]", " ", ":=", 
+      RowBox[{"81.7", " ", "Degree"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"r", "+", 
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"1", "-", "r"}], ")"}], 
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"1", "-", 
+            RowBox[{"Cos", "[", "\[Theta]", "]"}]}], ")"}], "^", "5"}]}], "-",
+         "h"}], ")"}], "/", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"Cos", "[", "\[Theta]", "]"}], 
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"1", "-", 
+           RowBox[{"Cos", "[", "\[Theta]", "]"}]}], ")"}], "^", "6"}]}], 
+       ")"}]}]}]}], "\[IndentingNewLine]", "]"}]}]}], "Input",
+ CellChangeTimes->{{3.7729133187681932`*^9, 3.772913353368194*^9}, {
+  3.772913385207367*^9, 3.772913430976614*^9}, {3.772913620594541*^9, 
+  3.772913669626027*^9}, {3.772913746784048*^9, 3.7729137665193787`*^9}, {
+  3.7729138044148903`*^9, 3.7729138080487623`*^9}, {3.772917214474042*^9, 
+  3.772917488633525*^9}, {3.7729176335715647`*^9, 3.772917635593645*^9}, {
+  3.772917737642107*^9, 3.7729177390893784`*^9}, {3.772918051427341*^9, 
+  3.772918051512904*^9}, {3.772918083411371*^9, 3.772918088378023*^9}, {
+  3.7729999643627872`*^9, 3.772999969792123*^9}, {3.7730645189191837`*^9, 
+  3.7730645366299353`*^9}, {3.7730852731867447`*^9, 3.773085273697719*^9}},
+ CellLabel->"In[1]:=",ExpressionUUID->"8f4e357f-9fa0-44a0-b6eb-a9412314a69b"],
+
+Cell[CellGroupData[{
+
+Cell["Schlick vs Laz\[AAcute]nyi-Shlick", "Subsection",
+ CellChangeTimes->{{3.773085919336048*^9, 
+  3.7730859333661127`*^9}},ExpressionUUID->"e3713a89-77cc-42f3-84cb-\
+ebc3ee1ff481"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "The", " ", "following", " ", "reference", " ", "values", " ", "were", 
+     " ", "computed", " ", "with", " ", "our", " ", "specular"}], "-", 
+    RowBox[{"color", " ", "tool"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"PopupMenu", "[", 
+    RowBox[{
+     RowBox[{"Dynamic", "[", "f0", "]"}], ",", 
+     RowBox[{"{", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"0.912", ",", "0.914", ",", "0.920"}], "}"}], "\[Rule]", 
+        "\"\<Aluminium\>\""}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"0.910", ",", "0.778", ",", "0.423"}], "}"}], "\[Rule]", 
+        "\"\<Brass\>\""}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"0.550", ",", "0.556", ",", "0.554"}], "}"}], "\[Rule]", 
+        "\"\<Chromium\>\""}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"0.966", ",", "0.690", ",", "0.483"}], "}"}], "\[Rule]", 
+        "\"\<Copper\>\""}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1.000", ",", "0.705", ",", "0.332"}], "}"}], "\[Rule]", 
+        "\"\<Gold\>\""}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"0.530", ",", "0.513", ",", "0.494"}], "}"}], "\[Rule]", 
+        "\"\<Iron\>\""}], ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"0.962", ",", "0.949", ",", "0.919"}], "}"}], "\[Rule]", 
+        "\"\<Silver\>\""}]}], "\[IndentingNewLine]", "}"}]}], 
+    "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Manipulate", "[", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"Plot", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"F", "[", 
+           RowBox[{"f0", ",", "x", ",", "0.0"}], "]"}], ",", 
+          RowBox[{"F", "[", 
+           RowBox[{"f0", ",", "x", ",", 
+            RowBox[{"Ferror", "[", 
+             RowBox[{"f0", ",", 
+              RowBox[{"{", 
+               RowBox[{"f82r", ",", " ", "f82g", ",", " ", "f82b"}], "}"}]}], 
+             "]"}]}], "]"}]}], "}"}], "]"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"{", 
+        RowBox[{"x", ",", "0", ",", 
+         RowBox[{"\[Pi]", "/", "2"}]}], "}"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"PlotStyle", "\[Rule]", 
+        RowBox[{"{", 
+         RowBox[{"Red", ",", "Green", ",", "Blue"}], "}"}]}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"PlotRange", "\[Rule]", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"{", 
+           RowBox[{"0", ",", 
+            RowBox[{"\[Pi]", "/", "2"}]}], "}"}], ",", 
+          RowBox[{"{", 
+           RowBox[{"0", ",", "1"}], "}"}]}], "}"}]}], ",", 
+       "\[IndentingNewLine]", 
+       RowBox[{"ImageSize", "\[Rule]", "Large"}], ",", "\[IndentingNewLine]", 
+       
+       RowBox[{"AspectRatio", "\[Rule]", "1"}]}], "\[IndentingNewLine]", 
+      "]"}], ",", "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"f82r", ",", " ", "0.842"}], "}"}], ",", "0", ",", "1", ",", 
+       RowBox[{"Appearance", "\[Rule]", "\"\<Labeled\>\""}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"f82g", ",", " ", "0.863"}], "}"}], ",", "0", ",", "1", ",", 
+       RowBox[{"Appearance", "\[Rule]", "\"\<Labeled\>\""}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"f82b", ",", " ", "0.893"}], "}"}], ",", "0", ",", "1", ",", 
+       RowBox[{"Appearance", "\[Rule]", "\"\<Labeled\>\""}]}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"Dynamic", "[", "f0", "]"}]}], "\[IndentingNewLine]", 
+    "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.77291348864955*^9, 3.772913597080381*^9}, {
+   3.7729137048264093`*^9, 3.772913801734908*^9}, {3.7729138649463673`*^9, 
+   3.7729138691115637`*^9}, {3.772913956202228*^9, 3.772914064911015*^9}, {
+   3.7729156866133833`*^9, 3.7729156909562693`*^9}, {3.7729157285974483`*^9, 
+   3.772915739582994*^9}, {3.772915772126011*^9, 3.77291582404399*^9}, {
+   3.7729158581196413`*^9, 3.7729159355478487`*^9}, {3.7729159663663807`*^9, 
+   3.772915991585353*^9}, {3.7729160235158167`*^9, 3.772916042412031*^9}, {
+   3.772916074687386*^9, 3.7729161443721313`*^9}, {3.7729162117643967`*^9, 
+   3.7729162479162397`*^9}, {3.7729162920773287`*^9, 3.772916333131909*^9}, {
+   3.772916432957225*^9, 3.772916433235639*^9}, {3.77291727096745*^9, 
+   3.77291727269827*^9}, {3.772917331138316*^9, 3.772917336587183*^9}, 
+   3.7729173951543827`*^9, {3.7729175005886374`*^9, 3.772917528389185*^9}, {
+   3.772918061108135*^9, 3.7729180626415653`*^9}, 3.77291834996336*^9, {
+   3.772918565556922*^9, 3.772918587816194*^9}, {3.772999784587057*^9, 
+   3.7729999044184628`*^9}, {3.77299994602988*^9, 3.772999983778234*^9}, {
+   3.773000199913855*^9, 3.773000223600787*^9}, {3.77300030525082*^9, 
+   3.7730003194807*^9}, {3.773000356470613*^9, 3.773000378266103*^9}, {
+   3.77300043539421*^9, 3.7730004940177193`*^9}, {3.77306440843257*^9, 
+   3.773064504709983*^9}, {3.773064565534629*^9, 3.773064567814849*^9}, {
+   3.7730857665420856`*^9, 3.773085840087997*^9}, {3.773088402165798*^9, 
+   3.773088413058975*^9}, {3.7730893539405823`*^9, 3.7730893840510406`*^9}, {
+   3.773496935708227*^9, 3.7734969630931683`*^9}},
+ CellLabel->"In[6]:=",ExpressionUUID->"7f53d52c-2dd5-4ede-9be9-a1c9d9b788f7"],
+
+Cell[BoxData[
+ PopupMenuBox[Dynamic[$CellContext`f0], {{0.912, 0.914, 
+  0.92}->"\<\"Aluminium\"\>", {0.91, 0.778, 0.423}->"\<\"Brass\"\>", {0.55, 
+  0.556, 0.554}->"\<\"Chromium\"\>", {0.966, 0.69, 0.483}->"\<\"Copper\"\>", {
+  1., 0.705, 0.332}->"\<\"Gold\"\>", {0.53, 0.513, 0.494}->"\<\"Iron\"\>", {
+  0.962, 0.949, 0.919}->"\<\"Silver\"\>"}]], "Output",
+ CellChangeTimes->{
+  3.772999984937956*^9, {3.7730003220405912`*^9, 3.773000334038609*^9}, {
+   3.773000366043109*^9, 3.7730003758804007`*^9}, {3.773000450983251*^9, 
+   3.773000461490407*^9}, 3.773000491644614*^9, 3.7730644513194237`*^9, {
+   3.773064487950633*^9, 3.773064511452229*^9}, {3.7730645595174713`*^9, 
+   3.7730645681373034`*^9}, 3.773085276683097*^9, 3.773085941152194*^9, 
+   3.773088416141054*^9, 3.7730893912337923`*^9, 3.773496543188936*^9, 
+   3.7734969667234173`*^9},
+ CellLabel->"Out[6]=",ExpressionUUID->"2fed9400-f54b-4ee3-b954-51a0af3443fc"],
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`f82b$$ = 0.683, $CellContext`f82g$$ = 
+    0.81, $CellContext`f82r$$ = 0.952, Typeset`show$$ = True, 
+    Typeset`bookmarkList$$ = {}, Typeset`bookmarkMode$$ = "Menu", 
+    Typeset`animator$$, Typeset`animvar$$ = 1, Typeset`name$$ = 
+    "\"untitled\"", Typeset`specs$$ = {{{
+       Hold[$CellContext`f82r$$], 0.842}, 0, 1}, {{
+       Hold[$CellContext`f82g$$], 0.863}, 0, 1}, {{
+       Hold[$CellContext`f82b$$], 0.893}, 0, 1}, {
+      Hold[
+       Dynamic[$CellContext`f0]], Manipulate`Dump`ThisIsNotAControl}}, 
+    Typeset`size$$ = {576., {288., 293.}}, Typeset`update$$ = 0, 
+    Typeset`initDone$$, Typeset`skipInitDone$$ = 
+    True, $CellContext`f82r$14030$$ = 0, $CellContext`f82g$14031$$ = 
+    0, $CellContext`f82b$14032$$ = 0}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, 
+      "Variables" :> {$CellContext`f82b$$ = 0.893, $CellContext`f82g$$ = 
+        0.863, $CellContext`f82r$$ = 0.842}, "ControllerVariables" :> {
+        Hold[$CellContext`f82r$$, $CellContext`f82r$14030$$, 0], 
+        Hold[$CellContext`f82g$$, $CellContext`f82g$14031$$, 0], 
+        Hold[$CellContext`f82b$$, $CellContext`f82b$14032$$, 0]}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, "Body" :> Plot[
+        Evaluate[{
+          $CellContext`F[$CellContext`f0, $CellContext`x, 0.], 
+          $CellContext`F[$CellContext`f0, $CellContext`x, 
+           $CellContext`Ferror[$CellContext`f0, {$CellContext`f82r$$, \
+$CellContext`f82g$$, $CellContext`f82b$$}]]}], {$CellContext`x, 0, Pi/2}, 
+        PlotStyle -> {Red, Green, Blue}, PlotRange -> {{0, Pi/2}, {0, 1}}, 
+        ImageSize -> Large, AspectRatio -> 1], 
+      "Specifications" :> {{{$CellContext`f82r$$, 0.842}, 0, 1, Appearance -> 
+         "Labeled"}, {{$CellContext`f82g$$, 0.863}, 0, 1, Appearance -> 
+         "Labeled"}, {{$CellContext`f82b$$, 0.893}, 0, 1, Appearance -> 
+         "Labeled"}, 
+        Dynamic[$CellContext`f0]}, "Options" :> {}, "DefaultOptions" :> {}],
+     ImageSizeCache->{621., {368., 374.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    SynchronousInitialization->True,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Output",
+ CellChangeTimes->{
+  3.772999984937956*^9, {3.7730003220405912`*^9, 3.773000334038609*^9}, {
+   3.773000366043109*^9, 3.7730003758804007`*^9}, {3.773000450983251*^9, 
+   3.773000461490407*^9}, 3.773000491644614*^9, 3.7730644513194237`*^9, {
+   3.773064487950633*^9, 3.773064511452229*^9}, {3.7730645595174713`*^9, 
+   3.7730645681373034`*^9}, 3.773085276683097*^9, 3.773085941152194*^9, 
+   3.773088416141054*^9, 3.7730893912337923`*^9, 3.773496543188936*^9, 
+   3.7734969667490253`*^9},
+ CellLabel->"Out[7]=",ExpressionUUID->"9d446db1-08cc-4d65-951e-c6f7381f21a3"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{907, 955},
+WindowMargins->{{988, Automatic}, {Automatic, 86}},
+FrontEndVersion->"11.3 for Mac OS X x86 (32-bit, 64-bit Kernel) (March 5, \
+2018)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 3458, 84, 275, "Subtitle",ExpressionUUID->"36b5e568-c52a-4f52-9551-81d4c06f91c8"],
+Cell[4041, 108, 2328, 58, 136, "Input",ExpressionUUID->"8f4e357f-9fa0-44a0-b6eb-a9412314a69b"],
+Cell[CellGroupData[{
+Cell[6394, 170, 183, 3, 54, "Subsection",ExpressionUUID->"e3713a89-77cc-42f3-84cb-ebc3ee1ff481"],
+Cell[CellGroupData[{
+Cell[6602, 177, 5619, 121, 535, "Input",ExpressionUUID->"7f53d52c-2dd5-4ede-9be9-a1c9d9b788f7"],
+Cell[12224, 300, 925, 14, 43, "Output",ExpressionUUID->"2fed9400-f54b-4ee3-b954-51a0af3443fc"],
+Cell[13152, 316, 3246, 60, 761, "Output",ExpressionUUID->"9d446db1-08cc-4d65-951e-c6f7381f21a3"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+

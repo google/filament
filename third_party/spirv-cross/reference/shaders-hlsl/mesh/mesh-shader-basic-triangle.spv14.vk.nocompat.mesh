@@ -1,0 +1,87 @@
+struct BlockOut
+{
+    float4 a;
+    float4 b;
+};
+
+struct BlockOutPrim
+{
+    float4 a;
+    float4 b;
+};
+
+struct TaskPayload
+{
+    float a;
+    float b;
+    int c;
+};
+
+static const uint3 gl_WorkGroupSize = uint3(2u, 3u, 4u);
+
+static uint3 gl_WorkGroupID;
+static uint3 gl_GlobalInvocationID;
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_WorkGroupID : SV_GroupID;
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+struct gl_MeshPerVertexEXT
+{
+    float4 vOut : TEXCOORD0;
+    BlockOut outputs : TEXCOORD2;
+    float4 gl_Position : SV_Position;
+    float gl_ClipDistance[1] : SV_ClipDistance;
+    float2 gl_CullDistance : SV_CullDistance;
+};
+
+struct gl_MeshPerPrimitiveEXT
+{
+    float4 vPrim : TEXCOORD1;
+    BlockOutPrim prim_outputs : TEXCOORD4;
+    uint gl_PrimitiveID : SV_PrimitiveID;
+    uint gl_Layer : SV_RenderTargetArrayIndex;
+    uint gl_ViewportIndex : SV_ViewportArrayIndex;
+    uint gl_PrimitiveShadingRateEXT : SV_ShadingRate;
+    bool gl_CullPrimitiveEXT : SV_CullPrimitive;
+};
+
+groupshared float shared_float[16];
+
+void mesh_main(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint3 gl_PrimitiveTriangleIndicesEXT[22])
+{
+    SetMeshOutputCounts(24u, 22u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = float4(float3(gl_GlobalInvocationID), 1.0f);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_CullDistance[0] = 3.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_CullDistance[1] = 5.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].vOut = float4(float3(gl_GlobalInvocationID), 2.0f);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].outputs.a = 5.0f.xxxx;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].outputs.b = 6.0f.xxxx;
+    GroupMemoryBarrierWithGroupSync();
+    if (gl_LocalInvocationIndex < 22u)
+    {
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].vPrim = float4(float3(gl_WorkGroupID), 3.0f);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].prim_outputs.a = _payload.a.xxxx;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].prim_outputs.b = _payload.b.xxxx;
+        gl_PrimitiveTriangleIndicesEXT[gl_LocalInvocationIndex] = uint3(0u, 1u, 2u) + gl_LocalInvocationIndex.xxx;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveID = int(gl_GlobalInvocationID.x);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_Layer = int(gl_GlobalInvocationID.x) + 1;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_ViewportIndex = int(gl_GlobalInvocationID.x) + 2;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_CullPrimitiveEXT = (gl_GlobalInvocationID.x & 1u) != 0u;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveShadingRateEXT = int(gl_GlobalInvocationID.x) + 3;
+    }
+}
+
+[outputtopology("triangle")]
+[numthreads(2, 3, 4)]
+void main(SPIRV_Cross_Input stage_input, out vertices gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], out primitives gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], in payload TaskPayload _payload, out indices uint3 gl_PrimitiveTriangleIndicesEXT[22])
+{
+    gl_WorkGroupID = stage_input.gl_WorkGroupID;
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    mesh_main(gl_MeshVerticesEXT, gl_MeshPrimitivesEXT, _payload, gl_PrimitiveTriangleIndicesEXT);
+}

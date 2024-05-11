@@ -1,0 +1,130 @@
+material {
+    name : dofDownsample,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : cocParams
+        },
+        {
+            type : float2,
+            name : cocClamp
+        },
+        {
+            type : float2,
+            name : texelSize,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4
+        },
+        {
+            name : coc,
+            target : color,
+            type : float
+        }
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+
+    void dummy(){}
+
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        // It works to fix-up the UV *before* applying the offsets because materialParams.texelSize
+        // corresponds to one texel.
+        // on GL:           v0 = v - 0.5 * texel                                                (1)
+        //                  v1 = v - 0.5 * texel + 1 * texel
+        //                     = v + 0.5 * texel                                                (2)
+        // on MTL/VK:       v0 = 1 - ((1 - v) - 0.5 * texel)
+        //                     = v + 0.5 * texel                                                (3)
+        //                  v1 = 1 - ((1 - v) - 0.5 * texel + 1 * texel)
+        //                     = v - 0.5 * texel                                                (4)
+        // Because the all the operations on the 4 texels in the fragment shader don't depend on
+        // the order they're fetched, it all works out.
+        postProcess.normalizedUV = uvToRenderTargetUV(postProcess.normalizedUV);
+
+        // offset UVs by -0.5 texel because we use textureLodOffset() in the fragment shader
+        postProcess.vertex.xy = postProcess.normalizedUV - 0.5 * materialParams.texelSize;
+    }
+}
+
+fragment {
+
+#include "dofUtils.fs"
+
+void dummy(){}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    highp vec2 uv = variable_vertex.xy;
+
+    // the source is guaranteed to be a multiple of two, so we know the bilinear weights are 0.25
+
+    vec4 s01 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 1));
+    vec4 s11 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 1));
+    vec4 s10 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 0));
+    vec4 s00 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 0));
+
+    vec4 hdr;
+    // fireflies/flickering filtering
+    hdr[0] = 1.0 / (1.0 + max3(s01.rgb));
+    hdr[1] = 1.0 / (1.0 + max3(s11.rgb));
+    hdr[2] = 1.0 / (1.0 + max3(s10.rgb));
+    hdr[3] = 1.0 / (1.0 + max3(s00.rgb));
+
+    vec4 d;
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+    d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
+#else
+    d[0] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;
+    d[1] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 1)).r;
+    d[2] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 0)).r;
+    d[3] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 0)).r;
+#endif
+
+    // Get the CoC radius of each four samples to downsample.
+    // We multiply by 0.5 to convert from diameter to radius.
+    vec4 c = getCOC(d, materialParams.cocParams) * 0.5;
+    float outCoc = downsampleCoC(c);
+    vec4 w = downsampleCocWeights(c, outCoc, 1.0) * hdr;
+    vec4 outColor = (s01 * w[0] + s11 * w[1] + s10 * w[2] + s00 * w[3]) * rcp(dot(vec4(1.0), w));
+
+    // Clamp to maximum allowable CoC radius.
+    outCoc = clamp(outCoc, materialParams.cocClamp[0], materialParams.cocClamp[1]);
+
+    // If CoC is less that 0.5 full resolution pixel, we clamp to 0, this will reduce
+    // artifacts in the "in focus" area and allow us to skip more tiles trivially.
+    if (abs(outCoc) < MAX_IN_FOCUS_COC) {
+        outCoc = 0.0;
+    }
+
+#if POST_PROCESS_OPAQUE
+    // kill the work performed above
+    outColor.a = 1.0;
+#endif
+
+    // Output to MRTs
+    postProcess.color = outColor;
+    postProcess.coc   = outCoc;
+}
+
+}

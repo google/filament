@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'filament-tools-plugin'
+}
+
+project.ext.isSample = true
+
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
+filamentTools {
+    iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/studio_small_02_2k.hdr")
+    iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+}
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    namespace 'com.google.android.filament.pagecurl'
+
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.pagecurl"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    // NOTE: This is a workaround required because the AGP task collectReleaseDependencies
+    //       is not configuration-cache friendly yet; this is only useful for Play publication
+    dependenciesInfo {
+        includeInApk = false
+    }
+
+    // We use the .filamat extension for materials compiled with matc
+    // Telling aapt to not compress them allows to load them efficiently
+    aaptOptions {
+        noCompress 'filamat'
+    }
+
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
+}
+
+dependencies {
+    implementation project(':filament-android')
+    implementation deps.androidx.annotations
+}

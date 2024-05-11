@@ -1,0 +1,37 @@
+material {
+    name : vsmMipmap,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : color,
+            precision: high
+        },
+        {
+            type : int,
+            name : layer
+        },
+        {
+            type : float,
+            name : uvscale
+        }
+    ],
+    outputs : [
+        {
+            name : color,
+            target : color,
+            type : float4
+        }
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false,
+    culling: none
+}
+
+fragment {
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = gl_FragCoord.xy * materialParams.uvscale;
+        postProcess.color = textureLod(materialParams_color,
+                vec3(uv, materialParams.layer), 0.0);
+    }
+}

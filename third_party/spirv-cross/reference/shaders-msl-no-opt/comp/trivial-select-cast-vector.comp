@@ -1,0 +1,19 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct A
+{
+    float3 a;
+    float3 b;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device A& _14 [[buffer(0)]])
+{
+    bool3 c = _14.b < float3(1.0);
+    _14.a = select(float3(1.0, 0.0, 0.0), float3(0.0, 0.0, 1.0), c);
+}
+

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset='UTF-8'>
+	
+	<title>Websocket Meters</title>
+    <!-- 
+        Version 0.1 Contributed by William Greathouse    9-Sep-2013
+        Simple demo of WebSocket connection use. Not a great example of web coding,
+        but it is functional.
+
+        The meter displays are adapted from CSS-TRICKS Progress Bars by Chris Coyier 
+        at http://css-tricks.com/css3-progress-bars/
+    -->
+	<style>
+        body {
+            background: #222;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+        }
+        button {
+            width: 225px;
+            height: 30px;
+            margin: auto 10px;
+            background-color: #ccc;
+            -moz-border-radius: 5px;
+            -webkit-border-radius: 5px;
+            border-radius:6px;
+            color: blue;
+            font-size: 20px;
+        }
+        button:hover {
+            background-color: #888;
+        }
+        button:hover:disabled {
+            background-color: #ccc;
+        }
+        button:disabled {
+            color: lightgray;
+        }
+
+        .button_container {
+            width:550px;
+            display:block;
+            margin-left:auto;
+            margin-right:auto;
+        }
+
+		.meter { 
+			height: 20px;  /* Can be anything */
+			position: relative;
+			background: #555;
+			-moz-border-radius: 25px;
+			-webkit-border-radius: 25px;
+			border-radius: 25px;
+			padding: 10px;
+			-webkit-box-shadow: inset 0 -1px 1px rgba(255,255,255,0.3);
+			-moz-box-shadow   : inset 0 -1px 1px rgba(255,255,255,0.3);
+			box-shadow        : inset 0 -1px 1px rgba(255,255,255,0.3);
+		}
+		.meter > span {
+			display: block;
+			height: 100%;
+			   -webkit-border-top-right-radius: 20px;
+			-webkit-border-bottom-right-radius: 20px;
+			       -moz-border-radius-topright: 20px;
+			    -moz-border-radius-bottomright: 20px;
+			           border-top-right-radius: 20px;
+			        border-bottom-right-radius: 20px;
+			    -webkit-border-top-left-radius: 20px;
+			 -webkit-border-bottom-left-radius: 20px;
+			        -moz-border-radius-topleft: 20px;
+			     -moz-border-radius-bottomleft: 20px;
+			            border-top-left-radius: 20px;
+			         border-bottom-left-radius: 20px;
+			background-color: rgb(43,194,83);
+			background-image: -webkit-gradient(
+			  linear,
+			  left bottom,
+			  left top,
+			  color-stop(0, rgb(43,194,83)),
+			  color-stop(1, rgb(84,240,84))
+			 );
+			background-image: -moz-linear-gradient(
+			  center bottom,
+			  rgb(43,194,83) 37%,
+			  rgb(84,240,84) 69%
+			 );
+			-webkit-box-shadow: 
+			  inset 0 2px 9px  rgba(255,255,255,0.3),
+			  inset 0 -2px 6px rgba(0,0,0,0.4);
+			-moz-box-shadow: 
+			  inset 0 2px 9px  rgba(255,255,255,0.3),
+			  inset 0 -2px 6px rgba(0,0,0,0.4);
+			box-shadow: 
+			  inset 0 2px 9px  rgba(255,255,255,0.3),
+			  inset 0 -2px 6px rgba(0,0,0,0.4);
+			position: relative;
+			overflow: hidden;
+		}
+		.meter > span:after, .animate > span > span {
+			content: "";
+			position: absolute;
+			top: 0; left: 0; bottom: 0; right: 0;
+			background-image: 
+			   -webkit-gradient(linear, 0 0, 100% 100%, 
+			      color-stop(.25, rgba(255, 255, 255, .2)), 
+			      color-stop(.25, transparent), color-stop(.5, transparent), 
+			      color-stop(.5, rgba(255, 255, 255, .2)), 
+			      color-stop(.75, rgba(255, 255, 255, .2)), 
+			      color-stop(.75, transparent), to(transparent)
+			   );
+			background-image: 
+				-moz-linear-gradient(
+				  -45deg, 
+			      rgba(255, 255, 255, .2) 25%, 
+			      transparent 25%, 
+			      transparent 50%, 
+			      rgba(255, 255, 255, .2) 50%, 
+			      rgba(255, 255, 255, .2) 75%, 
+			      transparent 75%, 
+			      transparent
+			   );
+			z-index: 1;
+			-webkit-background-size: 50px 50px;
+			-moz-background-size: 50px 50px;
+			-webkit-animation: move 2s linear infinite;
+			   -webkit-border-top-right-radius: 20px;
+			-webkit-border-bottom-right-radius: 20px;
+			       -moz-border-radius-topright: 20px;
+			    -moz-border-radius-bottomright: 20px;
+			           border-top-right-radius: 20px;
+			        border-bottom-right-radius: 20px;
+			    -webkit-border-top-left-radius: 20px;
+			 -webkit-border-bottom-left-radius: 20px;
+			        -moz-border-radius-topleft: 20px;
+			     -moz-border-radius-bottomleft: 20px;
+			            border-top-left-radius: 20px;
+			         border-bottom-left-radius: 20px;
+			overflow: hidden;
+		}
+		
+		.animate > span:after {
+			display: none;
+		}
+		
+		@-webkit-keyframes move {
+		    0% {
+		       background-position: 0 0;
+		    }
+		    100% {
+		       background-position: 50px 50px;
+		    }
+		}
+		
+		.orange > span {
+			background-color: #f1a165;
+			background-image: -moz-linear-gradient(top, #f1a165, #f36d0a);
+			background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #f1a165),color-stop(1, #f36d0a));
+			background-image: -webkit-linear-gradient(#f1a165, #f36d0a); 
+		}
+		
+		.red > span {
+			background-color: #f0a3a3;
+			background-image: -moz-linear-gradient(top, #f0a3a3, #f42323);
+			background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0, #f0a3a3),color-stop(1, #f42323));
+			background-image: -webkit-linear-gradient(#f0a3a3, #f42323);
+		}
+		
+		.nostripes > span > span, .nostripes > span:after {
+			-webkit-animation: none;
+			background-image: none;
+		}
+
+        #output {
+            background-color: #ccc;
+            height: 240px;
+            overflow-y: auto;
+        }
+
+	</style>
+</head>
+
+<body>
+	<div id="page_wrap">
+		
+	  <h1>Meter Updates via WebSocket</h1>
+	  
+	  <p/>
+
+		<div class="meter">
+			<span id="meter1" style="width: 25%"></span>
+		</div>
+
+        <p/>
+		
+		<div class="meter orange nostripes">
+			<span id="meter2" style="width: 33.3%"></span>
+		</div>
+
+        <p/>
+		
+		<div class="meter red">
+			<span id="meter3" style="width: 80%"></span>
+		</div>
+
+        <p/>
+
+	</div>
+    <div class="button_container">
+        <div>
+            <button id="connection" onclick="toggleConnection(this)">WebSocket Connect</button>
+            <button id="update" disabled onclick="toggleUpdate(this)">Disable Update</button>
+        </div>
+    </div>
+    <p/>
+    <div id="output"></div>
+	
+</body>
+
+<script language="javascript" type="text/javascript">
+    var connection; // websocket connection
+
+    function writeToScreen (message) {
+        var div = document.createElement('div');
+        var output = document.getElementById('output');
+        div.innerHTML = message;
+        output.appendChild(div);
+        output.scrollTop = output.scrollHeight;
+    }
+
+    function ws_connect() {
+        // check for websocket support
+        // for Internet Explorer < 10 there are options for websocket support that
+        // could be integrated into production code, but for now, we are expecting 
+        // browser support to be present for this demo
+        if ('WebSocket' in window) {
+
+            writeToScreen('Connecting');
+            connection = new WebSocket('ws://' + window.location.host + '/meters');
+            connection.onopen = function(ev) {
+                document.getElementById("connection").innerHTML = "WebSocket Disconnect";
+                document.getElementById("update").disabled=false;
+                document.getElementById("update").innerHTML = "Disable Update";
+                writeToScreen('CONNECTED');
+                var message = 'update on';
+                writeToScreen('SENT: ' + message);
+                connection.send(message);
+            };
+
+            connection.onclose = function(ev) {
+                document.getElementById("update").disabled=true;
+                document.getElementById("update").innerHTML = "Enable Update";
+                document.getElementById("connection").innerHTML = "WebSocket Connect";
+                writeToScreen('DISCONNECTED');
+            };
+
+            connection.onmessage = function(ev) {
+                if (ev.data.substr(0,5) == "meter")
+                {
+                    var target = ev.data.split(":")[0];
+                    var meter = document.getElementById(target);
+                    var data = ev.data.split(":")[1].split(",");
+                    var percent = (data[0]*100)/data[1];
+                    meter.style.width = percent+"%";
+                }
+                else
+                    writeToScreen('RECEIVED: ' + ev.data);
+            };
+
+            connection.onerror = function(ev) {
+                alert("WebSocket error");
+            };
+
+        } else {
+            alert("WebSocket is not available!!!\n" +
+                  "Demo will not function.");
+        }
+    }
+
+    // user connect/disconnect
+    function toggleConnection(el) {
+        var tag=el.innerHTML;
+        if (tag == "WebSocket Connect")
+        {
+            ws_connect();
+        }
+        else
+        {
+            connection.close();
+        }
+    }
+
+    // user turn updates on/off
+    function toggleUpdate(el) {
+        var tag=el.innerHTML;
+        var message;
+        if (tag == "Enable Update")
+        {
+            message = 'update on';
+            el.innerHTML = "Disable Update";
+        }
+        else
+        {
+            message = 'update off';
+            el.innerHTML = "Enable Update";
+        }
+        writeToScreen('SENT: ' + message);
+        connection.send(message);
+    }
+</script>
+
+</html>

@@ -1,0 +1,45 @@
+#version 450
+layout(local_size_x = 1) in;
+
+struct A
+{
+	float v;
+};
+
+struct B
+{
+	vec2 v;
+};
+
+struct C
+{
+	vec3 v;
+};
+
+struct D
+{
+	vec4 v;
+};
+
+struct E
+{
+	vec4 a;
+	vec2 b;
+};
+
+layout(std140, set = 0, binding = 0) buffer SSBO
+{
+	A a[2][4];
+	B b[2][4];
+	C c[2][4];
+	D d[2][4];
+	mat2 e[2][4];
+	E f[];
+};
+
+void main()
+{
+	f[0].a = vec4(2.0);
+	mat2 tmp = e[0][1];
+	e[1][2] = tmp;
+}

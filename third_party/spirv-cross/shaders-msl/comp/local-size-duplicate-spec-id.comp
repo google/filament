@@ -1,0 +1,15 @@
+#version 450
+
+layout(constant_id=0) const int local_size_x_val = 1;
+layout(constant_id=1) const int local_size_y_val = 1;
+layout(constant_id=2) const int local_size_z_val = 1;
+
+layout(local_size_x_id=0, local_size_y_id=1, local_size_z_id=2) in;
+
+layout(set=0, binding=0) buffer StorageBuffer {
+    uint values[];
+} ssbo;
+
+void main() {
+    ssbo.values[gl_LocalInvocationIndex] = 1u;
+}

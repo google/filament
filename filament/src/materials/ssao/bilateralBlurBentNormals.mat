@@ -1,0 +1,135 @@
+material {
+    name : bilateralBlurBentNormals,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : ssao,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : axis,
+            precision: high
+        },
+        {
+            type : int,
+            name : sampleCount
+        },
+        {
+            type : float,
+            name : farPlaneOverEdgeDistance
+        },
+        {
+            type : float[16],
+            name : kernel
+        }
+    ],
+    outputs : [
+        {
+            name : aoData,
+            target : color,
+            type : float3
+        },
+        {
+            name : bnData,
+            target : color,
+            type : float3
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+    #include "ssaoUtils.fs"
+
+    void dummy(){}
+
+    float bilateralWeight(in highp float depth, in highp float sampleDepth) {
+        float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
+        return max(0.0, 1.0 - diff * diff);
+    }
+
+    void tapAO(const highp sampler2DArray saoTexture, highp vec2 uv,
+            out float ao, out highp float sampleDepth) {
+        vec3 data = textureLod(saoTexture, vec3(uv, 0.0), 0.0).rgb;
+        ao = data.r;
+        sampleDepth = unpack(data.gb);
+    }
+
+    void tapBN(const highp sampler2DArray saoTexture, highp vec2 uv,
+            out vec3 bentNormal) {
+        vec3 data = textureLod(saoTexture, vec3(uv, 1.0), 0.0).xyz;
+        bentNormal = unpackBentNormal(data);
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = variable_vertex.xy; // interpolated at pixel's center
+
+        float ao;
+        highp float depth;
+        highp float sampleDepth;
+        vec3 bn;
+
+        vec3 data = textureLod(materialParams_ssao, vec3(uv, 0.0), 0.0).rgb;
+        ao = data.r;
+        depth = unpack(data.gb);
+
+        if (data.g * data.b == 1.0) {
+            // This is the skybox, skip
+            postProcess.aoData = data;
+            postProcess.bnData = vec3(0.0);
+            return;
+        }
+
+        tapBN(materialParams_ssao, uv, bn);
+
+        // we handle the center pixel separately because it doesn't participate in
+        // bilateral filtering
+        float totalWeight = materialParams.kernel[0];
+        float sumAO = ao * totalWeight;
+        vec3 sumBN = bn * totalWeight;
+
+        vec2 offset = materialParams.axis;
+        for (int i = 1; i < materialParams.sampleCount; i++) {
+            float weight = materialParams.kernel[i];
+            float bilateral;
+
+            tapAO(materialParams_ssao, uv + offset, ao, sampleDepth);
+            bilateral = weight * bilateralWeight(depth, sampleDepth);
+            totalWeight += bilateral;
+            tapBN(materialParams_ssao, uv + offset, bn);
+            sumAO += ao * bilateral;
+            sumBN += bn * bilateral;
+
+            tapAO(materialParams_ssao, uv - offset, ao, sampleDepth);
+            bilateral = weight * bilateralWeight(depth, sampleDepth);
+            totalWeight += bilateral;
+            tapBN(materialParams_ssao, uv - offset, bn);
+            sumAO += ao * bilateral;
+            sumBN += bn * bilateral;
+
+            offset += materialParams.axis;
+        }
+
+        ao = sumAO * (1.0 / totalWeight);
+        bn = sumBN * (1.0 / totalWeight);
+
+        // simple dithering helps a lot (assumes 8 bits target)
+        // this is most useful with high quality/large blurs
+        ao += ((interleavedGradientNoise(gl_FragCoord.xy) - 0.5) / 255.0);
+
+        postProcess.aoData = vec3(ao, data.gb);
+        postProcess.bnData = packBentNormal(bn);
+    }
+}

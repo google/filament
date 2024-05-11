@@ -1,0 +1,13 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 1, std430) writeonly buffer SSBO2
+{
+    mat3 out_data[];
+} _22;
+
+void main()
+{
+    _22.out_data[gl_GlobalInvocationID.x] = mat3(vec3(10.0), vec3(20.0), vec3(40.0));
+}
+

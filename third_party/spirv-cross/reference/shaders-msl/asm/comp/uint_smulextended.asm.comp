@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _4
+{
+    uint _m0[1];
+};
+
+struct _20
+{
+    uint _m0;
+    uint _m1;
+};
+
+kernel void main0(device _4& _5 [[buffer(0)]], device _4& _6 [[buffer(1)]], device _4& _7 [[buffer(2)]], device _4& _8 [[buffer(3)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    _20 _28;
+    _28._m0 = uint(int(_5._m0[gl_GlobalInvocationID.x]) * int(_6._m0[gl_GlobalInvocationID.x]));
+    _28._m1 = uint(mulhi(int(_5._m0[gl_GlobalInvocationID.x]), int(_6._m0[gl_GlobalInvocationID.x])));
+    _7._m0[gl_GlobalInvocationID.x] = _28._m0;
+    _8._m0[gl_GlobalInvocationID.x] = _28._m1;
+}
+

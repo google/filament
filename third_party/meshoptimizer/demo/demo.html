@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+        <title>meshoptimizer - demo</title>
+
+        <script src="https://preview.babylonjs.com/babylon.js"></script>
+        <script src="https://preview.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+        </style>
+    </head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+        // Optional - by default Babylon.JS will use bundled decoder module
+        BABYLON.GLTF2.Loader.Extensions.EXT_meshopt_compression.DecoderPath = '../js/meshopt_decoder.module.js';
+
+        var canvas = document.getElementById("renderCanvas");
+
+        var createScene = function () {
+            var scene = new BABYLON.Scene(engine);
+
+            var camera = new BABYLON.ArcRotateCamera("Camera", 0, 0.8, 10, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, false);
+
+            BABYLON.SceneLoader.Append("", "pirate.glb", scene, function (newMeshes) {
+                scene.activeCamera = null;
+                scene.createDefaultCameraOrLight(true);
+                scene.activeCamera.attachControl(canvas, false);
+                scene.activeCamera.alpha = Math.PI / 2;
+            });
+
+            return scene;
+        }
+
+        var engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        var scene = createScene();
+
+        engine.runRenderLoop(function () {
+            if (scene) {
+                scene.render();
+            }
+        });
+
+        // Resize
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>

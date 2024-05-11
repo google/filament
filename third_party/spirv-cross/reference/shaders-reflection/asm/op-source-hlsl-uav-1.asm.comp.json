@@ -1,0 +1,46 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "comp",
+            "workgroup_size" : [
+                1,
+                1,
+                1
+            ],
+            "workgroup_size_is_spec_constant_id" : [
+                false,
+                false,
+                false
+            ]
+        }
+    ],
+    "types" : {
+        "_4" : {
+            "name" : "UAV0",
+            "members" : [
+                {
+                    "name" : "@data",
+                    "type" : "vec4",
+                    "array" : [
+                        0
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
+                }
+            ]
+        }
+    },
+    "ssbos" : [
+        {
+            "type" : "_4",
+            "name" : "UAV0",
+            "block_size" : 0,
+            "set" : 0,
+            "binding" : 0
+        }
+    ]
+}

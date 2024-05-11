@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    half2 a;
+    float b;
+    float c;
+    half2 d;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _4 [[buffer(0)]])
+{
+    _4.b = as_type<float>(_4.a);
+    _4.d = as_type<half2>(_4.c);
+}
+

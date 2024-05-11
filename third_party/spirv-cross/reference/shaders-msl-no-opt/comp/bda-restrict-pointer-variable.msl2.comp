@@ -1,0 +1,23 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Ref;
+
+struct Ref
+{
+    float4 v;
+};
+
+struct Registers
+{
+    device Ref* foo;
+};
+
+kernel void main0(constant Registers& _14 [[buffer(0)]])
+{
+    device Ref* __restrict ref = _14.foo;
+    ref->v = float4(1.0);
+}
+

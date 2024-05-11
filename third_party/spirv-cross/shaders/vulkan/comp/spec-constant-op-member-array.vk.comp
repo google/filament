@@ -1,0 +1,33 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(constant_id = 0) const int a = 100;
+layout(constant_id = 1) const int b = 200;
+layout(constant_id = 2) const int c = 300;
+const int d = c + 50;
+layout(constant_id = 3) const int e = 400;
+
+struct A
+{
+	int member0[a];
+	int member1[b];
+};
+
+struct B
+{
+	int member0[b];
+	int member1[a];
+};
+
+layout(set = 1, binding = 0) buffer SSBO
+{
+	A member_a;
+	B member_b;
+	int v[a];
+	int w[d];
+};
+
+void main()
+{
+	w[gl_GlobalInvocationID.x] += v[gl_GlobalInvocationID.x] + e;
+}

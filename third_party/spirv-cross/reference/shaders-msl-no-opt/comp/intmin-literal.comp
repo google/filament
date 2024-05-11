@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float a;
+};
+
+struct UBO
+{
+    float b;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _9 [[buffer(0)]], constant UBO& _14 [[buffer(1)]])
+{
+    _9.a = as_type<float>(as_type<int>(_14.b) ^ int(0x80000000));
+}
+

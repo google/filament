@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>{{ page.title }}</title>
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="{{ 'assets/css/bootstrap.min.css' | relative_url }}">
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link rel="stylesheet" href="{{ 'assets/css/ie10-viewport-bug-workaround.css' | relative_url }}">
+
+    <!-- Custom styles for this template -->
+    <link rel="stylesheet" href="{{ 'assets/css/navbar-fixed-top.css' | relative_url }}">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <link rel="apple-touch-icon" sizes="57x57" href="{{ 'artwork/favicon/apple-icon-57x57.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="60x60" href="{{ 'artwork/favicon/apple-icon-60x60.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="72x72" href="{{ 'artwork/favicon/apple-icon-72x72.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="76x76" href="{{ 'artwork/favicon/apple-icon-76x76.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="114x114" href="{{ 'artwork/favicon/apple-icon-114x114.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{{ 'artwork/favicon/apple-icon-120x120.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="144x144" href="{{ 'artwork/favicon/apple-icon-144x144.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ 'artwork/favicon/apple-icon-152x152.png' | relative_url }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ 'artwork/favicon/apple-icon-180x180.png' | relative_url }}">
+    <link rel="icon" type="image/png" sizes="36x36" href="{{ 'artwork/favicon/android-icon-36x36.png' | relative_url }}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ 'artwork/favicon/android-icon-96x96.png' | relative_url }}">
+    <link rel="manifest" href="{{ 'artwork/favicon/manifest.json' | relative_url }}">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="{{ 'artwork/favicon/ms-icon-144x144.png' | relative_url }}">
+    <meta name="theme-color" content="#ffffff">
+    <style>
+    footer {
+      margin-top: 4rem;
+    }
+    </style>
+  </head>
+
+  <body>
+
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="{{ site.baseurl }}">Draco 3D</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="https://github.com/google/draco">Github</a></li>
+            <li><a href="https://storage.googleapis.com/demos.webmproject.org/draco/draco_loader_throw.html">Demo</a></li>
+            <li><a href="https://github.com/google/draco/tree/master/javascript/example">Example</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Spec <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="{{ site.baseurl }}/spec/">Draft Specification</a></li>
+                <li><a href="{{ site.baseurl }}/spec/README.html">Author README</a></li>
+              </ul>
+            </li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li></li>
+            <li></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container">
+
+      <!-- Main component for a primary marketing message or call to action -->
+      <div class="jumbotron">
+        <div class="row">
+          <div class="col-xs-12 col-sm-4 col-md-3">
+            <img class="img-responsive center-block jumbo-logo" src="artwork/draco3d-vert-360x274.png" alt="">
+          </div>
+          <div class="col-xs-12 col-sm-8 col-md-9 text-center">
+            <p>Draco is an open-source library for compressing and decompressing 3D
+            geometric meshes and point clouds. It is intended to improve the storage
+            and transmission of 3D graphics.</p>
+            <p>
+              <a class="btn btn-md btn-primary pull-right" href="https://github.com/google/draco" role="button">View on GitHub &raquo;</a>
+           </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="container">
+
+      <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+          <div class="col-md-4">
+            <h2>Take the Codelab</h2>
+            <p>Learn about compressing and viewing 3D models with Draco, and about different compression models and their effects. </p>
+            <p><a class="btn btn-default" href="https://codelabs.developers.google.com/codelabs/draco-3d/index.html" role="button">Codelab &raquo;</a></p>
+          </div>
+          <div class="col-md-4">
+            <h2>Draft Bitstream Spec</h2>
+            <p>View and contribute to the in-progress Draco <a href="spec">Bitstream Specification</a> and Decoding Guide. (Also see the <a href="spec/README.html">instructions</a> for authors.)</p>
+            <p><a class="btn btn-default" href="spec" role="button">Bitstream Spec &raquo;</a></p>
+          </div>
+          <div class="col-md-4">
+            <h2>Related Projects</h2>
+            <ul>
+              <li><a href="https://www.npmjs.com/package/draco3d"><b>NPM Package</b></a></li>
+              <li><a href="https://webvr.info/">WebVR</a></li>
+              <li><a href="https://www.khronos.org/gltf">Khronos glTF</a></li>
+              <li><a href="https://threejs.org/">three.js</a></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1 col-xs-18">
+          <hr>
+          <h3>YouTube: Comparing Draco to gzip</h3>
+          <div class="embed-responsive embed-responsive-16by9">
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/6sOgrBWjkcQ" frameborder="0" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1 col-xs-18">
+          <hr>
+          <h3>YouTube: Draco Announced on Google Developer Show</h3>
+          <div class="embed-responsive embed-responsive-16by9">
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/_l4UaUix8vA?start=33" frameborder="0" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- /container -->
+
+    {% include footer.html %}
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="{{ 'assets/js/bootstrap.min.js' | relative_url }}"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="{{ 'assets/js/ie10-viewport-bug-workaround.js' | relative_url }}"></script>
+    {% include analytics.html%}
+  </body>
+</html>

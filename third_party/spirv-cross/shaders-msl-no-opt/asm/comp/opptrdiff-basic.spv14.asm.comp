@@ -1,0 +1,98 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 59
+; Schema: 0
+               OpCapability Shader
+               OpCapability VariablePointersStorageBuffer
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2 %3 %4 %5 %6
+               OpExecutionMode %1 LocalSize 4 1 1
+               OpDecorate %7 Block
+               OpMemberDecorate %7 0 Offset 0
+               OpDecorate %8 ArrayStride 16
+               OpDecorate %9 Block
+               OpMemberDecorate %9 0 Offset 0
+               OpDecorate %10 ArrayStride 68
+               OpDecorate %11 Block
+               OpMemberDecorate %11 0 Offset 0
+               OpDecorate %12 ArrayStride 4
+               OpDecorate %13 ArrayStride 4
+               OpDecorate %2 DescriptorSet 0
+               OpDecorate %2 Binding 0
+               OpDecorate %3 DescriptorSet 0
+               OpDecorate %3 Binding 1
+               OpDecorate %4 DescriptorSet 0
+               OpDecorate %4 Binding 2
+               OpDecorate %5 BuiltIn LocalInvocationId
+               OpDecorate %6 BuiltIn WorkgroupId
+         %14 = OpTypeVoid
+         %15 = OpTypeBool
+         %16 = OpTypeInt 32 1
+         %17 = OpConstant %16 0
+         %18 = OpConstant %16 1
+         %19 = OpConstant %16 4
+         %20 = OpConstant %16 16
+         %21 = OpConstant %16 17
+         %22 = OpTypeVector %16 3
+         %23 = OpTypePointer Input %22
+         %12 = OpTypeArray %16 %19
+          %8 = OpTypeRuntimeArray %12
+          %7 = OpTypeStruct %8
+         %24 = OpTypePointer StorageBuffer %7
+         %25 = OpTypePointer StorageBuffer %12
+         %13 = OpTypeArray %16 %21
+         %10 = OpTypeRuntimeArray %13
+          %9 = OpTypeStruct %10
+         %26 = OpTypePointer StorageBuffer %9
+         %27 = OpTypePointer StorageBuffer %13
+         %28 = OpTypePointer StorageBuffer %16
+         %11 = OpTypeStruct %16
+         %29 = OpTypePointer Uniform %11
+         %30 = OpTypePointer Uniform %16
+          %2 = OpVariable %24 StorageBuffer
+          %3 = OpVariable %26 StorageBuffer
+          %4 = OpVariable %29 Uniform
+          %5 = OpVariable %23 Input
+          %6 = OpVariable %23 Input
+         %31 = OpTypeFunction %14
+          %1 = OpFunction %14 None %31
+         %32 = OpLabel
+         %33 = OpAccessChain %30 %4 %17
+         %34 = OpLoad %16 %33
+         %35 = OpLoad %22 %6
+         %36 = OpCompositeExtract %16 %35 0
+         %37 = OpLoad %22 %5
+         %38 = OpCompositeExtract %16 %37 0
+         %39 = OpAccessChain %25 %2 %17 %17
+         %40 = OpAccessChain %25 %2 %17 %36
+         %41 = OpSGreaterThanEqual %15 %36 %34
+               OpSelectionMerge %42 None
+               OpBranchConditional %41 %43 %42
+         %43 = OpLabel
+               OpReturn
+         %42 = OpLabel
+         %44 = OpIEqual %15 %38 %18
+               OpSelectionMerge %45 None
+               OpBranchConditional %44 %46 %45
+         %46 = OpLabel
+         %47 = OpPtrDiff %16 %40 %39
+         %48 = OpAccessChain %28 %3 %17 %36 %20
+               OpStore %48 %47
+               OpBranch %45
+         %45 = OpLabel
+         %49 = OpPhi %16 %17 %42 %17 %46 %50 %45
+         %50 = OpIAdd %16 %49 %18
+         %51 = OpIEqual %15 %50 %19
+         %52 = OpIMul %16 %38 %19
+         %53 = OpIAdd %16 %52 %49
+         %54 = OpAccessChain %28 %40 %38
+         %55 = OpAccessChain %28 %40 %49
+         %56 = OpPtrDiff %16 %54 %55
+         %57 = OpAccessChain %28 %3 %17 %36 %53
+               OpStore %57 %56
+               OpLoopMerge %58 %45 None
+               OpBranchConditional %51 %58 %45
+         %58 = OpLabel
+               OpReturn
+               OpFunctionEnd

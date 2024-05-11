@@ -1,0 +1,55 @@
+material {
+    name : customResolveAsSubpass,
+    parameters : [
+        {
+            // whether to tonemap (compress) or detonemap (uncompress)
+            // set to +1.0 to tonemap or -1.0 to detonemap
+            type : float,
+            name : direction,
+            precision: low
+        }
+    ],
+    subpasses : [
+        {
+            type : subpassInput,
+            format : float,
+            precision : medium,
+            name : colorBuffer,
+        }
+    ],
+    outputs : [
+        {
+            name : tonemappedOutput,
+            target : color,
+            type : float4,
+            location : 0
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess,
+    framebufferFetch: true
+}
+
+fragment {
+
+    void dummy(){}
+
+vec4 resolveFragment() {
+#if POST_PROCESS_OPAQUE
+    return vec4(subpassLoad(materialParams_colorBuffer).rgb, 1.0);
+#else
+    return subpassLoad(materialParams_colorBuffer);
+#endif
+}
+
+void postProcess(inout PostProcessInputs postProcess) {
+    vec4 color = resolveFragment();
+    float w = 1.0 / (1.0 + materialParams.direction * max3(color.rgb));
+    postProcess.tonemappedOutput = color * w;
+}
+
+}

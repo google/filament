@@ -1,0 +1,58 @@
+#version 450
+#if defined(GL_EXT_control_flow_attributes)
+#extension GL_EXT_control_flow_attributes : require
+#define SPIRV_CROSS_FLATTEN [[flatten]]
+#define SPIRV_CROSS_BRANCH [[dont_flatten]]
+#define SPIRV_CROSS_UNROLL [[unroll]]
+#define SPIRV_CROSS_LOOP [[dont_unroll]]
+#else
+#define SPIRV_CROSS_FLATTEN
+#define SPIRV_CROSS_BRANCH
+#define SPIRV_CROSS_UNROLL
+#define SPIRV_CROSS_LOOP
+#endif
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer bar
+{
+    vec4 _data[];
+} bar_1;
+
+layout(binding = 1, std430) buffer foo
+{
+    vec4 _data[];
+} foo_1;
+
+void _main()
+{
+    SPIRV_CROSS_UNROLL
+    for (int i = 0; i < 16; i++)
+    {
+        bar_1._data[i] = foo_1._data[i];
+    }
+    SPIRV_CROSS_LOOP
+    for (int i_1 = 0; i_1 < 16; i_1++)
+    {
+        bar_1._data[15 - i_1] = foo_1._data[i_1];
+    }
+    float v = bar_1._data[10].x;
+    float w = foo_1._data[10].x;
+    SPIRV_CROSS_BRANCH
+    if (v > 10.0)
+    {
+        foo_1._data[20] = vec4(5.0);
+    }
+    float value = 20.0;
+    SPIRV_CROSS_FLATTEN
+    if (w > 40.0)
+    {
+        value = 20.0;
+    }
+    foo_1._data[20] = vec4(value);
+}
+
+void main()
+{
+    _main();
+}
+

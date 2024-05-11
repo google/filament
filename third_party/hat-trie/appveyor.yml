@@ -1,0 +1,39 @@
+environment:
+    BOOST_ROOT: C:\Libraries\boost_1_67_0
+    matrix:
+        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+          ARCH: Win32
+          BOOST_LIBRARYDIR: C:\Libraries\boost_1_67_0\lib32-msvc-14.0
+          CMAKE_GENERATOR: Visual Studio 14 2015
+
+        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+          ARCH: x64
+          BOOST_LIBRARYDIR: C:\Libraries\boost_1_67_0\lib64-msvc-14.0
+          CMAKE_GENERATOR: Visual Studio 14 2015 Win64
+
+        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+          ARCH: Win32
+          BOOST_LIBRARYDIR: C:\Libraries\boost_1_67_0\lib32-msvc-14.1
+          CMAKE_GENERATOR: Visual Studio 15 2017
+          CXXFLAGS: /permissive-
+
+        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+          ARCH: x64
+          BOOST_LIBRARYDIR: C:\Libraries\boost_1_67_0\lib64-msvc-14.1
+          CMAKE_GENERATOR: Visual Studio 15 2017 Win64
+          CXXFLAGS: /permissive-
+
+configuration:
+    - Debug
+    - Release
+
+build_script:
+    - cd tests
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_BUILD_TYPE=%CONFIGURATION% -G"%CMAKE_GENERATOR%" ..
+    - cmake --build . --config %CONFIGURATION%
+
+test_script: 
+    - set PATH=%PATH%;%BOOST_LIBRARYDIR%
+    - .\%CONFIGURATION%\tsl_hat_trie_tests.exe

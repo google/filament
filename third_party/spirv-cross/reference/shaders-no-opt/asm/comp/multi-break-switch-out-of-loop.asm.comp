@@ -1,0 +1,52 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std140) uniform UBO
+{
+    int v;
+} _6;
+
+void main()
+{
+    uint count = 0u;
+    for (int i = 0; i < 4; i++)
+    {
+        bool _31_ladder_break = false;
+        do
+        {
+            bool _33_ladder_break = false;
+            do
+            {
+                bool _35_ladder_break = false;
+                do
+                {
+                    if (_6.v == 20)
+                    {
+                        _35_ladder_break = true;
+                        _33_ladder_break = true;
+                        _31_ladder_break = true;
+                        break;
+                    }
+                    break;
+                } while(false);
+                if (_35_ladder_break)
+                {
+                    break;
+                }
+                break;
+            } while(false);
+            if (_33_ladder_break)
+            {
+                break;
+            }
+            count++;
+            break;
+        } while(false);
+        if (_31_ladder_break)
+        {
+            break;
+        }
+        count++;
+    }
+}
+

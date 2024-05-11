@@ -1,0 +1,72 @@
+material {
+    name : Skybox,
+    parameters : [
+        {
+           type : int,
+           name : showSun
+        },
+        {
+           type : int,
+           name : constantColor
+        },
+        {
+           type : samplerCubemap,
+           name : skybox
+        },
+        {
+           type : float4,
+           name : color
+        }
+    ],
+    variables : [
+         eyeDirection
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    shadingModel : unlit,
+    variantFilter : [ skinning, shadowReceiver, vsm ],
+    culling: none
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec4 sky;
+        if (materialParams.constantColor != 0) {
+            sky = materialParams.color;
+        } else {
+#if MATERIAL_FEATURE_LEVEL == 0
+            sky = vec4(textureCube(materialParams_skybox, variable_eyeDirection.xyz).rgb, 1.0);
+#else
+            sky = vec4(textureLod(materialParams_skybox, variable_eyeDirection.xyz, 0.0).rgb, 1.0);
+#endif
+            sky.rgb *= frameUniforms.iblLuminance;
+        }
+        if (materialParams.showSun != 0 && frameUniforms.sun.w >= 0.0) {
+            vec3 direction = normalize(variable_eyeDirection.xyz);
+            // Assume the sun is a sphere
+            vec3 sun = frameUniforms.lightColorIntensity.rgb *
+                    (frameUniforms.lightColorIntensity.a * (4.0 * PI));
+            float cosAngle = dot(direction, frameUniforms.lightDirection);
+            float x = (cosAngle - frameUniforms.sun.x) * frameUniforms.sun.z;
+            float gradient = pow(1.0 - saturate(x), frameUniforms.sun.w);
+            sky.rgb = sky.rgb + gradient * sun;
+        }
+        material.baseColor = sky;
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // This code is taken from computeWorldPosition and assumes the vertex domain is 'device'.
+        vec4 p = getPosition();
+        // GL convention to inverted DX convention
+        p.z = p.z * -0.5 + 0.5;
+        vec4 worldPosition = getWorldFromClipMatrix() * p;
+        // Getting the true world position would require dividing by w, but since this is a skybox
+        // at inifinity, this results in very large numbers for material.eyeDirection.
+        // Since the eyeDirection is only used as a direction vector in the fragment shader, we can
+        // skip that step to improve precision.
+        material.eyeDirection.xyz = worldPosition.xyz;
+    }
+}

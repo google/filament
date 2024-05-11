@@ -1,0 +1,62 @@
+diff --git a/src/Vulkan/VkPipeline.cpp b/src/Vulkan/VkPipeline.cpp
+index 86913ec72..3b35345af 100644
+--- a/src/Vulkan/VkPipeline.cpp
++++ b/src/Vulkan/VkPipeline.cpp
+@@ -71,7 +71,56 @@ std::vector<uint32_t> preprocessSpirv(
+ 	if(optimize)
+ 	{
+ 		// Full optimization list taken from spirv-opt.
+-		opt.RegisterPerformancePasses();
++
++		// We have removed CreateRedundancyEliminationPass because it segfaults when encountering:
++		//     %389 = OpCompositeConstruct %7 %386 %387 %388 %86
++		// When inserting an entry into instruction_to_value_ (which is an unordered_map)
++		// This could perhaps be investigated further with help from asan.
++
++		using namespace spvtools;
++		opt.RegisterPass(CreateWrapOpKillPass())
++			.RegisterPass(CreateDeadBranchElimPass())
++			.RegisterPass(CreateMergeReturnPass())
++			.RegisterPass(CreateInlineExhaustivePass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreatePrivateToLocalPass())
++			.RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
++			.RegisterPass(CreateLocalSingleStoreElimPass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateScalarReplacementPass())
++			.RegisterPass(CreateLocalAccessChainConvertPass())
++			.RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
++			.RegisterPass(CreateLocalSingleStoreElimPass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateLocalMultiStoreElimPass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateCCPPass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateLoopUnrollPass(true))
++			.RegisterPass(CreateDeadBranchElimPass())
++			.RegisterPass(CreateRedundancyEliminationPass()) // workaround for SEGFAULT
++			.RegisterPass(CreateCombineAccessChainsPass())
++			.RegisterPass(CreateSimplificationPass())
++			.RegisterPass(CreateScalarReplacementPass())
++			.RegisterPass(CreateLocalAccessChainConvertPass())
++			.RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
++			.RegisterPass(CreateLocalSingleStoreElimPass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateSSARewritePass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateVectorDCEPass())
++			.RegisterPass(CreateDeadInsertElimPass())
++			.RegisterPass(CreateDeadBranchElimPass())
++			.RegisterPass(CreateSimplificationPass())
++			.RegisterPass(CreateIfConversionPass())
++			.RegisterPass(CreateCopyPropagateArraysPass())
++			.RegisterPass(CreateReduceLoadSizePass())
++			.RegisterPass(CreateAggressiveDCEPass())
++			.RegisterPass(CreateBlockMergePass())
++			.RegisterPass(CreateRedundancyEliminationPass()) // workaround for SEGFAULT
++			.RegisterPass(CreateDeadBranchElimPass())
++			.RegisterPass(CreateBlockMergePass())
++			.RegisterPass(CreateSimplificationPass());
+ 	}
+ 
+ 	std::vector<uint32_t> optimized;

@@ -1,0 +1,72 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_ray_flags_primitive_culling : require
+#extension GL_EXT_ray_tracing : require
+layout(primitive_culling);
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 1, std140) uniform Params
+{
+    uint ray_flags;
+    uint cull_mask;
+    vec3 origin;
+    float tmin;
+    vec3 dir;
+    float tmax;
+    float thit;
+    uvec2 bda;
+} _19;
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT AS;
+
+rayQueryEXT q;
+rayQueryEXT q2[2];
+
+void main()
+{
+    rayQueryInitializeEXT(q, AS, _19.ray_flags, _19.cull_mask, _19.origin, _19.tmin, _19.dir, _19.tmax);
+    rayQueryInitializeEXT(q2[1], accelerationStructureEXT(_19.bda), _19.ray_flags, _19.cull_mask, _19.origin, _19.tmin, _19.dir, _19.tmax);
+    bool _67 = rayQueryProceedEXT(q);
+    bool res = _67;
+    rayQueryTerminateEXT(q2[0]);
+    rayQueryGenerateIntersectionEXT(q, _19.thit);
+    rayQueryConfirmIntersectionEXT(q2[1]);
+    float _75 = rayQueryGetRayTMinEXT(q);
+    float fval = _75;
+    uint _79 = rayQueryGetRayFlagsEXT(q2[0]);
+    uint type = _79;
+    vec3 _82 = rayQueryGetWorldRayDirectionEXT(q);
+    vec3 fvals = _82;
+    vec3 _83 = rayQueryGetWorldRayOriginEXT(q);
+    fvals = _83;
+    uint _86 = rayQueryGetIntersectionTypeEXT(q2[1], bool(1));
+    type = _86;
+    bool _88 = rayQueryGetIntersectionCandidateAABBOpaqueEXT(q2[1]);
+    res = _88;
+    float _91 = rayQueryGetIntersectionTEXT(q2[1], bool(0));
+    fval = _91;
+    int _94 = rayQueryGetIntersectionInstanceCustomIndexEXT(q, bool(1));
+    int ival = _94;
+    int _96 = rayQueryGetIntersectionInstanceIdEXT(q2[0], bool(0));
+    ival = _96;
+    uint _97 = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(q, bool(1));
+    type = _97;
+    int _99 = rayQueryGetIntersectionGeometryIndexEXT(q2[1], bool(0));
+    ival = _99;
+    int _100 = rayQueryGetIntersectionPrimitiveIndexEXT(q, bool(1));
+    ival = _100;
+    vec2 _103 = rayQueryGetIntersectionBarycentricsEXT(q2[0], bool(0));
+    fvals.x = _103.x;
+    fvals.y = _103.y;
+    bool _110 = rayQueryGetIntersectionFrontFaceEXT(q, bool(1));
+    res = _110;
+    vec3 _111 = rayQueryGetIntersectionObjectRayDirectionEXT(q, bool(0));
+    fvals = _111;
+    vec3 _113 = rayQueryGetIntersectionObjectRayOriginEXT(q2[0], bool(1));
+    fvals = _113;
+    mat4x3 _117 = rayQueryGetIntersectionObjectToWorldEXT(q, bool(0));
+    mat4x3 matrices = _117;
+    mat4x3 _119 = rayQueryGetIntersectionWorldToObjectEXT(q2[1], bool(1));
+    matrices = _119;
+}
+

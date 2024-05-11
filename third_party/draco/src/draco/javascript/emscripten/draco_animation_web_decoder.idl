@@ -1,0 +1,52 @@
+// Interface exposed to emscripten's WebIDL Binder.
+// http://kripken.github.io/emscripten-site/docs/porting/connecting_cpp_and_javascript/WebIDL-Binder.html
+[Prefix="draco::"]
+interface DecoderBuffer {
+  void DecoderBuffer();
+  void Init([Const] byte[] data, unsigned long data_size);
+};
+
+enum draco_StatusCode {
+  "draco_Status::OK",
+  "draco_Status::DRACO_ERROR",
+  "draco_Status::IO_ERROR",
+  "draco_Status::INVALID_PARAMETER",
+  "draco_Status::UNSUPPORTED_VERSION",
+  "draco_Status::UNKNOWN_VERSION",
+};
+
+[Prefix="draco::"]
+interface Status {
+  draco_StatusCode code();
+  boolean ok();
+  [Const] DOMString error_msg();
+};
+
+// Draco version of typed arrays. The memory of these arrays is allocated on the
+// emscripten heap.
+interface DracoFloat32Array {
+  void DracoFloat32Array();
+  float GetValue(long index);
+  long size();
+};
+
+[Prefix="draco::"]
+interface KeyframeAnimation {
+  void KeyframeAnimation();
+  long num_frames();
+  long num_animations();
+};
+
+interface AnimationDecoder {
+  void AnimationDecoder();
+
+  [Const] Status DecodeBufferToKeyframeAnimation(DecoderBuffer in_buffer,
+                                                 KeyframeAnimation animation);
+
+  boolean GetTimestamps([Ref, Const] KeyframeAnimation animation,
+                        DracoFloat32Array timestamp);
+
+  boolean GetKeyframes([Ref, Const] KeyframeAnimation animation,
+                        long keyframes_id,
+                        DracoFloat32Array animation_data);
+};

@@ -1,0 +1,6 @@
+This folder contains various reference scenes for
+the Open Source physically based renderer called
+Mistuba: http://www.mitsuba-renderer.org/
+
+These scenes can be used to render reference
+images in Mitsuba and validate Filament.

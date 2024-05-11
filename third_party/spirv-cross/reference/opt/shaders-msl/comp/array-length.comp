@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint size;
+    float4 v[1];
+};
+
+struct SSBO1
+{
+    float bz[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(constant uint* spvBufferSizeConstants [[buffer(25)]], device SSBO& _14 [[buffer(0)]], device SSBO1* ssbos_0 [[buffer(1)]], device SSBO1* ssbos_1 [[buffer(2)]])
+{
+    device SSBO1* ssbos[] =
+    {
+        ssbos_0,
+        ssbos_1,
+    };
+
+    constant uint& _14BufferSize = spvBufferSizeConstants[0];
+    constant uint* ssbosBufferSize = &spvBufferSizeConstants[1];
+    _14.size = uint(int((_14BufferSize - 16) / 16) + int((ssbosBufferSize[1] - 0) / 4));
+}
+

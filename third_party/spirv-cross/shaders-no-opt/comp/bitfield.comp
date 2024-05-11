@@ -1,0 +1,21 @@
+#version 310 es
+
+void main()
+{
+   int signed_value = 0;
+   uint unsigned_value = 0u;
+
+   int s = bitfieldExtract(signed_value, 5, 20);
+   uint u = bitfieldExtract(unsigned_value, 6, 21);
+   s = bitfieldInsert(s, 40, 5, 4);
+   u = bitfieldInsert(u, 60u, 5, 4);
+
+   u = bitfieldReverse(u);
+   s = bitfieldReverse(s);
+
+   int v0 = bitCount(u);
+   int v1 = bitCount(s);
+
+   int v2 = findMSB(u);
+   int v3 = findLSB(s);
+}

@@ -1,0 +1,87 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBOCol
+{
+    float4x3 col_major0;
+    float4x3 col_major1;
+};
+
+struct SSBORow
+{
+    float3x4 row_major0;
+    float3x4 row_major1;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+static inline __attribute__((always_inline))
+void load_store_to_variable_col_major(device SSBOCol& _29)
+{
+    float4x3 loaded = _29.col_major0;
+    _29.col_major1 = loaded;
+}
+
+static inline __attribute__((always_inline))
+void load_store_to_variable_row_major(device SSBORow& _41)
+{
+    float4x3 loaded = transpose(_41.row_major0);
+    _41.row_major0 = transpose(loaded);
+}
+
+static inline __attribute__((always_inline))
+void copy_col_major_to_col_major(device SSBOCol& _29)
+{
+    _29.col_major0 = _29.col_major1;
+}
+
+static inline __attribute__((always_inline))
+void copy_col_major_to_row_major(device SSBOCol& _29, device SSBORow& _41)
+{
+    _41.row_major0 = transpose(_29.col_major0);
+}
+
+static inline __attribute__((always_inline))
+void copy_row_major_to_col_major(device SSBOCol& _29, device SSBORow& _41)
+{
+    _29.col_major0 = transpose(_41.row_major0);
+}
+
+static inline __attribute__((always_inline))
+void copy_row_major_to_row_major(device SSBORow& _41)
+{
+    _41.row_major0 = _41.row_major1;
+}
+
+static inline __attribute__((always_inline))
+void copy_columns(device SSBOCol& _29, device SSBORow& _41)
+{
+    _29.col_major0[1] = float3(_41.row_major0[0][1], _41.row_major0[1][1], _41.row_major0[2][1]);
+    _41.row_major0[0][1] = _29.col_major0[1].x;
+    _41.row_major0[1][1] = _29.col_major0[1].y;
+    _41.row_major0[2][1] = _29.col_major0[1].z;
+}
+
+static inline __attribute__((always_inline))
+void copy_elements(device SSBOCol& _29, device SSBORow& _41)
+{
+    ((device float*)&_29.col_major0[0])[1u] = ((device float*)&_41.row_major0[1u])[0];
+    ((device float*)&_41.row_major0[1u])[0] = ((device float*)&_29.col_major0[0])[1u];
+}
+
+kernel void main0(device SSBOCol& _29 [[buffer(0)]], device SSBORow& _41 [[buffer(1)]])
+{
+    load_store_to_variable_col_major(_29);
+    load_store_to_variable_row_major(_41);
+    copy_col_major_to_col_major(_29);
+    copy_col_major_to_row_major(_29, _41);
+    copy_row_major_to_col_major(_29, _41);
+    copy_row_major_to_row_major(_41);
+    copy_columns(_29, _41);
+    copy_elements(_29, _41);
+}
+

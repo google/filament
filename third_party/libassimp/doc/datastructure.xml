@@ -1,0 +1,127 @@
+<importedScene>
+  <version name="1.2" />   <smiley code=":-)" />
+  <node>
+    <name />
+    <transformation type="matrix4x4" />
+
+    <mesh refid="0" />
+    <!--More mesh definitions-->
+	<mesh />
+    
+    <childnode />
+    <childnode />
+  </node>
+
+  <cameras>
+    <camera up="0,1,0" lookat="0,0,1" fov="45"/>
+  </cameras>
+
+  <lights>
+    <light diffuse="black" type="spot" phi="5" theta="15"/>
+  </lights>
+  
+  <meshes>
+    <mesh id="0">
+      <meshheader type="MatID, Vertexcount, Facecount, a.s.o." />
+      <vertices>
+          <vertex type="xyz" />
+          
+		  <!-- More vertex definitions -->
+		  <vertex />
+      </vertices>
+      <texturecoords index="0">
+          <texturecoord type="uv" />
+          <texturecoord  />
+      </texturecoords>
+      <texturecoords index="..." />
+      <vertexcolors index="0">
+          <color type="rgba" />
+          <color />
+      </vertexcolors>
+      <vertexcolors index="..." />
+      <normals>
+          <normal type="xyz" />
+          
+		  <!-- More normal definitions -->
+		  <normal />
+      </normals>
+      <tangents>
+        <tangent type="xyz" />
+        
+		<!-- More tangent definitions -->
+		<tangent />
+      </tangents>
+      <bitangents>
+        <bitangent type="xyz" />
+        
+		<!-- More bitanget defiitions... -->
+		<bitangent />
+      </bitangents>
+      <faces>
+          <face numIndices="3" indices="p1, p2, p3" />
+          
+		  <!-- More faces -->
+		  <face />
+      </faces>      
+      <bones>
+        <bone>
+          <name />
+          <offset type="matrix4x4" />
+          <weights>
+            <weight type="v, w" />
+            
+			<!-- More weights -->
+			<weight />
+          </weights>
+        </bone>
+        
+		<!-- More bones -->
+		<bone />
+      </bones>      
+    </mesh>
+    <!-- More meshes -->
+	<mesh id="x" />
+  </meshes>
+  <anims>
+    <anim name="rudern" duration="4500" ticksPerSecond="50">
+      <animbone nameOfAnimatedNode="bla">
+        <rotation>
+          <rotkey time="0" rot="xyzw" />
+          <rotkey time="100" rot="xyzw" />
+          
+        </rotation>
+        <translation>
+          <transkey time="0" trans="xyz" />
+          <transkey time="100" trans="xyz" />
+          
+        </translation>
+        <scaling>
+          <scalekey time="0" scale="xyz" />
+          <scalekey time="100" scale="xyz" />
+          
+        </scaling>
+      </animbone>
+      <animbone nameOfAnimatedNode="blubb">
+        
+      </animbone>
+    </anim>
+    <anim />
+  </anims>
+  <materials>
+    <material>
+       <param>
+          <name/>
+          <value/>
+       </param>
+    </material>
+    
+	<!-- More material definitions-->
+	<material />
+  </materials>
+  <textures>
+    <texture type="width, height, formatHint">
+      <data />
+    </texture>
+    <texture />
+  </textures>
+</importedScene>

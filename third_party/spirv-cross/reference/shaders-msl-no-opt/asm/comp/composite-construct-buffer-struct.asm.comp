@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Block
+{
+    uint2 _m0[2];
+    uint2 _m1[2];
+};
+
+struct SSBO
+{
+    Block _m0[3];
+};
+
+kernel void main0(device SSBO& ssbo [[buffer(0)]])
+{
+    threadgroup uint2 _18[2];
+    ssbo._m0[0u] = Block{ { ssbo._m0[0u]._m1[0], ssbo._m0[0u]._m1[1] }, { ssbo._m0[0u]._m1[0], ssbo._m0[0u]._m1[1] } };
+}
+

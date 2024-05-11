@@ -1,0 +1,30 @@
+name: CocoaPods Deploy
+
+# This must be run after the iOS release job has finished, and the iOS release
+# asset has been uploaded to Github.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to deploy (e.g., v1.42.2)'
+        required: true
+        default: 'v1.42.2'
+
+jobs:
+  cocoapods-deploy:
+    name: cocoapods-deploy
+    runs-on: macos-14
+    steps:
+      - name: Check out iOS/CocoaPods directory
+        uses: Bhacaz/checkout-files@49fc3050859046bf4f4873678d46099985640e89
+        with:
+          files: ios/CocoaPods
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.event.inputs.release_tag }}
+      - name: Move podspec to root
+        run: mv ios/CocoaPods/*.podspec .
+      - name: Install CocoaPods
+        run: gem install cocoapods
+      - uses: michaelhenry/deploy-to-cocoapods-github-action@745686ab065f90596e0d5cfcf97bb2416d94262e
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}

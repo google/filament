@@ -1,0 +1,48 @@
+---
+
+image: 
+  - macos
+  - Ubuntu2004
+  - Visual Studio 2019
+
+configuration: Release
+
+environment:
+  APPVEYOR_YML_DISABLE_PS_LINUX: true
+
+install:
+- sh: |
+    if [ "$(uname)" != "Darwin" ]; then
+      sudo apt-get update -y
+      sudo apt-get install -y dos2unix recode
+    fi
+    
+build_script:
+  - ps: |
+      New-Item -Path . -Name "build" -ItemType "directory"
+      cd build
+      cmake --version
+      cmake ../ -DCMAKE_BUILD_TYPE:STRING="$env:CONFIGURATION"
+      cmake --build . --config $env:CONFIGURATION
+      cd ../
+  - sh: |
+      mkdir build
+      cd build
+      cmake --version
+      cmake ../ -DCMAKE_BUILD_TYPE:STRING="${CONFIGURATION}"
+      cmake --build . --config ${CONFIGURATION}
+      cd ../
+
+test_script:
+  - sh: |
+      if [ "$(uname)" != "Darwin" ]; then
+        bash ./format.sh
+      fi
+
+artifacts:
+  # Linux
+  - path: bin/basisu
+  # MacOS
+  - path: bin_osx/basisu
+  # Windows
+  - path: bin\$(configuration)\basisu.exe

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Filament Suzanne</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="favicon.png" rel="icon" type="image/x-icon" />
+<style>
+body { margin: 0; overflow: hidden; }
+canvas { touch-action: none; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas></canvas>
+<script src="filament.js"></script>
+<script src="gl-matrix-min.js"></script>
+<script>
+
+const env = 'default_env'
+const ibl_url = `${env}/${env}_ibl.ktx`;
+const sky_url = `${env}/${env}_skybox.ktx`;
+const albedo_url = `albedo.ktx2`;
+const ao_url = `ao.ktx2`;
+const metallic_url = `metallic.ktx2`;
+const normal_url = `normal.ktx2`;
+const roughness_url = `roughness.ktx2`;
+const filamat_url = 'textured.filamat';
+const filamesh_url = 'suzanne.filamesh';
+
+Filament.init([
+    filamat_url,
+    filamesh_url,
+    albedo_url,
+    ao_url,
+    metallic_url,
+    normal_url,
+    roughness_url,
+    ibl_url,
+    sky_url
+], () => {
+    window.AttributeType = Filament.VertexBuffer$AttributeType;
+    window.Format = Filament.Texture$InternalFormat;
+    window.Fov = Filament.Camera$Fov;
+    window.IndexType = Filament.IndexBuffer$IndexType;
+    window.LightType = Filament.LightManager$Type;
+    window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+    window.VertexAttribute = Filament.VertexAttribute;
+    window.app = new App(document.getElementsByTagName('canvas')[0]);
+});
+
+class App {
+    constructor(canvas) {
+        this.canvas = canvas;
+        const engine = this.engine = Filament.Engine.create(this.canvas);
+        this.scene = engine.createScene();
+
+        const sunlight = Filament.EntityManager.get().create();
+        Filament.LightManager.Builder(LightType.SUN)
+            .color([0.98, 0.92, 0.89])
+            .intensity(80000.0)
+            .direction([0.6, -1.0, -0.8])
+            .castShadows(true)
+            .sunAngularRadius(1.9)
+            .sunHaloSize(10.0)
+            .sunHaloFalloff(80.0)
+            .build(engine, sunlight);
+        this.scene.addEntity(sunlight);
+
+        const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
+        this.scene.setIndirectLight(indirectLight);
+        indirectLight.setIntensity(80000);
+
+        const skybox = engine.createSkyFromKtx1(sky_url);
+        this.scene.setSkybox(skybox);
+
+        const material = engine.createMaterial(filamat_url);
+        const matinstance = material.createInstance();
+
+        const sampler = new Filament.TextureSampler(
+            Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
+            Filament.MagFilter.LINEAR,
+            Filament.WrapMode.CLAMP_TO_EDGE);
+
+        // Filament requests support for the following extensions, but none are guaranteed.
+        //   WEBGL_compressed_texture_s3tc, WEBGL_compressed_texture_s3tc_srgb
+        //   WEBGL_compressed_texture_astc, WEBGL_compressed_texture_etc
+        const albedo = engine.createTextureFromKtx2(albedo_url, {
+                srgb: true,
+                formats: [ Format.DXT5_RGBA, Format.DXT5_SRGBA, Format.ETC2_EAC_SRGBA8 ]
+        });
+
+        console.assert(albedo, "Unable to create albedo texture.")
+
+        const roughness = engine.createTextureFromKtx2(roughness_url);
+        const metallic = engine.createTextureFromKtx2(metallic_url);
+        const ao = engine.createTextureFromKtx2(ao_url);
+        const normal = engine.createTextureFromKtx2(normal_url);
+
+        matinstance.setTextureParameter('albedo', albedo, sampler)
+        matinstance.setTextureParameter('roughness', roughness, sampler)
+        matinstance.setTextureParameter('metallic', metallic, sampler)
+        matinstance.setTextureParameter('normal', normal, sampler)
+        matinstance.setTextureParameter('ao', ao, sampler)
+
+        const mesh = engine.loadFilamesh(filamesh_url, matinstance);
+        this.suzanne = mesh.renderable;
+        this.scene.addEntity(mesh.renderable);
+
+        this.swapChain = engine.createSwapChain();
+        this.renderer = engine.createRenderer();
+        this.camera = engine.createCamera(Filament.EntityManager.get().create());
+        this.view = engine.createView();
+        this.view.setCamera(this.camera);
+        this.view.setScene(this.scene);
+        this.resize();
+        this.render = this.render.bind(this);
+        this.resize = this.resize.bind(this);
+        window.addEventListener('resize', this.resize);
+        window.requestAnimationFrame(this.render);
+    }
+
+    render() {
+        const radians = Date.now() / 1000;
+        const transform = mat4.fromRotation(mat4.create(), radians, [0, 1, 0]);
+        const tcm = this.engine.getTransformManager();
+        const inst = tcm.getInstance(this.suzanne);
+        tcm.setTransform(inst, transform);
+        inst.delete();
+        this.renderer.render(this.swapChain, this.view);
+        window.requestAnimationFrame(this.render);
+    }
+
+    resize() {
+        const dpr = window.devicePixelRatio;
+        const width = this.canvas.width = window.innerWidth * dpr;
+        const height = this.canvas.height = window.innerHeight * dpr;
+        this.view.setViewport([0, 0, width, height]);
+        const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+        this.camera.lookAt(eye, center, up);
+        const aspect = width / height;
+        const fov = aspect < 1 ? Fov.HORIZONTAL : Fov.VERTICAL;
+        this.camera.setProjectionFov(45, aspect, 1.0, 10.0, fov);
+    }
+}
+</script>
+</body>
+</html>

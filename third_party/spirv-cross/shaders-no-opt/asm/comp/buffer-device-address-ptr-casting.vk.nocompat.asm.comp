@@ -1,0 +1,106 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+               OpCapability Int64
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_KHR_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_ARB_gpu_shader_int64"
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpSourceExtension "GL_EXT_buffer_reference_uvec2"
+               OpName %main "main"
+               OpName %SomeBuffer "SomeBuffer"
+               OpMemberName %SomeBuffer 0 "v"
+               OpMemberName %SomeBuffer 1 "a"
+               OpMemberName %SomeBuffer 2 "b"
+               OpName %Registers "Registers"
+               OpMemberName %Registers 0 "address"
+               OpMemberName %Registers 1 "address2"
+               OpName %registers "registers"
+               OpName %a "a"
+               OpName %b "b"
+               OpMemberDecorate %SomeBuffer 0 Offset 0
+               OpMemberDecorate %SomeBuffer 1 Offset 16
+               OpMemberDecorate %SomeBuffer 2 Offset 24
+               OpDecorate %SomeBuffer Block
+               OpMemberDecorate %Registers 0 Offset 0
+               OpMemberDecorate %Registers 1 Offset 8
+               OpDecorate %Registers Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_SomeBuffer PhysicalStorageBuffer
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+      %ulong = OpTypeInt 64 0
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+ %SomeBuffer = OpTypeStruct %v4float %ulong %v2uint
+%_ptr_PhysicalStorageBuffer_SomeBuffer = OpTypePointer PhysicalStorageBuffer %SomeBuffer
+%_ptr_Function__ptr_PhysicalStorageBuffer_SomeBuffer = OpTypePointer Function %_ptr_PhysicalStorageBuffer_SomeBuffer
+  %Registers = OpTypeStruct %ulong %v2uint
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+  %registers = OpVariable %_ptr_PushConstant_Registers PushConstant
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_PushConstant_ulong = OpTypePointer PushConstant %ulong
+      %int_1 = OpConstant %int 1
+%_ptr_PushConstant_v2uint = OpTypePointer PushConstant %v2uint
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %35 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+%_ptr_PhysicalStorageBuffer_v4float = OpTypePointer PhysicalStorageBuffer %v4float
+    %float_5 = OpConstant %float 5
+    %float_6 = OpConstant %float 6
+    %float_7 = OpConstant %float 7
+    %float_8 = OpConstant %float 8
+         %43 = OpConstantComposite %v4float %float_5 %float_6 %float_7 %float_8
+%_ptr_Function_ulong = OpTypePointer Function %ulong
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+%_ptr_PhysicalStorageBuffer_ulong = OpTypePointer PhysicalStorageBuffer %ulong
+      %int_2 = OpConstant %int 2
+%_ptr_PhysicalStorageBuffer_v2uint = OpTypePointer PhysicalStorageBuffer %v2uint
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function_ulong Function
+          %b = OpVariable %_ptr_Function_v2uint Function
+         %21 = OpAccessChain %_ptr_PushConstant_ulong %registers %int_0
+         %27 = OpAccessChain %_ptr_PushConstant_v2uint %registers %int_1
+         %uint_ptr0 = OpLoad %ulong %21
+         %uint_ptr1 = OpLoad %v2uint %27
+
+		 ; ConvertUToPtr and vice versa do not accept vectors.
+         %ulong_ptr0 = OpConvertUToPtr %_ptr_PhysicalStorageBuffer_SomeBuffer %uint_ptr0
+         %ulong_ptr1 = OpBitcast %_ptr_PhysicalStorageBuffer_SomeBuffer %uint_ptr0
+         %uvec2_ptr0 = OpBitcast %_ptr_PhysicalStorageBuffer_SomeBuffer %uint_ptr1
+
+         %vec4_write0 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %ulong_ptr0 %int_0
+         %vec4_write1 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %ulong_ptr1 %int_0
+         %vec4_write2 = OpAccessChain %_ptr_PhysicalStorageBuffer_v4float %uvec2_ptr0 %int_0
+
+		   OpStore %vec4_write0 %35 Aligned 16
+		   OpStore %vec4_write1 %35 Aligned 16
+		   OpStore %vec4_write2 %35 Aligned 16
+
+         %ulong_from_ptr0 = OpConvertPtrToU %ulong %ulong_ptr0
+         %ulong_from_ptr1 = OpBitcast %ulong %ulong_ptr1
+         %uvec2_from_ptr0 = OpBitcast %v2uint %uvec2_ptr0
+
+         %ptr0 = OpAccessChain %_ptr_PhysicalStorageBuffer_ulong %ulong_ptr0 %int_1
+         %ptr1 = OpAccessChain %_ptr_PhysicalStorageBuffer_ulong %ulong_ptr1 %int_1
+         %ptr2 = OpAccessChain %_ptr_PhysicalStorageBuffer_v2uint %uvec2_ptr0 %int_2
+
+		   OpStore %ptr0 %ulong_from_ptr0 Aligned 8
+		   OpStore %ptr1 %ulong_from_ptr1 Aligned 8
+		   OpStore %ptr2 %uvec2_from_ptr0 Aligned 8
+
+               OpReturn
+               OpFunctionEnd

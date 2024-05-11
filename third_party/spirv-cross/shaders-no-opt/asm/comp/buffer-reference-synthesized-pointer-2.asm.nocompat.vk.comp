@@ -1,0 +1,44 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpCapability Int64
+               OpCapability PhysicalStorageBufferAddressesEXT
+               OpExtension "SPV_EXT_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64EXT GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_ARB_gpu_shader_int64"
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpDecorate %ptr AliasedPointerEXT
+               OpMemberDecorate %Registers 0 Offset 0
+               OpDecorate %Registers Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_PhysicalStorageBufferEXT_uint = OpTypePointer PhysicalStorageBufferEXT %uint
+%_ptr_Function__ptr_PhysicalStorageBufferEXT_uint = OpTypePointer Function %_ptr_PhysicalStorageBufferEXT_uint
+      %ulong = OpTypeInt 64 0
+  %Registers = OpTypeStruct %ulong
+%_ptr_PushConstant_Registers = OpTypePointer PushConstant %Registers
+  %registers = OpVariable %_ptr_PushConstant_Registers PushConstant
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_PushConstant_ulong = OpTypePointer PushConstant %ulong
+     %int_10 = OpConstant %int 10
+    %uint_20 = OpConstant %uint 20
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %ptr = OpVariable %_ptr_Function__ptr_PhysicalStorageBufferEXT_uint Function
+         %19 = OpAccessChain %_ptr_PushConstant_ulong %registers %int_0
+         %20 = OpLoad %ulong %19
+         %21 = OpConvertUToPtr %_ptr_PhysicalStorageBufferEXT_uint %20
+               OpStore %ptr %21
+         %22 = OpLoad %_ptr_PhysicalStorageBufferEXT_uint %ptr
+               OpStore %22 %uint_20 Aligned 4
+               OpReturn
+               OpFunctionEnd

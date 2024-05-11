@@ -1,0 +1,31 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+layout(local_size_x = 64) in;
+
+layout(std430, buffer_reference) readonly buffer RO
+{
+	vec4 v[];
+};
+
+layout(std430, buffer_reference) restrict buffer RW
+{
+	vec4 v[];
+};
+
+layout(std430, buffer_reference) coherent writeonly buffer WO
+{
+	vec4 v[];
+};
+
+layout(push_constant, std430) uniform Registers
+{
+	RO ro;
+	RW rw;
+	WO wo;
+} registers;
+
+void main()
+{
+	registers.rw.v[gl_GlobalInvocationID.x] = registers.ro.v[gl_GlobalInvocationID.x];
+	registers.wo.v[gl_GlobalInvocationID.x] = registers.ro.v[gl_GlobalInvocationID.x];
+}

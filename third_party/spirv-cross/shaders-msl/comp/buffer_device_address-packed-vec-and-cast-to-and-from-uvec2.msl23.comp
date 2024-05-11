@@ -1,0 +1,22 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+
+layout(buffer_reference, buffer_reference_align = 4) buffer SSBO
+{
+	vec3 a1;			// Will be 12-byte packed
+	float a2;
+};
+
+layout(push_constant) uniform UBO
+{
+	uvec2 b;
+};
+
+void main()
+{
+	SSBO(b).a1 = vec3(1.0, 2.0, 3.0);		// uvec2 -> buff ref and assign to packed
+	uvec2 v2 = uvec2(SSBO(b + 32));			// uvec2 -> buff ref -> uvec2
+	vec3 v3 = SSBO(v2).a1;					// uvec2 -> buff ref and assign from packed
+	SSBO(v2).a1 = v3 + 1.0;					// uvec2 -> buff ref and assign to packed
+}

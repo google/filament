@@ -1,0 +1,40 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float2x2 m22;
+    float2x3 m23;
+    float2x4 m24;
+    float3x2 m32;
+    float3x3 m33;
+    float3x4 m34;
+    float4x2 m42;
+    float4x3 m43;
+    float4x4 m44;
+};
+
+struct ReadSSBO
+{
+    float2 v2;
+    float3 v3;
+    float4 v4;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _21 [[buffer(0)]], const device ReadSSBO& _26 [[buffer(1)]])
+{
+    _21.m22 = float2x2(_26.v2 * _26.v2.x, _26.v2 * _26.v2.y);
+    _21.m23 = float2x3(_26.v3 * _26.v2.x, _26.v3 * _26.v2.y);
+    _21.m24 = float2x4(_26.v4 * _26.v2.x, _26.v4 * _26.v2.y);
+    _21.m32 = float3x2(_26.v2 * _26.v3.x, _26.v2 * _26.v3.y, _26.v2 * _26.v3.z);
+    _21.m33 = float3x3(_26.v3 * _26.v3.x, _26.v3 * _26.v3.y, _26.v3 * _26.v3.z);
+    _21.m34 = float3x4(_26.v4 * _26.v3.x, _26.v4 * _26.v3.y, _26.v4 * _26.v3.z);
+    _21.m42 = float4x2(_26.v2 * _26.v4.x, _26.v2 * _26.v4.y, _26.v2 * _26.v4.z, _26.v2 * _26.v4.w);
+    _21.m43 = float4x3(_26.v3 * _26.v4.x, _26.v3 * _26.v4.y, _26.v3 * _26.v4.z, _26.v3 * _26.v4.w);
+    _21.m44 = float4x4(_26.v4 * _26.v4.x, _26.v4 * _26.v4.y, _26.v4 * _26.v4.z, _26.v4 * _26.v4.w);
+}
+

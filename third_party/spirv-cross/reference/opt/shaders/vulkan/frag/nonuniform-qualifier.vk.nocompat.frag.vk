@@ -1,0 +1,64 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(set = 0, binding = 2, std140) uniform UBO
+{
+    vec4 v[64];
+} ubos[];
+
+layout(set = 0, binding = 3, std430) buffer SSBO
+{
+    uint counter;
+    vec4 v[];
+} ssbos[];
+
+layout(set = 0, binding = 0) uniform texture2D uSamplers[];
+layout(set = 0, binding = 1) uniform sampler uSamps[];
+layout(set = 0, binding = 4) uniform sampler2D uCombinedSamplers[];
+layout(set = 0, binding = 0) uniform texture2DMS uSamplersMS[];
+layout(set = 0, binding = 5, r32f) uniform image2D uImages[];
+layout(set = 0, binding = 5, r32ui) uniform uimage2D uImagesU32[];
+
+layout(location = 0) flat in int vIndex;
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) in vec2 vUV;
+
+void main()
+{
+    int _22 = vIndex + 10;
+    int _32 = vIndex + 40;
+    FragColor = texture(nonuniformEXT(sampler2D(uSamplers[_22], uSamps[_32])), vUV);
+    int _49 = _22;
+    FragColor = texture(uCombinedSamplers[nonuniformEXT(_49)], vUV);
+    int _65 = vIndex + 20;
+    int _69 = _32;
+    FragColor += ubos[nonuniformEXT(_65)].v[_69];
+    int _83 = vIndex + 50;
+    int _88 = vIndex + 60;
+    FragColor += ssbos[nonuniformEXT(_83)].v[_88];
+    int _100 = vIndex + 70;
+    ssbos[nonuniformEXT(_88)].v[_100] = vec4(20.0);
+    ivec2 _111 = ivec2(vUV);
+    FragColor = texelFetch(uSamplers[nonuniformEXT(_49)], _111, 0);
+    int _116 = vIndex + 100;
+    uint _122 = atomicAdd(ssbos[_116].counter, 100u);
+    vec4 _147 = FragColor;
+    vec2 _149 = _147.xy + (textureQueryLod(nonuniformEXT(sampler2D(uSamplers[_22], uSamps[_32])), vUV) + textureQueryLod(uCombinedSamplers[nonuniformEXT(_49)], vUV));
+    FragColor.x = _149.x;
+    FragColor.y = _149.y;
+    FragColor.x += float(textureQueryLevels(uSamplers[nonuniformEXT(_65)]));
+    FragColor.y += float(textureSamples(uSamplersMS[nonuniformEXT(_65)]));
+    vec4 _189 = FragColor;
+    vec2 _191 = _189.xy + vec2(textureSize(uSamplers[nonuniformEXT(_65)], 0));
+    FragColor.x = _191.x;
+    FragColor.y = _191.y;
+    FragColor += imageLoad(uImages[nonuniformEXT(_83)], _111);
+    vec4 _218 = FragColor;
+    vec2 _220 = _218.xy + vec2(imageSize(uImages[nonuniformEXT(_65)]));
+    FragColor.x = _220.x;
+    FragColor.y = _220.y;
+    imageStore(uImages[nonuniformEXT(_88)], _111, vec4(50.0));
+    uint _248 = imageAtomicAdd(uImagesU32[nonuniformEXT(_100)], _111, 40u);
+}
+

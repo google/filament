@@ -1,0 +1,58 @@
+#version 450
+#if defined(GL_EXT_control_flow_attributes)
+#extension GL_EXT_control_flow_attributes : require
+#define SPIRV_CROSS_FLATTEN [[flatten]]
+#define SPIRV_CROSS_BRANCH [[dont_flatten]]
+#define SPIRV_CROSS_UNROLL [[unroll]]
+#define SPIRV_CROSS_LOOP [[dont_unroll]]
+#else
+#define SPIRV_CROSS_FLATTEN
+#define SPIRV_CROSS_BRANCH
+#define SPIRV_CROSS_UNROLL
+#define SPIRV_CROSS_LOOP
+#endif
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer bar
+{
+    vec4 _data[];
+} bar_1;
+
+layout(binding = 1, std430) buffer foo
+{
+    vec4 _data[];
+} foo_1;
+
+void main()
+{
+    bar_1._data[0] = foo_1._data[0];
+    bar_1._data[1] = foo_1._data[1];
+    bar_1._data[2] = foo_1._data[2];
+    bar_1._data[3] = foo_1._data[3];
+    bar_1._data[4] = foo_1._data[4];
+    bar_1._data[5] = foo_1._data[5];
+    bar_1._data[6] = foo_1._data[6];
+    bar_1._data[7] = foo_1._data[7];
+    bar_1._data[8] = foo_1._data[8];
+    bar_1._data[9] = foo_1._data[9];
+    bar_1._data[10] = foo_1._data[10];
+    bar_1._data[11] = foo_1._data[11];
+    bar_1._data[12] = foo_1._data[12];
+    bar_1._data[13] = foo_1._data[13];
+    bar_1._data[14] = foo_1._data[14];
+    bar_1._data[15] = foo_1._data[15];
+    SPIRV_CROSS_LOOP
+    for (int _137 = 0; _137 < 16; )
+    {
+        bar_1._data[15 - _137] = foo_1._data[_137];
+        _137++;
+        continue;
+    }
+    SPIRV_CROSS_BRANCH
+    if (bar_1._data[10].x > 10.0)
+    {
+        foo_1._data[20] = vec4(5.0);
+    }
+    foo_1._data[20] = vec4(20.0);
+}
+

@@ -1,0 +1,25 @@
+#version 450
+#extension GL_KHR_shader_subgroup_basic : require
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) buffer SSBO
+{
+	float FragColor;
+};
+
+// Reduced test for emulated functionality.
+
+void main()
+{
+	// basic
+	FragColor = float(gl_NumSubgroups);
+	FragColor = float(gl_SubgroupID);
+	FragColor = float(gl_SubgroupSize);
+	FragColor = float(gl_SubgroupInvocationID);
+	subgroupBarrier();
+	subgroupMemoryBarrier();
+	subgroupMemoryBarrierBuffer();
+	subgroupMemoryBarrierShared();
+	subgroupMemoryBarrierImage();
+	bool elected = subgroupElect();
+}

@@ -1,0 +1,39 @@
+#version 310 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(binding = 4, std140) uniform UBO
+{
+    vec4 uInvSize;
+    vec4 uScale;
+} _46;
+
+layout(binding = 0) uniform mediump sampler2D uHeight;
+layout(binding = 1) uniform mediump sampler2D uDisplacement;
+layout(binding = 2, rgba16f) uniform writeonly mediump image2D iHeightDisplacement;
+layout(binding = 3, rgba16f) uniform writeonly mediump image2D iGradJacobian;
+
+mediump float jacobian(mediump vec2 dDdx, mediump vec2 dDdy)
+{
+    return ((1.0 + dDdx.x) * (1.0 + dDdy.y)) - (dDdx.y * dDdy.x);
+}
+
+void main()
+{
+    vec4 uv = (vec2(gl_GlobalInvocationID.xy) * _46.uInvSize.xy).xyxy + (_46.uInvSize * 0.5);
+    float h = textureLod(uHeight, uv.xy, 0.0).x;
+    float x0 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(-1, 0)).x;
+    float x1 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(1, 0)).x;
+    float y0 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(0, -1)).x;
+    float y1 = textureLodOffset(uHeight, uv.xy, 0.0, ivec2(0, 1)).x;
+    vec2 grad = (_46.uScale.xy * 0.5) * vec2(x1 - x0, y1 - y0);
+    vec2 displacement = textureLod(uDisplacement, uv.zw, 0.0).xy * 1.2000000476837158203125;
+    vec2 dDdx = (textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(1, 0)).xy - textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(-1, 0)).xy) * 0.60000002384185791015625;
+    vec2 dDdy = (textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(0, 1)).xy - textureLodOffset(uDisplacement, uv.zw, 0.0, ivec2(0, -1)).xy) * 0.60000002384185791015625;
+    mediump vec2 param = dDdx * _46.uScale.z;
+    mediump vec2 param_1 = dDdy * _46.uScale.z;
+    float j = jacobian(param, param_1);
+    displacement = vec2(0.0);
+    imageStore(iHeightDisplacement, ivec2(gl_GlobalInvocationID.xy), vec4(h, displacement, 0.0));
+    imageStore(iGradJacobian, ivec2(gl_GlobalInvocationID.xy), vec4(grad, j, 0.0));
+}
+

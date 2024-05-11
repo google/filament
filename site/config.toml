@@ -1,0 +1,18 @@
+baseURL = "https://google.github.io/filament/"
+languageCode = "en-us"
+title = "Filament"
+theme = "hyde"
+publishDir = "../docs"
+
+[params]
+themeColor = "theme-base-0d"
+github = "https://github.com/google/filament"
+lightbulb = "https://google.github.io/filament/images/filament_logo_small.png"
+
+[menu]
+
+  [[menu.main]]
+    identifier = "github"
+    name = "GitHub Project"
+    url = "https://github.com/google/filament"
+    weight = -110

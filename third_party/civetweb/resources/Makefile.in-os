@@ -1,0 +1,23 @@
+# 
+# Copyright (c) 2013 No Face Press, LLC
+# License http://opensource.org/licenses/mit-license.php MIT License
+#
+
+# Override this using TARGET_OS=LINUX on the command line
+ifeq ($(TARGET_OS),)
+  ifeq ($(OS),Windows_NT)
+    TARGET_OS = WIN32
+  else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+        TARGET_OS = LINUX
+    else
+        ifeq ($(UNAME_S),Darwin)
+            TARGET_OS = OSX
+        else
+            TARGET_OS = BSD
+        endif
+    endif
+  endif
+endif
+

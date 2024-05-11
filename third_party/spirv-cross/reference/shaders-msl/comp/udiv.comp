@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO2
+{
+    uint outputs[1];
+};
+
+struct SSBO
+{
+    uint inputs[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO2& _10 [[buffer(0)]], device SSBO& _23 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    _10.outputs[gl_GlobalInvocationID.x] = _23.inputs[gl_GlobalInvocationID.x] / 29u;
+}
+

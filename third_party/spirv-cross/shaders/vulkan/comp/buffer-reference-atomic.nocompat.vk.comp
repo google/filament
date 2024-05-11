@@ -1,0 +1,24 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+
+layout(buffer_reference) buffer Foo
+{
+	uint v;
+};
+
+layout(buffer_reference, buffer_reference_align = 8) buffer Bar
+{
+	uint a;
+	uint b;
+	Foo foo;
+};
+
+layout(push_constant) uniform Push
+{
+	Bar bar;
+};
+
+void main()
+{
+	atomicAdd(bar.b, 1u);
+}

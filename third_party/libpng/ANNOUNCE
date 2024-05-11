@@ -1,0 +1,46 @@
+libpng 1.6.39 - November 20, 2022
+=================================
+
+This is a public release of libpng, intended for use in production code.
+
+
+Files available for download
+----------------------------
+
+Source files with LF line endings (for Unix/Linux):
+
+ * libpng-1.6.39.tar.xz (LZMA-compressed, recommended)
+ * libpng-1.6.39.tar.gz
+
+Source files with CRLF line endings (for Windows):
+
+ * lpng1639.7z (LZMA-compressed, recommended)
+ * lpng1639.zip
+
+Other information:
+
+ * README.md
+ * LICENSE.md
+ * AUTHORS.md
+ * TRADEMARK.md
+
+
+Changes from version 1.6.38 to version 1.6.39
+---------------------------------------------
+
+ * Changed the error handler of oversized chunks (i.e. larger than
+   PNG_USER_CHUNK_MALLOC_MAX) from png_chunk_error to png_benign_error.
+ * Fixed a buffer overflow error in contrib/tools/pngfix.
+ * Fixed a memory leak (CVE-2019-6129) in contrib/tools/pngcp.
+ * Disabled the ARM Neon optimizations by default in the CMake file,
+   following the default behavior of the configure script.
+ * Allowed configure.ac to work with the trunk version of autoconf.
+ * Removed the support for "install" targets from the legacy makefiles;
+   removed the obsolete makefile.cegcc.
+ * Cleaned up the code and updated the internal documentation.
+
+
+Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
+Subscription is required; visit
+https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+to subscribe.

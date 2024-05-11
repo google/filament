@@ -1,0 +1,25 @@
+*.o
+*.a
+*.so
+*.exe
+.vscode/
+tags
+TAGS
+bazel-*
+build/
+Test/localResults/
+External/googletest
+External/spirv-tools
+out/
+CMakeUserPresets.json
+
+# GN generated files
+.cipd/
+*.gclient_entries
+third_party/
+buildtools/
+tools/
+
+# Random OS stuff
+.DS_Store
+._*

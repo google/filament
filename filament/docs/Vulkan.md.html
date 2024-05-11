@@ -1,0 +1,279 @@
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+<style>
+    img { max-width: 100px !important }
+    .md, body, .md h1, .md div.title, .md a  {
+        font-family: "Montserrat", sans-serif;
+        color: #555;
+    }
+    .md div.title { color: #a55 }
+    .md a  { color: #55a }
+</style>
+
+**Vulkan Backend**
+          *Last updated: 26 October 2022*
+
+![](../../docs/images/filament_logo.png)
+
+-----
+
+This document is a high-level "state of the union" for Filament's Vulkan backend. Some of the
+details may be out of date by the time you read it, but we hope to keep it reasonably well
+maintained, which is why it lives as a markdown document in our source tree.
+
+# Architecture
+
+At a high level, the Vulkan backend is composed of the **driver**, a set of **helpers**, and
+a set of **handle types**.
+
+The driver is responsible for implementing all `DriverAPI` entry points, as well as managing a
+single `VkDevice` and `VkInstance`.
+
+************************************************************************************************
+*                                                                                              *
+*   .---------------------------------------.                                                  *
+*  |            Client Application           |                                                 *
+*   '------------------+--------------------'                                                  *
+*                      |                                                                       *
+*                      v                                                                       *
+*   .----------------------------------------.     .--------------------------------------.    *
+*  |        Filament Rendering Engine         |   |          filament::SwapChain           |   *
+*   '------------------+---------------------'     '------------------+-------------------'    *
+*                      |                                              |                        *
+*                      v                                              v                        *
+*   .----------------------------------------.     .---------------------------------------.   *
+*  |                                          |   |                                         |  *
+*  |       VulkanDriver : DriverBase          |   |     VulkanSwapChain : HwSwapChain       |  *
+*  |                                          |   |                                         |  *
+*  |------------------------------------------|   |-----------------------------------------|  *
+*  |                                          |   |                                         |  *
+*  |    Helpers            VulkanContext      |   |    VulkanTexture    VulkanTexture       |  *
+*  |  .--------------.    .---------------.   |   |   .----------------+----------------.   |  *
+*  |  | PipelineCache|   | VkDevice        |  |   |  | VkImage         | VkImage         |  |  *
+*  |  +--------------+   | VkInstance      |  |   |  | VkImageView     | VkImageView     |  |  *
+*  |  | Disposer     |   | VulkanCommands  |  |   |  |                 |                 |  |  *
+*  |  +--------------+    '---------------'   |   |   '----------------+----------------'   |  *
+*  |  | FboCache     |                        |   |                                         |  *
+*  |  +--------------+                        |   |                                         |  *
+*  |  | SamplerCache |                        |   |                                         |  *
+*  |  +--------------+                        |   |                                         |  *
+*  |  | StagePool    |                        |    '---------------------------------------'   *
+*  |  '--------------'                        |                                                *
+*  |                                          |                                                *
+*  |                                          |                                                *
+*  |                                          |                                                *
+*   '----------------------------------------'                                                 *
+*                                                                                              *
+************************************************************************************************
+
+# Overview
+
+## VulkanDriver and VulkanContext
+
+The `VulkanDriver` class is the bridge between the backend and the Filament engine, and is kept as
+minimal as possible. Most of the actual logic is contained in methods in `VulkanContext` and in the
+handle types rather than directly in `VulkanDriver`.
+
+In a self-imposed design constraint, we have decided that every method in `VulkanDriver` must be an
+override; it should have no private methods other than the handle allocators. This reins in
+complexity because it must implement every method in `DriverAPI` while dealing with Vulkan itself,
+which has an extremely low-level API.
+
+## Command buffers
+
+The `VulkanCommands` class creates command buffers on the fly and maintains a chain of semaphores
+to ensure that submitted command buffers are executed serially.
+
+## Handle types
+
+This sole purpose of `VulkanHandles.h` is to declare structs that descend from the hardware handles
+that are defined in `DriverBase.h`.
+
+Most of the handle types do not contain much logic, but they often do more than mere wrapping of
+Vk objects. Notably, `VulkanRenderTarget` does not have a straightforward mapping to any one Vk
+object. See its class comment for details. Also, `VulkanTexture` and `VulkanSwapChain` have their
+own cpps file because of complexity around layouts and subresources.
+
+VulkanProgram
+: Descends from `HwProgram`, owns a pair of `VkShaderModule`.
+
+VulkanRenderTarget
+: Descends from `HwRenderTarget`, contains references to `VulkanTexture` objects.
+
+VulkanSwapChain
+: Descends from `HwSwapChain`, has a reference to `VkSurfaceKHR` and `VkSwapchainKHR`.
+
+VulkanVertexBuffer
+: Descends from `HwVertexBuffer`, owns a set of `VkBuffer`.
+
+VulkanIndexBuffer
+: Descends from `HwIndexBuffer`, owns a `VkBuffer`.
+
+VulkanSamplerGroup
+: Descends from `HwSamplerGroup`, does not own Vk objects.
+
+VulkanTexture
+: Descends from `HwTexture`, owns a `VkImage` and a set of `VkImageLayout`.
+
+VulkanRenderPrimitive
+: Descends from `HwRenderPrimitive`, does not own Vk objects.
+
+One special case is `VulkanBuffer`, which is not a handle class. It encapulates functionality shared
+between `VulkanIndexBuffer` and `VulkanVertexBuffer`.
+
+## Helpers
+
+`VulkanDriver` owns one instance of each helper. They are not part of a class hierarchy but
+they do follow a common set of conventions. For example, most of them implement a `gc()` method
+that is called once per frame to free unused objects.
+
+VulkanPipelineCache
+: Cache of VkDescriptorSet, VkPipeline, and VkPipelineLayout.
+
+VulkanDisposer
+: Holds reference counts to Vulkan objects in order to defer their destruction.
+
+VulkanFboCache
+: Cache of VkRenderPass and VkFramebuffer. Contains weak references to VkImage handles, but does not
+  own any pixel data. The cache key for render passes is quite complex because it needs to include
+  image layout information in a compact way. For details see the comments in the `RenderPassKey`
+  declaration.
+
+VulkanStagePool
+: Pool of VkBuffer objects that can be memory mapped (shared between host and device).
+
+VulkanSamplerCache
+: This is our simplest cache object because Vulkan samplers are fairly lightweight and re-usable.
+
+## Folder layout and namespacing
+
+With the exception of BlueVK, all Vulkan-specific code lives in `backend/src/vulkan`, which has
+no subfolders. All backend-specific types and functions live directly in the `filament::backend`
+namespace, and we simply prefix our names with "Vulkan" when necessary to avoid ambiguation with
+OpenGL.
+
+# Image Layout Strategy
+
+Adhering to a coherent strategy for image layout transitions is crucial. Without this, validation
+errors (and actual black screens with some GPU vendors) occur far too easily and can feel like
+whack-a-mole.
+
+Vulkan provides several mechanisms for transitioning layout (render passes, barriers) so the
+strategy outlined below specifies which mechanism should be used in various scenarios.
+
+The current image layouts are tracked at the subresource level in `VulkanTexture` using a
+specialized STL-ish container that we designed for this purpose:
+[RangeMap](https://github.com/google/filament/blob/main/libs/utils/include/utils/RangeMap.h).
+
+In the past we tried to avoid tracking since it theoritically duplicates state that exists in the
+GPU vendor's driver. However in practice this was impossible to manage, because complex logic was
+required to deduce the current layout. Also, tracking lets us use `assert_invariant` in many places
+to ensure that the behavior described in this document is implemented properly.  It is much easier
+to catch errors with asserts than with validation.
+
+As of this writing, the current rules are:
+
+(1) **Read-Only Color Textures**
+
+These should be created in an UNDEFINED state and stay that way until data gets uploaded into them,
+at which point the appropriate subresources are transitioned to TRANSFER_DST_OPTIMAL for the upload,
+then to SHADER_READ_ONLY_OPTIMAL, both times using a barrier.  Note that a subresource might be
+updated several times; each time it undergoes these two transitions.
+
+If a shader samples from a texture whose mipmaps are only partially loaded, we might see validation
+warnings about how some subresources are in an UNDEFINED layout.  However if we are properly using
+the `setMinMaxLevels` driver API, then the Vulkan backend will not bind those particular
+subresources, so validation should not complain.
+
+(2) **Writeable Color Textures**
+
+During construction of the HwTexture, these are transitioned to GENERAL using a barrier.
+
+GENERAL layout is not recommended by AMD best practices but in our case we wish to avoid thrashing
+the layout between COLOR_ATTACHMENT_OPTIMAL and SHADER_READ_ONLY_OPTIMAL for post-processing
+effects.  Moreover we do not have a priori knowledge about blitting and read pixels usage.
+
+(3) **Depth Textures**
+
+During construction of the HwTexture, these are transitioned to GENERAL using a barrier.
+
+Note that some post-processing passes (e.g. SSAO) sample from the depth buffer while also enabling
+depth testing. Using GENERAL makes this legal.
+
+(4) **Swap Chain Textures**
+
+During construction, these are transitioned to GENERAL using a barrier. They are then transitioned
+to PRESENT at the end of the frame using a barrier, and transitioned back to GENERAL using the first
+render pass of the frame.
+
+Note that we transition to PRESENT using a barrier, but with some GPU vendors it might be preferable
+to transition them using the last render pass. However we have no way of knowing ahead of time which
+pass is last.
+
+Note that Filament allows swap chains to be used as blit targets and blit sources (e.g. for
+ReadPixels). Using GENERAL makes this easier to manage.
+
+(5) **Headless Swap Chain Textures**
+
+These follow the same rules as writeable color texture and depth textures.
+
+# VulkanPipelineCache
+
+Uniforms, samplers, and shaders are not directly bindable in Vulkan; instead they are bound through
+indirection layers called *pipelines* and *descriptor sets*. The `VulkanPipelineCache` class allows
+the driver to call methods that are conceptually simple like `bindUniformBuffer`, even though no
+such function exists in the low-level Vulkan API.
+
+Although it is actually just another cache manager, `VulkanPipelineCache` has a fairly rich set of
+public methods. See its header file for details.
+
+The pipeline cache also manages the *layout objects*, which constrain the number of uniform buffers
+and samplers that can be bound simultaneously (see `VkDescriptorSetLayout` and `VkPipelineLayout`).
+
+# Memory Allocation
+
+Some architectures (e.g. Adreno) only allow a small number of `VkDeviceMemory` objects to exist at
+once, so we consolidate these using a simple third-party library
+([vk_mem_alloc](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)). This library is
+used each time the backend needs to create a `VkBuffer` or `VkImage`. See `VulkanStagePool` for a
+usage example.
+
+# BlueVK
+
+BlueVK loads in functions for all Vulkan entry points and supported extensions. On Android, this
+is not absolutely necessary since core functionality is available through static linking. However,
+we found that in practice it is simpler to use BlueVK across all platforms because of its ability
+to load extensions.
+
+The BlueVK C++ source is generated from a Python script that consumes `vk.xml`. This XML file is an
+API specification maintained by Khronos on GitHub.
+
+None of the source files in the  Vulkan backend include `vulkan.h` directly,  instead they include
+the BlueVK header, which in turn includes the Vulkan headers.
+
+!!! Note
+    Each time we update BlueVK by feeding it the latest `vk.xml`, we should also update the
+    Vulkan headers that are checked in to `libs/bluevk/include/vulkan`. If BlueVK and the Vulkan
+    headers are not updated concurrently, this will cause build errors.
+
+# Top Issues
+
+Here we list some of the most significant issues and to-be-done items for the Vulkan backend.
+
+- Improve the UBO strategy
+    - Currently we use staging buffers and perform lots of copies (host-to-host, then host-to-device)
+    - Consider an approach similar to MetalDriver, which effectively implements double-buffering
+      using a pool of shared mem buffers
+- Consider using subpasses for the depth prepass
+- We lazily create pipeline objects
+        1. This is notoriously slow in Vulkan
+        2. We do lots of state hashing for this
+        3. Vulkan has special pipeline cache objects that we aren't using yet, but...
+        4. It might be better to enhance our driver API to allow a priori construction
+- We need more automated testing
+- We don't *quite* have feature parity with the OpenGL backend
+    - No support for streaming camera texture yet
+        - This is possible, even in Android O, just haven't gotten around to it yet
+
+<script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

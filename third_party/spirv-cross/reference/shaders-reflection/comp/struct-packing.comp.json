@@ -1,0 +1,590 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "comp",
+            "workgroup_size" : [
+                1,
+                1,
+                1
+            ],
+            "workgroup_size_is_spec_constant_id" : [
+                false,
+                false,
+                false
+            ]
+        }
+    ],
+    "types" : {
+        "_11" : {
+            "name" : "S0",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec2",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 8
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 8
+                }
+            ]
+        },
+        "_14" : {
+            "name" : "S1",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec3",
+                    "offset" : 0
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 12
+                }
+            ]
+        },
+        "_17" : {
+            "name" : "S2",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec3",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 16
+                }
+            ]
+        },
+        "_19" : {
+            "name" : "S3",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec2",
+                    "offset" : 0
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 8
+                }
+            ]
+        },
+        "_20" : {
+            "name" : "S4",
+            "members" : [
+                {
+                    "name" : "c",
+                    "type" : "vec2",
+                    "offset" : 0
+                }
+            ]
+        },
+        "_23" : {
+            "name" : "Content",
+            "members" : [
+                {
+                    "name" : "m0s",
+                    "type" : "_11",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
+                },
+                {
+                    "name" : "m1s",
+                    "type" : "_14",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 16,
+                    "array_stride" : 16
+                },
+                {
+                    "name" : "m2s",
+                    "type" : "_17",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 32,
+                    "array_stride" : 32
+                },
+                {
+                    "name" : "m0",
+                    "type" : "_11",
+                    "offset" : 64
+                },
+                {
+                    "name" : "m1",
+                    "type" : "_14",
+                    "offset" : 80
+                },
+                {
+                    "name" : "m2",
+                    "type" : "_17",
+                    "offset" : 96
+                },
+                {
+                    "name" : "m3",
+                    "type" : "_19",
+                    "offset" : 128
+                },
+                {
+                    "name" : "m4",
+                    "type" : "float",
+                    "offset" : 144
+                },
+                {
+                    "name" : "m3s",
+                    "type" : "_20",
+                    "array" : [
+                        8
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 152,
+                    "array_stride" : 8
+                }
+            ]
+        },
+        "_36" : {
+            "name" : "SSBO1",
+            "members" : [
+                {
+                    "name" : "content",
+                    "type" : "_23",
+                    "offset" : 0
+                },
+                {
+                    "name" : "content1",
+                    "type" : "_23",
+                    "array" : [
+                        2
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 224,
+                    "array_stride" : 224
+                },
+                {
+                    "name" : "content2",
+                    "type" : "_23",
+                    "offset" : 672
+                },
+                {
+                    "name" : "m0",
+                    "type" : "mat2",
+                    "offset" : 896,
+                    "matrix_stride" : 8
+                },
+                {
+                    "name" : "m1",
+                    "type" : "mat2",
+                    "offset" : 912,
+                    "matrix_stride" : 8
+                },
+                {
+                    "name" : "m2",
+                    "type" : "mat2x3",
+                    "array" : [
+                        4
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 928,
+                    "array_stride" : 32,
+                    "matrix_stride" : 16
+                },
+                {
+                    "name" : "m3",
+                    "type" : "mat3x2",
+                    "offset" : 1056,
+                    "matrix_stride" : 8
+                },
+                {
+                    "name" : "m4",
+                    "type" : "mat2",
+                    "offset" : 1080,
+                    "matrix_stride" : 8,
+                    "row_major" : true
+                },
+                {
+                    "name" : "m5",
+                    "type" : "mat2",
+                    "array" : [
+                        9
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1096,
+                    "array_stride" : 16,
+                    "matrix_stride" : 8,
+                    "row_major" : true
+                },
+                {
+                    "name" : "m6",
+                    "type" : "mat2x3",
+                    "array" : [
+                        2,
+                        4
+                    ],
+                    "array_size_is_literal" : [
+                        true,
+                        true
+                    ],
+                    "offset" : 1240,
+                    "array_stride" : 48,
+                    "matrix_stride" : 8,
+                    "row_major" : true
+                },
+                {
+                    "name" : "m7",
+                    "type" : "mat3x2",
+                    "offset" : 1440,
+                    "matrix_stride" : 16,
+                    "row_major" : true
+                },
+                {
+                    "name" : "array",
+                    "type" : "float",
+                    "array" : [
+                        0
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1472,
+                    "array_stride" : 4
+                }
+            ]
+        },
+        "_42" : {
+            "name" : "S0",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec2",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 16
+                }
+            ]
+        },
+        "_44" : {
+            "name" : "S1",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec3",
+                    "offset" : 0
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 12
+                }
+            ]
+        },
+        "_47" : {
+            "name" : "S2",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec3",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 16
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 16
+                }
+            ]
+        },
+        "_49" : {
+            "name" : "S3",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec2",
+                    "offset" : 0
+                },
+                {
+                    "name" : "b",
+                    "type" : "float",
+                    "offset" : 8
+                }
+            ]
+        },
+        "_50" : {
+            "name" : "S4",
+            "members" : [
+                {
+                    "name" : "c",
+                    "type" : "vec2",
+                    "offset" : 0
+                }
+            ]
+        },
+        "_52" : {
+            "name" : "Content",
+            "members" : [
+                {
+                    "name" : "m0s",
+                    "type" : "_42",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 32
+                },
+                {
+                    "name" : "m1s",
+                    "type" : "_44",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 32,
+                    "array_stride" : 16
+                },
+                {
+                    "name" : "m2s",
+                    "type" : "_47",
+                    "array" : [
+                        1
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 48,
+                    "array_stride" : 32
+                },
+                {
+                    "name" : "m0",
+                    "type" : "_42",
+                    "offset" : 80
+                },
+                {
+                    "name" : "m1",
+                    "type" : "_44",
+                    "offset" : 112
+                },
+                {
+                    "name" : "m2",
+                    "type" : "_47",
+                    "offset" : 128
+                },
+                {
+                    "name" : "m3",
+                    "type" : "_49",
+                    "offset" : 160
+                },
+                {
+                    "name" : "m4",
+                    "type" : "float",
+                    "offset" : 176
+                },
+                {
+                    "name" : "m3s",
+                    "type" : "_50",
+                    "array" : [
+                        8
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 192,
+                    "array_stride" : 16
+                }
+            ]
+        },
+        "_59" : {
+            "name" : "SSBO0",
+            "members" : [
+                {
+                    "name" : "content",
+                    "type" : "_52",
+                    "offset" : 0
+                },
+                {
+                    "name" : "content1",
+                    "type" : "_52",
+                    "array" : [
+                        2
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 320,
+                    "array_stride" : 320
+                },
+                {
+                    "name" : "content2",
+                    "type" : "_52",
+                    "offset" : 960
+                },
+                {
+                    "name" : "m0",
+                    "type" : "mat2",
+                    "offset" : 1280,
+                    "matrix_stride" : 16
+                },
+                {
+                    "name" : "m1",
+                    "type" : "mat2",
+                    "offset" : 1312,
+                    "matrix_stride" : 16
+                },
+                {
+                    "name" : "m2",
+                    "type" : "mat2x3",
+                    "array" : [
+                        4
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1344,
+                    "array_stride" : 32,
+                    "matrix_stride" : 16
+                },
+                {
+                    "name" : "m3",
+                    "type" : "mat3x2",
+                    "offset" : 1472,
+                    "matrix_stride" : 16
+                },
+                {
+                    "name" : "m4",
+                    "type" : "mat2",
+                    "offset" : 1520,
+                    "matrix_stride" : 16,
+                    "row_major" : true
+                },
+                {
+                    "name" : "m5",
+                    "type" : "mat2",
+                    "array" : [
+                        9
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 1552,
+                    "array_stride" : 32,
+                    "matrix_stride" : 16,
+                    "row_major" : true
+                },
+                {
+                    "name" : "m6",
+                    "type" : "mat2x3",
+                    "array" : [
+                        2,
+                        4
+                    ],
+                    "array_size_is_literal" : [
+                        true,
+                        true
+                    ],
+                    "offset" : 1840,
+                    "array_stride" : 96,
+                    "matrix_stride" : 16,
+                    "row_major" : true
+                },
+                {
+                    "name" : "m7",
+                    "type" : "mat3x2",
+                    "offset" : 2224,
+                    "matrix_stride" : 16,
+                    "row_major" : true
+                },
+                {
+                    "name" : "array",
+                    "type" : "float",
+                    "array" : [
+                        0
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 2256,
+                    "array_stride" : 16
+                }
+            ]
+        }
+    },
+    "ssbos" : [
+        {
+            "type" : "_36",
+            "name" : "SSBO1",
+            "restrict" : true,
+            "block_size" : 1472,
+            "set" : 0,
+            "binding" : 1
+        },
+        {
+            "type" : "_59",
+            "name" : "SSBO0",
+            "restrict" : true,
+            "block_size" : 2256,
+            "set" : 0,
+            "binding" : 0
+        }
+    ]
+}

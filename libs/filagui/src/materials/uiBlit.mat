@@ -1,0 +1,29 @@
+material {
+    name : uiBlit,
+    parameters : [
+        {
+            type : sampler2d,
+            name : albedo
+        }
+    ],
+    requires : [
+        uv0,
+        color
+    ],
+    shadingModel : unlit,
+    culling : none,
+    depthCulling: false,
+    blending : transparent,
+    featureLevel : 0
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec2 uv = getUV0();
+        uv.y = 1.0 - uv.y;
+        vec4 albedo = texture2D(materialParams_albedo, uv);
+        material.baseColor = getColor() * albedo;
+        material.baseColor.rgb *= material.baseColor.a;
+    }
+}

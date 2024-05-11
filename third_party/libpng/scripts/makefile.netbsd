@@ -1,0 +1,53 @@
+# makefile for libpng on NetBSD
+# Copyright (C) 2020-2022 Cosmin Truta
+# Copyright (C) 2007-2009, 2014 Glenn Randers-Pehrson
+# Copyright (C) 2002 Patrick R.L. Welche
+#
+# This code is released under the libpng license.
+# For conditions of distribution and use, see the disclaimer
+# and license in png.h
+
+SHLIB_MAJOR=	16
+SHLIB_MINOR=	0
+
+LIB=	png
+SRCS=	png.c pngerror.c pngget.c pngmem.c pngpread.c \
+	pngread.c pngrio.c pngrtran.c pngrutil.c pngset.c \
+	pngtrans.c pngwio.c pngwrite.c pngwtran.c pngwutil.c
+INCS=	png.h pngconf.h pnglibconf.h
+
+CPPFLAGS+=	-I${.CURDIR}
+CFLAGS+=	-Wall -Wextra -Wundef
+
+CLEANFILES+=	pngtest.o pngtest pnglibconf.h
+
+# Pre-built configuration
+# See scripts/pnglibconf.mak for more options
+PNGLIBCONF_H_PREBUILT= scripts/pnglibconf.h.prebuilt
+
+# We should be able to do something like this instead of the manual
+# uncommenting, but it core dumps for me at the moment:
+# .if ${MACHINE_ARCH} == "i386"
+#   MKLINT= no
+# .endif
+
+.c.o:
+	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $<
+
+pnglibconf.h:	${PNGLIBCONF_H_PREBUILT}
+	cp ${PNGLIBCONF_H_PREBUILT} $@
+
+pngtest.o:	pngtest.c
+	${CC} -c ${CPPFLAGS} ${CFLAGS} ${.ALLSRC} -o ${.TARGET}
+
+pngtest:	pngtest.o libpng.a
+	${CC} ${LDFLAGS} ${.ALLSRC} -o ${.TARGET} -lz -lm
+
+test:	pngtest
+	./pngtest
+
+install:
+	@echo "The $@ target is no longer supported by this makefile."
+	@false
+
+.include <bsd.lib.mk>

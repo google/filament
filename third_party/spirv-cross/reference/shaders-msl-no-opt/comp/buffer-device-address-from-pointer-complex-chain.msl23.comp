@@ -1,0 +1,28 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO;
+
+struct S
+{
+    float3 v;
+};
+
+struct SSBO
+{
+    S s[1];
+};
+
+struct PC
+{
+    uint2 ptr;
+};
+
+kernel void main0(constant PC& pc [[buffer(0)]])
+{
+    device SSBO* ssbo = reinterpret_cast<device SSBO*>(as_type<ulong>(pc.ptr));
+    ssbo->s[0].v = float3(1.0);
+}
+

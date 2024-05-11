@@ -1,0 +1,26 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(constant_id = 0) const int A = 0;
+layout(constant_id = 1) const int A_1 = 1;
+layout(constant_id = 2) const int A_2 = 2;
+layout(constant_id = 3) const int A_3 = 3;
+layout(constant_id = 4) const int A_4 = 4;
+layout(constant_id = 5) const int A_5 = 5;
+const int A_6 = (A - A_1);
+const int A_7 = (A_6 - A_2);
+const int A_8 = (A_7 - A_3);
+const int A_9 = (A_8 - A_4);
+const int A_10 = (A_9 - A_5);
+const int A_11 = (A_10 + A_5);
+
+layout(set = 0, binding = 0, std430) buffer SSBO
+{
+    int values[];
+} _5;
+
+void main()
+{
+    _5.values[gl_GlobalInvocationID.x] = A_11;
+}
+

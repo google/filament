@@ -1,0 +1,35 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    float in_data[1];
+};
+
+struct SSBO2
+{
+    float out_data[1];
+};
+
+struct SSBO3
+{
+    uint count;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
+
+kernel void main0(const device SSBO& _22 [[buffer(0)]], device SSBO2& _38 [[buffer(1)]], device SSBO3& _41 [[buffer(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    float _28 = _22.in_data[gl_GlobalInvocationID.x];
+    if (_28 > 12.0)
+    {
+        uint _45 = atomic_fetch_add_explicit((device atomic_uint*)&_41.count, 1u, memory_order_relaxed);
+        _38.out_data[_45] = _28;
+    }
+}
+

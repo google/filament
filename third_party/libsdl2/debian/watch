@@ -1,0 +1,2 @@
+version=3
+http://www.libsdl.org/release/SDL-([\d.]+)\.tar\.gz

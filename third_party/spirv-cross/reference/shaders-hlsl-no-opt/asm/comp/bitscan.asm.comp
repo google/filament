@@ -1,0 +1,25 @@
+RWByteAddressBuffer _4 : register(u0);
+
+void comp_main()
+{
+    uint4 _19 = _4.Load4(0);
+    int4 _20 = int4(_4.Load4(16));
+    _4.Store4(0, firstbitlow(_19));
+    _4.Store4(16, uint4(int4(firstbitlow(_19))));
+    _4.Store4(0, uint4(firstbitlow(_20)));
+    _4.Store4(16, uint4(firstbitlow(_20)));
+    _4.Store4(0, firstbithigh(_19));
+    _4.Store4(16, uint4(int4(firstbithigh(_19))));
+    _4.Store4(0, firstbithigh(uint4(_20)));
+    _4.Store4(16, uint4(int4(firstbithigh(uint4(_20)))));
+    _4.Store4(0, uint4(firstbithigh(int4(_19))));
+    _4.Store4(16, uint4(firstbithigh(int4(_19))));
+    _4.Store4(0, uint4(firstbithigh(_20)));
+    _4.Store4(16, uint4(firstbithigh(_20)));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

@@ -1,0 +1,98 @@
+material {
+    name : bloomDownsample2x,
+    parameters : [
+        {
+            type : sampler2d,
+            name : source,
+            precision: medium
+        },
+        {
+            type : float,
+            name : level
+        },
+        {
+            type : float,
+            name : threshold
+        },
+        {
+            type : float,
+            name : fireflies
+        },
+        {
+            type : float,
+            name : invHighlight
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+
+    void dummy(){}
+
+    void threshold(inout vec3 c) {
+        // threshold everything below 1.0
+        c = max(vec3(0.0), c - 1.0);
+        // crush everything above 1
+        highp float f = max3(c);
+        c *= 1.0 / (1.0 + f * materialParams.invHighlight);
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        float lod = materialParams.level;
+
+        highp vec2 size = vec2(textureSize(materialParams_source, int(lod)));
+        highp vec2 texelSize = vec2(1.0) / size;
+
+        // Castaño, 2013, "Shadow Mapping Summary Part 1"
+        // 3x3 gaussian filter with 4 linear samples
+        vec2 offset = vec2(0.5);
+        highp vec2 uv = (variable_vertex.xy * size) + offset;
+        highp vec2 base = (floor(uv) - offset) * texelSize;
+        highp vec2 st = fract(uv);
+        vec2 uw = vec2(3.0 - 2.0 * st.x, 1.0 + 2.0 * st.x);
+        vec2 vw = vec2(3.0 - 2.0 * st.y, 1.0 + 2.0 * st.y);
+        highp vec2 u = vec2((2.0 - st.x) / uw.x - 1.0, st.x / uw.y + 1.0) * texelSize.x;
+        highp vec2 v = vec2((2.0 - st.y) / vw.x - 1.0, st.y / vw.y + 1.0) * texelSize.y;
+        vec3 c0 = textureLod(materialParams_source, base + vec2(u.x, v.x), lod).rgb;
+        vec3 c1 = textureLod(materialParams_source, base + vec2(u.y, v.x), lod).rgb;
+        vec3 c2 = textureLod(materialParams_source, base + vec2(u.x, v.y), lod).rgb;
+        vec3 c3 = textureLod(materialParams_source, base + vec2(u.y, v.y), lod).rgb;
+
+        float w0 = uw.x * vw.x * (1.0 / 16.0);
+        float w1 = uw.y * vw.x * (1.0 / 16.0);
+        float w2 = uw.x * vw.y * (1.0 / 16.0);
+        float w3 = uw.y * vw.y * (1.0 / 16.0);
+
+        if (materialParams.fireflies > 0.0) {
+            w0 /= (1.0 + max3(c0));
+            w1 /= (1.0 + max3(c1));
+            w2 /= (1.0 + max3(c2));
+            w3 /= (1.0 + max3(c3));
+            float w = 1.0 / (w0 + w1 + w2 + w3);
+            w0 *= w;
+            w1 *= w;
+            w2 *= w;
+            w3 *= w;
+        }
+
+        vec3 c = c0 * w0 + c1 * w1 + c2 * w2 + c3 * w3;
+
+        if (materialParams.threshold > 0.0) {
+            threshold(c);
+        }
+
+        postProcess.color.rgb = c;
+    }
+}

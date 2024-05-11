@@ -1,0 +1,32 @@
+<aside class="sidebar">
+    <div class="container sidebar-sticky">
+        <div class="sidebar-about">
+            <a href="{{ .Site.BaseURL }}">
+                {{with .Site.Params.lightbulb}}
+                <div style="width:100%; height:150px">
+                <img src="{{.}}" class="lightbulb" />
+                </div>
+                {{end}}
+            </a>
+            <p class="lead">
+                {{ with .Site.Params.description }} {{.}} {{end}}
+            </p>
+        </div>
+        <nav>
+            <ul class="sidebar-nav">
+                {{ range .Site.Menus.main -}}
+                <li>
+                    <a href="{{.URL}}"> {{ .Name }} </a>
+                    {{ with .Children }}
+                    <ul>
+                    {{ range . -}}
+                    <li><a href="{{.URL}}"> {{ .Name }} </a></li>
+                    {{- end }}
+                    </ul>
+                    {{- end }}
+                </li>
+                {{- end }}
+            </ul>
+        </nav>
+    </div>
+</aside>

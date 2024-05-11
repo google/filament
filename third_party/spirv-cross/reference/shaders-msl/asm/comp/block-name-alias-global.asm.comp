@@ -1,0 +1,46 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct A
+{
+    int a;
+    int b;
+};
+
+struct A_1
+{
+    A Data[1];
+};
+
+struct A_2
+{
+    int a;
+    int b;
+    char _m0_final_padding[8];
+};
+
+struct A_3
+{
+    A_2 Data[1024];
+};
+
+struct B
+{
+    A Data[1];
+};
+
+struct B_1
+{
+    A_2 Data[1024];
+};
+
+kernel void main0(device A_1& C1 [[buffer(0)]], constant A_3& C2 [[buffer(1)]], device B& C3 [[buffer(2)]], constant B_1& C4 [[buffer(3)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    C1.Data[gl_GlobalInvocationID.x].a = C2.Data[gl_GlobalInvocationID.x].a;
+    C1.Data[gl_GlobalInvocationID.x].b = C2.Data[gl_GlobalInvocationID.x].b;
+    C3.Data[gl_GlobalInvocationID.x].a = C4.Data[gl_GlobalInvocationID.x].a;
+    C3.Data[gl_GlobalInvocationID.x].b = C4.Data[gl_GlobalInvocationID.x].b;
+}
+

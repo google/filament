@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'filament-tools-plugin'
+}
+
+project.ext.isSample = true
+
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
+filamentTools {
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
+
+    meshInputFile = project.layout.projectDirectory.file("../../../third_party/models/shader_ball/shader_ball.obj")
+    meshOutputDir = project.layout.projectDirectory.dir("src/main/assets/models")
+
+    iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/flower_road_no_sun_2k.hdr")
+    iblOutputDir = project.layout.projectDirectory.dir("src/main/assets/envs")
+}
+
+clean.doFirst {
+    delete "src/main/assets"
+}
+
+android {
+    namespace 'com.google.android.filament.ibl'
+
+    compileSdkVersion versions.compileSdk
+    defaultConfig {
+        applicationId "com.google.android.filament.ibl"
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+    }
+
+    // NOTE: This is a workaround required because the AGP task collectReleaseDependencies
+    //       is not configuration-cache friendly yet; this is only useful for Play publication
+    dependenciesInfo {
+        includeInApk = false
+    }
+
+    // We use the .filamat extension for materials compiled with matc
+    // Telling aapt to not compress them allows to load them efficiently
+    aaptOptions {
+        noCompress 'filamat', 'ktx'
+    }
+
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
+}
+
+dependencies {
+    implementation deps.kotlin
+    implementation project(':filament-android')
+}

@@ -1,0 +1,51 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 8
+; Bound: 17
+; Schema: 0
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_EXT_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 460
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpSourceExtension "GL_EXT_buffer_reference2"
+               OpSourceExtension "GL_EXT_shader_explicit_arithmetic_types_int64"
+               OpName %main "main"
+               OpName %Params "Params"
+               OpMemberName %Params 0 "x"
+               OpMemberName %Params 1 "y"
+               OpName %IntBuf "IntBuf"
+               OpMemberName %IntBuf 0 "v"
+               OpName %_ ""
+               OpDecorate %_arr_7_uint_3 ArrayStride 16
+               OpMemberDecorate %Params 0 Offset 0
+               OpMemberDecorate %Params 1 Offset 16
+               OpDecorate %Params Block
+               OpMemberDecorate %IntBuf 0 Offset 0
+               OpDecorate %IntBuf Block
+               OpDecorate %_arr__ptr_PhysicalStorageBuffer_IntBuf_uint_3 ArrayStride 16
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_IntBuf PhysicalStorageBuffer
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+%_arr_7_uint_3 = OpTypeArray %_ptr_PhysicalStorageBuffer_IntBuf %uint_3
+%ptr_array_ptr = OpTypePointer PhysicalStorageBuffer %_arr_7_uint_3
+     %Params = OpTypeStruct %float %ptr_array_ptr
+        %int = OpTypeInt 32 1
+     %IntBuf = OpTypeStruct %int
+%_ptr_PhysicalStorageBuffer_IntBuf = OpTypePointer PhysicalStorageBuffer %IntBuf
+%_arr__ptr_PhysicalStorageBuffer_IntBuf_uint_3 = OpTypeArray %_ptr_PhysicalStorageBuffer_IntBuf %uint_3
+%_ptr_Uniform_Params = OpTypePointer Uniform %Params
+          %_ = OpVariable %_ptr_Uniform_Params Uniform
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd

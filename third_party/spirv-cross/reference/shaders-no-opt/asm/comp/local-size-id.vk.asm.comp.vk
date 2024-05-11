@@ -1,0 +1,22 @@
+#version 450
+layout(local_size_x_id = 3, local_size_y_id = 4, local_size_z = 2) in;
+
+layout(constant_id = 1) const int _10 = 11;
+layout(constant_id = 2) const int _11 = 12;
+const uint _29 = (uint(int(gl_WorkGroupSize.x)) + 3u);
+const uvec3 _30 = uvec3(_29, int(gl_WorkGroupSize.y), 2u);
+
+layout(set = 0, binding = 0, std430) buffer SSBO
+{
+    vec4 values[];
+} _8;
+
+void main()
+{
+    vec3 _38 = vec3(_30);
+    float _41 = float(int(gl_WorkGroupSize.x));
+    float _42 = float(int(gl_WorkGroupSize.y));
+    float _43 = float(int(2u));
+    _8.values[gl_GlobalInvocationID.x] = ((((_8.values[gl_GlobalInvocationID.x] + vec4(2.0)) + _38.xyzz) * _41) * _42) * _43;
+}
+

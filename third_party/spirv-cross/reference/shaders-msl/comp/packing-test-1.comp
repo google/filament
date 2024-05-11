@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct T1
+{
+    float3 a;
+    float b;
+};
+
+struct T1_1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct Buffer0
+{
+    T1_1 buf0[1];
+};
+
+struct Buffer1
+{
+    float buf1[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(32u, 1u, 1u);
+
+kernel void main0(device Buffer0& _15 [[buffer(0)]], device Buffer1& _34 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    T1 v;
+    v.a = float3(_15.buf0[0].a);
+    v.b = _15.buf0[0].b;
+    float x = v.b;
+    _34.buf1[gl_GlobalInvocationID.x] = x;
+}
+

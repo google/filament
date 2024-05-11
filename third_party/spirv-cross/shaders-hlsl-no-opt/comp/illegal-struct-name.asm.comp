@@ -1,0 +1,62 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 8
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %Foo "Foo"
+               OpMemberName %Foo 0 "abs"
+               OpName %f "f"
+               OpName %Foo_0 "Foo"
+               OpMemberName %Foo_0 0 "abs"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "foo"
+               OpMemberName %SSBO 1 "foo2"
+               OpName %_ ""
+               OpName %linear "abs"
+               OpMemberDecorate %Foo_0 0 Offset 0
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+        %Foo = OpTypeStruct %float
+%_ptr_Function_Foo = OpTypePointer Function %Foo
+      %Foo_0 = OpTypeStruct %float
+       %SSBO = OpTypeStruct %Foo_0 %Foo_0
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_Foo_0 = OpTypePointer Uniform %Foo_0
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Function_int = OpTypePointer Function %int
+     %int_10 = OpConstant %int 10
+      %int_1 = OpConstant %int 1
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %f = OpVariable %_ptr_Function_Foo Function
+     %linear = OpVariable %_ptr_Function_int Function
+         %17 = OpAccessChain %_ptr_Uniform_Foo_0 %_ %int_0
+         %18 = OpLoad %Foo_0 %17
+         %19 = OpCompositeExtract %float %18 0
+         %21 = OpAccessChain %_ptr_Function_float %f %int_0
+               OpStore %21 %19
+               OpStore %linear %int_10
+         %26 = OpLoad %Foo %f
+         %27 = OpAccessChain %_ptr_Uniform_Foo_0 %_ %int_1
+         %28 = OpCompositeExtract %float %26 0
+         %30 = OpAccessChain %_ptr_Uniform_float %27 %int_0
+               OpStore %30 %28
+               OpReturn
+               OpFunctionEnd

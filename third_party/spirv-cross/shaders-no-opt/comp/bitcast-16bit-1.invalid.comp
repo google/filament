@@ -1,0 +1,23 @@
+#version 450 core
+#extension GL_AMD_gpu_shader_half_float : require
+#extension GL_AMD_gpu_shader_int16 : require
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) buffer SSBO0
+{
+   i16vec4 inputs[];
+};
+
+layout(binding = 1, std430) buffer SSBO1
+{
+   ivec4 outputs[];
+};
+
+void main()
+{
+   uint ident = gl_GlobalInvocationID.x;
+   f16vec2 a = int16BitsToFloat16(inputs[ident].xy);
+   outputs[ident].x = int(packFloat2x16(a + f16vec2(1, 1)));
+   outputs[ident].y = packInt2x16(inputs[ident].zw);
+   outputs[ident].z = int(packUint2x16(u16vec2(inputs[ident].xy)));
+}

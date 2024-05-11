@@ -1,0 +1,31 @@
+static const uint3 gl_WorkGroupSize = uint3(4u, 1u, 1u);
+
+ByteAddressBuffer _22 : register(t0);
+RWByteAddressBuffer _44 : register(u1);
+
+static uint3 gl_GlobalInvocationID;
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+groupshared float sShared[4];
+
+void comp_main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    float idata = asfloat(_22.Load(ident * 4 + 0));
+    sShared[gl_LocalInvocationIndex] = idata;
+    GroupMemoryBarrierWithGroupSync();
+    _44.Store(ident * 4 + 0, asuint(sShared[(4u - gl_LocalInvocationIndex) - 1u]));
+}
+
+[numthreads(4, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    comp_main();
+}

@@ -1,0 +1,31 @@
+From c82fe8888aacfe784476112edd3878256d2e30bc Mon Sep 17 00:00:00 2001
+From: Joshua Boyd <jdboyd@Joshua-Boyds-Mac-mini.local>
+Date: Wed, 23 Mar 2016 17:54:41 -0400
+Subject: [PATCH] Detect missing itimerspec on OSX.
+
+Set define to compiler accordingly.
+
+This fixes cmake on osx support.
+---
+ CMakeLists.txt | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e271e31..1d413e8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -193,6 +193,14 @@ if(NOT HAVE_SYS_TIME_H)
+     endif(MSVC)
+ endif(NOT HAVE_SYS_TIME_H)
+ 
++# OSX has sys/time.h, but it still lacks itimerspec
++if(HAVE_SYS_TIME_H)
++    check_struct_member("struct itimerspec" it_value "sys/time.h" HAVE_STRUCT_ITIMERSPEC_IT_VALUE)
++    if(NOT HAVE_STRUCT_ITIMERSPEC_IT_VALUE)
++        add_definitions(-DSTRUCT_ITIMERSPEC_DEFINITION_MISSING=1)
++        set(STRUCT_ITIMERSPEC_DEFINITION_MISSING 1)
++    endif(NOT HAVE_STRUCT_ITIMERSPEC_IT_VALUE)
++endif(HAVE_SYS_TIME_H)
+ 
+ ###############################################################################
+ # Check for integer types

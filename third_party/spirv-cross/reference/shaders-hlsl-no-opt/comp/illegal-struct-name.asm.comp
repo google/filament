@@ -1,0 +1,22 @@
+struct Foo
+{
+    float _abs;
+};
+
+RWByteAddressBuffer _7 : register(u0);
+
+void comp_main()
+{
+    Foo _24;
+    _24._abs = asfloat(_7.Load(0));
+    Foo f;
+    f._abs = _24._abs;
+    int _abs = 10;
+    _7.Store(4, asuint(f._abs));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

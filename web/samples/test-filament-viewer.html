@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Filament Viewer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+h2 {
+    margin-top: 0
+}
+
+main {
+    max-width: 800px;
+    background: #eee;
+    font-family: "Open Sans";
+    margin: auto;
+    padding: 10px;
+}
+
+.expando {
+    width: 100%;
+    border: solid 2px gray;
+}
+
+.tall {
+    height: 400px;
+}
+
+.wide {
+    width: 500px;
+    height: 300px;
+    border: none;
+}
+
+.wide::part(canvas) {
+    border-radius: 10px;
+}
+
+</style>
+</head>
+<body>
+<main>
+<h2>Hello World</h2>
+<p>
+This is a demonstration of the <code>&lt;filament-viewer&gt;</code> web component.
+</p>
+
+<h3>No skybox, auto-expand, drag and drop</h3>
+<p>
+<filament-viewer
+    enableDrop="true"
+    class="expando"
+    ibl="default_env/default_env_ibl.ktx"
+    intensity="20000" />
+</p>
+
+<h3>No skybox, auto-expand</h3>
+<p>
+<filament-viewer
+    src="FlightHelmet.gltf"
+    class="expando"
+    ibl="default_env/default_env_ibl.ktx"
+    intensity="20000" />
+</p>
+
+<h3>Skybox, fixed size</h3>
+<p>
+<filament-viewer
+    src="https://prideout.net/models/CesiumMan.glb"
+    ibl="default_env/default_env_ibl.ktx"
+    sky="default_env/default_env_skybox.ktx"
+    class="tall"
+/>
+</p>
+
+<h3>No skybox, no IBL, fixed size, round border</h3>
+<p>
+<filament-viewer
+    src="https://prideout.net/models/MaterialsVariantsShoe.glb"
+    materialVariant="1"
+    class="wide"
+/>
+</p>
+
+</main>
+<script src="filament.js"></script>
+<script src="https://unpkg.com/gltumble"></script>
+<script src="filament-viewer.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+#version 450
+#if defined(GL_ARB_gpu_shader_int64)
+#extension GL_ARB_gpu_shader_int64 : require
+#else
+#error No extension available for 64-bit integers.
+#endif
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer SomeBuffer;
+layout(buffer_reference, buffer_reference_align = 16, std430) buffer SomeBuffer
+{
+    vec4 v;
+    uint64_t a;
+    uvec2 b;
+};
+
+layout(push_constant, std430) uniform Registers
+{
+    uint64_t address;
+    uvec2 address2;
+} registers;
+
+void main()
+{
+    SomeBuffer _44 = SomeBuffer(registers.address);
+    SomeBuffer _45 = SomeBuffer(registers.address);
+    SomeBuffer _46 = SomeBuffer(registers.address2);
+    _44.v = vec4(1.0, 2.0, 3.0, 4.0);
+    _45.v = vec4(1.0, 2.0, 3.0, 4.0);
+    _46.v = vec4(1.0, 2.0, 3.0, 4.0);
+    _44.a = uint64_t(_44);
+    _45.a = uint64_t(_45);
+    _46.b = uvec2(_46);
+}
+

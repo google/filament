@@ -1,0 +1,95 @@
+material {
+    name : bilateralBlur,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : ssao,
+            precision: medium
+        },
+        {
+            type : float2,
+            name : axis,
+            precision: high
+        },
+        {
+            type : int,
+            name : sampleCount
+        },
+        {
+            type : float,
+            name : farPlaneOverEdgeDistance
+        },
+        {
+            type : float[16],
+            name : kernel
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    domain : postprocess,
+    depthWrite : false,
+    depthCulling : false
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+    #include "ssaoUtils.fs"
+
+    void dummy(){}
+
+    float bilateralWeight(in highp float depth, in highp float sampleDepth) {
+        float diff = (sampleDepth - depth) * materialParams.farPlaneOverEdgeDistance;
+        return max(0.0, 1.0 - diff * diff);
+    }
+
+    void tap(const highp sampler2DArray saoTexture,
+            inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
+        // ambient occlusion sample
+        vec3 data = textureLod(saoTexture, vec3(position, 0.0), 0.0).rgb;
+
+        // bilateral sample
+        float bilateral = weight * bilateralWeight(depth, unpack(data.gb));
+        sum += data.r * bilateral;
+        totalWeight += bilateral;
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = variable_vertex.xy; // interpolated at pixel's center
+
+        vec3 data = textureLod(materialParams_ssao, vec3(uv, 0.0), 0.0).rgb;
+        if (data.g * data.b == 1.0) {
+            // This is the skybox, skip
+            postProcess.color.rgb = data;
+            return;
+        }
+
+        // we handle the center pixel separately because it doesn't participate in
+        // bilateral filtering
+        float depth = unpack(data.gb);
+        float totalWeight = materialParams.kernel[0];
+        float sum = data.r * totalWeight;
+
+        vec2 offset = materialParams.axis;
+        for (int i = 1; i < materialParams.sampleCount; i++) {
+            float weight = materialParams.kernel[i];
+            tap(materialParams_ssao, sum, totalWeight, weight, depth, uv + offset);
+            tap(materialParams_ssao, sum, totalWeight, weight, depth, uv - offset);
+            offset += materialParams.axis;
+        }
+
+        float ao = sum * (1.0 / totalWeight);
+
+        // simple dithering helps a lot (assumes 8 bits target)
+        // this is most useful with high quality/large blurs
+        ao += ((interleavedGradientNoise(gl_FragCoord.xy) - 0.5) / 255.0);
+
+        postProcess.color.r = ao;
+        postProcess.color.gb = data.gb;
+    }
+}

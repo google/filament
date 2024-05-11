@@ -1,0 +1,7 @@
+This folder was updated as follows:
+
+    cd third_party
+    curl -L https://github.com/google/draco/archive/1.4.1.zip > draco.zip
+    unzip draco.zip ; rm -rf draco.zip
+    rsync -r --delete --exclude tnt draco-1.4.1/ draco/
+    rm -rf draco-1.4.1 draco/testdata draco/unity draco/maya

@@ -1,0 +1,80 @@
+material {
+    name : debugShadowCascades,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high
+        },
+        {
+            type : float4,
+            name : cascadeSplits,
+            precision: high
+        },
+        {
+            type : uint,
+            name : cascadeCount,
+            precision: high
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
+    }
+}
+
+fragment {
+    void dummy(){}
+
+    vec3 uintToColorDebug(int v) {
+        if (v == 0) {
+            return vec3(0.0, 1.0, 0.0);     // green
+        } else if (v == 1) {
+            return vec3(0.0, 0.0, 1.0);     // blue
+        } else if (v == 2) {
+            return vec3(1.0, 1.0, 0.0);     // yellow
+        } else if (v == 3) {
+            return vec3(1.0, 0.0, 0.0);     // red
+        } else if (v == 4) {
+            return vec3(1.0, 0.0, 1.0);     // purple
+        } else if (v == 5) {
+            return vec3(0.0, 1.0, 1.0);     // cyan
+        }
+
+        // fallback to handle "not all code-paths return" warnings
+        return vec3(0.0, 0.0, 0.0);
+    }
+
+    int getShadowCascade(highp float z) {
+        ivec4 greaterZ = ivec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
+        int cascadeCount = frameUniforms.cascades & 0xF;
+        return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0, cascadeCount - 1);
+    }
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        vec4 color = textureLod(materialParams_color, variable_vertex.xy, 0.0);
+
+        // depth from the depth buffer
+        highp float depth = textureLod(materialParams_depth, variable_vertex.xy, 0.0).r;
+        // convert to view-space (linear z).
+        highp vec4 p = mulMat4x4Float3(getViewFromClipMatrix(), vec3(0, 0, depth));
+        highp float z = p.z / p.w;
+
+        color.rgb *= uintToColorDebug(getShadowCascade(z));
+        postProcess.color = color;
+    }
+}
+

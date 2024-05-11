@@ -1,0 +1,45 @@
+#version 450
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_vote : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) buffer SSBO
+{
+    float FragColor;
+} _9;
+
+void main()
+{
+    _9.FragColor = float(gl_NumSubgroups);
+    _9.FragColor = float(gl_SubgroupID);
+    _9.FragColor = float(gl_SubgroupSize);
+    _9.FragColor = float(gl_SubgroupInvocationID);
+    subgroupMemoryBarrier();
+    subgroupBarrier();
+    subgroupMemoryBarrier();
+    subgroupMemoryBarrierBuffer();
+    subgroupMemoryBarrierShared();
+    subgroupMemoryBarrierImage();
+    bool elected = subgroupElect();
+    _9.FragColor = vec4(gl_SubgroupEqMask).x;
+    _9.FragColor = vec4(gl_SubgroupGeMask).x;
+    _9.FragColor = vec4(gl_SubgroupGtMask).x;
+    _9.FragColor = vec4(gl_SubgroupLeMask).x;
+    _9.FragColor = vec4(gl_SubgroupLtMask).x;
+    vec4 broadcasted = subgroupBroadcast(vec4(10.0), 8u);
+    vec3 first = subgroupBroadcastFirst(vec3(20.0));
+    uvec4 ballot_value = subgroupBallot(true);
+    bool inverse_ballot_value = subgroupInverseBallot(ballot_value);
+    bool bit_extracted = subgroupBallotBitExtract(uvec4(10u), 8u);
+    uint bit_count = subgroupBallotBitCount(ballot_value);
+    uint inclusive_bit_count = subgroupBallotInclusiveBitCount(ballot_value);
+    uint exclusive_bit_count = subgroupBallotExclusiveBitCount(ballot_value);
+    uint lsb = subgroupBallotFindLSB(ballot_value);
+    uint msb = subgroupBallotFindMSB(ballot_value);
+    bool has_all = subgroupAll(true);
+    bool has_any = subgroupAny(true);
+    bool has_equal_bool = subgroupAllEqual(true);
+    bool has_equal_T = subgroupAllEqual(uvec3(5u));
+}
+
