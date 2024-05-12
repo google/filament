@@ -3888,7 +3888,7 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 #endif
     }
 
-#ifdef FILAMENT_ENABLE_MATDBG
+#if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
 #else
     CHECK_GL_ERROR(utils::slog.e)
@@ -3934,7 +3934,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
     glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
 #endif // BACKEND_OPENGL_LEVEL_GLES31
 
-#ifdef FILAMENT_ENABLE_MATDBG
+#if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
 #else
     CHECK_GL_ERROR(utils::slog.e)
