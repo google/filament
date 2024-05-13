@@ -86,6 +86,7 @@ struct RenderableManager::BuilderDetails {
     RenderableManager::Builder::GeometryType mGeometryType : 2;
     size_t mSkinningBoneCount = 0;
     size_t mMorphTargetCount = 0;
+    FMorphTargetBuffer* mMorphTargetBuffer = nullptr;
     Bone const* mUserBones = nullptr;
     mat4f const* mUserBoneMatrices = nullptr;
     FSkinningBuffer* mSkinningBuffer = nullptr;
@@ -271,6 +272,18 @@ RenderableManager::Builder& RenderableManager::Builder::fog(bool enabled) noexce
 RenderableManager::Builder& RenderableManager::Builder::morphing(size_t targetCount) noexcept {
     mImpl->mMorphTargetCount = targetCount;
     return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::morphing(
+        MorphTargetBuffer* UTILS_NONNULL morphTargetBuffer) noexcept {
+    mImpl->mMorphTargetBuffer = downcast(morphTargetBuffer);
+    mImpl->mMorphTargetCount = morphTargetBuffer->getCount();
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::morphing(
+        uint8_t level, size_t primitiveIndex, size_t offset, size_t count) noexcept {
+    return morphing(level, primitiveIndex, mImpl->mMorphTargetBuffer, offset, count);
 }
 
 RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t, size_t primitiveIndex,
@@ -646,10 +659,14 @@ void FRenderableManager::create(
 
         // Create and initialize all needed MorphTargets.
         // It's required to avoid branches in hot loops.
+        FMorphTargetBuffer* morphTargetBuffer = builder->mMorphTargetBuffer;
+        if (morphTargetBuffer == nullptr) {
+            morphTargetBuffer = mEngine.getDummyMorphTargetBuffer();
+        }
         MorphTargets* const morphTargets = new MorphTargets[entryCount];
         std::generate_n(morphTargets, entryCount,
-                [dummy = mEngine.getDummyMorphTargetBuffer()]() -> MorphTargets {
-                    return { dummy, 0, 0 };
+                [morphTargetBuffer]() -> MorphTargets {
+                    return { morphTargetBuffer, 0, 0 };
                 });
 
         mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
@@ -963,6 +980,17 @@ void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level
         if (primitiveIndex < morphTargets.size()) {
             morphTargets[primitiveIndex] = { morphTargetBuffer, (uint32_t)offset,
                                              (uint32_t)count };
+        }
+    }
+}
+
+void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
+        size_t primitiveIndex, size_t offset, size_t count) {
+    if (instance) {
+        Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
+        if (primitiveIndex < morphTargets.size()) {
+            setMorphTargetBufferAt(instance, level,
+                    primitiveIndex, morphTargets[primitiveIndex].buffer, offset, count);
         }
     }
 }

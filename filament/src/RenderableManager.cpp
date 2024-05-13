@@ -164,6 +164,11 @@ void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
             downcast(morphTargetBuffer), offset, count);
 }
 
+void RenderableManager::setMorphTargetBufferAt(
+        Instance instance, uint8_t level, size_t primitiveIndex, size_t offset, size_t count) {
+    downcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex, offset, count);
+}
+
 MorphTargetBuffer* RenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,
         size_t primitiveIndex) const noexcept {
     return downcast(this)->getMorphTargetBufferAt(instance, level, primitiveIndex);
