@@ -72,7 +72,7 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
 };
 
-enum class PushConstantIds {
+enum class PushConstantIds : uint8_t  {
     MORPHING_BUFFER_OFFSET = 0,
 };
 
@@ -142,6 +142,8 @@ template<>
 struct utils::EnableIntegerOperators<filament::SamplerBindingPoints> : public std::true_type {};
 template<>
 struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PushConstantIds> : public std::true_type {};
 template<>
 struct utils::EnableIntegerOperators<filament::PostProcessVariant> : public std::true_type {};
 
