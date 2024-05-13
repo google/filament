@@ -153,7 +153,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
             "MorphTargetBuffer (size=%lu) overflow (count=%u, offset=%u)",
             (unsigned)mVertexCount, (unsigned)count, (unsigned)offset);
 
-    auto size = getSize<VertexAttribute::POSITION>(mVertexCount);
+    auto size = getSize<VertexAttribute::POSITION>(count);
 
     ASSERT_PRECONDITION(targetIndex < mCount,
             "%d target index must be < %d", targetIndex, mCount);
@@ -177,7 +177,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
             "MorphTargetBuffer (size=%lu) overflow (count=%u, offset=%u)",
             (unsigned)mVertexCount, (unsigned)count, (unsigned)offset);
 
-    auto size = getSize<VertexAttribute::POSITION>(mVertexCount);
+    auto size = getSize<VertexAttribute::POSITION>(count);
 
     ASSERT_PRECONDITION(targetIndex < mCount,
             "%d target index must be < %d", targetIndex, mCount);
@@ -200,7 +200,7 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
             "MorphTargetBuffer (size=%lu) overflow (count=%u, offset=%u)",
             (unsigned)mVertexCount, (unsigned)count, (unsigned)offset);
 
-    const auto size = getSize<VertexAttribute::TANGENTS>(mVertexCount);
+    const auto size = getSize<VertexAttribute::TANGENTS>(count);
 
     ASSERT_PRECONDITION(targetIndex < mCount,
             "%d target index must be < %d", targetIndex, mCount);
@@ -226,8 +226,8 @@ void FMorphTargetBuffer::updateDataAt(backend::DriverApi& driver,
     size_t const xoffset        = offset % MAX_MORPH_TARGET_BUFFER_WIDTH;
     size_t const textureWidth   = getWidth(mVertexCount);
     size_t const alignment      = ((textureWidth - xoffset) % textureWidth);
-    size_t const lineCount      = (count - alignment) / textureWidth;
-    size_t const lastLineCount  = (count - alignment) % textureWidth;
+    size_t const lineCount      = (count > alignment) ? (count - alignment) / textureWidth : 0;
+    size_t const lastLineCount  = (count > alignment) ? (count - alignment) % textureWidth : 0;
 
     // 'out' buffer is going to be used up to 3 times, so for simplicity we use a shared_buffer
     // to manage its lifetime. One side effect of this is that the callbacks below will allocate
