@@ -341,19 +341,22 @@ void PostProcessManager::init() noexcept {
         }
     }
 
-    mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
+    if (engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
+        mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::R8, 1, 256, 1, 1, TextureUsage::DEFAULT);
 
-    PixelBufferDescriptor dataStarburst(driver.allocate(256), 256, PixelDataFormat::R, PixelDataType::UBYTE);
-    std::generate_n((uint8_t*)dataStarburst.buffer, 256,
-            [&dist = mUniformDistribution, &gen = mEngine.getRandomEngine()]() {
-        float const r = 0.5f + 0.5f * dist(gen);
-        return uint8_t(r * 255.0f);
-    });
+        PixelBufferDescriptor dataStarburst(driver.allocate(256), 256,
+                PixelDataFormat::R, PixelDataType::UBYTE);
+        std::generate_n((uint8_t*)dataStarburst.buffer, 256,
+                [&dist = mUniformDistribution, &gen = mEngine.getRandomEngine()]() {
+                    float const r = 0.5f + 0.5f * dist(gen);
+                    return uint8_t(r * 255.0f);
+                });
 
-    driver.update3DImage(mStarburstTexture,
-            0, 0, 0, 0, 256, 1, 1,
-            std::move(dataStarburst));
+        driver.update3DImage(mStarburstTexture,
+                0, 0, 0, 0, 256, 1, 1,
+                std::move(dataStarburst));
+    }
 }
 
 void PostProcessManager::terminate(DriverApi& driver) noexcept {

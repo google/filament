@@ -42,11 +42,16 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
     }
 
     // We were not able to find a sufficiently large stage, so create a new one.
-    id<MTLBuffer> buffer = [mContext.device newBufferWithLength:numBytes
-                                                        options:MTLResourceStorageModeShared];
+    id<MTLBuffer> buffer = nil;
+    {
+        ScopedAllocationTimer timer("staging");
+        buffer = [mContext.device newBufferWithLength:numBytes
+                                              options:MTLResourceStorageModeShared];
+    }
+    MetalBufferTracking::track(buffer, MetalBufferTracking::Type::STAGING);
     ASSERT_POSTCONDITION(buffer, "Could not allocate Metal staging buffer of size %zu.", numBytes);
     MetalBufferPoolEntry* stage = new MetalBufferPoolEntry {
-        .buffer = { buffer, TrackedMetalBuffer::Type::STAGING },
+        .buffer = buffer,
         .capacity = numBytes,
         .lastAccessed = mCurrentFrame,
         .referenceCount = 1

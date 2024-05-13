@@ -50,7 +50,6 @@ VulkanBuffer::~VulkanBuffer() {
 
 void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
         uint32_t numBytes) {
-    assert_invariant(byteOffset == 0);
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
     vmaMapMemory(mAllocator, stage->memory, &mapped);
@@ -87,7 +86,11 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
                 &barrier, 0, nullptr);
     }
 
-    VkBufferCopy region{ .size = numBytes };
+    VkBufferCopy region {
+            .srcOffset = 0,
+            .dstOffset = byteOffset,
+            .size = numBytes,
+    };
     vkCmdCopyBuffer(cmdbuf, stage->buffer, mGpuBuffer, 1, &region);
 
     mUpdatedBytes = numBytes;

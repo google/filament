@@ -7,6 +7,13 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.51.8
+
+- filagui: Fix regression which broke WebGL
+- Add a new Engine::Config setting to control preferred shader language
+- Add `getEyeIndex` vertex API
+- ios: Remove bitcode from iOS builds
+
 ## v1.51.7
 
 - Add new matedit tool

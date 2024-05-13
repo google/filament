@@ -169,6 +169,23 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
         id<MTLFunction> function = [library newFunctionWithName:@"main0"
                                                  constantValues:constants
                                                           error:&error];
+        if (function == nil) {
+            // If the library loads but functions within it fail to load, it usually means the
+            // GPU backend crashed. (This can happen if it's a Metallib shader that was compiled
+            // with a minimum iOS version that's newer than this device.)
+            NSString* errorMessage = @"unknown error";
+            if (error) {
+                auto description =
+                        [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+                utils::slog.w << description << utils::io::endl;
+                errorMessage = error.localizedDescription;
+            }
+            PANIC_LOG("Failed to load main0 in Metal program.");
+            NSString* programName =
+                [NSString stringWithFormat:@"%s::main0", program.getName().c_str_safe()];
+            return MetalFunctionBundle::error(errorMessage, programName);
+        }
+
         if (!program.getName().empty()) {
             function.label = @(program.getName().c_str());
         }

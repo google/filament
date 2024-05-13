@@ -152,7 +152,11 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     sortCommands(builder.mArena);
 
     if (engine.isAutomaticInstancingEnabled()) {
-        instanceify(engine, builder.mArena);
+        uint32_t stereoscopicEyeCount = 1;
+        if (builder.mFlags & IS_INSTANCED_STEREOSCOPIC) {
+            stereoscopicEyeCount *= engine.getConfig().stereoscopicEyeCount;
+        }
+        instanceify(engine, builder.mArena, stereoscopicEyeCount);
     }
 }
 
@@ -279,7 +283,7 @@ void RenderPass::execute(RenderPass const& pass,
     driver.endRenderPass();
 }
 
-void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
+void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -362,7 +366,7 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
             }
 
             // make the first command instanced
-            curr[0].info.instanceCount = instanceCount;
+            curr[0].info.instanceCount = instanceCount * eyeCount;
             curr[0].info.index = instancedPrimitiveOffset;
             curr[0].info.boh = mInstancedUboHandle;
 
@@ -653,7 +657,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.boh = soaInstanceInfo[i].handle;
         } else {
             // with no- or user- instancing, we can only know after instanceify()
-            assert_invariant(cmd.info.instanceCount <= 1);
             cmd.info.boh = renderablesUbo;
         }
 

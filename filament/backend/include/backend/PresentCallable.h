@@ -48,7 +48,7 @@ namespace filament::backend {
  * and optional user data:
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * swapChain->setFrameScheduledCallback(nullptr, myFrameScheduledCallback);
+ * swapChain->setFrameScheduledCallback(myFrameScheduledCallback, nullptr);
  * if (renderer->beginFrame(swapChain)) {
  *     renderer->render(view);
  *     renderer->endFrame();
@@ -57,6 +57,8 @@ namespace filament::backend {
  *
  * @remark Only Filament's Metal backend supports PresentCallables and frame callbacks. Other
  * backends ignore the callback (which will never be called) and proceed normally.
+ *
+ * @remark The SwapChain::FrameScheduledCallback is called on an arbitrary thread.
  *
  * Applications *must* call each PresentCallable they receive. Each PresentCallable represents a
  * frame that is waiting to be presented. If an application fails to call a PresentCallable, a

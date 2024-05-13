@@ -65,6 +65,12 @@ public:
          * Disable backend handles use-after-free checks.
          */
         bool disableHandleUseAfterFreeCheck = false;
+
+        /**
+         * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
+         * GLES 3.x backends.
+         */
+        bool forceGLES2Context = false;
     };
 
     Platform() noexcept;

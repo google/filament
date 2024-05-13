@@ -476,7 +476,7 @@ Energy conservation is one of the key components of a good BRDF for physically b
 <p>
 
 
-For the specular term, \(f_m\) is a mirror BRDF that can be modeled with the Fresnel law, noted \(F\) in the Cook-Torrance approximation of the microfacet model integration:
+For the specular term, \(f_r\) is a mirror BRDF that can be modeled with the Fresnel law, noted \(F\) in the Cook-Torrance approximation of the microfacet model integration:
 
 </p><p>
 
@@ -857,7 +857,7 @@ The full GLSL implementation of the standard model is shown in <a href="#listing
 <span class="line">    <span class="hljs-comment">// perceptually linear roughness to roughness (see parameterization)</span></span>
 <span class="line">    <span class="hljs-type">float</span> roughness = perceptualRoughness * perceptualRoughness;</span>
 <span class="line"></span>
-<span class="line">    <span class="hljs-type">float</span> D = D_GGX(NoH, a);</span>
+<span class="line">    <span class="hljs-type">float</span> D = D_GGX(NoH, roughness);</span>
 <span class="line">    <span class="hljs-type">vec3</span>  F = F_Schlick(LoH, f0);</span>
 <span class="line">    <span class="hljs-type">float</span> V = V_SmithGGXCorrelated(NoV, NoL, roughness);</span>
 <span class="line"></span>

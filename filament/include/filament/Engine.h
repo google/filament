@@ -362,6 +362,13 @@ public:
             METAL_LIBRARY = 2,
         };
         ShaderLanguage preferredShaderLanguage = ShaderLanguage::DEFAULT;
+
+        /*
+         * When the OpenGL ES backend is used, setting this value to true will force a GLES2.0
+         * context if supported by the Platform, or if not, will have the backend pretend
+         * it's a GLES2 context. Ignored on other backends.
+         */
+        bool forceGLES2Context = false;
     };
 
 
