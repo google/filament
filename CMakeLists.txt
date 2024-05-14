@@ -21,8 +21,6 @@ project(TNT)
 # ==================================================================================================
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
-option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
-
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -143,11 +141,6 @@ if (LINUX)
     else ()
         if (FILAMENT_SUPPORTS_XCB)
             add_definitions(-DFILAMENT_SUPPORTS_XCB)
-        endif()
-
-        # Default Swiftshader build does not enable the xlib extension
-        if (FILAMENT_SUPPORTS_XLIB AND FILAMENT_USE_SWIFTSHADER)
-            set(FILAMENT_SUPPORTS_XLIB OFF)
         endif()
 
         if (FILAMENT_SUPPORTS_XLIB)
@@ -325,10 +318,6 @@ endif()
 
 if (FILAMENT_SUPPORTS_EGL_ON_LINUX)
   set(EGL TRUE)
-endif()
-
-if (FILAMENT_USE_SWIFTSHADER)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_SWIFTSHADER")
 endif()
 
 if (WIN32)
@@ -681,21 +670,6 @@ if (WEBGL)
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
 else()
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
-endif()
-
-# ==================================================================================================
-# Try to find Vulkan if the SDK is installed, otherwise fall back to the bundled version.
-# This needs to stay in our top-level CMakeLists because it sets up variables that are used by the
-# "bluevk" and "samples" targets.
-# ==================================================================================================
-
-if (FILAMENT_USE_SWIFTSHADER)
-    if (NOT FILAMENT_SUPPORTS_VULKAN)
-        message(ERROR "SwiftShader is only useful when Vulkan is enabled.")
-    endif()
-    find_library(SWIFTSHADER_VK NAMES vk_swiftshader HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
-    message(STATUS "Found SwiftShader VK library in: ${SWIFTSHADER_VK}.")
-    add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${SWIFTSHADER_VK}\")
 endif()
 
 # ==================================================================================================

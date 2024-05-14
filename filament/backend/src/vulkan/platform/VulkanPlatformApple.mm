@@ -52,13 +52,14 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getRequiredInstanceExtensions() {
-    ExtensionSet ret;
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+    ExtensionSet const ret = {
     #if defined(__APPLE__)
-        ret.insert("VK_MVK_macos_surface"); // TODO: replace with VK_EXT_metal_surface
-    #elif defined(IOS)
-        ret.insert("VK_MVK_ios_surface");
+        VK_MVK_MACOS_SURFACE_EXTENSION_NAME,  // TODO: replace with VK_EXT_metal_surface
+    #elif defined(IOS) && defined(METAL_AVAILABLE)
+        VK_MVK_IOS_SURFACE_EXTENSION_NAME,
     #endif
+    };
     return ret;
 }
 
