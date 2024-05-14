@@ -241,7 +241,15 @@ OpenGLDriver::~OpenGLDriver() noexcept { // NOLINT(modernize-use-equals-default)
 }
 
 Dispatcher OpenGLDriver::getDispatcher() const noexcept {
-    return ConcreteDispatcher<OpenGLDriver>::make();
+    auto dispatcher = ConcreteDispatcher<OpenGLDriver>::make();
+    if (mContext.isES2()) {
+        dispatcher.draw2_ = +[](Driver& driver, CommandBase* base, intptr_t* next){
+            using Cmd = COMMAND_TYPE(draw2);
+            OpenGLDriver& concreteDriver = static_cast<OpenGLDriver&>(driver);
+            Cmd::execute(&OpenGLDriver::draw2GLES2, concreteDriver, base, next);
+        };
+    }
+    return dispatcher;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -3875,18 +3883,33 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
         return;
     }
 
-    if (UTILS_LIKELY(instanceCount <= 1)) {
-        glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
-    } else {
-        assert_invariant(!mContext.isES2());
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
-                rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
-                (GLsizei)instanceCount);
+    assert_invariant(!mContext.isES2());
+    glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
+            rp->gl.getIndicesType(),
+            reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
+            (GLsizei)instanceCount);
 #endif
+
+#if FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+#else
+    CHECK_GL_ERROR(utils::slog.e)
+#endif
+}
+
+void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
+    if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
+        return;
     }
+
+    assert_invariant(mContext.isES2());
+    assert_invariant(instanceCount == 1);
+
+    glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
+            reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
+
 
 #if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
@@ -3907,7 +3930,11 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
     state.vertexBufferInfo = rp->vbih;
     bindPipeline(state);
     bindRenderPrimitive(rph);
-    draw2(indexOffset, indexCount, instanceCount);
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        draw2GLES2(indexOffset, indexCount, instanceCount);
+    } else {
+        draw2(indexOffset, indexCount, instanceCount);
+    }
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
