@@ -1637,7 +1637,7 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 }
 
-void MetalDriver::bindPipeline(PipelineState ps) {
+void MetalDriver::bindPipeline(PipelineState const& ps) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "bindPipeline() without a valid command encoder.");
 
