@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_METALDRIVER_H
 #define TNT_FILAMENT_DRIVER_METALDRIVER_H
 
+#include "backend/DriverEnums.h"
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
 
@@ -140,6 +141,7 @@ private:
     void enumerateBoundBuffers(BufferObjectBinding bindingType,
             const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f);
 
+    backend::StereoscopicType const mStereoscopicType;
 };
 
 } // namespace backend

@@ -142,6 +142,8 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
                 assert_invariant(false);
 #endif
                 break;
+            case Engine::StereoscopicType::NONE:
+                break;
         }
     }
     auto material = builder.build(engine);

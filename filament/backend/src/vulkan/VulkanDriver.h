@@ -28,6 +28,7 @@
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanUtility.h"
+#include "backend/DriverEnums.h"
 #include "caching/VulkanDescriptorSetManager.h"
 #include "caching/VulkanPipelineLayoutCache.h"
 
@@ -166,10 +167,10 @@ private:
         VkPipelineLayout pipelineLayout;
     };
     BoundPipeline mBoundPipeline = {};
-
     RenderPassFboBundle mRenderPassFboInfo;
 
     bool const mIsSRGBSwapChainSupported;
+    backend::StereoscopicType const mStereoscopicType;
 };
 
 } // namespace filament::backend

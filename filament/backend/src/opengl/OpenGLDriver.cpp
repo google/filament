@@ -2050,19 +2050,19 @@ bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
 
-bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+bool OpenGLDriver::isStereoSupported() {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return mContext.ext.EXT_clip_cull_distance;
-    case backend::StereoscopicType::MULTIVIEW:
-        return mContext.ext.OVR_multiview2;
-    default:
-        return false;
+    switch (mDriverConfig.stereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return mContext.ext.EXT_clip_cull_distance;
+        case backend::StereoscopicType::MULTIVIEW:
+            return mContext.ext.OVR_multiview2;
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 

@@ -1094,9 +1094,17 @@ void ViewerGui::updateUserInterface() {
             ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(), cstrings.size());
         }
 
-        ImGui::Checkbox("Instanced stereo", &mSettings.view.stereoscopicOptions.enabled);
-        ImGui::SliderFloat(
-                "Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f, 1.0f);
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)                                                \
+        || defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        ImGui::Checkbox("Stereo mode", &mSettings.view.stereoscopicOptions.enabled);
+
+    #if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")
+                = mSettings.view.stereoscopicOptions.enabled;
+    #endif
+#endif
+        ImGui::SliderFloat("Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f,
+                1.0f);
 
         float toeInDegrees = mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
         ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");

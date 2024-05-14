@@ -184,8 +184,8 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-        return getDriver().isStereoSupported(stereoscopicType);
+    bool isStereoSupported() const noexcept {
+        return getDriver().isStereoSupported();
     }
 
     static size_t getMaxStereoscopicEyes() noexcept {

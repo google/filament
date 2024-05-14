@@ -315,7 +315,7 @@ public:
          *
          * @see View::setStereoscopicOptions
          */
-        StereoscopicType stereoscopicType = StereoscopicType::INSTANCED;
+        StereoscopicType stereoscopicType = StereoscopicType::NONE;
 
         /*
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are

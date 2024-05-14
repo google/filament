@@ -182,7 +182,7 @@ bool NoopDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
+bool NoopDriver::isStereoSupported() {
     return false;
 }
 
