@@ -359,7 +359,7 @@ void NoopDriver::blit(
         math::uint2 size) {
 }
 
-void NoopDriver::bindPipeline(PipelineState pipelineState) {
+void NoopDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void NoopDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {

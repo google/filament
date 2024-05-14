@@ -924,16 +924,18 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 }
 
 void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
-    // NOTE: this is called from draw() and must be as efficient as possible.
+    // NOTE: this is called often and must be as efficient as possible.
 
     auto& gl = mContext;
 
+#ifndef NDEBUG
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
         GLint vaoBinding;
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
         assert_invariant(vaoBinding == (GLint)rp->gl.vao[gl.contextIndex]);
     }
+#endif
 
     if (UTILS_LIKELY(rp->gl.vertexBufferVersion == vb->bufferObjectsVersion &&
                      rp->gl.stateVersion == gl.state.age)) {
@@ -949,7 +951,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
             // if a buffer is defined it must not be invalid.
             assert_invariant(vb->gl.buffers[bi]);
 
-            // if w're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
+            // if we're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
@@ -3837,7 +3839,7 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
 #endif
 }
 
-void OpenGLDriver::bindPipeline(PipelineState state) {
+void OpenGLDriver::bindPipeline(PipelineState const& state) {
     DEBUG_MARKER()
     auto& gl = mContext;
     setRasterState(state.rasterState);

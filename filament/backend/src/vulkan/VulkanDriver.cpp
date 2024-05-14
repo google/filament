@@ -1763,7 +1763,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::bindPipeline(PipelineState pipelineState) {
+void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("draw");
 

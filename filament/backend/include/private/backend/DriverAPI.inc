@@ -502,7 +502,7 @@ DECL_DRIVER_API_N(blit,
         math::uint2, size)
 
 DECL_DRIVER_API_N(bindPipeline,
-        backend::PipelineState, state)
+        backend::PipelineState const&, state)
 
 DECL_DRIVER_API_N(bindRenderPrimitive,
         backend::RenderPrimitiveHandle, rph)
