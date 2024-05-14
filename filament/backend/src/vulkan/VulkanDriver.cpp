@@ -1873,6 +1873,12 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
 
     mPipelineCache.bindLayout(pipelineLayout);
     mPipelineCache.bindPipeline(commands);
+
+    // Since we don't statically define scissor as part of the pipeline, we need to call scissor at
+    // least once. Context: VUID-vkCmdDrawIndexed-None-07832.
+    auto const& extent = rt->getExtent();
+    scissor({0, 0, extent.width, extent.height});
+
     FVK_SYSTRACE_END();
 }
 
@@ -1963,7 +1969,7 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
     rt->transformClientRectToPlatform(&scissor);
-    mPipelineCache.bindScissor(cmdbuffer, scissor);
+    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

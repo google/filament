@@ -120,9 +120,6 @@ public:
     // Creates a new pipeline if necessary and binds it using vkCmdBindPipeline.
     void bindPipeline(VulkanCommandBuffer* commands);
 
-    // Sets up a new scissor rectangle if it has been dirtied.
-    void bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept;
-
     // Each of the following methods are fast and do not make Vulkan calls.
     void bindProgram(VulkanProgram* program) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
@@ -263,9 +260,6 @@ private:
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
-
-    // Current state for scissoring.
-    VkRect2D mCurrentScissor = {};
 };
 
 } // namespace filament::backend
