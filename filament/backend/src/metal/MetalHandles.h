@@ -75,7 +75,7 @@ public:
 
     void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback);
     void setFrameCompletedCallback(
-            CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
+            CallbackHandler* handler, utils::Invocable<void(void)>&& callback);
 
     // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
     // FrameScheduledCallback.
@@ -124,8 +124,7 @@ private:
 
     struct {
         CallbackHandler* handler = nullptr;
-        CallbackHandler::Callback callback = {};
-        void* user = nullptr;
+        std::shared_ptr<utils::Invocable<void(void)>> callback = nullptr;
     } frameCompleted;
 };
 

@@ -227,11 +227,10 @@ void MetalSwapChain::setFrameScheduledCallback(
     frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
 }
 
-void MetalSwapChain::setFrameCompletedCallback(CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user) {
+void MetalSwapChain::setFrameCompletedCallback(
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     frameCompleted.handler = handler;
-    frameCompleted.callback = callback;
-    frameCompleted.user = user;
+    frameCompleted.callback = std::make_shared<utils::Invocable<void(void)>>(std::move(callback));
 }
 
 void MetalSwapChain::present() {
@@ -337,13 +336,25 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
         return;
     }
 
-    CallbackHandler* handler = frameCompleted.handler;
-    void* user = frameCompleted.user;
-    CallbackHandler::Callback callback = frameCompleted.callback;
+    struct Callback {
+        Callback(std::shared_ptr<utils::Invocable<void(void)>> callback) : f(callback) {}
+        std::shared_ptr<utils::Invocable<void(void)>> f;
+        static void func(void* user) {
+            auto* const c = reinterpret_cast<Callback*>(user);
+            c->f->operator()();
+            delete c;
+        }
+    };
 
+    // This callback pointer will be captured by the block. Even if the completed handler is never
+    // called, the unique_ptr will still ensure we don't leak memory.
+    __block auto callback = std::make_unique<Callback>(frameCompleted.callback);
+
+    CallbackHandler* handler = frameCompleted.handler;
     MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        driver->scheduleCallback(handler, user, callback);
+        Callback* user = callback.release();
+        driver->scheduleCallback(handler, user, &Callback::func);
     }];
 }
 

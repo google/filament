@@ -398,7 +398,7 @@ void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {

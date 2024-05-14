@@ -144,8 +144,7 @@ DECL_DRIVER_API_N(setFrameScheduledCallback,
 DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::SwapChainHandle, sch,
         backend::CallbackHandler*, handler,
-        backend::CallbackHandler::Callback, callback,
-        void*, user)
+        utils::Invocable<void(void)>&&, callback)
 
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)
