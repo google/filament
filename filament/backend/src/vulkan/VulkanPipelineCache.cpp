@@ -79,10 +79,6 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     commands->setPipeline(cacheEntry->handle);
 }
 
-void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept {
-    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
-}
-
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
     assert_invariant(mPipelineRequirements.shaders[0] && "Vertex shader is not bound.");
     assert_invariant(mPipelineRequirements.layout && "No pipeline layout specified");
@@ -306,7 +302,6 @@ void VulkanPipelineCache::gc() noexcept {
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     mBoundPipeline = {};
-    mCurrentScissor = {};
 
     // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
 
