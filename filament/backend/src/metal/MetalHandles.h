@@ -119,7 +119,7 @@ private:
     // PresentCallable object.
     struct {
         CallbackHandler* handler = nullptr;
-        FrameScheduledCallback callback = {};
+        std::shared_ptr<FrameScheduledCallback> callback = nullptr;
     } frameScheduled;
 
     struct {
