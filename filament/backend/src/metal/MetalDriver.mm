@@ -243,10 +243,10 @@ void MetalDriver::setFrameScheduledCallback(
     swapChain->setFrameScheduledCallback(handler, std::move(callback));
 }
 
-void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+void MetalDriver::setFrameCompletedCallback(
+        Handle<HwSwapChain> sch, CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameCompletedCallback(handler, callback, user);
+    swapChain->setFrameCompletedCallback(handler, std::move(callback));
 }
 
 void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
