@@ -27,8 +27,9 @@ using namespace filament;
 using namespace filament::backend;
 
 static constexpr struct {
-    size_t TRIANGLE_SCALE = 0;
-    size_t TRIANGLE_OFFSET_X = 1;
+    size_t TRIANGLE_HIDE = 0;
+    size_t TRIANGLE_SCALE = 1;
+    size_t TRIANGLE_OFFSET_X = 2;
     size_t TRIANGLE_OFFSET_Y = 3;
 
     size_t RED = 0;
@@ -39,14 +40,19 @@ static constexpr struct {
 static const char* const triangleVs = R"(#version 450 core
 
 layout(push_constant) uniform Constants {
+    bool hideTriangle;
     float triangleScale;
     float triangleOffsetX;
-    bool padding;       // test correct bool padding
     float triangleOffsetY;
 } pushConstants;
 
 layout(location = 0) in vec4 mesh_position;
 void main() {
+    if (pushConstants.hideTriangle) {
+        // Test that bools are written correctly. All bits must be 0 if the bool is false.
+        gl_Position = vec4(0.0);
+        return;
+    }
     gl_Position = vec4(mesh_position.xy * pushConstants.triangleScale +
             vec2(pushConstants.triangleOffsetX, pushConstants.triangleOffsetY), 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
@@ -109,6 +115,7 @@ TEST_F(BackendTest, PushConstants) {
         api.beginRenderPass(renderTarget, params);
 
         // Set the push constants to scale the triangle in half
+        api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_HIDE, false);
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_SCALE, 0.5f);
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_OFFSET_X, 0.0f);
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_OFFSET_Y, 0.0f);

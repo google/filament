@@ -179,7 +179,16 @@ void MetalPushConstantBuffer::setBytesIfDirty(
     for (size_t i = 0; i < mPushConstants.size(); i++) {
         const auto& constant = mPushConstants[i];
         std::visit([i](auto arg) {
-                    *(decltype(arg)*)(buffer + PUSH_CONSTANT_SIZE_BYTES * i) = arg;
+                    if constexpr (std::is_same_v<decltype(arg), bool>) {
+                        // bool push constants are converted to uints in MSL.
+                        // We must ensure we write all the bytes for boolean values to work
+                        // correctly.
+                        uint32_t boolAsUint = arg ? 0x00000001 : 0x00000000;
+                        *(reinterpret_cast<uint32_t*>(buffer + PUSH_CONSTANT_SIZE_BYTES * i)) =
+                                boolAsUint;
+                    } else {
+                        *(decltype(arg)*)(buffer + PUSH_CONSTANT_SIZE_BYTES * i) = arg;
+                    }
                 },
                 constant);
     }
