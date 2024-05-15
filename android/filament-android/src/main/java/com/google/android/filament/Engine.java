@@ -159,7 +159,8 @@ public class Engine {
     };
 
     /**
-     * The type of technique for stereoscopic rendering
+     * The type of technique for stereoscopic rendering. (Note that the materials used will need to be
+     * compatible with the chosen technique.)
      */
     public enum StereoscopicType {
         /** No stereoscopic rendering. */

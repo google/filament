@@ -42,7 +42,8 @@ public:
     struct Stream {};
 
     /**
-     * The type of technique for stereoscopic rendering
+     * The type of technique for stereoscopic rendering. (Note that the materials used will need to
+     * be compatible with the chosen technique.)
      */
     enum class StereoscopicType : uint8_t {
         /**
@@ -54,7 +55,8 @@ public:
          */
         INSTANCED,
         /**
-         * Stereoscopic rendering is performed using the multiview feature from the graphics backend.
+         * Stereoscopic rendering is performed using the multiview feature from the graphics
+         * backend.
          */
         MULTIVIEW,
     };
