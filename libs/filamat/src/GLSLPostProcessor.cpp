@@ -255,6 +255,17 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
         mslCompiler.add_msl_resource_binding(argBufferBinding);
     }
 
+    // Bind push constants to [buffer(26)]
+    MSLResourceBinding pushConstantBinding;
+    // the baseType doesn't matter, but can't be UNKNOWN
+    pushConstantBinding.basetype = SPIRType::BaseType::Struct;
+    pushConstantBinding.stage = executionModel;
+    pushConstantBinding.desc_set = kPushConstDescSet;
+    pushConstantBinding.binding = kPushConstBinding;
+    pushConstantBinding.count = 1;
+    pushConstantBinding.msl_buffer = 26;
+    mslCompiler.add_msl_resource_binding(pushConstantBinding);
+
     auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);

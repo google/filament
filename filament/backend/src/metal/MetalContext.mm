@@ -153,5 +153,61 @@ bool isInRenderPass(MetalContext* context) {
     return context->currentRenderPassEncoder != nil;
 }
 
+void MetalPushConstantBuffer::setPushConstant(PushConstantVariant value, uint8_t index) {
+    if (mPushConstants.size() <= index) {
+        mPushConstants.resize(index + 1);
+        mDirty = true;
+    }
+    if (UTILS_LIKELY(mPushConstants[index] != value)) {
+        mDirty = true;
+        mPushConstants[index] = value;
+    }
+}
+
+void MetalPushConstantBuffer::setBytesIfDirty(
+        id<MTLCommandEncoder> encoder, ShaderStage stage) {
+    if (!mDirty) {
+        return;
+    }
+    constexpr size_t PUSH_CONSTANT_SIZE_BYTES = 4;
+    constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 26;
+
+    size_t bufferSize = PUSH_CONSTANT_SIZE_BYTES * mPushConstants.size();
+    char* buffer = static_cast<char*>(malloc(bufferSize));
+    for (size_t i = 0; i < mPushConstants.size(); i++) {
+        const auto& constant = mPushConstants[i];
+        std::visit([buffer, i](auto arg) {
+                    *(decltype(arg)*)(buffer + PUSH_CONSTANT_SIZE_BYTES * i) = arg;
+                },
+                constant);
+    }
+
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            [(id<MTLRenderCommandEncoder>)encoder setVertexBytes:buffer
+                                                          length:bufferSize
+                                                         atIndex:PUSH_CONSTANT_BUFFER_INDEX];
+            break;
+        case ShaderStage::FRAGMENT:
+            [(id<MTLRenderCommandEncoder>)encoder setFragmentBytes:buffer
+                                                            length:bufferSize
+                                                           atIndex:PUSH_CONSTANT_BUFFER_INDEX];
+            break;
+        case ShaderStage::COMPUTE:
+            [(id<MTLComputeCommandEncoder>)encoder setBytes:buffer
+                                                     length:bufferSize
+                                                    atIndex:PUSH_CONSTANT_BUFFER_INDEX];
+            break;
+    }
+
+    free(buffer);
+    mDirty = false;
+}
+
+void MetalPushConstantBuffer::clear() {
+    mPushConstants.clear();
+    mDirty = false;
+}
+
 } // namespace backend
 } // namespace filament
