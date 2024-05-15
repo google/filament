@@ -172,11 +172,13 @@ void MetalPushConstantBuffer::setBytesIfDirty(
     constexpr size_t PUSH_CONSTANT_SIZE_BYTES = 4;
     constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 26;
 
+    static char buffer[MAX_PUSH_CONSTANT_COUNT * PUSH_CONSTANT_SIZE_BYTES];
+    assert_invariant(mPushConstants.size() <= MAX_PUSH_CONSTANT_COUNT);
+
     size_t bufferSize = PUSH_CONSTANT_SIZE_BYTES * mPushConstants.size();
-    char* buffer = static_cast<char*>(malloc(bufferSize));
     for (size_t i = 0; i < mPushConstants.size(); i++) {
         const auto& constant = mPushConstants[i];
-        std::visit([buffer, i](auto arg) {
+        std::visit([i](auto arg) {
                     *(decltype(arg)*)(buffer + PUSH_CONSTANT_SIZE_BYTES * i) = arg;
                 },
                 constant);
@@ -200,7 +202,6 @@ void MetalPushConstantBuffer::setBytesIfDirty(
             break;
     }
 
-    free(buffer);
     mDirty = false;
 }
 
