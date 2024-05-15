@@ -1882,7 +1882,9 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
     // Update push constants.
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         auto& pushConstants = mContext->currentPushConstants[i];
-        pushConstants.setBytesIfDirty(mContext->currentRenderPassEncoder, static_cast<ShaderStage>(i));
+        if (UTILS_UNLIKELY(pushConstants.isDirty())) {
+            pushConstants.setBytes(mContext->currentRenderPassEncoder, static_cast<ShaderStage>(i));
+        }
     }
 
     auto primitive = handle_cast<MetalRenderPrimitive>(mContext->currentRenderPrimitive);

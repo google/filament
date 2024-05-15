@@ -58,7 +58,8 @@ constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most
 class MetalPushConstantBuffer {
 public:
     void setPushConstant(PushConstantVariant value, uint8_t index);
-    void setBytesIfDirty(id<MTLCommandEncoder> encoder, ShaderStage stage);
+    bool isDirty() const { return mDirty; }
+    void setBytes(id<MTLCommandEncoder> encoder, ShaderStage stage);
     void clear();
 
 private:

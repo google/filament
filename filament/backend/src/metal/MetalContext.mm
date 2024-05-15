@@ -164,11 +164,7 @@ void MetalPushConstantBuffer::setPushConstant(PushConstantVariant value, uint8_t
     }
 }
 
-void MetalPushConstantBuffer::setBytesIfDirty(
-        id<MTLCommandEncoder> encoder, ShaderStage stage) {
-    if (!mDirty) {
-        return;
-    }
+void MetalPushConstantBuffer::setBytes(id<MTLCommandEncoder> encoder, ShaderStage stage) {
     constexpr size_t PUSH_CONSTANT_SIZE_BYTES = 4;
     constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 26;
 
@@ -178,7 +174,8 @@ void MetalPushConstantBuffer::setBytesIfDirty(
     size_t bufferSize = PUSH_CONSTANT_SIZE_BYTES * mPushConstants.size();
     for (size_t i = 0; i < mPushConstants.size(); i++) {
         const auto& constant = mPushConstants[i];
-        std::visit([i](auto arg) {
+        std::visit(
+                [i](auto arg) {
                     if constexpr (std::is_same_v<decltype(arg), bool>) {
                         // bool push constants are converted to uints in MSL.
                         // We must ensure we write all the bytes for boolean values to work
