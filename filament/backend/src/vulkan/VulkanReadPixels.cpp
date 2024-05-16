@@ -303,7 +303,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
         // Fence hasn't been reached. Try waiting again.
         if (status != VK_SUCCESS) {
-            utils::slog.e << "Failed to wait for readPixels fence" << utils::io::endl;
+            utils::slog.e << "Failed to wait for readPixels fence=" << status << utils::io::endl;
             return;
         }
 

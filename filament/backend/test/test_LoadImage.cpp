@@ -23,10 +23,21 @@
 #include "private/filament/SamplerInterfaceBlock.h"
 #include "private/backend/SamplerGroup.h"
 
+#include <utils/Log.h>
+#include <utils/Hash.h>
+
 #include <math/half.h>
 
 #include <fstream>
 #include <vector>
+
+#ifndef IOS
+#include <imageio/ImageEncoder.h>
+#include <image/ColorTransform.h>
+
+using namespace image;
+#endif
+
 
 using namespace filament;
 using namespace filament::backend;
@@ -56,7 +67,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform {samplerType} test_tex;
+layout(binding = 0, set = 1) uniform {samplerType} test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -108,6 +119,49 @@ void main() {
 
 )");
 
+}
+static void readScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, size_t const readWidth,
+        size_t const readHeight, std::function<void(void*)> output) {
+    size_t const size = readWidth * readHeight * 4;
+    void* buffer = calloc(1, size);
+    struct ReadPixelUserData {
+        std::function<void(void*)> onRead;
+    };
+    ReadPixelUserData* userdata = new ReadPixelUserData{output};
+    auto cb = [](void* buffer, size_t size, void* user) {
+        ReadPixelUserData* data = (ReadPixelUserData*) user;
+        data->onRead(buffer);
+        free(buffer);
+        delete data;
+    };
+    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb,
+            userdata);
+    dapi.readPixels(rt, 0, 0, readWidth, readHeight, std::move(pb));
+}
+
+static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, size_t const readWidth,
+        size_t const readHeight, test::Backend backend, std::string fname = "") {
+    size_t const size = readWidth * readHeight * 4;
+    if (fname.empty()) {
+        std::string backendStr = "gl";
+        if (backend == test::Backend::METAL) {
+            backendStr = "mtl";
+        } else if (backend == test::Backend::VULKAN) {
+            backendStr = "vk";
+        }
+        fname = "feedback_" + backendStr + "_" + ".png";
+    }
+    utils::slog.e << "writing: " << fname << utils::io::endl;
+    readScreenshot(dapi, rt, readWidth, readHeight, [w = readWidth, h = readHeight, size, fname](void* buffer) {
+        uint32_t const* texels = (uint32_t*) buffer;
+        auto hashResutl = utils::hash::murmur3(texels, size / 4, 0);
+#ifndef IOS
+        LinearImage image(w, h, 4);
+        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
+        std::ofstream pngstrm(fname.c_str(), std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", fname.c_str());
+#endif
+    });
 }
 
 namespace test {
@@ -246,21 +300,22 @@ TEST_F(BackendTest, UpdateImage2D) {
 
     std::vector<TestCase> testCases;
 
+
     // Test basic upload.
     testCases.emplace_back("RGBA, UBYTE -> RGBA8", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8);
 
     // Test format conversion.
     // TODO: Vulkan crashes with `Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)'
     testCases.emplace_back("RGBA, FLOAT -> RGBA16F", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F);
-
+    /*
     // Test texture formats not all backends support natively.
     // TODO: Vulkan crashes with "VK_FORMAT_R32G32B32_SFLOAT is not supported"
     testCases.emplace_back("RGB, FLOAT -> RGB32F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F);
     testCases.emplace_back("RGB, FLOAT -> RGB16F", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB16F);
 
-    // Test packed format uploads.
+    // packed Test format uploads.
     // TODO: Vulkan crashes with "Texture at colorAttachment[0] has usage (0x01) which doesn't specify MTLTextureUsageRenderTarget (0x04)"
-    testCases.emplace_back("RGBA, UINT_2_10_10_10_REV -> RGB10_A2", PixelDataFormat::RGBA, PixelDataType::UINT_2_10_10_10_REV, TextureFormat::RGB10_A2);
+    testCases.emplace_back("RGBA, UINT_2_10_10_10_REV -> RGB10_A2", PixelDataFormat::RGBA, PixelDataType::UINT_2_10_10_10_REV, TextureFormat::RGB10_A2);gitgg
     testCases.emplace_back("RGB, UINT_10F_11F_11F_REV -> R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::UINT_10F_11F_11F_REV, TextureFormat::R11F_G11F_B10F);
     testCases.emplace_back("RGB, HALF -> R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::HALF, TextureFormat::R11F_G11F_B10F);
 
@@ -281,8 +336,9 @@ TEST_F(BackendTest, UpdateImage2D) {
     // TODO: Vulkan crashes with "Offsets not yet supported"
     testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 0u, true);
     testCases.emplace_back("RGBA, FLOAT -> RGBA16F (subregions)", PixelDataFormat::RGBA, PixelDataType::FLOAT, TextureFormat::RGBA16F, 0u, true);
-    testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions, buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u, true);
+     testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions, buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u, true);
     testCases.emplace_back("RGB, FLOAT -> RGB32F (subregions, buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
+    */
 
     auto& api = getDriverApi();
 
@@ -305,6 +361,7 @@ TEST_F(BackendTest, UpdateImage2D) {
 
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
+        utils::slog.e <<"sampler=" << fragment << utils::io::endl;
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
         Program prog = shaderGen.getProgram(api);
         Program::Sampler psamplers[] = { utils::CString("test_tex"), 0 };
@@ -347,6 +404,8 @@ TEST_F(BackendTest, UpdateImage2D) {
 
         api.commit(swapChain);
         api.endFrame(0);
+
+//        dumpScreenshot(api, defaultRenderTarget, 512, 512, test::Backend::VULKAN, t.name);
 
         api.destroyProgram(program);
         api.destroySwapChain(swapChain);

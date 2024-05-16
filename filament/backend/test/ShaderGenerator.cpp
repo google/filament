@@ -22,11 +22,14 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
+#include <spirv-tools/libspirv.hpp>
+
 #include "../src/GLSLPostProcessor.h"
 
 #include "builtinResource.h"
 
 #include <utils/FixedCapacityVector.h>
+#include <utils/Log.h>
 
 #include <iostream>
 #include <utility>
@@ -36,6 +39,7 @@ namespace test {
 
 using namespace glslang;
 using namespace spirv_cross;
+using namespace spvtools;
 
 using namespace filament::backend;
 
@@ -128,6 +132,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(
 
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
 
+    utils::slog.e <<"-----------" << shaderCString << utils::io::endl;
+
     if (!ok) {
         std::cerr << "ERROR: Unable to parse " <<
             (stage == ShaderStage::VERTEX ? "vertex" : "fragment") << " shader:" << std::endl;
@@ -145,6 +151,13 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(
     SpirvBlob spirv;
 
     GlslangToSpv(*program.getIntermediate(language), spirv);
+
+    SpirvTools const tools(SPV_ENV_UNIVERSAL_1_3);
+    std::string disassembly;
+    bool rr = tools.Disassemble(spirv, &disassembly);
+
+    utils::slog.e <<"dissambly=" << rr << "\n" <<
+        disassembly << utils::io::endl;
 
     std::string result;
 
