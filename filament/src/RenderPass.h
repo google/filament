@@ -251,6 +251,7 @@ public:
         uint32_t indexCount;                                            // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
         backend::SamplerGroupHandle morphTargetBuffer;                  // 4 bytes
+        uint32_t morphingOffset = 0;                                    // 4 bytes
 
         backend::RasterState rasterState;                               // 4 bytes
 
@@ -261,7 +262,7 @@ public:
         bool hasMorphing : 1;                                           //              1 bit
         bool hasHybridInstancing : 1;                                   //              1 bit
 
-        uint32_t rfu[3];                                                // 16 bytes
+        uint32_t rfu[2];                                                // 16 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 56);
 

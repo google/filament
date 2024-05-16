@@ -54,7 +54,6 @@ struct App {
     Skybox* skybox;
     Entity renderable;
     MorphTargetBuffer *mt1;
-    MorphTargetBuffer *mt2;
 };
 
 struct Vertex {
@@ -174,12 +173,7 @@ int main(int argc, char** argv) {
                 .build(*engine);
 
         app.mt1 = MorphTargetBuffer::Builder()
-            .vertexCount(9)
-            .count(3)
-            .build(*engine);
-
-        app.mt2 = MorphTargetBuffer::Builder()
-            .vertexCount(9)
+            .vertexCount(9 * 2)
             .count(3)
             .build(*engine);
 
@@ -190,12 +184,12 @@ int main(int argc, char** argv) {
         app.mt1->setTangentsAt(*engine,1, targets_tan+3, 3, 0);
         app.mt1->setTangentsAt(*engine,2, targets_tan+6, 3, 0);
 
-        app.mt2->setPositionsAt(*engine,0, targets_pos2, 3, 0);
-        app.mt2->setPositionsAt(*engine,1, targets_pos2+3, 3, 0);
-        app.mt2->setPositionsAt(*engine,2, targets_pos2+6, 3, 0);
-        app.mt2->setTangentsAt(*engine,0, targets_tan, 3, 0);
-        app.mt2->setTangentsAt(*engine,1, targets_tan+3, 3, 0);
-        app.mt2->setTangentsAt(*engine,2, targets_tan+6, 3, 0);
+        app.mt1->setPositionsAt(*engine,0, targets_pos2, 3, 9);
+        app.mt1->setPositionsAt(*engine,1, targets_pos2+3, 3, 9);
+        app.mt1->setPositionsAt(*engine,2, targets_pos2+6, 3, 9);
+        app.mt1->setTangentsAt(*engine,0, targets_tan, 3, 9);
+        app.mt1->setTangentsAt(*engine,1, targets_tan+3, 3, 9);
+        app.mt1->setTangentsAt(*engine,2, targets_tan+6, 3, 9);
 
         app.renderable = EntityManager::get().create();
 
@@ -209,8 +203,8 @@ int main(int argc, char** argv) {
                 .receiveShadows(false)
                 .castShadows(false)
                 .morphing(3)
-                .morphing(0,0,app.mt1)
-                .morphing(0,1,app.mt2)
+                .morphing(0,0,app.mt1, 0, app.mt1->getCount())
+                .morphing(0,1,app.mt1, 9, app.mt1->getCount())
                 .build(*engine, app.renderable);
 
         scene->addEntity(app.renderable);
@@ -226,7 +220,6 @@ int main(int argc, char** argv) {
         engine->destroy(app.vb);
         engine->destroy(app.ib);
         engine->destroy(app.mt1);
-        engine->destroy(app.mt2);
         engine->destroyCameraComponent(app.camera);
         utils::EntityManager::get().destroy(app.camera);
     };

@@ -524,14 +524,7 @@ public class RenderableManager {
         }
 
         /**
-         * Controls if the renderable has vertex morphing targets, zero by default. This is
-         * required to enable GPU morphing.
-         *
-         * <p>Filament supports two morphing modes: standard (default) and legacy.</p>
-         *
-         * <p>For standard morphing, A {@link MorphTargetBuffer} must be created and provided via
-         * {@link RenderableManager#setMorphTargetBufferAt}. Standard morphing supports up to
-         * <code>CONFIG_MAX_MORPH_TARGET_COUNT</code> morph targets.</p>
+         * Controls if the renderable has legacy vertex morphing targets, zero by default.
          *
          * For legacy morphing, the attached {@link VertexBuffer} must provide data in the
          * appropriate {@link VertexBuffer.VertexAttribute} slots (<code>MORPH_POSITION_0</code> etc).
@@ -546,6 +539,22 @@ public class RenderableManager {
         @NonNull
         public Builder morphing(@IntRange(from = 0, to = 255) int targetCount) {
             nBuilderMorphing(mNativeBuilder, targetCount);
+            return this;
+        }
+
+        /**
+         * Controls if the renderable has vertex morphing targets, zero by default.
+         *
+         * <p>For standard morphing, A {@link MorphTargetBuffer} must be provided.
+         * Standard morphing supports up to
+         * <code>CONFIG_MAX_MORPH_TARGET_COUNT</code> morph targets.</p>
+         *
+         * <p>See also {@link RenderableManager#setMorphWeights}, which can be called on a per-frame basis
+         * to advance the animation.</p>
+         */
+        @NonNull
+        public Builder morphing(@NonNull MorphTargetBuffer morphTargetBuffer) {
+            nBuilderMorphingStandard(mNativeBuilder, morphTargetBuffer.getNativeObject());
             return this;
         }
 
@@ -567,6 +576,17 @@ public class RenderableManager {
         @NonNull
         public Builder morphing(@IntRange(from = 0) int level,
                                 @IntRange(from = 0) int primitiveIndex,
+                                @IntRange(from = 0) int offset,
+                                @IntRange(from = 0) int count) {
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex, 0, offset, count);
+            return this;
+        }
+
+        /** @deprecated */
+        @Deprecated
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
                                 @NonNull MorphTargetBuffer morphTargetBuffer,
                                 @IntRange(from = 0) int offset,
                                 @IntRange(from = 0) int count) {
@@ -575,10 +595,8 @@ public class RenderableManager {
             return this;
         }
 
-        /**
-         * Utility method to specify morph target buffer for a primitive.
-         * For details, see the {@link RenderableManager.Builder#morphing}.
-         */
+        /** @deprecated */
+        @Deprecated
         @NonNull
         public Builder morphing(@IntRange(from = 0) int level,
                                 @IntRange(from = 0) int primitiveIndex,
@@ -690,6 +708,16 @@ public class RenderableManager {
     public void setMorphTargetBufferAt(@EntityInstance int i,
                                        @IntRange(from = 0) int level,
                                        @IntRange(from = 0) int primitiveIndex,
+                                       @IntRange(from = 0) int offset,
+                                       @IntRange(from = 0) int count) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex, 0, offset, count);
+    }
+
+    /** @deprecated */
+    @Deprecated
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
                                        @NonNull MorphTargetBuffer morphTargetBuffer,
                                        @IntRange(from = 0) int offset,
                                        @IntRange(from = 0) int count) {
@@ -697,10 +725,8 @@ public class RenderableManager {
                 morphTargetBuffer.getNativeObject(), offset, count);
     }
 
-    /**
-     * Utility method to change morph target buffer for the given primitive.
-     * For details, see the {@link RenderableManager#setMorphTargetBufferAt}.
-     */
+    /** @deprecated */
+    @Deprecated
     public void setMorphTargetBufferAt(@EntityInstance int i,
                                        @IntRange(from = 0) int level,
                                        @IntRange(from = 0) int primitiveIndex,
@@ -1006,6 +1032,7 @@ public class RenderableManager {
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
+    private static native void nBuilderMorphingStandard(long nativeBuilder, long nativeMorphTargetBuffer);
     private static native void nBuilderSetMorphTargetBufferAt(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
     private static native void nBuilderEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderFog(long nativeBuilder, boolean enabled);
