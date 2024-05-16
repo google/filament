@@ -228,7 +228,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
       mDescriptorSetManager(mPlatform->getDevice(), &mResourceAllocator),
-      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
+      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
+      mStereoscopicType(driverConfig.stereoscopicType) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
@@ -899,13 +900,14 @@ bool VulkanDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return true;
-    case backend::StereoscopicType::MULTIVIEW:
-        // TODO: implement multiview feature in Vulkan.
-        return false;
+bool VulkanDriver::isStereoSupported() {
+    switch (mStereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return true;
+        case backend::StereoscopicType::MULTIVIEW:
+            // TODO: implement multiview feature in Vulkan.
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 

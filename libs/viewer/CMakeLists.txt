@@ -34,6 +34,12 @@ target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn c
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced")
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    add_definitions(-DFILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+endif ()
+
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================

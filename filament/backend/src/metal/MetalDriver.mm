@@ -102,7 +102,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
           mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
-                  driverConfig.disableHandleUseAfterFreeCheck) {
+                  driverConfig.disableHandleUseAfterFreeCheck),
+          mStereoscopicType(driverConfig.stereoscopicType) {
     mContext->driver = this;
 
     ScopedAllocationTimer::setPlatform(platform);
@@ -803,13 +804,15 @@ bool MetalDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return true;
-    case backend::StereoscopicType::MULTIVIEW:
-        // TODO: implement multiview feature in Metal.
-        return false;
+bool MetalDriver::isStereoSupported() {
+    switch (mStereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return true;
+        case backend::StereoscopicType::MULTIVIEW:
+            // TODO: implement multiview feature in Metal.
+            return false;
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
