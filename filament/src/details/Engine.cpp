@@ -353,6 +353,7 @@ void FEngine::init() {
 
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         switch (mConfig.stereoscopicType) {
+            case StereoscopicType::NONE:
             case StereoscopicType::INSTANCED:
                 defaultMaterialBuilder.package(
                     MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
@@ -364,8 +365,6 @@ void FEngine::init() {
 #else
                 assert_invariant(false);
 #endif
-                break;
-            case StereoscopicType::NONE:
                 break;
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
@@ -679,7 +678,7 @@ int FEngine::loop() {
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
             .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
             .forceGLES2Context = mConfig.forceGLES2Context,
-            .stereoscopicType =  mConfig.stereoscopicType,            
+            .stereoscopicType =  mConfig.stereoscopicType,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
