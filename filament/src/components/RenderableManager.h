@@ -157,6 +157,8 @@ public:
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            size_t offset, size_t count);
     MorphTargetBuffer* getMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     size_t getMorphTargetCount(Instance instance) const noexcept;
 
