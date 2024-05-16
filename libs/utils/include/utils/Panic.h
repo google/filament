@@ -287,6 +287,11 @@ public:
     virtual const char* getReason() const noexcept = 0;
 
     /**
+     * You know who you are.
+     */
+    virtual const char* getReasonLiteral() const noexcept = 0;
+
+    /**
      * Get the function name where the panic was detected. On debug build the fully qualified
      * function name is returned; on release builds only the function name is.
      * @return a C string containing the function name where the panic was detected
@@ -335,6 +340,7 @@ public:
 
     // Panic interface
     const char* getReason() const noexcept override;
+    const char* getReasonLiteral() const noexcept override;
     const char* getFunction() const noexcept override;
     const char* getFile() const noexcept override;
     int getLine() const noexcept override;
@@ -374,11 +380,6 @@ public:
     }
 
 protected:
-    /**
-     * Creates a Panic.
-     * @param reason a description of the cause of the error
-     */
-    explicit TPanic(std::string reason);
 
     /**
      * Creates a Panic with extra information about the error-site.
@@ -387,7 +388,8 @@ protected:
      * @param line the line in the above file where the error was detected
      * @param reason a description of the cause of the error
      */
-    TPanic(char const* function, char const* file, int line, std::string reason);
+    TPanic(char const* function, char const* file, int line,
+            std::string reason, std::string reasonLiteral);
 
     ~TPanic() override;
 
@@ -396,6 +398,7 @@ private:
 
     CallStack m_callstack;
     std::string m_reason;
+    std::string m_reason_literal;
     char const* const m_function = nullptr;
     char const* const m_file = nullptr;
     const int m_line = -1;
