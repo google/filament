@@ -16,6 +16,7 @@
 
 #include "BackendTest.h"
 
+#include "BackendTestUtils.h"
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
@@ -64,8 +65,6 @@ void main() {
     fragColor = textureLod(test_tex, uv, params.sourceLevel);
 })";
 
-static uint32_t sPixelHashResult = 0;
-
 // Selecting a NPOT texture size seems to exacerbate the bug seen with Intel GPU's.
 // Note that Filament uses a higher precision format (R11F_G11F_B10F) but this does not seem
 // necessary to trigger the bug.
@@ -99,30 +98,13 @@ static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, Material
     dapi.updateBufferObject(ubh, std::move(bd), 0);
 }
 
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
-    const size_t size = kTexWidth * kTexHeight * 4;
-    void* buffer = calloc(1, size);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        int w = kTexWidth, h = kTexHeight;
-        const uint32_t* texels = (uint32_t*) buffer;
-        sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-        #ifndef IOS
-        LinearImage image(w, h, 4);
-        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
-        #endif
-        free(buffer);
-    };
-    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
-    dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
-}
-
 // TODO: This test needs work to get Metal and OpenGL to agree on results.
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
     auto& api = getDriverApi();
+    auto& driver = getDriver();
+    uint32_t pixelHashResult = 0;
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
@@ -147,7 +129,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             program = api.createProgram(std::move(prog));
         }
 
-        TrianglePrimitive const triangle(getDriverApi());
+        TrianglePrimitive const triangle(api);
 
         // Create a texture.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
@@ -211,8 +193,8 @@ TEST_F(BackendTest, FeedbackLoops) {
                 const uint32_t sourceLevel = targetLevel - 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
-                getDriverApi().setMinMaxLevels(texture, sourceLevel, sourceLevel);
-                uploadUniforms(getDriverApi(), ubuffer, {
+                api.setMinMaxLevels(texture, sourceLevel, sourceLevel);
+                uploadUniforms(api, ubuffer, {
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
                     .sourceLevel = float(sourceLevel),
@@ -230,8 +212,8 @@ TEST_F(BackendTest, FeedbackLoops) {
                 const uint32_t sourceLevel = targetLevel + 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
-                getDriverApi().setMinMaxLevels(texture, sourceLevel, sourceLevel);
-                uploadUniforms(getDriverApi(), ubuffer, {
+                api.setMinMaxLevels(texture, sourceLevel, sourceLevel);
+                uploadUniforms(api, ubuffer, {
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
                     .sourceLevel = float(sourceLevel),
@@ -241,14 +223,16 @@ TEST_F(BackendTest, FeedbackLoops) {
                 api.endRenderPass();
             }
 
-            getDriverApi().setMinMaxLevels(texture, 0, 0x7f);
+            api.setMinMaxLevels(texture, 0, 0x7f);
 
             // Read back the render target corresponding to the base level.
             //
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
-                dumpScreenshot(api, renderTargets[0]);
+                constexpr uint32_t expected = 0x70695aa1;
+                readPixelsAndAssertHash("feedback", kTexWidth, kTexHeight, renderTargets[0],
+                        expected, true);
             }
 
             api.flush();
@@ -256,7 +240,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             api.endFrame(0);
             api.finish();
             executeCommands();
-            getDriver().purge();
+            driver.purge();
         }
 
         api.destroyProgram(program);
@@ -264,10 +248,6 @@ TEST_F(BackendTest, FeedbackLoops) {
         api.destroyTexture(texture);
         for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
     }
-
-    const uint32_t expected = 0x70695aa1;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
-    EXPECT_TRUE(sPixelHashResult == expected);
 }
 
 } // namespace test

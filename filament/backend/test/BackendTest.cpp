@@ -20,6 +20,7 @@
 
 #include "BackendTest.h"
 
+#include <utils/Log.h>
 #include <utils/Hash.h>
 
 #include <fstream>
@@ -149,49 +150,58 @@ void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
 }
 
 void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, size_t height,
-        Handle<HwRenderTarget> rt, uint32_t expectedHash, bool exportScreenshot) {
-    void* buffer = calloc(1, width * height * 4);
+        Handle<HwRenderTarget> rt, uint32_t const expectedHash, bool const exportScreenshot) {
+    auto img = getRenderTargetRGB(rt, width, height);
+    uint32_t hash = computeImageHash(img);
 
-    struct Capture {
-        uint32_t expectedHash;
-        char* name;
-        bool exportScreenshot;
-        size_t width, height;
-    };
-    auto* c = new Capture();
-    c->expectedHash = expectedHash;
-    c->name = strdup(testName);
-    c->exportScreenshot = exportScreenshot;
-    c->width = width;
-    c->height = height;
-
-    PixelBufferDescriptor pbd(buffer, width * height * 4, PixelDataFormat::RGBA, PixelDataType::UBYTE,
-            1, 0, 0, width, [](void* buffer, size_t size, void* user) {
-                auto* c = (Capture*)user;
-
-                // Export a screenshot, if requested.
-                if (c->exportScreenshot) {
-#ifndef IOS
-                    LinearImage image(c->width, c->height, 4);
-                    image = toLinearWithAlpha<uint8_t>(c->width, c->height, c->width * 4,
-                            (uint8_t*) buffer);
-                    const std::string png = std::string(c->name) + ".png";
-                    std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
-                    ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                            png);
-#endif
-                }
-
-                // Hash the contents of the buffer and check that they match.
-                uint32_t hash = utils::hash::murmur3((const uint32_t*) buffer, size / 4, 0);
-                ASSERT_EQ(hash, c->expectedHash) << c->name << " failed: hashes do not match." << std::endl;
-
-                free(buffer);
-                free(c->name);
-                free(c);
-            }, (void*)c);
-    getDriverApi().readPixels(rt, 0, 0, width, height, std::move(pbd));
+    if (exportScreenshot) {
+        writeImage(img, width, height, utils::CString(testName));
+    }
+    ASSERT_EQ(hash, expectedHash) << testName << " failed: hashes do not match." << std::endl;
 }
+
+void BackendTest::writeImage(utils::FixedCapacityVector<uint8_t> img, size_t w, size_t h,
+        utils::CString const& fname) {
+    constexpr size_t MAX_FNAME_LEN = 50;
+    constexpr size_t FNAME_EXT_LEN = 4;
+    constexpr size_t TOTAL_LEN = MAX_FNAME_LEN + FNAME_EXT_LEN + 1;
+    char buf[TOTAL_LEN];
+
+    ASSERT_PRECONDITION(fname.size() <= MAX_FNAME_LEN, "File name %s is too long", fname.c_str());
+
+    snprintf(buf, TOTAL_LEN, "%s.png", fname.c_str());
+
+#ifndef IOS
+    LinearImage image(w, h, 4);
+    image = toLinearWithAlpha<uint8_t>(w, h, w * 4, img.data());
+    std::ofstream pngstrm(buf, std::ios::binary | std::ios::trunc);
+    ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", buf);
+#endif
+}
+
+utils::FixedCapacityVector<uint8_t> BackendTest::getRenderTarget(
+        Handle<HwRenderTarget> rt, size_t width, size_t height, PixelDataFormat format,
+        PixelDataType dataType) {
+    auto& api = getDriverApi();
+    size_t const size = width * height * 4;
+    utils::FixedCapacityVector<uint8_t> result(size);
+    PixelBufferDescriptor pb(result.data(), size, format, dataType);
+    api.readPixels(rt, 0, 0, width, height, std::move(pb));
+    flushAndWait();
+
+    return result;
+}
+
+uint32_t BackendTest::computeImageHash(utils::FixedCapacityVector<uint8_t> const& img) {
+    return utils::hash::murmur3((uint32_t*) img.data(), img.size() / 4, 0);
+}
+
+utils::FixedCapacityVector<uint8_t> BackendTest::getRenderTargetRGB(
+        Handle<HwRenderTarget> rt, size_t width, size_t height) {
+    return getRenderTarget(rt, width, height, PixelDataFormat::RGBA,
+            PixelDataType::UBYTE);
+}
+
 
 class Environment : public ::testing::Environment {
 public:

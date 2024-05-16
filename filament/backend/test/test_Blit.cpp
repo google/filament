@@ -60,36 +60,6 @@ struct MaterialParams {
     float4 scale;
 };
 
-struct ScreenshotParams {
-    int width;
-    int height;
-    const char* filename;
-    uint32_t pixelHashResult;
-};
-
-#ifdef IOS
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {}
-#else
-static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {
-    using namespace image;
-    const size_t size = params->width * params->height * 4;
-    void* buffer = calloc(1, size);
-    auto cb = [](void* buffer, size_t size, void* user) {
-        ScreenshotParams* params = (ScreenshotParams*) user;
-        int w = params->width, h = params->height;
-        const uint32_t* texels = (uint32_t*) buffer;
-        params->pixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-        LinearImage image(w, h, 4);
-        image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
-        std::ofstream pngstrm(params->filename, std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", params->filename);
-    };
-    PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb,
-            (void*) params);
-    dapi.readPixels(rt, 0, 0, params->width, params->height, std::move(pb));
-}
-#endif
-
 static void uploadUniforms(DriverApi& dapi, Handle<HwBufferObject> ubh, MaterialParams params) {
     MaterialParams* tmp = new MaterialParams(params);
     auto cb = [](void* buffer, size_t size, void* user) {
@@ -243,21 +213,12 @@ TEST_F(BackendTest, ColorMagnify) {
     api.endFrame(0);
 
     // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMagnify.png" };
     api.beginFrame(0, 0, 0);
-    dumpScreenshot(api, dstRenderTargets[0], &params);
-    api.commit(swapChain);
+    constexpr uint32_t expected = 0x410bdd31;
+    readPixelsAndAssertHash("ColorMagnify", kDstTexWidth, kDstTexHeight, dstRenderTargets[0],
+            expected, true);
     api.endFrame(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x410bdd31;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    EXPECT_TRUE(params.pixelHashResult == expected);
+    flushAndWait();
 
     // Cleanup.
     api.destroyTexture(srcTexture);
@@ -315,16 +276,14 @@ TEST_F(BackendTest, ColorMinify) {
             SamplerMagFilter::LINEAR);
 
     // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMinify.png" };
-    dumpScreenshot(api, dstRenderTargets[0], &params);
+    api.beginFrame(0, 0, 0);
+    constexpr uint32_t expected = 0xf3d9c53f;
+    readPixelsAndAssertHash("ColorMinify", kDstTexWidth, kDstTexHeight, dstRenderTargets[0],
+            expected, true);
 
-    // Wait for the ReadPixels result to come back.
+    api.commit(swapChain);
+    api.endFrame(0);
     flushAndWait();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xf3d9c53f;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    EXPECT_TRUE(params.pixelHashResult == expected);
 
     // Cleanup.
     api.destroyTexture(srcTexture);
@@ -416,16 +375,12 @@ TEST_F(BackendTest, ColorResolve) {
             SamplerMagFilter::NEAREST);
 
     // Grab a screenshot.
-    ScreenshotParams sparams{ kDstTexWidth, kDstTexHeight, "ColorResolve.png" };
-    dumpScreenshot(api, dstRenderTarget, &sparams);
-
-    // Wait for the ReadPixels result to come back.
+    api.beginFrame(0, 0, 0);
+    constexpr uint32_t expected = 0xebfac2ef;
+    readPixelsAndAssertHash("ColorResolve", kDstTexWidth, kDstTexHeight, dstRenderTarget,
+            expected, true);
+    api.endFrame(0);
     flushAndWait();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0xebfac2ef;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sparams.pixelHashResult, expected);
-    EXPECT_TRUE(sparams.pixelHashResult == expected);
 
     // Cleanup.
     api.destroyBufferObject(ubuffer);
@@ -489,21 +444,12 @@ TEST_F(BackendTest, Blit2DTextureArray) {
     api.endFrame(0);
 
     // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "Blit2DTextureArray.png" };
     api.beginFrame(0, 0, 0);
-    dumpScreenshot(api, dstRenderTarget, &params);
-    api.commit(swapChain);
+    constexpr uint32_t expected = 0x8de7d55b;
+    readPixelsAndAssertHash("Blit2DTextureArray", kDstTexWidth, kDstTexHeight, dstRenderTarget,
+            expected, true);
     api.endFrame(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x8de7d55b;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    EXPECT_TRUE(params.pixelHashResult == expected);
+    flushAndWait();
 
     // Cleanup.
     api.destroyTexture(srcTexture);
@@ -578,28 +524,17 @@ TEST_F(BackendTest, BlitRegion) {
     api.commit(swapChain);
     api.endFrame(0);
 
-    // Grab a screenshot.
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegion.png" };
-    api.beginFrame(0, 0, 0);
-    dumpScreenshot(api, dstRenderTarget, &params);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
     // Check if the image matches perfectly to our golden run.
-    //
     // TODO: for some reason, this test has very, very slight (as in one pixel) differences between
     // OpenGL and Metal. So disable golden checking for now.
     // Use the compare tool from ImageMagick to see visual differences:
     // compare -verbose -metric mae BlitRegion_Metal.png BlitRegion_OpenGL.png difference.png
-    //
-    // const uint32_t expected = 0x74fa34ed;
-    // printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
-    // EXPECT_TRUE(params.pixelHashResult == expected);
+    // api.beginFrame(0, 0, 0);
+    // constexpr uint32_t expected = 0x74fa34ed;
+    // readPixelsAndAssertHash("BlitRegion", kDstTexWidth, kDstTexHeight, dstRenderTarget,
+    //         expected, true);
+    // api.endFrame(0);
+    // flushAndWait();
 
     // Cleanup.
     api.destroyTexture(srcTexture);
@@ -655,23 +590,22 @@ TEST_F(BackendTest, BlitRegionToSwapChain) {
         .height = kDstTexHeight - 10,
     };
 
-    api.beginFrame(0, 0, 0);
-
     api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
             dstRect, srcRenderTargets[srcLevel],
             srcRect, SamplerMagFilter::LINEAR);
 
-    ScreenshotParams params { kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain.png" };
-    dumpScreenshot(api, dstRenderTarget, &params);
-
+    // Push through an empty frame to allow the texture to upload and the blit to execute.
+    api.beginFrame(0, 0, 0);
     api.commit(swapChain);
-
     api.endFrame(0);
 
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
+    // Grab a screenshot.
+    api.beginFrame(0, 0, 0);
+    constexpr uint32_t expected = 0xebfac2ef;
+    readPixelsAndAssertHash("BlitRegionToSwapChain", kDstTexWidth, kDstTexHeight, dstRenderTarget,
+            expected, true);
+    api.endFrame(0);
+    flushAndWait();
 
     // Cleanup.
     api.destroyTexture(srcTexture);

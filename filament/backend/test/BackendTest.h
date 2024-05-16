@@ -67,6 +67,17 @@ protected:
     filament::backend::Driver& getDriver() { return *driver; }
 
 private:
+    void writeImage(utils::FixedCapacityVector<uint8_t> img, size_t w, size_t h,
+            utils::CString const& fname);
+    utils::FixedCapacityVector<uint8_t> getRenderTarget(
+            filament::backend::Handle<filament::backend::HwRenderTarget> rt, size_t width,
+            size_t height, filament::backend::PixelDataFormat format,
+            filament::backend::PixelDataType dataType);
+    uint32_t computeImageHash(utils::FixedCapacityVector<uint8_t> const& img);
+
+    utils::FixedCapacityVector<uint8_t> getRenderTargetRGB(
+            filament::backend::Handle<filament::backend::HwRenderTarget> rt, size_t width,
+            size_t height);
 
     filament::backend::Driver* driver = nullptr;
     filament::backend::CommandBufferQueue commandBufferQueue;
