@@ -202,9 +202,9 @@ int main(int argc, char** argv) {
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
-                .morphing(3)
-                .morphing(0,0,app.mt1, 0, app.mt1->getCount())
-                .morphing(0,1,app.mt1, 9, app.mt1->getCount())
+                .morphing(app.mt1)
+                .morphing(0, 0, 0)
+                .morphing(0, 1, 9)
                 .build(*engine, app.renderable);
 
         scene->addEntity(app.renderable);

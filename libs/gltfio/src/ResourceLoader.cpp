@@ -293,10 +293,13 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
             cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
             if (accessor->type == cgltf_type_vec3) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                        (const float3*) floatsData, slot.morphTargetBuffer->getVertexCount());
+                        (const float3*) floatsData,
+                        slot.morphTargetCount,
+                        slot.morphTargetOffset);
             } else {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                        (const float4*) data, slot.morphTargetBuffer->getVertexCount());
+                        (const float4*) data, slot.morphTargetBuffer->getVertexCount(),
+                        slot.morphTargetOffset);
             }
             free(floatsData);
             continue;
@@ -304,11 +307,13 @@ inline void uploadBuffers(FFilamentAsset* asset, Engine& engine,
 
         if (accessor->type == cgltf_type_vec3) {
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float3*) data,
-                    slot.morphTargetBuffer->getVertexCount());
+                    slot.morphTargetCount,
+                    slot.morphTargetOffset);
         } else {
             assert_invariant(accessor->type == cgltf_type_vec4);
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float4*) data,
-                    slot.morphTargetBuffer->getVertexCount());
+                    slot.morphTargetCount,
+                    slot.morphTargetOffset);
         }
     }
 }
@@ -694,7 +699,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         }
         auto iter = baseTangents.find(vb);
         if (iter != baseTangents.end()) {
-            jobParams.emplace_back(Params {{ prim }, {vb, nullptr, iter->second }});
+            jobParams.emplace_back(Params {{ prim }, {vb, nullptr, 0, iter->second }});
         }
     }
 
@@ -707,7 +712,8 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         }
         for (cgltf_size pindex = 0, pcount = mesh.primitives_count; pindex < pcount; ++pindex) {
             const cgltf_primitive& prim = mesh.primitives[pindex];
-            MorphTargetBuffer* tb = prims[pindex].targets;
+            MorphTargetBuffer* const tb = prims[pindex].morphTargetBuffer;
+            uint32_t const morphTargetOffset = prims[pindex].morphTargetOffset;
             for (cgltf_size tindex = 0, tcount = prim.targets_count; tindex < tcount; ++tindex) {
                 const cgltf_morph_target& target = prim.targets[tindex];
                 bool hasNormals = false;
@@ -719,13 +725,13 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
                     }
                     hasNormals = true;
                     jobParams.emplace_back(Params { { &prim, (int) tindex },
-                                                    { nullptr, tb, (uint8_t) pindex } });
+                                                    { nullptr, tb, morphTargetOffset, (uint8_t) pindex } });
                     break;
                 }
                 // Generate flat normals if necessary.
                 if (!hasNormals && prim.material && !prim.material->unlit) {
                     jobParams.emplace_back(Params { { &prim, (int) tindex },
-                                                    { nullptr, tb, (uint8_t) pindex } });
+                                                    { nullptr, tb, morphTargetOffset, (uint8_t) pindex } });
                 }
             }
         }
@@ -752,7 +758,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
         } else {
             assert_invariant(params.context.tb);
             params.context.tb->setTangentsAt(*mEngine, params.in.morphTargetIndex,
-                    params.out.results, params.out.vertexCount);
+                    params.out.results, params.out.vertexCount, params.context.offset);
             free(params.out.results);
         }
     }
