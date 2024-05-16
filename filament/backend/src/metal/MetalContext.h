@@ -55,6 +55,18 @@ struct MetalVertexBuffer;
 
 constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most 8 MSAA samples
 
+class MetalPushConstantBuffer {
+public:
+    void setPushConstant(PushConstantVariant value, uint8_t index);
+    bool isDirty() const { return mDirty; }
+    void setBytes(id<MTLCommandEncoder> encoder, ShaderStage stage);
+    void clear();
+
+private:
+    std::vector<PushConstantVariant> mPushConstants;
+    bool mDirty = false;
+};
+
 struct MetalContext {
     explicit MetalContext(size_t metalFreedTextureListSize)
         : texturesToDestroy(metalFreedTextureListSize) {}
@@ -108,6 +120,8 @@ struct MetalContext {
     ArgumentEncoderCache argumentEncoderCache;
 
     PolygonOffset currentPolygonOffset = {0.0f, 0.0f};
+
+    std::array<MetalPushConstantBuffer, Program::SHADER_TYPE_COUNT> currentPushConstants;
 
     MetalSamplerGroup* samplerBindings[Program::SAMPLER_BINDING_COUNT] = {};
 

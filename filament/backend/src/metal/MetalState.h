@@ -43,7 +43,8 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
 //   ------------------------------------------------------
 //   0           Zero buffer (placeholder vertex buffer)  1
 //   1-16        Filament vertex buffers                 16   limited by MAX_VERTEX_BUFFER_COUNT
-//   17-26       Uniform buffers                         10   Program::UNIFORM_BINDING_COUNT
+//   17-25       Uniform buffers                          9   Program::UNIFORM_BINDING_COUNT
+//   26          Push constants                           1
 //   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
 //
 //   Total                                               31
@@ -53,7 +54,8 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
 //   Bindings    Buffer name                          Count
 //   ------------------------------------------------------
 //   0-3         SSBO buffers                             4   MAX_SSBO_COUNT
-//   17-26       Uniform buffers                         10   Program::UNIFORM_BINDING_COUNT
+//   17-25       Uniform buffers                          9   Program::UNIFORM_BINDING_COUNT
+//   26          Push constants                           1
 //   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
 //
 //   Total                                               18
