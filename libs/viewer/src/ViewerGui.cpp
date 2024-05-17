@@ -387,6 +387,9 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
     mSettings.view.ssao.enabled = true;
     mSettings.view.bloom.enabled = true;
 
+    DebugRegistry& debug = mEngine->getDebugRegistry();
+    *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images") = true;
+
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(mSettings.lighting.sunlightColor)
@@ -1097,11 +1100,12 @@ void ViewerGui::updateUserInterface() {
 #if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)                                                \
         || defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         ImGui::Checkbox("Stereo mode", &mSettings.view.stereoscopicOptions.enabled);
-
-    #if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
-        *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images")
-                = mSettings.view.stereoscopicOptions.enabled;
-    #endif
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        ImGui::Indent();
+        ImGui::Checkbox("Combine Multiview Images",
+                debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
+        ImGui::Unindent();
+#endif
 #endif
         ImGui::SliderFloat("Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f,
                 1.0f);
