@@ -102,8 +102,13 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
           mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
-                  driverConfig.disableHandleUseAfterFreeCheck) {
+                  driverConfig.disableHandleUseAfterFreeCheck),
+          mStereoscopicType(driverConfig.stereoscopicType) {
     mContext->driver = this;
+
+    ScopedAllocationTimer::setPlatform(platform);
+    MetalBufferTracking::initialize();
+    MetalBufferTracking::setPlatform(platform);
 
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
@@ -198,6 +203,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 }
 
 MetalDriver::~MetalDriver() noexcept {
+    MetalBufferTracking::setPlatform(nullptr);
+    ScopedAllocationTimer::setPlatform(nullptr);
     mContext->device = nil;
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
@@ -218,20 +225,29 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
     if (mPlatform.hasDebugUpdateStatFunc()) {
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers", TrackedMetalBuffer::getAliveBuffers());
+#if FILAMENT_METAL_BUFFER_TRACKING
+        const uint64_t generic = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::GENERIC);
+        const uint64_t ring = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::RING);
+        const uint64_t staging = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::STAGING);
+        const uint64_t total = generic + ring + staging;
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers", total);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.generic", generic);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.ring", ring);
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging", staging);
+#endif
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+void MetalDriver::setFrameScheduledCallback(
+        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(callback, user);
+    swapChain->setFrameScheduledCallback(handler, std::move(callback));
 }
 
-void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+void MetalDriver::setFrameCompletedCallback(
+        Handle<HwSwapChain> sch, CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameCompletedCallback(handler, callback, user);
+    swapChain->setFrameCompletedCallback(handler, std::move(callback));
 }
 
 void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
@@ -788,13 +804,15 @@ bool MetalDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return true;
-    case backend::StereoscopicType::MULTIVIEW:
-        // TODO: implement multiview feature in Metal.
-        return false;
+bool MetalDriver::isStereoSupported() {
+    switch (mStereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return true;
+        case backend::StereoscopicType::MULTIVIEW:
+            // TODO: implement multiview feature in Metal.
+            return false;
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
@@ -804,6 +822,10 @@ bool MetalDriver::isParallelShaderCompileSupported() {
 
 bool MetalDriver::isDepthStencilResolveSupported() {
     return false;
+}
+
+bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    return true;
 }
 
 bool MetalDriver::isProtectedTexturesSupported() {
@@ -1090,6 +1112,10 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedSamplerGroups.clear();
+
+    for (auto& pc : mContext->currentPushConstants) {
+        pc.clear();
+    }
 }
 
 void MetalDriver::nextSubpass(int dummy) {}
@@ -1235,6 +1261,16 @@ void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) 
 void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
     mContext->samplerBindings[index] = sb;
+}
+
+void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+    ASSERT_PRECONDITION(
+            isInRenderPass(mContext), "setPushConstant must be called inside a render pass.");
+    assert_invariant(static_cast<size_t>(stage) < mContext->currentPushConstants.size());
+    MetalPushConstantBuffer& pushConstants =
+            mContext->currentPushConstants[static_cast<size_t>(stage)];
+    pushConstants.setPushConstant(value, index);
 }
 
 void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
@@ -1615,7 +1651,7 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 }
 
-void MetalDriver::bindPipeline(PipelineState ps) {
+void MetalDriver::bindPipeline(PipelineState const& ps) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "bindPipeline() without a valid command encoder.");
 
@@ -1842,6 +1878,14 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
             UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
             uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
+
+    // Update push constants.
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        auto& pushConstants = mContext->currentPushConstants[i];
+        if (UTILS_UNLIKELY(pushConstants.isDirty())) {
+            pushConstants.setBytes(mContext->currentRenderPassEncoder, static_cast<ShaderStage>(i));
+        }
+    }
 
     auto primitive = handle_cast<MetalRenderPrimitive>(mContext->currentRenderPrimitive);
 

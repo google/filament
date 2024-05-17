@@ -30,7 +30,7 @@ public:
             uint32_t numBytes);
     ~VulkanBuffer();
     void loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes) const;
+            uint32_t numBytes);
     VkBuffer getGpuBuffer() const {
         return mGpuBuffer;
     }
@@ -42,6 +42,7 @@ private:
     VmaAllocation mGpuMemory = VK_NULL_HANDLE;
     VkBuffer mGpuBuffer = VK_NULL_HANDLE;
     VkBufferUsageFlags mUsage = {};
+    uint32_t mUpdatedBytes = 0;
 };
 
 } // namespace filament::backend

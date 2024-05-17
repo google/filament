@@ -179,6 +179,23 @@ TEST(FilamentTest, SkinningMath) {
     }
 }
 
+TEST(FilamentTest, TransformManagerSimple) {
+    filament::FTransformManager tcm;
+    EntityManager& em = EntityManager::get();
+    Entity root = em.create();
+    tcm.create(root);
+
+    auto ti = tcm.getInstance(root);
+
+    auto t = mat4f::translation(float3{ 1, 2, 3 });
+    auto prev = tcm.getWorldTransform(ti);
+    tcm.setTransform(ti, t);
+    auto updated = tcm.getWorldTransform(ti);
+
+    EXPECT_NE(prev, t);
+    EXPECT_EQ(updated, t);
+}
+
 TEST(FilamentTest, TransformManager) {
     filament::FTransformManager tcm;
     tcm.setAccurateTranslationsEnabled(true);

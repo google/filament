@@ -245,12 +245,24 @@ Java_com_google_android_filament_RenderableManager_nBuilderMorphing(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderMorphingStandard(JNIEnv*, jclass,
+        jlong nativeBuilder, jlong nativeMorphTargetBuffer) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+    builder->morphing(morphTargetBuffer);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderSetMorphTargetBufferAt(JNIEnv*, jclass,
         jlong nativeBuilder, int level, int primitiveIndex, jlong nativeMorphTargetBuffer,
         int offset, int count) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
-    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
-    builder->morphing(level, primitiveIndex, morphTargetBuffer, offset, count);
+    if (nativeMorphTargetBuffer) {
+        MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+        builder->morphing(level, primitiveIndex, morphTargetBuffer, offset, count);
+    } else {
+        builder->morphing(level, primitiveIndex, offset, count);
+    }
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -326,9 +338,14 @@ Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferAt(JNIEn
         jclass, jlong nativeRenderableManager, jint i, int level, jint primitiveIndex,
         jlong nativeMorphTargetBuffer, jint offset, jint count) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
-    rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
-            (size_t) primitiveIndex, morphTargetBuffer, (size_t) offset, (size_t) count);
+    if (nativeMorphTargetBuffer) {
+        MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
+        rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
+                (size_t) primitiveIndex, morphTargetBuffer, (size_t) offset, (size_t) count);
+    } else {
+        rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
+                (size_t) primitiveIndex, (size_t) offset, (size_t) count);
+    }
 }
 
 extern "C" JNIEXPORT jint JNICALL

@@ -619,6 +619,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         engineConfig.stereoscopicType = Engine::StereoscopicType::INSTANCED;
 #elif defined (FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         engineConfig.stereoscopicType = Engine::StereoscopicType::MULTIVIEW;
+#else
+        engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
 #endif
 
         if (backend == Engine::Backend::VULKAN) {

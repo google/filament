@@ -21,8 +21,6 @@ project(TNT)
 # ==================================================================================================
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
-option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
-
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -69,6 +67,10 @@ set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "4" CACHE STRING
 
 set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
     "Size of the Metal handle arena, default 8."
+)
+
+set(FILAMENT_BACKEND_DEBUG_FLAG "" CACHE STRING
+    "A debug flag meant for enabling/disabling backend debugging paths"
 )
 
 # Enable exceptions by default in spirv-cross.
@@ -141,11 +143,6 @@ if (LINUX)
             add_definitions(-DFILAMENT_SUPPORTS_XCB)
         endif()
 
-        # Default Swiftshader build does not enable the xlib extension
-        if (FILAMENT_SUPPORTS_XLIB AND FILAMENT_USE_SWIFTSHADER)
-            set(FILAMENT_SUPPORTS_XLIB OFF)
-        endif()
-
         if (FILAMENT_SUPPORTS_XLIB)
             add_definitions(-DFILAMENT_SUPPORTS_XLIB)
         endif()
@@ -167,15 +164,6 @@ endif()
 
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
     set(IS_HOST_PLATFORM TRUE)
-endif()
-
-if (IOS)
-    # Remove the headerpad_max_install_names linker flag on iOS. It causes warnings when linking
-    # executables with bitcode.
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS})
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS})
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS})
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS})
 endif()
 
 if (WIN32)
@@ -332,10 +320,6 @@ if (FILAMENT_SUPPORTS_EGL_ON_LINUX)
   set(EGL TRUE)
 endif()
 
-if (FILAMENT_USE_SWIFTSHADER)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_SWIFTSHADER")
-endif()
-
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 endif()
@@ -389,8 +373,9 @@ endif()
 if (NOT MSVC AND NOT IOS)
     # Omitting stack frame pointers prevents the generation of readable stack traces in crash reports on iOS
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer")
+endif()
 
-    # These aren't compatible with -fembed-bitcode (and seem to have no effect on Apple platforms anyway)
+if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
 endif()
 
@@ -455,7 +440,12 @@ endif()
 if (NOT WEBGL)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
+
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
+
+if (ANDROID)
+set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
+endif()
 
 if (APPLE)
     set(GC_SECTIONS "-Wl,-dead_strip")
@@ -470,7 +460,7 @@ if (APPLE)
 endif()
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
 if (WEBGL_PTHREADS)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pthread")
@@ -534,19 +524,27 @@ else()
 endif()
 
 # This only affects the prebuilt shader files in gltfio and samples, not filament library.
-# The value can be either "instanced" or "multiview".
-set(FILAMENT_SAMPLES_STEREO_TYPE "instanced" CACHE STRING
+# The value can be either "instanced", "multiview", or "none"
+set(FILAMENT_SAMPLES_STEREO_TYPE "none" CACHE STRING
     "Stereoscopic type that shader files in gltfio and samples are built for."
 )
 string(TOLOWER "${FILAMENT_SAMPLES_STEREO_TYPE}" FILAMENT_SAMPLES_STEREO_TYPE)
-if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced" AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
-    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\" or \"multiview\" ")
+if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "none")
+    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\",  \"multiview\", or \"none\" ")
 endif ()
 
 # Compiling samples for multiview implies enabling multiview feature as well.
 if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
     set(FILAMENT_ENABLE_MULTIVIEW ON)
 endif ()
+
+# Define backend flag for debug only
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT FILAMENT_BACKEND_DEBUG_FLAG STREQUAL "")
+    add_definitions(-DFILAMENT_BACKEND_DEBUG_FLAG=${FILAMENT_BACKEND_DEBUG_FLAG})
+    unset(FILAMENT_BACKEND_DEBUG_FLAG)
+endif()
 
 # ==================================================================================================
 # Material compilation flags
@@ -674,21 +672,6 @@ if (WEBGL)
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
 else()
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
-endif()
-
-# ==================================================================================================
-# Try to find Vulkan if the SDK is installed, otherwise fall back to the bundled version.
-# This needs to stay in our top-level CMakeLists because it sets up variables that are used by the
-# "bluevk" and "samples" targets.
-# ==================================================================================================
-
-if (FILAMENT_USE_SWIFTSHADER)
-    if (NOT FILAMENT_SUPPORTS_VULKAN)
-        message(ERROR "SwiftShader is only useful when Vulkan is enabled.")
-    endif()
-    find_library(SWIFTSHADER_VK NAMES vk_swiftshader HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
-    message(STATUS "Found SwiftShader VK library in: ${SWIFTSHADER_VK}.")
-    add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${SWIFTSHADER_VK}\")
 endif()
 
 # ==================================================================================================

@@ -159,9 +159,12 @@ public class Engine {
     };
 
     /**
-     * The type of technique for stereoscopic rendering
+     * The type of technique for stereoscopic rendering. (Note that the materials used will need to be
+     * compatible with the chosen technique.)
      */
     public enum StereoscopicType {
+        /** No stereoscopic rendering. */
+        NONE,
         /** Stereoscopic rendering is performed using instanced rendering technique. */
         INSTANCED,
         /** Stereoscopic rendering is performed using the multiview feature from the graphics backend. */
@@ -225,7 +228,9 @@ public class Engine {
                     config.textureUseAfterFreePoolSize, config.disableParallelShaderCompile,
                     config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
                     config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
-                    config.disableHandleUseAfterFreeCheck);
+                    config.disableHandleUseAfterFreeCheck,
+                    config.preferredShaderLanguage.ordinal(),
+                    config.forceGLES2Context);
             return this;
         }
 
@@ -403,7 +408,7 @@ public class Engine {
          *
          * @see View#setStereoscopicOptions
          */
-        public StereoscopicType stereoscopicType = StereoscopicType.INSTANCED;
+        public StereoscopicType stereoscopicType = StereoscopicType.NONE;
 
         /**
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
@@ -428,6 +433,35 @@ public class Engine {
          * Disable backend handles use-after-free checks.
          */
         public boolean disableHandleUseAfterFreeCheck = false;
+
+        /*
+         * Sets a preferred shader language for Filament to use.
+         *
+         * The Metal backend supports two shader languages: MSL (Metal Shading Language) and
+         * METAL_LIBRARY (precompiled .metallib). This option controls which shader language is
+         * used when materials contain both.
+         *
+         * By default, when preferredShaderLanguage is unset, Filament will prefer METAL_LIBRARY
+         * shaders if present within a material, falling back to MSL. Setting
+         * preferredShaderLanguage to ShaderLanguage::MSL will instead instruct Filament to check
+         * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
+         * present.
+         *
+         * When using a non-Metal backend, setting this has no effect.
+         */
+        public enum ShaderLanguage {
+            DEFAULT,
+            MSL,
+            METAL_LIBRARY,
+        };
+        public ShaderLanguage preferredShaderLanguage = ShaderLanguage.DEFAULT;
+
+        /*
+         * When the OpenGL ES backend is used, setting this value to true will force a GLES2.0
+         * context if supported by the Platform, or if not, will have the backend pretend
+         * it's a GLES2 context. Ignored on other backends.
+         */
+        public boolean forceGLES2Context = false;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1228,6 +1262,17 @@ public class Engine {
     }
 
     /**
+     * Get paused state of rendering thread.
+     *
+     * <p>Warning: This is an experimental API.
+     *
+     * @see #setPaused
+     */
+    public boolean isPaused() {
+        return nIsPaused(getNativeObject());
+    }
+
+    /**
      * Pause or resume the rendering thread.
      *
      * <p>Warning: This is an experimental API. In particular, note the following caveats.
@@ -1319,6 +1364,7 @@ public class Engine {
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
     private static native void nFlush(long nativeEngine);
+    private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
@@ -1341,7 +1387,9 @@ public class Engine {
             long textureUseAfterFreePoolSize, boolean disableParallelShaderCompile,
             int stereoscopicType, long stereoscopicEyeCount,
             long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,
-            boolean disableHandleUseAfterFreeCheck);
+            boolean disableHandleUseAfterFreeCheck,
+            int preferredShaderLanguage,
+            boolean forceGLES2Context);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);

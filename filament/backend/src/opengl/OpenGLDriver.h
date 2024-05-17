@@ -66,9 +66,9 @@ namespace filament::backend {
 class OpenGLPlatform;
 class PixelBufferDescriptor;
 struct TargetBufferInfo;
-
 class OpenGLProgram;
 class TimerQueryFactoryInterface;
+struct PushConstantBundle;
 
 class OpenGLDriver final : public DriverBase {
     inline explicit OpenGLDriver(OpenGLPlatform* platform,
@@ -336,6 +336,8 @@ private:
 
     void setScissor(Viewport const& scissor) noexcept;
 
+    void draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount);
+
     // ES2 only. Uniform buffer emulation binding points
     GLuint mLastAssignedEmulatedUboId = 0;
 
@@ -375,6 +377,8 @@ private:
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;
     bool mRec709OutputColorspace = false;
+
+    PushConstantBundle* mCurrentPushConstants = nullptr;
 };
 
 // ------------------------------------------------------------------------------------------------

@@ -57,6 +57,11 @@ void CommandBufferQueue::requestExit() {
     mCondition.notify_one();
 }
 
+bool CommandBufferQueue::isPaused() const noexcept {
+    std::lock_guard<utils::Mutex> const lock(mLock);
+    return mPaused;
+}
+
 void CommandBufferQueue::setPaused(bool paused) {
     std::lock_guard<utils::Mutex> const lock(mLock);
     if (paused) {

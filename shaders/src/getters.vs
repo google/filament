@@ -146,7 +146,8 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
 #define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
 
 void morphPosition(inout vec4 p) {
-    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -159,7 +160,8 @@ void morphPosition(inout vec4 p) {
 
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
-    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -265,4 +267,18 @@ vec4 computeWorldPosition() {
 #else
 #error Unknown Vertex Domain
 #endif
+}
+
+/**
+ * Index of the eye being rendered, starting at 0.
+ * @public-api
+ */
+int getEyeIndex() {
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
+    return instance_index % CONFIG_STEREO_EYE_COUNT;
+#elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
+    // gl_ViewID_OVR is of uint type, which needs an explicit conversion.
+    return int(gl_ViewID_OVR);
+#endif
+    return 0;
 }

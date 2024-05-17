@@ -184,8 +184,8 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-        return getDriver().isStereoSupported(stereoscopicType);
+    bool isStereoSupported() const noexcept {
+        return getDriver().isStereoSupported();
     }
 
     static size_t getMaxStereoscopicEyes() noexcept {
@@ -246,6 +246,10 @@ public:
             case Backend::VULKAN:
                 return { backend::ShaderLanguage::SPIRV };
             case Backend::METAL:
+                const auto& lang = mConfig.preferredShaderLanguage;
+                if (lang == Config::ShaderLanguage::MSL) {
+                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
+                }
                 return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
     }
@@ -344,6 +348,7 @@ public:
 
     void destroy(utils::Entity e);
 
+    bool isPaused() const noexcept;
     void setPaused(bool paused);
 
     void flushAndWait();

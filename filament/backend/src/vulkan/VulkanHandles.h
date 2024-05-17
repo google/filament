@@ -26,10 +26,10 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
-#include "private/backend/SamplerGroup.h"
-#include "utils/FixedCapacityVector.h"
-#include "vulkan/vulkan_core.h"
+#include <private/backend/SamplerGroup.h>
+#include <backend/Program.h>
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
 
@@ -180,6 +180,28 @@ private:
 using VulkanDescriptorSetList = std::array<Handle<VulkanDescriptorSet>,
         VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
+using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
+using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
+
+struct PushConstantDescription {
+
+    explicit PushConstantDescription(backend::Program const& program) noexcept;
+
+    VkPushConstantRange const* getVkRanges() const noexcept { return mRanges; }
+
+    uint32_t getVkRangeCount() const noexcept { return mRangeCount; }
+
+    void write(VulkanCommands* commands, VkPipelineLayout layout, backend::ShaderStage stage,
+            uint8_t index, backend::PushConstantVariant const& value);
+
+private:
+    static constexpr uint32_t ENTRY_SIZE = sizeof(uint32_t);
+
+    utils::FixedCapacityVector<backend::ConstantType> mTypes[Program::SHADER_TYPE_COUNT];
+    VkPushConstantRange mRanges[Program::SHADER_TYPE_COUNT];
+    uint32_t mRangeCount;
+};
+
 struct VulkanProgram : public HwProgram, VulkanResource {
 
     using BindingList = CappedArray<uint16_t, MAX_SAMPLER_COUNT>;
@@ -198,10 +220,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->bindingToSamplerIndex;
     }
 
-    inline UsageFlags getUsage() const {
-        return mInfo->usage;
-    }
-
     // Get a list of the sampler binding indices so that we don't have to loop through all possible
     // samplers.
     inline BindingList const& getBindings() const { return mInfo->bindings; }
@@ -216,6 +234,19 @@ struct VulkanProgram : public HwProgram, VulkanResource {
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
     inline LayoutDescriptionList const& getLayoutDescriptionList() const { return mInfo->layouts; }
 
+    inline uint32_t getPushConstantRangeCount() const {
+        return mInfo->pushConstantDescription.getVkRangeCount();
+    }
+
+    inline VkPushConstantRange const* getPushConstantRanges() const {
+        return mInfo->pushConstantDescription.getVkRanges();
+    }
+
+    inline void writePushConstant(VulkanCommands* commands, VkPipelineLayout layout,
+            backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
+        mInfo->pushConstantDescription.write(commands, layout, stage, index, value);
+    }
+
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
     inline utils::FixedCapacityVector<std::string> const& getBindingToName() const {
         return mInfo->bindingToName;
@@ -228,16 +259,13 @@ struct VulkanProgram : public HwProgram, VulkanResource {
 
 private:
     struct PipelineInfo {
-        PipelineInfo()
-            : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff)
+        explicit PipelineInfo(backend::Program const& program) noexcept
+            : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff),
+              pushConstantDescription(program)
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
             , bindingToName(MAX_SAMPLER_COUNT, "")
 #endif
             {}
-
-        // This bitset maps to each of the sampler in the sampler groups associated with this
-        // program, and whether each sampler is used in which shader (i.e. vert, frag, compute).
-        UsageFlags usage;
 
         BindingList bindings;
 
@@ -248,6 +276,8 @@ private:
         // TODO: Use this instead of `layouts` after Filament-side Descriptor Set API is in place.
         // descset::DescriptorSetLayout layout;
         LayoutDescriptionList layouts;
+
+        PushConstantDescription pushConstantDescription;
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
         // We store the sampler name mapped from binding index (only for debug purposes).
@@ -282,10 +312,11 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     void transformClientRectToPlatform(VkRect2D* bounds) const;
     void transformClientRectToPlatform(VkViewport* bounds) const;
     VkExtent2D getExtent() const;
-    VulkanAttachment getColor(int target) const;
-    VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth() const;
-    VulkanAttachment getMsaaDepth() const;
+    // We return references in the following methods to avoid a copy.
+    VulkanAttachment& getColor(int target);
+    VulkanAttachment& getMsaaColor(int target);
+    VulkanAttachment& getDepth();
+    VulkanAttachment& getMsaaDepth();
     uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
     bool hasDepth() const { return mDepth.texture; }

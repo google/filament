@@ -173,6 +173,10 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
         PANIC_LOG("OpenGL ES 2.0 minimum needed (current %d.%d)", major, minor);
         goto cleanup;
     }
+    if (UTILS_UNLIKELY(driverConfig.forceGLES2Context)) {
+        major = 2;
+        minor = 0;
+    }
 #else
     // we require GL 4.1 headers and minimum version
     if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
@@ -203,12 +207,13 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
-          mContext(mPlatform),
+          mContext(mPlatform, driverConfig),
           mShaderCompilerService(*this),
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
                   driverConfig.disableHandleUseAfterFreeCheck),
-          mDriverConfig(driverConfig) {
+          mDriverConfig(driverConfig),
+          mCurrentPushConstants(new(std::nothrow) PushConstantBundle{}) {
 
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
@@ -236,7 +241,15 @@ OpenGLDriver::~OpenGLDriver() noexcept { // NOLINT(modernize-use-equals-default)
 }
 
 Dispatcher OpenGLDriver::getDispatcher() const noexcept {
-    return ConcreteDispatcher<OpenGLDriver>::make();
+    auto dispatcher = ConcreteDispatcher<OpenGLDriver>::make();
+    if (mContext.isES2()) {
+        dispatcher.draw2_ = +[](Driver& driver, CommandBase* base, intptr_t* next){
+            using Cmd = COMMAND_TYPE(draw2);
+            OpenGLDriver& concreteDriver = static_cast<OpenGLDriver&>(driver);
+            Cmd::execute(&OpenGLDriver::draw2GLES2, concreteDriver, base, next);
+        };
+    }
+    return dispatcher;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -265,6 +278,9 @@ void OpenGLDriver::terminate() {
     assert_invariant(mGpuCommandCompleteOps.empty());
 #endif
 
+    delete mCurrentPushConstants;
+    mCurrentPushConstants = nullptr;
+
     mContext.terminate();
 
     mPlatform.terminate();
@@ -283,6 +299,39 @@ void OpenGLDriver::resetState(int) {
 
 void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
     mContext.bindSampler(unit, sampler);
+}
+
+void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+    assert_invariant(stage == ShaderStage::VERTEX || stage == ShaderStage::FRAGMENT);
+    utils::Slice<std::pair<GLint, ConstantType>> constants;
+    if (stage == ShaderStage::VERTEX) {
+        constants = mCurrentPushConstants->vertexConstants;
+    } else if (stage == ShaderStage::FRAGMENT) {
+        constants = mCurrentPushConstants->fragmentConstants;
+    }
+
+    assert_invariant(index < constants.size());
+    auto const& [location, type] = constants[index];
+
+    // This push constant wasn't found in the shader. It's ok to return without error-ing here.
+    if (location < 0) {
+        return;
+    }
+
+    if (std::holds_alternative<bool>(value)) {
+        assert_invariant(type == ConstantType::BOOL);
+        bool const bval = std::get<bool>(value);
+        glUniform1i(location, bval ? 1 : 0);
+    } else if (std::holds_alternative<float>(value)) {
+        assert_invariant(type == ConstantType::FLOAT);
+        float const fval = std::get<float>(value);
+        glUniform1f(location, fval);
+    } else {
+        assert_invariant(type == ConstantType::INT);
+        int const ival = std::get<int>(value);
+        glUniform1i(location, ival);
+    }
 }
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
@@ -883,16 +932,18 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 }
 
 void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
-    // NOTE: this is called from draw() and must be as efficient as possible.
+    // NOTE: this is called often and must be as efficient as possible.
 
     auto& gl = mContext;
 
+#ifndef NDEBUG
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
         GLint vaoBinding;
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
         assert_invariant(vaoBinding == (GLint)rp->gl.vao[gl.contextIndex]);
     }
+#endif
 
     if (UTILS_LIKELY(rp->gl.vertexBufferVersion == vb->bufferObjectsVersion &&
                      rp->gl.stateVersion == gl.state.age)) {
@@ -908,7 +959,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
             // if a buffer is defined it must not be invalid.
             assert_invariant(vb->gl.buffers[bi]);
 
-            // if w're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
+            // if we're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
@@ -1999,19 +2050,19 @@ bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
 
-bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+bool OpenGLDriver::isStereoSupported() {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return mContext.ext.EXT_clip_cull_distance;
-    case backend::StereoscopicType::MULTIVIEW:
-        return mContext.ext.OVR_multiview2;
-    default:
-        return false;
+    switch (mDriverConfig.stereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return mContext.ext.EXT_clip_cull_distance;
+        case backend::StereoscopicType::MULTIVIEW:
+            return mContext.ext.OVR_multiview2;
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
@@ -2020,6 +2071,10 @@ bool OpenGLDriver::isParallelShaderCompileSupported() {
 }
 
 bool OpenGLDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
+bool OpenGLDriver::isDepthStencilBlitSupported(TextureFormat format) {
     return true;
 }
 
@@ -3378,7 +3433,9 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
 
 void OpenGLDriver::tick(int) {
     DEBUG_MARKER()
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     executeGpuCommandsCompleteOps();
+#endif
     executeEveryNowAndThenOps();
     getShaderCompilerService().tick();
 }
@@ -3407,12 +3464,12 @@ void OpenGLDriver::beginFrame(
 }
 
 void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
     DEBUG_MARKER()
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     DEBUG_MARKER()
 }
 
@@ -3650,7 +3707,7 @@ void OpenGLDriver::blit(
         case SamplerType::SAMPLER_EXTERNAL:
             break;
     }
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
 
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, fbo[1]);
     switch (s->target) {
@@ -3676,7 +3733,7 @@ void OpenGLDriver::blit(
         case SamplerType::SAMPLER_EXTERNAL:
             break;
     }
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
 
     gl.disable(GL_SCISSOR_TEST);
     glBlitFramebuffer(
@@ -3790,7 +3847,7 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
 #endif
 }
 
-void OpenGLDriver::bindPipeline(PipelineState state) {
+void OpenGLDriver::bindPipeline(PipelineState const& state) {
     DEBUG_MARKER()
     auto& gl = mContext;
     setRasterState(state.rasterState);
@@ -3798,6 +3855,7 @@ void OpenGLDriver::bindPipeline(PipelineState state) {
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(state.program);
     mValidProgram = useProgram(p);
+    (*mCurrentPushConstants) = p->getPushConstants();
 }
 
 void OpenGLDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -3827,20 +3885,35 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
         return;
     }
 
-    if (UTILS_LIKELY(instanceCount <= 1)) {
-        glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
-    } else {
-        assert_invariant(!mContext.isES2());
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
-                rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
-                (GLsizei)instanceCount);
+    assert_invariant(!mContext.isES2());
+    glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
+            rp->gl.getIndicesType(),
+            reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
+            (GLsizei)instanceCount);
 #endif
+
+#if FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+#else
+    CHECK_GL_ERROR(utils::slog.e)
+#endif
+}
+
+void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
+    if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
+        return;
     }
 
-#ifdef FILAMENT_ENABLE_MATDBG
+    assert_invariant(mContext.isES2());
+    assert_invariant(instanceCount == 1);
+
+    glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
+            reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
+
+
+#if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
 #else
     CHECK_GL_ERROR(utils::slog.e)
@@ -3859,7 +3932,11 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
     state.vertexBufferInfo = rp->vbih;
     bindPipeline(state);
     bindRenderPrimitive(rph);
-    draw2(indexOffset, indexCount, instanceCount);
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        draw2GLES2(indexOffset, indexCount, instanceCount);
+    } else {
+        draw2(indexOffset, indexCount, instanceCount);
+    }
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
@@ -3886,7 +3963,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
     glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
 #endif // BACKEND_OPENGL_LEVEL_GLES31
 
-#ifdef FILAMENT_ENABLE_MATDBG
+#if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
 #else
     CHECK_GL_ERROR(utils::slog.e)

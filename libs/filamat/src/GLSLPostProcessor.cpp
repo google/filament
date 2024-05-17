@@ -255,6 +255,17 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
         mslCompiler.add_msl_resource_binding(argBufferBinding);
     }
 
+    // Bind push constants to [buffer(26)]
+    MSLResourceBinding pushConstantBinding;
+    // the baseType doesn't matter, but can't be UNKNOWN
+    pushConstantBinding.basetype = SPIRType::BaseType::Struct;
+    pushConstantBinding.stage = executionModel;
+    pushConstantBinding.desc_set = kPushConstDescSet;
+    pushConstantBinding.binding = kPushConstBinding;
+    pushConstantBinding.count = 1;
+    pushConstantBinding.msl_buffer = 26;
+    mslCompiler.add_msl_resource_binding(pushConstantBinding);
+
     auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
@@ -539,14 +550,15 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
         if (config.variant.hasStereo() && config.shaderType == ShaderStage::VERTEX) {
             switch (config.materialInfo->stereoscopicType) {
-            case StereoscopicType::INSTANCED:
-                // Nothing to generate
-                break;
             case StereoscopicType::MULTIVIEW:
                 // For stereo variants using multiview feature, this generates the shader code below.
                 //   #extension GL_OVR_multiview2 : require
                 //   layout(num_views = 2) in;
                 glslOptions.ovr_multiview_view_count = config.materialInfo->stereoscopicEyeCount;
+                break;
+            case StereoscopicType::INSTANCED:
+            case StereoscopicType::NONE:
+                // Nothing to generate
                 break;
             }
         }
@@ -604,7 +616,13 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
     });
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
-        registerSizePasses(*optimizer, config);
+        // When optimizing for size, we don't run the SPIR-V through any size optimization passes
+        // when targeting MSL. This results in better line dictionary compression. We do, however,
+        // still register the passes necessary (below) to support half precision floating point
+        // math.
+        if (config.targetApi != MaterialBuilder::TargetApi::METAL) {
+            registerSizePasses(*optimizer, config);
+        }
     } else if (optimization == MaterialBuilder::Optimization::PERFORMANCE) {
         registerPerformancePasses(*optimizer, config);
     }
@@ -719,7 +737,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
@@ -728,11 +745,9 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateCCPPass());
     RegisterPass(CreateLoopUnrollPass(true));
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateScalarReplacementPass(0));
     RegisterPass(CreateLocalSingleStoreElimPass());
     RegisterPass(CreateIfConversionPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
@@ -748,7 +763,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateBlockMergePass());
     RegisterPass(CreateLocalMultiStoreElimPass());
     RegisterPass(CreateRedundancyEliminationPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateCFGCleanupPass());
 }

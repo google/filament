@@ -138,14 +138,13 @@ DECL_DRIVER_API_N(beginFrame,
 
 DECL_DRIVER_API_N(setFrameScheduledCallback,
         backend::SwapChainHandle, sch,
-        backend::FrameScheduledCallback, callback,
-        void*, user)
+        backend::CallbackHandler*, handler,
+        backend::FrameScheduledCallback&&, callback)
 
 DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::SwapChainHandle, sch,
         backend::CallbackHandler*, handler,
-        backend::CallbackHandler::Callback, callback,
-        void*, user)
+        utils::Invocable<void(void)>&&, callback)
 
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)
@@ -301,9 +300,10 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, isStereoSupported, backend::StereoscopicType, stereoscopicType)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
@@ -433,6 +433,11 @@ DECL_DRIVER_API_N(bindSamplers,
         uint32_t, index,
         backend::SamplerGroupHandle, sbh)
 
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
+
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string,
         uint32_t, len = 0)
@@ -496,7 +501,7 @@ DECL_DRIVER_API_N(blit,
         math::uint2, size)
 
 DECL_DRIVER_API_N(bindPipeline,
-        backend::PipelineState, state)
+        backend::PipelineState const&, state)
 
 DECL_DRIVER_API_N(bindRenderPrimitive,
         backend::RenderPrimitiveHandle, rph)

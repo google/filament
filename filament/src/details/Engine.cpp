@@ -102,7 +102,9 @@ Engine* FEngine::create(Engine::Builder const& builder) {
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
-                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck
+                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
+                .forceGLES2Context = instance->getConfig().forceGLES2Context,
+                .stereoscopicType =  instance->getConfig().stereoscopicType,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -351,6 +353,7 @@ void FEngine::init() {
 
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         switch (mConfig.stereoscopicType) {
+            case StereoscopicType::NONE:
             case StereoscopicType::INSTANCED:
                 defaultMaterialBuilder.package(
                     MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
@@ -581,6 +584,8 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
+    ASSERT_PRECONDITION(!mCommandBufferQueue.isPaused(),
+            "Cannot call flushAndWait() when rendering thread is paused!");
 
 #if defined(__ANDROID__)
 
@@ -671,7 +676,9 @@ int FEngine::loop() {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
-            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck
+            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
+            .forceGLES2Context = mConfig.forceGLES2Context,
+            .stereoscopicType =  mConfig.stereoscopicType,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
@@ -1216,6 +1223,10 @@ void FEngine::destroy(FEngine* engine) {
         engine->shutdown();
         delete engine;
     }
+}
+
+bool FEngine::isPaused() const noexcept {
+    return mCommandBufferQueue.isPaused();
 }
 
 void FEngine::setPaused(bool paused) {

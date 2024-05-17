@@ -28,6 +28,7 @@
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanUtility.h"
+#include "backend/DriverEnums.h"
 #include "caching/VulkanDescriptorSetManager.h"
 #include "caching/VulkanPipelineLayoutCache.h"
 
@@ -41,6 +42,25 @@ namespace filament::backend {
 
 class VulkanPlatform;
 struct VulkanSamplerGroup;
+
+// The maximum number of attachments for any renderpass (color + resolve + depth)
+constexpr uint8_t MAX_RENDERTARGET_ATTACHMENT_TEXTURES =
+        MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT * 2 + 1;
+
+// We need to store information about a render pass to enable better barriers at the end of a
+// renderpass.
+struct RenderPassFboBundle {
+    using AttachmentArray =
+            CappedArray<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
+
+    AttachmentArray attachments;
+    bool hasColorResolve = false;
+
+    void clear() {
+        attachments.clear();
+        hasColorResolve = false;
+    }
+};
 
 class VulkanDriver final : public DriverBase {
 public:
@@ -141,7 +161,16 @@ private:
 
     VulkanDescriptorSetManager::GetPipelineLayoutFunction mGetPipelineFunction;
 
+    // This is necessary for us to write to push constants after binding a pipeline.
+    struct BoundPipeline {
+        VulkanProgram* program;
+        VkPipelineLayout pipelineLayout;
+    };
+    BoundPipeline mBoundPipeline = {};
+    RenderPassFboBundle mRenderPassFboInfo;
+
     bool const mIsSRGBSwapChainSupported;
+    backend::StereoscopicType const mStereoscopicType;
 };
 
 } // namespace filament::backend

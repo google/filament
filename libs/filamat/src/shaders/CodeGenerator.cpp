@@ -17,6 +17,7 @@
 #include "CodeGenerator.h"
 
 #include "MaterialInfo.h"
+#include "../PushConstantDefinitions.h"
 
 #include "generated/shaders.h"
 
@@ -77,6 +78,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 case StereoscopicType::MULTIVIEW:
                     out << "#extension GL_OVR_multiview2 : require\n";
                     break;
+                case StereoscopicType::NONE:
+                    break;
                 }
             }
             break;
@@ -98,6 +101,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 case StereoscopicType::MULTIVIEW:
                     out << "#extension GL_OVR_multiview2 : require\n";
                     break;
+                case StereoscopicType::NONE:
+                    break;
                 }
             }
             break;
@@ -118,6 +123,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             break;
         case StereoscopicType::MULTIVIEW:
             out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            break;
+        case StereoscopicType::NONE:
             break;
         }
     }
@@ -215,6 +222,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         break;
     case StereoscopicType::MULTIVIEW:
         generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
+        break;
+    case StereoscopicType::NONE:
         break;
     }
 
@@ -454,8 +463,8 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
 }
 
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
-        const AttributeBitset& attributes, Interpolation interpolation) const {
-
+        const AttributeBitset& attributes, Interpolation interpolation,
+        MaterialBuilder::PushConstantList const& pushConstants) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
     const char* shading = getInterpolationQualifier(interpolation);
@@ -479,6 +488,9 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
             }
             out << getTypeName(attribute.type) << " " << attribute.getAttributeName() << ";\n";
         });
+
+        out << "\n";
+        generatePushConstants(out, pushConstants, attributes.size());
     }
 
     out << "\n";
@@ -906,6 +918,41 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
+utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
+        MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
+    static constexpr char const* STRUCT_NAME = "Constants";
+
+    bool const outputSpirv =
+            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
+    auto const getType = [](ConstantType const& type) {
+        switch (type) {
+            case ConstantType::BOOL:
+                return "bool";
+            case ConstantType::INT:
+                return "int";
+            case ConstantType::FLOAT:
+                return "float";
+        }
+    };
+    if (outputSpirv) {
+        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
+    } else {
+        out << "struct " << STRUCT_NAME << " {\n";
+    }
+
+    for (auto const& constant: pushConstants) {
+        out << getType(constant.type) << " " << constant.name.c_str() << ";\n";
+    }
+
+    if (outputSpirv) {
+        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    } else {
+        out << "};\n";
+        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
+            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    }
+    return out;
+}
 
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
         MaterialBuilder::Property property, bool isSet) {

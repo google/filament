@@ -406,6 +406,13 @@ Java_com_google_android_filament_Engine_nFlush(JNIEnv*, jclass,
     engine->flush();
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsPaused(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)engine->isPaused();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Engine_nSetPaused(JNIEnv*, jclass,
         jlong nativeEngine, jboolean paused) {
@@ -510,7 +517,9 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jlong textureUseAfterFreePoolSize, jboolean disableParallelShaderCompile,
         jint stereoscopicType, jlong stereoscopicEyeCount,
         jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge,
-        jboolean disableHandleUseAfterFreeCheck) {
+        jboolean disableHandleUseAfterFreeCheck,
+        jint preferredShaderLanguage,
+        jboolean forceGLES2Context) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -526,6 +535,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .resourceAllocatorCacheSizeMB = (uint32_t) resourceAllocatorCacheSizeMB,
             .resourceAllocatorCacheMaxAge = (uint8_t) resourceAllocatorCacheMaxAge,
             .disableHandleUseAfterFreeCheck = (bool) disableHandleUseAfterFreeCheck,
+            .preferredShaderLanguage = (Engine::Config::ShaderLanguage) preferredShaderLanguage,
+            .forceGLES2Context = (bool) forceGLES2Context,
     };
     builder->config(&config);
 }

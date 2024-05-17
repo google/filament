@@ -437,8 +437,11 @@ public:
         return mFogEntity;
     }
 
-private:
+    backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
+        return mRenderableUbh;
+    }
 
+private:
     struct FPickingQuery : public PickingQuery {
     private:
         FPickingQuery(uint32_t x, uint32_t y,

@@ -65,21 +65,6 @@ static constexpr Bitmask fromStageFlags(ShaderStageFlags2 flags, uint8_t binding
     return ret;
 }
 
-UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags flags, UsageFlags src) {
-    // NOTE: if you modify this function, you also need to modify getShaderStageFlags.
-    assert_invariant(binding < MAX_SAMPLER_COUNT);
-    if (any(flags & ShaderStageFlags::VERTEX)) {
-        src.set(binding);
-    }
-    if (any(flags & ShaderStageFlags::FRAGMENT)) {
-        src.set(MAX_SAMPLER_COUNT + binding);
-    }
-    // TODO: add support for compute by extending SHADER_MODULE_COUNT and ensuring UsageFlags
-    // has 186 bits (MAX_SAMPLER_COUNT * 3)
-    // assert_invariant(!any(flags & ~(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)));
-    return src;
-}
-
 constexpr decltype(VulkanProgram::MAX_SHADER_MODULES) MAX_SHADER_MODULES =
         VulkanProgram::MAX_SHADER_MODULES;
 
@@ -127,27 +112,82 @@ inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
     return layout;
 }
 
+inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
+    switch(stage) {
+        case backend::ShaderStage::VERTEX:
+            return VK_SHADER_STAGE_VERTEX_BIT;
+        case backend::ShaderStage::FRAGMENT:
+            return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case backend::ShaderStage::COMPUTE:
+            PANIC_POSTCONDITION("Unsupported stage");
+    }
+}
+
 } // anonymous namespace
 
 
-VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayoutCreateInfo const& info,
-        Bitmask const& bitmask)
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device,
+        VkDescriptorSetLayoutCreateInfo const& info, Bitmask const& bitmask)
     : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
       mDevice(device),
       vklayout(createDescriptorSetLayout(device, info)),
       bitmask(bitmask),
       bindings(getBindings(bitmask)),
-      count(Count::fromLayoutBitmask(bitmask)) {
-}
+      count(Count::fromLayoutBitmask(bitmask)) {}
 
 VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
     vkDestroyDescriptorSetLayout(mDevice, vklayout, VKALLOC);
 }
 
+PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
+    mRangeCount = 0;
+    for (auto stage : { ShaderStage::VERTEX, ShaderStage::FRAGMENT, ShaderStage::COMPUTE }) {
+        auto const& constants = program.getPushConstants(stage);
+        if (constants.empty()) {
+            continue;
+        }
+
+        // We store the type of the constant for type-checking when writing.
+        auto& types = mTypes[(uint8_t) stage];
+        types.reserve(constants.size());
+        std::for_each(constants.cbegin(), constants.cend(), [&types] (Program::PushConstant t) {
+            types.push_back(t.type);
+        });
+
+        mRanges[mRangeCount++] = {
+            .stageFlags = getVkStage(stage),
+            .offset = 0,
+            .size = (uint32_t) constants.size() * ENTRY_SIZE,
+        };
+    }
+}
+
+void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout layout,
+        backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
+    VulkanCommandBuffer* cmdbuf = &(commands->get());
+    uint32_t binaryValue = 0;
+    UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
+    if (std::holds_alternative<bool>(value)) {
+        assert_invariant(types[index] == ConstantType::BOOL);
+        bool const bval = std::get<bool>(value);
+        binaryValue = static_cast<uint32_t const>(bval ? VK_TRUE : VK_FALSE);
+    } else if (std::holds_alternative<float>(value)) {
+        assert_invariant(types[index] == ConstantType::FLOAT);
+        float const fval = std::get<float>(value);
+        binaryValue = *reinterpret_cast<uint32_t const*>(&fval);
+    } else {
+        assert_invariant(types[index] == ConstantType::INT);
+        int const ival = std::get<int>(value);
+        binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
+    }
+    vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), index * ENTRY_SIZE, ENTRY_SIZE,
+            &binaryValue);
+}
+
 VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
-      mInfo(new PipelineInfo()),
+      mInfo(new(std::nothrow) PipelineInfo(builder)),
       mDevice(device) {
 
     constexpr uint8_t UBO_MODULE_OFFSET = (sizeof(UniformBufferBitmask) * 8) / MAX_SHADER_MODULES;
@@ -236,7 +276,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     auto& groupInfo = builder.getSamplerGroupInfo();
     auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
     auto& bindings = mInfo->bindings;
-    auto& usage = mInfo->usage;
     for (uint8_t groupInd = 0; groupInd < Program::SAMPLER_BINDING_COUNT; groupInd++) {
         auto const& group = groupInfo[groupInd];
         auto const& samplers = group.samplers;
@@ -245,7 +284,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             bindingToSamplerIndex[binding] = (groupInd << 8) | (0xff & i);
             assert_invariant(bindings.find(binding) == bindings.end());
             bindings.insert(binding);
-            usage = getUsageFlags(binding, group.stageFlags, usage);
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
             bindingToName[binding] = samplers[i].name.c_str();
@@ -302,13 +340,13 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
-    const auto& limits = context.getPhysicalDeviceLimits();
+    auto const& limits = context.getPhysicalDeviceLimits();
     mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
             limits.framebufferColorSampleCounts);
 
     // Create sidecar MSAA textures for color attachments if they don't already exist.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        const VulkanAttachment& spec = color[index];
+        VulkanAttachment const& spec = color[index];
         VulkanTexture* texture = (VulkanTexture*) spec.texture;
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
@@ -371,19 +409,19 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
     return {width, height};
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(int target) const {
+VulkanAttachment& VulkanRenderTarget::getColor(int target) {
     return mColor[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
+VulkanAttachment& VulkanRenderTarget::getMsaaColor(int target) {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth() const {
+VulkanAttachment& VulkanRenderTarget::getDepth() {
     return mDepth;
 }
 
-VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
+VulkanAttachment& VulkanRenderTarget::getMsaaDepth() {
     return mMsaaDepthAttachment;
 }
 

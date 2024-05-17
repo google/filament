@@ -60,7 +60,7 @@ static constexpr float PID_CONTROLLER_Kd = 0.0f;
 FView::FView(FEngine& engine)
         : mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
-          mIsStereoSupported(engine.getDriverApi().isStereoSupported(engine.getConfig().stereoscopicType)),
+          mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
           mPerViewUniforms(engine) {
 
     DriverApi& driver = engine.getDriverApi();
@@ -649,7 +649,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
                 mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableData));
                 driver.destroyBufferObject(mRenderableUbh);
-                mRenderableUbh = driver.createBufferObject(mRenderableUBOSize + sizeof(PerRenderableUib),
+                mRenderableUbh = driver.createBufferObject(
+                        mRenderableUBOSize + sizeof(PerRenderableUib),
                         BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
             } else {
                 // TODO: should we shrink the underlying UBO at some point?

@@ -60,6 +60,11 @@ public:
         std::fill(std::begin(storage), std::end(storage), 0);
     }
 
+    template<typename U, typename = typename std::enable_if_t<N == 1, U>>
+    explicit bitset(U value) noexcept {
+        storage[0] = value;
+    }
+
     T getBitsAt(size_t n) const noexcept {
         assert_invariant(n<N);
         return storage[n];
@@ -94,6 +99,8 @@ public:
 
     size_t size() const noexcept { return N * BITS_PER_WORD; }
 
+    bool empty() const noexcept { return none(); }
+
     bool test(size_t bit) const noexcept { return operator[](bit); }
 
     void set(size_t b) noexcept {
@@ -117,9 +124,12 @@ public:
         storage[b / BITS_PER_WORD] ^= T(1) << (b % BITS_PER_WORD);
     }
 
-
     void reset() noexcept {
         std::fill(std::begin(storage), std::end(storage), 0);
+    }
+
+    void clear() noexcept {
+        reset();
     }
 
     bool operator[](size_t b) const noexcept {

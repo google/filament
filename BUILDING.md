@@ -73,7 +73,6 @@ The following CMake options are boolean options specific to Filament:
 - `FILAMENT_SUPPORTS_VULKAN`:      Include the Vulkan backend
 - `FILAMENT_INSTALL_BACKEND_TEST`: Install the backend test library so it can be consumed on iOS
 - `FILAMENT_USE_EXTERNAL_GLES3`:   Experimental: Compile Filament against OpenGL ES 3
-- `FILAMENT_USE_SWIFTSHADER`:      Compile Filament against SwiftShader
 - `FILAMENT_SKIP_SAMPLES`:         Don't build sample apps
 
 To turn an option on or off:
@@ -426,7 +425,7 @@ value is the desired roughness between 0 and 1.
 
 ## Generating C++ documentation
 
-To generate the documentation you must first install `doxygen` and `graphviz`, then run the 
+To generate the documentation you must first install `doxygen` and `graphviz`, then run the
 following commands:
 
 ```shell
@@ -436,32 +435,62 @@ doxygen docs/doxygen/filament.doxygen
 
 Finally simply open `docs/html/index.html` in your web browser.
 
-## SwiftShader
+## Software Rasterization
 
-To try out Filament's Vulkan support with SwiftShader, first build SwiftShader and set the
-`SWIFTSHADER_LD_LIBRARY_PATH` variable to the folder that contains `libvk_swiftshader.dylib`:
+We have tested swiftshader and Mesa for software rasterization on the Vulkan/GL backends.
+
+To use this for Vulkan, please first make sure that the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) is
+installed on your machine. If you are doing a manual installation of the SDK on Linux, you will have
+to source `setup-env.sh` in the SDK's root folder to make sure the Vulkan loader is the first lib loaded.
+
+### Swiftshader (Vulkan) [tested on macOS and Linux]
+
+First, build SwiftShader
 
 ```shell
 git clone https://github.com/google/swiftshader.git
 cd swiftshader/build
 cmake .. &&  make -j
-export SWIFTSHADER_LD_LIBRARY_PATH=`pwd`
 ```
 
-Next, go to your Filament repo and use the [easy build](#easy-build) script with `-t`.
+and then set `VK_ICD_FILENAMES` to the ICD json produced in the build. For example,
+```shell
+export VK_ICD_FILENAMES=/Users/user/swiftshader/build/Darwin/vk_swiftshader_icd.json
+```
 
-## SwiftShader for CI
+Build and run Filament as usual and specify the Vulkan backend when creating the Engine.
 
-Continuous testing turnaround can be quite slow if you need to build SwiftShader from scratch, so we
-provide an Ubuntu-based Docker image that has it already built. The Docker image also includes
-everything necessary for building Filament. You can fetch and run the image as follows:
+### Mesa's LLVMPipe (GL) and Lavapipe (Vulkan) [tested on Linux]
+
+We will only cover steps that build Mesa from source. The official documentation of Mesa mentioned
+that in general precompiled libraries [are **not** made available](https://docs.mesa3d.org/precompiled.html).
+
+Download the repo and make sure you have the build depedencies. For example (assuming an Ubuntu/Debian distro),
+```shell
+git clone https://gitlab.freedesktop.org/mesa/mesa.git
+sudo apt-get build-dep mesa
+```
+
+To build both the GL and Vulkan rasterizers,
 
 ```shell
-docker pull ghcr.io/filament-assets/swiftshader
-docker run -it ghcr.io/filament-assets/swiftshader
+cd mesa
+mkdir -p out
+meson setup builddir/ -Dprefix=$(pwd)/out -Dglx=xlib -Dgallium-drivers=swrast -Dvulkan-drivers=swrast
+meson install -C builddir/
 ```
 
-To do more with the container, see the helper script at `build/swiftshader/test.sh`.
+For GL, we need to ensure that we load the GL lib from the mesa output directory.  For example, to run
+the debug `gltf_viewer`, we would execute
+```shell
+LD_LIBRARY_PATH=/Users/user/mesa/out/lib/x86_64-linux-gnu \
+    ./out/cmake-debug/samples/gltf_viewer -a opengl
+```
 
-If you are a team member, you can update the public image to the latest SwiftShader by
-following the instructions at the top of `build/swiftshader/Dockerfile`.
+For Vulkan, we need to set the path to the ICD json, which tells the loader where to find the driver
+library. To run `gltf_viewer`, we would execute
+```shell
+VK_ICD_FILENAMES=/Users/user/mesa/out/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    ./out/cmake-debug/samples/gltf_viewer -a vulkan
+
+```

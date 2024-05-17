@@ -54,12 +54,12 @@ void NoopDriver::beginFrame(int64_t monotonic_clock_ns,
 }
 
 void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
 
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 
 }
 
@@ -182,7 +182,7 @@ bool NoopDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
+bool NoopDriver::isStereoSupported() {
     return false;
 }
 
@@ -191,6 +191,10 @@ bool NoopDriver::isParallelShaderCompileSupported() {
 }
 
 bool NoopDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
+bool NoopDriver::isDepthStencilBlitSupported(TextureFormat format) {
     return true;
 }
 
@@ -308,6 +312,10 @@ void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
 void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
+void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+}
+
 void NoopDriver::insertEventMarker(char const* string, uint32_t len) {
 }
 
@@ -351,7 +359,7 @@ void NoopDriver::blit(
         math::uint2 size) {
 }
 
-void NoopDriver::bindPipeline(PipelineState pipelineState) {
+void NoopDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void NoopDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {

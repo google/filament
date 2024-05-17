@@ -17,21 +17,28 @@
 #include "details/Skybox.h"
 
 #include "details/Engine.h"
-#include "details/Texture.h"
-#include "details/VertexBuffer.h"
-#include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
-#include "details/MaterialInstance.h"
+#include "details/Texture.h"
+#include "details/VertexBuffer.h"
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
 #include <filament/TextureSampler.h>
+#include <filament/Skybox.h>
 
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
-#include <filament/Skybox.h>
+
+#include <math/vec4.h>
+
+#include <stdint.h>
 
 
 #include "generated/resources/materials.h"
@@ -125,6 +132,7 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
 #endif
     {
         switch (engine.getConfig().stereoscopicType) {
+            case Engine::StereoscopicType::NONE:
             case Engine::StereoscopicType::INSTANCED:
                 builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
                 break;
@@ -132,7 +140,8 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
 #ifdef FILAMENT_ENABLE_MULTIVIEW
                 builder.package(MATERIALS_SKYBOX_MULTIVIEW_DATA, MATERIALS_SKYBOX_MULTIVIEW_SIZE);
 #else
-                assert_invariant(false);
+                PANIC_POSTCONDITION("Multiview is enabled in the Engine, but this build has not "
+                                    "been compiled for multiview.");
 #endif
                 break;
         }
@@ -162,10 +171,6 @@ void FSkybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
 
 void FSkybox::setColor(math::float4 color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
-}
-
-void FSkybox::commit(backend::DriverApi& driver) noexcept {
-    mSkyboxMaterialInstance->commit(driver);
 }
 
 } // namespace filament

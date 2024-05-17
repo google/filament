@@ -308,6 +308,11 @@ utils::JobSystem& Engine::getJobSystem() noexcept {
     return downcast(this)->getJobSystem();
 }
 
+bool Engine::isPaused() const noexcept {
+    ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
+    return downcast(this)->isPaused();
+}
+
 void Engine::setPaused(bool paused) {
     ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
     downcast(this)->setPaused(paused);
@@ -350,7 +355,7 @@ const Engine::Config& Engine::getConfig() const noexcept {
 }
 
 bool Engine::isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-    return downcast(this)->isStereoSupported(stereoscopicType);
+    return downcast(this)->isStereoSupported();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {
