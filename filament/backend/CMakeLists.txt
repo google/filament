@@ -419,6 +419,7 @@ if (APPLE OR LINUX)
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
         test/test_MRT.cpp
+        test/test_PushConstants.cpp
         test/test_LoadImage.cpp
         test/test_StencilBuffer.cpp
         test/test_Scissor.cpp
