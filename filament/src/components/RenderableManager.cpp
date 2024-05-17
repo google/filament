@@ -966,15 +966,13 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
 
 void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
         size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) {
-    assert_invariant(offset == 0 && "Offset not yet supported.");
-    assert_invariant(count == morphTargetBuffer->getVertexCount() && "Count not yet supported.");
     if (instance) {
         assert_invariant(morphTargetBuffer);
 
         MorphWeights const& morphWeights = mManager[instance].morphWeights;
-        ASSERT_PRECONDITION(morphWeights.count == morphTargetBuffer->getCount(),
+        ASSERT_PRECONDITION(morphWeights.count == count,
                 "Only %d morph targets can be set (count=%d)",
-                morphWeights.count, morphTargetBuffer->getCount());
+                morphWeights.count, count);
 
         Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
         if (primitiveIndex < morphTargets.size()) {
