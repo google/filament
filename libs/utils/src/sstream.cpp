@@ -15,6 +15,9 @@
  */
 
 #include <utils/sstream.h>
+#include <utils/ostream.h>
+
+#include "ostream_.h"
 
 namespace utils::io {
 
