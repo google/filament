@@ -600,7 +600,7 @@ public:
             bool debug_froxel_visualization = false;
         } lighting;
         struct {
-            bool combine_multiview_images = true;
+            bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
     } debug;
