@@ -16,6 +16,8 @@
 
 #include "backend/platforms/VulkanPlatform.h"
 
+#include <backend/DriverEnums.h>
+
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriver.h"
@@ -313,6 +315,7 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
             .samplerAnisotropy = features.samplerAnisotropy,
             .textureCompressionETC2 = features.textureCompressionETC2,
             .textureCompressionBC = features.textureCompressionBC,
+            .shaderClipDistance = features.shaderClipDistance,
     };
 
     deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
@@ -664,6 +667,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                       ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice)
                       : mImpl->mGraphicsQueueFamilyIndex;
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
+
+    // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
+    if (context.mPhysicalDeviceFeatures.shaderClipDistance == VK_TRUE
+            && driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
+        context.mPhysicalDeviceFeatures.shaderClipDistance = VK_FALSE;
+    }
 
     // At this point, we should have a family index that points to a family that has > 0 queues for
     // graphics. In which case, we will allocate one queue for all of Filament (and assumes at least

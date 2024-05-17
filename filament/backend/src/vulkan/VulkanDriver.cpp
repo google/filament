@@ -903,7 +903,7 @@ bool VulkanDriver::isProtectedContentSupported() {
 bool VulkanDriver::isStereoSupported() {
     switch (mStereoscopicType) {
         case backend::StereoscopicType::INSTANCED:
-            return true;
+            return mContext.isClipDistanceSupported();
         case backend::StereoscopicType::MULTIVIEW:
             // TODO: implement multiview feature in Vulkan.
         case backend::StereoscopicType::NONE:
