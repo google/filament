@@ -52,6 +52,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <thread>
 
 #include "generated/resources/materials.h"
 
