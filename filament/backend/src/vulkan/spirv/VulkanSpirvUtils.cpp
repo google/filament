@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <cstring>
 
 namespace filament::backend {
 
