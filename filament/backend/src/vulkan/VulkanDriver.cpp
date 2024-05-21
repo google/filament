@@ -259,8 +259,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
     mDescriptorSetManager.setPlaceHolders(mSamplerCache.getSampler({}), mEmptyTexture,
             mEmptyBufferObject);
 
-    mGetPipelineFunction = [this](VulkanDescriptorSetLayoutList const& layouts) {
-        return mPipelineLayoutCache.getLayout(layouts);
+    mGetPipelineFunction = [this](VulkanDescriptorSetLayoutList const& layouts, VulkanProgram* program) {
+        return mPipelineLayoutCache.getLayout(layouts, program);
     };
 }
 
@@ -394,11 +394,11 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -1572,6 +1572,14 @@ void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     mSamplerBindings[index] = hwsb;
 }
 
+void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+    assert_invariant(mBoundPipeline.program && "Expect a program when writing to push constants");
+    VulkanCommands* commands = &mCommands;
+    mBoundPipeline.program->writePushConstant(commands, mBoundPipeline.pipelineLayout, stage, index,
+            value);
+}
+
 void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.insertEventMarker(string, len);
@@ -1857,7 +1865,13 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
         mDescriptorSetManager.updateSampler({}, binding, texture, vksampler);
     }
 
-    mPipelineCache.bindLayout(mDescriptorSetManager.bind(commands, program, mGetPipelineFunction));
+    auto const pipelineLayout = mDescriptorSetManager.bind(commands, program, mGetPipelineFunction);
+    mBoundPipeline = {
+        .program = program,
+        .pipelineLayout = pipelineLayout,
+    };
+
+    mPipelineCache.bindLayout(pipelineLayout);
     mPipelineCache.bindPipeline(commands);
     FVK_SYSTRACE_END();
 }

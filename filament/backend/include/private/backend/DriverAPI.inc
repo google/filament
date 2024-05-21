@@ -138,14 +138,13 @@ DECL_DRIVER_API_N(beginFrame,
 
 DECL_DRIVER_API_N(setFrameScheduledCallback,
         backend::SwapChainHandle, sch,
-        backend::FrameScheduledCallback, callback,
-        void*, user)
+        backend::CallbackHandler*, handler,
+        backend::FrameScheduledCallback&&, callback)
 
 DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::SwapChainHandle, sch,
         backend::CallbackHandler*, handler,
-        backend::CallbackHandler::Callback, callback,
-        void*, user)
+        utils::Invocable<void(void)>&&, callback)
 
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)
@@ -433,6 +432,11 @@ DECL_DRIVER_API_N(unbindBuffer,
 DECL_DRIVER_API_N(bindSamplers,
         uint32_t, index,
         backend::SamplerGroupHandle, sbh)
+
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
 
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string,

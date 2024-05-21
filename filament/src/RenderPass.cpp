@@ -684,6 +684,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.indexCount = primitive.getIndexCount();
             cmd.info.type = primitive.getPrimitiveType();
             cmd.info.morphTargetBuffer = morphTargets.buffer->getHwHandle();
+            cmd.info.morphingOffset = morphTargets.offset;
 
             if constexpr (isColorPass) {
                 RenderPass::setupColorCommand(cmd, renderableVariant, mi, inverseFrontFaces);
@@ -1029,6 +1030,9 @@ void RenderPass::Executor::execute(FEngine& engine,
                     rebindPipeline = false;
                     currentPipeline = pipeline;
                     driver.bindPipeline(pipeline);
+
+                    driver.setPushConstant(ShaderStage::VERTEX,
+                            +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }
 
                 if (info.rph != currentPrimitiveHandle) {

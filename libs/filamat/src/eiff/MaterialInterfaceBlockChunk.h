@@ -31,6 +31,7 @@ class SamplerInterfaceBlock;
 class BufferInterfaceBlock;
 struct SubpassInfo;
 struct MaterialConstant;
+struct MaterialPushConstant;
 } // namespace filament
 
 namespace filamat {
@@ -84,6 +85,21 @@ private:
     void flatten(Flattener&) final;
 
     utils::FixedCapacityVector<filament::MaterialConstant> mConstants;
+};
+
+// ------------------------------------------------------------------------------------------------
+
+class MaterialPushConstantParametersChunk final : public Chunk {
+public:
+    explicit MaterialPushConstantParametersChunk(utils::CString const& structVarName,
+            utils::FixedCapacityVector<filament::MaterialPushConstant> constants);
+    ~MaterialPushConstantParametersChunk() final = default;
+
+private:
+    void flatten(Flattener&) final;
+
+    utils::CString mStructVarName;
+    utils::FixedCapacityVector<filament::MaterialPushConstant> mConstants;
 };
 
 // ------------------------------------------------------------------------------------------------

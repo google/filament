@@ -24,12 +24,14 @@
 
 #include <backend/PresentCallable.h>
 
+#include <utils/Invocable.h>
 #include <utils/ostream.h>
 
 #include <math/vec4.h>
 
 #include <array>        // FIXME: STL headers are not allowed in public headers
 #include <type_traits>  // FIXME: STL headers are not allowed in public headers
+#include <variant>      // FIXME: STL headers are not allowed in public headers
 
 #include <stddef.h>
 #include <stdint.h>
@@ -90,11 +92,14 @@ static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = SWAP_CHAIN_CON
  */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
 
-
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
 static constexpr size_t MAX_SSBO_COUNT              = 4;    // This is guaranteed by OpenGL ES.
+
+static constexpr size_t MAX_PUSH_CONSTANT_COUNT     = 32;   // Vulkan 1.1 spec allows for 128-byte
+                                                            // of push constant (we assume 4-byte
+                                                            // types).
 
 // Per feature level caps
 // Use (int)FeatureLevel to index this array
@@ -112,7 +117,7 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
         "The number of buffer objects that can be attached to a VertexBuffer must be "
         "less than or equal to the maximum number of vertex attributes.");
 
-static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 10;  // This is guaranteed by OpenGL ES.
+static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 9;   // This is guaranteed by OpenGL ES.
 static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guaranteed by OpenGL ES.
 
 /**
@@ -331,7 +336,7 @@ enum class UniformType : uint8_t {
 /**
  * Supported constant parameter types
  */
- enum class ConstantType : uint8_t {
+enum class ConstantType : uint8_t {
   INT,
   FLOAT,
   BOOL
@@ -1218,13 +1223,15 @@ struct StencilState {
     uint8_t padding = 0;
 };
 
+using PushConstantVariant = std::variant<int32_t, float, bool>;
+
 static_assert(sizeof(StencilState::StencilOperations) == 5u,
         "StencilOperations size not what was intended");
 
 static_assert(sizeof(StencilState) == 12u,
         "StencilState size not what was intended");
 
-using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
+using FrameScheduledCallback = utils::Invocable<void(backend::PresentCallable)>;
 
 enum class Workaround : uint16_t {
     // The EASU pass must split because shader compiler flattens early-exit branch

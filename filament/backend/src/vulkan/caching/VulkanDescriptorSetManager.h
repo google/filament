@@ -45,8 +45,8 @@ class VulkanDescriptorSetManager {
 public:
     static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT =
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT;
-    using GetPipelineLayoutFunction =
-            std::function<VkPipelineLayout(VulkanDescriptorSetLayoutList const&)>;
+    using GetPipelineLayoutFunction = std::function<VkPipelineLayout(
+            VulkanDescriptorSetLayoutList const&, VulkanProgram* program)>;
 
     VulkanDescriptorSetManager(VkDevice device, VulkanResourceAllocator* resourceAllocator);
 
@@ -108,3 +108,4 @@ private:
 }// namespace filament::backend
 
 #endif// TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
+

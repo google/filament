@@ -879,7 +879,7 @@ public:
             vkUpdateDescriptorSets(mDevice, nwrites, descriptorWrites, 0, nullptr);
         }
 
-        VkPipelineLayout const pipelineLayout = getPipelineLayoutFn(outLayouts);
+        VkPipelineLayout const pipelineLayout = getPipelineLayoutFn(outLayouts, program);
         VkCommandBuffer const cmdbuffer = commands->buffer();
 
         BoundState state{};

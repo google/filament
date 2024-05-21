@@ -237,16 +237,16 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+void MetalDriver::setFrameScheduledCallback(
+        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(callback, user);
+    swapChain->setFrameScheduledCallback(handler, std::move(callback));
 }
 
-void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+void MetalDriver::setFrameCompletedCallback(
+        Handle<HwSwapChain> sch, CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameCompletedCallback(handler, callback, user);
+    swapChain->setFrameCompletedCallback(handler, std::move(callback));
 }
 
 void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
@@ -1109,6 +1109,10 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedSamplerGroups.clear();
+
+    for (auto& pc : mContext->currentPushConstants) {
+        pc.clear();
+    }
 }
 
 void MetalDriver::nextSubpass(int dummy) {}
@@ -1254,6 +1258,16 @@ void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) 
 void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     auto sb = handle_cast<MetalSamplerGroup>(sbh);
     mContext->samplerBindings[index] = sb;
+}
+
+void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+    ASSERT_PRECONDITION(
+            isInRenderPass(mContext), "setPushConstant must be called inside a render pass.");
+    assert_invariant(static_cast<size_t>(stage) < mContext->currentPushConstants.size());
+    MetalPushConstantBuffer& pushConstants =
+            mContext->currentPushConstants[static_cast<size_t>(stage)];
+    pushConstants.setPushConstant(value, index);
 }
 
 void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
@@ -1861,6 +1875,14 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
             UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
             uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
+
+    // Update push constants.
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        auto& pushConstants = mContext->currentPushConstants[i];
+        if (UTILS_UNLIKELY(pushConstants.isDirty())) {
+            pushConstants.setBytes(mContext->currentRenderPassEncoder, static_cast<ShaderStage>(i));
+        }
+    }
 
     auto primitive = handle_cast<MetalRenderPrimitive>(mContext->currentRenderPrimitive);
 

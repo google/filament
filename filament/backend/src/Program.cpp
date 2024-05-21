@@ -91,6 +91,12 @@ Program& Program::specializationConstants(
     return *this;
 }
 
+Program& Program::pushConstants(ShaderStage stage,
+        utils::FixedCapacityVector<PushConstant> constants) noexcept {
+    mPushConstants[static_cast<uint8_t>(stage)] = std::move(constants);
+    return *this;
+}
+
 Program& Program::cacheId(uint64_t cacheId) noexcept {
     mCacheId = cacheId;
     return *this;

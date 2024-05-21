@@ -53,6 +53,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialAttributeInfo = charTo64bitNum("MAT_ATTR"),
     MaterialProperties = charTo64bitNum("MAT_PROP"),
     MaterialConstants = charTo64bitNum("MAT_CONS"),
+    MaterialPushConstants = charTo64bitNum("MAT_PCON"),
 
     MaterialName = charTo64bitNum("MAT_NAME"),
     MaterialVersion = charTo64bitNum("MAT_VERS"),

@@ -226,6 +226,7 @@ public class Engine {
                     config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
                     config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
                     config.disableHandleUseAfterFreeCheck,
+                    config.preferredShaderLanguage.ordinal(),
                     config.forceGLES2Context);
             return this;
         }
@@ -429,6 +430,28 @@ public class Engine {
          * Disable backend handles use-after-free checks.
          */
         public boolean disableHandleUseAfterFreeCheck = false;
+
+        /*
+         * Sets a preferred shader language for Filament to use.
+         *
+         * The Metal backend supports two shader languages: MSL (Metal Shading Language) and
+         * METAL_LIBRARY (precompiled .metallib). This option controls which shader language is
+         * used when materials contain both.
+         *
+         * By default, when preferredShaderLanguage is unset, Filament will prefer METAL_LIBRARY
+         * shaders if present within a material, falling back to MSL. Setting
+         * preferredShaderLanguage to ShaderLanguage::MSL will instead instruct Filament to check
+         * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
+         * present.
+         *
+         * When using a non-Metal backend, setting this has no effect.
+         */
+        public enum ShaderLanguage {
+            DEFAULT,
+            MSL,
+            METAL_LIBRARY,
+        };
+        public ShaderLanguage preferredShaderLanguage = ShaderLanguage.DEFAULT;
 
         /*
          * When the OpenGL ES backend is used, setting this value to true will force a GLES2.0
@@ -1362,6 +1385,7 @@ public class Engine {
             int stereoscopicType, long stereoscopicEyeCount,
             long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,
             boolean disableHandleUseAfterFreeCheck,
+            int preferredShaderLanguage,
             boolean forceGLES2Context);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);

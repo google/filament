@@ -153,5 +153,68 @@ bool isInRenderPass(MetalContext* context) {
     return context->currentRenderPassEncoder != nil;
 }
 
+void MetalPushConstantBuffer::setPushConstant(PushConstantVariant value, uint8_t index) {
+    if (mPushConstants.size() <= index) {
+        mPushConstants.resize(index + 1);
+        mDirty = true;
+    }
+    if (UTILS_LIKELY(mPushConstants[index] != value)) {
+        mDirty = true;
+        mPushConstants[index] = value;
+    }
+}
+
+void MetalPushConstantBuffer::setBytes(id<MTLCommandEncoder> encoder, ShaderStage stage) {
+    constexpr size_t PUSH_CONSTANT_SIZE_BYTES = 4;
+    constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 26;
+
+    static char buffer[MAX_PUSH_CONSTANT_COUNT * PUSH_CONSTANT_SIZE_BYTES];
+    assert_invariant(mPushConstants.size() <= MAX_PUSH_CONSTANT_COUNT);
+
+    size_t bufferSize = PUSH_CONSTANT_SIZE_BYTES * mPushConstants.size();
+    for (size_t i = 0; i < mPushConstants.size(); i++) {
+        const auto& constant = mPushConstants[i];
+        std::visit(
+                [i](auto arg) {
+                    if constexpr (std::is_same_v<decltype(arg), bool>) {
+                        // bool push constants are converted to uints in MSL.
+                        // We must ensure we write all the bytes for boolean values to work
+                        // correctly.
+                        uint32_t boolAsUint = arg ? 0x00000001 : 0x00000000;
+                        *(reinterpret_cast<uint32_t*>(buffer + PUSH_CONSTANT_SIZE_BYTES * i)) =
+                                boolAsUint;
+                    } else {
+                        *(decltype(arg)*)(buffer + PUSH_CONSTANT_SIZE_BYTES * i) = arg;
+                    }
+                },
+                constant);
+    }
+
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            [(id<MTLRenderCommandEncoder>)encoder setVertexBytes:buffer
+                                                          length:bufferSize
+                                                         atIndex:PUSH_CONSTANT_BUFFER_INDEX];
+            break;
+        case ShaderStage::FRAGMENT:
+            [(id<MTLRenderCommandEncoder>)encoder setFragmentBytes:buffer
+                                                            length:bufferSize
+                                                           atIndex:PUSH_CONSTANT_BUFFER_INDEX];
+            break;
+        case ShaderStage::COMPUTE:
+            [(id<MTLComputeCommandEncoder>)encoder setBytes:buffer
+                                                     length:bufferSize
+                                                    atIndex:PUSH_CONSTANT_BUFFER_INDEX];
+            break;
+    }
+
+    mDirty = false;
+}
+
+void MetalPushConstantBuffer::clear() {
+    mPushConstants.clear();
+    mDirty = false;
+}
+
 } // namespace backend
 } // namespace filament

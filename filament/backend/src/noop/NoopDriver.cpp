@@ -54,12 +54,12 @@ void NoopDriver::beginFrame(int64_t monotonic_clock_ns,
 }
 
 void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
 
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 
 }
 
@@ -310,6 +310,10 @@ void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
 }
 
 void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
+}
+
+void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
 }
 
 void NoopDriver::insertEventMarker(char const* string, uint32_t len) {

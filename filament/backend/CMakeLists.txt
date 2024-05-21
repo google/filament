@@ -417,7 +417,9 @@ if (APPLE OR LINUX)
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
+        test/test_Callbacks.cpp
         test/test_MRT.cpp
+        test/test_PushConstants.cpp
         test/test_LoadImage.cpp
         test/test_StencilBuffer.cpp
         test/test_Scissor.cpp
@@ -478,6 +480,10 @@ if (APPLE)
        # linker from removing "unused" symbols.
        target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
        set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
+
+       # This is needed after XCode 15.3
+       set_target_properties(backend_test_mac PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+       set_target_properties(backend_test_mac PROPERTIES INSTALL_RPATH /usr/local/lib)
     endif()
 endif()
 

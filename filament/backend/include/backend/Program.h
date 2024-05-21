@@ -117,6 +117,14 @@ public:
     Program& specializationConstants(
             utils::FixedCapacityVector<SpecializationConstant> specConstants) noexcept;
 
+    struct PushConstant {
+        utils::CString name;
+        ConstantType type;
+    };
+
+    Program& pushConstants(ShaderStage stage,
+            utils::FixedCapacityVector<PushConstant> constants) noexcept;
+
     Program& cacheId(uint64_t cacheId) noexcept;
 
     Program& multiview(bool multiview) noexcept;
@@ -148,6 +156,15 @@ public:
         return mSpecializationConstants;
     }
 
+    utils::FixedCapacityVector<PushConstant> const& getPushConstants(
+            ShaderStage stage) const noexcept {
+        return mPushConstants[static_cast<uint8_t>(stage)];
+    }
+
+    utils::FixedCapacityVector<PushConstant>& getPushConstants(ShaderStage stage) noexcept {
+        return mPushConstants[static_cast<uint8_t>(stage)];
+    }
+
     uint64_t getCacheId() const noexcept { return mCacheId; }
 
     bool isMultiview() const noexcept { return mMultiview; }
@@ -165,6 +182,7 @@ private:
     uint64_t mCacheId{};
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
     utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
+    std::array<utils::FixedCapacityVector<PushConstant>, SHADER_TYPE_COUNT> mPushConstants;
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mAttributes;
     std::array<UniformInfo, Program::UNIFORM_BINDING_COUNT> mBindingUniformInfo;
     CompilerPriorityQueue mPriorityQueue = CompilerPriorityQueue::HIGH;

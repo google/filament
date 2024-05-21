@@ -23,7 +23,8 @@ set(COMMON_PRIVATE_HDRS
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/ShaderEntry.h
         src/eiff/SimpleFieldChunk.h
-        src/Includes.h)
+        src/Includes.h
+        src/PushConstantDefinitions.h)
 
 set(COMMON_SRCS
         src/eiff/Chunk.cpp

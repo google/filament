@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Slice.h>
 
 #include <array>
 #include <limits>
@@ -37,6 +38,11 @@
 namespace filament::backend {
 
 class OpenGLDriver;
+
+struct PushConstantBundle {
+    utils::Slice<std::pair<GLint, ConstantType>> vertexConstants;
+    utils::Slice<std::pair<GLint, ConstantType>> fragmentConstants;
+};
 
 class OpenGLProgram : public HwProgram {
 public:
@@ -78,6 +84,14 @@ public:
         GLuint program = 0;
     } gl;                                               // 4 bytes
 
+    PushConstantBundle getPushConstants() {
+        auto fragBegin = mPushConstants.begin() + mPushConstantFragmentStageOffset;
+        return {
+            .vertexConstants = utils::Slice(mPushConstants.begin(), fragBegin),
+            .fragmentConstants = utils::Slice(fragBegin, mPushConstants.end()),
+        };
+    }
+
 private:
     // keep these away from of other class attributes
     struct LazyInitializationData;
@@ -95,11 +109,14 @@ private:
     ShaderCompilerService::program_token_t mToken{};    // 16 bytes
 
     uint8_t mUsedBindingsCount = 0u;                    // 1 byte
-    UTILS_UNUSED uint8_t padding[3] = {};               // 3 bytes
+    UTILS_UNUSED uint8_t padding[2] = {};               // 2 byte
 
+    // Push constant array offset for fragment stage constants.
+    uint8_t mPushConstantFragmentStageOffset = 0u;      // 1 byte
 
     // only needed for ES2
-    GLint mRec709Location = -1; // 4 bytes
+    GLint mRec709Location = -1;                         // 4 bytes
+
     using LocationInfo = utils::FixedCapacityVector<GLint>;
     struct UniformsRecord {
         Program::UniformInfo uniforms;
@@ -107,11 +124,15 @@ private:
         mutable GLuint id = 0;
         mutable uint16_t age = std::numeric_limits<uint16_t>::max();
     };
-    UniformsRecord const* mUniformsRecords = nullptr;
+    UniformsRecord const* mUniformsRecords = nullptr;               // 8 bytes
+
+    // Note that this can be replaced with a raw pointer and an uint8_t (for size) to reduce the
+    // size of the container to 9 bytes if there is a need in the future.
+    utils::FixedCapacityVector<std::pair<GLint, ConstantType>> mPushConstants;// 16 bytes
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
-static_assert(sizeof(OpenGLProgram) <= 64); // currently 48 bytes
+static_assert(sizeof(OpenGLProgram) <= 64); // currently 64 bytes
 
 } // namespace filament::backend
 

@@ -47,6 +47,7 @@ class BufferInterfaceBlock;
 class SamplerInterfaceBlock;
 struct SubpassInfo;
 struct MaterialConstant;
+struct MaterialPushConstant;
 
 class MaterialParser {
 public:
@@ -79,6 +80,8 @@ public:
     bool getSamplerBlockBindings(SamplerGroupBindingInfoList* pSamplerGroupInfoList,
             SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept;
     bool getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept;
+    bool getPushConstants(utils::CString* structVarName,
+            utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept;
 
     using BindingUniformInfoContainer = utils::FixedCapacityVector<
             std::pair<filament::UniformBindingPoints, backend::Program::UniformInfo>>;
@@ -212,6 +215,11 @@ struct ChunkSamplerBlockBindings {
 struct ChunkMaterialConstants {
     static bool unflatten(filaflat::Unflattener& unflattener,
             utils::FixedCapacityVector<MaterialConstant>* materialConstants);
+};
+
+struct ChunkMaterialPushConstants {
+    static bool unflatten(filaflat::Unflattener& unflattener, utils::CString* structVarName,
+            utils::FixedCapacityVector<MaterialPushConstant>* materialPushConstants);
 };
 
 } // namespace filament
