@@ -50,8 +50,8 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     };
     VkImage image;
     VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &image);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS,
-            "Unable to create image: ", static_cast<int32_t>(result));
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "Unable to create image: " << static_cast<int32_t>(result);
 
     // Allocate memory for the VkImage and bind it.
     VkDeviceMemory imageMemory;
