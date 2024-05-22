@@ -1494,9 +1494,8 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
-    ASSERT_POSTCONDITION(sc->swapChain,
-            "createSwapChain(%p, 0x%lx) failed. See logs for details.",
-            nativeWindow, flags);
+    FILAMENT_CHECK_POSTCONDITION(sc->swapChain) << "createSwapChain(" << nativeWindow << ", "
+                                                << flags << ") failed. See logs for details.";
 #endif
 
     // See if we need the emulated rec709 output conversion
@@ -1515,9 +1514,9 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
-    ASSERT_POSTCONDITION(sc->swapChain,
-            "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
-            width, height, flags);
+    FILAMENT_CHECK_POSTCONDITION(sc->swapChain)
+            << "createSwapChainHeadless(" << width << ", " << height << ", " << flags
+            << ") failed. See logs for details.";
 #endif
 
     // See if we need the emulated rec709 output conversion
