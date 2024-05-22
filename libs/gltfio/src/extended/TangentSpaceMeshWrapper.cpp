@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <cstring>
 
 namespace filament::gltfio {
 

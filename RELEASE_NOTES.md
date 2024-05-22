@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.52.1
+
+- Add instructions for using Mesa for software rasterization
+
 ## v1.51.9
 
 
