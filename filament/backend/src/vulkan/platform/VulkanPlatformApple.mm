@@ -78,8 +78,8 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         createInfo.pView = (__bridge void*) nsview;
         VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-    #elif defined(IOS) && defined(METAL_AVAILABLE)
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateMacOSSurfaceMVK error.";
+    #elif defined(IOS) && defined(METAL_AVAILABLE)
         CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
         // Create the VkSurface.
         FILAMENT_CHECK_POSTCONDITION(vkCreateIOSSurfaceMVK)
@@ -91,8 +91,8 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         createInfo.pView = metalLayer;
         VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-    #endif
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateIOSSurfaceMVK error.";
+    #endif
     return std::make_tuple(surface, VkExtent2D {});
 }
 
