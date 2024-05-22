@@ -772,9 +772,7 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
 
     FILAMENT_CHECK_PRECONDITION(data.size >= shape.totalBytes)
             << "Expected buffer size of at least " << shape.totalBytes
-            << " but "
-               "received PixelBufferDescriptor with size "
-            << data.size << ".";
+            << " but received PixelBufferDescriptor with size " << data.size << ".";
 
     // Earlier versions of iOS don't have the maxBufferLength query, but 256 MB is a safe bet.
     NSUInteger deviceMaxBufferLength = 256 * 1024 * 1024;   // 256 MB

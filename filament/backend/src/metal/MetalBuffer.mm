@@ -49,7 +49,7 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
     }
     MetalBufferTracking::track(mBuffer, MetalBufferTracking::Type::GENERIC);
     FILAMENT_CHECK_POSTCONDITION(mBuffer)
-            << "Could not allocate Metal buffer of size " << size << "u.";
+            << "Could not allocate Metal buffer of size " << size << ".";
 }
 
 MetalBuffer::~MetalBuffer() {
@@ -64,7 +64,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     }
     FILAMENT_CHECK_PRECONDITION(size + byteOffset <= mBufferSize)
             << "Attempting to copy " << size << " bytes into a buffer of size " << mBufferSize
-            << "u at offset " << byteOffset << "u";
+            << " at offset " << byteOffset;
 
     // Either copy into the Metal buffer or into our cpu buffer.
     if (mCpuBuffer) {
