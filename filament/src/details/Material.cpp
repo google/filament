@@ -94,9 +94,7 @@ static std::unique_ptr<MaterialParser> createParser(Backend backend,
         FILAMENT_CHECK_PRECONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
                 << "the material was not built for any of the " << backendToString(backend)
-                << " backend's supported shader "
-                   "languages ("
-                << languageNames.c_str() << ")\n";
+                << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
     }
 
     if (backend == Backend::NOOP) {
@@ -528,8 +526,8 @@ Program FMaterial::getProgramWithVariants(
     FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
             << "The material '" << mName.c_str()
             << "' has not been compiled to include the required "
-               "GLSL or SPIR-V chunks for the vertex shader (variant=0x"
-            << variant.key << ", filtered=0x" << vertexVariant.key << ").";
+               "GLSL or SPIR-V chunks for the vertex shader (variant=0x" << io::hex
+            << variant.key << ", filtered=0x" << vertexVariant.key << io::dex << ").";
 
     /*
      * Fragment shader
@@ -543,8 +541,8 @@ Program FMaterial::getProgramWithVariants(
     FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
             << "The material '" << mName.c_str()
             << "' has not been compiled to include the required "
-               "GLSL or SPIR-V chunks for the fragment shader (variant=0x"
-            << variant.key << ", filtered=0x" << fragmentVariant.key << ").";
+               "GLSL or SPIR-V chunks for the fragment shader (variant=0x" << io::hex
+            << variant.key << ", filtered=0x" << fragmentVariant.key << io::dec << ").";
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())

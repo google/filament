@@ -32,8 +32,7 @@ bool loadLibrary() {
 
     module = dlopen(dylibPath, RTLD_NOW | RTLD_LOCAL);
     FILAMENT_CHECK_POSTCONDITION(module != nullptr)
-            << "BlueVK is unable to load entry points: " << dlerror()
-            << ".\n"
+            << "BlueVK is unable to load entry points: " << dlerror() << ".\n"
                "Install the LunarG SDK with 'System Global Installation' and reboot.\n";
     return module != nullptr;
 }

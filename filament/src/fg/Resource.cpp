@@ -102,7 +102,7 @@ void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage u) {
 
     FILAMENT_CHECK_PRECONDITION(none(u & ~ANY_ATTACHMENT))
             << "Imported render target resource \"" << name
-            << "\" can only be used as an attachment (usage=" << utils::to_string(u).c_str() << ")";
+            << "\" can only be used as an attachment (usage=" << utils::to_string(u).c_str() << ')';
 }
 
 bool ImportedRenderTarget::connect(DependencyGraph& graph, PassNode* passNode,

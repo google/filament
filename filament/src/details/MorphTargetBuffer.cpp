@@ -150,7 +150,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
         math::float3 const* positions, size_t count, size_t offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
-            << "u) overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
+            << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     auto size = getSize<VertexAttribute::POSITION>(count);
 
@@ -173,7 +173,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
         math::float4 const* positions, size_t count, size_t offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
-            << "u) overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
+            << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     auto size = getSize<VertexAttribute::POSITION>(count);
 
@@ -195,7 +195,7 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
         math::short4 const* tangents, size_t count, size_t offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
-            << "u) overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
+            << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     const auto size = getSize<VertexAttribute::TANGENTS>(count);
 

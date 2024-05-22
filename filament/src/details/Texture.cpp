@@ -340,8 +340,8 @@ void FTexture::setImage(FEngine& engine, size_t level,
     size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
     // TODO: PBD should have a p.depth (# layers to skip)
     FILAMENT_CHECK_PRECONDITION(bpp * p.left + bpr * p.top + bpl * (0 + depth) <= p.size)
-            << "buffer overflow: (size=" << size_t(p.size) << "u, stride=" << size_t(p.stride)
-            << "u, left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
+            << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
+            << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
             << ") smaller than specified region "
                "{{"
             << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"

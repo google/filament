@@ -54,9 +54,8 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount >= 1) << "instanceCount must be >= 1.";
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances())
             << "instanceCount is " << mImpl->mInstanceCount
-            << "u, but instance count is limited to "
-               "Engine::getMaxAutomaticInstances() ("
-            << engine.getMaxAutomaticInstances() << "u) instances when supplying transforms.";
+            << ", but instance count is limited to Engine::getMaxAutomaticInstances() ("
+            << engine.getMaxAutomaticInstances() << ") instances when supplying transforms.";
     return downcast(engine).createInstanceBuffer(*this);
 }
 
@@ -78,9 +77,8 @@ void FInstanceBuffer::setLocalTransforms(
         math::mat4f const* localTransforms, size_t count, size_t offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mInstanceCount)
             << "setLocalTransforms overflow. InstanceBuffer has only " << mInstanceCount
-            << "u instances, but trying to set "
-               ""
-            << count << "u transforms at offset " << offset << "u.";
+            << " instances, but trying to set " << count 
+            << " transforms at offset " << offset << ".";
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 

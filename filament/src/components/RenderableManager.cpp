@@ -445,9 +445,8 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
     FILAMENT_CHECK_PRECONDITION(
             mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer)
             << "instance count is " << mImpl->mInstanceCount
-            << "u, but instance count is limited to CONFIG_MAX_INSTANCES (" << CONFIG_MAX_INSTANCES
-            << "u) "
-               "instances when supplying transforms via an InstanceBuffer.";
+            << ", but instance count is limited to CONFIG_MAX_INSTANCES (" << CONFIG_MAX_INSTANCES
+            << ") instances when supplying transforms via an InstanceBuffer.";
 
     if (mImpl->mGeometryType == GeometryType::STATIC) {
         FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount > 0)
@@ -461,10 +460,8 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         size_t const bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
         FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount)
                 << "instance count (" << mImpl->mInstanceCount
-                << "u) must be less than or equal to the InstanceBuffer's instance "
-                   "count "
-                   "("
-                << bufferInstanceCount << "u).";
+                << ") must be less than or equal to the InstanceBuffer's instance "
+                   "count (" << bufferInstanceCount << ").";
     }
 
     if (UTILS_LIKELY(mImpl->mSkinningBoneCount || mImpl->mSkinningBufferMode)) {
