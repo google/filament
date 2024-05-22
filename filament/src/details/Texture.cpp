@@ -187,8 +187,8 @@ Texture* Texture::Builder::build(Engine& engine) {
     const bool imported = mImpl->mImportedId;
 
     #if defined(__EMSCRIPTEN__)
-    #endif
     FILAMENT_CHECK_PRECONDITION(!swizzled) << "WebGL does not support texture swizzling.";
+    #endif
 
     auto validateSamplerType = [&engine = downcast(engine)](SamplerType sampler) -> bool {
         switch (sampler) {
