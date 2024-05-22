@@ -214,8 +214,8 @@ struct FAssetLoader : public AssetLoader {
             mEngine(*config.engine),
             mDefaultNodeName(config.defaultNodeName) {
         if (config.ext) {
-            ASSERT_PRECONDITION(AssetConfigurationExtended::isSupported(),
-                    "Extend asset loading is not supported on this platform");
+            FILAMENT_CHECK_PRECONDITION(AssetConfigurationExtended::isSupported())
+                    << "Extend asset loading is not supported on this platform";
             mLoaderExtended = std::make_unique<AssetLoaderExtended>(
                     *config.ext, config.engine, mMaterials);
         }

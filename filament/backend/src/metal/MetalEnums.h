@@ -71,7 +71,7 @@ constexpr inline MTLIndexType getIndexType(size_t elementSize) noexcept {
     } else if (elementSize == 4) {
         return MTLIndexTypeUInt32;
     }
-    ASSERT_POSTCONDITION(false, "Index element size not supported.");
+    FILAMENT_CHECK_POSTCONDITION(false) << "Index element size not supported.";
 }
 
 constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalized) noexcept {
@@ -100,7 +100,7 @@ constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalize
             case ElementType::SHORT4: return MTLVertexFormatShort4Normalized;
             case ElementType::USHORT4: return MTLVertexFormatUShort4Normalized;
             default:
-                ASSERT_POSTCONDITION(false, "Normalized format does not exist.");
+                FILAMENT_CHECK_POSTCONDITION(false) << "Normalized format does not exist.";
                 return MTLVertexFormatInvalid;
         }
     }
@@ -326,7 +326,8 @@ constexpr inline MTLCullMode getMetalCullMode(CullingMode cullMode) noexcept {
         case CullingMode::FRONT: return MTLCullModeFront;
         case CullingMode::BACK: return MTLCullModeBack;
         case CullingMode::FRONT_AND_BACK:
-            ASSERT_POSTCONDITION(false, "FRONT_AND_BACK culling is not supported in Metal.");
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "FRONT_AND_BACK culling is not supported in Metal.";
     }
 }
 

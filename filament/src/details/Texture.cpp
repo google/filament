@@ -141,15 +141,16 @@ Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swi
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
-    ASSERT_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
-            "Texture format %u not supported on this platform", mImpl->mFormat);
+    FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
+            << "Texture format " << uint16_t(mImpl->mFormat) << " not supported on this platform";
 
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();
     const bool useProtectedMemory = bool(mImpl->mUsage & TextureUsage::PROTECTED);
 
-    ASSERT_PRECONDITION((isProtectedTexturesSupported && useProtectedMemory) || !useProtectedMemory,
-            "Texture is PROTECTED but protected textures are not supported");
+    FILAMENT_CHECK_PRECONDITION(
+            (isProtectedTexturesSupported && useProtectedMemory) || !useProtectedMemory)
+            << "Texture is PROTECTED but protected textures are not supported";
 
     uint8_t maxLevelCount;
     switch (mImpl->mTarget) {
@@ -186,8 +187,8 @@ Texture* Texture::Builder::build(Engine& engine) {
     const bool imported = mImpl->mImportedId;
 
     #if defined(__EMSCRIPTEN__)
-    ASSERT_PRECONDITION(!swizzled, "WebGL does not support texture swizzling.");
     #endif
+    FILAMENT_CHECK_PRECONDITION(!swizzled) << "WebGL does not support texture swizzling.";
 
     auto validateSamplerType = [&engine = downcast(engine)](SamplerType sampler) -> bool {
         switch (sampler) {
@@ -203,15 +204,15 @@ Texture* Texture::Builder::build(Engine& engine) {
         }
     };
 
-    ASSERT_PRECONDITION(validateSamplerType(mImpl->mTarget),
-            "SamplerType %u not support at feature level %u",
-            mImpl->mTarget, engine.getActiveFeatureLevel());
+    FILAMENT_CHECK_PRECONDITION(validateSamplerType(mImpl->mTarget))
+            << "SamplerType " << uint8_t(mImpl->mTarget) << " not support at feature level "
+            << uint8_t(engine.getActiveFeatureLevel());
 
-    ASSERT_PRECONDITION((swizzled && sampleable) || !swizzled,
-            "Swizzled texture must be SAMPLEABLE");
+    FILAMENT_CHECK_PRECONDITION((swizzled && sampleable) || !swizzled)
+            << "Swizzled texture must be SAMPLEABLE";
 
-    ASSERT_PRECONDITION((imported && sampleable) || !imported,
-            "Imported texture must be SAMPLEABLE");
+    FILAMENT_CHECK_PRECONDITION((imported && sampleable) || !imported)
+            << "Imported texture must be SAMPLEABLE";
 
     return downcast(engine).createTexture(*this);
 }
@@ -268,41 +269,42 @@ void FTexture::setImage(FEngine& engine, size_t level,
         FTexture::PixelBufferDescriptor&& p) const {
 
     if (UTILS_UNLIKELY(!engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))) {
-        ASSERT_PRECONDITION(p.stride == 0 || p.stride == width,
-                "PixelBufferDescriptor stride must be 0 (or width) at FEATURE_LEVEL_0");
+        FILAMENT_CHECK_PRECONDITION(p.stride == 0 || p.stride == width)
+                << "PixelBufferDescriptor stride must be 0 (or width) at FEATURE_LEVEL_0";
     }
 
     // this should have been validated already
     assert_invariant(isTextureFormatSupported(engine, mFormat));
 
-    ASSERT_PRECONDITION(p.type == PixelDataType::COMPRESSED ||
-                        validatePixelFormatAndType(mFormat, p.format, p.type),
-            "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            unsigned(mFormat), unsigned(p.format), unsigned(p.type));
+    FILAMENT_CHECK_PRECONDITION(p.type == PixelDataType::COMPRESSED ||
+            validatePixelFormatAndType(mFormat, p.format, p.type))
+            << "The combination of internal format=" << unsigned(mFormat)
+            << " and {format=" << unsigned(p.format) << ", type=" << unsigned(p.type)
+            << "} is not supported.";
 
-    ASSERT_PRECONDITION(!mStream, "setImage() called on a Stream texture.");
+    FILAMENT_CHECK_PRECONDITION(!mStream) << "setImage() called on a Stream texture.";
 
-    ASSERT_PRECONDITION(level < mLevelCount,
-            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount));
+    FILAMENT_CHECK_PRECONDITION(level < mLevelCount)
+            << "level=" << unsigned(level) << " is >= to levelCount=" << unsigned(mLevelCount)
+            << ".";
 
-    ASSERT_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL,
-            "Texture SamplerType::SAMPLER_EXTERNAL not supported for this operation.",
-            unsigned(mTarget));
+    FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL)
+            << "Texture SamplerType::SAMPLER_EXTERNAL not supported for this operation.";
 
-    ASSERT_PRECONDITION(mSampleCount <= 1,
-            "Operation not supported with multisample (%u) texture.", unsigned(mSampleCount));
+    FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1) << "Operation not supported with multisample ("
+                                                   << unsigned(mSampleCount) << ") texture.";
 
-    ASSERT_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth),
-            "xoffset (%u) + width (%u) > texture width (%u) at level (%u)",
-            unsigned(xoffset), unsigned(width), unsigned(valueForLevel(level, mWidth)),
-            unsigned(level));
+    FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
+            << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
+            << ") > texture width (" << valueForLevel(level, mWidth) << ") at level ("
+            << unsigned(level) << ")";
 
-    ASSERT_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight),
-            "yoffset (%u) + height (%u) > texture height (%u) at level (%u)",
-            unsigned(yoffset), unsigned(height), unsigned(valueForLevel(level, mHeight)),
-            unsigned(level));
+    FILAMENT_CHECK_PRECONDITION(yoffset + height <= valueForLevel(level, mHeight))
+            << "yoffset (" << unsigned(yoffset) << ") + height (" << unsigned(height)
+            << ") > texture height (" << valueForLevel(level, mHeight) << ") at level ("
+            << unsigned(level) << ")";
 
-    ASSERT_PRECONDITION(p.buffer, "Data buffer is nullptr.");
+    FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
 
     uint32_t effectiveTextureDepthOrLayers;
     switch (mTarget) {
@@ -326,9 +328,10 @@ void FTexture::setImage(FEngine& engine, size_t level,
             break;
     }
 
-    ASSERT_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers,
-            "zoffset (%u) + depth (%u) > texture depth (%u) at level (%u)",
-            unsigned(zoffset), unsigned(depth), effectiveTextureDepthOrLayers, unsigned(level));
+    FILAMENT_CHECK_PRECONDITION(zoffset + depth <= effectiveTextureDepthOrLayers)
+            << "zoffset (" << unsigned(zoffset) << ") + depth (" << unsigned(depth)
+            << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
+            << unsigned(level) << ")";
 
     using PBD = PixelBufferDescriptor;
     size_t const stride = p.stride ? p.stride : width;
@@ -336,12 +339,13 @@ void FTexture::setImage(FEngine& engine, size_t level,
     size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
     size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
     // TODO: PBD should have a p.depth (# layers to skip)
-    ASSERT_PRECONDITION(bpp * p.left + bpr * p.top + bpl * (0 + depth) <= p.size,
-        "buffer overflow: (size=%lu, stride=%lu, left=%u, top=%u) smaller than specified region "
-        "{{%u,%u,%u},{%u,%u,%u)}}",
-        size_t(p.size), size_t(p.stride), unsigned(p.left), unsigned(p.top),
-        unsigned(xoffset), unsigned(yoffset), unsigned(zoffset),
-        unsigned(width), unsigned(height), unsigned(depth));
+    FILAMENT_CHECK_PRECONDITION(bpp * p.left + bpr * p.top + bpl * (0 + depth) <= p.size)
+            << "buffer overflow: (size=" << size_t(p.size) << "u, stride=" << size_t(p.stride)
+            << "u, left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
+            << ") smaller than specified region "
+               "{{"
+            << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
+            << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << ")}}";
 
     engine.getDriverApi().update3DImage(mHandle,
             uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(p));
@@ -367,20 +371,23 @@ void FTexture::setImage(FEngine& engine, size_t level,
     // this should have been validated already
     assert_invariant(isTextureFormatSupported(engine, mFormat));
 
-    ASSERT_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
-                        validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
-            "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
-            unsigned(mFormat), unsigned(buffer.format), unsigned(buffer.type));
+    FILAMENT_CHECK_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
+            validatePixelFormatAndType(mFormat, buffer.format, buffer.type))
+            << "The combination of internal format=" << unsigned(mFormat)
+            << " and {format=" << unsigned(buffer.format) << ", type=" << unsigned(buffer.type)
+            << "} is not supported.";
 
-    ASSERT_PRECONDITION(!mStream, "setImage() called on a Stream texture.");
+    FILAMENT_CHECK_PRECONDITION(!mStream) << "setImage() called on a Stream texture.";
 
-    ASSERT_PRECONDITION(level < mLevelCount,
-            "level=%u is >= to levelCount=%u.", unsigned(level), unsigned(mLevelCount));
+    FILAMENT_CHECK_PRECONDITION(level < mLevelCount)
+            << "level=" << unsigned(level) << " is >= to levelCount=" << unsigned(mLevelCount)
+            << ".";
 
-    ASSERT_PRECONDITION(validateTarget(mTarget),
-            "Texture Sampler type (%u) not supported for this operation.", unsigned(mTarget));
+    FILAMENT_CHECK_PRECONDITION(validateTarget(mTarget))
+            << "Texture Sampler type (" << unsigned(mTarget)
+            << ") not supported for this operation.";
 
-    ASSERT_PRECONDITION(buffer.buffer, "Data buffer is nullptr.");
+    FILAMENT_CHECK_PRECONDITION(buffer.buffer) << "Data buffer is nullptr.";
 
     auto w = std::max(1u, mWidth >> level);
     auto h = std::max(1u, mHeight >> level);
@@ -430,8 +437,8 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
     if (stream) {
-        ASSERT_PRECONDITION(mTarget == Sampler::SAMPLER_EXTERNAL,
-                "Texture target must be SAMPLER_EXTERNAL");
+        FILAMENT_CHECK_PRECONDITION(mTarget == Sampler::SAMPLER_EXTERNAL)
+                << "Texture target must be SAMPLER_EXTERNAL";
 
         mStream = stream;
         engine.getDriverApi().setExternalStream(mHandle, stream->getHandle());
@@ -442,15 +449,15 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
 }
 
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
-    ASSERT_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL,
-            "External Textures are not mipmappable.");
+    FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL)
+            << "External Textures are not mipmappable.";
 
-    ASSERT_PRECONDITION(mTarget != SamplerType::SAMPLER_3D,
-            "3D Textures are not mipmappable.");
+    FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_3D)
+            << "3D Textures are not mipmappable.";
 
     const bool formatMipmappable = engine.getDriverApi().isTextureFormatMipmappable(mFormat);
-    ASSERT_PRECONDITION(formatMipmappable,
-            "Texture format %u is not mipmappable.", (unsigned)mFormat);
+    FILAMENT_CHECK_PRECONDITION(formatMipmappable)
+            << "Texture format " << (unsigned)mFormat << " is not mipmappable.";
 
     if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
         return;
@@ -493,24 +500,21 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
     /* validate input data */
 
-    ASSERT_PRECONDITION(buffer.format == PixelDataFormat::RGB ||
-                                       buffer.format == PixelDataFormat::RGBA,
-            "input data format must be RGB or RGBA");
+    FILAMENT_CHECK_PRECONDITION(
+            buffer.format == PixelDataFormat::RGB || buffer.format == PixelDataFormat::RGBA)
+            << "input data format must be RGB or RGBA";
 
-    ASSERT_PRECONDITION(
-            buffer.type == PixelDataType::FLOAT ||
+    FILAMENT_CHECK_PRECONDITION(buffer.type == PixelDataType::FLOAT ||
             buffer.type == PixelDataType::HALF ||
-            buffer.type == PixelDataType::UINT_10F_11F_11F_REV,
-            "input data type must be FLOAT, HALF or UINT_10F_11F_11F_REV");
+            buffer.type == PixelDataType::UINT_10F_11F_11F_REV)
+            << "input data type must be FLOAT, HALF or UINT_10F_11F_11F_REV";
 
     /* validate texture */
 
-    ASSERT_PRECONDITION(!(size & (size-1)),
-            "input data cubemap dimensions must be a power-of-two");
+    FILAMENT_CHECK_PRECONDITION(!(size & (size - 1)))
+            << "input data cubemap dimensions must be a power-of-two";
 
-    ASSERT_PRECONDITION(!isCompressed(),
-            "reflections texture cannot be compressed");
-
+    FILAMENT_CHECK_PRECONDITION(!isCompressed()) << "reflections texture cannot be compressed";
 
     PrefilterOptions const defaultOptions;
     options = options ? options : &defaultOptions;

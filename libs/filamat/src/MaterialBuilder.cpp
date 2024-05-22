@@ -242,7 +242,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, size_t size, UniformType type,
         ParameterPrecision precision) noexcept {
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
+    FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
     mParameters[mParameterCount++] = { name, type, size, precision };
     return *this;
 }
@@ -255,15 +255,14 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType type,
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
         SamplerFormat format, ParameterPrecision precision, bool multisample) noexcept {
+    FILAMENT_CHECK_PRECONDITION(!multisample ||
+            (format != SamplerFormat::SHADOW &&
+                    (samplerType == SamplerType::SAMPLER_2D ||
+                            samplerType == SamplerType::SAMPLER_2D_ARRAY)))
+            << "multisample samplers only possible with SAMPLER_2D or SAMPLER_2D_ARRAY,"
+               " as long as type is not SHADOW";
 
-    ASSERT_PRECONDITION(
-            !multisample || (format != SamplerFormat::SHADOW && (
-                                    samplerType == SamplerType::SAMPLER_2D
-                                            || samplerType == SamplerType::SAMPLER_2D_ARRAY)),
-            "multisample samplers only possible with SAMPLER_2D or SAMPLER_2D_ARRAY,"
-            " as long as type is not SHADOW");
-
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
+    FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
     mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample };
     return *this;
 }
@@ -273,8 +272,8 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType type, 
     auto result = std::find_if(mConstants.begin(), mConstants.end(), [name](const Constant& c) {
         return c.name == utils::CString(name);
     });
-    ASSERT_POSTCONDITION(result == mConstants.end(),
-            "There is already a constant parameter present with the name %s.", name);
+    FILAMENT_CHECK_POSTCONDITION(result == mConstants.end())
+            << "There is already a constant parameter present with the name " << name << ".";
     Constant constant {
             .name = CString(name),
             .type = type,
@@ -287,19 +286,20 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType type, 
         }
     };
 
-    const char* const errMessage =
-            "Constant %s was declared with type %s but given %s default value.";
     if constexpr (std::is_same_v<T, int32_t>) {
-        ASSERT_POSTCONDITION(
-                type == ConstantType::INT, errMessage, name, toString(type), "an int");
+        FILAMENT_CHECK_POSTCONDITION(type == ConstantType::INT)
+                << "Constant " << name << " was declared with type " << toString(type)
+                << " but given an int default value.";
         constant.defaultValue.i = defaultValue;
     } else if constexpr (std::is_same_v<T, float>) {
-        ASSERT_POSTCONDITION(
-                type == ConstantType::FLOAT, errMessage, name, toString(type), "a float");
+        FILAMENT_CHECK_POSTCONDITION(type == ConstantType::FLOAT)
+                << "Constant " << name << " was declared with type " << toString(type)
+                << " but given a float default value.";
         constant.defaultValue.f = defaultValue;
     } else if constexpr (std::is_same_v<T, bool>) {
-        ASSERT_POSTCONDITION(
-                type == ConstantType::BOOL, errMessage, name, toString(type), "a bool");
+        FILAMENT_CHECK_POSTCONDITION(type == ConstantType::BOOL)
+                << "Constant " << name << " was declared with type " << toString(type)
+                << " but given a bool default value.";
         constant.defaultValue.b = defaultValue;
     } else {
         assert_invariant(false);
@@ -316,17 +316,17 @@ template MaterialBuilder& MaterialBuilder::constant<bool>(
         const char* name, ConstantType type, bool defaultValue);
 
 MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
-    ASSERT_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT, "Too many buffers");
+    FILAMENT_CHECK_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT) << "Too many buffers";
     mBuffers.emplace_back(std::make_unique<filament::BufferInterfaceBlock>(std::move(bib)));
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
         ParameterPrecision precision, const char* name) noexcept {
-    ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,
-            "Subpass parameters must have FLOAT format.");
+    FILAMENT_CHECK_PRECONDITION(format == SamplerFormat::FLOAT)
+            << "Subpass parameters must have FLOAT format.";
 
-    ASSERT_POSTCONDITION(mSubpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
+    FILAMENT_CHECK_POSTCONDITION(mSubpassCount < MAX_SUBPASS_COUNT) << "Too many subpasses";
     mSubpasses[mSubpassCount++] = { name, subpassType, format, precision };
     return *this;
 }
@@ -1079,14 +1079,14 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
         Precision precision, OutputType type, const char* name, int location) noexcept {
+    FILAMENT_CHECK_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT)
+            << "Depth outputs must be of type FLOAT.";
+    FILAMENT_CHECK_PRECONDITION(
+            target != OutputTarget::DEPTH || qualifier == VariableQualifier::OUT)
+            << "Depth outputs must use OUT qualifier.";
 
-    ASSERT_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT,
-            "Depth outputs must be of type FLOAT.");
-    ASSERT_PRECONDITION(target != OutputTarget::DEPTH || qualifier == VariableQualifier::OUT,
-            "Depth outputs must use OUT qualifier.");
-
-    ASSERT_PRECONDITION(location >= -1,
-            "Output location must be >= 0 (or use -1 for default location).");
+    FILAMENT_CHECK_PRECONDITION(location >= -1)
+            << "Output location must be >= 0 (or use -1 for default location).";
 
     // A location value of -1 signals using the default location. We'll simply take the previous
     // output's location and add 1.
@@ -1108,10 +1108,10 @@ MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarg
         }
     }
 
-    ASSERT_PRECONDITION(colorOutputCount <= MAX_COLOR_OUTPUT,
-            "A maximum of %d COLOR outputs is allowed.", MAX_COLOR_OUTPUT);
-    ASSERT_PRECONDITION(depthOutputCount <= MAX_DEPTH_OUTPUT,
-            "A maximum of %d DEPTH output is allowed.", MAX_DEPTH_OUTPUT);
+    FILAMENT_CHECK_PRECONDITION(colorOutputCount <= MAX_COLOR_OUTPUT)
+            << "A maximum of " << MAX_COLOR_OUTPUT << " COLOR outputs is allowed.";
+    FILAMENT_CHECK_PRECONDITION(depthOutputCount <= MAX_DEPTH_OUTPUT)
+            << "A maximum of " << MAX_DEPTH_OUTPUT << " DEPTH output is allowed.";
 
     assert(mOutputs.size() <= MAX_COLOR_OUTPUT + MAX_DEPTH_OUTPUT);
 

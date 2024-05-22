@@ -48,7 +48,8 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
         mBuffer = [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate];
     }
     MetalBufferTracking::track(mBuffer, MetalBufferTracking::Type::GENERIC);
-    ASSERT_POSTCONDITION(mBuffer, "Could not allocate Metal buffer of size %zu.", size);
+    FILAMENT_CHECK_POSTCONDITION(mBuffer)
+            << "Could not allocate Metal buffer of size " << size << "u.";
 }
 
 MetalBuffer::~MetalBuffer() {
@@ -61,9 +62,9 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     if (size <= 0) {
         return;
     }
-    ASSERT_PRECONDITION(size + byteOffset <= mBufferSize,
-            "Attempting to copy %zu bytes into a buffer of size %zu at offset %zu",
-            size, mBufferSize, byteOffset);
+    FILAMENT_CHECK_PRECONDITION(size + byteOffset <= mBufferSize)
+            << "Attempting to copy " << size << " bytes into a buffer of size " << mBufferSize
+            << "u at offset " << byteOffset << "u";
 
     // Either copy into the Metal buffer or into our cpu buffer.
     if (mCpuBuffer) {
@@ -77,7 +78,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     memcpy(staging->buffer.contents, src, size);
 
     // The blit below requires that byteOffset be a multiple of 4.
-    ASSERT_PRECONDITION(!(byteOffset & 0x3u), "byteOffset must be a multiple of 4");
+    FILAMENT_CHECK_PRECONDITION(!(byteOffset & 0x3u)) << "byteOffset must be a multiple of 4";
 
     // Encode a blit from the staging buffer into the private GPU buffer.
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);

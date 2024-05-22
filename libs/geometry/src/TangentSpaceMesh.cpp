@@ -100,8 +100,8 @@ inline AlgorithmImpl selectBestDefaultAlgorithm(uint8_t const inputType) {
     } else if (isInputType(inputType, POSITIONS_INDICES)) {
         return AlgorithmImpl::FLAT_SHADING;
     } else {
-        ASSERT_PRECONDITION(inputType & NORMALS,
-                "Must at least have normals or (positions + indices) as input");
+        FILAMENT_CHECK_PRECONDITION(inputType & NORMALS)
+                << "Must at least have normals or (positions + indices) as input";
         return AlgorithmImpl::FRISVAD;
     }
 }
@@ -580,14 +580,14 @@ Builder& Builder::algorithm(Algorithm algo) noexcept {
 }
 
 TangentSpaceMesh* Builder::build() {
-    ASSERT_PRECONDITION(!mMesh->mInput->triangles32 || !mMesh->mInput->triangles16,
-            "Cannot provide both uint32 triangles and uint16 triangles");
+    FILAMENT_CHECK_PRECONDITION(!mMesh->mInput->triangles32 || !mMesh->mInput->triangles16)
+            << "Cannot provide both uint32 triangles and uint16 triangles";
 
     // Validate whether the provided data for an attribute is of the right data type.
     for (auto attribute: mMesh->mInput->getAuxAttributes()) {
-        ASSERT_PRECONDITION(
-                TangentSpaceMeshInput::isDataTypeCorrect(attribute, mMesh->mInput->data(attribute)),
-                "Incorrect attribute data type");
+        FILAMENT_CHECK_PRECONDITION(
+                TangentSpaceMeshInput::isDataTypeCorrect(attribute, mMesh->mInput->data(attribute)))
+                << "Incorrect attribute data type";
     }
 
     mMesh->mOutput->algorithm = selectAlgorithm(mMesh->mInput);
@@ -654,7 +654,7 @@ size_t TangentSpaceMesh::getVertexCount() const noexcept {
 
 void TangentSpaceMesh::getPositions(float3* positions, size_t stride) const {
     auto inPositions = mInput->positions();
-    ASSERT_PRECONDITION(inPositions, "Must provide input positions");
+    FILAMENT_CHECK_PRECONDITION(inPositions) << "Must provide input positions";
     stride = stride ? stride : sizeof(decltype(*positions));
     auto const& outPositions = mOutput->positions();
     for (size_t i = 0; i < mOutput->vertexCount; ++i) {
@@ -665,7 +665,7 @@ void TangentSpaceMesh::getPositions(float3* positions, size_t stride) const {
 
 void TangentSpaceMesh::getUVs(float2* uvs, size_t stride) const {
     auto inUVs = mInput->uvs();
-    ASSERT_PRECONDITION(inUVs, "Must provide input positions");
+    FILAMENT_CHECK_PRECONDITION(inUVs) << "Must provide input positions";
     stride = stride ? stride : sizeof(decltype(*uvs));
     auto const& outUvs = mOutput->uvs();
     for (size_t i = 0; i < mOutput->vertexCount; ++i) {
@@ -679,7 +679,8 @@ size_t TangentSpaceMesh::getTriangleCount() const noexcept {
 }
 
 void TangentSpaceMesh::getTriangles(uint3* out) const {
-    ASSERT_PRECONDITION(mInput->triangles16 || mInput->triangles32, "Must provide input triangles");
+    FILAMENT_CHECK_PRECONDITION(mInput->triangles16 || mInput->triangles32)
+            << "Must provide input triangles";
 
     bool const is16 = (bool) mOutput->triangles16;
     auto const& triangles16 = mOutput->triangles16;
@@ -692,7 +693,8 @@ void TangentSpaceMesh::getTriangles(uint3* out) const {
 }
 
 void TangentSpaceMesh::getTriangles(ushort3* out) const {
-    ASSERT_PRECONDITION(mInput->triangles16 || mInput->triangles32, "Must provide input triangles");
+    FILAMENT_CHECK_PRECONDITION(mInput->triangles16 || mInput->triangles32)
+            << "Must provide input triangles";
 
     const bool is16 = (bool) mOutput->triangles16;
     auto const& triangles16 = mOutput->triangles16;
@@ -703,9 +705,9 @@ void TangentSpaceMesh::getTriangles(ushort3* out) const {
             *out = triangles16[i];
         } else {
             uint3 const& tri = triangles32[i];
-            ASSERT_PRECONDITION(tri.x <= USHRT_MAX &&
-                                tri.y <= USHRT_MAX &&
-                                tri.z <= USHRT_MAX, "Overflow when casting uint3 to ushort3");
+            FILAMENT_CHECK_PRECONDITION(
+                    tri.x <= USHRT_MAX && tri.y <= USHRT_MAX && tri.z <= USHRT_MAX)
+                    << "Overflow when casting uint3 to ushort3";
             *out = ushort3{static_cast<uint16_t>(tri.x),
                            static_cast<uint16_t>(tri.y),
                            static_cast<uint16_t>(tri.z)};
@@ -763,7 +765,7 @@ template<typename T, typename>
 void TangentSpaceMesh::getAux(AuxAttribute attribute, T* out, size_t stride) const noexcept {
     AttributeImpl attrib = static_cast<AttributeImpl>(attribute);
     auto inAux = mInput->data<T>(attrib);
-    ASSERT_PRECONDITION(inAux, "Must provide input auxilliary attribute");
+    FILAMENT_CHECK_PRECONDITION(inAux) << "Must provide input auxilliary attribute";
     stride = stride ? stride : sizeof(decltype(*out));
     auto const& outAux = mOutput->data<T>(attrib);
     for (size_t i = 0; i < mOutput->vertexCount; ++i) {

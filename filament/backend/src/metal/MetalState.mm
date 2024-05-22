@@ -94,7 +94,7 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
         utils::slog.e << description << utils::io::endl;
     }
-    ASSERT_POSTCONDITION(error == nil, "Could not create Metal pipeline state.");
+    FILAMENT_CHECK_POSTCONDITION(error == nil) << "Could not create Metal pipeline state.";
 
     return pipeline;
 }

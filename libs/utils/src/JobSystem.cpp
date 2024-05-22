@@ -275,14 +275,14 @@ void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
 
             if (job) {
                 auto runningJobCount = job->runningJobCount.load();
-                ASSERT_POSTCONDITION(runningJobCount > 0,
-                        "JobSystem(%p, %u): waiting while job %p has completed and %d jobs are active!",
-                        this, unsigned(id), job, activeJobs);
+                FILAMENT_CHECK_POSTCONDITION(runningJobCount > 0)
+                        << "JobSystem(" << this << ", " << unsigned(id) << "): waiting while job "
+                        << job << " has completed and " << activeJobs << " jobs are active!";
             }
 
-            ASSERT_POSTCONDITION(activeJobs <= 0,
-                    "JobSystem(%p, %u): waiting while %d jobs are active!",
-                    this, unsigned(id), activeJobs);
+            FILAMENT_CHECK_POSTCONDITION(activeJobs <= 0)
+                    << "JobSystem(" << this << ", " << unsigned(id) << "): waiting while "
+                    << activeJobs << " jobs are active!";
 
         } while (true);
     }
@@ -311,7 +311,7 @@ void JobSystem::wake(size_t hint) noexcept {
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
     std::lock_guard<utils::Mutex> const lock(mThreadMapLock);
     auto iter = mThreadMap.find(std::this_thread::get_id());
-    ASSERT_PRECONDITION(iter != mThreadMap.end(), "This thread has not been adopted.");
+    FILAMENT_CHECK_PRECONDITION(iter != mThreadMap.end()) << "This thread has not been adopted.";
     return *iter->second;
 }
 
@@ -445,7 +445,7 @@ void JobSystem::loop(ThreadState* state) noexcept {
     mThreadMapLock.lock();
     bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
     mThreadMapLock.unlock();
-    ASSERT_PRECONDITION(inserted, "This thread is already in a loop.");
+    FILAMENT_CHECK_PRECONDITION(inserted) << "This thread is already in a loop.";
 
     // run our main loop...
     do {
@@ -605,9 +605,9 @@ void JobSystem::adopt() {
 
     if (state) {
         // we're already part of a JobSystem, do nothing.
-        ASSERT_PRECONDITION(this == state->js,
-                "Called adopt on a thread owned by another JobSystem (%p), this=%p!",
-                state->js, this);
+        FILAMENT_CHECK_PRECONDITION(this == state->js)
+                << "Called adopt on a thread owned by another JobSystem (" << state->js
+                << "), this=" << this << "!";
         return;
     }
 
@@ -615,8 +615,8 @@ void JobSystem::adopt() {
     uint16_t const adopted = mAdoptedThreads.fetch_add(1, std::memory_order_relaxed);
     size_t const index = mThreadCount + adopted;
 
-    ASSERT_POSTCONDITION(index < mThreadStates.size(),
-            "Too many calls to adopt(). No more adoptable threads!");
+    FILAMENT_CHECK_POSTCONDITION(index < mThreadStates.size())
+            << "Too many calls to adopt(). No more adoptable threads!";
 
     // all threads adopted by the JobSystem need to run at the same priority
     JobSystem::setThreadPriority(Priority::DISPLAY);
@@ -634,8 +634,8 @@ void JobSystem::emancipate() {
     std::lock_guard<utils::Mutex> const lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
-    ASSERT_PRECONDITION(state, "this thread is not an adopted thread");
-    ASSERT_PRECONDITION(state->js == this, "this thread is not adopted by us");
+    FILAMENT_CHECK_PRECONDITION(state) << "this thread is not an adopted thread";
+    FILAMENT_CHECK_PRECONDITION(state->js == this) << "this thread is not adopted by us";
     mThreadMap.erase(iter);
 }
 

@@ -3606,13 +3606,11 @@ void OpenGLDriver::resolve(
     assert_invariant(s);
     assert_invariant(d);
 
-    ASSERT_PRECONDITION(
-            d->width == s->width && d->height == s->height,
-            "invalid resolve: src and dst sizes don't match");
+    FILAMENT_CHECK_PRECONDITION(d->width == s->width && d->height == s->height)
+            << "invalid resolve: src and dst sizes don't match";
 
-    ASSERT_PRECONDITION(s->samples > 1 && d->samples == 1,
-            "invalid resolve: src.samples=%u, dst.samples=%u",
-            +s->samples, +d->samples);
+    FILAMENT_CHECK_PRECONDITION(s->samples > 1 && d->samples == 1)
+            << "invalid resolve: src.samples=" << +s->samples << ", dst.samples=" << +d->samples;
 
     blit(   dst, dstLevel, dstLayer, {},
             src, srcLevel, srcLayer, {},
@@ -3768,12 +3766,12 @@ void OpenGLDriver::blitDEPRECATED(TargetBufferFlags buffers,
     UTILS_UNUSED_IN_RELEASE auto& gl = mContext;
     assert_invariant(!gl.isES2());
 
-    ASSERT_PRECONDITION(buffers == TargetBufferFlags::COLOR0,
-            "blitDEPRECATED only supports COLOR0");
+    FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
+            << "blitDEPRECATED only supports COLOR0";
 
-    ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
-                        dstRect.left >= 0 && dstRect.bottom >= 0,
-            "Source and destination rects must be positive.");
+    FILAMENT_CHECK_PRECONDITION(
+            srcRect.left >= 0 && srcRect.bottom >= 0 && dstRect.left >= 0 && dstRect.bottom >= 0)
+            << "Source and destination rects must be positive.";
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 

@@ -296,9 +296,10 @@ protected:
 private:
     UTILS_NOINLINE
     void assertConnect(FrameGraphTexture::Usage u) {
-        ASSERT_PRECONDITION((u & this->usage) == u,
-                "Requested usage %s not available on imported resource \"%s\" with usage %s",
-                utils::to_string(u).c_str(), this->name, utils::to_string(this->usage).c_str());
+        FILAMENT_CHECK_PRECONDITION((u & this->usage) == u)
+                << "Requested usage " << utils::to_string(u).c_str()
+                << " not available on imported resource \"" << this->name << "\" with usage "
+                << utils::to_string(this->usage).c_str();
     }
 };
 

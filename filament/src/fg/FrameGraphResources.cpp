@@ -32,18 +32,18 @@ const char* FrameGraphResources::getPassName() const noexcept {
 // this perhaps weirdly returns a reference, this is to express the fact that if this method
 // fails, it has to assert (or throw), it can't return for e.g. a nullptr, because the public
 // API doesn't return pointers.
-// We still use ASSERT_PRECONDITION() because these failures are due to post conditions not met.
+// We still use FILAMENT_CHECK_PRECONDITION() because these failures are due to post conditions not met.
 VirtualResource& FrameGraphResources::getResource(FrameGraphHandle handle) const {
-    ASSERT_PRECONDITION(handle, "Uninitialized handle when using FrameGraphResources.");
+    FILAMENT_CHECK_PRECONDITION(handle) << "Uninitialized handle when using FrameGraphResources.";
 
     VirtualResource* const resource = mFrameGraph.getResource(handle);
 
     auto& declaredHandles = mPassNode.mDeclaredHandles;
     const bool hasReadOrWrite = declaredHandles.find(handle.index) != declaredHandles.cend();
 
-    ASSERT_PRECONDITION(hasReadOrWrite,
-            "Pass \"%s\" didn't declare any access to resource \"%s\"",
-            mPassNode.getName(), resource->name);
+    FILAMENT_CHECK_PRECONDITION(hasReadOrWrite)
+            << "Pass \"" << mPassNode.getName() << "\" didn't declare any access to resource \""
+            << resource->name << "\"";
 
     assert_invariant(resource->refcount);
 
@@ -55,9 +55,8 @@ FrameGraphResources::RenderPassInfo FrameGraphResources::getRenderPassInfo(uint3
     RenderPassNode const& renderPassNode = static_cast<RenderPassNode const&>(mPassNode);
     RenderPassNode::RenderPassData const* pRenderPassData = renderPassNode.getRenderPassData(id);
 
-    ASSERT_PRECONDITION(pRenderPassData,
-            "using invalid RenderPass index %u in Pass \"%s\"",
-            id, mPassNode.getName());
+    FILAMENT_CHECK_PRECONDITION(pRenderPassData) << "using invalid RenderPass index " << id
+                                                 << " in Pass \"" << mPassNode.getName() << "\"";
 
     return { pRenderPassData->backend.target, pRenderPassData->backend.params };
 }

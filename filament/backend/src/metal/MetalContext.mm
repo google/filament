@@ -113,7 +113,8 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
             }
         }
     }];
-    ASSERT_POSTCONDITION(context->pendingCommandBuffer, "Could not obtain command buffer.");
+    FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)
+            << "Could not obtain command buffer.";
     return context->pendingCommandBuffer;
 }
 

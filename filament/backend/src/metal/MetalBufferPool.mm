@@ -49,7 +49,8 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
                                               options:MTLResourceStorageModeShared];
     }
     MetalBufferTracking::track(buffer, MetalBufferTracking::Type::STAGING);
-    ASSERT_POSTCONDITION(buffer, "Could not allocate Metal staging buffer of size %zu.", numBytes);
+    FILAMENT_CHECK_POSTCONDITION(buffer)
+            << "Could not allocate Metal staging buffer of size " << numBytes << "u.";
     MetalBufferPoolEntry* stage = new MetalBufferPoolEntry {
         .buffer = buffer,
         .capacity = numBytes,

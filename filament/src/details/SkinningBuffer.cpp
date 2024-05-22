@@ -96,20 +96,20 @@ void FSkinningBuffer::terminate(FEngine& engine) {
 
 void FSkinningBuffer::setBones(FEngine& engine,
         RenderableManager::Bone const* transforms, size_t count, size_t offset) {
-
-    ASSERT_PRECONDITION((offset + count) <= mBoneCount,
-            "SkinningBuffer (size=%lu) overflow (boneCount=%u, offset=%u)",
-            (unsigned)mBoneCount, (unsigned)count, (unsigned)offset);
+    FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
+            << "SkinningBuffer (size=" << (unsigned)mBoneCount
+            << "u) overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
+            << ")";
 
     setBones(engine, mHandle, transforms, count, offset);
 }
 
 void FSkinningBuffer::setBones(FEngine& engine,
         math::mat4f const* transforms, size_t count, size_t offset) {
-
-    ASSERT_PRECONDITION((offset + count) <= mBoneCount,
-            "SkinningBuffer (size=%lu) overflow (boneCount=%u, offset=%u)",
-            (unsigned)mBoneCount, (unsigned)count, (unsigned)offset);
+    FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
+            << "SkinningBuffer (size=" << (unsigned)mBoneCount
+            << "u) overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
+            << ")";
 
     setBones(engine, mHandle, transforms, count, offset);
 }
