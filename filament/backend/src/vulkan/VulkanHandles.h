@@ -38,9 +38,14 @@ namespace filament::backend {
 using namespace descset;
 
 class VulkanTimestamps;
+struct VulkanBufferObject;
 
-struct VulkanDescriptorSetLayout : public VulkanResource {
-    static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT = 3;
+struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout {
+    static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT = 4;
+    static constexpr uint8_t MAX_BINDINGS = 25;
+
+    using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
+            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     // The bitmask representation of a set layout.
     struct Bitmask {
@@ -51,16 +56,12 @@ struct VulkanDescriptorSetLayout : public VulkanResource {
 
         // Because we're using this struct as hash key, must make it's 8-bytes aligned, with no
         // unaccounted bytes.
-        uint8_t padding0 = 0; // 1 bytes
-        uint16_t padding1 = 0;// 2 bytes
-        uint32_t padding2 = 0;// 4 bytes
+        uint8_t padding[7] = {}; // 7 bytes
 
         bool operator==(Bitmask const& right) const {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
                    inputAttachment == right.inputAttachment;
         }
-
-        static Bitmask fromBackendLayout(descset::DescriptorSetLayout const& layout);
     };
 
     // This is a convenience struct to quickly check layout compatibility in terms of descriptor set
@@ -70,6 +71,10 @@ struct VulkanDescriptorSetLayout : public VulkanResource {
         uint32_t dynamicUbo = 0;
         uint32_t sampler = 0;
         uint32_t inputAttachment = 0;
+
+        inline uint32_t total() const {
+            return ubo + dynamicUbo + sampler + inputAttachment;
+        }
 
         bool operator==(Count const& right) const noexcept {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
@@ -99,8 +104,7 @@ struct VulkanDescriptorSetLayout : public VulkanResource {
 
     static_assert(sizeof(Bitmask) % 8 == 0);
 
-    explicit VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayoutCreateInfo const& info,
-            Bitmask const& bitmask);
+    VulkanDescriptorSetLayout(VkDevice device, DescriptorSetLayout const& layout);
 
     ~VulkanDescriptorSetLayout();
 
@@ -147,20 +151,17 @@ private:
     }
 };
 
-using VulkanDescriptorSetLayoutList = std::array<Handle<VulkanDescriptorSetLayout>,
-        VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
-
-struct VulkanDescriptorSet : public VulkanResource {
+struct VulkanDescriptorSet : public VulkanResource, HwDescriptorSet {
 public:
     // Because we need to recycle descriptor sets not used, we allow for a callback that the "Pool"
     // can use to repackage the vk handle.
     using OnRecycle = std::function<void()>;
 
-    VulkanDescriptorSet(VulkanResourceAllocator* allocator,
-            VkDescriptorSet rawSet, OnRecycle&& onRecycleFn)
+    VulkanDescriptorSet(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
+            OnRecycle&& onRecycleFn)
         : VulkanResource(VulkanResourceType::DESCRIPTOR_SET),
-          resources(allocator),
           vkSet(rawSet),
+          mResources(allocator),
           mOnRecycleFn(std::move(onRecycleFn)) {}
 
     ~VulkanDescriptorSet() {
@@ -169,16 +170,24 @@ public:
         }
     }
 
+    void acquire(VulkanTexture* texture);
+
+    void acquire(VulkanBufferObject* texture);
+
+    bool hasTexture(VulkanTexture* texture) {
+        return std::any_of(mTextures.begin(), mTextures.end(),
+                [texture](auto t) { return t == texture; });
+    }
+
     // TODO: maybe change to fixed size for performance.
-    VulkanAcquireOnlyResourceManager resources;
     VkDescriptorSet const vkSet;
 
 private:
+    std::array<VulkanTexture*, 16> mTextures = { nullptr };
+    uint8_t mTextureCount = 0;
+    VulkanAcquireOnlyResourceManager mResources;
     OnRecycle mOnRecycleFn;
 };
-
-using VulkanDescriptorSetList = std::array<Handle<VulkanDescriptorSet>,
-        VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
@@ -224,16 +233,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
     // samplers.
     inline BindingList const& getBindings() const { return mInfo->bindings; }
 
-    // TODO: this is currently not used. This will replace getLayoutDescriptionList below.
-    // inline descset::DescriptorSetLayout const& getLayoutDescription() const {
-    //    return mInfo->layout;
-    // }
-    // In the usual case, we would have just one layout per program. But in the current setup, we
-    // have a set/layout for each descriptor type. This will be changed in the future.
-    using LayoutDescriptionList = std::array<descset::DescriptorSetLayout,
-            VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
-    inline LayoutDescriptionList const& getLayoutDescriptionList() const { return mInfo->layouts; }
-
     inline uint32_t getPushConstantRangeCount() const {
         return mInfo->pushConstantDescription.getVkRangeCount();
     }
@@ -272,10 +271,6 @@ private:
         // We store the samplerGroupIndex as the top 8-bit and the index within each group as the lower 8-bit.
         utils::FixedCapacityVector<uint16_t> bindingToSamplerIndex;
         VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
-
-        // TODO: Use this instead of `layouts` after Filament-side Descriptor Set API is in place.
-        // descset::DescriptorSetLayout layout;
-        LayoutDescriptionList layouts;
 
         PushConstantDescription pushConstantDescription;
 
@@ -482,11 +477,6 @@ private:
     utils::Mutex mFenceMutex;
 };
 
-struct VulkanDescriptorSetLayout2 : public HwDescriptorSetLayout, VulkanResource {
-};
-
-struct VulkanDescriptorSet2 : public HwDescriptorSet, VulkanResource {
-};
 
 inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
         BufferObjectBinding bindingType) noexcept {

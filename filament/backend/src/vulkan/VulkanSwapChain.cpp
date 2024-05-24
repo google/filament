@@ -75,7 +75,7 @@ void VulkanSwapChain::update() {
 
 void VulkanSwapChain::present() {
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
-        VkCommandBuffer const cmdbuf = mCommands->get().buffer();
+        VulkanCommandBuffer& commands = mCommands->get();
         VkImageSubresourceRange const subresources{
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
@@ -83,7 +83,7 @@ void VulkanSwapChain::present() {
                 .baseArrayLayer = 0,
                 .layerCount = 1,
         };
-        mColors[mCurrentSwapIndex]->transitionLayout(cmdbuf, subresources, VulkanLayout::PRESENT);
+        mColors[mCurrentSwapIndex]->transitionLayout(&commands, subresources, VulkanLayout::PRESENT);
     }
 
     mCommands->flush();

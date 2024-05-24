@@ -182,6 +182,8 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
                     }
                     break;
                 }
+                case DescriptorType::INPUT_ATTACHMENT:
+                    break;
             }
             CHECK_GL_ERROR(utils::slog.e)
         }

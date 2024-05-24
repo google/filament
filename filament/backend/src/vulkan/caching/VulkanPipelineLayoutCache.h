@@ -28,9 +28,10 @@ namespace filament::backend {
 
 class VulkanPipelineLayoutCache {
 public:
+    using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
+    
     VulkanPipelineLayoutCache(VkDevice device, VulkanResourceAllocator* allocator)
         : mDevice(device),
-          mAllocator(allocator),
           mTimestamp(0) {}
 
     void terminate() noexcept;
@@ -43,20 +44,18 @@ public:
     };
 
     struct PipelineLayoutKey {
-        using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout,
-                VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;
-        DescriptorSetLayoutArray descSetLayouts = {};                   // 8 * 3
-        PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};  // 2 * 3
+        DescriptorSetLayoutArray descSetLayouts = {};                                     // 8 * 4
+        PushConstantKey pushConstant[Program::SHADER_TYPE_COUNT] = {};                    // 2 * 3
         uint16_t padding = 0;
     };
-    static_assert(sizeof(PipelineLayoutKey) == 32);
+    static_assert(sizeof(PipelineLayoutKey) == 40);
 
     VulkanPipelineLayoutCache(VulkanPipelineLayoutCache const&) = delete;
     VulkanPipelineLayoutCache& operator=(VulkanPipelineLayoutCache const&) = delete;
 
     // A pipeline layout depends on the descriptor set layout and the push constant ranges, which
     // are described in the program.
-    VkPipelineLayout getLayout(VulkanDescriptorSetLayoutList const& descriptorSetLayouts,
+    VkPipelineLayout getLayout(DescriptorSetLayoutArray const& descriptorSetLayouts,
             VulkanProgram* program);
 
 private:
@@ -77,7 +76,6 @@ private:
             PipelineLayoutKeyHashFn, PipelineLayoutKeyEqual>;
 
     VkDevice mDevice;
-    VulkanResourceAllocator* mAllocator;
     Timestamp mTimestamp;
     PipelineLayoutMap mPipelineLayouts;
 };

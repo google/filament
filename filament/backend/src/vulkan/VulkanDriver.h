@@ -159,12 +159,11 @@ private:
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetManager mDescriptorSetManager;
 
-    VulkanDescriptorSetManager::GetPipelineLayoutFunction mGetPipelineFunction;
-
     // This is necessary for us to write to push constants after binding a pipeline.
     struct BoundPipeline {
         VulkanProgram* program;
         VkPipelineLayout pipelineLayout;
+        uint8_t descriptorSetMask;
     };
     BoundPipeline mBoundPipeline = {};
     RenderPassFboBundle mRenderPassFboInfo;

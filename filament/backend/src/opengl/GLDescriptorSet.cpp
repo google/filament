@@ -105,6 +105,8 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
                     }
                 }
                 break;
+            case DescriptorType::INPUT_ATTACHMENT:
+                break;
         }
     }
 }

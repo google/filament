@@ -226,6 +226,7 @@ enum class DescriptorType : uint8_t {
     UNIFORM_BUFFER,
     SHADER_STORAGE_BUFFER,
     SAMPLER,
+    INPUT_ATTACHMENT,
 };
 
 enum class DescriptorFlags : uint8_t {

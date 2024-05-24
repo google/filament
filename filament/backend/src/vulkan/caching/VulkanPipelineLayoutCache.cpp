@@ -21,14 +21,15 @@
 namespace filament::backend {
 
 VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
-        VulkanDescriptorSetLayoutList const& descriptorSetLayouts, VulkanProgram* program) {
+        DescriptorSetLayoutArray const& descriptorSetLayouts, VulkanProgram* program) {
     PipelineLayoutKey key = {};
     uint8_t descSetLayoutCount = 0;
+    key.descSetLayouts = descriptorSetLayouts;
     for (auto layoutHandle: descriptorSetLayouts) {
-        if (layoutHandle) {
-            auto layout = mAllocator->handle_cast<VulkanDescriptorSetLayout*>(layoutHandle);
-            key.descSetLayouts[descSetLayoutCount++] = layout->vklayout;
+        if (layoutHandle == VK_NULL_HANDLE) {
+            break;
         }
+        descSetLayoutCount++;
     }
 
     // build the push constant layout key

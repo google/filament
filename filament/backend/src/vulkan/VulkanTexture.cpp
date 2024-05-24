@@ -226,17 +226,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     // Go ahead and create the primary image view.
     getImageView(mPrimaryViewRange, mViewType, mSwizzle);
 
-    // Transition the layout of each image slice that might be used as a render target.
-    // We do not transition images that are merely SAMPLEABLE, this is deferred until upload time
-    // because we do not know how many layers and levels will actually be used.
-    if (imageInfo.usage
-        & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-           | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-        VulkanCommandBuffer& commands = mCommands->get();
-        VkCommandBuffer const cmdbuf = commands.buffer();
-        commands.acquire(this);
-        transitionLayout(cmdbuf, mFullViewRange, imgutil::getDefaultLayout(imageInfo.usage));
-    }
+    VulkanCommandBuffer& commandsBuf = mCommands->get();
+    commandsBuf.acquire(this);
+    transitionLayout(&commandsBuf, mFullViewRange, imgutil::getDefaultLayout(imageInfo.usage));
 }
 
 VulkanTexture::~VulkanTexture() {
@@ -254,7 +246,6 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     assert_invariant(width <= this->width && height <= this->height);
     assert_invariant(depth <= this->depth * ((target == SamplerType::SAMPLER_CUBEMAP ||
                         target == SamplerType::SAMPLER_CUBEMAP_ARRAY) ? 6 : 1));
-
     const PixelBufferDescriptor* hostData = &data;
     PixelBufferDescriptor reshapedData;
 
@@ -332,11 +323,11 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
         nextLayout = imgutil::getDefaultLayout(this->usage);
     }
 
-    transitionLayout(cmdbuf, transitionRange, newLayout);
+    transitionLayout(&commands, transitionRange, newLayout);
 
     vkCmdCopyBufferToImage(cmdbuf, stage->buffer, mTextureImage, newVkLayout, 1, &copyRegion);
 
-    transitionLayout(cmdbuf, transitionRange, nextLayout);
+    transitionLayout(&commands, transitionRange, nextLayout);
 }
 
 void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
@@ -371,12 +362,12 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
-    transitionLayout(cmdbuf, range, newLayout);
+    transitionLayout(&commands, range, newLayout);
 
     vkCmdBlitImage(cmdbuf, stage->image, imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
             mTextureImage, imgutil::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
 
-    transitionLayout(cmdbuf, range, oldLayout);
+    transitionLayout(&commands, range, oldLayout);
 }
 
 void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) {
@@ -425,9 +416,15 @@ VkImageAspectFlags VulkanTexture::getImageAspect() const {
     return filament::backend::getImageAspect(mVkFormat);
 }
 
-void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubresourceRange& range,
-        VulkanLayout newLayout) {
+void VulkanTexture::transitionLayout(VulkanCommandBuffer* commands,
+        const VkImageSubresourceRange& range, VulkanLayout newLayout) {
+    transitionLayout(commands->buffer(), commands->fence, range, newLayout);
+}
 
+void VulkanTexture::transitionLayout(
+        VkCommandBuffer cmdbuf, std::shared_ptr<VulkanCmdFence> fence,
+        const VkImageSubresourceRange& range,
+        VulkanLayout newLayout) {
     VulkanLayout const oldLayout = getLayout(range.baseArrayLayer, range.baseMipLevel);
 
     uint32_t const firstLayer = range.baseArrayLayer;
@@ -438,7 +435,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
     // If we are transitioning more than one layer/level (slice), we need to know whether they are
     // all of the same layer.  If not, we need to transition slice-by-slice. Otherwise it would
     // trigger the validation layer saying that the `oldLayout` provided is incorrect.
-    // TODO: transition by multiple slices with more sophiscated range finding.
+    // TODO: transition by multiple slices with more sophisticated range finding.
     bool transitionSliceBySlice = false;
     for (uint32_t i = firstLayer; i < lastLayer; ++i) {
         for (uint32_t j = firstLevel; j < lastLevel; ++j) {
@@ -449,39 +446,30 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
         }
     }
 
-#if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-    FVK_LOGD << "transition texture=" << mTextureImage
-                  << " (" << range.baseArrayLayer
-                  << "," << range.baseMipLevel << ")"
-                  << " count=(" << range.layerCount
-                  << "," << range.levelCount << ")"
-                  << " from=" << oldLayout << " to=" << newLayout
-                  << " format=" << mVkFormat
-                  << " depth=" << isVkDepthFormat(mVkFormat)
-                  << " slice-by-slice=" << transitionSliceBySlice
-                  << utils::io::endl;
-#endif
-
+    bool hasTransitions = false;
     if (transitionSliceBySlice) {
         for (uint32_t i = firstLayer; i < lastLayer; ++i) {
             for (uint32_t j = firstLevel; j < lastLevel; ++j) {
                 VulkanLayout const layout = getLayout(i, j);
-                imgutil::transitionLayout(cmdbuf, {
-                        .image = mTextureImage,
-                        .oldLayout = layout,
-                        .newLayout = newLayout,
-                        .subresources = {
-                            .aspectMask = range.aspectMask,
-                            .baseMipLevel = j,
-                            .levelCount = 1,
-                            .baseArrayLayer = i,
-                            .layerCount = 1,
-                        },
-                    });
+                if (layout == newLayout) {
+                    continue;
+                }
+                hasTransitions = hasTransitions || imgutil::transitionLayout(cmdbuf, {
+                    .image = mTextureImage,
+                    .oldLayout = layout,
+                    .newLayout = newLayout,
+                    .subresources = {
+                        .aspectMask = range.aspectMask,
+                        .baseMipLevel = j,
+                        .levelCount = 1,
+                        .baseArrayLayer = i,
+                        .layerCount = 1,
+                    },
+                });
             }
         }
-    } else {
-        imgutil::transitionLayout(cmdbuf, {
+    } else if (newLayout != oldLayout) {
+        hasTransitions = imgutil::transitionLayout(cmdbuf, {
             .image = mTextureImage,
             .oldLayout = oldLayout,
             .newLayout = newLayout,
@@ -489,7 +477,25 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
         });
     }
 
-    setLayout(range, newLayout);
+    if (hasTransitions) {
+        mTransitionFence = fence;
+        setLayout(range, newLayout);
+
+#if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
+        FVK_LOGD << "transition texture=" << mTextureImage << " (" << range.baseArrayLayer
+                       << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
+                       << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
+                       << " format=" << mVkFormat << " depth=" << isVkDepthFormat(mVkFormat)
+                       << " slice-by-slice=" << transitionSliceBySlice << utils::io::endl;
+#endif
+    } else {
+#if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
+        FVK_LOGD << "transition texture=" << mTextureImage << " (" << range.baseArrayLayer
+                      << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
+                      << range.levelCount << ")" << " to=" << newLayout
+                      << " is skipped because of no change in layout" << utils::io::endl;
+#endif
+    }
 }
 
 void VulkanTexture::setLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout) {

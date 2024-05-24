@@ -92,8 +92,11 @@ struct VulkanTexture : public HwTexture, VulkanResource {
         return mSidecarMSAA.get();
     }
 
-    void transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
+    void transitionLayout(VulkanCommandBuffer* commands, const VkImageSubresourceRange& range,
             VulkanLayout newLayout);
+
+    void transitionLayout(VkCommandBuffer cmdbuf, std::shared_ptr<VulkanCmdFence> fence,
+            const VkImageSubresourceRange& range, VulkanLayout newLayout);
 
     // Returns the preferred data plane of interest for all image views.
     // For now this always returns either DEPTH or COLOR.
@@ -103,12 +106,19 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // manually (outside of calls to transitionLayout).
     void setLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout);
 
+    void setPrimaryLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout);
+
+    bool transitionReady() {
+        auto res = !mTransitionFence || mTransitionFence->getStatus() == VK_SUCCESS;
+        mTransitionFence.reset();
+        return res;
+    }
+
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;
 #endif
 
 private:
-
     struct ImageViewKey {
         VkImageSubresourceRange range;  // 4 * 5 bytes
         VkImageViewType type;           // 4 bytes
@@ -160,6 +170,7 @@ private:
     VkDevice mDevice;
     VmaAllocator mAllocator;
     VulkanCommands* mCommands;
+    std::shared_ptr<VulkanCmdFence> mTransitionFence;
 };
 
 } // namespace filament::backend
