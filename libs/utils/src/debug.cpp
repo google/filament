@@ -31,7 +31,7 @@ void abort() noexcept {
 }
 
 void panic(const char *func, const char * file, int line, const char *assertion) noexcept {
-    PANIC_LOG("%s:%d: failed assertion `%s'\n", file, line, assertion);
+    PANIC_LOG("%s:%d: failed assertion '%s'\n", file, line, assertion);
     abort(); // set a breakpoint here
     return;  // this line is needed to be able to move the cursor here in the debugger
 }
