@@ -93,8 +93,7 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
 const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
         std::string_view name) const {
     auto pos = mInfoMap.find(name);
-    ASSERT_PRECONDITION(pos != mInfoMap.end(), "sampler named \"%.*s\" not found",
-            name.size(), name.data());
+    FILAMENT_CHECK_PRECONDITION(pos != mInfoMap.end()) << "sampler named \"" << name << "\" not found";
     return &mSamplersInfoList[pos->second];
 }
 

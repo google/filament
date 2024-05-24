@@ -237,7 +237,7 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             .pCode = data,
         };
         VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create shader module.";
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
         std::string name{ builder.getName().c_str(), builder.getName().size() };

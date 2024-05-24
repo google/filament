@@ -122,7 +122,7 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
     };
     VkSampler sampler;
     VkResult error = vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &sampler);
-    ASSERT_POSTCONDITION(!error, "Unable to create sampler.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create sampler.";
     mCache.insert({params, sampler});
     return sampler;
 }

@@ -148,10 +148,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool enabled) noe
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
-    ASSERT_PRECONDITION(mImpl->mVertexCount > 0, "vertexCount cannot be 0");
-    ASSERT_PRECONDITION(mImpl->mBufferCount > 0, "bufferCount cannot be 0");
-    ASSERT_PRECONDITION(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT,
-            "bufferCount cannot be more than %d", MAX_VERTEX_BUFFER_COUNT);
+    FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
+    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
+    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT)
+            << "bufferCount cannot be more than " << MAX_VERTEX_BUFFER_COUNT;
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
     // because uploading to an unused slot can trigger undefined behavior in the backend.
@@ -164,8 +164,8 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         attributedBuffers.set(attributes[j].buffer);
 
         if (engine.getActiveFeatureLevel() == backend::FeatureLevel::FEATURE_LEVEL_0) {
-            ASSERT_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET),
-                    "Attribute::FLAG_INTEGER_TARGET not supported at FEATURE_LEVEL_0");
+            FILAMENT_CHECK_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET))
+                    << "Attribute::FLAG_INTEGER_TARGET not supported at FEATURE_LEVEL_0";
         }
 
         // also checks that we don't use an invalid type with integer attributes
@@ -180,23 +180,23 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
                     (1 << (int)ET::HALF2) |
                     (1 << (int)ET::HALF3) |
                     (1 << (int)ET::HALF4);
-            ASSERT_PRECONDITION(!(invalidIntegerTypes & (1 << (int)attributes[j].type)),
-                    "invalid integer vertex attribute type %d", attributes[j].type);
+            FILAMENT_CHECK_PRECONDITION(!(invalidIntegerTypes & (1 << (int)attributes[j].type)))
+                    << "invalid integer vertex attribute type " << int(attributes[j].type);
         }
     });
 
-    ASSERT_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount,
-            "At least one buffer slot was never assigned to an attribute.");
+    FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
+            << "At least one buffer slot was never assigned to an attribute.";
 
     if (mImpl->mAdvancedSkinningEnabled) {
-        ASSERT_PRECONDITION(!mImpl->mDeclaredAttributes[VertexAttribute::BONE_INDICES],
-                "Vertex buffer attribute BONE_INDICES is already defined, "
-                "no advanced skinning is allowed");
-        ASSERT_PRECONDITION(!mImpl->mDeclaredAttributes[VertexAttribute::BONE_WEIGHTS],
-                "Vertex buffer attribute BONE_WEIGHTS is already defined, "
-                "no advanced skinning is allowed");
-        ASSERT_PRECONDITION(mImpl->mBufferCount < (MAX_VERTEX_BUFFER_COUNT - 2),
-                "Vertex buffer uses to many buffers (%u)", mImpl->mBufferCount);
+        FILAMENT_CHECK_PRECONDITION(!mImpl->mDeclaredAttributes[VertexAttribute::BONE_INDICES])
+                << "Vertex buffer attribute BONE_INDICES is already defined, "
+                   "no advanced skinning is allowed";
+        FILAMENT_CHECK_PRECONDITION(!mImpl->mDeclaredAttributes[VertexAttribute::BONE_WEIGHTS])
+                << "Vertex buffer attribute BONE_WEIGHTS is already defined, "
+                   "no advanced skinning is allowed";
+        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount < (MAX_VERTEX_BUFFER_COUNT - 2))
+                << "Vertex buffer uses to many buffers (" << mImpl->mBufferCount << ")";
     }
 
     return downcast(engine).createVertexBuffer(*this);
@@ -328,21 +328,22 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
 
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
-    ASSERT_PRECONDITION(!mBufferObjectsEnabled, "Please use setBufferObjectAt()");
+    FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled) << "Please use setBufferObjectAt()";
     if (bufferIndex < mBufferCount) {
         assert_invariant(mBufferObjects[bufferIndex]);
         engine.getDriverApi().updateBufferObject(mBufferObjects[bufferIndex],
                std::move(buffer), byteOffset);
     } else {
-        ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
+        FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
+                << "bufferIndex must be < bufferCount";
     }
 }
 
 void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
         FBufferObject const * bufferObject) {
-    ASSERT_PRECONDITION(mBufferObjectsEnabled, "Please use setBufferAt()");
-    ASSERT_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX,
-            "Binding type must be VERTEX.");
+    FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled) << "Please use setBufferAt()";
+    FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
+            << "Binding type must be VERTEX.";
     if (bufferIndex < mBufferCount) {
         auto hwBufferObject = bufferObject->getHwHandle();
         engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
@@ -350,14 +351,15 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
         // used only in buffer object mode
         mBufferObjects[bufferIndex] = hwBufferObject;
     } else {
-        ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
+        FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
+                << "bufferIndex must be < bufferCount";
     }
 }
 
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
         std::unique_ptr<uint16_t[]> skinJoints,
         std::unique_ptr<float[]> skinWeights) {
-    ASSERT_PRECONDITION(mAdvancedSkinningEnabled, "No advanced skinning enabled");
+    FILAMENT_CHECK_PRECONDITION(mAdvancedSkinningEnabled) << "No advanced skinning enabled";
     auto jointsData = skinJoints.release();
     uint8_t const indicesIndex = mAttributes[VertexAttribute::BONE_INDICES].buffer;
     engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex],

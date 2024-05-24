@@ -61,7 +61,8 @@ FenceStatus FFence::waitAndDestroy(FFence* fence, Mode mode) noexcept {
 
 UTILS_NOINLINE
 FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
-    ASSERT_PRECONDITION(UTILS_HAS_THREADING || timeout == 0, "Non-zero timeout requires threads.");
+    FILAMENT_CHECK_PRECONDITION(UTILS_HAS_THREADING || timeout == 0)
+            << "Non-zero timeout requires threads.";
 
     FEngine& engine = mEngine;
 

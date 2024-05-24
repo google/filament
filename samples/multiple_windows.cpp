@@ -92,7 +92,7 @@ extern "C"
 #endif
 int main(int argc, char *argv[]) {
     // ---- initialize ----
-    ASSERT_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0, "SDL_Init Failure");
+    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
 
     std::vector<Window> windows = { Window(), Window() };
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
