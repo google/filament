@@ -582,19 +582,19 @@ public:
 
 #define PANIC_PRECONDITION_IMPL(cond, format, ...)                                                 \
     ::utils::PreconditionPanic::panic(PANIC_FUNCTION,                                              \
-            PANIC_FILE(__FILE__), __LINE__, #cond, format, format, ##__VA_ARGS__)
+            PANIC_FILE(__FILE__), __LINE__, #cond, format, ##__VA_ARGS__)
 
 #define PANIC_POSTCONDITION_IMPL(cond, format, ...)                                                \
     ::utils::PostconditionPanic::panic(PANIC_FUNCTION,                                             \
-            PANIC_FILE(__FILE__), __LINE__, #cond, format, format, ##__VA_ARGS__)
+            PANIC_FILE(__FILE__), __LINE__, #cond, format, ##__VA_ARGS__)
 
 #define PANIC_ARITHMETIC_IMPL(cond, format, ...)                                                   \
     ::utils::ArithmeticPanic::panic(PANIC_FUNCTION,                                                \
-            PANIC_FILE(__FILE__), __LINE__, #cond, format, format, ##__VA_ARGS__)
+            PANIC_FILE(__FILE__), __LINE__, #cond, format, ##__VA_ARGS__)
 
 #define PANIC_LOG_IMPL(cond, format, ...)                                                          \
     ::utils::details::panicLog(PANIC_FUNCTION,                                                     \
-            PANIC_FILE(__FILE__), __LINE__, #cond, format, format, ##__VA_ARGS__)
+            PANIC_FILE(__FILE__), __LINE__, format, ##__VA_ARGS__)
 
 /**
  * PANIC_PRECONDITION is a macro that reports a PreconditionPanic

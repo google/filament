@@ -106,9 +106,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
           mStereoscopicType(driverConfig.stereoscopicType) {
     mContext->driver = this;
 
+    TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
-    MetalBufferTracking::initialize();
-    MetalBufferTracking::setPlatform(platform);
 
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
@@ -204,7 +203,7 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 }
 
 MetalDriver::~MetalDriver() noexcept {
-    MetalBufferTracking::setPlatform(nullptr);
+    TrackedMetalBuffer::setPlatform(nullptr);
     ScopedAllocationTimer::setPlatform(nullptr);
     mContext->device = nil;
     mContext->emptyTexture = nil;
@@ -226,16 +225,13 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
     if (mPlatform.hasDebugUpdateStatFunc()) {
-#if FILAMENT_METAL_BUFFER_TRACKING
-        const uint64_t generic = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::GENERIC);
-        const uint64_t ring = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::RING);
-        const uint64_t staging = MetalBufferTracking::getAliveBuffers(MetalBufferTracking::Type::STAGING);
-        const uint64_t total = generic + ring + staging;
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers", total);
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers.generic", generic);
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers.ring", ring);
-        mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging", staging);
-#endif
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers", TrackedMetalBuffer::getAliveBuffers());
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.generic",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::GENERIC));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.ring",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::RING));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::STAGING));
     }
 }
 

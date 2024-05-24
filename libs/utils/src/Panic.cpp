@@ -108,10 +108,10 @@ static std::string buildPanicString(
         std::string_view const& msg, const char* function, int line,
         const char* file, const char* reason) {
 #ifndef NDEBUG
-    return sprintfToString("=%.*s\nin %s:%d\nin file %s\nreason: %s",
+    return sprintfToString("%.*s\nin %s:%d\nin file %s\nreason: %s",
             msg.size(), msg.data(), function, line, file, reason);
 #else
-    return sprintfToString("=%.*s\nin %s:%d\nreason: %s",
+    return sprintfToString("%.*s\nin %s:%d\nreason: %s",
             msg.size(), msg.data(), function, line, reason);
 #endif
 }
