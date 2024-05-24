@@ -525,9 +525,9 @@ Program FMaterial::getProgramWithVariants(
 
     FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
             << "The material '" << mName.c_str()
-            << "' has not been compiled to include the required "
-               "GLSL or SPIR-V chunks for the vertex shader (variant=0x" << io::hex
-            << variant.key << ", filtered=0x" << vertexVariant.key << io::dex << ").";
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "vertex shader (variant="
+            << variant.key << ", filtered=" << vertexVariant.key << ").";
 
     /*
      * Fragment shader
@@ -540,9 +540,9 @@ Program FMaterial::getProgramWithVariants(
 
     FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
             << "The material '" << mName.c_str()
-            << "' has not been compiled to include the required "
-               "GLSL or SPIR-V chunks for the fragment shader (variant=0x" << io::hex
-            << variant.key << ", filtered=0x" << fragmentVariant.key << io::dec << ").";
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "fragment shader (variant="
+            << variant.key << ", filtered=" << ").";
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
