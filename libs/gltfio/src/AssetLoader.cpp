@@ -534,12 +534,6 @@ void FAssetLoader::createInstances(size_t numInstances, FFilamentAsset* fAsset) 
     std::partition(fAsset->mEntities.begin(), fAsset->mEntities.end(), [&rm](Entity a) {
         return rm.hasComponent(a);
     });
-
-    if (mError) {
-        destroyAsset(fAsset);
-        fAsset = nullptr;
-        mError = false;
-    }
 }
 
 void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
