@@ -135,13 +135,14 @@ bool CocoaTouchExternalImage::set(CVPixelBufferRef image) noexcept {
     }
 
     OSType formatType = CVPixelBufferGetPixelFormatType(image);
-    ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA ||
-                         formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
-            "iOS external images must be in either 32BGRA or 420f format.");
+    FILAMENT_CHECK_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA ||
+            formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+            << "iOS external images must be in either 32BGRA or 420f format.";
 
     size_t planeCount = CVPixelBufferGetPlaneCount(image);
-    ASSERT_POSTCONDITION(planeCount == 0 || planeCount == 2,
-            "The OpenGL backend does not support images with plane counts of %d.", planeCount);
+    FILAMENT_CHECK_POSTCONDITION(planeCount == 0 || planeCount == 2)
+            << "The OpenGL backend does not support images with plane counts of " << planeCount
+            << ".";
 
     // The pixel buffer must be locked whenever we do rendering with it. We'll unlock it before
     // releasing.

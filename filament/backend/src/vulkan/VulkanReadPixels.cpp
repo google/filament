@@ -71,8 +71,8 @@ void TaskHandler::shutdown() {
     }
     mHasTaskCondition.notify_one();
     mThread.join();
-    ASSERT_POSTCONDITION(mTaskQueue.empty(),
-            "ReadPixels handler has tasks in the queue after shutdown");
+    FILAMENT_CHECK_POSTCONDITION(mTaskQueue.empty())
+            << "ReadPixels handler has tasks in the queue after shutdown";
 }
 
 void TaskHandler::loop() {
@@ -190,8 +190,8 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
                 << utils::io::endl;
     }
 
-    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
-            "VulkanReadPixels: unable to find a memory type that meets requirements.");
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanReadPixels: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo const allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,

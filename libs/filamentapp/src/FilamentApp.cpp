@@ -578,7 +578,7 @@ void FilamentApp::loadDirt(const Config& config) {
 }
 
 void FilamentApp::initSDL() {
-    ASSERT_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0, "SDL_Init Failure");
+    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
 }
 
 // ------------------------------------------------------------------------------------------------

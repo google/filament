@@ -176,7 +176,7 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
     assert_invariant(isCaMetalLayer());
     drawable = [layer nextDrawable];
 
-    ASSERT_POSTCONDITION(drawable != nil, "Could not obtain drawable.");
+    FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
     return drawable.texture;
 }
 
@@ -493,15 +493,16 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         externalImage(context, r, g, b, a) {
 
     devicePixelFormat = decidePixelFormat(&context, format);
-    ASSERT_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid, "Texture format not supported.");
+    FILAMENT_CHECK_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid)
+            << "Texture format not supported.";
 
     const BOOL mipmapped = levels > 1;
     const BOOL multisampled = samples > 1;
 
 #if defined(IOS)
     const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
-    ASSERT_PRECONDITION(!textureArray || !multisampled,
-            "iOS does not support multisampled texture arrays.");
+    FILAMENT_CHECK_PRECONDITION(!textureArray || !multisampled)
+            << "iOS does not support multisampled texture arrays.";
 #endif
 
     const auto get2DTextureType = [](SamplerType target, bool isMultisampled) {
@@ -536,12 +537,14 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
             texture = [context.device newTextureWithDescriptor:descriptor];
-            ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
+            FILAMENT_CHECK_POSTCONDITION(texture != nil)
+                    << "Could not create Metal texture. Out of memory?";
             break;
         case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
-            ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
+            FILAMENT_CHECK_POSTCONDITION(!multisampled)
+                    << "Multisampled cubemap faces not supported.";
+            FILAMENT_CHECK_POSTCONDITION(width == height) << "Cubemap faces must be square.";
             descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:devicePixelFormat
                                                                                size:width
                                                                           mipmapped:mipmapped];
@@ -550,7 +553,8 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
             texture = [context.device newTextureWithDescriptor:descriptor];
-            ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
+            FILAMENT_CHECK_POSTCONDITION(texture != nil)
+                    << "Could not create Metal texture. Out of memory?";
             break;
         case SamplerType::SAMPLER_3D:
             descriptor = [MTLTextureDescriptor new];
@@ -563,7 +567,8 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
             texture = [context.device newTextureWithDescriptor:descriptor];
-            ASSERT_POSTCONDITION(texture != nil, "Could not create Metal texture. Out of memory?");
+            FILAMENT_CHECK_POSTCONDITION(texture != nil)
+                    << "Could not create Metal texture. Out of memory?";
             break;
         case SamplerType::SAMPLER_EXTERNAL:
             // If we're using external textures (CVPixelBufferRefs), we don't need to make any
@@ -765,9 +770,9 @@ void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffs
         PixelBufferDescriptor const& data) noexcept {
     const PixelBufferShape shape = PixelBufferShape::compute(data, format, region.size, byteOffset);
 
-    ASSERT_PRECONDITION(data.size >= shape.totalBytes,
-            "Expected buffer size of at least %d but "
-            "received PixelBufferDescriptor with size %d.", shape.totalBytes, data.size);
+    FILAMENT_CHECK_PRECONDITION(data.size >= shape.totalBytes)
+            << "Expected buffer size of at least " << shape.totalBytes
+            << " but received PixelBufferDescriptor with size " << data.size << ".";
 
     // Earlier versions of iOS don't have the maxBufferLength query, but 256 MB is a safe bet.
     NSUInteger deviceMaxBufferLength = 256 * 1024 * 1024;   // 256 MB
@@ -800,13 +805,13 @@ void MetalTexture::loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion 
         PixelBufferDescriptor const& data, const PixelBufferShape& shape) {
     const size_t stagingBufferSize = shape.totalBytes;
     auto entry = context.bufferPool->acquireBuffer(stagingBufferSize);
-    memcpy(entry->buffer.contents,
+    memcpy(entry->buffer.get().contents,
             static_cast<uint8_t*>(data.buffer) + shape.sourceOffset,
             stagingBufferSize);
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
     blitCommandEncoder.label = @"Texture upload buffer blit";
-    [blitCommandEncoder copyFromBuffer:entry->buffer
+    [blitCommandEncoder copyFromBuffer:entry->buffer.get()
                           sourceOffset:0
                      sourceBytesPerRow:shape.bytesPerRow
                    sourceBytesPerImage:shape.bytesPerSlice
@@ -988,9 +993,9 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         }
         color[i] = colorAttachments[i];
 
-        ASSERT_PRECONDITION(color[i].getSampleCount() <= samples,
-                "MetalRenderTarget was initialized with a MSAA COLOR%d texture, but sample count is %d.",
-                i, samples);
+        FILAMENT_CHECK_PRECONDITION(color[i].getSampleCount() <= samples)
+                << "MetalRenderTarget was initialized with a MSAA COLOR" << i
+                << " texture, but sample count is " << samples << ".";
 
         auto t = color[i].metalTexture;
         const auto twidth = std::max(1u, t->width >> color[i].level);
@@ -1013,9 +1018,10 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
     if (depthAttachment) {
         depth = depthAttachment;
 
-        ASSERT_PRECONDITION(depth.getSampleCount() <= samples,
-                "MetalRenderTarget was initialized with a MSAA DEPTH texture, but sample count is %d.",
-                samples);
+        FILAMENT_CHECK_PRECONDITION(depth.getSampleCount() <= samples)
+                << "MetalRenderTarget was initialized with a MSAA DEPTH texture, but sample count "
+                   "is "
+                << samples << ".";
 
         auto t = depth.metalTexture;
         const auto twidth = std::max(1u, t->width >> depth.level);
@@ -1038,9 +1044,10 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
     if (stencilAttachment) {
         stencil = stencilAttachment;
 
-        ASSERT_PRECONDITION(stencil.getSampleCount() <= samples,
-                "MetalRenderTarget was initialized with a MSAA STENCIL texture, but sample count is %d.",
-                samples);
+        FILAMENT_CHECK_PRECONDITION(stencil.getSampleCount() <= samples)
+                << "MetalRenderTarget was initialized with a MSAA STENCIL texture, but sample "
+                   "count is "
+                << samples << ".";
 
         auto t = stencil.metalTexture;
         const auto twidth = std::max(1u, t->width >> stencil.level);
