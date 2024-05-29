@@ -47,8 +47,8 @@
 #include "FFilamentInstance.h"
 #include "Utility.h"
 
-#include <tsl/htrie_map.h>
-
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -273,7 +273,7 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
 
     DependencyGraph mDependencyGraph;
-    tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
+    std::unordered_map<std::string, std::vector<utils::Entity>> mNameToEntity;
     utils::CString mAssetExtras;
     bool mDetachedFilamentComponents = false;
 
