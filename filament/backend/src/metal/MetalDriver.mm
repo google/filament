@@ -295,6 +295,8 @@ void MetalDriver::updateDescriptorSetBuffer(
         backend::BufferObjectHandle boh,
         uint32_t offset,
         uint32_t size) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateDescriptorSetBuffer must be called outside of a render pass.");
 }
 
 void MetalDriver::updateDescriptorSetTexture(
@@ -302,6 +304,8 @@ void MetalDriver::updateDescriptorSetTexture(
         backend::descriptor_binding_t binding,
         backend::TextureHandle th,
         SamplerParams params) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateDescriptorSetTexture must be called outside of a render pass.");
 }
 
 void MetalDriver::flush(int) {
@@ -487,10 +491,12 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 
 void MetalDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         DescriptorSetLayout&& info) {
+    construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
 }
 
 void MetalDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {
+    construct_handle<MetalDescriptorSet>(dsh, dslh);
 }
 
 Handle<HwVertexBufferInfo> MetalDriver::createVertexBufferInfoS() noexcept {
@@ -679,9 +685,15 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh) {
+    if (dslh) {
+        destruct_handle<MetalDescriptorSetLayout>(dslh);
+    }
 }
 
 void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
+    if (dsh) {
+        destruct_handle<MetalDescriptorSet>(dsh);
+    }
 }
 
 void MetalDriver::terminate() {

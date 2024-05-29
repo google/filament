@@ -52,6 +52,12 @@ MetalArgumentBuffer::Builder& MetalArgumentBuffer::Builder::sampler(
     return *this;
 }
 
+MetalArgumentBuffer::Builder& MetalArgumentBuffer::Builder::buffer(
+        size_t index, const std::string& type, const std::string& name) noexcept {
+    mArguments.emplace_back(BufferArgument { name, index, type });
+    return *this;
+}
+
 MetalArgumentBuffer* MetalArgumentBuffer::Builder::build() {
     assert_invariant(!mName.empty());
     return new MetalArgumentBuffer(*this);
@@ -111,6 +117,11 @@ std::ostream& MetalArgumentBuffer::Builder::TextureArgument::write(std::ostream&
 
 std::ostream& MetalArgumentBuffer::Builder::SamplerArgument::write(std::ostream& os) const {
     os << "sampler " << name << " [[id(" << index << ")]];" << std::endl;
+    return os;
+}
+
+std::ostream& MetalArgumentBuffer::Builder::BufferArgument::write(std::ostream& os) const {
+    os << "constant " << type << "* " << name << " [[id(" << index << ")]];" << std::endl;
     return os;
 }
 

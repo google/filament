@@ -547,10 +547,18 @@ struct MetalTimerQuery : public HwTimerQuery {
     std::shared_ptr<Status> status;
 };
 
+// Descriptor sets are layed out as follows:
+// Buffers
+// Textures
+
 struct MetalDescriptorSetLayout : public HwDescriptorSetLayout {
+    MetalDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept : layout(std::move(layout)) {}
+    DescriptorSetLayout layout;
 };
 
 struct MetalDescriptorSet : public HwDescriptorSet {
+    MetalDescriptorSet(Handle<HwDescriptorSetLayout> layout) noexcept : layout(layout) {}
+    Handle<HwDescriptorSetLayout> layout;
 };
 
 } // namespace backend
