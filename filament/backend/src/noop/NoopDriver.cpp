@@ -182,7 +182,7 @@ bool NoopDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
+bool NoopDriver::isStereoSupported() {
     return false;
 }
 
@@ -359,7 +359,7 @@ void NoopDriver::blit(
         math::uint2 size) {
 }
 
-void NoopDriver::bindPipeline(PipelineState pipelineState) {
+void NoopDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void NoopDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {

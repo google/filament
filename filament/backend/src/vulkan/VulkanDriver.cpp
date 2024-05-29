@@ -228,7 +228,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
       mDescriptorSetManager(mPlatform->getDevice(), &mResourceAllocator),
-      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
+      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
+      mStereoscopicType(driverConfig.stereoscopicType) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
@@ -899,13 +900,14 @@ bool VulkanDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return true;
-    case backend::StereoscopicType::MULTIVIEW:
-        // TODO: implement multiview feature in Vulkan.
-        return false;
+bool VulkanDriver::isStereoSupported() {
+    switch (mStereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return mContext.isClipDistanceSupported();
+        case backend::StereoscopicType::MULTIVIEW:
+            // TODO: implement multiview feature in Vulkan.
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
@@ -1763,7 +1765,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::bindPipeline(PipelineState pipelineState) {
+void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("draw");
 
@@ -1873,6 +1875,12 @@ void VulkanDriver::bindPipeline(PipelineState pipelineState) {
 
     mPipelineCache.bindLayout(pipelineLayout);
     mPipelineCache.bindPipeline(commands);
+
+    // Since we don't statically define scissor as part of the pipeline, we need to call scissor at
+    // least once. Context: VUID-vkCmdDrawIndexed-None-07832.
+    auto const& extent = rt->getExtent();
+    scissor({0, 0, extent.width, extent.height});
+
     FVK_SYSTRACE_END();
 }
 
@@ -1963,7 +1971,7 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
     rt->transformClientRectToPlatform(&scissor);
-    mPipelineCache.bindScissor(cmdbuffer, scissor);
+    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

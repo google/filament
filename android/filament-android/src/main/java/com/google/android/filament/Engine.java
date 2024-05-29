@@ -159,9 +159,12 @@ public class Engine {
     };
 
     /**
-     * The type of technique for stereoscopic rendering
+     * The type of technique for stereoscopic rendering. (Note that the materials used will need to be
+     * compatible with the chosen technique.)
      */
     public enum StereoscopicType {
+        /** No stereoscopic rendering. */
+        NONE,
         /** Stereoscopic rendering is performed using instanced rendering technique. */
         INSTANCED,
         /** Stereoscopic rendering is performed using the multiview feature from the graphics backend. */
@@ -405,7 +408,7 @@ public class Engine {
          *
          * @see View#setStereoscopicOptions
          */
-        public StereoscopicType stereoscopicType = StereoscopicType.INSTANCED;
+        public StereoscopicType stereoscopicType = StereoscopicType.NONE;
 
         /**
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are

@@ -32,7 +32,7 @@ struct MetalContext;
 
 // Immutable POD representing a shared CPU-GPU buffer.
 struct MetalBufferPoolEntry {
-    id<MTLBuffer> buffer;
+    TrackedMetalBuffer buffer;
     size_t capacity;
     mutable uint64_t lastAccessed;
     mutable uint32_t referenceCount;

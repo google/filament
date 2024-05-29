@@ -336,6 +336,8 @@ private:
 
     void setScissor(Viewport const& scissor) noexcept;
 
+    void draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount);
+
     // ES2 only. Uniform buffer emulation binding points
     GLuint mLastAssignedEmulatedUboId = 0;
 

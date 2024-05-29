@@ -184,8 +184,8 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-        return getDriver().isStereoSupported(stereoscopicType);
+    bool isStereoSupported() const noexcept {
+        return getDriver().isStereoSupported();
     }
 
     static size_t getMaxStereoscopicEyes() noexcept {
@@ -600,7 +600,7 @@ public:
             bool debug_froxel_visualization = false;
         } lighting;
         struct {
-            bool combine_multiview_images = true;
+            bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
     } debug;

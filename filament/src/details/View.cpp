@@ -60,7 +60,7 @@ static constexpr float PID_CONTROLLER_Kd = 0.0f;
 FView::FView(FEngine& engine)
         : mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
-          mIsStereoSupported(engine.getDriverApi().isStereoSupported(engine.getConfig().stereoscopicType)),
+          mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
           mPerViewUniforms(engine) {
 
     DriverApi& driver = engine.getDriverApi();

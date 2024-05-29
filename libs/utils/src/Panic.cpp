@@ -123,22 +123,16 @@ void Panic::setPanicHandler(PanicHandlerCallback handler, void* user) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 template<typename T>
-TPanic<T>::TPanic(std::string reason) :
-    m_reason(std::move(reason)) {
+TPanic<T>::TPanic(const char* function, const char* file, int line,
+        std::string reason, std::string reasonLiteral)
+        : m_reason(std::move(reason)), m_reason_literal(std::move(reasonLiteral)),
+          m_function(function), m_file(file), m_line(line) {
     m_callstack.update(1);
     buildMessage();
 }
 
 template<typename T>
-TPanic<T>::TPanic(const char* function, const char* file, int line, std::string reason)
-        : m_reason(std::move(reason)), m_function(function), m_file(file), m_line(line) {
-    m_callstack.update(1);
-    buildMessage();
-}
-
-template<typename T>
-TPanic<T>::~TPanic() {
-}
+TPanic<T>::~TPanic() = default;
 
 template<typename T>
 const char* TPanic<T>::what() const noexcept {
@@ -148,6 +142,11 @@ const char* TPanic<T>::what() const noexcept {
 template<typename T>
 const char* TPanic<T>::getReason() const noexcept {
     return m_reason.c_str();
+}
+
+template<typename T>
+const char* TPanic<T>::getReasonLiteral() const noexcept {
+    return m_reason_literal.c_str();
 }
 
 template<typename T>
@@ -197,9 +196,9 @@ template<typename T>
 void TPanic<T>::panic(char const* function, char const* file, int line, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    std::string const reason(formatString(format, args));
+    std::string reason(formatString(format, args));
     va_end(args);
-    T e(function, formatFile(file), line, reason);
+    T e(function, formatFile(file), line, std::move(reason), format);
 
     // always log the Panic at the point it is detected
     e.log();

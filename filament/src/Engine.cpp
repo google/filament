@@ -355,7 +355,7 @@ const Engine::Config& Engine::getConfig() const noexcept {
 }
 
 bool Engine::isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-    return downcast(this)->isStereoSupported(stereoscopicType);
+    return downcast(this)->isStereoSupported();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {

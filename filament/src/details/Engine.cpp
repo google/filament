@@ -103,7 +103,8 @@ Engine* FEngine::create(Engine::Builder const& builder) {
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
                 .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
-                .forceGLES2Context = instance->getConfig().forceGLES2Context
+                .forceGLES2Context = instance->getConfig().forceGLES2Context,
+                .stereoscopicType =  instance->getConfig().stereoscopicType,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -352,6 +353,7 @@ void FEngine::init() {
 
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         switch (mConfig.stereoscopicType) {
+            case StereoscopicType::NONE:
             case StereoscopicType::INSTANCED:
                 defaultMaterialBuilder.package(
                     MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
@@ -675,7 +677,8 @@ int FEngine::loop() {
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
             .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
-            .forceGLES2Context = mConfig.forceGLES2Context
+            .forceGLES2Context = mConfig.forceGLES2Context,
+            .stereoscopicType =  mConfig.stereoscopicType,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 

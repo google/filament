@@ -22,6 +22,7 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
+#include <backend/Platform.h>
 #include <backend/PresentCallable.h>
 
 #include <utils/Invocable.h>
@@ -1250,13 +1251,7 @@ enum class Workaround : uint16_t {
     POWER_VR_SHADER_WORKAROUNDS,
 };
 
-//! The type of technique for stereoscopic rendering
-enum class StereoscopicType : uint8_t {
-    // Stereoscopic rendering is performed using instanced rendering technique.
-    INSTANCED,
-    // Stereoscopic rendering is performed using the multiview feature from the graphics backend.
-    MULTIVIEW,
-};
+using StereoscopicType = backend::Platform::StereoscopicType;
 
 } // namespace filament::backend
 

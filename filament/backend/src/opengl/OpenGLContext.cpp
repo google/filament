@@ -66,7 +66,8 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
         Platform::DriverConfig const& driverConfig) noexcept
         : mPlatform(platform),
-          mSamplerMap(32) {
+          mSamplerMap(32),
+          mDriverConfig(driverConfig) {
 
     state.vao.p = &mDefaultVAO;
 
@@ -366,7 +367,8 @@ void OpenGLContext::setDefaultState() noexcept {
     }
 #endif
 
-    if (ext.EXT_clip_cull_distance) {
+    if (ext.EXT_clip_cull_distance
+            && mDriverConfig.stereoscopicType == StereoscopicType::INSTANCED) {
         glEnable(GL_CLIP_DISTANCE0);
         glEnable(GL_CLIP_DISTANCE1);
     }

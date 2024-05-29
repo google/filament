@@ -22,13 +22,9 @@
 namespace filament {
 namespace backend {
 
+std::array<uint64_t, TrackedMetalBuffer::TypeCount> TrackedMetalBuffer::aliveBuffers = { 0 };
+MetalPlatform* TrackedMetalBuffer::platform = nullptr;
 MetalPlatform* ScopedAllocationTimer::platform = nullptr;
-
-#if FILAMENT_METAL_BUFFER_TRACKING
-std::array<NSHashTable<id<MTLBuffer>>*, MetalBufferTracking::TypeCount>
-        MetalBufferTracking::aliveBuffers;
-MetalPlatform* MetalBufferTracking::platform = nullptr;
-#endif
 
 MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
         size_t size, bool forceGpuBuffer) : mBufferSize(size), mContext(context) {
@@ -45,9 +41,9 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
     // Otherwise, we allocate a private GPU buffer.
     {
         ScopedAllocationTimer timer("generic");
-        mBuffer = [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate];
+        mBuffer = { [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate],
+            TrackedMetalBuffer::Type::GENERIC };
     }
-    MetalBufferTracking::track(mBuffer, MetalBufferTracking::Type::GENERIC);
     ASSERT_POSTCONDITION(mBuffer, "Could not allocate Metal buffer of size %zu.", size);
 }
 
@@ -74,7 +70,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     // Acquire a staging buffer to hold the contents of this update.
     MetalBufferPool* bufferPool = mContext.bufferPool;
     const MetalBufferPoolEntry* const staging = bufferPool->acquireBuffer(size);
-    memcpy(staging->buffer.contents, src, size);
+    memcpy(staging->buffer.get().contents, src, size);
 
     // The blit below requires that byteOffset be a multiple of 4.
     ASSERT_PRECONDITION(!(byteOffset & 0x3u), "byteOffset must be a multiple of 4");
@@ -83,9 +79,9 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
     id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
     blitEncoder.label = @"Buffer upload blit";
-    [blitEncoder copyFromBuffer:staging->buffer
+    [blitEncoder copyFromBuffer:staging->buffer.get()
                    sourceOffset:0
-                       toBuffer:mBuffer
+                       toBuffer:mBuffer.get()
               destinationOffset:byteOffset
                            size:size];
     [blitEncoder endEncoding];
@@ -106,7 +102,7 @@ id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) n
         return nil;
     }
     assert_invariant(mBuffer);
-    return mBuffer;
+    return mBuffer.get();
 }
 
 void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncoder> encoder,
