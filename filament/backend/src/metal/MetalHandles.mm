@@ -297,7 +297,7 @@ private:
     static void cleanupAndDestroy(PresentDrawableData *that) {
         std::optional<std::lock_guard<std::mutex>> opt_lock;
 #if FILAMENT_LOCK_METAL_DRAWABLE_POOL == 1
-        if (UTILS_LIKELY(that->mDrawablePoolMutex)) {
+        if (UTILS_LIKELY(that->mDrawableMutex)) {
             opt_lock.emplace(*(that->mDrawableMutex));
         }
 #endif
