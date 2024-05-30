@@ -325,6 +325,10 @@ ShaderModel VulkanDriver::getShaderModel() const noexcept {
 }
 
 void VulkanDriver::terminate() {
+    // Flush and wait here to make sure all queued commands are executed and resources that are tied
+    // to those commands are no longer referenced.
+    finish(0);
+
     delete mEmptyBufferObject;
     delete mEmptyTexture;
 
