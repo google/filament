@@ -293,7 +293,7 @@ private:
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
         {
-            std::lock_guard<std::mutex>> lock(*(that->mDrawableMutex));
+            std::lock_guard<std::mutex> lock(*(that->mDrawableMutex));
             that->mDrawable = nil;
         }
         that->mDrawableMutex = nullptr;
