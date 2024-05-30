@@ -40,7 +40,7 @@ public class Manipulator {
         mNativeObject = nativeIndexBuffer;
     }
 
-    public enum Mode { ORBIT, MAP, FREE_FLIGHT };
+    public enum Mode { ORBIT, MAP, FREE_FLIGHT, FREE_FLIGHT_2 };
 
     public enum Fov { VERTICAL, HORIZONTAL };
 

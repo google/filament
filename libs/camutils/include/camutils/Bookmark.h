@@ -26,11 +26,14 @@ namespace filament {
 namespace camutils {
 
 template <typename FLOAT> class FreeFlightManipulator;
+template <typename FLOAT> class FreeFlight2Manipulator;
 template <typename FLOAT> class OrbitManipulator;
 template <typename FLOAT> class MapManipulator;
 template <typename FLOAT> class Manipulator;
 
-enum class Mode { ORBIT, MAP, FREE_FLIGHT };
+// FREE_FLIGHT_2 enables PAN and ZOOM through gestures
+// FREE_FLIGHT offers PAN and ZOOM through keys
+enum class Mode { ORBIT, MAP, FREE_FLIGHT, FREE_FLIGHT_2 };
 
 /**
  * Opaque memento to a viewing position and orientation (e.g. the "home" camera position).
@@ -75,6 +78,7 @@ private:
     OrbitParams orbit;
     FlightParams flight;
     friend class FreeFlightManipulator<FLOAT>;
+    friend class FreeFlight2Manipulator<FLOAT>;
     friend class OrbitManipulator<FLOAT>;
     friend class MapManipulator<FLOAT>;
 };

@@ -18,6 +18,7 @@
 
 #include <math/scalar.h>
 
+#include "FreeFlight2Manipulator.h"
 #include "FreeFlightManipulator.h"
 #include "MapManipulator.h"
 #include "OrbitManipulator.h"
@@ -149,6 +150,8 @@ Manipulator<FLOAT>* Manipulator<FLOAT>::Builder::build(Mode mode) {
     switch (mode) {
         case Mode::FREE_FLIGHT:
             return new FreeFlightManipulator<FLOAT>(mode, details);
+        case Mode::FREE_FLIGHT_2:
+            return new FreeFlight2Manipulator<FLOAT>(mode, details);
         case Mode::MAP:
             return new MapManipulator<FLOAT>(mode, details);
         case Mode::ORBIT:

@@ -19,6 +19,7 @@ set(SRCS
         src/Manipulator.cpp
         src/MapManipulator.h
         src/OrbitManipulator.h
+        src/FreeFlight2Manipulator.h
 )
 
 # ==================================================================================================
