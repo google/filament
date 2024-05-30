@@ -143,10 +143,6 @@ NSUInteger MetalSwapChain::getSurfaceHeight() const {
     return (NSUInteger) layer.drawableSize.height;
 }
 
-#ifndef FILAMENT_LOCK_METAL_DRAWABLE_POOL
-#define FILAMENT_LOCK_METAL_DRAWABLE_POOL 1
-#endif
-
 id<MTLTexture> MetalSwapChain::acquireDrawable() {
     if (drawable) {
         return drawable.texture;
@@ -178,10 +174,12 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
     }
 
     assert_invariant(isCaMetalLayer());
+
+    // CAMetalLayer's drawable pool is not thread safe. Use a mutex when
+    // calling -nextDrawable, or when releasing the last known reference
+    // to any CAMetalDrawable returned from a previous -nextDrawable.
     {
-#if FILAMENT_LOCK_METAL_DRAWABLE_POOL == 1
         std::lock_guard<std::mutex> lock(layerDrawableMutex);
-#endif
         drawable = [layer nextDrawable];
     }
 
@@ -190,9 +188,7 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
 }
 
 void MetalSwapChain::releaseDrawable() {
-#if FILAMENT_LOCK_METAL_DRAWABLE_POOL == 1
     std::lock_guard<std::mutex> lock(layerDrawableMutex);
-#endif
     drawable = nil;
 }
 
@@ -270,6 +266,7 @@ public:
 
     static PresentDrawableData* create(id<CAMetalDrawable> drawable,
             std::mutex* drawableMutex, MetalDriver* driver) {
+        assert_invariant(drawableMutex);
         assert_invariant(driver);
         return new PresentDrawableData(drawable, drawableMutex, driver);
     }
@@ -295,15 +292,10 @@ private:
         : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver) {}
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
-        std::optional<std::lock_guard<std::mutex>> opt_lock;
-#if FILAMENT_LOCK_METAL_DRAWABLE_POOL == 1
-        if (UTILS_LIKELY(that->mDrawableMutex)) {
-            opt_lock.emplace(*(that->mDrawableMutex));
+        {
+            std::lock_guard<std::mutex>> lock(*(that->mDrawableMutex));
+            that->mDrawable = nil;
         }
-#endif
-        that->mDrawable = nil;
-        opt_lock.reset();
-
         that->mDrawableMutex = nullptr;
         that->mDriver = nullptr;
         delete that;
