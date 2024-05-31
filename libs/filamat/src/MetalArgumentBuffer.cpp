@@ -18,6 +18,7 @@
 
 #include <sstream>
 #include <utility>
+#include <variant>
 
 namespace filamat {
 
@@ -128,9 +129,6 @@ std::ostream& MetalArgumentBuffer::Builder::BufferArgument::write(std::ostream& 
 MetalArgumentBuffer::MetalArgumentBuffer(Builder& builder) {
     mName = builder.mName;
 
-    std::stringstream ss;
-    ss << "struct " << mName << " {" << std::endl;
-
     auto& args = builder.mArguments;
 
     // Sort the arguments by index.
@@ -144,6 +142,18 @@ MetalArgumentBuffer::MetalArgumentBuffer(Builder& builder) {
                 return std::visit(
                         [](auto const& x, auto const& y) { return x.index == y.index; }, lhs, rhs);
             }) == args.end());
+
+    std::stringstream ss;
+
+    // Add forward declarations of buffers.
+    for (const auto& a : builder.mArguments) {
+        if (std::holds_alternative<Builder::BufferArgument>(a)) {
+            const auto& bufferArg = std::get<Builder::BufferArgument>(a);
+            ss << "struct " << bufferArg.type << ";" << std::endl;
+        }
+    }
+
+    ss << "struct " << mName << " {" << std::endl;
 
     for (const auto& a : builder.mArguments) {
         std::visit([&](auto&& arg) {

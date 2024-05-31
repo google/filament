@@ -97,8 +97,31 @@ TEST(ArgBufferFixup, Buffer) {
     auto argBufferStr = argBuffer->getMsl();
 
     const std::string expected =
+            "struct FrameUniforms;\n"
             "struct myArgumentBuffer {\n"
             "constant FrameUniforms* frameUniforms [[id(0)]];\n"
+            "}";
+
+    EXPECT_EQ(argBuffer->getMsl(), expected);
+
+    MetalArgumentBuffer::destroy(&argBuffer);
+}
+
+TEST(ArgBufferFixup, MultipleBuffers) {
+    auto argBuffer =
+            MetalArgumentBuffer::Builder()
+                    .name("myArgumentBuffer")
+                    .buffer(0, "FrameUniforms", "frameUniforms")
+                    .buffer(1, "ObjectUniforms", "objectUniforms")
+                    .build();
+    auto argBufferStr = argBuffer->getMsl();
+
+    const std::string expected =
+            "struct FrameUniforms;\n"
+            "struct ObjectUniforms;\n"
+            "struct myArgumentBuffer {\n"
+            "constant FrameUniforms* frameUniforms [[id(0)]];\n"
+            "constant ObjectUniforms* objectUniforms [[id(1)]];\n"
             "}";
 
     EXPECT_EQ(argBuffer->getMsl(), expected);
@@ -139,6 +162,7 @@ TEST(ArgBufferFixup, Sorted) {
     auto argBufferStr = argBuffer->getMsl();
 
     const std::string expected =
+            "struct FrameUniforms;\n"
             "struct myArgumentBuffer {\n"
             "texture2d<float> textureA [[id(0)]];\n"
             "sampler samplerA [[id(1)]];\n"
