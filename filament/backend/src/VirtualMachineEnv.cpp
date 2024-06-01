@@ -16,6 +16,7 @@
 
 #include "private/backend/VirtualMachineEnv.h"
 
+#include <utils/compiler.h>
 #include <utils/debug.h>
 
 namespace filament {
@@ -23,6 +24,7 @@ namespace filament {
 JavaVM* VirtualMachineEnv::sVirtualMachine = nullptr;
 
 // This is called when the library is loaded. We need this to get a reference to the global VM
+UTILS_PUBLIC
 UTILS_NOINLINE
 jint VirtualMachineEnv::JNI_OnLoad(JavaVM* vm) noexcept {
     JNIEnv* env = nullptr;
