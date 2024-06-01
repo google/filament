@@ -39,6 +39,10 @@
 #include <filament/MaterialEnums.h>
 
 #include <private/backend/PlatformFactory.h>
+#if defined(__ANDROID__)
+#include <private/backend/VirtualMachineEnv.h>
+#endif
+
 
 #include <backend/DriverEnums.h>
 
@@ -637,6 +641,11 @@ void FEngine::flushAndWait() {
 
 int FEngine::loop() {
     if (mPlatform == nullptr) {
+        #if defined(__ANDROID__)
+        // this thread might call jni routines. Attach the current thread. The
+        // return value is unused
+        (void)filament::VirtualMachineEnv::get().getEnvironment();
+        #endif
         mPlatform = PlatformFactory::create(&mBackend);
         mOwnPlatform = true;
         const char* const backend = backendToString(mBackend);
