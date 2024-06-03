@@ -211,7 +211,7 @@ Entity FFilamentAsset::getFirstEntityByName(const char* name) noexcept {
     if (iter == mNameToEntity.end()) {
         return {};
     }
-    return iter->front();
+    return iter->second.front();
 }
 
 size_t FFilamentAsset::getEntitiesByName(const char* name, Entity* entities,
@@ -220,7 +220,7 @@ size_t FFilamentAsset::getEntitiesByName(const char* name, Entity* entities,
     if (iter == mNameToEntity.end()) {
         return 0;
     }
-    const auto& source = *iter;
+    const auto& source = iter->second;
     if (entities == nullptr) {
         return source.size();
     }
@@ -240,25 +240,20 @@ size_t FFilamentAsset::getEntitiesByName(const char* name, Entity* entities,
 
 size_t FFilamentAsset::getEntitiesByPrefix(const char* prefix, Entity* entities,
         size_t maxCount) const noexcept {
-    const auto range = mNameToEntity.equal_prefix_range(prefix);
-    size_t count = 0;
-    for (auto iter = range.first; iter != range.second; ++iter) {
-        count += iter->size();
-    }
-    if (entities == nullptr) {
-        return count;
-    }
-    maxCount = std::min(maxCount, count);
     if (maxCount == 0) {
         return 0;
     }
-    count = 0;
-    for (auto iter = range.first; iter != range.second; ++iter) {
-        const auto& source = *iter;
-        for (Entity entity : source) {
-            entities[count] = entity;
-            if (++count >= maxCount) {
-                return count;
+    std::string_view prefixString(prefix);
+    size_t count = 0;
+    for (auto& [k, v] : mNameToEntity) {
+        if (k.compare(0, prefixString.size(), prefixString) == 0) {
+            for (Entity entity : v) {
+                if (entities) {
+                    entities[count] = entity;
+                }
+                if (++count >= maxCount) {
+                    return count;
+                }
             }
         }
     }

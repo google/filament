@@ -179,7 +179,7 @@ set_target_properties(uberarchive PROPERTIES FOLDER Libs)
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
-link_libraries(math utils filament cgltf stb ktxreader geometry tsl trie uberzlib)
+link_libraries(math utils filament cgltf stb ktxreader geometry tsl uberzlib)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
