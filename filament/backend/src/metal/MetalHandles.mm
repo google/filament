@@ -174,13 +174,21 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
     }
 
     assert_invariant(isCaMetalLayer());
-    drawable = [layer nextDrawable];
+
+    // CAMetalLayer's drawable pool is not thread safe. Use a mutex when
+    // calling -nextDrawable, or when releasing the last known reference
+    // to any CAMetalDrawable returned from a previous -nextDrawable.
+    {
+        std::lock_guard<std::mutex> lock(layerDrawableMutex);
+        drawable = [layer nextDrawable];
+    }
 
     FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
     return drawable.texture;
 }
 
 void MetalSwapChain::releaseDrawable() {
+    std::lock_guard<std::mutex> lock(layerDrawableMutex);
     drawable = nil;
 }
 
@@ -256,9 +264,11 @@ public:
     PresentDrawableData(const PresentDrawableData&) = delete;
     PresentDrawableData& operator=(const PresentDrawableData&) = delete;
 
-    static PresentDrawableData* create(id<CAMetalDrawable> drawable, MetalDriver* driver) {
+    static PresentDrawableData* create(id<CAMetalDrawable> drawable,
+            std::mutex* drawableMutex, MetalDriver* driver) {
+        assert_invariant(drawableMutex);
         assert_invariant(driver);
-        return new PresentDrawableData(drawable, driver);
+        return new PresentDrawableData(drawable, drawableMutex, driver);
     }
 
     static void maybePresentAndDestroyAsync(PresentDrawableData* that, bool shouldPresent) {
@@ -277,16 +287,22 @@ public:
     }
 
 private:
-    PresentDrawableData(id<CAMetalDrawable> drawable, MetalDriver* driver)
-        : mDrawable(drawable), mDriver(driver) {}
+    PresentDrawableData(id<CAMetalDrawable> drawable, std::mutex* drawableMutex,
+            MetalDriver* driver)
+        : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver) {}
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
-        that->mDrawable = nil;
+        {
+            std::lock_guard<std::mutex> lock(*(that->mDrawableMutex));
+            that->mDrawable = nil;
+        }
+        that->mDrawableMutex = nullptr;
         that->mDriver = nullptr;
         delete that;
     }
 
     id<CAMetalDrawable> mDrawable;
+    std::mutex* mDrawableMutex = nullptr;
     MetalDriver* mDriver = nullptr;
 };
 
@@ -304,8 +320,8 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     struct Callback {
         Callback(std::shared_ptr<FrameScheduledCallback> callback, id<CAMetalDrawable> drawable,
-                MetalDriver* driver)
-            : f(callback), data(PresentDrawableData::create(drawable, driver)) {}
+                std::mutex* drawableMutex, MetalDriver* driver)
+            : f(callback), data(PresentDrawableData::create(drawable, drawableMutex, driver)) {}
         std::shared_ptr<FrameScheduledCallback> f;
         // PresentDrawableData* is destroyed by maybePresentAndDestroyAsync() later.
         std::unique_ptr<PresentDrawableData> data;
@@ -320,8 +336,8 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     // This callback pointer will be captured by the block. Even if the scheduled handler is never
     // called, the unique_ptr will still ensure we don't leak memory.
-    __block auto callback =
-            std::make_unique<Callback>(frameScheduled.callback, drawable, context.driver);
+    __block auto callback = std::make_unique<Callback>(
+        frameScheduled.callback, drawable, &layerDrawableMutex, context.driver);
 
     backend::CallbackHandler* handler = frameScheduled.handler;
     MetalDriver* driver = context.driver;
