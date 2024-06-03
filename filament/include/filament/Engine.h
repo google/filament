@@ -931,6 +931,14 @@ public:
     void pumpMessageQueues();
 
     /**
+     * Switch the command queue to unprotected mode. Protected mode can be activated via
+     * Renderer::beginFrame() using a protected SwapChain.
+     * @see Renderer
+     * @see SwapChain
+     */
+    void unprotected() noexcept;
+
+    /**
      * Returns the default Material.
      *
      * The default material is 80% white and uses the Material.Shading.LIT shading.
