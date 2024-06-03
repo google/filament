@@ -518,3 +518,20 @@ target_link_libraries(compute_test PRIVATE
 set_target_properties(compute_test PROPERTIES FOLDER Tests)
 
 endif()
+
+# ==================================================================================================
+# Metal utils tests
+
+if (APPLE AND NOT IOS)
+
+add_executable(metal_utils_test test/MetalTest.mm)
+
+target_link_libraries(metal_utils_test PRIVATE
+        backend
+        getopt
+        gtest
+        )
+
+set_target_properties(metal_utils_test PROPERTIES FOLDER Tests)
+
+endif()

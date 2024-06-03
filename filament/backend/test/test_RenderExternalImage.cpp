@@ -71,16 +71,19 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     auto swapChain = createSwapChain();
 
-    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", 0, SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
+    filamat::DescriptorSetInfoVector descriptors = {
+            {1, {
+                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+            }}
+    };
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(api);
-    p.descriptorBindings(0, {{"test_tex", DescriptorType::SAMPLER, 0}});
+    p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
     backend::Handle<HwProgram> program = api.createProgram(std::move(p));
     DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
             {{
@@ -126,7 +129,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     api.beginFrame(0, 0, 0);
 
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);
@@ -158,16 +161,19 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     auto swapChain = createSwapChain();
 
-    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", 0, SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
+    filamat::DescriptorSetInfoVector descriptors = {
+            {1, {
+                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+            }}
+    };
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(api);
-    p.descriptorBindings(0, {{"test_tex", DescriptorType::SAMPLER, 0}});
+    p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
     auto program = api.createProgram(std::move(p));
 
     DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
@@ -257,7 +263,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);

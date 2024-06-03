@@ -39,22 +39,22 @@ namespace backend {
 //   ------------------------------------------------------
 //   0           Zero buffer (placeholder vertex buffer)  1
 //   1-16        Filament vertex buffers                 16   limited by MAX_VERTEX_BUFFER_COUNT
-//   17-25       Uniform buffers                          9   Program::UNIFORM_BINDING_COUNT
-//   26          Push constants                           1
-//   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
+//   20          Push constants                           1
+//   21-24       Descriptor sets (argument buffers)       4   limited by MAX_DESCRIPTOR_SET_COUNT
+//   25          Dynamic offset buffer                    1
 //
-//   Total                                               31
+//   Total                                               23
 
 //   Compute Bindings
 //   ----------------------
 //   Bindings    Buffer name                          Count
 //   ------------------------------------------------------
 //   0-3         SSBO buffers                             4   MAX_SSBO_COUNT
-//   17-25       Uniform buffers                          9   Program::UNIFORM_BINDING_COUNT
-//   26          Push constants                           1
-//   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
+//   20          Push constants                           1
+//   21-24       Descriptor sets (argument buffers)       4   limited by MAX_DESCRIPTOR_SET_COUNT
+//   25          Dynamic offset buffer                    1
 //
-//   Total                                               18
+//   Total                                               10
 
 // The total number of vertex buffer "slots" that the Metal backend can bind.
 // + 1 to account for the zero buffer, a placeholder buffer used internally by the Metal backend.
@@ -68,6 +68,7 @@ static constexpr uint32_t ZERO_VERTEX_BUFFER_BINDING = 0u;
 static constexpr uint32_t USER_VERTEX_BUFFER_BINDING_START = 1u;
 
 // These constants must match the equivalent in CodeGenerator.h.
+// TODO: deprecate these
 static constexpr uint32_t UNIFORM_BUFFER_BINDING_START = 17u;
 static constexpr uint32_t SSBO_BINDING_START = 0u;
 static constexpr uint32_t SAMPLER_GROUP_BINDING_START = 27u;
@@ -382,14 +383,17 @@ using WindingStateTracker = StateTracker<MTLWinding>;
 // Argument encoder
 
 struct ArgumentEncoderState {
+    NSUInteger bufferCount;
     utils::FixedCapacityVector<MTLTextureType> textureTypes;
 
-    explicit ArgumentEncoderState(utils::FixedCapacityVector<MTLTextureType>&& types)
-        : textureTypes(std::move(types)) {}
+    explicit ArgumentEncoderState(
+            NSUInteger bufferCount, utils::FixedCapacityVector<MTLTextureType>&& types)
+        : bufferCount(bufferCount), textureTypes(std::move(types)) {}
 
     bool operator==(const ArgumentEncoderState& rhs) const noexcept {
         return std::equal(textureTypes.begin(), textureTypes.end(), rhs.textureTypes.begin(),
-                rhs.textureTypes.end());
+                       rhs.textureTypes.end()) &&
+                bufferCount == rhs.bufferCount;
     }
 
     bool operator!=(const ArgumentEncoderState& rhs) const noexcept {
@@ -410,6 +414,26 @@ struct ArgumentEncoderCreator {
 
 using ArgumentEncoderCache = StateCache<ArgumentEncoderState, id<MTLArgumentEncoder>,
         ArgumentEncoderCreator, ArgumentEncoderHasher>;
+
+template <NSUInteger N>
+class MetalBufferBindings {
+public:
+    MetalBufferBindings() {}
+
+    void invalidate() {
+        mDirtyBuffers.allOn();
+        mDirtyOffsets.allOn();
+    }
+    void setBuffer(const id<MTLBuffer> buffer, NSUInteger offset, NSUInteger index);
+    void bindBuffers(id<MTLCommandEncoder> encoder, NSUInteger startIndex);
+
+private:
+    static_assert(N <= 8);
+    std::array<__unsafe_unretained id<MTLBuffer>, N> mBuffers = { nil };
+    std::array<NSUInteger, N> mOffsets = { 0 };
+    utils::bitset8 mDirtyBuffers { 0xFF };
+    utils::bitset8 mDirtyOffsets { 0xFF };
+};
 
 } // namespace backend
 } // namespace filament

@@ -62,6 +62,7 @@ public:
 private:
 
     friend class MetalSwapChain;
+    friend struct MetalDescriptorSet;
 
     MetalPlatform& mPlatform;
     MetalContext* mContext;

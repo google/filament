@@ -301,18 +301,21 @@ TEST_F(BackendTest, UpdateImage2D) {
         auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
         // Create a program.
-        SamplerInterfaceBlock const sib = filament::SamplerInterfaceBlock::Builder()
-                .name("Test")
-                .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-                .add( {{"tex", 0, SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH }} )
-                .build();
+        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+            SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
+        filamat::DescriptorSetInfoVector descriptors = {
+                {1, {
+                        {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+                }}
+        };
 
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+        ShaderGenerator shaderGen(
+                vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 
         Program prog = shaderGen.getProgram(api);
-        prog.descriptorBindings(0, {{"test_tex", DescriptorType::SAMPLER, 0}});
+        prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
 
         ProgramHandle const program = api.createProgram(std::move(prog));
 
@@ -349,7 +352,7 @@ TEST_F(BackendTest, UpdateImage2D) {
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
-        api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
         renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
 
@@ -386,16 +389,19 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
-    SamplerInterfaceBlock const sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", 0, SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
+    filamat::DescriptorSetInfoVector descriptors = {
+            {1, {
+                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+            }}
+    };
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
     Program prog = shaderGen.getProgram(api);
-    prog.descriptorBindings(0, {{"test_tex", DescriptorType::SAMPLER, 0}});
+    prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
     ProgramHandle const program = api.createProgram(std::move(prog));
     DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
             {{
@@ -441,7 +447,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
 
@@ -479,16 +485,19 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
-    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", 0, SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
+    filamat::DescriptorSetInfoVector descriptors = {
+            {1, {
+                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+            }}
+    };
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
     Program prog = shaderGen.getProgram(api);
-    prog.descriptorBindings(0, {{"test_tex", DescriptorType::SAMPLER, 0}});
+    prog.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
     ProgramHandle const program = api.createProgram(std::move(prog));
     DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
             {{
@@ -518,7 +527,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
 
@@ -558,16 +567,19 @@ TEST_F(BackendTest, UpdateImage3D) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
-    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", 0, SamplerType::SAMPLER_2D_ARRAY, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_2D_ARRAY, getSamplerFormat(textureFormat), Precision::HIGH, false };
+    filamat::DescriptorSetInfoVector descriptors = {
+            {1, {
+                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+            }}
+    };
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
     Program prog = shaderGen.getProgram(api);
-    prog.descriptorBindings(0, {{ "test_tex", DescriptorType::SAMPLER, 0 }});
+    prog.descriptorBindings(1, {{ "test_tex", DescriptorType::SAMPLER, 0 }});
     ProgramHandle const program = api.createProgram(std::move(prog));
     DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
             {{
@@ -607,7 +619,7 @@ TEST_F(BackendTest, UpdateImage3D) {
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
 

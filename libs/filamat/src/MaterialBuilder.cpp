@@ -64,6 +64,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -937,6 +938,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
                 GLSLPostProcessor::Config config{
                         .variant = v.variant,
+                        .variantFilter = mVariantFilter,
                         .targetApi = targetApi,
                         .targetLanguage = targetLanguage,
                         .shaderType = v.stage,

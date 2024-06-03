@@ -547,18 +547,178 @@ struct MetalTimerQuery : public HwTimerQuery {
     std::shared_ptr<Status> status;
 };
 
-// Descriptor sets are layed out as follows:
-// Buffers
-// Textures
+class MetalDescriptorSetLayout : public HwDescriptorSetLayout {
+public:
+    MetalDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
 
-struct MetalDescriptorSetLayout : public HwDescriptorSetLayout {
-    MetalDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept : layout(std::move(layout)) {}
-    DescriptorSetLayout layout;
+    const auto& getBindings() const noexcept { return mLayout.bindings; }
+
+    size_t getDynamicOffsetCount() const noexcept { return mDynamicOffsetCount; }
+
+    id<MTLArgumentEncoder> getArgumentEncoderForTextureTypes(
+            id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
+
+private:
+    id<MTLArgumentEncoder> getArgumentEncoderForTextureTypesSlow(
+            id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
+
+    DescriptorSetLayout mLayout;
+    size_t mDynamicOffsetCount = 0;
+    id<MTLArgumentEncoder> mCachedArgumentEncoder = nil;
+    utils::FixedCapacityVector<MTLTextureType> mCachedTextureTypes;
 };
 
 struct MetalDescriptorSet : public HwDescriptorSet {
-    MetalDescriptorSet(Handle<HwDescriptorSetLayout> layout) noexcept : layout(layout) {}
-    Handle<HwDescriptorSetLayout> layout;
+    MetalDescriptorSet(MetalDescriptorSetLayout* layout) noexcept;
+    MetalDescriptorSetLayout* layout;
+
+    void finalize(MetalDriver* driver) {
+        [driver->mContext->currentRenderPassEncoder useResource:driver->mContext->emptyBuffer
+                                                          usage:MTLResourceUsageRead];
+        [driver->mContext->currentRenderPassEncoder useResource:getOrCreateEmptyTexture(driver->mContext)
+                                                          usage:MTLResourceUsageRead];
+        auto const& bindings = this->layout->getBindings();
+        for (auto const& binding : bindings) {
+            switch (binding.type) {
+                case DescriptorType::UNIFORM_BUFFER:
+                case DescriptorType::SHADER_STORAGE_BUFFER: {
+                    auto found = buffers.find(binding.binding);
+                    if (found == buffers.end()) {
+                        continue;
+                    }
+
+                    auto const& bufferBinding = buffers[binding.binding];
+                    auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
+                                                ->getBuffer()
+                                                ->getGpuBufferForDraw();
+                    [driver->mContext->currentRenderPassEncoder useResource:metalBuffer
+                                                                      usage:MTLResourceUsageRead];
+                    break;
+                }
+                case DescriptorType::SAMPLER: {
+                    auto found = textures.find(binding.binding);
+                    if (found == textures.end()) {
+                        continue;
+                    }
+
+                    auto const& textureBinding = textures[binding.binding];
+                    auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
+                                            ->getMtlTextureForRead();
+                    [driver->mContext->currentRenderPassEncoder useResource:texture
+                                                                      usage:MTLResourceUsageRead];
+                    break;
+                }
+                case DescriptorType::INPUT_ATTACHMENT:
+                    break;
+            }
+        }
+    }
+
+    id<MTLBuffer> finalizeAndGetBuffer(MetalDriver* driver) {
+        if (buffer) {
+            return buffer;
+        }
+
+        // Map all the texture bindings to their respective texture types.
+        auto const& bindings = layout->getBindings();
+        auto textureTypes = utils::FixedCapacityVector<MTLTextureType>::with_capacity(bindings.size());
+        for (auto const& binding : bindings) {
+            MTLTextureType textureType = MTLTextureType2D;
+            if (auto found = textures.find(binding.binding); found != textures.end()) {
+                auto const& textureBinding = textures[binding.binding];
+                auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
+                                    ->getMtlTextureForRead();
+                textureType = texture.textureType;
+            }
+            textureTypes.push_back(textureType);
+        }
+
+        MetalContext const& context = *driver->mContext;
+
+        id<MTLArgumentEncoder> encoder =
+                layout->getArgumentEncoderForTextureTypes(context.device, textureTypes);
+
+        buffer = [context.device newBufferWithLength:encoder.encodedLength
+                                             options:MTLResourceStorageModeShared];
+        [encoder setArgumentBuffer:buffer offset:0];
+
+        printf("finalizeAndGetBuffer -- encoding begin --\n");
+        for (auto const& binding : bindings) {
+            printf("    binding %d: ", binding.binding);
+            switch (binding.type) {
+                case DescriptorType::UNIFORM_BUFFER:
+                case DescriptorType::SHADER_STORAGE_BUFFER: {
+                    printf("uniform, ");
+                    auto found = buffers.find(binding.binding);
+                    if (found == buffers.end()) {
+                        [encoder setBuffer:driver->mContext->emptyBuffer
+                                    offset:0
+                                   atIndex:binding.binding * 2];
+                        printf("empty buffer\n");
+                        continue;
+                    }
+
+                    auto const& bufferBinding = buffers[binding.binding];
+                    printf("buffer handle: %d", bufferBinding.buffer.getId());
+                    auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
+                                                ->getBuffer()
+                                                ->getGpuBufferForDraw();
+                    [encoder setBuffer:metalBuffer
+                                offset:bufferBinding.offset
+                               atIndex:binding.binding * 2];
+                    break;
+                }
+                case DescriptorType::SAMPLER: {
+                    printf("sampler, ");
+                    auto found = textures.find(binding.binding);
+                    if (found == textures.end()) {
+                        [encoder setTexture:driver->mContext->emptyTexture
+                                    atIndex:binding.binding * 2];
+                        id<MTLSamplerState> sampler =
+                                driver->mContext->samplerStateCache.getOrCreateState({});
+                        [encoder setSamplerState:sampler
+                                         atIndex:binding.binding * 2 + 1];
+                        printf("empty texture\n");
+                        continue;
+                    }
+
+                    auto const& textureBinding = textures[binding.binding];
+                    printf("texture handle: %d", textureBinding.texture.getId());
+                    auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
+                                            ->getMtlTextureForRead();
+                    [encoder setTexture:texture atIndex:binding.binding * 2];
+                    SamplerState samplerState {
+                            .samplerParams = textureBinding.sampler
+                    };
+                    id<MTLSamplerState> sampler = driver->mContext->samplerStateCache.getOrCreateState(samplerState);
+                    [encoder setSamplerState:sampler
+                                     atIndex:binding.binding * 2 + 1];
+                    break;
+                }
+                case DescriptorType::INPUT_ATTACHMENT:
+                    assert_invariant(false);
+                    break;
+            }
+            printf("\n");
+        }
+        printf("finalizeAndGetBuffer -- end --\n");
+
+        return buffer;
+    }
+
+    struct BufferBinding {
+        BufferObjectHandle buffer;
+        uint32_t offset;
+        uint32_t size;
+    };
+    struct TextureBinding {
+        TextureHandle texture;
+        SamplerParams sampler;
+    };
+    tsl::robin_map<descriptor_binding_t, BufferBinding> buffers;
+    tsl::robin_map<descriptor_binding_t, TextureBinding> textures;
+
+    id<MTLBuffer> buffer = nil;
 };
 
 } // namespace backend

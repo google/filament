@@ -98,12 +98,14 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Create a program that samples a texture.
         Handle<HwProgram> textureProgram;
         {
-            SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-                    .name("backend_test_sib")
-                    .stageFlags(backend::ShaderStageFlags::FRAGMENT)
-                    .add( {{"tex", 0, SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
-                    .build();
-            ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "backend_test", "sib_tex", 0,
+                SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+            filamat::DescriptorSetInfoVector descriptors = {
+                    {1, {
+                            {"backend_test_sib_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
+                    }}
+            };
+            ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
             Program p = shaderGen.getProgram(api);
             p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
             textureProgram = api.createProgram(std::move(p));

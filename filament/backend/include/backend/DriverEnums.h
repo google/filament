@@ -419,6 +419,18 @@ enum class SamplerType : uint8_t {
     SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
 };
 
+inline const char* stringify(SamplerType samplerType) {
+    switch (samplerType) {
+        case SamplerType::SAMPLER_2D: return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY: return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP: return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL: return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D: return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "SAMPLER_CUBEMAP_ARRAY";
+    }
+    return "UNKNOWN";
+}
+
 //! Subpass type
 enum class SubpassType : uint8_t {
     SUBPASS_INPUT
@@ -746,6 +758,23 @@ enum class TextureUsage : uint16_t {
     PROTECTED           = 0x0100,            //!< Texture can be used for protected content
     DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
+
+inline const char* stringify(TextureUsage usage) {
+    switch (usage) {
+        case TextureUsage::NONE: return "NONE";
+        case TextureUsage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
+        case TextureUsage::DEPTH_ATTACHMENT: return "DEPTH_ATTACHMENT";
+        case TextureUsage::STENCIL_ATTACHMENT: return "STENCIL_ATTACHMENT";
+        case TextureUsage::UPLOADABLE: return "UPLOADABLE";
+        case TextureUsage::SAMPLEABLE: return "SAMPLEABLE";
+        case TextureUsage::SUBPASS_INPUT: return "SUBPASS_INPUT";
+        case TextureUsage::BLIT_SRC: return "BLIT_SRC";
+        case TextureUsage::BLIT_DST: return "BLIT_DST";
+        case TextureUsage::PROTECTED: return "PROTECTED";
+        case TextureUsage::DEFAULT: return "DEFAULT";
+        default: return "UNKNOWN";
+    }
+}
 
 //! Texture swizzle
 enum class TextureSwizzle : uint8_t {

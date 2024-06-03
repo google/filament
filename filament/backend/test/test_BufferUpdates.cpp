@@ -31,7 +31,7 @@ layout(location = 0) in vec4 mesh_position;
 
 layout(location = 0) out uvec4 indices;
 
-uniform Params {
+layout(binding = 0, set = 0) uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
     highp vec4 color;
@@ -96,7 +96,13 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+        filamat::DescriptorSetInfoVector descriptors = {
+                {1, {
+                        {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0}, {}}
+                }}
+        };
+        ShaderGenerator shaderGen(
+                vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
         Program p = shaderGen.getProgram(api);
         p.descriptorBindings(0, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
         auto program = api.createProgram(std::move(p));
@@ -220,7 +226,13 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a program.
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    filamat::DescriptorSetInfoVector descriptors = {
+            {1, {
+                    {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0}, {}}
+            }}
+    };
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
     Program p = shaderGen.getProgram(api);
     p.descriptorBindings(0, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
     auto program = api.createProgram(std::move(p));

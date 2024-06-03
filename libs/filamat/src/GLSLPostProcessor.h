@@ -20,6 +20,7 @@
 #include <filamat/MaterialBuilder.h>    // for MaterialBuilder:: enums
 
 #include <private/filament/Variant.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include "ShaderMinifier.h"
 
@@ -35,15 +36,19 @@
 #include <string>
 #include <vector>
 
-namespace filament {
-class SamplerInterfaceBlock;
-};
-
 namespace filamat {
 
 using SpirvBlob = std::vector<uint32_t>;
 using BindingPointAndSib = std::pair<uint8_t, const filament::SamplerInterfaceBlock*>;
 using SibVector = utils::FixedCapacityVector<BindingPointAndSib>;
+
+using DescriptorInfo = std::tuple<
+        utils::CString,
+        filament::backend::DescriptorSetLayoutBinding,
+        std::optional<filament::SamplerInterfaceBlock::SamplerInfo>>;
+using DescriptorSetInfo = utils::FixedCapacityVector<DescriptorInfo>;
+using BindingPointAndDescriptorSetInfo = std::pair<uint8_t, DescriptorSetInfo>;
+using DescriptorSetInfoVector = utils::FixedCapacityVector<BindingPointAndDescriptorSetInfo>;
 
 class GLSLPostProcessor {
 public:
@@ -58,6 +63,7 @@ public:
 
     struct Config {
         filament::Variant variant;
+        filament::UserVariantFilterMask variantFilter;
         MaterialBuilder::TargetApi targetApi;
         MaterialBuilder::TargetLanguage targetLanguage;
         filament::backend::ShaderStage shaderType;
@@ -80,7 +86,7 @@ public:
     // public so backend_test can also use it
     static void spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
             filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
-            const SibVector& sibs, const ShaderMinifier* minifier);
+            const DescriptorSetInfoVector& descriptorSets, const ShaderMinifier* minifier);
 
 private:
     struct InternalConfig {

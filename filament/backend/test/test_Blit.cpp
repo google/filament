@@ -38,7 +38,7 @@ using namespace utils;
 
 static const char* const triangleVs = R"(#version 450 core
 layout(location = 0) in vec4 mesh_position;
-uniform Params { highp vec4 color; highp vec4 scale; } params;
+layout(binding = 0, set = 1) uniform Params { highp vec4 color; highp vec4 scale; } params;
 void main() {
     gl_Position = vec4((mesh_position.xy + 0.5) * params.scale.xy, params.scale.z, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
@@ -50,7 +50,7 @@ void main() {
 static const char* const triangleFs = R"(#version 450 core
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
-uniform Params { highp vec4 color; highp vec4 scale; } params;
+layout(binding = 0, set = 1) uniform Params { highp vec4 color; highp vec4 scale; } params;
 void main() {
     fragColor = params.color;
 })";
@@ -348,9 +348,15 @@ TEST_F(BackendTest, ColorResolve) {
     // Create a program.
     ProgramHandle program;
     {
-        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
+        filamat::DescriptorSetInfoVector descriptors = {
+                {1, {
+                        {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0}, {}}
+                }}
+        };
+        ShaderGenerator shaderGen(
+                triangleVs, triangleFs, sBackend, sIsMobilePlatform, std::move(descriptors));
         Program prog = shaderGen.getProgram(api);
-        prog.descriptorBindings(0, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
+        prog.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
         program = api.createProgram(std::move(prog));
     }
 
@@ -412,7 +418,7 @@ TEST_F(BackendTest, ColorResolve) {
     });
 
     api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams));
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // FIXME: on Metal this triangle is not drawn. Can't understand why.
     api.beginFrame(0, 0, 0);

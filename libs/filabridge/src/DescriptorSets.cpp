@@ -81,6 +81,7 @@ static DescriptorSetLayout perViewDescriptorSetLayout = {{
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG,            DescriptorFlags::NONE, 0 },
 }};
 
+
 static DescriptorSetLayout perRenderableDescriptorSetLayout = {{
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS,             DescriptorFlags::DYNAMIC_OFFSET, 0 },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,              DescriptorFlags::DYNAMIC_OFFSET, 0 },

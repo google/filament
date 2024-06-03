@@ -167,7 +167,7 @@ void MetalPushConstantBuffer::setPushConstant(PushConstantVariant value, uint8_t
 
 void MetalPushConstantBuffer::setBytes(id<MTLCommandEncoder> encoder, ShaderStage stage) {
     constexpr size_t PUSH_CONSTANT_SIZE_BYTES = 4;
-    constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 26;
+    constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 20;
 
     static char buffer[MAX_PUSH_CONSTANT_COUNT * PUSH_CONSTANT_SIZE_BYTES];
     assert_invariant(mPushConstants.size() <= MAX_PUSH_CONSTANT_COUNT);

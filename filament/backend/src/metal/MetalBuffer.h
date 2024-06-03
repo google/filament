@@ -180,7 +180,7 @@ public:
      * is no device allocation.
      *
      */
-    id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
+    id<MTLBuffer> getGpuBufferForDraw() noexcept;
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 

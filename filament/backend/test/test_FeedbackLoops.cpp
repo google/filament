@@ -55,14 +55,15 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform sampler2D test_tex;
+layout(binding = 0, set = 1) uniform sampler2D test_tex;
 
-uniform Params {
+layout(binding = 1, set = 1) uniform Params {
     highp float fbWidth;
     highp float fbHeight;
     highp float sourceLevel;
     highp float unused;
 } params;
+
 void main() {
     vec2 fbsize = vec2(params.fbWidth, params.fbHeight);
     vec2 uv = (gl_FragCoord.xy + 0.5) / fbsize;
@@ -139,14 +140,18 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a program.
         ProgramHandle program;
         {
-            SamplerInterfaceBlock const sib = filament::SamplerInterfaceBlock::Builder()
-                    .name("Test")
-                    .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-                    .add( {{"tex", 0, SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
-                    .build();
-            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform, &sib);
+            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+                SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+            filamat::DescriptorSetInfoVector descriptors = {
+                    {1, {
+                            {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo},
+                            {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 1}, {}}
+                    }}
+            };
+            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform,
+                    std::move(descriptors));
             Program prog = shaderGen.getProgram(api);
-            prog.descriptorBindings(0, {
+            prog.descriptorBindings(1, {
                     { "test_tex", DescriptorType::SAMPLER, 0 },
                     { "Params", DescriptorType::UNIFORM_BUFFER, 1 }
             });
@@ -183,7 +188,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
         api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
 
-        api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
