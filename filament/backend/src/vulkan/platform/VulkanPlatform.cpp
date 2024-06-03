@@ -281,8 +281,8 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     }
 
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance. Result=%d",
-            result);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "Unable to create Vulkan instance. Result=" << result;
     return instance;
 }
 
@@ -333,7 +333,7 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     }
 
     VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error=%d.", result);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
 
     return device;
 }
@@ -467,9 +467,9 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         deviceList[deviceInd].name = targetDeviceProperties.deviceName;
     }
 
-    ASSERT_PRECONDITION(gpuPreference.index < static_cast<int32_t>(deviceList.size()),
-            "Provided GPU index=%d >= the number of GPUs=%d", gpuPreference.index,
-            static_cast<int32_t>(deviceList.size()));
+    FILAMENT_CHECK_PRECONDITION(gpuPreference.index < static_cast<int32_t>(deviceList.size()))
+            << "Provided GPU index=" << gpuPreference.index
+            << " >= the number of GPUs=" << static_cast<int32_t>(deviceList.size());
 
     // Sort the found devices
     std::sort(deviceList.begin(), deviceList.end(),
@@ -497,7 +497,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
                 return deviceTypeOrder(a.deviceType) < deviceTypeOrder(b.deviceType);
             });
     auto device = deviceList.back().device;
-    ASSERT_POSTCONDITION(device != VK_NULL_HANDLE, "Unable to find suitable device.");
+    FILAMENT_CHECK_POSTCONDITION(device != VK_NULL_HANDLE) << "Unable to find suitable device.";
     return device;
 }
 
@@ -586,21 +586,21 @@ void VulkanPlatform::terminate() {
 Driver* VulkanPlatform::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     // Load Vulkan entry points.
-    ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
+    FILAMENT_CHECK_POSTCONDITION(bluevk::initialize()) << "BlueVK is unable to load entry points.";
 
     if (sharedContext) {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         // All fields of VulkanSharedContext should be present.
-        ASSERT_PRECONDITION(scontext->instance != VK_NULL_HANDLE,
-                "Client needs to provide VkInstance");
-        ASSERT_PRECONDITION(scontext->physicalDevice != VK_NULL_HANDLE,
-                "Client needs to provide VkPhysicalDevice");
-        ASSERT_PRECONDITION(scontext->logicalDevice != VK_NULL_HANDLE,
-                "Client needs to provide VkDevice");
-        ASSERT_PRECONDITION(scontext->graphicsQueueFamilyIndex != INVALID_VK_INDEX,
-                "Client needs to provide graphics queue family index");
-        ASSERT_PRECONDITION(scontext->graphicsQueueIndex != INVALID_VK_INDEX,
-                "Client needs to provide graphics queue index");
+        FILAMENT_CHECK_PRECONDITION(scontext->instance != VK_NULL_HANDLE)
+                << "Client needs to provide VkInstance";
+        FILAMENT_CHECK_PRECONDITION(scontext->physicalDevice != VK_NULL_HANDLE)
+                << "Client needs to provide VkPhysicalDevice";
+        FILAMENT_CHECK_PRECONDITION(scontext->logicalDevice != VK_NULL_HANDLE)
+                << "Client needs to provide VkDevice";
+        FILAMENT_CHECK_PRECONDITION(scontext->graphicsQueueFamilyIndex != INVALID_VK_INDEX)
+                << "Client needs to provide graphics queue family index";
+        FILAMENT_CHECK_PRECONDITION(scontext->graphicsQueueIndex != INVALID_VK_INDEX)
+                << "Client needs to provide graphics queue index";
 
         mImpl->mInstance = scontext->instance;
         mImpl->mPhysicalDevice = scontext->physicalDevice;
@@ -646,8 +646,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     VulkanPlatform::Customization::GPUPreference const pref = getCustomization().gpu;
     bool const hasGPUPreference = pref.index >= 0 || !pref.deviceName.empty();
-    ASSERT_PRECONDITION(!(hasGPUPreference && sharedContext),
-            "Cannot both share context and indicate GPU preference");
+    FILAMENT_CHECK_PRECONDITION(!(hasGPUPreference && sharedContext))
+            << "Cannot both share context and indicate GPU preference";
 
     mImpl->mPhysicalDevice = mImpl->mPhysicalDevice == VK_NULL_HANDLE
                                      ? selectPhysicalDevice(mImpl->mInstance, pref)
@@ -707,8 +707,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
 #ifdef NDEBUG
     // If we are in release build, we should not have turned on debug extensions
-    ASSERT_POSTCONDITION(!context.mDebugUtilsSupported && !context.mDebugMarkersSupported,
-            "Debug utils should not be enabled in release build.");
+    FILAMENT_CHECK_POSTCONDITION(!context.mDebugUtilsSupported && !context.mDebugMarkersSupported)
+            << "Debug utils should not be enabled in release build.";
 #endif
 
     context.mDepthStencilFormats = findAttachmentDepthStencilFormats(mImpl->mPhysicalDevice);

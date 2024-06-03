@@ -1175,12 +1175,14 @@ void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept 
 }
 
 void FView::setMaterialGlobal(uint32_t index, float4 const& value) {
-    ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
+    FILAMENT_CHECK_PRECONDITION(index < 4)
+            << "material global variable index (" << +index << ") out of range";
     mMaterialGlobals[index] = value;
 }
 
 math::float4 FView::getMaterialGlobal(uint32_t index) const {
-    ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
+    FILAMENT_CHECK_PRECONDITION(index < 4)
+            << "material global variable index (" << +index << ") out of range";
     return mMaterialGlobals[index];
 }
 

@@ -23,6 +23,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstring>
 
 struct Config {
     utils::Path inputFile;

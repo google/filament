@@ -52,6 +52,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <thread>
 
 #include "generated/resources/materials.h"
 
@@ -158,8 +159,8 @@ FEngine* FEngine::getEngine(void* token) {
 
     FEngine* instance = static_cast<FEngine*>(token);
 
-    ASSERT_PRECONDITION(ThreadUtils::isThisThread(instance->mMainThreadId),
-            "Engine::createAsync() and Engine::getEngine() must be called on the same thread.");
+    FILAMENT_CHECK_PRECONDITION(ThreadUtils::isThisThread(instance->mMainThreadId))
+            << "Engine::createAsync() and Engine::getEngine() must be called on the same thread.";
 
     // we use mResourceAllocator as a proxy for "am I already initialized"
     if (!instance->mResourceAllocator) {
@@ -440,8 +441,8 @@ void FEngine::shutdown() {
     // by construction this should never be nullptr
     assert_invariant(mResourceAllocator);
 
-    ASSERT_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId),
-            "Engine::shutdown() called from the wrong thread!");
+    FILAMENT_CHECK_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId))
+            << "Engine::shutdown() called from the wrong thread!";
 
 #ifndef NDEBUG
     // print out some statistics about this run
@@ -584,14 +585,14 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
-    ASSERT_PRECONDITION(!mCommandBufferQueue.isPaused(),
-            "Cannot call flushAndWait() when rendering thread is paused!");
+    FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isPaused())
+            << "Cannot call flushAndWait() when rendering thread is paused!";
 
 #if defined(__ANDROID__)
 
     // first make sure we've not terminated filament
-    ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
-            "calling Engine::flushAndWait() after Engine::shutdown()!");
+    FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isExitRequested())
+            << "calling Engine::flushAndWait() after Engine::shutdown()!";
 
 #endif
 
@@ -609,10 +610,10 @@ void FEngine::flushAndWait() {
         // if the fence didn't trigger after 250ms, check that the command queue thread is still
         // running (otherwise indicating a precondition violation).
         if (UTILS_UNLIKELY(status == FenceStatus::TIMEOUT_EXPIRED)) {
-            ASSERT_PRECONDITION(!mCommandBufferQueue.isExitRequested(),
-                    "called Engine::shutdown() WHILE in Engine::flushAndWait()!");
+            FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isExitRequested())
+                    << "called Engine::shutdown() WHILE in Engine::flushAndWait()!";
             tryCount--;
-            ASSERT_POSTCONDITION(tryCount, "flushAndWait() failed inexplicably after 2s");
+            FILAMENT_CHECK_POSTCONDITION(tryCount) << "flushAndWait() failed inexplicably after 2s";
             // if the thread is still running, maybe we just need to give it more time
             continue;
         }
@@ -1239,10 +1240,10 @@ Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
 }
 
 Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
-    ASSERT_PRECONDITION(featureLevel <= getSupportedFeatureLevel(),
-            "Feature level %u not supported", (unsigned)featureLevel);
-    ASSERT_PRECONDITION(mActiveFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1,
-            "Cannot adjust feature level beyond 0 at runtime");
+    FILAMENT_CHECK_PRECONDITION(featureLevel <= getSupportedFeatureLevel())
+            << "Feature level " << (unsigned)featureLevel << " not supported";
+    FILAMENT_CHECK_PRECONDITION(mActiveFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1)
+            << "Cannot adjust feature level beyond 0 at runtime";
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 

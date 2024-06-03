@@ -116,7 +116,7 @@ class Engine;
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * SDL_SysWMinfo wmi;
  * SDL_VERSION(&wmi.version);
- * ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi), "SDL version unsupported!");
+ * FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi)) << "SDL version unsupported!";
  * HDC nativeWindow = (HDC) wmi.info.win.hdc;
  *
  * using namespace filament;
