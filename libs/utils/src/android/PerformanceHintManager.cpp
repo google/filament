@@ -47,6 +47,13 @@ PerformanceHintManager::PerformanceHintManager() noexcept {
 
 PerformanceHintManager::~PerformanceHintManager() noexcept = default;
 
+bool PerformanceHintManager::isSupported() noexcept {
+    if (__builtin_available(android __ANDROID_API_T__, *)) {
+        return true;
+    }
+    return false;
+}
+
 bool PerformanceHintManager::isValid() const {
     return mImpl->mManager != nullptr;
 }
