@@ -476,6 +476,8 @@ void FEngine::shutdown() {
 
     destroy(mDefaultMaterial);
 
+    destroy(mUnprotectedDummySwapchain);
+
     /*
      * clean-up after the user -- we call terminate on each "leaked" object and clear each list.
      *
@@ -1252,6 +1254,13 @@ void FEngine::resetBackendState() noexcept {
     getDriverApi().resetState();
 }
 #endif
+
+void FEngine::unprotected() noexcept {
+    if (UTILS_UNLIKELY(!mUnprotectedDummySwapchain)) {
+        mUnprotectedDummySwapchain = createSwapChain(1, 1, 0);
+    }
+    mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
+}
 
 // ------------------------------------------------------------------------------------------------
 
