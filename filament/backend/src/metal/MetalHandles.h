@@ -109,6 +109,7 @@ private:
     NSUInteger headlessWidth = 0;
     NSUInteger headlessHeight = 0;
     CAMetalLayer* layer = nullptr;
+    std::mutex layerDrawableMutex;
     MetalExternalImage externalImage;
     SwapChainType type;
 
