@@ -16,13 +16,23 @@
 
 #include "private/backend/VirtualMachineEnv.h"
 
+#include <utils/compiler.h>
 #include <utils/debug.h>
+
+#include <jni.h>
 
 namespace filament {
 
 JavaVM* VirtualMachineEnv::sVirtualMachine = nullptr;
 
-// This is called when the library is loaded. We need this to get a reference to the global VM
+/*
+ * This is typically called by filament_jni.so when it is loaded. If filament_jni.so is not used,
+ * then this must be called manually -- however, this is a problem because VirtualMachineEnv.h
+ * is currently private and part of backend.
+ * For now, we authorize this usage, but we will need to fix it; by making a proper public
+ * API for this.
+ */
+UTILS_PUBLIC
 UTILS_NOINLINE
 jint VirtualMachineEnv::JNI_OnLoad(JavaVM* vm) noexcept {
     JNIEnv* env = nullptr;
