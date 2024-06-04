@@ -406,6 +406,8 @@ public:
         getDriver().purge();
     }
 
+    void unprotected() noexcept;
+
     void setAutomaticInstancingEnabled(bool enable) noexcept {
         // instancing is not allowed at feature level 0
         if (hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
@@ -539,6 +541,7 @@ private:
 
     mutable FMaterial const* mDefaultMaterial = nullptr;
     mutable FMaterial const* mSkyboxMaterial = nullptr;
+    mutable FSwapChain* mUnprotectedDummySwapchain = nullptr;
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
