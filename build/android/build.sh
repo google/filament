@@ -57,6 +57,7 @@ FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
 # Install the required NDK version specifically (if not present)
 if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
+    yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
     ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION"
 fi
 
