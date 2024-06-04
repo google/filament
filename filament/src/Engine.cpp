@@ -329,6 +329,10 @@ void Engine::pumpMessageQueues() {
     downcast(this)->pumpMessageQueues();
 }
 
+void Engine::unprotected() noexcept {
+    downcast(this)->unprotected();
+}
+
 void Engine::setAutomaticInstancingEnabled(bool enable) noexcept {
     downcast(this)->setAutomaticInstancingEnabled(enable);
 }
