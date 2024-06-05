@@ -486,7 +486,7 @@ struct Voidify final {
     void operator&&(const T&) const&& {}
 };
 
-class PanicStream {
+class UTILS_PUBLIC PanicStream {
 public:
     PanicStream(
             char const* function,
