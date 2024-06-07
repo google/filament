@@ -123,7 +123,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         };
         VkResult const result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateAndroidSurfaceKHR error.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateAndroidSurfaceKHR error.";
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
         extent.width = ptrval->width;
@@ -138,11 +138,11 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         };
         VkResult const result = vkCreateWaylandSurfaceKHR(instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWaylandSurfaceKHR error.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateWaylandSurfaceKHR error.";
     #elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11)
         if (g_x11_vk.library == nullptr) {
             g_x11_vk.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
-            ASSERT_PRECONDITION(g_x11_vk.library, "Unable to open X11 library.");
+            FILAMENT_CHECK_PRECONDITION(g_x11_vk.library) << "Unable to open X11 library.";
             #if defined(FILAMENT_SUPPORTS_XCB)
                 g_x11_vk.xcbConnect = (XCB_CONNECT) dlsym(g_x11_vk.library, "xcb_connect");
                 int screen;
@@ -151,7 +151,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
             #if defined(FILAMENT_SUPPORTS_XLIB)
                 g_x11_vk.openDisplay = (X11_OPEN_DISPLAY) dlsym(g_x11_vk.library, "XOpenDisplay");
                 g_x11_vk.display = g_x11_vk.openDisplay(NULL);
-                ASSERT_PRECONDITION(g_x11_vk.display, "Unable to open X11 display.");
+                FILAMENT_CHECK_PRECONDITION(g_x11_vk.display) << "Unable to open X11 display.";
             #endif
         }
         #if defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB)
@@ -164,8 +164,8 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 useXcb = true;
             #endif
             if (useXcb) {
-                ASSERT_POSTCONDITION(vkCreateXcbSurfaceKHR,
-                        "Unable to load vkCreateXcbSurfaceKHR function.");
+                FILAMENT_CHECK_POSTCONDITION(vkCreateXcbSurfaceKHR)
+                        << "Unable to load vkCreateXcbSurfaceKHR function.";
 
                 VkXcbSurfaceCreateInfoKHR const createInfo = {
                         .sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
@@ -174,13 +174,14 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 };
                 VkResult const result = vkCreateXcbSurfaceKHR(instance, &createInfo, VKALLOC,
                         (VkSurfaceKHR*) &surface);
-                ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateXcbSurfaceKHR error.");
+                FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                        << "vkCreateXcbSurfaceKHR error.";
             }
         #endif
         #if defined(FILAMENT_SUPPORTS_XLIB)
             if (!useXcb) {
-                ASSERT_POSTCONDITION(vkCreateXlibSurfaceKHR,
-                        "Unable to load vkCreateXlibSurfaceKHR function.");
+                FILAMENT_CHECK_POSTCONDITION(vkCreateXlibSurfaceKHR)
+                        << "Unable to load vkCreateXlibSurfaceKHR function.";
 
                 VkXlibSurfaceCreateInfoKHR const createInfo = {
                         .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
@@ -189,7 +190,8 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 };
                 VkResult const result = vkCreateXlibSurfaceKHR(instance, &createInfo, VKALLOC,
                         (VkSurfaceKHR*) &surface);
-                ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateXlibSurfaceKHR error.");
+                FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                        << "vkCreateXlibSurfaceKHR error.";
             }
         #endif
     #elif defined(WIN32)
@@ -200,7 +202,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         };
         VkResult const result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr,
                 (VkSurfaceKHR*) &surface);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWin32SurfaceKHR error.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateWin32SurfaceKHR error.";
     #endif
     return std::make_tuple(surface, extent);
 }

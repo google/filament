@@ -511,6 +511,8 @@ private:
     mutable tsl::robin_map<SamplerParams, GLuint,
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
+    Platform::DriverConfig const mDriverConfig;
+
     void bindFramebufferResolved(GLenum target, GLuint buffer) noexcept;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{

@@ -170,9 +170,9 @@ public:
         };
         VkDescriptorSet vkSet;
         UTILS_UNUSED VkResult result = vkAllocateDescriptorSets(mDevice, &allocInfo, &vkSet);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS,
-                "Failed to allocate descriptor set code=%d size=%d capacity=%d count=%s", result,
-                mSize, mCapacity);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Failed to allocate descriptor set code=" << result << " size=" << mSize
+                << " capacity=" << mCapacity << " count=" << "%s";
         mSize++;
         return createSet(layout->bitmask, vkSet);
     }

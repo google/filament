@@ -671,8 +671,9 @@ static bool intersect(Ray ray, Sphere sphere, float* t) {
 
 static LinearImage diffImages(const LinearImage& a, const LinearImage& b) {
     const uint32_t width = a.getWidth(), height = a.getHeight(), nchan = a.getChannels();
-    ASSERT_PRECONDITION(width == b.getWidth() && height == b.getHeight() &&
-            nchan == b.getChannels(), "Images must have same shape.");
+    FILAMENT_CHECK_PRECONDITION(
+            width == b.getWidth() && height == b.getHeight() && nchan == b.getChannels())
+            << "Images must have same shape.";
     LinearImage result(width, height, nchan);
     float* dst = result.getPixelRef();
     float const* srca = a.getPixelRef();

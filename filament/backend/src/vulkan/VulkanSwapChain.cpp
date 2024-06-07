@@ -39,7 +39,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
       mAcquired(false),
       mIsFirstRenderPass(true) {
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
-    ASSERT_POSTCONDITION(swapChain, "Unable to create swapchain");
+    FILAMENT_CHECK_POSTCONDITION(swapChain) << "Unable to create swapchain";
 
     VkSemaphoreCreateInfo const createInfo = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -53,8 +53,9 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
 		for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
 			VkResult result =
 					vkCreateSemaphore(mPlatform->getDevice(), &createInfo, nullptr, mImageReady + i);
-			ASSERT_POSTCONDITION(result == VK_SUCCESS, "Failed to create semaphore");
-		}
+                        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                                << "Failed to create semaphore";
+                }
     }
 
     update();
@@ -112,9 +113,9 @@ void VulkanSwapChain::present() {
     if (!mHeadless) {
         VkSemaphore const finishedDrawing = mCommands->acquireFinishedSignal();
         VkResult const result = mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
-                                     result == VK_ERROR_OUT_OF_DATE_KHR,
-                "Cannot present in swapchain.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
+                result == VK_ERROR_OUT_OF_DATE_KHR)
+                << "Cannot present in swapchain.";
     }
 
     // We presented the last acquired buffer.
@@ -141,8 +142,8 @@ void VulkanSwapChain::acquire(bool& resized) {
 	mCurrentImageReadyIndex = (mCurrentImageReadyIndex + 1) % IMAGE_READY_SEMAPHORE_COUNT;
 	const VkSemaphore imageReady = mImageReady[mCurrentImageReadyIndex];
     VkResult const result = mPlatform->acquire(swapChain, imageReady, &mCurrentSwapIndex);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR,
-            "Cannot acquire in swapchain.");
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
+            << "Cannot acquire in swapchain.";
     if (imageReady != VK_NULL_HANDLE) {
         mCommands->injectDependency(imageReady);
     }

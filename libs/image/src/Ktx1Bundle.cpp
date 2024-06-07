@@ -109,11 +109,12 @@ Ktx1Bundle::Ktx1Bundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubem
 
 Ktx1Bundle::Ktx1Bundle(uint8_t const* bytes, uint32_t nbytes) :
         mBlobs(new KtxBlobList), mMetadata(new KtxMetadata) {
-    ASSERT_PRECONDITION(sizeof(SerializationHeader) <= nbytes, "KTX buffer is too small");
+    FILAMENT_CHECK_PRECONDITION(sizeof(SerializationHeader) <= nbytes) << "KTX buffer is too small";
 
     // First, "parse" the header by casting it to a struct.
     SerializationHeader const* header = (SerializationHeader const*) bytes;
-    ASSERT_PRECONDITION(memcmp(header->magic, MAGIC, 12) == 0, "KTX has unexpected identifier");
+    FILAMENT_CHECK_PRECONDITION(memcmp(header->magic, MAGIC, 12) == 0)
+            << "KTX has unexpected identifier";
     mInfo = header->info;
 
     // The spec allows 0 or 1 for the number of array layers and mipmap levels, but we replace 0
@@ -263,7 +264,8 @@ uint32_t Ktx1Bundle::getSerializedLength() const {
                 if (blobSize == 0) {
                     blobSize = thisBlobSize;
                 }
-                ASSERT_PRECONDITION(blobSize == thisBlobSize, "Inconsistent blob sizes within LOD");
+                FILAMENT_CHECK_PRECONDITION(blobSize == thisBlobSize)
+                        << "Inconsistent blob sizes within LOD";
                 total += thisBlobSize;
             }
         }

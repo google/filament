@@ -8,4 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- Add instructions for using Mesa for software rasterization
+- engine: fix skinning normals with large transforms (b/342459864) [⚠️ **New Material Version**]

@@ -80,7 +80,8 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
 }
 
 RenderPass RenderPassBuilder::build(FEngine& engine) {
-    ASSERT_POSTCONDITION(mRenderableSoa, "RenderPassBuilder::geometry() hasn't been called");
+    FILAMENT_CHECK_POSTCONDITION(mRenderableSoa)
+            << "RenderPassBuilder::geometry() hasn't been called";
     assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
     assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
     return RenderPass{ engine, *this };

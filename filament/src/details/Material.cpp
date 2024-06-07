@@ -91,23 +91,24 @@ static std::unique_ptr<MaterialParser> createParser(Backend backend,
             }
         }
 
-        ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
-                "the material was not built for any of the %s backend's supported shader "
-                "languages (%s)\n",
-                backendToString(backend), languageNames.c_str());
+        FILAMENT_CHECK_PRECONDITION(
+                materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
+                << "the material was not built for any of the " << backendToString(backend)
+                << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
     }
 
     if (backend == Backend::NOOP) {
         return materialParser;
     }
 
-    ASSERT_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS,
-                "could not parse the material package");
+    FILAMENT_CHECK_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
+            << "could not parse the material package";
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
-    ASSERT_PRECONDITION(version == MATERIAL_VERSION,
-            "Material version mismatch. Expected %d but received %d.", MATERIAL_VERSION, version);
+    FILAMENT_CHECK_PRECONDITION(version == MATERIAL_VERSION)
+            << "Material version mismatch. Expected " << MATERIAL_VERSION << " but received "
+            << version << ".";
 
     assert_invariant(backend != Backend::DEFAULT && "Default backend has not been resolved.");
 
@@ -144,7 +145,7 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 
 template<typename T, typename>
 Material::Builder& Material::Builder::constant(const char* name, size_t nameLength, T value) {
-    ASSERT_PRECONDITION(name != nullptr, "name cannot be null");
+    FILAMENT_CHECK_PRECONDITION(name != nullptr) << "name cannot be null";
     mImpl->mConstantSpecializations[{name, nameLength}] = value;
     return *this;
 }
@@ -522,10 +523,11 @@ Program FMaterial::getProgramWithVariants(
     UTILS_UNUSED_IN_RELEASE bool const vsOK = mMaterialParser->getShader(vsBuilder, sm,
             vertexVariant, ShaderStage::VERTEX);
 
-    ASSERT_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()),
-            "The material '%s' has not been compiled to include the required "
-            "GLSL or SPIR-V chunks for the vertex shader (variant=0x%x, filtered=0x%x).",
-            mName.c_str(), variant.key, vertexVariant.key);
+    FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
+            << "The material '" << mName.c_str()
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "vertex shader (variant="
+            << variant.key << ", filtered=" << vertexVariant.key << ").";
 
     /*
      * Fragment shader
@@ -536,10 +538,11 @@ Program FMaterial::getProgramWithVariants(
     UTILS_UNUSED_IN_RELEASE bool const fsOK = mMaterialParser->getShader(fsBuilder, sm,
             fragmentVariant, ShaderStage::FRAGMENT);
 
-    ASSERT_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()),
-            "The material '%s' has not been compiled to include the required "
-            "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filtered=0x%x).",
-            mName.c_str(), variant.key, fragmentVariant.key);
+    FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
+            << "The material '" << mName.c_str()
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "fragment shader (variant="
+            << variant.key << ", filtered=" << ").";
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
@@ -904,26 +907,29 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
     for (auto const& [name, value] : builder->mConstantSpecializations) {
         std::string_view const key{ name.data(), name.size() };
         auto pos = mSpecializationConstantsNameToIndex.find(key);
-        ASSERT_PRECONDITION(pos != mSpecializationConstantsNameToIndex.end(),
-                "The material %s does not have a constant parameter named %s.",
-                mName.c_str_safe(), name.c_str());
+        FILAMENT_CHECK_PRECONDITION(pos != mSpecializationConstantsNameToIndex.end())
+                << "The material " << mName.c_str_safe()
+                << " does not have a constant parameter named " << name.c_str() << ".";
         const char* const types[3] = {"an int", "a float", "a bool"};
-        const char* const errorMessage =
-                "The constant parameter %s on material %s is of type %s, but %s was "
-                "provided.";
         auto& constant = mMaterialConstants[pos->second];
         switch (constant.type) {
             case ConstantType::INT:
-                ASSERT_PRECONDITION(std::holds_alternative<int32_t>(value), errorMessage,
-                        name.c_str(), mName.c_str_safe(), "int", types[value.index()]);
+                FILAMENT_CHECK_PRECONDITION(std::holds_alternative<int32_t>(value))
+                        << "The constant parameter " << name.c_str() << " on material "
+                        << mName.c_str_safe() << " is of type int, but " << types[value.index()]
+                        << " was provided.";
                 break;
             case ConstantType::FLOAT:
-                ASSERT_PRECONDITION(std::holds_alternative<float>(value), errorMessage,
-                        name.c_str(), mName.c_str_safe(), "float", types[value.index()]);
+                FILAMENT_CHECK_PRECONDITION(std::holds_alternative<float>(value))
+                        << "The constant parameter " << name.c_str() << " on material "
+                        << mName.c_str_safe() << " is of type float, but " << types[value.index()]
+                        << " was provided.";
                 break;
             case ConstantType::BOOL:
-                ASSERT_PRECONDITION(std::holds_alternative<bool>(value), errorMessage,
-                        name.c_str(), mName.c_str_safe(), "bool", types[value.index()]);
+                FILAMENT_CHECK_PRECONDITION(std::holds_alternative<bool>(value))
+                        << "The constant parameter " << name.c_str() << " on material "
+                        << mName.c_str_safe() << " is of type bool, but " << types[value.index()]
+                        << " was provided.";
                 break;
         }
         uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;

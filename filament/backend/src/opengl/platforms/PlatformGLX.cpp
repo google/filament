@@ -226,7 +226,7 @@ Driver* PlatformGLX::createDriver(void* const sharedGLContext,
     g_glx.setCurrentContext(mGLXDisplay, mDummySurface, mDummySurface, mGLXContext);
 
     int result = bluegl::bind();
-    ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
+    FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
 
     return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
 }

@@ -177,7 +177,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             << "target = " << static_cast<int>(target) <<", "
             << "format = " << mVkFormat << utils::io::endl;
     }
-    ASSERT_POSTCONDITION(!error, "Unable to create image.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create image.";
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs = {};
@@ -186,8 +186,8 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
-            "VulkanTexture: unable to find a memory type that meets requirements.");
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanTexture: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -195,9 +195,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         .memoryTypeIndex = memoryTypeIndex,
     };
     error = vkAllocateMemory(mDevice, &allocInfo, nullptr, &mTextureImageMemory);
-    ASSERT_POSTCONDITION(!error, "Unable to allocate image memory.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to allocate image memory.";
     error = vkBindImageMemory(mDevice, mTextureImage, mTextureImageMemory, 0);
-    ASSERT_POSTCONDITION(!error, "Unable to bind image.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to bind image.";
 
     uint32_t layerCount = 0;
     if (target == SamplerType::SAMPLER_CUBEMAP) {

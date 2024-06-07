@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 
-#include <utils/compiler.h>
 #include <utils/Panic.h>
+
+#include "ostream_.h"
+
+#include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <new>
 #include <string>
+#include <string_view>
 #include <utility>
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 namespace utils {
 
@@ -72,9 +76,9 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-static std::string formatString(const char* format, va_list args) noexcept {
-    std::string reason;
-
+UTILS_NOINLINE
+static std::string sprintfToString(const char* format, va_list args) noexcept {
+    std::string s;
     va_list tmp;
     va_copy(tmp, args);
     int n = vsnprintf(nullptr, 0, format, tmp);
@@ -85,30 +89,30 @@ static std::string formatString(const char* format, va_list args) noexcept {
         char* const buf = new(std::nothrow) char[n];
         if (buf) {
             vsnprintf(buf, size_t(n), format, args);
-            reason.assign(buf);
+            s.assign(buf);
             delete [] buf;
         }
     }
-    return reason;
+    return s;
 }
 
-static std::string formatString(const char* format, ...) noexcept {
+static inline std::string sprintfToString(const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
-    std::string s(formatString(format, args));
+    std::string const s{ sprintfToString(format, args) };
     va_end(args);
     return s;
 }
 
-static std::string panicString(
-        const std::string& msg, const char* function, int line,
+static std::string buildPanicString(
+        std::string_view const& msg, const char* function, int line,
         const char* file, const char* reason) {
 #ifndef NDEBUG
-    return formatString("%s\nin %s:%d\nin file %s\nreason: %s",
-            msg.c_str(), function, line, file, reason);
+    return sprintfToString("%.*s\nin %s:%d\nin file %s\nreason: %s",
+            msg.size(), msg.data(), function, line, file, reason);
 #else
-    return formatString("%s\nin %s:%d\nreason: %s",
-            msg.c_str(), function, line, reason);
+    return sprintfToString("%.*s\nin %s:%d\nreason: %s",
+            msg.size(), msg.data(), function, line, reason);
 #endif
 }
 
@@ -123,68 +127,64 @@ void Panic::setPanicHandler(PanicHandlerCallback handler, void* user) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 template<typename T>
-TPanic<T>::TPanic(std::string reason) :
-    m_reason(std::move(reason)) {
-    m_callstack.update(1);
-    buildMessage();
+TPanic<T>::TPanic(const char* function, const char* file, int line, char const* literal,
+        std::string reason)
+        : mFile(file),
+          mFunction(function),
+          mLine(line),
+          mLiteral(literal),
+          mReason(std::move(reason)) {
+    mCallstack.update(1);
+    mWhat = buildPanicString(T::type, mFunction, mLine, mFile, mReason.c_str());
 }
 
 template<typename T>
-TPanic<T>::TPanic(const char* function, const char* file, int line, std::string reason)
-        : m_reason(std::move(reason)), m_function(function), m_file(file), m_line(line) {
-    m_callstack.update(1);
-    buildMessage();
-}
-
-template<typename T>
-TPanic<T>::~TPanic() {
-}
+TPanic<T>::~TPanic() = default;
 
 template<typename T>
 const char* TPanic<T>::what() const noexcept {
-    return m_msg.c_str();
+    return mWhat.c_str();
+}
+
+template<typename T>
+const char* TPanic<T>::getType() const noexcept {
+    return T::type;
 }
 
 template<typename T>
 const char* TPanic<T>::getReason() const noexcept {
-    return m_reason.c_str();
+    return mReason.c_str();
+}
+
+template<typename T>
+const char* TPanic<T>::getReasonLiteral() const noexcept {
+    return mLiteral.c_str();
 }
 
 template<typename T>
 const char* TPanic<T>::getFunction() const noexcept {
-    return m_function;
+    return mFunction;
 }
 
 template<typename T>
 const char* TPanic<T>::getFile() const noexcept {
-    return m_file;
+    return mFile;
 }
 
 template<typename T>
 int TPanic<T>::getLine() const noexcept {
-    return m_line;
+    return mLine;
 }
 
 template<typename T>
 const CallStack& TPanic<T>::getCallStack() const noexcept {
-    return m_callstack;
+    return mCallstack;
 }
 
 template<typename T>
 void TPanic<T>::log() const noexcept {
     slog.e << what() << io::endl;
-    slog.e << m_callstack << io::endl;
-}
-
-template<typename T>
-void TPanic<T>::buildMessage() {
-    std::string type;
-#if UTILS_HAS_RTTI
-    type = CallStack::demangleTypeName(typeid(T).name()).c_str();
-#else
-    type = "Panic";
-#endif
-    m_msg = panicString(type, m_function, m_line, m_file, m_reason.c_str());
+    slog.e << mCallstack << io::endl;
 }
 
 UTILS_ALWAYS_INLINE
@@ -194,12 +194,25 @@ inline static const char* formatFile(char const* file) noexcept {
 }
 
 template<typename T>
-void TPanic<T>::panic(char const* function, char const* file, int line, const char* format, ...) {
+void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal,
+        const char* format, ...) {
     va_list args;
     va_start(args, format);
-    std::string const reason(formatString(format, args));
+    std::string reason{ sprintfToString(format, args) };
     va_end(args);
-    T e(function, formatFile(file), line, reason);
+
+    panic(function, file, line, literal, std::move(reason));
+}
+
+template<typename T>
+void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal,
+        std::string reason) {
+
+    if (reason.empty()) {
+        reason = literal;
+    }
+
+    T e(function, formatFile(file), line, literal, std::move(reason));
 
     // always log the Panic at the point it is detected
     e.log();
@@ -223,14 +236,119 @@ namespace details {
 void panicLog(char const* function, char const* file, int line, const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
-    std::string const reason(formatString(format, args));
+    std::string const reason{ sprintfToString(format, args) };
     va_end(args);
 
-    const std::string msg = panicString("" /* no extra message */,
+    std::string const msg = buildPanicString("PanicLog",
             function, line, file, reason.c_str());
 
     slog.e << msg << io::endl;
     slog.e << CallStack::unwind(1) << io::endl;
+}
+
+PanicStream::PanicStream(
+        char const* function,
+        char const* file,
+        int line,
+        char const* condition) noexcept
+        : mFunction(function), mFile(file), mLine(line), mLiteral(condition) {
+}
+
+PanicStream::~PanicStream() = default;
+
+PanicStream& PanicStream::operator<<(short value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(unsigned short value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(char value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(unsigned char value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(int value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(unsigned int value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(long value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(unsigned long value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(long long int value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(unsigned long long int value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(float value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(double value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(long double value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(bool value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(void const* value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(char const* value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(unsigned char const* value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(std::string const& value) noexcept {
+    mStream << value;
+    return *this;
+}
+
+PanicStream& PanicStream::operator<<(std::string_view const& value) noexcept {
+    mStream << value;
+    return *this;
 }
 
 } // namespace details
