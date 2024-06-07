@@ -26,6 +26,8 @@
 
 #include "details/Engine.h"
 
+#include "ds/SsrPassDescriptorSet.h"
+
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
@@ -33,7 +35,6 @@
 
 #include "fsr.h"
 #include "FrameHistory.h"
-#include "PerViewUniforms.h"
 #include "RenderPass.h"
 
 #include "details/Camera.h"
@@ -187,12 +188,18 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine)
 UTILS_NOINLINE
 std::pair<backend::PipelineState, backend::Viewport>
         PostProcessManager::PostProcessMaterial::getPipelineState(
-        FEngine& engine, Variant::type_t variantKey) const noexcept {
+        FEngine& engine,
+        Variant::type_t variantKey) const noexcept {
     FMaterial* const material = getMaterial(engine);
     material->prepareProgram(Variant{ variantKey });
     return {{
             .program = material->getProgram(Variant{ variantKey }),
             .vertexBufferInfo = engine.getFullScreenVertexBuffer()->getVertexBufferInfoHandle(),
+            .pipelineLayout = { .setLayout = {
+                    material->getPerViewDescriptorSetLayout().getHandle(),
+                    engine.getPerRenderableDescriptorSetLayout().getHandle(),
+                    material->getDescriptorSetLayout().getHandle()
+            } },
             .rasterState = material->getRasterState() },
             material->getDefaultInstance()->getScissor() };
 }
@@ -238,6 +245,7 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
           mWorkaroundSplitEasu(false),
           mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
+    // don't use Engine here, it's not fully initialized yet
 }
 
 PostProcessManager::~PostProcessManager() noexcept = default;
@@ -324,6 +332,9 @@ void PostProcessManager::init() noexcept {
     //debugRegistry.registerProperty("d.ssao.kernelSize", &engine.debug.ssao.kernelSize);
     //debugRegistry.registerProperty("d.ssao.stddev", &engine.debug.ssao.stddev);
 
+    mSsrPassDescriptorSet.init(engine);
+    mPostProcessDescriptorSet.init(engine);
+
     mWorkaroundSplitEasu =
             driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
     mWorkaroundAllowReadOnlyAncillaryFeedbackLoop =
@@ -362,12 +373,16 @@ void PostProcessManager::init() noexcept {
 void PostProcessManager::terminate(DriverApi& driver) noexcept {
     FEngine& engine = mEngine;
     driver.destroyTexture(mStarburstTexture);
+
     auto first = mMaterialRegistry.begin();
     auto last = mMaterialRegistry.end();
     while (first != last) {
         first.value().terminate(engine);
         ++first;
     }
+
+    mPostProcessDescriptorSet.terminate(driver);
+    mSsrPassDescriptorSet.terminate(driver);
 }
 
 backend::Handle<backend::HwTexture> PostProcessManager::getOneTexture() const {
@@ -390,6 +405,8 @@ UTILS_NOINLINE
 void PostProcessManager::render(FrameGraphResources::RenderPassInfo const& out,
         backend::PipelineState const& pipeline, backend::Viewport const& scissor,
         DriverApi& driver) const noexcept {
+
+    bindPostProcessDescriptorSet(driver);
 
     assert_invariant(
             ((out.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH)
@@ -472,11 +489,13 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 });
             },
             [=, passBuilder = passBuilder](FrameGraphResources const& resources,
-                    auto const&, DriverApi&) mutable {
+                    auto const&, DriverApi& driver) mutable {
                 Variant structureVariant(Variant::DEPTH_VARIANT);
                 structureVariant.setPicking(config.picking);
 
                 auto out = resources.getRenderPassInfo();
+
+                bindPostProcessDescriptorSet(driver);
 
                 passBuilder.renderFlags(structureRenderFlags);
                 passBuilder.variant(structureVariant);
@@ -533,7 +552,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
         RenderPassBuilder const& passBuilder,
         FrameHistory const& frameHistory,
         CameraInfo const& cameraInfo,
-        PerViewUniforms& uniforms,
         FrameGraphId<FrameGraphTexture> structure,
         ScreenSpaceReflectionsOptions const& options,
         FrameGraphTexture::Descriptor const& desc) noexcept {
@@ -593,10 +611,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
             },
             [this, projection = cameraInfo.projection,
                     userViewMatrix = cameraInfo.getUserViewMatrix(), uvFromClipMatrix, historyProjection,
-                    options, &uniforms, passBuilder = passBuilder]
+                    options, passBuilder = passBuilder]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
+                // set our frame uniforms in our descriptor-set
+                assert_invariant(mFrameUniforms);
+                mSsrPassDescriptorSet.setFrameUniforms(*mFrameUniforms);
+
                 // set structure sampler
-                uniforms.prepareStructure(data.structure ?
+                mSsrPassDescriptorSet.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
@@ -607,9 +629,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // the history sampler is a regular texture2D
                 TextureHandle const history = data.history ?
                         resources.getTexture(data.history) : getZeroTexture();
-                uniforms.prepareHistorySSR(history, reprojection, uvFromViewMatrix, options);
+                mSsrPassDescriptorSet.prepareHistorySSR(history, reprojection, uvFromViewMatrix, options);
 
-                uniforms.commit(driver);
+                mSsrPassDescriptorSet.commit(mEngine);
+
+                mSsrPassDescriptorSet.bind(driver);
 
                 auto out = resources.getRenderPassInfo();
 
@@ -1171,7 +1195,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 mi->setParameter("layer", 0.0f);
                 mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
                 mi->commit(driver);
-                // we don't need to call use() here, since it's the same material
+                mi->use(driver);
 
                 render(hwOutRT, separableGaussianBlur.getPipelineState(mEngine), driver);
             });
@@ -1622,6 +1646,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
                 mi->setParameter("color", inOutColor, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("coc",   inOutCoc,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                mi->commit(driver);
                 mi->use(driver);
 
                 auto const pipeline = material.getPipelineState(mEngine, variant);
@@ -2316,6 +2341,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
                 customResolvePrepareSubpass(driver, CustomResolveOp::UNCOMPRESS);
                 auto out = resources.getRenderPassInfo();
                 out.params.subpassMask = 1;
+                bindPostProcessDescriptorSet(driver);
                 driver.beginRenderPass(out.target, out.params);
                 customResolveSubpass(driver);
                 driver.endRenderPass();
@@ -2524,13 +2550,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA->output;
 }
 
-void PostProcessManager::prepareTaa(FrameGraph& fg,
+void PostProcessManager::TaaJitterCamera(
         filament::Viewport const& svp,
         TemporalAntiAliasingOptions const& taaOptions,
         FrameHistory& frameHistory,
         FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
-        CameraInfo* inoutCameraInfo,
-        PerViewUniforms& uniforms) const noexcept {
+        CameraInfo* inoutCameraInfo) const noexcept {
     auto const& previous = frameHistory.getPrevious().*pTaa;
     auto& current = frameHistory.getCurrent().*pTaa;
 
@@ -2575,12 +2600,6 @@ void PostProcessManager::prepareTaa(FrameGraph& fg,
     // VERTEX_DOMAIN_DEVICE doesn't apply the projection, but it still needs this
     // clip transform, so we apply it separately (see main.vs)
     inoutCameraInfo->clipTransform.zw -= jitterInClipSpace;
-
-    fg.addTrivialSideEffectPass("Jitter Camera",
-            [=, &uniforms] (DriverApi& driver) {
-        uniforms.prepareCamera(mEngine, *inoutCameraInfo);
-        uniforms.commit(driver);
-    });
 }
 
 void PostProcessManager::configureTemporalAntiAliasingMaterial(
@@ -2740,6 +2759,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                     out.params.subpassMask = 1;
                 }
                 auto const pipeline = material.getPipelineState(mEngine, variant);
+                bindPostProcessDescriptorSet(driver);
                 driver.beginRenderPass(out.target, out.params);
                 driver.scissor(pipeline.second);
                 driver.draw(pipeline.first, mEngine.getFullScreenRenderPrimitive(), 0, 3, 1);
@@ -2969,6 +2989,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                         enableTranslucentBlending(pipeline0.first);
                         enableTranslucentBlending(pipeline1.first);
                     }
+                    bindPostProcessDescriptorSet(driver);
                     driver.beginRenderPass(out.target, out.params);
                     driver.scissor(pipeline0.second);
                     driver.draw(pipeline0.first, fullScreenRenderPrimitive, 0, 3, 1);

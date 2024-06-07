@@ -353,7 +353,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     ShadowMap::prepareTime(transaction, engine, userTime);
                     ShadowMap::prepareShadowMapping(transaction,
                             vsmShadowOptions.highPrecision);
-                    shadowMap.commit(transaction, driver);
+                    shadowMap.commit(transaction, engine, driver);
 
                     // updatePrimitivesLod must be run before RenderPass::appendCommands.
                     view.updatePrimitivesLod(engine,
@@ -364,9 +364,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     RenderPass const pass = passBuilder
                             .camera(cameraInfo)
                             .visibilityMask(entry.visibilityMask)
-                            .geometry(scene->getRenderableData(),
-                                    entry.range,
-                                    view.getRenderableUBO())
+                            .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine);
 

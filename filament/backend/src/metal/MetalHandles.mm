@@ -482,7 +482,7 @@ MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
 
     // Save this program's SamplerGroupInfo, it's used during draw calls to bind sampler groups to
     // the appropriate stage(s).
-    samplerGroupInfo = program.getSamplerGroupInfo();
+//    samplerGroupInfo = program.getSamplerGroupInfo();
 
     mToken = context.shaderCompiler->createProgram(program.getName(), std::move(program));
     assert_invariant(mToken);

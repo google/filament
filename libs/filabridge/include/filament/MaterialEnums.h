@@ -255,4 +255,7 @@ enum class UserVariantFilterBit : UserVariantFilterMask {
 template<> struct utils::EnableBitMaskOperators<filament::UserVariantFilterBit>
         : public std::true_type {};
 
+template<> struct utils::EnableIntegerOperators<filament::UserVariantFilterBit>
+        : public std::true_type {};
+
 #endif

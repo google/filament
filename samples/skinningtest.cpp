@@ -528,9 +528,9 @@ int main(int argc, char** argv) {
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)
-            .morphing(3)
-            .morphing(0,1,app.mt)
-            .morphing(0,3,app.mt)
+            .morphing(app.mt)
+            .morphing(0,1, 0, 9)
+            .morphing(0,3, 0, 9)
             .build(*engine, app.renderables[0]);
 
 // renderable 1: attribute bone data definitions skinning
@@ -558,9 +558,9 @@ int main(int argc, char** argv) {
             .castShadows(false)
             .enableSkinningBuffers(true)
             .skinning(app.sb, 9, 0)
-            .morphing(3)
-            .morphing(0,2,app.mt)
-            .morphing(0,0,app.mt)
+            .morphing(app.mt)
+            .morphing(0, 2, 0, 9)
+            .morphing(0, 0, 0, 9)
             .build(*engine, app.renderables[1]);
 
 // renderable 2: various ways of skinning definitions
@@ -591,8 +591,8 @@ int main(int argc, char** argv) {
             .boneIndicesAndWeights(1, app.boneDataPerPrimitive)
             .boneIndicesAndWeights(2, app.boneDataPerPrimitive)
 
-            .morphing(3)
-            .morphing(0, 2, app.mt)
+            .morphing(app.mt)
+            .morphing(0, 2, 0, 9)
             .build(*engine, app.renderables[2]);
 
 // renderable 3: combination attribute and advance bone data
@@ -620,9 +620,9 @@ int main(int argc, char** argv) {
             .skinning(app.sb, 9, 0)
             .boneIndicesAndWeights(1, app.boneDataPerPrimitiveMulti)
             .boneIndicesAndWeights(2, app.boneDataPerPrimitive)
-            .morphing(3)
-            .morphing(0,0,app.mt)
-            .morphing(0,2,app.mt)
+            .morphing(app.mt)
+            .morphing(0, 0, 0, 9)
+            .morphing(0, 2, 0, 9)
             .build(*engine, app.renderables[3]);
 
         scene->addEntity(app.renderables[0]);

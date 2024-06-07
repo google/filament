@@ -41,7 +41,7 @@ public:
     FRenderPrimitive() noexcept = default;
 
     void init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
-            const RenderableManager::Builder::Entry& entry) noexcept;
+            FRenderableManager::Entry const& entry) noexcept;
 
     void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             RenderableManager::PrimitiveType type,
@@ -56,6 +56,7 @@ public:
     backend::VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
     uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
     uint32_t getIndexCount() const noexcept { return mIndexCount; }
+    uint32_t getMorphingBufferOffset() const noexcept { return mMorphingBufferOffset; }
 
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
@@ -72,6 +73,10 @@ public:
         mGlobalBlendOrderEnabled = enabled;
     }
 
+    void setMorphingBufferOffset(uint32_t offset) noexcept {
+        mMorphingBufferOffset = offset;
+    }
+
 private:
     // These first fields are dereferences from PrimitiveInfo, keep them together
     struct {
@@ -80,6 +85,7 @@ private:
         backend::Handle<backend::HwVertexBufferInfo> mVertexBufferInfoHandle = {};
         uint32_t mIndexOffset = 0;
         uint32_t mIndexCount = 0;
+        uint32_t mMorphingBufferOffset = 0;
     };
 
     AttributeBitset mEnabledAttributes = {};

@@ -20,6 +20,8 @@
 
 #include "components/RenderableManager.h"
 
+#include "ds/DescriptorSet.h"
+
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
@@ -69,7 +71,7 @@ namespace filament {
 using namespace backend;
 
 struct RenderableManager::BuilderDetails {
-    using Entry = RenderableManager::Builder::Entry;
+    using Entry = FRenderableManager::Entry;
     std::vector<Entry> mEntries;
     Box mAABB;
     uint8_t mLayerMask = 0x1;
@@ -139,7 +141,7 @@ RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
 RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
         PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
         size_t offset, UTILS_UNUSED size_t minIndex, UTILS_UNUSED size_t maxIndex, size_t count) noexcept {
-    std::vector<Entry>& entries = mImpl->mEntries;
+    std::vector<BuilderDetails::Entry>& entries = mImpl->mEntries;
     if (index < entries.size()) {
         entries[index].vertices = vertices;
         entries[index].indices = indices;
@@ -282,18 +284,12 @@ RenderableManager::Builder& RenderableManager::Builder::morphing(
 }
 
 RenderableManager::Builder& RenderableManager::Builder::morphing(
-        uint8_t level, size_t primitiveIndex, size_t offset, size_t count) noexcept {
-    return morphing(level, primitiveIndex, mImpl->mMorphTargetBuffer, offset, count);
-}
-
-RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t, size_t primitiveIndex,
-        MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept {
-    std::vector<Entry>& entries = mImpl->mEntries;
+        uint8_t level, size_t primitiveIndex, size_t offset, size_t) noexcept {
+    // the last parameter "count" is unused, because it must be equal to the primitive's vertex count
+    std::vector<BuilderDetails::Entry>& entries = mImpl->mEntries;
     if (primitiveIndex < entries.size()) {
         auto& morphing = entries[primitiveIndex].morphing;
-        morphing.buffer = morphTargetBuffer;
-        morphing.offset = offset;
-        morphing.count = count;
+        morphing.offset = uint32_t(offset);
     }
     return *this;
 }
@@ -560,7 +556,7 @@ void FRenderableManager::create(
     if (ci) {
         // create and initialize all needed RenderPrimitives
         using size_type = Slice<FRenderPrimitive>::size_type;
-        Builder::Entry const * const entries = builder->mEntries.data();
+        auto const * const entries = builder->mEntries.data();
         const size_t entryCount = builder->mEntries.size();
         FRenderPrimitive* rp = new FRenderPrimitive[entryCount];
         auto& factory = mHwRenderPrimitiveFactory;
@@ -668,27 +664,20 @@ void FRenderableManager::create(
         if (morphTargetBuffer == nullptr) {
             morphTargetBuffer = mEngine.getDummyMorphTargetBuffer();
         }
-        MorphTargets* const morphTargets = new MorphTargets[entryCount];
-        std::generate_n(morphTargets, entryCount,
-                [morphTargetBuffer]() -> MorphTargets {
-                    return { morphTargetBuffer, 0, 0 };
-                });
-
-        mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
 
         // Always create skinning and morphing resources if one of them is enabled because
         // the shader always handles both. See Variant::SKINNING_OR_MORPHING.
         if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
 
-            auto [sampler, texture] = FSkinningBuffer::createIndicesAndWeightsHandle(
-                    downcast(engine), builder->mBoneIndicesAndWeightsCount);
-            if (builder->mBoneIndicesAndWeightsCount > 0) {
-                FSkinningBuffer::setIndicesAndWeightsData(downcast(engine), texture,
-                        builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
-            }
             Bones& bones = manager[ci].bones;
-            bones.handleSamplerGroup = sampler;
-            bones.handleTexture = texture;
+            bones.handleTexture = FSkinningBuffer::createIndicesAndWeightsHandle(
+                    engine, builder->mBoneIndicesAndWeightsCount);
+            if (builder->mBoneIndicesAndWeightsCount > 0) {
+                FSkinningBuffer::setIndicesAndWeightsData(engine,
+                        bones.handleTexture,
+                        builder->mBoneIndicesAndWeights,
+                        builder->mBoneIndicesAndWeightsCount);
+            }
 
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
@@ -700,13 +689,13 @@ void FRenderableManager::create(
                         backend::BufferUsage::DYNAMIC),
                 .count = targetCount };
 
-            for (size_t i = 0; i < entryCount; ++i) {
-                const auto& morphing = builder->mEntries[i].morphing;
-                if (!morphing.buffer) {
-                    continue;
+            Slice<FRenderPrimitive>& primitives = mManager[ci].primitives;
+            mManager[ci].morphTargetBuffer = morphTargetBuffer;
+            if (builder->mMorphTargetBuffer) {
+                for (size_t i = 0; i < entryCount; ++i) {
+                    const auto& morphing = builder->mEntries[i].morphing;
+                    primitives[i].setMorphingBufferOffset(morphing.offset);
                 }
-                morphTargets[i] = { downcast(morphing.buffer), (uint32_t)morphing.offset,
-                                    (uint32_t)morphing.count };
             }
             
             // When targetCount equal 0, boneCount>0 in this case, do an initialization for the
@@ -762,15 +751,18 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
 
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(mHwRenderPrimitiveFactory, driver, manager[ci].primitives);
-    destroyComponentMorphTargets(engine, manager[ci].morphTargets);
+
+    // destroy the per-renderable descriptor set if we have one
+    DescriptorSet& descriptorSet = manager[ci].descriptorSet;
+    descriptorSet.terminate(driver);
 
     // destroy the bones structures if any
     Bones const& bones = manager[ci].bones;
     if (bones.handle && !bones.skinningBufferMode) {
+        // when not in skinningBufferMode, we now the handle, so we destroy it
         driver.destroyBufferObject(bones.handle);
     }
-    if (bones.handleSamplerGroup){
-        driver.destroySamplerGroup(bones.handleSamplerGroup);
+    if (bones.handleTexture) {
         driver.destroyTexture(bones.handleTexture);
     }
 
@@ -793,11 +785,6 @@ void FRenderableManager::destroyComponentPrimitives(
         primitive.terminate(factory, driver);
     }
     delete[] primitives.data();
-}
-
-void FRenderableManager::destroyComponentMorphTargets(FEngine&,
-        utils::Slice<MorphTargets>& morphTargets) noexcept {
-    delete[] morphTargets.data();
 }
 
 void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
@@ -969,41 +956,25 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
 }
 
 void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) {
+        size_t primitiveIndex, size_t offset, size_t count) {
     if (instance) {
-        assert_invariant(morphTargetBuffer);
+        assert_invariant(mManager[instance].morphTargetBuffer);
 
         MorphWeights const& morphWeights = mManager[instance].morphWeights;
         FILAMENT_CHECK_PRECONDITION(morphWeights.count == count)
                 << "Only " << morphWeights.count << " morph targets can be set (count=" << count
                 << ")";
 
-        Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
-        if (primitiveIndex < morphTargets.size()) {
-            morphTargets[primitiveIndex] = { morphTargetBuffer, (uint32_t)offset,
-                                             (uint32_t)count };
+        Slice<FRenderPrimitive>& primitives = mManager[instance].primitives;
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].setMorphingBufferOffset(offset);
         }
     }
 }
 
-void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex, size_t offset, size_t count) {
+MorphTargetBuffer* FRenderableManager::getMorphTargetBuffer(Instance instance) const noexcept {
     if (instance) {
-        Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
-        if (primitiveIndex < morphTargets.size()) {
-            setMorphTargetBufferAt(instance, level,
-                    primitiveIndex, morphTargets[primitiveIndex].buffer, offset, count);
-        }
-    }
-}
-
-MorphTargetBuffer* FRenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex) const noexcept {
-    if (instance) {
-        const Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
-        if (primitiveIndex < morphTargets.size()) {
-            return morphTargets[primitiveIndex].buffer;
-        }
+        return mManager[instance].morphTargetBuffer;
     }
     return nullptr;
 }

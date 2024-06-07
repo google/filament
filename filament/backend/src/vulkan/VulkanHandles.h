@@ -482,6 +482,12 @@ private:
     utils::Mutex mFenceMutex;
 };
 
+struct VulkanDescriptorSetLayout2 : public HwDescriptorSetLayout, VulkanResource {
+};
+
+struct VulkanDescriptorSet2 : public HwDescriptorSet, VulkanResource {
+};
+
 inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
         BufferObjectBinding bindingType) noexcept {
     switch(bindingType) {

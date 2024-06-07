@@ -21,7 +21,11 @@
 #include "TrianglePrimitive.h"
 #include "BackendTestUtils.h"
 
-#include "private/backend/SamplerGroup.h"
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace {
 
@@ -87,8 +91,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         {
             ShaderGenerator shaderGen(vertex, whiteFragment, sBackend, sIsMobilePlatform);
             Program p = shaderGen.getProgram(api);
-            Program::Sampler sampler{utils::CString("backend_test_sib_tex"), 0};
-            p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
+            p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
             whiteProgram = api.createProgram(std::move(p));
         }
 
@@ -98,14 +101,22 @@ TEST_F(BackendTest, SetMinMaxLevel) {
             SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
                     .name("backend_test_sib")
                     .stageFlags(backend::ShaderStageFlags::FRAGMENT)
-                    .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                    .add( {{"tex", 0, SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
                     .build();
             ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
             Program p = shaderGen.getProgram(api);
-            Program::Sampler sampler{utils::CString("backend_test_sib_tex"), 0};
-            p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
+            p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
             textureProgram = api.createProgram(std::move(p));
         }
+
+        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+                {{
+                         DescriptorType::SAMPLER,
+                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                         DescriptorFlags::NONE, 0
+                 }}});
+
+        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
 
         // Create a texture that has 4 mip levels. Each level is a different color.
         // Level 0: 128x128 (red)
@@ -183,20 +194,17 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         PipelineState state;
         state.program = textureProgram;
+        state.pipelineLayout.setLayout = { descriptorSetLayout };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = SamplerCompareFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        SamplerGroup samplers(1);
-        SamplerParams samplerParams {};
-        samplerParams.filterMag = SamplerMagFilter::NEAREST;
-        samplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
-        samplers.setSampler(0, { texture, samplerParams });
-        backend::Handle<HwSamplerGroup> samplerGroup =
-                api.createSamplerGroup(1, utils::FixedSizeString<32>("Test"));
-        api.updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(api));
-        api.bindSamplers(0, samplerGroup);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::NEAREST,
+                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
         // Render a triangle to the screen, sampling from mip level 1.
         // Because the min level is 1, the result color should be the white triangle drawn in the
@@ -233,6 +241,8 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Cleanup.
         api.destroySwapChain(swapChain);
         api.destroyRenderTarget(renderTarget);
+        api.destroyDescriptorSet(descriptorSet);
+        api.destroyDescriptorSetLayout(descriptorSetLayout);
         api.destroyTexture(texture);
         api.destroyProgram(whiteProgram);
         api.destroyProgram(textureProgram);

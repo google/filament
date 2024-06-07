@@ -96,7 +96,9 @@ struct Primitive {
     IndexBuffer* indices = nullptr;
     Aabb aabb; // object-space bounding box
     UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
-    MorphTargetBuffer* targets = nullptr;
+    MorphTargetBuffer* morphTargetBuffer = nullptr;
+    uint32_t morphTargetOffset;
+    std::vector<int> slotIndices;
 };
 using MeshCache = utils::FixedCapacityVector<utils::FixedCapacityVector<Primitive>>;
 
@@ -329,6 +331,8 @@ struct FFilamentAsset : public FilamentAsset {
             VertexBuffer* vertexBuffer;
             IndexBuffer* indexBuffer;
             MorphTargetBuffer* morphTargetBuffer;
+            uint32_t morphTargetOffset;
+            uint32_t morphTargetCount;
         };
 
         std::vector<BufferSlot> mBufferSlots;

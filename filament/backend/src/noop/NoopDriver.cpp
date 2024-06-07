@@ -111,6 +111,12 @@ void NoopDriver::destroyStream(Handle<HwStream> sh) {
 void NoopDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
+void NoopDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+}
+
+void NoopDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
+}
+
 Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream) {
     return {};
 }
@@ -306,9 +312,6 @@ void NoopDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index
         Handle<HwBufferObject> ubh, uint32_t offset, uint32_t size) {
 }
 
-void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
-}
-
 void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
@@ -386,6 +389,27 @@ void NoopDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void NoopDriver::resetState(int) {
+}
+
+void NoopDriver::updateDescriptorSetBuffer(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::BufferObjectHandle boh,
+        uint32_t offset,
+        uint32_t size) {
+}
+
+void NoopDriver::updateDescriptorSetTexture(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::TextureHandle th,
+        SamplerParams params) {
+}
+
+void NoopDriver::bindDescriptorSet(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_set_t set,
+        backend::DescriptorSetOffsetArray&& offsets) {
 }
 
 } // namespace filament

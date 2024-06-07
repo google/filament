@@ -200,12 +200,12 @@ public:
     MetalProgram(MetalContext& context, Program&& program) noexcept;
 
     const MetalShaderCompiler::MetalFunctionBundle& getFunctions();
-    const Program::SamplerGroupInfo& getSamplerGroupInfo() { return samplerGroupInfo; }
+//    const Program::SamplerGroupInfo& getSamplerGroupInfo() { return samplerGroupInfo; }
 
 private:
     void initialize();
 
-    Program::SamplerGroupInfo samplerGroupInfo;
+//    Program::SamplerGroupInfo samplerGroupInfo;
     MetalContext& mContext;
     MetalShaderCompiler::MetalFunctionBundle mFunctionBundle;
     MetalShaderCompiler::program_token_t mToken;
@@ -545,6 +545,12 @@ struct MetalTimerQuery : public HwTimerQuery {
     };
 
     std::shared_ptr<Status> status;
+};
+
+struct MetalDescriptorSetLayout : public HwDescriptorSetLayout {
+};
+
+struct MetalDescriptorSet : public HwDescriptorSet {
 };
 
 } // namespace backend

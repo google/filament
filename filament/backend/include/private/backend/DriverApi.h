@@ -18,6 +18,17 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H
 
 #include "backend/DriverApiForward.h"
+
 #include "private/backend/CommandStream.h"
+
+#include <stddef.h>
+
+namespace filament::backend {
+
+inline void* allocateFromCommandStream(DriverApi& driver, size_t size, size_t alignment) noexcept {
+    return driver.allocate(size, alignment);
+}
+
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_DRIVERAPI_H

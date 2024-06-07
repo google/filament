@@ -258,8 +258,7 @@ Java_com_google_android_filament_RenderableManager_nBuilderSetMorphTargetBufferA
         int offset, int count) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
     if (nativeMorphTargetBuffer) {
-        MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
-        builder->morphing(level, primitiveIndex, morphTargetBuffer, offset, count);
+        builder->morphing(level, primitiveIndex, offset, count);
     } else {
         builder->morphing(level, primitiveIndex, offset, count);
     }
@@ -336,16 +335,10 @@ Java_com_google_android_filament_RenderableManager_nSetMorphWeights(JNIEnv* env,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMorphTargetBufferAt(JNIEnv*,
         jclass, jlong nativeRenderableManager, jint i, int level, jint primitiveIndex,
-        jlong nativeMorphTargetBuffer, jint offset, jint count) {
+        jlong, jint offset, jint count) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
-    if (nativeMorphTargetBuffer) {
-        MorphTargetBuffer *morphTargetBuffer = (MorphTargetBuffer *) nativeMorphTargetBuffer;
-        rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
-                (size_t) primitiveIndex, morphTargetBuffer, (size_t) offset, (size_t) count);
-    } else {
-        rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
-                (size_t) primitiveIndex, (size_t) offset, (size_t) count);
-    }
+    rm->setMorphTargetBufferAt((RenderableManager::Instance) i, (uint8_t) level,
+            (size_t) primitiveIndex, (size_t) offset, (size_t) count);
 }
 
 extern "C" JNIEXPORT jint JNICALL

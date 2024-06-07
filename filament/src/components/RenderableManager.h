@@ -21,6 +21,8 @@
 
 #include "HwRenderPrimitiveFactory.h"
 
+#include "ds/DescriptorSet.h"
+
 #include <details/InstanceBuffer.h>
 
 #include <filament/Box.h>
@@ -79,12 +81,6 @@ public:
     };
 
     static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
-
-    struct MorphTargets {
-        FMorphTargetBuffer* buffer = nullptr;
-        uint32_t offset = 0;
-        uint32_t count = 0;
-    };
 
     explicit FRenderableManager(FEngine& engine) noexcept;
     ~FRenderableManager();
@@ -156,10 +152,8 @@ public:
     inline void setMorphing(Instance instance, bool enable);
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
-    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             size_t offset, size_t count);
-    MorphTargetBuffer* getMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
+    MorphTargetBuffer* getMorphTargetBuffer(Instance instance) const noexcept;
     size_t getMorphTargetCount(Instance instance) const noexcept;
 
     void setLightChannel(Instance instance, unsigned int channel, bool enable) noexcept;
@@ -176,11 +170,12 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
+    inline DescriptorSet& getDescriptorSet(Instance instance) noexcept;
 
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
         uint32_t offset;
-        backend::Handle<backend::HwSamplerGroup> handleSampler;
+        backend::Handle<backend::HwTexture> boneIndicesAndWeightHandle;
     };
 
     inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
@@ -189,7 +184,7 @@ public:
     struct MorphingBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
         uint32_t count;
-        MorphTargets const* targets; // Pointer to Slice<MorphTargets> at a renderable.
+        FMorphTargetBuffer const* morphTargetBuffer;
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
 
@@ -218,26 +213,35 @@ public:
     AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     inline utils::Slice<FRenderPrimitive> const& getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
     inline utils::Slice<FRenderPrimitive>& getRenderPrimitives(Instance instance, uint8_t level) noexcept;
-    inline utils::Slice<MorphTargets> const& getMorphTargets(Instance instance, uint8_t level) const noexcept;
-    inline utils::Slice<MorphTargets>& getMorphTargets(Instance instance, uint8_t level) noexcept;
+
+    struct Entry {
+        VertexBuffer* vertices = nullptr;
+        IndexBuffer* indices = nullptr;
+        uint32_t offset = 0;
+        uint32_t count = 0;
+        MaterialInstance const* materialInstance = nullptr;
+        PrimitiveType type = PrimitiveType::TRIANGLES;
+        uint16_t blendOrder = 0;
+        bool globalBlendOrderEnabled = false;
+        struct {
+            uint32_t offset = 0;
+        } morphing;
+    };
 
 private:
     void destroyComponent(Instance ci) noexcept;
     static void destroyComponentPrimitives(
             HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
-    static void destroyComponentMorphTargets(FEngine& engine,
-            utils::Slice<MorphTargets>& morphTargets) noexcept;
 
     struct Bones {
         backend::Handle<backend::HwBufferObject> handle;
+        backend::Handle<backend::HwTexture> handleTexture;
         uint16_t count = 0;
         uint16_t offset = 0;
-        bool skinningBufferMode = false;
-        backend::Handle<backend::HwSamplerGroup> handleSamplerGroup;
-        backend::Handle<backend::HwTexture> handleTexture;
+        bool skinningBufferMode = false; // whether we own (false) handle or not (true)
     };
-    static_assert(sizeof(Bones) == 20);
+    static_assert(sizeof(Bones) == 16);
 
     struct MorphWeights {
         backend::Handle<backend::HwBufferObject> handle;
@@ -254,7 +258,8 @@ private:
         VISIBILITY,             // user data
         PRIMITIVES,             // user data
         BONES,                  // filament data, UBO storing a pointer to the bones information
-        MORPH_TARGETS
+        MORPHTARGET_BUFFER,     // morphtarget buffer for the component
+        DESCRIPTOR_SET          // per-renderable descriptor set
     };
 
     using Base = utils::SingleInstanceComponentManager<
@@ -266,7 +271,8 @@ private:
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones,                           // BONES
-            utils::Slice<MorphTargets>       // MORPH_TARGETS
+            FMorphTargetBuffer*,            // MORPHTARGET_BUFFER
+            filament::DescriptorSet          // DESCRIPTOR_SET
     >;
 
     struct Sim : public Base {
@@ -289,7 +295,8 @@ private:
                 Field<VISIBILITY>           visibility;
                 Field<PRIMITIVES>           primitives;
                 Field<BONES>                bones;
-                Field<MORPH_TARGETS>        morphTargets;
+                Field<MORPHTARGET_BUFFER>   morphTargetBuffer;
+                Field<DESCRIPTOR_SET>       descriptorSet;
             };
         };
 
@@ -450,7 +457,7 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
 FRenderableManager::SkinningBindingInfo
 FRenderableManager::getSkinningBufferInfo(Instance instance) const noexcept {
     Bones const& bones = mManager[instance].bones;
-    return { bones.handle, bones.offset, bones.handleSamplerGroup };
+    return { bones.handle, bones.offset, bones.handleTexture };
 }
 
 inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexcept {
@@ -461,8 +468,8 @@ inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexce
 FRenderableManager::MorphingBindingInfo
 FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
     MorphWeights const& morphWeights = mManager[instance].morphWeights;
-    utils::Slice<MorphTargets> const& morphTargets = getMorphTargets(instance, 0);
-    return { morphWeights.handle, morphWeights.count, morphTargets.data() };
+    FMorphTargetBuffer const* const buffer = mManager[instance].morphTargetBuffer;
+    return { morphWeights.handle, morphWeights.count, buffer  };
 }
 
 FRenderableManager::InstancesInfo
@@ -480,14 +487,8 @@ utils::Slice<FRenderPrimitive>& FRenderableManager::getRenderPrimitives(
     return mManager[instance].primitives;
 }
 
-utils::Slice<FRenderableManager::MorphTargets> const& FRenderableManager::getMorphTargets(
-        Instance instance, UTILS_UNUSED uint8_t level) const noexcept {
-    return mManager[instance].morphTargets;
-}
-
-utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTargets(
-        Instance instance, UTILS_UNUSED uint8_t level) noexcept {
-    return mManager[instance].morphTargets;
+DescriptorSet& FRenderableManager::getDescriptorSet(Instance instance) noexcept {
+    return mManager[instance].descriptorSet;
 }
 
 } // namespace filament

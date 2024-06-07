@@ -57,27 +57,27 @@ namespace msl {  // this is only used for MSL
 
 using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 
-static void collectSibs(const GLSLPostProcessor::Config& config, SibVector& sibs) {
-    switch (config.domain) {
-        case MaterialDomain::SURFACE:
-            UTILS_NOUNROLL
-            for (uint8_t blockIndex = 0; blockIndex < CONFIG_SAMPLER_BINDING_COUNT; blockIndex++) {
-                if (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
-                    continue;
-                }
-                auto const* sib =
-                        SibGenerator::getSib((SamplerBindingPoints)blockIndex, config.variant);
-                if (sib && hasShaderType(sib->getStageFlags(), config.shaderType)) {
-                    sibs.emplace_back(blockIndex, sib);
-                }
-            }
-        case MaterialDomain::POST_PROCESS:
-        case MaterialDomain::COMPUTE:
-            break;
-    }
-    sibs.emplace_back((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-            &config.materialInfo->sib);
-}
+//static void collectSibs(const GLSLPostProcessor::Config& config, SibVector& sibs) {
+//    switch (config.domain) {
+//        case MaterialDomain::SURFACE:
+//            UTILS_NOUNROLL
+//            for (uint8_t blockIndex = 0; blockIndex < CONFIG_SAMPLER_BINDING_COUNT; blockIndex++) {
+//                if (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
+//                    continue;
+//                }
+//                auto const* sib =
+//                        SibGenerator::getSib((SamplerBindingPoints)blockIndex, config.variant);
+//                if (sib && hasShaderType(sib->getStageFlags(), config.shaderType)) {
+//                    sibs.emplace_back(blockIndex, sib);
+//                }
+//            }
+//        case MaterialDomain::POST_PROCESS:
+//        case MaterialDomain::COMPUTE:
+//            break;
+//    }
+//    sibs.emplace_back((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE,
+//            &config.materialInfo->sib);
+//}
 
 } // namespace msl
 
@@ -225,74 +225,63 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
     //
     // Which is then bound to the vertex/fragment functions:
     // constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(27)]]
-    for (auto [bindingPoint, sib] : sibs) {
-        const auto& infoList = sib->getSamplerInfoList();
-
-        // bindingPoint + 1, because the first descriptor set is for uniforms
-        auto argBufferBuilder = MetalArgumentBuffer::Builder()
-                .name("spvDescriptorSetBuffer" + std::to_string(int(bindingPoint + 1)));
-
-        for (const auto& info: infoList) {
-            const std::string name = info.uniformName.c_str();
-            argBufferBuilder
-                    .texture(info.offset * 2, name, info.type, info.format, info.multisample)
-                    .sampler(info.offset * 2 + 1, name + "Smplr");
-        }
-
-        argumentBuffers.push_back(argBufferBuilder.build());
-
-        // This MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
-        // buffer itself;
-        MSLResourceBinding argBufferBinding;
-        // the baseType doesn't matter, but can't be UNKNOWN
-        argBufferBinding.basetype = SPIRType::BaseType::Float;
-        argBufferBinding.stage = executionModel;
-        argBufferBinding.desc_set = bindingPoint + 1;
-        argBufferBinding.binding = kArgumentBufferBinding;
-        argBufferBinding.count = 1;
-        argBufferBinding.msl_buffer =
-                CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
-        mslCompiler.add_msl_resource_binding(argBufferBinding);
-    }
-
-    // Bind push constants to [buffer(26)]
-    MSLResourceBinding pushConstantBinding;
-    // the baseType doesn't matter, but can't be UNKNOWN
-    pushConstantBinding.basetype = SPIRType::BaseType::Struct;
-    pushConstantBinding.stage = executionModel;
-    pushConstantBinding.desc_set = kPushConstDescSet;
-    pushConstantBinding.binding = kPushConstBinding;
-    pushConstantBinding.count = 1;
-    pushConstantBinding.msl_buffer = 26;
-    mslCompiler.add_msl_resource_binding(pushConstantBinding);
-
-    auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
-        auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-        auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
-        MSLResourceBinding newBinding;
-        newBinding.basetype = SPIRType::BaseType::Void;
-        newBinding.stage = executionModel;
-        newBinding.desc_set = set;
-        newBinding.binding = binding;
-        newBinding.count = 1;
-        newBinding.msl_texture =
-        newBinding.msl_sampler =
-        newBinding.msl_buffer = binding;
-        mslCompiler.add_msl_resource_binding(newBinding);
-    };
-
-    auto uniformResources = mslCompiler.get_shader_resources();
-    for (const auto& resource : uniformResources.uniform_buffers) {
-        updateResourceBindingDefault(resource);
-    }
-    auto ssboResources = mslCompiler.get_shader_resources();
-    for (const auto& resource : ssboResources.storage_buffers) {
-        updateResourceBindingDefault(resource);
-    }
+//    for (auto [bindingPoint, sib] : sibs) {
+//        const auto& infoList = sib->getSamplerInfoList();
+//
+//        // bindingPoint + 1, because the first descriptor set is for uniforms
+//        auto argBufferBuilder = MetalArgumentBuffer::Builder()
+//                .name("spvDescriptorSetBuffer" + std::to_string(int(bindingPoint + 1)));
+//
+//        for (const auto& info: infoList) {
+//            const std::string name = info.uniformName.c_str();
+//            argBufferBuilder
+//                    .texture(info.offset * 2, name, info.type, info.format, info.multisample)
+//                    .sampler(info.offset * 2 + 1, name + "Smplr");
+//        }
+//
+//        argumentBuffers.push_back(argBufferBuilder.build());
+//
+//        // This MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
+//        // buffer itself;
+//        MSLResourceBinding argBufferBinding;
+//        // the baseType doesn't matter, but can't be UNKNOWN
+//        argBufferBinding.basetype = SPIRType::BaseType::Float;
+//        argBufferBinding.stage = executionModel;
+//        argBufferBinding.desc_set = bindingPoint + 1;
+//        argBufferBinding.binding = kArgumentBufferBinding;
+//        argBufferBinding.count = 1;
+//        argBufferBinding.msl_buffer =
+//                CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
+//        mslCompiler.add_msl_resource_binding(argBufferBinding);
+//    }
+//
+//    auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
+//        auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+//        auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
+//        MSLResourceBinding newBinding;
+//        newBinding.basetype = SPIRType::BaseType::Void;
+//        newBinding.stage = executionModel;
+//        newBinding.desc_set = set;
+//        newBinding.binding = binding;
+//        newBinding.count = 1;
+//        newBinding.msl_texture =
+//        newBinding.msl_sampler =
+//        newBinding.msl_buffer = binding;
+//        mslCompiler.add_msl_resource_binding(newBinding);
+//    };
+//
+//    auto uniformResources = mslCompiler.get_shader_resources();
+//    for (const auto& resource : uniformResources.uniform_buffers) {
+//        updateResourceBindingDefault(resource);
+//    }
+//    auto ssboResources = mslCompiler.get_shader_resources();
+//    for (const auto& resource : ssboResources.storage_buffers) {
+//        updateResourceBindingDefault(resource);
+//    }
 
     // Descriptor set 0 is uniforms. The add_discrete_descriptor_set call here prevents the uniforms
     // from becoming argument buffers.
-    mslCompiler.add_discrete_descriptor_set(0);
+//    mslCompiler.add_discrete_descriptor_set(0);
 
     *outMsl = mslCompiler.compile();
     if (minifier) {
@@ -394,7 +383,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 fixupClipDistance(*internalConfig.spirvOutput, config);
                 if (internalConfig.mslOutput) {
                     auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
-                    msl::collectSibs(config, sibs);
+//                    msl::collectSibs(config, sibs);
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
                             config.shaderModel, config.hasFramebufferFetch, sibs,
                             mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
@@ -483,7 +472,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
     if (internalConfig.mslOutput) {
         auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
-        msl::collectSibs(config, sibs);
+//        msl::collectSibs(config, sibs);
         spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
                 config.hasFramebufferFetch, sibs,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
@@ -524,7 +513,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
     if (internalConfig.mslOutput) {
         auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
-        msl::collectSibs(config, sibs);
+//        msl::collectSibs(config, sibs);
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
                 sibs, mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }

@@ -19,12 +19,17 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
-#include "private/backend/SamplerGroup.h"
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <utils/Hash.h>
 #include <utils/Log.h>
 
 #include <fstream>
+#include <string>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #ifndef IOS
 #include <imageio/ImageEncoder.h>
@@ -37,14 +42,14 @@ using namespace image;
 // Shaders
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static std::string fullscreenVs = R"(#version 450 core
+static std::string const fullscreenVs = R"(#version 450 core
 layout(location = 0) in vec4 mesh_position;
 void main() {
     // Hack: move and scale triangle so that it covers entire viewport.
     gl_Position = vec4((mesh_position.xy + 0.5) * 5.0, 0.0, 1.0);
 })";
 
-static std::string fullscreenFs = R"(#version 450 core
+static std::string const fullscreenFs = R"(#version 450 core
 precision mediump int; precision highp float;
 layout(location = 0) out vec4 fragColor;
 
@@ -106,12 +111,12 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
         int w = kTexWidth, h = kTexHeight;
         const uint32_t* texels = (uint32_t*) buffer;
         sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-        #ifndef IOS
+#ifndef IOS
         LinearImage image(w, h, 4);
         image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
         std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
         ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
-        #endif
+#endif
         free(buffer);
     };
     PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
@@ -137,15 +142,30 @@ TEST_F(BackendTest, FeedbackLoops) {
             SamplerInterfaceBlock const sib = filament::SamplerInterfaceBlock::Builder()
                     .name("Test")
                     .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-                    .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                    .add( {{"tex", 0, SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
                     .build();
             ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform, &sib);
             Program prog = shaderGen.getProgram(api);
-            Program::Sampler psamplers[] = { utils::CString("test_tex"), 0 };
-            prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
-            prog.uniformBlockBindings({{"params", 1}});
+            prog.descriptorBindings(0, {
+                    { "test_tex", DescriptorType::SAMPLER, 0 },
+                    { "Params", DescriptorType::UNIFORM_BUFFER, 1 }
+            });
             program = api.createProgram(std::move(prog));
         }
+
+        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+                {{
+                         DescriptorType::SAMPLER,
+                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                         DescriptorFlags::NONE, 0
+                 },
+                 {
+                         DescriptorType::UNIFORM_BUFFER,
+                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 1,
+                         DescriptorFlags::NONE, 0
+                 }}});
+
+        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
 
         TrianglePrimitive const triangle(getDriverApi());
 
@@ -153,6 +173,17 @@ TEST_F(BackendTest, FeedbackLoops) {
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
         Handle<HwTexture> const texture = api.createTexture(
             SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
+
+        // Create ubo
+        auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
+
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
@@ -189,20 +220,10 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
             state.program = program;
-            SamplerGroup samplers(1);
-            SamplerParams sparams = {};
-            sparams.filterMag = SamplerMagFilter::LINEAR;
-            sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-            samplers.setSampler(0, { texture, sparams });
-            auto sgroup =
-                    api.createSamplerGroup(samplers.getSize(), utils::FixedSizeString<32>("Test"));
-            api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
-            auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
-                    BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+            state.pipelineLayout.setLayout = { descriptorSetLayout };
+
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
-            api.bindSamplers(0, sgroup);
-            api.bindUniformBuffer(0, ubuffer);
 
             // Downsample passes
             params.flags.discardStart = TargetBufferFlags::ALL;
@@ -259,10 +280,15 @@ TEST_F(BackendTest, FeedbackLoops) {
             getDriver().purge();
         }
 
+        api.destroyDescriptorSet(descriptorSet);
+        api.destroyDescriptorSetLayout(descriptorSetLayout);
         api.destroyProgram(program);
         api.destroySwapChain(swapChain);
         api.destroyTexture(texture);
-        for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
+        api.destroyBufferObject(ubuffer);
+        for (auto rt : renderTargets)  {
+            api.destroyRenderTarget(rt);
+        }
     }
 
     const uint32_t expected = 0x70695aa1;

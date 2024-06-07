@@ -545,10 +545,12 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
             assert_invariant(!out->indices || out->indices == slot.indices);
             out->indices = slot.indices;
         }
-        if (slot.target) {
-            assert_invariant(!out->targets || out->targets == slot.target);
-            out->targets = slot.target;
-        }
+        // FIXME: repair morphing
+        assert_invariant(!slot.target);
+//        if (slot.target) {
+//            assert_invariant(!out->targets || out->targets == slot.target);
+//            out->targets = slot.target;
+//        }
     }
 
     outSlots.insert(outSlots.end(), slots.begin(), slots.end());

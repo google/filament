@@ -20,16 +20,24 @@
 
 #include "MaterialInfo.h"
 
+#include "UibGenerator.h"
+
 #include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
 #include <utils/sstream.h>
 
-#include <algorithm>
+#include <string>
+
+#include <stdint.h>
+#include <stddef.h>
 
 namespace filamat {
 
@@ -61,7 +69,8 @@ public:
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant,
-            filament::Interpolation interpolation) const noexcept;
+            filament::Interpolation interpolation,
+            filament::UserVariantFilterMask variantFilter) const noexcept;
 
     std::string createComputeProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,

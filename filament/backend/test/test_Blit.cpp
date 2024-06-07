@@ -350,9 +350,18 @@ TEST_F(BackendTest, ColorResolve) {
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        prog.uniformBlockBindings({{"params", 1}});
+        prog.descriptorBindings(0, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
         program = api.createProgram(std::move(prog));
     }
+
+    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+            {{
+                     DescriptorType::UNIFORM_BUFFER,
+                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                     DescriptorFlags::NONE, 0
+             }}});
+
+    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
 
     // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.
     TrianglePrimitive const triangle(api);
@@ -388,6 +397,7 @@ TEST_F(BackendTest, ColorResolve) {
 
     PipelineState state = {};
     state.program = program;
+    state.pipelineLayout.setLayout = { descriptorSetLayout };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -401,10 +411,12 @@ TEST_F(BackendTest, ColorResolve) {
         .scale = float4(1, 1, 0.5, 0),
     });
 
+    api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams));
+    api.bindDescriptorSet(descriptorSet, 0, {});
+
     // FIXME: on Metal this triangle is not drawn. Can't understand why.
     api.beginFrame(0, 0, 0);
         api.beginRenderPass(srcRenderTarget, params);
-            api.bindUniformBuffer(0, ubuffer);
             api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
     api.endFrame(0);
@@ -428,6 +440,8 @@ TEST_F(BackendTest, ColorResolve) {
     EXPECT_TRUE(sparams.pixelHashResult == expected);
 
     // Cleanup.
+    api.destroyDescriptorSet(descriptorSet);
+    api.destroyDescriptorSetLayout(descriptorSetLayout);
     api.destroyBufferObject(ubuffer);
     api.destroyProgram(program);
     api.destroyTexture(srcColorTexture);

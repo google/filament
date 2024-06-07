@@ -21,6 +21,8 @@
 
 #include "generated/shaders.h"
 
+#include <backend/DriverEnums.h>
+
 #include <utils/sstream.h>
 
 #include <cctype>
@@ -594,17 +596,33 @@ const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precis
 
 utils::io::sstream& CodeGenerator::generateBuffers(utils::io::sstream& out,
         MaterialInfo::BufferContainer const& buffers) const {
-    uint32_t binding = 0;
+
     for (auto const* buffer : buffers) {
-        generateBufferInterfaceBlock(out, ShaderStage::COMPUTE, binding, *buffer);
-        binding++;
+
+        // FIXME: we need to get the bindings for the SSBOs and that will depend on the samplers
+        backend::descriptor_binding_t binding = 0;
+
+        if (mTargetApi == TargetApi::OPENGL) {
+            // For OpenGL, the set is not used bug the binding must be unique.
+            binding = getUniqueSsboBindingPoint();
+        }
+        generateBufferInterfaceBlock(out, ShaderStage::COMPUTE,
+                DescriptorSetBindingPoints::PER_MATERIAL, binding, *buffer);
     }
     return out;
 }
 
 io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage,
-        UniformBindingPoints binding, const BufferInterfaceBlock& uib) const {
-    return generateBufferInterfaceBlock(out, stage, +binding, uib);
+        filament::DescriptorSetBindingPoints set,
+        filament::backend::descriptor_binding_t binding,
+        const BufferInterfaceBlock& uib) const {
+
+    if (mTargetApi == TargetApi::OPENGL) {
+        // For OpenGL, the set is not used bug the binding must be unique.
+        binding = getUniqueUboBindingPoint();
+    }
+
+    return generateBufferInterfaceBlock(out, stage, set, binding, uib);
 }
 
 io::sstream& CodeGenerator::generateInterfaceFields(io::sstream& out,
@@ -659,7 +677,9 @@ io::sstream& CodeGenerator::generateUboAsPlainUniforms(io::sstream& out, ShaderS
 }
 
 io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage stage,
-        uint32_t binding, const BufferInterfaceBlock& uib) const {
+        filament::DescriptorSetBindingPoints set,
+        filament::backend::descriptor_binding_t binding,
+        const BufferInterfaceBlock& uib) const {
     if (uib.isEmptyForFeatureLevel(mFeatureLevel)) {
         return out;
     }
@@ -679,28 +699,19 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     blockName.front() = char(std::toupper((unsigned char)blockName.front()));
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
 
-    auto metalBufferBindingOffset = 0;
-    switch (uib.getTarget()) {
-        case BufferInterfaceBlock::Target::UNIFORM:
-            metalBufferBindingOffset = METAL_UNIFORM_BUFFER_BINDING_START;
-            break;
-        case BufferInterfaceBlock::Target::SSBO:
-            metalBufferBindingOffset = METAL_SSBO_BINDING_START;
-            break;
-    }
-
     out << "\nlayout(";
     if (mTargetLanguage == TargetLanguage::SPIRV ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
         switch (mTargetApi) {
             case TargetApi::METAL:
-                out << "binding = " << metalBufferBindingOffset + binding << ", ";
+            case TargetApi::VULKAN:
+                out << "set = " << +set << ", binding = " << +binding << ", ";
                 break;
 
             case TargetApi::OPENGL:
                 // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
-            case TargetApi::VULKAN:
-                out << "binding = " << binding << ", ";
+                // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
+                out << "binding = " << +binding << ", ";
                 break;
 
             case TargetApi::ALL:
@@ -754,15 +765,14 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     return out;
 }
 
-io::sstream& CodeGenerator::generateSamplers(
-        io::sstream& out, SamplerBindingPoints bindingPoint, uint8_t firstBinding,
-        const SamplerInterfaceBlock& sib) const {
-    auto const& infos = sib.getSamplerInfoList();
-    if (infos.empty()) {
+io::sstream& CodeGenerator::generateSamplers(utils::io::sstream& out,
+        filament::DescriptorSetBindingPoints set,
+        filament::SamplerInterfaceBlock::SamplerInfoList const& list) const {
+    if (list.empty()) {
         return out;
     }
 
-    for (auto const& info : infos) {
+    for (auto const& info : list) {
         auto type = info.type;
         if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::MOBILE) {
             // we're generating the shader for the desktop, where we assume external textures
@@ -772,27 +782,27 @@ io::sstream& CodeGenerator::generateSamplers(
         char const* const typeName = getSamplerTypeName(type, info.format, info.multisample);
         char const* const precision = getPrecisionQualifier(info.precision);
         if (mTargetLanguage == TargetLanguage::SPIRV) {
-            const uint32_t bindingIndex = (uint32_t) firstBinding + info.offset;
             switch (mTargetApi) {
-                // For Vulkan, we place uniforms in set 0 (the default set) and samplers in set 1. This
-                // allows the sampler bindings to live in a separate "namespace" that starts at zero.
                 // Note that the set specifier is not covered by the desktop GLSL spec, including
                 // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
                 case TargetApi::VULKAN:
-                    out << "layout(binding = " << bindingIndex << ", set = 1) ";
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
                     break;
 
                 // For Metal, each sampler group gets its own descriptor set, each of which will
                 // become an argument buffer. The first descriptor set is reserved for uniforms,
                 // hence the +1 here.
                 case TargetApi::METAL:
-                    out << "layout(binding = " << (uint32_t) info.offset
-                        << ", set = " << (uint32_t) bindingPoint + 1 << ") ";
+                    out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
                     break;
 
-                default:
                 case TargetApi::OPENGL:
-                    out << "layout(binding = " << bindingIndex << ") ";
+                    // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
+                    out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
+                    break;
+
+                case TargetApi::ALL:
+                    // should not happen
                     break;
             }
         }

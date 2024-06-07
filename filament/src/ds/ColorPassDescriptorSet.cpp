@@ -14,54 +14,139 @@
  * limitations under the License.
  */
 
-#include "PerViewUniforms.h"
+#include "ColorPassDescriptorSet.h"
 
-#include "DFG.h"
 #include "Froxelizer.h"
 #include "ShadowMapManager.h"
+#include "TypedUniformBuffer.h"
+
+#include "components/LightManager.h"
 
 #include "details/Camera.h"
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
 #include "details/Texture.h"
 
+#include <filament/Engine.h>
 #include <filament/Exposure.h>
 #include <filament/Options.h>
 #include <filament/TextureSampler.h>
+#include <filament/MaterialEnums.h>
+#include <filament/Viewport.h>
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/SibStructs.h>
+#include <private/filament/DescriptorSets.h>
+#include <private/filament/UibStructs.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <math/mat4.h>
+#include <math/mat3.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <random>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
 using namespace backend;
 using namespace math;
 
-PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
-        : mSamplers(PerViewSib::SAMPLER_COUNT) {
-    DriverApi& driver = engine.getDriverApi();
+uint8_t ColorPassDescriptorSet::getIndex(
+        bool lit, bool ssr, bool fog) noexcept {
 
-    mSamplerGroupHandle = driver.createSamplerGroup(
-            mSamplers.getSize(), utils::FixedSizeString<32>("Per-view samplers"));
+    uint8_t index = 0;
 
-    mUniformBufferHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    if (!lit) {
+        // this will remove samplers unused when unit
+        index |= 0x1;
+    }
+
+    if (ssr) {
+        // this will add samplers needed for screen-space SSR
+        index |= 0x2;
+    }
+
+    if (!fog) {
+        // this will remove samplers needed for fog
+        index |= 0x4;
+    }
+
+    assert_invariant(index < DESCRIPTOR_LAYOUT_COUNT);
+    return index;
+}
+
+
+ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
+        TypedUniformBuffer<PerViewUib>& uniforms) noexcept
+        : mUniforms(uniforms) {
+
+    constexpr UserVariantFilterMask filterFog = UserVariantFilterMask(UserVariantFilterBit::FOG);
+    constexpr UserVariantFilterMask keepFog = UserVariantFilterMask(0);
+
+    for (bool const lit: { false, true }) {
+        for (bool const ssr: { false, true }) {
+            for (bool const fog: { false, true }) {
+                auto index = ColorPassDescriptorSet::getIndex(lit, ssr, fog);
+                mDescriptorSetLayout[index] = {
+                        engine.getDriverApi(),
+                        descriptor_sets::getPerViewDescriptorSetLayout(
+                                MaterialDomain::SURFACE,
+                                fog ? keepFog : filterFog,
+                                lit,
+                                ssr ? ReflectionMode::SCREEN_SPACE : ReflectionMode::DEFAULT,
+                                ssr ? RefractionMode::SCREEN_SPACE : RefractionMode::NONE)
+                };
+                mDescriptorSet[index] = DescriptorSet{ mDescriptorSetLayout[index] };
+            }
+        }
+    }
+
+    setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
+            uniforms.getUboHandle(), 0, uniforms.getSize());
 
     if (engine.getDFG().isValid()) {
         TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
-        mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
-                { engine.getDFG().getTexture(), sampler.getSamplerParams() });
+        setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
+                engine.getDFG().getTexture(), sampler.getSamplerParams());
     }
 }
 
-void PerViewUniforms::terminate(DriverApi& driver) {
-    driver.destroyBufferObject(mUniformBufferHandle);
-    driver.destroySamplerGroup(mSamplerGroupHandle);
+void ColorPassDescriptorSet::init(
+        BufferObjectHandle lights,
+        BufferObjectHandle recordBuffer,
+        BufferObjectHandle froxelBuffer) noexcept {
+    for (auto&& descriptorSet: mDescriptorSet) {
+        descriptorSet.setBuffer(+PerViewBindingPoints::LIGHTS,
+                lights, 0, sizeof(LightsUib));
+        descriptorSet.setBuffer(+PerViewBindingPoints::RECORD_BUFFER,
+                recordBuffer, 0, sizeof(FroxelRecordUib));
+        descriptorSet.setBuffer(+PerViewBindingPoints::FROXEL_BUFFER,
+                froxelBuffer, 0, sizeof(FroxelsUib));
+    }
 }
 
-void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept {
+void ColorPassDescriptorSet::terminate(DriverApi& driver) {
+    for (auto&& entry : mDescriptorSet) {
+        entry.terminate(driver);
+    }
+    for (auto&& entry : mDescriptorSetLayout) {
+        entry.terminate(driver);
+    }
+}
+
+void ColorPassDescriptorSet::prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept {
     mat4f const& viewFromWorld = camera.view;
     mat4f const& worldFromView = camera.model;
     mat4f const& clipFromView  = camera.projection;
@@ -96,20 +181,20 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
-void PerViewUniforms::prepareLodBias(float bias, float2 derivativesScale) noexcept {
+void ColorPassDescriptorSet::prepareLodBias(float bias, float2 derivativesScale) noexcept {
     auto& s = mUniforms.edit();
     s.lodBias = bias;
     s.derivativesScale = derivativesScale;
 }
 
-void PerViewUniforms::prepareExposure(float ev100) noexcept {
+void ColorPassDescriptorSet::prepareExposure(float ev100) noexcept {
     const float exposure = Exposure::exposure(ev100);
     auto& s = mUniforms.edit();
     s.exposure = exposure;
     s.ev100 = ev100;
 }
 
-void PerViewUniforms::prepareViewport(
+void ColorPassDescriptorSet::prepareViewport(
         const filament::Viewport& physicalViewport,
         const filament::Viewport& logicalViewport) noexcept {
     float4 const physical{ physicalViewport.left, physicalViewport.bottom,
@@ -122,7 +207,7 @@ void PerViewUniforms::prepareViewport(
     s.logicalViewportOffset = -logical.xy / logical.zw;
 }
 
-void PerViewUniforms::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
+void ColorPassDescriptorSet::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
     auto& s = mUniforms.edit();
     const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
     const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
@@ -130,7 +215,7 @@ void PerViewUniforms::prepareTime(FEngine& engine, math::float4 const& userTime)
     s.userTime = userTime;
 }
 
-void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
+void ColorPassDescriptorSet::prepareTemporalNoise(FEngine& engine,
         TemporalAntiAliasingOptions const& options) noexcept {
     std::uniform_real_distribution<float> uniformDistribution{ 0.0f, 1.0f };
     auto& s = mUniforms.edit();
@@ -138,7 +223,7 @@ void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
     s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
-void PerViewUniforms::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
+void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
         mat4 const& userWorldFromFog, FogOptions const& options, FIndirectLight const* ibl) noexcept {
 
     auto packHalf2x16 = [](math::half2 v) -> uint32_t {
@@ -196,11 +281,11 @@ void PerViewUniforms::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
         }
     }
 
-    mSamplers.setSampler(PerViewSib::FOG, {
+    setSampler(+PerViewBindingPoints::FOG,
             fogColorTextureHandle ? fogColorTextureHandle : engine.getDummyCubemap()->getHwHandle(), {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-            }});
+            });
 
     s.fogStart             = options.distance;
     s.fogMaxOpacity        = options.maximumOpacity;
@@ -214,7 +299,7 @@ void PerViewUniforms::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
     s.fogFromWorldMatrix   = mat3f{ cof(fogFromWorld) };
 }
 
-void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
+void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,
         AmbientOcclusionOptions const& options) noexcept {
     // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
     // least set to high and of course only if upsampling is needed.
@@ -222,10 +307,10 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
             && options.resolution < 1.0f;
 
     // LINEAR filtering is only needed when AO is enabled and low-quality upsampling is used.
-    mSamplers.setSampler(PerViewSib::SSAO, { ssao, {
+    setSampler(+PerViewBindingPoints::SSAO, ssao, {
         .filterMag = options.enabled && !highQualitySampling ?
                 SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
-    }});
+    });
 
     const float edgeDistance = 1.0f / options.bilateralThreshold;
     auto& s = mUniforms.edit();
@@ -234,11 +319,11 @@ void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
     s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
 }
 
-void PerViewUniforms::prepareBlending(bool needsAlphaChannel) noexcept {
+void ColorPassDescriptorSet::prepareBlending(bool needsAlphaChannel) noexcept {
     mUniforms.edit().needsAlphaChannel = needsAlphaChannel ? 1.0f : 0.0f;
 }
 
-void PerViewUniforms::prepareMaterialGlobals(
+void ColorPassDescriptorSet::prepareMaterialGlobals(
         std::array<math::float4, 4> const& materialGlobals) noexcept {
     mUniforms.edit().custom[0] = materialGlobals[0];
     mUniforms.edit().custom[1] = materialGlobals[1];
@@ -246,30 +331,30 @@ void PerViewUniforms::prepareMaterialGlobals(
     mUniforms.edit().custom[3] = materialGlobals[3];
 }
 
-void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
+void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
         bool disableSSR,
         float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
-    mSamplers.setSampler(PerViewSib::SSR, { ssr, {
+    setSampler(+PerViewBindingPoints::SSR, ssr, {
         .filterMag = SamplerMagFilter::LINEAR,
         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-    }});
+    });
 
     auto& s = mUniforms.edit();
     s.refractionLodOffset = refractionLodOffset;
     s.ssrDistance = (ssrOptions.enabled && !disableSSR) ? ssrOptions.maxDistance : 0.0f;
 }
 
-void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,
+void ColorPassDescriptorSet::prepareHistorySSR(Handle<HwTexture> ssr,
         math::mat4f const& historyProjection,
         math::mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
-    mSamplers.setSampler(PerViewSib::SSR, { ssr, {
+    setSampler(+PerViewBindingPoints::SSR, ssr, {
         .filterMag = SamplerMagFilter::LINEAR,
         .filterMin = SamplerMinFilter::LINEAR
-    }});
+    });
 
     auto& s = mUniforms.edit();
     s.ssrReprojection = historyProjection;
@@ -280,20 +365,19 @@ void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,
     s.ssrStride = ssrOptions.stride;
 }
 
-void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {
+void ColorPassDescriptorSet::prepareStructure(Handle<HwTexture> structure) noexcept {
     // sampler must be NEAREST
-    mSamplers.setSampler(PerViewSib::STRUCTURE, { structure, {}});
+    setSampler(+PerViewBindingPoints::STRUCTURE, structure, {});
 }
 
-void PerViewUniforms::prepareDirectionalLight(FEngine& engine,
+void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
         float exposure,
         float3 const& sceneSpaceDirection,
-        PerViewUniforms::LightManagerInstance directionalLight) noexcept {
+        ColorPassDescriptorSet::LightManagerInstance directionalLight) noexcept {
     FLightManager const& lcm = engine.getLightManager();
     auto& s = mUniforms.edit();
 
     float const shadowFar = lcm.getShadowFar(directionalLight);
-    // TODO: make the falloff rate a parameter
     s.shadowFarAttenuationParams = shadowFar > 0.0f ?
             0.5f * float2{ 10.0f, 10.0f / (shadowFar * shadowFar) } : float2{ 1.0f, 0.0f };
 
@@ -328,12 +412,12 @@ void PerViewUniforms::prepareDirectionalLight(FEngine& engine,
     }
 }
 
-void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const& ibl,
+void ColorPassDescriptorSet::prepareAmbientLight(FEngine& engine, FIndirectLight const& ibl,
         float intensity, float exposure) noexcept {
     auto& s = mUniforms.edit();
 
     // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
-    float const iblRoughnessOneLevel = ibl.getLevelCount() - 1.0f;
+    float const iblRoughnessOneLevel = float(ibl.getLevelCount() - 1);
     s.iblRoughnessOneLevel = iblRoughnessOneLevel;
     s.iblLuminance = intensity * exposure;
     std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 v) {
@@ -345,14 +429,14 @@ void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const&
     if (!reflection) {
         reflection = engine.getDummyCubemap()->getHwHandle();
     }
-    mSamplers.setSampler(PerViewSib::IBL_SPECULAR, {
+    setSampler(+PerViewBindingPoints::IBL_SPECULAR,
             reflection, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
-            }});
+            });
 }
 
-void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
+void ColorPassDescriptorSet::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     auto& s = mUniforms.edit();
     froxelizer.updateUniforms(s);
     float const f = froxelizer.getLightFar();
@@ -360,22 +444,23 @@ void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
-void PerViewUniforms::prepareShadowMapping(bool highPrecision) noexcept {
+void ColorPassDescriptorSet::prepareShadowMapping(backend::BufferObjectHandle shadowUniforms, bool highPrecision) noexcept {
     auto& s = mUniforms.edit();
     constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
     constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
     s.vsmExponent = highPrecision ? high : low;
+    setBuffer(+PerViewBindingPoints::SHADOWS, shadowUniforms, 0, sizeof(ShadowUib));
 }
 
-void PerViewUniforms::prepareShadowSampling(PerViewUib& uniforms,
+void ColorPassDescriptorSet::prepareShadowSampling(PerViewUib& uniforms,
         ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
     uniforms.cascadeSplits              = shadowMappingUniforms.cascadeSplits;
     uniforms.ssContactShadowDistance    = shadowMappingUniforms.ssContactShadowDistance;
-    uniforms.directionalShadows         = shadowMappingUniforms.directionalShadows;
-    uniforms.cascades                   = shadowMappingUniforms.cascades;
+    uniforms.directionalShadows         = int32_t(shadowMappingUniforms.directionalShadows);
+    uniforms.cascades                   = int32_t(shadowMappingUniforms.cascades);
 }
 
-void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
+void ColorPassDescriptorSet::prepareShadowVSM(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms,
         VsmShadowOptions const& options) noexcept {
     constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
@@ -384,85 +469,93 @@ void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
     if (options.anisotropy > 0 || options.mipmapping) {
         filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
     }
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, {
+    setSampler(+PerViewBindingPoints::SHADOW_MAP,
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = filterMin,
                     .anisotropyLog2 = options.anisotropy,
-            }});
+            });
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
     s.vsmExponent = options.highPrecision ? high : low;
     s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
-    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowPCF(Handle<HwTexture> texture,
+void ColorPassDescriptorSet::prepareShadowPCF(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, {
+    setSampler(+PerViewBindingPoints::SHADOW_MAP,
             texture, {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
                     .compareFunc = SamplerCompareFunc::GE
-            }});
+            });
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
-    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowDPCF(Handle<HwTexture> texture,
+void ColorPassDescriptorSet::prepareShadowDPCF(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms,
         SoftShadowOptions const& options) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {}});
+    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, {});
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
-    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowPCSS(Handle<HwTexture> texture,
+void ColorPassDescriptorSet::prepareShadowPCSS(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms,
         SoftShadowOptions const& options) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {}});
+    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, {});
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
-    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::prepareShadowPCFDebug(Handle<HwTexture> texture,
+void ColorPassDescriptorSet::prepareShadowPCFDebug(Handle<HwTexture> texture,
         ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
-    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {
+    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, {
             .filterMag = SamplerMagFilter::NEAREST,
             .filterMin = SamplerMinFilter::NEAREST
-    }});
+    });
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
-    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
+void ColorPassDescriptorSet::commit(backend::DriverApi& driver) noexcept {
     if (mUniforms.isDirty()) {
-        driver.updateBufferObject(mUniformBufferHandle, mUniforms.toBufferDescriptor(driver), 0);
+        driver.updateBufferObject(mUniforms.getUboHandle(),
+                mUniforms.toBufferDescriptor(driver), 0);
     }
-    if (mSamplers.isDirty()) {
-        driver.updateSamplerGroup(mSamplerGroupHandle, mSamplers.toBufferDescriptor(driver));
+    for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
+        mDescriptorSet[i].commit(mDescriptorSetLayout[i], driver);
     }
 }
 
-void PerViewUniforms::bind(backend::DriverApi& driver) noexcept {
-    driver.bindUniformBuffer(+UniformBindingPoints::PER_VIEW, mUniformBufferHandle);
-    driver.bindSamplers(+SamplerBindingPoints::PER_VIEW, mSamplerGroupHandle);
+void ColorPassDescriptorSet::setSampler(backend::descriptor_binding_t binding,
+        TextureHandle th, SamplerParams params) noexcept {
+    for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
+        auto samplers = mDescriptorSetLayout[i].getSamplerDescriptors();
+        if (samplers[binding]) {
+            mDescriptorSet[i].setSampler(binding, th, params);
+        }
+    }
 }
 
-void PerViewUniforms::unbindSamplers() noexcept {
-    auto& samplerGroup = mSamplers;
-    samplerGroup.clearSampler(PerViewSib::SSAO);
-    samplerGroup.clearSampler(PerViewSib::SSR);
-    samplerGroup.clearSampler(PerViewSib::STRUCTURE);
-    samplerGroup.clearSampler(PerViewSib::SHADOW_MAP);
+void ColorPassDescriptorSet::setBuffer(backend::descriptor_binding_t binding,
+        BufferObjectHandle boh, uint32_t offset, uint32_t size) noexcept {
+    for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
+        auto ubos = mDescriptorSetLayout[i].getUniformBufferDescriptors();
+        if (ubos[binding]) {
+            mDescriptorSet[i].setBuffer(binding, boh, offset, size);
+        }
+    }
 }
 
 } // namespace filament

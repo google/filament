@@ -34,6 +34,7 @@
 #include <filament/View.h>
 
 #include <private/filament/UibStructs.h>
+#include <private/filament/EngineEnums.h>
 
 #include <utils/Profiler.h>
 #include <utils/Slice.h>
@@ -58,10 +59,12 @@ static constexpr float PID_CONTROLLER_Ki = 0.002f;
 static constexpr float PID_CONTROLLER_Kd = 0.0f;
 
 FView::FView(FEngine& engine)
-        : mFroxelizer(engine),
+        : mCommonRenderableDescriptorSet(engine.getPerRenderableDescriptorSetLayout()),
+          mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
-          mPerViewUniforms(engine) {
+          mUniforms(engine.getDriverApi()),
+          mColorPassDescriptorSet(engine, mUniforms) {
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -101,6 +104,11 @@ FView::FView(FEngine& engine)
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
     mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
+
+    mColorPassDescriptorSet.init(
+            mLightUbh,
+            mFroxelizer.getRecordBuffer(),
+            mFroxelizer.getFroxelBuffer());
 }
 
 FView::~FView() noexcept = default;
@@ -121,8 +129,10 @@ void FView::terminate(FEngine& engine) {
     drainFrameHistory(engine);
 
     ShadowMapManager::terminate(engine, mShadowMapManager);
-    mPerViewUniforms.terminate(driver);
+    mUniforms.terminate(driver);
+    mColorPassDescriptorSet.terminate(driver);
     mFroxelizer.terminate(driver);
+    mCommonRenderableDescriptorSet.terminate(driver);
 
     engine.getEntityManager().destroy(mFogEntity);
 }
@@ -377,7 +387,7 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
      */
 
     const float exposure = Exposure::exposure(cameraInfo.ev100);
-    mPerViewUniforms.prepareExposure(cameraInfo.ev100);
+    mColorPassDescriptorSet.prepareExposure(cameraInfo.ev100);
 
     /*
      * Indirect light (IBL)
@@ -394,7 +404,7 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
         FSkybox const* const skybox = scene->getSkybox();
         intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
     }
-    mPerViewUniforms.prepareAmbientLight(engine, *ibl, intensity, exposure);
+    mColorPassDescriptorSet.prepareAmbientLight(engine, *ibl, intensity, exposure);
 
     /*
      * Directional light (always at index 0)
@@ -402,7 +412,7 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
 
     FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
-    mPerViewUniforms.prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
+    mColorPassDescriptorSet.prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 }
 
 CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
@@ -554,7 +564,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
                 // TODO: might be more consistent to do this in prepareLighting(), but it's not
                 //       strictly necessary
-                mPerViewUniforms.prepareDynamicLights(mFroxelizer);
+                mColorPassDescriptorSet.prepareDynamicLights(mFroxelizer);
             }
             // We need to pass viewMatrix by value here because it extends the scope of this
             // function.
@@ -657,6 +667,67 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
             }
             assert_invariant(mRenderableUbh);
             scene->updateUBOs(merged, mRenderableUbh);
+
+            mCommonRenderableDescriptorSet.setBuffer(
+                    +PerRenderableBindingPoints::OBJECT_UNIFORMS, mRenderableUbh,
+                    0, sizeof(PerRenderableUib));
+
+            mCommonRenderableDescriptorSet.commit(
+                    engine.getPerRenderableDescriptorSetLayout(), driver);
+        }
+    }
+
+    { // this must happen after mRenderableUbh is created/updated
+        // prepare skinning, morphing and hybrid instancing
+        auto& sceneData = scene->getRenderableData();
+        for (uint32_t const i : merged) {
+            auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
+            auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
+            auto const& instance = sceneData.elementAt<FScene::INSTANCES>(i);
+
+            // FIXME: when only one is active the UBO handle of the other is null
+            //        (probably a problem on vulkan)
+            if (UTILS_UNLIKELY(skinning.handle || morphing.handle || instance.handle)) {
+                auto const ci = sceneData.elementAt<FScene::RENDERABLE_INSTANCE>(i);
+                FRenderableManager& rcm = engine.getRenderableManager();
+                auto& descriptorSet = rcm.getDescriptorSet(ci);
+
+                // initialize the descriptor set the first time it's needed
+                if (UTILS_UNLIKELY(!descriptorSet.getHandle())) {
+                    descriptorSet = DescriptorSet{ engine.getPerRenderableDescriptorSetLayout() };
+                }
+
+                descriptorSet.setBuffer(+PerRenderableBindingPoints::OBJECT_UNIFORMS,
+                        instance.handle ? instance.handle : mRenderableUbh,
+                        0, sizeof(PerRenderableUib));
+
+                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
+
+                    descriptorSet.setBuffer(+PerRenderableBindingPoints::BONES_UNIFORMS,
+                            skinning.handle, 0, sizeof(PerRenderableBoneUib));
+
+                    descriptorSet.setSampler(+PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
+                            skinning.boneIndicesAndWeightHandle, {});
+
+                    descriptorSet.setBuffer(+PerRenderableBindingPoints::MORPHING_UNIFORMS,
+                            morphing.handle, 0, sizeof(PerRenderableMorphingUib));
+
+                    descriptorSet.setSampler(+PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                            morphing.morphTargetBuffer->getPositionsHandle(), {});
+
+                    descriptorSet.setSampler(+PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+                            morphing.morphTargetBuffer->getTangentsHandle(), {});
+                }
+
+                descriptorSet.commit(engine.getPerRenderableDescriptorSetLayout(), driver);
+
+                // write the descriptor-set handle to the sceneData array for access later
+                sceneData.elementAt<FScene::DESCRIPTOR_SET_HANDLE>(i) = descriptorSet.getHandle();
+            } else {
+                // use the shared descriptor-set
+                sceneData.elementAt<FScene::DESCRIPTOR_SET_HANDLE>(i) =
+                        mCommonRenderableDescriptorSet.getHandle();
+            }
         }
     }
 
@@ -675,35 +746,12 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     auto const& tcm = engine.getTransformManager();
     auto const fogTransform = tcm.getWorldTransformAccurate(tcm.getInstance(mFogEntity));
 
-    mPerViewUniforms.prepareTime(engine, userTime);
-    mPerViewUniforms.prepareFog(engine, cameraInfo, fogTransform, mFogOptions,
+    mColorPassDescriptorSet.prepareTime(engine, userTime);
+    mColorPassDescriptorSet.prepareFog(engine, cameraInfo, fogTransform, mFogOptions,
             scene->getIndirectLight());
-    mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
-    mPerViewUniforms.prepareBlending(needsAlphaChannel);
-    mPerViewUniforms.prepareMaterialGlobals(mMaterialGlobals);
-}
-
-void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
-    mPerViewUniforms.bind(driver);
-
-    if (UTILS_UNLIKELY(driver.getFeatureLevel() == backend::FeatureLevel::FEATURE_LEVEL_0)) {
-        return;
-    }
-
-    driver.bindUniformBuffer(+UniformBindingPoints::LIGHTS,
-            mLightUbh);
-
-    if (needsShadowMap()) {
-        assert_invariant(mShadowMapManager->getShadowUniformsHandle());
-        driver.bindUniformBuffer(+UniformBindingPoints::SHADOW,
-                mShadowMapManager->getShadowUniformsHandle());
-    }
-
-    driver.bindUniformBuffer(+UniformBindingPoints::FROXEL_RECORDS,
-            mFroxelizer.getRecordBuffer());
-
-    driver.bindUniformBuffer(+UniformBindingPoints::FROXELS,
-            mFroxelizer.getFroxelBuffer());
+    mColorPassDescriptorSet.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
+    mColorPassDescriptorSet.prepareBlending(needsAlphaChannel);
+    mColorPassDescriptorSet.prepareMaterialGlobals(mMaterialGlobals);
 }
 
 void FView::computeVisibilityMasks(
@@ -764,12 +812,12 @@ void FView::prepareUpscaler(float2 scale,
             derivativesScale = 0.5f;
         }
     }
-    mPerViewUniforms.prepareLodBias(bias, derivativesScale);
+    mColorPassDescriptorSet.prepareLodBias(bias, derivativesScale);
 }
 
 void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {
     SYSTRACE_CALL();
-    mPerViewUniforms.prepareCamera(engine, cameraInfo);
+    mColorPassDescriptorSet.prepareCamera(engine, cameraInfo);
 }
 
 void FView::prepareViewport(
@@ -778,23 +826,23 @@ void FView::prepareViewport(
     SYSTRACE_CALL();
     // TODO: we should pass viewport.{left|bottom} to the backend, so it can offset the
     //       scissor properly.
-    mPerViewUniforms.prepareViewport(physicalViewport, logicalViewport);
+    mColorPassDescriptorSet.prepareViewport(physicalViewport, logicalViewport);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
-    mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
+    mColorPassDescriptorSet.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
 void FView::prepareSSR(Handle<HwTexture> ssr,
         bool disableSSR,
         float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSR(ssr, disableSSR, refractionLodOffset, ssrOptions);
+    mColorPassDescriptorSet.prepareSSR(ssr, disableSSR, refractionLodOffset, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
     // sampler must be NEAREST
-    mPerViewUniforms.prepareStructure(structure);
+    mColorPassDescriptorSet.prepareStructure(structure);
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
@@ -806,33 +854,33 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     }
     switch (mShadowType) {
         case filament::ShadowType::PCF:
-            mPerViewUniforms.prepareShadowPCF(texture, uniforms);
+            mColorPassDescriptorSet.prepareShadowPCF(texture, uniforms);
             break;
         case filament::ShadowType::VSM:
-            mPerViewUniforms.prepareShadowVSM(texture, uniforms, mVsmShadowOptions);
+            mColorPassDescriptorSet.prepareShadowVSM(texture, uniforms, mVsmShadowOptions);
             break;
         case filament::ShadowType::DPCF:
-            mPerViewUniforms.prepareShadowDPCF(texture, uniforms, mSoftShadowOptions);
+            mColorPassDescriptorSet.prepareShadowDPCF(texture, uniforms, mSoftShadowOptions);
             break;
         case filament::ShadowType::PCSS:
-            mPerViewUniforms.prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
+            mColorPassDescriptorSet.prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
             break;
         case filament::ShadowType::PCFd:
-            mPerViewUniforms.prepareShadowPCFDebug(texture, uniforms);
+            mColorPassDescriptorSet.prepareShadowPCFDebug(texture, uniforms);
             break;
     }
 }
 
 void FView::prepareShadowMapping(bool highPrecision) const noexcept {
-    mPerViewUniforms.prepareShadowMapping(highPrecision);
+    if (mHasShadowing) {
+        assert_invariant(mShadowMapManager);
+        mColorPassDescriptorSet.prepareShadowMapping(
+                mShadowMapManager->getShadowUniformsHandle(), highPrecision);
+    }
 }
 
-void FView::cleanupRenderPasses() const noexcept {
-    mPerViewUniforms.unbindSamplers();
-}
-
-void FView::commitUniforms(DriverApi& driver) const noexcept {
-    mPerViewUniforms.commit(driver);
+void FView::commitUniformsAndSamplers(DriverApi& driver) const noexcept {
+    mColorPassDescriptorSet.commit(driver);
 }
 
 void FView::commitFroxels(DriverApi& driverApi) const noexcept {

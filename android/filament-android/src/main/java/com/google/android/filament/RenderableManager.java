@@ -582,30 +582,6 @@ public class RenderableManager {
             return this;
         }
 
-        /** @deprecated */
-        @Deprecated
-        @NonNull
-        public Builder morphing(@IntRange(from = 0) int level,
-                                @IntRange(from = 0) int primitiveIndex,
-                                @NonNull MorphTargetBuffer morphTargetBuffer,
-                                @IntRange(from = 0) int offset,
-                                @IntRange(from = 0) int count) {
-            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
-                    morphTargetBuffer.getNativeObject(), offset, count);
-            return this;
-        }
-
-        /** @deprecated */
-        @Deprecated
-        @NonNull
-        public Builder morphing(@IntRange(from = 0) int level,
-                                @IntRange(from = 0) int primitiveIndex,
-                                @NonNull MorphTargetBuffer morphTargetBuffer) {
-            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
-                    morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
-            return this;
-        }
-
         /**
          * Adds the Renderable component to an entity.
          *
