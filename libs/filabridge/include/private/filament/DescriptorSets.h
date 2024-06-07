@@ -32,7 +32,6 @@ backend::DescriptorSetLayout const& getDepthVariantLayout() noexcept;
 backend::DescriptorSetLayout const& getSsrVariantLayout() noexcept;
 backend::DescriptorSetLayout const& getPerRenderableLayout() noexcept;
 
-backend::DescriptorSetLayout const& getPerViewLayout() noexcept;  // @deprecated
 backend::DescriptorSetLayout getPerViewDescriptorSetLayout(
         MaterialDomain domain,
         UserVariantFilterMask variantFilter,

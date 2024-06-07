@@ -102,10 +102,6 @@ DescriptorSetLayout const& getSsrVariantLayout() noexcept {
     return ssrVariantDescriptorSetLayout;
 }
 
-DescriptorSetLayout const& getPerViewLayout() noexcept {
-    return perViewDescriptorSetLayout;
-}
-
 DescriptorSetLayout const& getPerRenderableLayout() noexcept {
     return perRenderableDescriptorSetLayout;
 }
@@ -160,6 +156,10 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
         bool isLit,
         ReflectionMode reflectionMode,
         RefractionMode refractionMode) noexcept {
+
+    bool const ssr = reflectionMode == ReflectionMode::SCREEN_SPACE ||
+                     refractionMode == RefractionMode::SCREEN_SPACE;
+
     switch (domain) {
         case MaterialDomain::SURFACE: {
             //
@@ -171,14 +171,13 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
                 layout.bindings.erase(
                         std::remove_if(layout.bindings.begin(), layout.bindings.end(),
                                 [](auto const& entry) {
-                                    return entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
-                                           entry.binding == PerViewBindingPoints::IBL_SPECULAR;
+                                    return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
+                                            entry.binding == PerViewBindingPoints::IBL_SPECULAR;
                                 }),
                         layout.bindings.end());
             }
             // remove descriptors not needed for SSRs
-            if (reflectionMode != ReflectionMode::SCREEN_SPACE &&
-                refractionMode != RefractionMode::SCREEN_SPACE) {
+            if (!ssr) {
                 layout.bindings.erase(
                         std::remove_if(layout.bindings.begin(), layout.bindings.end(),
                                 [](auto const& entry) {

@@ -604,12 +604,30 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateSeparator(fs);
 
     if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
 
-        // We need to filter out all the descriptors not included in the "resolved" layout below
-        backend::DescriptorSetLayout const perViewDescriptorSetLayout =
-                descriptor_sets::getPerViewDescriptorSetLayout(
-                        mMaterialDomain, variantFilter,
-                        material.isLit, material.reflectionMode, material.refractionMode);
+        auto getPerViewDescriptorSetLayoutWithVariant = [](
+                filament::Variant variant,
+                UserVariantFilterMask variantFilter,
+                bool isLit,
+                ReflectionMode reflectionMode,
+                RefractionMode refractionMode) -> backend::DescriptorSetLayout {
+
+            if (filament::Variant::isValidDepthVariant(variant)) {
+                return descriptor_sets::getDepthVariantLayout();
+            }
+            if (filament::Variant::isSSRVariant(variant)) {
+                return descriptor_sets::getSsrVariantLayout();
+            }
+            // We need to filter out all the descriptors not included in the "resolved" layout below
+            return descriptor_sets::getPerViewDescriptorSetLayout(
+                    MaterialDomain::SURFACE, variantFilter,
+                    isLit, reflectionMode, refractionMode);
+        };
+
+        auto const perViewDescriptorSetLayout = getPerViewDescriptorSetLayoutWithVariant(
+                variant, variantFilter,
+                material.isLit, material.reflectionMode, material.refractionMode);
 
         // this is the list of samplers we need to filter
         auto list = SibGenerator::getPerViewSib(variant).getSamplerInfoList();
