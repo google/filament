@@ -238,6 +238,8 @@ public:
     /**
      * Gets the value of a parameter by name.
      * 
+     * Note: Only supports non-texture parameters such as numeric and math types.
+     * 
      * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
      * @param nameLength    Length in `char` of the name parameter.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
