@@ -173,7 +173,8 @@ DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const
         };
         VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo,
                 VKALLOC, &mDebugMessenger);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug messenger.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Unable to create Vulkan debug messenger.";
     }
 #endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
 }
@@ -228,7 +229,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
       mDescriptorSetManager(mPlatform->getDevice(), &mResourceAllocator),
-      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
+      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
+      mStereoscopicType(driverConfig.stereoscopicType) {
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
@@ -246,7 +248,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
         };
         VkResult result = createDebugReportCallback(mPlatform->getInstance(), &cbinfo, VKALLOC,
                 &mDebugCallback);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug callback.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Unable to create Vulkan debug callback.";
     }
 #endif
 
@@ -322,6 +325,10 @@ ShaderModel VulkanDriver::getShaderModel() const noexcept {
 }
 
 void VulkanDriver::terminate() {
+    // Flush and wait here to make sure all queued commands are executed and resources that are tied
+    // to those commands are no longer referenced.
+    finish(0);
+
     delete mEmptyBufferObject;
     delete mEmptyTexture;
 
@@ -390,7 +397,10 @@ void VulkanDriver::collectGarbage() {
 }
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("beginFrame");
     // Do nothing.
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
@@ -398,7 +408,7 @@ void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -899,13 +909,14 @@ bool VulkanDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return true;
-    case backend::StereoscopicType::MULTIVIEW:
-        // TODO: implement multiview feature in Vulkan.
-        return false;
+bool VulkanDriver::isStereoSupported() {
+    switch (mStereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return mContext.isClipDistanceSupported();
+        case backend::StereoscopicType::MULTIVIEW:
+            // TODO: implement multiview feature in Vulkan.
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
@@ -1088,7 +1099,8 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
         return TimerQueryResult::NOT_READY;
     }
 
-    ASSERT_POSTCONDITION(timestamp1 >= timestamp0, "Timestamps are not monotonically increasing.");
+    FILAMENT_CHECK_POSTCONDITION(timestamp1 >= timestamp0)
+            << "Timestamps are not monotonically increasing.";
 
     // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
     // However there are plans for implementing this properly. See the following GitHub ticket.
@@ -1493,8 +1505,8 @@ void VulkanDriver::endRenderPass(int) {
 }
 
 void VulkanDriver::nextSubpass(int) {
-    ASSERT_PRECONDITION(mCurrentRenderPass.currentSubpass == 0,
-            "Only two subpasses are currently supported.");
+    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.currentSubpass == 0)
+            << "Only two subpasses are currently supported.";
 
     VulkanRenderTarget* renderTarget = mCurrentRenderPass.renderTarget;
     assert_invariant(renderTarget);
@@ -1634,36 +1646,36 @@ void VulkanDriver::resolve(
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("resolve");
 
-    ASSERT_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE,
-            "resolve() cannot be invoked inside a render pass.");
+    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+            << "resolve() cannot be invoked inside a render pass.";
 
     auto* const srcTexture = mResourceAllocator.handle_cast<VulkanTexture*>(src);
     auto* const dstTexture = mResourceAllocator.handle_cast<VulkanTexture*>(dst);
     assert_invariant(srcTexture);
     assert_invariant(dstTexture);
 
-    ASSERT_PRECONDITION(
-            dstTexture->width == srcTexture->width && dstTexture->height == srcTexture->height,
-            "invalid resolve: src and dst sizes don't match");
+    FILAMENT_CHECK_PRECONDITION(
+            dstTexture->width == srcTexture->width && dstTexture->height == srcTexture->height)
+            << "invalid resolve: src and dst sizes don't match";
 
-    ASSERT_PRECONDITION(srcTexture->samples > 1 && dstTexture->samples == 1,
-            "invalid resolve: src.samples=%u, dst.samples=%u",
-            +srcTexture->samples, +dstTexture->samples);
+    FILAMENT_CHECK_PRECONDITION(srcTexture->samples > 1 && dstTexture->samples == 1)
+            << "invalid resolve: src.samples=" << +srcTexture->samples
+            << ", dst.samples=" << +dstTexture->samples;
 
-    ASSERT_PRECONDITION(srcTexture->format == dstTexture->format,
-            "src and dst texture format don't match");
+    FILAMENT_CHECK_PRECONDITION(srcTexture->format == dstTexture->format)
+            << "src and dst texture format don't match";
 
-    ASSERT_PRECONDITION(!isDepthFormat(srcTexture->format),
-            "can't resolve depth formats");
+    FILAMENT_CHECK_PRECONDITION(!isDepthFormat(srcTexture->format))
+            << "can't resolve depth formats";
 
-    ASSERT_PRECONDITION(!isStencilFormat(srcTexture->format),
-            "can't resolve stencil formats");
+    FILAMENT_CHECK_PRECONDITION(!isStencilFormat(srcTexture->format))
+            << "can't resolve stencil formats";
 
-    ASSERT_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST),
-            "texture doesn't have BLIT_DST");
+    FILAMENT_CHECK_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST))
+            << "texture doesn't have BLIT_DST";
 
-    ASSERT_PRECONDITION(any(srcTexture->usage & TextureUsage::BLIT_SRC),
-            "texture doesn't have BLIT_SRC");
+    FILAMENT_CHECK_PRECONDITION(any(srcTexture->usage & TextureUsage::BLIT_SRC))
+            << "texture doesn't have BLIT_SRC";
 
     mBlitter.resolve(
             { .texture = dstTexture, .level = dstLevel, .layer = dstLayer },
@@ -1679,20 +1691,20 @@ void VulkanDriver::blit(
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("blit");
 
-    ASSERT_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE,
-            "blit() cannot be invoked inside a render pass.");
+    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+            << "blit() cannot be invoked inside a render pass.";
 
     auto* const srcTexture = mResourceAllocator.handle_cast<VulkanTexture*>(src);
     auto* const dstTexture = mResourceAllocator.handle_cast<VulkanTexture*>(dst);
 
-    ASSERT_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST),
-            "texture doesn't have BLIT_DST");
+    FILAMENT_CHECK_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST))
+            << "texture doesn't have BLIT_DST";
 
-    ASSERT_PRECONDITION(any(srcTexture->usage & TextureUsage::BLIT_SRC),
-            "texture doesn't have BLIT_SRC");
+    FILAMENT_CHECK_PRECONDITION(any(srcTexture->usage & TextureUsage::BLIT_SRC))
+            << "texture doesn't have BLIT_SRC";
 
-    ASSERT_PRECONDITION(srcTexture->format == dstTexture->format,
-            "src and dst texture format don't match");
+    FILAMENT_CHECK_PRECONDITION(srcTexture->format == dstTexture->format)
+            << "src and dst texture format don't match";
 
     // The Y inversion below makes it so that Vk matches GL and Metal.
 
@@ -1724,15 +1736,15 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
     // Note: blitDEPRECATED is only used for Renderer::copyFrame()
 
-    ASSERT_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE,
-            "blitDEPRECATED() cannot be invoked inside a render pass.");
+    FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
+            << "blitDEPRECATED() cannot be invoked inside a render pass.";
 
-    ASSERT_PRECONDITION(buffers == TargetBufferFlags::COLOR0,
-            "blitDEPRECATED only supports COLOR0");
+    FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
+            << "blitDEPRECATED only supports COLOR0";
 
-    ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
-                        dstRect.left >= 0 && dstRect.bottom >= 0,
-            "Source and destination rects must be positive.");
+    FILAMENT_CHECK_PRECONDITION(
+            srcRect.left >= 0 && srcRect.bottom >= 0 && dstRect.left >= 0 && dstRect.bottom >= 0)
+            << "Source and destination rects must be positive.";
 
     VulkanRenderTarget* dstTarget = mResourceAllocator.handle_cast<VulkanRenderTarget*>(dst);
     VulkanRenderTarget* srcTarget = mResourceAllocator.handle_cast<VulkanRenderTarget*>(src);

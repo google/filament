@@ -59,7 +59,7 @@ void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 
 }
 
@@ -182,7 +182,7 @@ bool NoopDriver::isProtectedContentSupported() {
     return false;
 }
 
-bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
+bool NoopDriver::isStereoSupported() {
     return false;
 }
 

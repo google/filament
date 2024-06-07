@@ -97,9 +97,10 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
 void UTILS_NOINLINE FCamera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
         math::mat4 const& projectionForCulling, double near, double far) {
     const Engine::Config& config = mEngine.getConfig();
-    ASSERT_PRECONDITION(count >= config.stereoscopicEyeCount,
-            "All eye projections must be supplied together, count must be >= "
-            "config.stereoscopicEyeCount (%d)", config.stereoscopicEyeCount);
+    FILAMENT_CHECK_PRECONDITION(count >= config.stereoscopicEyeCount)
+            << "All eye projections must be supplied together, count must be >= "
+               "config.stereoscopicEyeCount ("
+            << config.stereoscopicEyeCount << ")";
     for (int i = 0; i < config.stereoscopicEyeCount; i++) {
         mEyeProjection[i] = projection[i];
     }
@@ -113,14 +114,13 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
         double bottom, double top,
         double near, double far) {
 
-    ASSERT_PRECONDITION(!(
-            left == right ||
-            bottom == top ||
+    FILAMENT_CHECK_PRECONDITION(!(left == right || bottom == top ||
             (projection == Projection::PERSPECTIVE && (near <= 0 || far <= near)) ||
-            (projection == Projection::ORTHO && (near == far))),
-            "Camera preconditions not met in setProjection(%s, %f, %f, %f, %f, %f, %f)",
-            projection == Camera::Projection::PERSPECTIVE ? "PERSPECTIVE" : "ORTHO",
-            left, right, bottom, top, near, far);
+            (projection == Projection::ORTHO && (near == far))))
+            << "Camera preconditions not met in setProjection("
+            << (projection == Camera::Projection::PERSPECTIVE ? "PERSPECTIVE" : "ORTHO") << ", "
+            << left << ", " << right << ", " << bottom << ", " << top << ", " << near << ", " << far
+            << ")";
 
     mat4 c, p;
     switch (projection) {
@@ -193,8 +193,9 @@ math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
 
 const math::mat4& FCamera::getUserProjectionMatrix(uint8_t eyeId) const {
     const Engine::Config& config = mEngine.getConfig();
-    ASSERT_PRECONDITION(eyeId < config.stereoscopicEyeCount,
-            "eyeId must be < config.stereoscopicEyeCount (%d)", config.stereoscopicEyeCount);
+    FILAMENT_CHECK_PRECONDITION(eyeId < config.stereoscopicEyeCount)
+            << "eyeId must be < config.stereoscopicEyeCount (" << config.stereoscopicEyeCount
+            << ")";
     return mEyeProjection[eyeId];
 }
 
@@ -210,8 +211,9 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
 
 void UTILS_NOINLINE FCamera::setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model) {
     const Engine::Config& config = mEngine.getConfig();
-    ASSERT_PRECONDITION(eyeId < config.stereoscopicEyeCount,
-            "eyeId must be < config.stereoscopicEyeCount (%d)", config.stereoscopicEyeCount);
+    FILAMENT_CHECK_PRECONDITION(eyeId < config.stereoscopicEyeCount)
+            << "eyeId must be < config.stereoscopicEyeCount (" << config.stereoscopicEyeCount
+            << ")";
     mEyeFromView[eyeId] = inverse(model);
 }
 

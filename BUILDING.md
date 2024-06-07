@@ -437,10 +437,11 @@ Finally simply open `docs/html/index.html` in your web browser.
 
 ## Software Rasterization
 
-We have tested swiftshader for running software rasterization on the Vulkan backend. To use this,
-please first make sure that the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) is installed on
-your machine. If you are doing a manual installation of the SDK on Linux, you will have to source
-`setup-env.sh` in the SDK's root folder to make sure the Vulkan loader is the first lib loaded.
+We have tested swiftshader and Mesa for software rasterization on the Vulkan/GL backends.
+
+To use this for Vulkan, please first make sure that the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) is
+installed on your machine. If you are doing a manual installation of the SDK on Linux, you will have
+to source `setup-env.sh` in the SDK's root folder to make sure the Vulkan loader is the first lib loaded.
 
 ### Swiftshader (Vulkan) [tested on macOS and Linux]
 
@@ -457,5 +458,39 @@ and then set `VK_ICD_FILENAMES` to the ICD json produced in the build. For examp
 export VK_ICD_FILENAMES=/Users/user/swiftshader/build/Darwin/vk_swiftshader_icd.json
 ```
 
-Build Filament as normal and use the vulkan backend.
+Build and run Filament as usual and specify the Vulkan backend when creating the Engine.
 
+### Mesa's LLVMPipe (GL) and Lavapipe (Vulkan) [tested on Linux]
+
+We will only cover steps that build Mesa from source. The official documentation of Mesa mentioned
+that in general precompiled libraries [are **not** made available](https://docs.mesa3d.org/precompiled.html).
+
+Download the repo and make sure you have the build depedencies. For example (assuming an Ubuntu/Debian distro),
+```shell
+git clone https://gitlab.freedesktop.org/mesa/mesa.git
+sudo apt-get build-dep mesa
+```
+
+To build both the GL and Vulkan rasterizers,
+
+```shell
+cd mesa
+mkdir -p out
+meson setup builddir/ -Dprefix=$(pwd)/out -Dglx=xlib -Dgallium-drivers=swrast -Dvulkan-drivers=swrast
+meson install -C builddir/
+```
+
+For GL, we need to ensure that we load the GL lib from the mesa output directory.  For example, to run
+the debug `gltf_viewer`, we would execute
+```shell
+LD_LIBRARY_PATH=/Users/user/mesa/out/lib/x86_64-linux-gnu \
+    ./out/cmake-debug/samples/gltf_viewer -a opengl
+```
+
+For Vulkan, we need to set the path to the ICD json, which tells the loader where to find the driver
+library. To run `gltf_viewer`, we would execute
+```shell
+VK_ICD_FILENAMES=/Users/user/mesa/out/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    ./out/cmake-debug/samples/gltf_viewer -a vulkan
+
+```

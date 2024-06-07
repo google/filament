@@ -19,6 +19,8 @@
 #include <backend/platforms/PlatformEGL.h>
 #include <backend/platforms/PlatformEGLAndroid.h>
 
+#include <private/backend/VirtualMachineEnv.h>
+
 #include "opengl/GLUtils.h"
 #include "ExternalStreamManagerAndroid.h"
 
@@ -82,9 +84,23 @@ using EGLStream = Platform::Stream;
 
 // ---------------------------------------------------------------------------------------------
 
+PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmForPerformanceManagerIfNeeded() {
+    // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
+    // to attach this thread to the JVM before we initialize PerformanceHintManager.
+    // This should be done in PerformanceHintManager(), but libutils doesn't have access to
+    // VirtualMachineEnv.
+    if (PerformanceHintManager::isSupported()) {
+        (void)VirtualMachineEnv::get().getEnvironment();
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         : PlatformEGL(),
-          mExternalStreamManager(ExternalStreamManagerAndroid::create()) {
+          mExternalStreamManager(ExternalStreamManagerAndroid::create()),
+          mInitializeJvmForPerformanceManagerIfNeeded(),
+          mPerformanceHintManager() {
 
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("ro.build.version.release", scratch);

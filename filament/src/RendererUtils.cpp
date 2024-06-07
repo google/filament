@@ -353,14 +353,12 @@ UTILS_NOINLINE
 void RendererUtils::readPixels(backend::DriverApi& driver, Handle<HwRenderTarget> renderTargetHandle,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         backend::PixelBufferDescriptor&& buffer) {
-    ASSERT_PRECONDITION(
-            buffer.type != PixelDataType::COMPRESSED,
-            "buffer.format cannot be COMPRESSED");
+    FILAMENT_CHECK_PRECONDITION(buffer.type != PixelDataType::COMPRESSED)
+            << "buffer.format cannot be COMPRESSED";
 
-    ASSERT_PRECONDITION(
-            buffer.alignment > 0 && buffer.alignment <= 8 &&
-            !(buffer.alignment & (buffer.alignment - 1u)),
-            "buffer.alignment must be 1, 2, 4 or 8");
+    FILAMENT_CHECK_PRECONDITION(buffer.alignment > 0 && buffer.alignment <= 8 &&
+            !(buffer.alignment & (buffer.alignment - 1u)))
+            << "buffer.alignment must be 1, 2, 4 or 8";
 
     // It's not really possible to know here which formats will be supported because
     // it can vary depending on the RenderTarget, in GL the following are ALWAYS supported though:
@@ -373,8 +371,9 @@ void RendererUtils::readPixels(backend::DriverApi& driver, Handle<HwRenderTarget
             buffer.top + height,
             buffer.alignment);
 
-    ASSERT_PRECONDITION(buffer.size >= sizeNeeded,
-            "Pixel buffer too small: has %u bytes, needs %u bytes", buffer.size, sizeNeeded);
+    FILAMENT_CHECK_PRECONDITION(buffer.size >= sizeNeeded)
+            << "Pixel buffer too small: has " << buffer.size << " bytes, needs " << sizeNeeded
+            << " bytes";
 
     driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
 }

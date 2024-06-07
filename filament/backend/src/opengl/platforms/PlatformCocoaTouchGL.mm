@@ -61,7 +61,7 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext, const Pl
     EAGLSharegroup* sharegroup = (__bridge EAGLSharegroup*) sharedGLContext;
 
     EAGLContext *context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3 sharegroup:sharegroup];
-    ASSERT_POSTCONDITION(context, "Unable to create OpenGL ES context.");
+    FILAMENT_CHECK_POSTCONDITION(context) << "Unable to create OpenGL ES context.";
 
     [EAGLContext setCurrentContext:context];
 
@@ -103,7 +103,7 @@ void PlatformCocoaTouchGL::createContext(bool shared) {
     EAGLContext* const context = [[EAGLContext alloc]
                                   initWithAPI:kEAGLRenderingAPIOpenGLES3
                                    sharegroup:sharegroup];
-    ASSERT_POSTCONDITION(context, "Unable to create extra OpenGL ES context.");
+    FILAMENT_CHECK_POSTCONDITION(context) << "Unable to create extra OpenGL ES context.";
     [EAGLContext setCurrentContext:context];
     pImpl->mAdditionalContexts.push_back(context);
 }
@@ -180,7 +180,8 @@ bool PlatformCocoaTouchGL::makeCurrent(ContextType type, SwapChain* drawSwapChai
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebuffer);
         glBindFramebuffer(GL_FRAMEBUFFER, pImpl->mDefaultFramebuffer);
         GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
+        FILAMENT_CHECK_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE)
+                << "Incomplete framebuffer.";
         glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer);
     }
     return true;

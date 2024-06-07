@@ -26,7 +26,8 @@
 void* getNativeWindow(SDL_Window* sdlWindow) {
     SDL_SysWMinfo wmi;
     SDL_VERSION(&wmi.version);
-    ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi), "SDL version unsupported!");
+    FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi))
+            << "SDL version unsupported!";
     NSWindow* win = wmi.info.cocoa.window;
     NSView* view = [win contentView];
     return view;
@@ -35,7 +36,8 @@ void* getNativeWindow(SDL_Window* sdlWindow) {
 void prepareNativeWindow(SDL_Window* sdlWindow) {
     SDL_SysWMinfo wmi;
     SDL_VERSION(&wmi.version);
-    ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi), "SDL version unsupported!");
+    FILAMENT_CHECK_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi))
+            << "SDL version unsupported!";
     NSWindow* win = wmi.info.cocoa.window;
     [win setColorSpace:[NSColorSpace sRGBColorSpace]];
 }

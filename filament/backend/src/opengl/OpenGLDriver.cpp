@@ -1494,9 +1494,8 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
-    ASSERT_POSTCONDITION(sc->swapChain,
-            "createSwapChain(%p, 0x%lx) failed. See logs for details.",
-            nativeWindow, flags);
+    FILAMENT_CHECK_POSTCONDITION(sc->swapChain) << "createSwapChain(" << nativeWindow << ", "
+                                                << flags << ") failed. See logs for details.";
 #endif
 
     // See if we need the emulated rec709 output conversion
@@ -1515,9 +1514,9 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
-    ASSERT_POSTCONDITION(sc->swapChain,
-            "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
-            width, height, flags);
+    FILAMENT_CHECK_POSTCONDITION(sc->swapChain)
+            << "createSwapChainHeadless(" << width << ", " << height << ", " << flags
+            << ") failed. See logs for details.";
 #endif
 
     // See if we need the emulated rec709 output conversion
@@ -2050,19 +2049,19 @@ bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
 
-bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+bool OpenGLDriver::isStereoSupported() {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return mContext.ext.EXT_clip_cull_distance;
-    case backend::StereoscopicType::MULTIVIEW:
-        return mContext.ext.OVR_multiview2;
-    default:
-        return false;
+    switch (mDriverConfig.stereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return mContext.ext.EXT_clip_cull_distance;
+        case backend::StereoscopicType::MULTIVIEW:
+            return mContext.ext.OVR_multiview2;
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
@@ -3469,7 +3468,7 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     DEBUG_MARKER()
 }
 
@@ -3606,13 +3605,11 @@ void OpenGLDriver::resolve(
     assert_invariant(s);
     assert_invariant(d);
 
-    ASSERT_PRECONDITION(
-            d->width == s->width && d->height == s->height,
-            "invalid resolve: src and dst sizes don't match");
+    FILAMENT_CHECK_PRECONDITION(d->width == s->width && d->height == s->height)
+            << "invalid resolve: src and dst sizes don't match";
 
-    ASSERT_PRECONDITION(s->samples > 1 && d->samples == 1,
-            "invalid resolve: src.samples=%u, dst.samples=%u",
-            +s->samples, +d->samples);
+    FILAMENT_CHECK_PRECONDITION(s->samples > 1 && d->samples == 1)
+            << "invalid resolve: src.samples=" << +s->samples << ", dst.samples=" << +d->samples;
 
     blit(   dst, dstLevel, dstLayer, {},
             src, srcLevel, srcLayer, {},
@@ -3768,12 +3765,12 @@ void OpenGLDriver::blitDEPRECATED(TargetBufferFlags buffers,
     UTILS_UNUSED_IN_RELEASE auto& gl = mContext;
     assert_invariant(!gl.isES2());
 
-    ASSERT_PRECONDITION(buffers == TargetBufferFlags::COLOR0,
-            "blitDEPRECATED only supports COLOR0");
+    FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
+            << "blitDEPRECATED only supports COLOR0";
 
-    ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
-                        dstRect.left >= 0 && dstRect.bottom >= 0,
-            "Source and destination rects must be positive.");
+    FILAMENT_CHECK_PRECONDITION(
+            srcRect.left >= 0 && srcRect.bottom >= 0 && dstRect.left >= 0 && dstRect.bottom >= 0)
+            << "Source and destination rects must be positive.";
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 

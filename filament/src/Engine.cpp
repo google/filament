@@ -299,7 +299,8 @@ void* Engine::streamAlloc(size_t size, size_t alignment) noexcept {
 // The external-facing execute does a flush, and is meant only for single-threaded environments.
 // It also discards the boolean return value, which would otherwise indicate a thread exit.
 void Engine::execute() {
-    ASSERT_PRECONDITION(!UTILS_HAS_THREADING, "Execute is meant for single-threaded platforms.");
+    FILAMENT_CHECK_PRECONDITION(!UTILS_HAS_THREADING)
+            << "Execute is meant for single-threaded platforms.";
     downcast(this)->flush();
     downcast(this)->execute();
 }
@@ -309,12 +310,14 @@ utils::JobSystem& Engine::getJobSystem() noexcept {
 }
 
 bool Engine::isPaused() const noexcept {
-    ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
+    FILAMENT_CHECK_PRECONDITION(UTILS_HAS_THREADING)
+            << "Pause is meant for multi-threaded platforms.";
     return downcast(this)->isPaused();
 }
 
 void Engine::setPaused(bool paused) {
-    ASSERT_PRECONDITION(UTILS_HAS_THREADING, "Pause is meant for multi-threaded platforms.");
+    FILAMENT_CHECK_PRECONDITION(UTILS_HAS_THREADING)
+            << "Pause is meant for multi-threaded platforms.";
     downcast(this)->setPaused(paused);
 }
 
@@ -324,6 +327,10 @@ DebugRegistry& Engine::getDebugRegistry() noexcept {
 
 void Engine::pumpMessageQueues() {
     downcast(this)->pumpMessageQueues();
+}
+
+void Engine::unprotected() noexcept {
+    downcast(this)->unprotected();
 }
 
 void Engine::setAutomaticInstancingEnabled(bool enable) noexcept {
@@ -355,7 +362,7 @@ const Engine::Config& Engine::getConfig() const noexcept {
 }
 
 bool Engine::isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-    return downcast(this)->isStereoSupported(stereoscopicType);
+    return downcast(this)->isStereoSupported();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {

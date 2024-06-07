@@ -120,14 +120,19 @@ public:
     }
 
     inline bool isImageCubeArraySupported() const noexcept {
-        return mPhysicalDeviceFeatures.imageCubeArray;
+        return mPhysicalDeviceFeatures.imageCubeArray == VK_TRUE;
     }
 
     inline bool isDebugMarkersSupported() const noexcept {
         return mDebugMarkersSupported;
     }
+
     inline bool isDebugUtilsSupported() const noexcept {
         return mDebugUtilsSupported;
+    }
+
+    inline bool isClipDistanceSupported() const noexcept {
+        return mPhysicalDeviceFeatures.shaderClipDistance == VK_TRUE;
     }
 
 private:

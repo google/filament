@@ -71,20 +71,20 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[(size_t)AttachmentPoint::DEPTH];
 
     if (color.texture) {
-        ASSERT_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
-                "Texture usage must contain COLOR_ATTACHMENT");
+        FILAMENT_CHECK_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT)
+                << "Texture usage must contain COLOR_ATTACHMENT";
     }
 
     if (depth.texture) {
-        ASSERT_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
-                "Texture usage must contain DEPTH_ATTACHMENT");
+        FILAMENT_CHECK_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT)
+                << "Texture usage must contain DEPTH_ATTACHMENT";
     }
 
     const size_t maxDrawBuffers = downcast(engine).getDriverApi().getMaxDrawBuffers();
     for (size_t i = maxDrawBuffers; i < MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT; i++) {
-        ASSERT_PRECONDITION(!mImpl->mAttachments[i].texture,
-                "Only %u color attachments are supported, but COLOR%u attachment is set",
-                maxDrawBuffers, i);
+        FILAMENT_CHECK_PRECONDITION(!mImpl->mAttachments[i].texture)
+                << "Only " << maxDrawBuffers << " color attachments are supported, but COLOR" << i
+                << " attachment is set";
     }
     
     uint32_t minWidth = std::numeric_limits<uint32_t>::max();
@@ -102,8 +102,8 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
         }
     }
 
-    ASSERT_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight,
-            "All attachments dimensions must match");
+    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight)
+            << "All attachments dimensions must match";
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;

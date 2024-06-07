@@ -57,7 +57,8 @@ FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
 # Install the required NDK version specifically (if not present)
 if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
-    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION" > /dev/null
+    yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
+    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION"
 fi
 
 # Only build 1 64 bit target during presubmit to cut down build times during presubmit

@@ -68,20 +68,22 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
     VkSurfaceKHR surface;
     #if defined(__APPLE__)
         NSView* nsview = (__bridge NSView*) nativeWindow;
-        ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
+        FILAMENT_CHECK_POSTCONDITION(nsview) << "Unable to obtain Metal-backed NSView.";
 
         // Create the VkSurface.
-        ASSERT_POSTCONDITION(vkCreateMacOSSurfaceMVK, "Unable to load vkCreateMacOSSurfaceMVK.");
+        FILAMENT_CHECK_POSTCONDITION(vkCreateMacOSSurfaceMVK)
+                << "Unable to load vkCreateMacOSSurfaceMVK.";
         VkMacOSSurfaceCreateInfoMVK createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
         createInfo.pView = (__bridge void*) nsview;
         VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateMacOSSurfaceMVK error.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateMacOSSurfaceMVK error.";
     #elif defined(IOS) && defined(METAL_AVAILABLE)
         CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
         // Create the VkSurface.
-        ASSERT_POSTCONDITION(vkCreateIOSSurfaceMVK, "Unable to load vkCreateIOSSurfaceMVK function.");
+        FILAMENT_CHECK_POSTCONDITION(vkCreateIOSSurfaceMVK)
+                << "Unable to load vkCreateIOSSurfaceMVK function.";
         VkIOSSurfaceCreateInfoMVK createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
         createInfo.pNext = NULL;
@@ -89,7 +91,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         createInfo.pView = metalLayer;
         VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateIOSSurfaceMVK error.");
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateIOSSurfaceMVK error.";
     #endif
     return std::make_tuple(surface, VkExtent2D {});
 }

@@ -524,13 +524,15 @@ else()
 endif()
 
 # This only affects the prebuilt shader files in gltfio and samples, not filament library.
-# The value can be either "instanced" or "multiview".
-set(FILAMENT_SAMPLES_STEREO_TYPE "instanced" CACHE STRING
+# The value can be either "instanced", "multiview", or "none"
+set(FILAMENT_SAMPLES_STEREO_TYPE "none" CACHE STRING
     "Stereoscopic type that shader files in gltfio and samples are built for."
 )
 string(TOLOWER "${FILAMENT_SAMPLES_STEREO_TYPE}" FILAMENT_SAMPLES_STEREO_TYPE)
-if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced" AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
-    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\" or \"multiview\" ")
+if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "none")
+    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\",  \"multiview\", or \"none\" ")
 endif ()
 
 # Compiling samples for multiview implies enabling multiview feature as well.
@@ -733,7 +735,6 @@ add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 add_subdirectory(${EXTERNAL}/civetweb/tnt)
-add_subdirectory(${EXTERNAL}/hat-trie/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
 add_subdirectory(${EXTERNAL}/smol-v/tnt)
