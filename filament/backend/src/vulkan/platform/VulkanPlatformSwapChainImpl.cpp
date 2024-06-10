@@ -324,17 +324,7 @@ VkResult VulkanPlatformSurfaceSwapChain::recreate() {
 }
 
 void VulkanPlatformSurfaceSwapChain::destroy() {
-    if (mSwapChainBundle.depth) {
-        vkDestroyImage(mDevice, mSwapChainBundle.depth, VKALLOC);
-        if (mMemory.find(mSwapChainBundle.depth) != mMemory.end()) {
-            vkFreeMemory(mDevice, mMemory.at(mSwapChainBundle.depth), VKALLOC);
-            mMemory.erase(mSwapChainBundle.depth);
-        }
-    }
-    mSwapChainBundle.depth = VK_NULL_HANDLE;
-
-    // Note: Hardware-backed swapchain images are not owned by us and should not be destroyed.
-    mSwapChainBundle.colors.clear();
+    VulkanPlatformSwapChainImpl::destroy();
 
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         if (mImageReady[i] != VK_NULL_HANDLE) {
