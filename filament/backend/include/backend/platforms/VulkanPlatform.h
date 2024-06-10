@@ -93,16 +93,14 @@ public:
     struct ImageSyncData {
       static constexpr uint32_t INVALID_IMAGE_INDEX = UINT32_MAX;
 
-      // The index of the next image as returned by vkAcquireNextImage or
-      // equivalent.
+      // The index of the next image as returned by vkAcquireNextImage or equivalent.
       uint32_t imageIndex = INVALID_IMAGE_INDEX;
 
       // Semaphore to be signaled once the image is available.
       VkSemaphore imageReadySemaphore = VK_NULL_HANDLE;
 
-      // A function called right before vkQueueSubmit.
-      // After this call, the image must be available.
-      // This pointer can be null if imageReadySemaphore is not VK_NULL_HANDLE.
+      // A function called right before vkQueueSubmit. After this call, the image must be 
+      // available. This pointer can be null if imageReadySemaphore is not VK_NULL_HANDLE.
       std::function<void(SwapChainPtr handle)> explicitImageReadyWait = nullptr;
     };
 
@@ -145,8 +143,8 @@ public:
         bool flushAndWaitOnWindowResize = true;
 
         /**
-         * Whether the swapchain image should be transition to a layout suitable
-         * for presentation. Default is true.
+         * Whether the swapchain image should be transitioned to a layout suitable for
+         * presentation. Default is true.
          */
         bool transitionSwapChainImageLayoutForPresent = true;
     };

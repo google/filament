@@ -260,7 +260,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     };
 
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
-        VkResult result = vkCreateSemaphore(mDevice, &semaphoreCreateInfo, nullptr, mImageReady + i);
+        VkResult result = vkCreateSemaphore(mDevice, &semaphoreCreateInfo, nullptr,
+                mImageReady + i);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Failed to create semaphore";
     }
 
@@ -270,11 +271,11 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
 VkResult VulkanPlatformSurfaceSwapChain::acquire(VulkanPlatform::ImageSyncData* outImageSyncData) {
     mCurrentImageReadyIndex = (mCurrentImageReadyIndex + 1) % IMAGE_READY_SEMAPHORE_COUNT;
     outImageSyncData->imageReadySemaphore = mImageReady[mCurrentImageReadyIndex];
-    VkResult result = vkAcquireNextImageKHR(
-      mDevice, mSwapchain, UINT64_MAX, outImageSyncData->imageReadySemaphore, VK_NULL_HANDLE, &outImageSyncData->imageIndex);
+    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapchain, UINT64_MAX,
+            outImageSyncData->imageReadySemaphore, VK_NULL_HANDLE, &outImageSyncData->imageIndex);
 
-    // Users should be notified of a suboptimal surface, but it should not cause a
-    // cascade of log messages or a loop of re-creations.
+    // Users should be notified of a suboptimal surface, but it should not cause a cascade of
+    // log messages or a loop of re-creations.
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
         slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         mSuboptimal = true;
@@ -336,9 +337,9 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
     mSwapChainBundle.colors.clear();
 
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
-      if (mImageReady[i] != VK_NULL_HANDLE) {
-        vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
-      }
+        if (mImageReady[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
+        }
     }
 }
 

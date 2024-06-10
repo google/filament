@@ -36,8 +36,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
       mHeadless(extent.width != 0 && extent.height != 0 && !nativeWindow),
       mFlushAndWaitOnResize(platform->getCustomization().flushAndWaitOnWindowResize),
       mTransitionSwapChainImageLayoutForPresent(
-          platform->getCustomization()
-              .transitionSwapChainImageLayoutForPresent),
+        platform->getCustomization().transitionSwapChainImageLayoutForPresent),
       mAcquired(false),
       mIsFirstRenderPass(true) {
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
@@ -85,15 +84,16 @@ void VulkanSwapChain::present() {
                 .layerCount = 1,
         };
         mColors[mCurrentSwapIndex]->transitionLayout(cmdbuf, subresources, VulkanLayout::PRESENT);
-        mCommands->flush();
     }
+
+    mCommands->flush();
     
     // call the image ready wait function
     if (mExplicitImageReadyWait != nullptr) {
         mExplicitImageReadyWait(swapChain);
     }
 
-    // We only present if it is not headless.  No-op for headless.
+    // We only present if it is not headless. No-op for headless.
     if (!mHeadless) {
         VkSemaphore const finishedDrawing = mCommands->acquireFinishedSignal();
         VkResult const result = mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing);
@@ -127,8 +127,8 @@ void VulkanSwapChain::acquire(bool& resized) {
     VkResult const result = mPlatform->acquire(swapChain, &imageSyncData);
     mCurrentSwapIndex = imageSyncData.imageIndex;
     mExplicitImageReadyWait = imageSyncData.explicitImageReadyWait;
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
-            << "Cannot acquire in swapchain.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) 
+        << "Cannot acquire in swapchain.";
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {
         mCommands->injectDependency(imageSyncData.imageReadySemaphore);
     }

@@ -50,8 +50,9 @@ struct VulkanSwapChain : public HwSwapChain, VulkanResource {
     void acquire(bool& reized);
 
     inline VulkanTexture* getCurrentColor() const noexcept {
-        const uint32_t imageIndex = mCurrentSwapIndex;
-        FILAMENT_CHECK_PRECONDITION(imageIndex != VulkanPlatform::ImageSyncData::INVALID_IMAGE_INDEX);
+        uint32_t const imageIndex = mCurrentSwapIndex;
+        FILAMENT_CHECK_PRECONDITION(
+            imageIndex != VulkanPlatform::ImageSyncData::INVALID_IMAGE_INDEX);
         return mColors[imageIndex].get();
     }
 
