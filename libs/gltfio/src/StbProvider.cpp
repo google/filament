@@ -126,7 +126,7 @@ Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
     }
 
     JobSystem* js = &mEngine->getJobSystem();
-    info->decoderJob = jobs::createJob(*js, mDecoderRootJob, [this, info] {
+    info->decoderJob = jobs::createJob(*js, mDecoderRootJob, [info] {
         auto& source = info->sourceBuffer;
         int width, height, comp;
 

@@ -58,7 +58,7 @@ public:
 
     /* compound assignment products by a scalar
      */
-    template<typename U>
+    template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
     constexpr QUATERNION<T>& operator*=(U v) {
         QUATERNION<T>& lhs = static_cast<QUATERNION<T>&>(*this);
         for (size_t i = 0; i < QUATERNION<T>::size(); i++) {
@@ -67,7 +67,7 @@ public:
         return lhs;
     }
 
-    template<typename U>
+    template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
     constexpr QUATERNION<T>& operator/=(U v) {
         QUATERNION<T>& lhs = static_cast<QUATERNION<T>&>(*this);
         for (size_t i = 0; i < QUATERNION<T>::size(); i++) {
@@ -125,25 +125,25 @@ public:
      *              q.w*r.z + q.x*r.y - q.y*r.x + q.z*r.w);
      *
      */
-    template<typename U>
+    template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
     friend inline constexpr
     QUATERNION<arithmetic_result_t<T, U>> MATH_PURE operator*(QUATERNION<T> q, U scalar) {
         // don't pass q by reference because we need a copy anyway
-        return q *= scalar;
+        return QUATERNION<arithmetic_result_t<T, U>>(q *= scalar);
     }
 
-    template<typename U>
+    template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
     friend inline constexpr
-    QUATERNION<arithmetic_result_t<T, U>> MATH_PURE operator*(T scalar, QUATERNION<U> q) {
+    QUATERNION<arithmetic_result_t<T, U>> MATH_PURE operator*(U scalar, QUATERNION<T> q) {
         // don't pass q by reference because we need a copy anyway
-        return q *= scalar;
+        return QUATERNION<arithmetic_result_t<T, U>>(q *= scalar);
     }
 
-    template<typename U>
+    template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
     friend inline constexpr
     QUATERNION<arithmetic_result_t<T, U>> MATH_PURE operator/(QUATERNION<T> q, U scalar) {
         // don't pass q by reference because we need a copy anyway
-        return q /= scalar;
+        return QUATERNION<arithmetic_result_t<T, U>>(q /= scalar);
     }
 };
 

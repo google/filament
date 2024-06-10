@@ -53,6 +53,9 @@
 #include <math/scalar.h>
 #include <math/mat4.h>
 
+#include <array>
+#include <memory>
+
 namespace utils {
 class JobSystem;
 } // namespace utils;
@@ -88,7 +91,7 @@ public:
 
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
-    void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
+    void prepare(FEngine& engine, backend::DriverApi& driver, RootArenaScope& rootArenaScope,
             filament::Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
@@ -133,7 +136,9 @@ public:
         return mName.c_str_safe();
     }
 
-    void prepareUpscaler(math::float2 scale) const noexcept;
+    void prepareUpscaler(math::float2 scale,
+            TemporalAntiAliasingOptions const& taaOptions,
+            DynamicResolutionOptions const& dsrOptions) const noexcept;
     void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
 
     void prepareViewport(
@@ -142,7 +147,7 @@ public:
 
     void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
-    void prepareLighting(FEngine& engine, ArenaScope& arena, CameraInfo const& cameraInfo) noexcept;
+    void prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, bool disableSSR,
@@ -168,11 +173,13 @@ public:
     bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
-    bool hasInstancedStereo() const noexcept { return mStereoscopicOptions.enabled; }
+    bool hasStereo() const noexcept {
+        return mIsStereoSupported && mStereoscopicOptions.enabled;
+    }
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
-            RenderPass const& pass) noexcept;
+            RenderPassBuilder const& passBuilder) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
@@ -192,10 +199,11 @@ public:
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
-    void setStereoscopicOptions(StereoscopicOptions const& options);
+    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
-    FCamera const* getDirectionalLightCamera() const noexcept {
-        return mShadowMapManager.getDirectionalLightCamera();
+    FCamera const* getDirectionalShadowCamera() const noexcept {
+        if (!mShadowMapManager) return nullptr;
+        return mShadowMapManager->getDirectionalShadowCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -381,6 +389,10 @@ public:
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 
+    bool hasCamera() const noexcept {
+        return mCullingCamera != nullptr;
+    }
+
     backend::Handle<backend::HwRenderTarget> getRenderTargetHandle() const noexcept {
         backend::Handle<backend::HwRenderTarget> kEmptyHandle;
         return mRenderTarget == nullptr ? kEmptyHandle : mRenderTarget->getHwHandle();
@@ -415,7 +427,7 @@ public:
             View::PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
-            backend::RenderTargetHandle handle, float scale) noexcept;
+            backend::RenderTargetHandle handle, math::float2 scale) noexcept;
 
     void setMaterialGlobal(uint32_t index, math::float4 const& value);
 
@@ -425,8 +437,11 @@ public:
         return mFogEntity;
     }
 
-private:
+    backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
+        return mRenderableUbh;
+    }
 
+private:
     struct FPickingQuery : public PickingQuery {
     private:
         FPickingQuery(uint32_t x, uint32_t y,
@@ -456,7 +471,8 @@ private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
-    static void prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
+    static void prepareVisibleLights(FLightManager const& lcm,
+            utils::Slice<float> scratch,
             math::mat4f const& viewMatrix, Frustum const& frustum,
             FScene::LightSoa& lightData) noexcept;
 
@@ -486,7 +502,7 @@ private:
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
-    FCamera* mCullingCamera = nullptr;
+    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should alaways be non-null
     // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
 
@@ -550,7 +566,7 @@ private:
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
 
-    ShadowMapManager mShadowMapManager;
+    std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
     std::array<math::float4, 4> mMaterialGlobals = {{
                                                             { 0, 0, 0, 1 },
@@ -560,7 +576,7 @@ private:
                                                     }};
 
 #ifndef NDEBUG
-    std::array<DebugRegistry::FrameHistory, 5*60> mDebugFrameHistory;
+    std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> mDebugFrameHistory;
 #endif
 };
 

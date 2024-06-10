@@ -29,10 +29,12 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/compiler.h>
 
 #include <inttypes.h>
+#include <utility>
 
 namespace filaflat {
 class ChunkContainer;
@@ -45,10 +47,12 @@ class BufferInterfaceBlock;
 class SamplerInterfaceBlock;
 struct SubpassInfo;
 struct MaterialConstant;
+struct MaterialPushConstant;
 
 class MaterialParser {
 public:
-    MaterialParser(backend::ShaderLanguage language, const void* data, size_t size);
+    MaterialParser(utils::FixedCapacityVector<backend::ShaderLanguage> preferredLanguages,
+            const void* data, size_t size);
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
@@ -60,6 +64,7 @@ public:
     };
 
     ParseResult parse() noexcept;
+    backend::ShaderLanguage getShaderLanguage() const noexcept;
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
@@ -75,6 +80,8 @@ public:
     bool getSamplerBlockBindings(SamplerGroupBindingInfoList* pSamplerGroupInfoList,
             SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept;
     bool getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept;
+    bool getPushConstants(utils::CString* structVarName,
+            utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept;
 
     using BindingUniformInfoContainer = utils::FixedCapacityVector<
             std::pair<filament::UniformBindingPoints, backend::Program::UniformInfo>>;
@@ -102,6 +109,7 @@ public:
 
     bool getShading(Shading*) const noexcept;
     bool getBlendingMode(BlendingMode*) const noexcept;
+    bool getCustomBlendFunction(std::array<backend::BlendFunction, 4>*) const noexcept;
     bool getMaskThreshold(float*) const noexcept;
     bool getAlphaToCoverageSet(bool*) const noexcept;
     bool getAlphaToCoverage(bool*) const noexcept;
@@ -129,7 +137,9 @@ public:
 
 private:
     struct MaterialParserDetails {
-        MaterialParserDetails(backend::ShaderLanguage language, const void* data, size_t size);
+        MaterialParserDetails(
+                const utils::FixedCapacityVector<backend::ShaderLanguage>& preferredLanguages,
+                const void* data, size_t size);
 
         template<typename T>
         bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
@@ -156,12 +166,12 @@ private:
 
         ManagedBuffer mManagedBuffer;
         filaflat::ChunkContainer mChunkContainer;
+        utils::FixedCapacityVector<backend::ShaderLanguage> mPreferredLanguages;
+        backend::ShaderLanguage mChosenLanguage;
 
         // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
         filaflat::MaterialChunk mMaterialChunk;
         filaflat::BlobDictionary mBlobDictionary;
-        filamat::ChunkType mMaterialTag = filamat::ChunkType::Unknown;
-        filamat::ChunkType mDictionaryTag = filamat::ChunkType::Unknown;
     };
 
     filaflat::ChunkContainer& getChunkContainer() noexcept;
@@ -205,6 +215,11 @@ struct ChunkSamplerBlockBindings {
 struct ChunkMaterialConstants {
     static bool unflatten(filaflat::Unflattener& unflattener,
             utils::FixedCapacityVector<MaterialConstant>* materialConstants);
+};
+
+struct ChunkMaterialPushConstants {
+    static bool unflatten(filaflat::Unflattener& unflattener, utils::CString* structVarName,
+            utils::FixedCapacityVector<MaterialPushConstant>* materialPushConstants);
 };
 
 } // namespace filament

@@ -23,8 +23,11 @@
 
 #include <math/mat4.h>
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <utils/unwindows.h> // Because we define NEAR and FAR in the Plane enum.
+
+#include <stdint.h>
 
 namespace filament {
 
@@ -76,14 +79,14 @@ public:
      * @param planes six plane equations encoded as in getNormalizedPlane() in
      *              left, right, bottom, top, far, near order
      */
-    void getNormalizedPlanes(math::float4 planes[6]) const noexcept;
+    void getNormalizedPlanes(math::float4 planes[UTILS_NONNULL 6]) const noexcept;
 
     /**
      * Returns all six frustum planes in left, right, bottom, top, far, near order
      * @return six plane equations encoded as in getNormalizedPlane() in
      *              left, right, bottom, top, far, near order
      */
-    math::float4 const* getNormalizedPlanes() const noexcept { return mPlanes; }
+    math::float4 const* UTILS_NONNULL getNormalizedPlanes() const noexcept { return mPlanes; }
 
     /**
      * Returns whether a box intersects the frustum (i.e. is visible)

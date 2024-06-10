@@ -25,7 +25,7 @@
 
 #include <math/mathfwd.h>
 
-#include <stdint.h>
+#include <stddef.h>
 
 namespace filament {
 
@@ -40,26 +40,11 @@ class UTILS_PUBLIC DebugRegistry : public FilamentAPI {
 public:
 
     /**
-     * Type of a property
-     */
-    enum Type {
-        BOOL, INT, FLOAT, FLOAT2, FLOAT3, FLOAT4
-    };
-
-    /**
-     * Information about a property
-     */
-    struct Property {
-        const char* name;   //!< property name
-        Type type;          //!< property type
-    };
-
-    /**
      * Queries whether a property exists
      * @param name The name of the property to query
      * @return true if the property exists, false otherwise
      */
-    bool hasProperty(const char* name) const noexcept;
+    bool hasProperty(const char* UTILS_NONNULL name) const noexcept;
 
     /**
      * Queries the address of a property's data from its name
@@ -67,28 +52,30 @@ public:
      * @return Address of the data of the \p name property
      * @{
      */
-    void* getPropertyAddress(const char* name);
+    void* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name);
 
-    void const* getPropertyAddress(const char* name) const noexcept;
+    void const* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) const noexcept;
 
     template<typename T>
-    inline T* getPropertyAddress(const char* name) {
+    inline T* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) {
         return static_cast<T*>(getPropertyAddress(name));
     }
 
     template<typename T>
-    inline T const* getPropertyAddress(const char* name) const noexcept {
+    inline T const* UTILS_NULLABLE getPropertyAddress(const char* UTILS_NONNULL name) const noexcept {
         return static_cast<T*>(getPropertyAddress(name));
     }
 
     template<typename T>
-    inline bool getPropertyAddress(const char* name, T** p) {
+    inline bool getPropertyAddress(const char* UTILS_NONNULL name,
+            T* UTILS_NULLABLE* UTILS_NONNULL p) {
         *p = getPropertyAddress<T>(name);
         return *p != nullptr;
     }
 
     template<typename T>
-    inline bool getPropertyAddress(const char* name, T* const* p) const noexcept {
+    inline bool getPropertyAddress(const char* UTILS_NONNULL name,
+            T* const UTILS_NULLABLE* UTILS_NONNULL p) const noexcept {
         *p = getPropertyAddress<T>(name);
         return *p != nullptr;
     }
@@ -101,12 +88,12 @@ public:
      * @return true if the operation was successful, false otherwise.
      * @{
      */
-    bool setProperty(const char* name, bool v) noexcept;
-    bool setProperty(const char* name, int v) noexcept;
-    bool setProperty(const char* name, float v) noexcept;
-    bool setProperty(const char* name, math::float2 v) noexcept;
-    bool setProperty(const char* name, math::float3 v) noexcept;
-    bool setProperty(const char* name, math::float4 v) noexcept;
+    bool setProperty(const char* UTILS_NONNULL name, bool v) noexcept;
+    bool setProperty(const char* UTILS_NONNULL name, int v) noexcept;
+    bool setProperty(const char* UTILS_NONNULL name, float v) noexcept;
+    bool setProperty(const char* UTILS_NONNULL name, math::float2 v) noexcept;
+    bool setProperty(const char* UTILS_NONNULL name, math::float3 v) noexcept;
+    bool setProperty(const char* UTILS_NONNULL name, math::float4 v) noexcept;
     /** @}*/
 
     /**
@@ -116,20 +103,20 @@ public:
      * @return true if the call was successful and \p v was updated
      * @{
      */
-    bool getProperty(const char* name, bool* v) const noexcept;
-    bool getProperty(const char* name, int* v) const noexcept;
-    bool getProperty(const char* name, float* v) const noexcept;
-    bool getProperty(const char* name, math::float2* v) const noexcept;
-    bool getProperty(const char* name, math::float3* v) const noexcept;
-    bool getProperty(const char* name, math::float4* v) const noexcept;
+    bool getProperty(const char* UTILS_NONNULL name, bool* UTILS_NONNULL v) const noexcept;
+    bool getProperty(const char* UTILS_NONNULL name, int* UTILS_NONNULL v) const noexcept;
+    bool getProperty(const char* UTILS_NONNULL name, float* UTILS_NONNULL v) const noexcept;
+    bool getProperty(const char* UTILS_NONNULL name, math::float2* UTILS_NONNULL v) const noexcept;
+    bool getProperty(const char* UTILS_NONNULL name, math::float3* UTILS_NONNULL v) const noexcept;
+    bool getProperty(const char* UTILS_NONNULL name, math::float4* UTILS_NONNULL v) const noexcept;
     /** @}*/
 
     struct DataSource {
-        void const* data;
+        void const* UTILS_NULLABLE data;
         size_t count;
     };
 
-    DataSource getDataSource(const char* name) const noexcept;
+    DataSource getDataSource(const char* UTILS_NONNULL name) const noexcept;
 
     struct FrameHistory {
         using duration_ms = float;

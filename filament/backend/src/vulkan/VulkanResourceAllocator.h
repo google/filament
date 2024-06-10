@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANRESOURCEALLOCATOR_H
 #define TNT_FILAMENT_BACKEND_VULKANRESOURCEALLOCATOR_H
 
+#include "VulkanConstants.h"
 #include "VulkanHandles.h"
 
 #include <private/backend/HandleAllocator.h>
@@ -29,18 +30,17 @@
 
 namespace filament::backend {
 
-// RESOURCE_TYPE_COUNT matches the count of enum VulkanResourceType.
-#define RESOURCE_TYPE_COUNT 12
-#define DEBUG_RESOURCE_LEAKS 0
+#define RESOURCE_TYPE_COUNT (static_cast<int>(VulkanResourceType::END_TYPE))
+#define DEBUG_RESOURCE_LEAKS FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
 
 #if DEBUG_RESOURCE_LEAKS
-    #define TRACK_INCREMENT()                                       \
-    if (!IS_MANAGED_TYPE(obj->mType)) {                             \
-        mDebugOnlyResourceCount[static_cast<size_t>(obj->mType)]++; \
+    #define TRACK_INCREMENT()                                           \
+    if (!IS_HEAP_ALLOC_TYPE(obj->getType())) {                          \
+        mDebugOnlyResourceCount[static_cast<size_t>(obj->getType())]++; \
     }
-    #define TRACK_DECREMENT()                                       \
-    if (!IS_MANAGED_TYPE(obj->mType)) {                             \
-        mDebugOnlyResourceCount[static_cast<size_t>(obj->mType)]--; \
+    #define TRACK_DECREMENT()                                           \
+    if (!IS_HEAP_ALLOC_TYPE(obj->getType())) {                          \
+        mDebugOnlyResourceCount[static_cast<size_t>(obj->getType())]--; \
     }
 #else
     // No-op
@@ -49,10 +49,10 @@ namespace filament::backend {
 #endif
 
 class VulkanResourceAllocator {
-
 public:
-    VulkanResourceAllocator(size_t arenaSize)
-        : mHandleAllocatorImpl("Handles", arenaSize)
+    using AllocatorImpl = HandleAllocatorVK;
+    VulkanResourceAllocator(size_t arenaSize, bool disableUseAfterFreeCheck)
+        : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck)
 #if DEBUG_RESOURCE_LEAKS
         , mDebugOnlyResourceCount(RESOURCE_TYPE_COUNT) {
         std::memset(mDebugOnlyResourceCount.data(), 0, sizeof(size_t) * RESOURCE_TYPE_COUNT);
@@ -106,7 +106,7 @@ public:
     }
 
 private:
-    HandleAllocatorVK mHandleAllocatorImpl;
+    AllocatorImpl mHandleAllocatorImpl;
 
 #if DEBUG_RESOURCE_LEAKS
 public:

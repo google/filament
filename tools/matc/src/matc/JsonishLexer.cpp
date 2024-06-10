@@ -27,9 +27,7 @@ JsonType JsonishLexer::readIdentifier() noexcept {
         consume();
     }
 
-    const char* lexemeEnd = mCursor - 1;
-
-    size_t lexemeSize = lexemeEnd - lexemeStart;
+    size_t lexemeSize = mCursor - lexemeStart;
 
     // Check what kind of keyword we got here.
     if (strncmp("true", lexemeStart, lexemeSize) == 0) {

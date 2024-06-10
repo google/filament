@@ -11,9 +11,9 @@ on:
 jobs:
   npm-deploy:
     name: npm-deploy
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ github.event.inputs.release_tag }}
       # Setup .npmrc file to publish to npm

@@ -133,18 +133,18 @@ DECL_DRIVER_API_0(tick)
 
 DECL_DRIVER_API_N(beginFrame,
         int64_t, monotonic_clock_ns,
+        int64_t, refreshIntervalNs,
         uint32_t, frameId)
 
 DECL_DRIVER_API_N(setFrameScheduledCallback,
         backend::SwapChainHandle, sch,
-        backend::FrameScheduledCallback, callback,
-        void*, user)
+        backend::CallbackHandler*, handler,
+        backend::FrameScheduledCallback&&, callback)
 
 DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::SwapChainHandle, sch,
         backend::CallbackHandler*, handler,
-        backend::CallbackHandler::Callback, callback,
-        void*, user)
+        utils::Invocable<void(void)>&&, callback)
 
 DECL_DRIVER_API_N(setPresentationTime,
         int64_t, monotonic_clock_ns)
@@ -167,11 +167,14 @@ DECL_DRIVER_API_0(resetState)
  * -----------------------
  */
 
-DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_R_N(backend::VertexBufferInfoHandle, createVertexBufferInfo,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
-        uint32_t, vertexCount,
         backend::AttributeArray, attributes)
+
+DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+        uint32_t, vertexCount,
+        backend::VertexBufferInfoHandle, vbih)
 
 DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
@@ -224,11 +227,7 @@ DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
 DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
         backend::VertexBufferHandle, vbh,
         backend::IndexBufferHandle, ibh,
-        backend::PrimitiveType, pt,
-        uint32_t, offset,
-        uint32_t, minIndex,
-        uint32_t, maxIndex,
-        uint32_t, count)
+        backend::PrimitiveType, pt)
 
 DECL_DRIVER_API_R_N(backend::ProgramHandle, createProgram,
         backend::Program&&, program)
@@ -240,6 +239,7 @@ DECL_DRIVER_API_R_N(backend::RenderTargetHandle, createRenderTarget,
         uint32_t, width,
         uint32_t, height,
         uint8_t, samples,
+        uint8_t, layerCount,
         backend::MRT, color,
         backend::TargetBufferInfo, depth,
         backend::TargetBufferInfo, stencil)
@@ -264,6 +264,7 @@ DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
  */
 
 DECL_DRIVER_API_N(destroyVertexBuffer,    backend::VertexBufferHandle, vbh)
+DECL_DRIVER_API_N(destroyVertexBufferInfo,backend::VertexBufferInfoHandle, vbih)
 DECL_DRIVER_API_N(destroyIndexBuffer,     backend::IndexBufferHandle, ibh)
 DECL_DRIVER_API_N(destroyBufferObject,    backend::BufferObjectHandle, ibh)
 DECL_DRIVER_API_N(destroyRenderPrimitive, backend::RenderPrimitiveHandle, rph)
@@ -298,14 +299,17 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchMultiSampleSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
 
@@ -429,6 +433,11 @@ DECL_DRIVER_API_N(bindSamplers,
         uint32_t, index,
         backend::SamplerGroupHandle, sbh)
 
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
+
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string,
         uint32_t, len = 0)
@@ -468,7 +477,7 @@ DECL_DRIVER_API_N(readBufferSubData,
  * --------------------
  */
 
-DECL_DRIVER_API_N(blit,
+DECL_DRIVER_API_N(blitDEPRECATED,
         backend::TargetBufferFlags, buffers,
         backend::RenderTargetHandle, dst,
         backend::Viewport, dstRect,
@@ -476,14 +485,46 @@ DECL_DRIVER_API_N(blit,
         backend::Viewport, srcRect,
         backend::SamplerMagFilter, filter)
 
+DECL_DRIVER_API_N(resolve,
+        backend::TextureHandle, dst,
+        uint8_t, dstLevel, uint8_t, dstLayer,
+        backend::TextureHandle, src,
+        uint8_t, srcLevel, uint8_t, srcLayer)
+
+DECL_DRIVER_API_N(blit,
+        backend::TextureHandle, dst,
+        uint8_t, dstLevel, uint8_t, dstLayer,
+        math::uint2, dstOrigin,
+        backend::TextureHandle, src,
+        uint8_t, srcLevel, uint8_t, srcLayer,
+        math::uint2, srcOrigin,
+        math::uint2, size)
+
+DECL_DRIVER_API_N(bindPipeline,
+        backend::PipelineState const&, state)
+
+DECL_DRIVER_API_N(bindRenderPrimitive,
+        backend::RenderPrimitiveHandle, rph)
+
+DECL_DRIVER_API_N(draw2,
+        uint32_t, indexOffset,
+        uint32_t, indexCount,
+        uint32_t, instanceCount)
+
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
         backend::RenderPrimitiveHandle, rph,
+        uint32_t, indexOffset,
+        uint32_t, indexCount,
         uint32_t, instanceCount)
+
 
 DECL_DRIVER_API_N(dispatchCompute,
         backend::ProgramHandle, program,
         math::uint3, workGroupCount)
+
+DECL_DRIVER_API_N(scissor,
+        Viewport, scissor)
 
 
 #pragma clang diagnostic pop

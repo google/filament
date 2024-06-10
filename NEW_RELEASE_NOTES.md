@@ -8,11 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- engine: Allow instantiating Engine at a given feature level via `Engine::Builder::featureLevel`
-- matc: Enable `GL_OES_standard_derivatives` extension in ESSL 1.0 shaders
-- matc: Fix code generation of double sided and masked materials in ESSL 1.0 shaders
-- filagui: Add support for feature level 0
-- matc: Add support for post-process materials in feature level 0
-- engine: Add `Material::getFeatureLevel()`
-- engine: Add missing `Material::getReflectionMode()` method in Java
-- engine: Support basic usage of post-processing materials on feature level 0
+- engine: fix skinning normals with large transforms (b/342459864) [⚠️ **New Material Version**]

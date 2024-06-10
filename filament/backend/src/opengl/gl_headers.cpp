@@ -28,6 +28,7 @@ static void getProcAddress(T& pfn, const char* name) noexcept {
 }
 
 namespace glext {
+#ifndef __EMSCRIPTEN__
 #ifdef GL_OES_EGL_image
 PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
@@ -66,16 +67,20 @@ PFNGLDISCARDFRAMEBUFFEREXTPROC glDiscardFramebufferEXT;
 #ifdef GL_KHR_parallel_shader_compile
 PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
 #endif
+#ifdef GL_OVR_multiview
+PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
+#endif
 
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 // On Android, If we want to support a build system less than ANDROID_API 21, we need to
 // use getProcAddress for ES3.1 and above entry points.
 PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 #endif
-
 static std::once_flag sGlExtInitialized;
+#endif // __EMSCRIPTEN__
 
 void importGLESExtensionsEntryPoints() {
+#ifndef __EMSCRIPTEN__
     std::call_once(sGlExtInitialized, +[]() {
 #ifdef GL_OES_EGL_image
     getProcAddress(glEGLImageTargetTexture2DOES, "glEGLImageTargetTexture2DOES");
@@ -115,10 +120,14 @@ void importGLESExtensionsEntryPoints() {
 #ifdef GL_KHR_parallel_shader_compile
         getProcAddress(glMaxShaderCompilerThreadsKHR, "glMaxShaderCompilerThreadsKHR");
 #endif
+#ifdef GL_OVR_multiview
+        getProcAddress(glFramebufferTextureMultiviewOVR, "glFramebufferTextureMultiviewOVR");
+#endif
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
         getProcAddress(glDispatchCompute, "glDispatchCompute");
 #endif
     });
+#endif // __EMSCRIPTEN__
 }
 
 } // namespace glext

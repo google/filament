@@ -41,15 +41,6 @@ static void BM_utils_mutex(benchmark::State& state) {
     }
 }
 
-static void BM_spinlock(benchmark::State& state) {
-    static LockingPolicy::SpinLock l;
-    PerformanceCounters pc(state);
-    for (auto _ : state) {
-        l.lock();
-        l.unlock();
-    }
-}
-
 BENCHMARK(BM_std_mutex)
     ->Threads(1)
     ->Threads(2)
@@ -57,12 +48,6 @@ BENCHMARK(BM_std_mutex)
     ->ThreadPerCpu();
 
 BENCHMARK(BM_utils_mutex)
-    ->Threads(1)
-    ->Threads(2)
-    ->Threads(8)
-    ->ThreadPerCpu();
-
-BENCHMARK(BM_spinlock)
     ->Threads(1)
     ->Threads(2)
     ->Threads(8)

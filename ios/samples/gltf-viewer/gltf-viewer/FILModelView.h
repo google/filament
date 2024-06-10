@@ -16,6 +16,8 @@
 
 #import <UIKit/UIKit.h>
 
+#include <utils/Entity.h>
+
 namespace filament {
 class Engine;
 class Scene;
@@ -75,6 +77,17 @@ typedef NSData* _Nonnull (^ResourceCallback)(NSString* _Nonnull);
 - (void)loadModelGltf:(NSData*)buffer callback:(ResourceCallback)callback;
 
 - (void)destroyModel;
+
+/**
+ * Issues a pick query at the given view coordinates.
+ * The coordinates should be in UIKit's coordinate system, with the origin at
+ * the top-left.
+ * The callback is triggered with entity of the picked object.
+ */
+typedef void (^PickCallback)(utils::Entity);
+- (void)issuePickQuery:(CGPoint)point callback:(PickCallback)callback;
+
+- (NSString* _Nullable)getEntityName:(utils::Entity)entity;
 
 /**
  * Sets up a root transform on the current model to make it fit into a unit cube.

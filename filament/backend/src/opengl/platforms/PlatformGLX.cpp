@@ -226,7 +226,7 @@ Driver* PlatformGLX::createDriver(void* const sharedGLContext,
     g_glx.setCurrentContext(mGLXDisplay, mDummySurface, mDummySurface, mGLXContext);
 
     int result = bluegl::bind();
-    ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
+    FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
 
     return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
 }
@@ -265,10 +265,11 @@ void PlatformGLX::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     }
 }
 
-void PlatformGLX::makeCurrent(
-        Platform::SwapChain* drawSwapChain, Platform::SwapChain* readSwapChain) noexcept {
+bool PlatformGLX::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) noexcept {
     g_glx.setCurrentContext(mGLXDisplay,
             (GLXDrawable)drawSwapChain, (GLXDrawable)readSwapChain, mGLXContext);
+    return true;
 }
 
 void PlatformGLX::commit(Platform::SwapChain* swapChain) noexcept {

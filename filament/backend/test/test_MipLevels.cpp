@@ -143,7 +143,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         TrianglePrimitive triangle(api);
 
-        api.beginFrame(0, 0);
+        api.beginFrame(0, 0, 0);
 
         // We set the base mip to 1, and the max mip to 3
         // Level 0: 128x128 (red)
@@ -155,7 +155,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
         Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
-                TargetBufferFlags::COLOR, 32, 32, 1,
+                TargetBufferFlags::COLOR, 32, 32, 1, 0,
                 {texture, 2 /* level */, 0 /* layer */}, {}, {});
         {
             RenderPassParams params = {};
@@ -168,7 +168,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
             ps.rasterState.colorWrite = true;
             ps.rasterState.depthWrite = false;
             api.beginRenderPass(renderTarget, params);
-            api.draw(ps, triangle.getRenderPrimitive(), 1);
+            api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
             api.endRenderPass();
         }
 
@@ -182,7 +182,6 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.scissor = params.viewport;
         state.program = textureProgram;
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
@@ -203,7 +202,8 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Because the min level is 1, the result color should be the white triangle drawn in the
         // previous pass.
         api.beginRenderPass(defaultRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 1);
+        api.scissor(params.viewport);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         // Adjust the base mip to 2.
@@ -221,7 +221,8 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         params.flags.clear = TargetBufferFlags::NONE;
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(defaultRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 1);
+        api.scissor(params.viewport);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         api.commit(swapChain);

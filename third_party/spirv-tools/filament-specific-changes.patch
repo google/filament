@@ -1,24 +1,22 @@
-diff --git a/third_party/spirv-tools/.gitignore b/third_party/spirv-tools/.gitignore
-index ec709ba79..a87496a7d 100644
---- a/third_party/spirv-tools/.gitignore
-+++ b/third_party/spirv-tools/.gitignore
-@@ -5,8 +5,6 @@ compile_commands.json
- /build*/
- /buildtools/
- /external/googletest
--/external/SPIRV-Headers
--/external/spirv-headers
- /external/effcee
- /external/re2
- /external/protobuf
 diff --git a/third_party/spirv-tools/CMakeLists.txt b/third_party/spirv-tools/CMakeLists.txt
 index 76b87d8c5..53b3404d1 100755
 --- a/third_party/spirv-tools/CMakeLists.txt
 +++ b/third_party/spirv-tools/CMakeLists.txt
-@@ -24,8 +24,14 @@ if (POLICY CMP0054)
+@@ -12,7 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-cmake_minimum_required(VERSION 2.8.12)
++cmake_minimum_required(VERSION 3.19)
+ if (POLICY CMP0048)
+   cmake_policy(SET CMP0048 NEW)
+ endif()
+@@ -24,8 +24,16 @@ if (POLICY CMP0054)
  endif()
  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
- 
+
++set(SPIRV-Headers_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../spirv-headers)
++
 +if (APPLE)
 +  set(CMAKE_MACOSX_RPATH ON)
 +endif (APPLE)
@@ -63,7 +61,7 @@ index 76b87d8c5..53b3404d1 100755
  
  # Check for symbol exports on Linux.
  # At the moment, this check will fail on the OSX build machines for the Android NDK.
-@@ -286,11 +297,13 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
+@@ -286,11 +297,11 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
  endif()
  
  # Defaults to OFF if the user didn't set it.
@@ -72,13 +70,11 @@ index 76b87d8c5..53b3404d1 100755
 -  ${SPIRV_SKIP_EXECUTABLES})
 -option(SPIRV_SKIP_TESTS
 -  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS})
-+ option(SPIRV_SKIP_EXECUTABLES
-+   "Skip building the executable and tests along with the library"
-+  ${SPIRV_SKIP_EXECUTABLES_OPTION})
-+ option(SPIRV_SKIP_TESTS
-+  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
-+
-+
++option(SPIRV_SKIP_EXECUTABLES
++  "Skip building the executable and tests along with the library"
++ ${SPIRV_SKIP_EXECUTABLES_OPTION})
++option(SPIRV_SKIP_TESTS
++ "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
  if ("${SPIRV_SKIP_EXECUTABLES}")
    set(SPIRV_SKIP_TESTS ON)
  endif()
@@ -131,36 +127,6 @@ index 76b87d8c5..53b3404d1 100755
 -    DESTINATION
 -      ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 -endif()
-diff --git a/third_party/spirv-tools/FILAMENT_README.md b/third_party/spirv-tools/FILAMENT_README.md
-index 39e4620a0..3aa363ebf 100644
---- a/third_party/spirv-tools/FILAMENT_README.md
-+++ b/third_party/spirv-tools/FILAMENT_README.md
-@@ -1,9 +1,6 @@
--When updating spirv-tools to a new version, make sure to preserve all the changes marked with
--the following in `CMakeLists.txt` and `source/CMakeLists.txt`:
--
--`# Filament specific changes`
--
--You can easily apply these changes by running the following command at Filament's root:
-+When updating spirv-tools to a new version there are several `CMakeLists.txt` files that need
-+to patched with Filament specific changes. This can be done by running the following command at
-+Filament's root:
- 
- ```
- git apply third_party/spirv-tools/filament-specific-changes.patch
-diff --git a/third_party/spirv-tools/external/CMakeLists.txt b/third_party/spirv-tools/external/CMakeLists.txt
-index 179a4012f..a081e119b 100644
---- a/third_party/spirv-tools/external/CMakeLists.txt
-+++ b/third_party/spirv-tools/external/CMakeLists.txt
-@@ -45,8 +45,6 @@ if (IS_DIRECTORY ${SPIRV_HEADER_DIR})
-   # Do this so enclosing projects can use SPIRV-Headers_SOURCE_DIR to find
-   # headers to include.
-   if (NOT DEFINED SPIRV-Headers_SOURCE_DIR)
--    set(SPIRV_HEADERS_SKIP_INSTALL ON)
--    set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
-     add_subdirectory(${SPIRV_HEADER_DIR})
-   endif()
- else()
 diff --git a/third_party/spirv-tools/source/CMakeLists.txt b/third_party/spirv-tools/source/CMakeLists.txt
 index 98559b8fe..0734d6a82 100644
 --- a/third_party/spirv-tools/source/CMakeLists.txt
@@ -194,21 +160,3 @@ index 98559b8fe..0734d6a82 100644
  
  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 
-diff --git a/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt b/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
-index 147f7adee..d8d1d7e35 100644
---- a/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
-+++ b/third_party/spirv-tools/external/spirv-headers/CMakeLists.txt
-@@ -49,11 +49,9 @@ add_custom_target(install-headers
-     COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
-         $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
-
--option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples"
--      ${SPIRV_HEADERS_SKIP_EXAMPLES})
-+option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples" ON)
-
--option(SPIRV_HEADERS_SKIP_INSTALL "Skip install"
--      ${SPIRV_HEADERS_SKIP_INSTALL})
-+option(SPIRV_HEADERS_SKIP_INSTALL "Skip install" ON)
-
- if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
-   set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)

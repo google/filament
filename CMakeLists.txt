@@ -21,8 +21,6 @@ project(TNT)
 # ==================================================================================================
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
-option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
-
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -40,6 +38,12 @@ option(FILAMENT_SKIP_SDL2 "Skip dependencies of SDL2, and SDL2" OFF)
 option(FILAMENT_LINUX_IS_MOBILE "Treat Linux as Mobile" OFF)
 
 option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitizers" OFF)
+
+option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
+
+option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
+
+option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
@@ -64,6 +68,13 @@ set(FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB "4" CACHE STRING
 set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
     "Size of the Metal handle arena, default 8."
 )
+
+set(FILAMENT_BACKEND_DEBUG_FLAG "" CACHE STRING
+    "A debug flag meant for enabling/disabling backend debugging paths"
+)
+
+# Enable exceptions by default in spirv-cross.
+set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF)
 
 # ==================================================================================================
 # CMake policies
@@ -132,11 +143,6 @@ if (LINUX)
             add_definitions(-DFILAMENT_SUPPORTS_XCB)
         endif()
 
-        # Default Swiftshader build does not enable the xlib extension
-        if (FILAMENT_SUPPORTS_XLIB AND FILAMENT_USE_SWIFTSHADER)
-            set(FILAMENT_SUPPORTS_XLIB OFF)
-        endif()
-
         if (FILAMENT_SUPPORTS_XLIB)
             add_definitions(-DFILAMENT_SUPPORTS_XLIB)
         endif()
@@ -158,15 +164,6 @@ endif()
 
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS AND NOT FILAMENT_LINUX_IS_MOBILE)
     set(IS_HOST_PLATFORM TRUE)
-endif()
-
-if (IOS)
-    # Remove the headerpad_max_install_names linker flag on iOS. It causes warnings when linking
-    # executables with bitcode.
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS})
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS})
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS})
-    string(REPLACE "-Wl,-headerpad_max_install_names" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS ${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS})
 endif()
 
 if (WIN32)
@@ -225,6 +222,21 @@ if (WIN32)
             # we don't need them on CI.
             string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" ${LinkerFlag} ${${LinkerFlag}})
         endforeach()
+
+        # We turn off compile-time optimizations for CI, as options that speed up the compile-time
+        # (e.g. /MP) might increase memory usage, leading to instabilities on limited CI machines.
+        option(FILAMENT_SHORTEN_MSVC_COMPILATION "Shorten compile-time in Visual Studio" OFF)
+    else()
+        option(FILAMENT_SHORTEN_MSVC_COMPILATION "Shorten compile-time in Visual Studio" ON)
+    endif()
+
+    if (MSVC)
+        if (FILAMENT_SHORTEN_MSVC_COMPILATION)
+            # enable multi-processor compilation
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+            # disable run-time STL checks to improve tools (e.g. matc) performance
+            set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
+        endif()
     endif()
 endif()
 
@@ -308,10 +320,6 @@ if (FILAMENT_SUPPORTS_EGL_ON_LINUX)
   set(EGL TRUE)
 endif()
 
-if (FILAMENT_USE_SWIFTSHADER)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFILAMENT_USE_SWIFTSHADER")
-endif()
-
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 endif()
@@ -337,6 +345,7 @@ endif()
 
 if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
 if (MSVC)
@@ -364,8 +373,9 @@ endif()
 if (NOT MSVC AND NOT IOS)
     # Omitting stack frame pointers prevents the generation of readable stack traces in crash reports on iOS
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer")
+endif()
 
-    # These aren't compatible with -fembed-bitcode (and seem to have no effect on Apple platforms anyway)
+if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffunction-sections -fdata-sections")
 endif()
 
@@ -373,6 +383,7 @@ endif()
 # saved by -fno-exception and 10 KiB saved by -fno-rtti).
 if (ANDROID OR IOS OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 
     if (ANDROID OR WEBGL)
         # Omitting unwind info prevents the generation of readable stack traces in crash reports on iOS
@@ -384,6 +395,7 @@ endif()
 # std::visit, which is not supported on iOS 11.0 when exceptions are enabled.
 if (IOS)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-exceptions")
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
 # With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
@@ -403,7 +415,13 @@ endif()
 if (FILAMENT_ENABLE_ASAN_UBSAN)
    set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined")
 endif()
-
+if (FILAMENT_ENABLE_TSAN)
+   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=thread")
+endif()
+if (ANDROID)
+    # keep STL debug infos (mimics what the NDK does)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-limit-debug-info")
+endif()
 if (NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
@@ -422,7 +440,12 @@ endif()
 if (NOT WEBGL)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
+
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
+
+if (ANDROID)
+set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
+endif()
 
 if (APPLE)
     set(GC_SECTIONS "-Wl,-dead_strip")
@@ -437,7 +460,7 @@ if (APPLE)
 endif()
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
 if (WEBGL_PTHREADS)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pthread")
@@ -500,6 +523,29 @@ else()
     option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" ON)
 endif()
 
+# This only affects the prebuilt shader files in gltfio and samples, not filament library.
+# The value can be either "instanced", "multiview", or "none"
+set(FILAMENT_SAMPLES_STEREO_TYPE "none" CACHE STRING
+    "Stereoscopic type that shader files in gltfio and samples are built for."
+)
+string(TOLOWER "${FILAMENT_SAMPLES_STEREO_TYPE}" FILAMENT_SAMPLES_STEREO_TYPE)
+if (NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "instanced"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview"
+    AND NOT FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "none")
+    message(FATAL_ERROR "Invalid stereo type: \"${FILAMENT_SAMPLES_STEREO_TYPE}\" choose either \"instanced\",  \"multiview\", or \"none\" ")
+endif ()
+
+# Compiling samples for multiview implies enabling multiview feature as well.
+if (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
+    set(FILAMENT_ENABLE_MULTIVIEW ON)
+endif ()
+
+# Define backend flag for debug only
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT FILAMENT_BACKEND_DEBUG_FLAG STREQUAL "")
+    add_definitions(-DFILAMENT_BACKEND_DEBUG_FLAG=${FILAMENT_BACKEND_DEBUG_FLAG})
+    unset(FILAMENT_BACKEND_DEBUG_FLAG)
+endif()
+
 # ==================================================================================================
 # Material compilation flags
 # ==================================================================================================
@@ -521,6 +567,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
+endif()
+
+# Disable ESSL 1.0 code generation.
+if (NOT FILAMENT_ENABLE_FEATURE_LEVEL_0)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -1)
 endif()
 
 # Enable debug info (preserves names in SPIR-V)
@@ -598,9 +649,9 @@ function(combine_static_libs TARGET OUTPUT DEPS)
     # Loop through the dependent libraries and query their location on disk.
     set(DEPS_FILES )
     foreach(DEPENDENCY ${DEPS})
-        if(TARGET ${DEPENDENCY})
+        if (TARGET ${DEPENDENCY})
             get_property(dep_type TARGET ${DEPENDENCY} PROPERTY TYPE)
-            if(dep_type STREQUAL "STATIC_LIBRARY")
+            if (dep_type STREQUAL "STATIC_LIBRARY")
                 list(APPEND DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
             endif()
         endif()
@@ -621,21 +672,6 @@ if (WEBGL)
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
 else()
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
-endif()
-
-# ==================================================================================================
-# Try to find Vulkan if the SDK is installed, otherwise fall back to the bundled version.
-# This needs to stay in our top-level CMakeLists because it sets up variables that are used by the
-# "bluevk" and "samples" targets.
-# ==================================================================================================
-
-if (FILAMENT_USE_SWIFTSHADER)
-    if (NOT FILAMENT_SUPPORTS_VULKAN)
-        message(ERROR "SwiftShader is only useful when Vulkan is enabled.")
-    endif()
-    find_library(SWIFTSHADER_VK NAMES vk_swiftshader HINTS "$ENV{SWIFTSHADER_LD_LIBRARY_PATH}")
-    message(STATUS "Found SwiftShader VK library in: ${SWIFTSHADER_VK}.")
-    add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${SWIFTSHADER_VK}\")
 endif()
 
 # ==================================================================================================
@@ -670,7 +706,7 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
         set(RESGEN_OUTPUTS "${OUTPUTS}" PARENT_SCOPE)
         set(RESGEN_FLAGS -qx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}${ASM_SUFFIX}.S" PARENT_SCOPE)
-        set(RESGEN_SOURCE_FLAGS "-I${ARCHIVE_DIR} ${ASM_ARCH_FLAG}" PARENT_SCOPE)
+        set(RESGEN_SOURCE_FLAGS "-I'${ARCHIVE_DIR}' ${ASM_ARCH_FLAG}" PARENT_SCOPE)
     endif()
 endfunction()
 
@@ -685,7 +721,6 @@ add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filagui)
 add_subdirectory(${LIBRARIES}/filameshio)
-add_subdirectory(${LIBRARIES}/geometry)
 add_subdirectory(${LIBRARIES}/gltfio)
 add_subdirectory(${LIBRARIES}/ibl)
 add_subdirectory(${LIBRARIES}/iblprefilter)
@@ -700,7 +735,6 @@ add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 add_subdirectory(${EXTERNAL}/civetweb/tnt)
-add_subdirectory(${EXTERNAL}/hat-trie/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
 add_subdirectory(${EXTERNAL}/smol-v/tnt)
@@ -712,6 +746,9 @@ add_subdirectory(${EXTERNAL}/draco/tnt)
 add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
+
+# Note that this has to be placed after mikktspace in order for combine_static_libs to work.
+add_subdirectory(${LIBRARIES}/geometry)
 
 if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     # spirv-tools must come before filamat, as filamat relies on the presence of the
@@ -730,6 +767,8 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
+    set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
+    add_subdirectory(${EXTERNAL}/spirv-headers)
 endif()
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
@@ -762,6 +801,9 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/glslminifier)
     add_subdirectory(${TOOLS}/matc)
     add_subdirectory(${TOOLS}/matinfo)
+    if (NOT WIN32)  # matedit not yet supported on Windows
+        add_subdirectory(${TOOLS}/matedit)
+    endif()
     add_subdirectory(${TOOLS}/mipgen)
     add_subdirectory(${TOOLS}/normal-blending)
     add_subdirectory(${TOOLS}/resgen)

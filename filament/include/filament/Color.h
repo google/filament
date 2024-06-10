@@ -24,6 +24,9 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <stdint.h>
+#include <stddef.h>
+
 namespace filament {
 
 //! RGB color in linear space

@@ -98,3 +98,22 @@ Java_com_google_android_filament_Scene_nHasEntity(JNIEnv *env, jclass type, jlon
     Entity entity = Entity::import(entityId);
     return (jboolean) scene->hasEntity(entity);
 }
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Scene_nGetEntities(JNIEnv *env, jclass ,
+        jlong nativeScene, jintArray outArray, jint length) {
+    Scene const* const scene = (Scene*) nativeScene;
+    if (length < scene->getEntityCount()) {
+        // should not happen because we already checked on the java side
+        return JNI_FALSE;
+    }
+    jint *out = (jint *) env->GetIntArrayElements(outArray, nullptr);
+    scene->forEach([out, length, i = 0](Entity entity)mutable {
+        if (i < length) { // this is just paranoia here
+            out[i++] = (jint) entity.getId();
+        }
+    });
+    env->ReleaseIntArrayElements(outArray, (jint*) out, 0);
+    return JNI_TRUE;
+}

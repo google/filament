@@ -47,7 +47,8 @@ VulkanCmdFence::VulkanCmdFence(VkFence ifence)
 
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device,
         VkCommandPool pool)
-    : mResourceManager(allocator) {
+    : mResourceManager(allocator),
+      mPipeline(VK_NULL_HANDLE) {
     // Create the low-level command buffer.
     const VkCommandBufferAllocateInfo allocateInfo{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -155,7 +156,7 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
 #endif
 }
 
-VulkanCommands::~VulkanCommands() {
+void VulkanCommands::terminate() {
     wait();
     gc();
     vkDestroyCommandPool(mDevice, mPool, VKALLOC);
@@ -435,8 +436,8 @@ void VulkanCommands::popGroupMarker() {
         auto const [marker, startTime] = mGroupMarkers->pop();
         auto const endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = endTime - startTime;
-        utils::slog.d << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms\n"
-                      << utils::io::flush;
+        utils::slog.d << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms"
+                      << utils::io::endl;
 #else
         mGroupMarkers->pop();
 #endif

@@ -38,7 +38,6 @@ protected:
     utils::Arena<utils::ObjectPoolAllocator<Payload>, LockingPolicy::NoLock> mPoolAllocatorNoLock;
     utils::Arena<utils::ObjectPoolAllocator<Payload>, std::mutex> mPoolAllocatorStdMutex;
     utils::Arena<utils::ObjectPoolAllocator<Payload>, utils::Mutex> mPoolAllocatorUtilsMutex;
-    utils::Arena<utils::ObjectPoolAllocator<Payload>, LockingPolicy::SpinLock> mPoolAllocatorSpinlock;
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Payload>, LockingPolicy::NoLock> mPoolAllocatorAtomic;
 };
 
@@ -48,7 +47,6 @@ Allocators::Allocators()
         : mPoolAllocatorNoLock("nolock", POOL_ITEM_COUNT * sizeof(Payload)),
           mPoolAllocatorStdMutex("std::mutex", POOL_ITEM_COUNT * sizeof(Payload)),
           mPoolAllocatorUtilsMutex("utils::Mutex", POOL_ITEM_COUNT * sizeof(Payload)),
-          mPoolAllocatorSpinlock("spinlock", POOL_ITEM_COUNT * sizeof(Payload)),
           mPoolAllocatorAtomic("atomic", POOL_ITEM_COUNT * sizeof(Payload)) {
 }
 
@@ -81,15 +79,6 @@ BENCHMARK_DEFINE_F(Allocators, poolAllocator_utils_mutex)(benchmark::State& stat
     }
 }
 
-BENCHMARK_DEFINE_F(Allocators, poolAllocator_spinlock)(benchmark::State& state) {
-    auto& pool = mPoolAllocatorSpinlock;
-    PerformanceCounters pc(state);
-    for (auto _ : state) {
-        Payload* p = pool.alloc<Payload>(1);
-        pool.free(p);
-    }
-}
-
 BENCHMARK_DEFINE_F(Allocators, poolAllocator_atomic)(benchmark::State& state) {
     auto& pool = mPoolAllocatorAtomic;
     PerformanceCounters pc(state);
@@ -104,10 +93,6 @@ BENCHMARK_REGISTER_F(Allocators, poolAllocator_std_mutex)
         ->Threads(benchmark::CPUInfo::Get().num_cpus * 2);
 
 BENCHMARK_REGISTER_F(Allocators, poolAllocator_utils_mutex)
-        ->ThreadRange(1, 4)
-        ->Threads(benchmark::CPUInfo::Get().num_cpus * 2);
-
-BENCHMARK_REGISTER_F(Allocators, poolAllocator_spinlock)
         ->ThreadRange(1, 4)
         ->Threads(benchmark::CPUInfo::Get().num_cpus * 2);
 

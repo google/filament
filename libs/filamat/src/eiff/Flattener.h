@@ -17,13 +17,19 @@
 #ifndef TNT_FILAMAT_FLATENNER_H
 #define TNT_FILAMAT_FLATENNER_H
 
-#include <utils/Panic.h>
+#include <utility>
+#include <utils/Log.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <map>
+#include <string_view>
 #include <vector>
 
 #include <assert.h>
 #include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 using namespace utils;
@@ -97,7 +103,7 @@ public:
     }
 
     void writeString(const char* str) {
-        size_t len = strlen(str);
+        size_t const len = strlen(str);
         if (mStart != nullptr) {
             strcpy(reinterpret_cast<char*>(mCursor), str);
         }
@@ -105,7 +111,7 @@ public:
     }
 
     void writeString(std::string_view str) {
-        size_t len = str.length();
+        size_t const len = str.length();
         if (mStart != nullptr) {
             memcpy(reinterpret_cast<char*>(mCursor), str.data(), len);
             mCursor[len] = 0;
@@ -117,6 +123,13 @@ public:
         writeUint64(nbytes);
         if (mStart != nullptr) {
             memcpy(reinterpret_cast<char*>(mCursor), blob, nbytes);
+        }
+        mCursor += nbytes;
+    }
+
+    void writeRaw(const char* raw, size_t nbytes) {
+        if (mStart != nullptr) {
+            memcpy(reinterpret_cast<char*>(mCursor), raw, nbytes);
         }
         mCursor += nbytes;
     }
@@ -145,12 +158,12 @@ public:
     }
 
     uint32_t writeSize() {
-        assert(mSizePlaceholders.size() > 0);
+        assert(!mSizePlaceholders.empty());
 
         uint8_t* dst = mSizePlaceholders.back();
         mSizePlaceholders.pop_back();
         // -4 to account for the 4 bytes we are about to write.
-        uint32_t size = static_cast<uint32_t>(mCursor - dst - 4);
+        uint32_t const size = static_cast<uint32_t>(mCursor - dst - 4);
         if (mStart != nullptr) {
             dst[0] = static_cast<uint8_t>( size        & 0xff);
             dst[1] = static_cast<uint8_t>((size >>  8) & 0xff);
@@ -177,12 +190,12 @@ public:
         }
 
         for(auto pair : mOffsetPlaceholders) {
-            size_t index = pair.first;
+            size_t const index = pair.first;
             if (index != forIndex) {
                 continue;
             }
             uint8_t* dst = pair.second;
-            size_t offset = mCursor - mOffsetsBase;
+            size_t const offset = mCursor - mOffsetsBase;
             if (offset > UINT32_MAX) {
                 slog.e << "Unable to write offset greater than UINT32_MAX." << io::endl;
                 exit(0);
@@ -206,7 +219,7 @@ public:
     }
 
     void writePlaceHoldValue(size_t v) {
-        assert(mValuePlaceholders.size() > 0);
+        assert(!mValuePlaceholders.empty());
 
         if (v > UINT32_MAX) {
             slog.e << "Unable to write value greater than UINT32_MAX." << io::endl;

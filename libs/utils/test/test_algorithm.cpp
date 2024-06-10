@@ -20,6 +20,8 @@
 
 #include <array>
 
+#include <stdint.h>
+
 using namespace utils;
 
 template <typename T>
@@ -58,6 +60,20 @@ TEST(AlgorithmTest, clz) {
         EXPECT_EQ(j, details::clz(i|1));
         EXPECT_EQ(j, count_leading_zeros(i));
     }
+    for (uint16_t i = 1, j = 15; j < 16; i *= 2, j--) {
+        EXPECT_EQ(j, clz(i));
+        EXPECT_EQ(j, clz(uint16_t(i|1)));
+        EXPECT_EQ(j, details::clz(i));
+        EXPECT_EQ(j, details::clz(uint16_t(i|1)));
+        EXPECT_EQ(j, count_leading_zeros(i));
+    }
+    for (uint8_t i = 1, j = 7; j < 8; i *= 2, j--) {
+        EXPECT_EQ(j, clz(i));
+        EXPECT_EQ(j, clz(uint8_t(i|1)));
+        EXPECT_EQ(j, details::clz(i));
+        EXPECT_EQ(j, details::clz(uint8_t(i|1)));
+        EXPECT_EQ(j, count_leading_zeros(i));
+    }
 }
 
 TEST(AlgorithmTest, details_ctz) {
@@ -76,6 +92,16 @@ TEST(AlgorithmTest, ctz) {
         EXPECT_EQ(j, count_trailing_zeros(i));
     }
     for (uint32_t i = 1, j = 0; j < 32; i *= 2, j++) {
+        EXPECT_EQ(j, ctz(i));
+        EXPECT_EQ(j, details::ctz(i));
+        EXPECT_EQ(j, count_trailing_zeros(i));
+    }
+    for (uint16_t i = 1, j = 0; j < 16; i *= 2, j++) {
+        EXPECT_EQ(j, ctz(i));
+        EXPECT_EQ(j, details::ctz(i));
+        EXPECT_EQ(j, count_trailing_zeros(i));
+    }
+    for (uint8_t i = 1, j = 0; j < 8; i *= 2, j++) {
         EXPECT_EQ(j, ctz(i));
         EXPECT_EQ(j, details::ctz(i));
         EXPECT_EQ(j, count_trailing_zeros(i));

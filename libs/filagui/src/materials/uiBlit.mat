@@ -19,7 +19,7 @@ material {
 
 fragment {
     void material(inout MaterialInputs material) {
-	prepareMaterial(material);
+        prepareMaterial(material);
         vec2 uv = getUV0();
         uv.y = 1.0 - uv.y;
         vec4 albedo = texture2D(materialParams_albedo, uv);

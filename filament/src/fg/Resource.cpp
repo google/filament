@@ -100,9 +100,9 @@ void ImportedRenderTarget::assertConnect(FrameGraphTexture::Usage u) {
                                     FrameGraphTexture::Usage::DEPTH_ATTACHMENT |
                                     FrameGraphTexture::Usage::STENCIL_ATTACHMENT;
 
-    ASSERT_PRECONDITION(none(u & ~ANY_ATTACHMENT),
-            "Imported render target resource \"%s\" can only be used as an attachment (usage=%s)",
-            name, utils::to_string(u).c_str());
+    FILAMENT_CHECK_PRECONDITION(none(u & ~ANY_ATTACHMENT))
+            << "Imported render target resource \"" << name
+            << "\" can only be used as an attachment (usage=" << utils::to_string(u).c_str() << ')';
 }
 
 bool ImportedRenderTarget::connect(DependencyGraph& graph, PassNode* passNode,

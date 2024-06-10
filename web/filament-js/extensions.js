@@ -339,6 +339,12 @@ Filament.loadClassExtensions = function() {
         this._setGuardBandOptions(options);
     };
 
+    /// setStereoscopicOptions ::method::
+    Filament.View.prototype.setStereoscopicOptions = function(overrides) {
+        const options = this.setStereoscopicOptionsDefaults(overrides);
+        this._setStereoscopicOptions(options);
+    }
+
     /// BufferObject ::core class::
 
     /// setBuffer ::method::

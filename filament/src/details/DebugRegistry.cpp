@@ -16,11 +16,17 @@
 
 #include "details/DebugRegistry.h"
 
+#include <utils/compiler.h>
+#include <utils/Invocable.h>
 #include <utils/Panic.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+
+#include <functional>
+#include <string_view>
+#include <utility>
 
 #ifndef NDEBUG
 #   define DEBUG_PROPERTIES_WRITABLE true
@@ -120,12 +126,25 @@ void FDebugRegistry::registerDataSource(std::string_view name,
     }
 }
 
+void FDebugRegistry::registerDataSource(std::string_view name,
+        utils::Invocable<DataSource()>&& creator) noexcept {
+    mDataSourceCreatorMap[name] = std::move(creator);
+}
+
 DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
     std::string_view const key{ name };
     auto& dataSourceMap = mDataSourceMap;
     auto const& it = dataSourceMap.find(key);
-    if (it == dataSourceMap.end()) {
-        return { nullptr, 0u };
+    if (UTILS_UNLIKELY(it == dataSourceMap.end())) {
+        auto& dataSourceCreatorMap = mDataSourceCreatorMap;
+        auto const& pos = dataSourceCreatorMap.find(key);
+        if (pos == dataSourceCreatorMap.end()) {
+            return { nullptr, 0u };
+        }
+        DataSource dataSource{ pos->second() };
+        dataSourceMap[key] = dataSource;
+        dataSourceCreatorMap.erase(pos);
+        return dataSource;
     }
     return it->second;
 }

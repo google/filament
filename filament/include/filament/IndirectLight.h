@@ -25,6 +25,8 @@
 
 #include <math/mathfwd.h>
 
+#include <stdint.h>
+
 namespace filament {
 
 class Engine;
@@ -114,7 +116,7 @@ public:
          * @return This Builder, for chaining calls.
          *
          */
-        Builder& reflections(Texture const* cubemap) noexcept;
+        Builder& reflections(Texture const* UTILS_NULLABLE cubemap) noexcept;
 
         /**
          * Sets the irradiance as Spherical Harmonics.
@@ -160,7 +162,7 @@ public:
          * Because the coefficients are pre-scaled, `sh[0]` is the environment's
          * average irradiance.
          */
-        Builder& irradiance(uint8_t bands, math::float3 const* sh) noexcept;
+        Builder& irradiance(uint8_t bands, math::float3 const* UTILS_NONNULL sh) noexcept;
 
         /**
          * Sets the irradiance from the radiance expressed as Spherical Harmonics.
@@ -192,7 +194,7 @@ public:
          *
          * @return This Builder, for chaining calls.
          */
-        Builder& radiance(uint8_t bands, math::float3 const* sh) noexcept;
+        Builder& radiance(uint8_t bands, math::float3 const* UTILS_NONNULL sh) noexcept;
 
         /**
          * Sets the irradiance as a cubemap.
@@ -211,7 +213,7 @@ public:
          *
          * @see irradiance(uint8_t bands, math::float3 const* sh)
          */
-        Builder& irradiance(Texture const* cubemap) noexcept;
+        Builder& irradiance(Texture const* UTILS_NULLABLE cubemap) noexcept;
 
         /**
          * (optional) Environment intensity.
@@ -247,7 +249,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        IndirectLight* build(Engine& engine);
+        IndirectLight* UTILS_NONNULL build(Engine& engine);
 
     private:
         friend class FIndirectLight;
@@ -284,12 +286,12 @@ public:
     /**
      * Returns the associated reflection map, or null if it does not exist.
      */
-    Texture const* getReflectionsTexture() const noexcept;
+    Texture const* UTILS_NULLABLE getReflectionsTexture() const noexcept;
 
     /**
      * Returns the associated irradiance map, or null if it does not exist.
      */
-    Texture const* getIrradianceTexture() const noexcept;
+    Texture const* UTILS_NULLABLE getIrradianceTexture() const noexcept;
 
     /**
      * Helper to estimate the direction of the dominant light in the environment represented by
@@ -312,7 +314,7 @@ public:
      * @see LightManager::Builder::direction()
      * @see getColorEstimate()
      */
-    static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
+    static math::float3 getDirectionEstimate(const math::float3 sh[UTILS_NONNULL 9]) noexcept;
 
     /**
      * Helper to estimate the color and relative intensity of the environment represented by
@@ -332,7 +334,8 @@ public:
      * @see LightManager::Builder::intensity()
      * @see getDirectionEstimate, getIntensity, setIntensity
      */
-    static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
+    static math::float4 getColorEstimate(const math::float3 sh[UTILS_NONNULL 9],
+            math::float3 direction) noexcept;
 
 
     /** @deprecated use static versions instead */

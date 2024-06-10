@@ -22,6 +22,9 @@
 #include <utils/debug.h>
 
 #include <map>
+#include <utility>
+
+#include <stddef.h>
 
 namespace utils {
 
@@ -116,7 +119,8 @@ public:
      */
     const ValueType& get(KeyType key) const {
         ConstIterator iter = findRange(key);
-        ASSERT_PRECONDITION(iter != end(), "RangeMap: No element exists at the given key.");
+        FILAMENT_CHECK_PRECONDITION(iter != end())
+                << "RangeMap: No element exists at the given key.";
         return getValue(iter);
     }
 

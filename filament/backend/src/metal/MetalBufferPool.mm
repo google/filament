@@ -19,6 +19,7 @@
 #include "MetalContext.h"
 
 #include <utils/Panic.h>
+#include <utils/Log.h>
 #include <utils/trap.h>
 
 #include <thread>
@@ -41,15 +42,20 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
     }
 
     // We were not able to find a sufficiently large stage, so create a new one.
-    id<MTLBuffer> buffer = [mContext.device newBufferWithLength:numBytes
-                                                        options:MTLResourceStorageModeShared];
-    ASSERT_POSTCONDITION(buffer, "Could not allocate Metal staging buffer of size %zu.", numBytes);
-    MetalBufferPoolEntry* stage = new MetalBufferPoolEntry({
-        .buffer = buffer,
+    id<MTLBuffer> buffer = nil;
+    {
+        ScopedAllocationTimer timer("staging");
+        buffer = [mContext.device newBufferWithLength:numBytes
+                                              options:MTLResourceStorageModeShared];
+    }
+    FILAMENT_CHECK_POSTCONDITION(buffer)
+            << "Could not allocate Metal staging buffer of size " << numBytes << ".";
+    MetalBufferPoolEntry* stage = new MetalBufferPoolEntry {
+        .buffer = { buffer, TrackedMetalBuffer::Type::STAGING },
         .capacity = numBytes,
         .lastAccessed = mCurrentFrame,
         .referenceCount = 1
-    });
+    };
     mUsedStages.insert(stage);
 
     return stage;

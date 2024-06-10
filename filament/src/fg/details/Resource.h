@@ -84,7 +84,8 @@ public:
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
-    virtual void devirtualize(ResourceAllocatorInterface& resourceAllocator) noexcept = 0;
+    virtual void devirtualize(ResourceAllocatorInterface& resourceAllocator,
+            bool useProtectedMemory) noexcept = 0;
 
     /* Destroy the concrete resource */
     virtual void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept = 0;
@@ -132,7 +133,7 @@ public:
     Descriptor descriptor;
     SubResourceDescriptor subResourceDescriptor;
 
-    // weather the resource was detached
+    // whether the resource was detached
     bool detached = false;
 
     // An Edge with added data from this resource
@@ -229,9 +230,10 @@ protected:
         delete static_cast<ResourceEdge *>(edge);
     }
 
-    void devirtualize(ResourceAllocatorInterface& resourceAllocator) noexcept override {
+    void devirtualize(ResourceAllocatorInterface& resourceAllocator,
+            bool useProtectedMemory) noexcept override {
         if (!isSubResource()) {
-            resource.create(resourceAllocator, name, descriptor, usage);
+            resource.create(resourceAllocator, name, descriptor, usage, useProtectedMemory);
         } else {
             // resource is guaranteed to be initialized before we are by construction
             resource = static_cast<Resource const*>(parent)->resource;
@@ -268,7 +270,7 @@ public:
     }
 
 protected:
-    void devirtualize(ResourceAllocatorInterface&) noexcept override {
+    void devirtualize(ResourceAllocatorInterface&, bool) noexcept override {
         // imported resources don't need to devirtualize
     }
     void destroy(ResourceAllocatorInterface&) noexcept override {
@@ -294,9 +296,10 @@ protected:
 private:
     UTILS_NOINLINE
     void assertConnect(FrameGraphTexture::Usage u) {
-        ASSERT_PRECONDITION((u & this->usage) == u,
-                "Requested usage %s not available on imported resource \"%s\" with usage %s",
-                utils::to_string(u).c_str(), this->name, utils::to_string(this->usage).c_str());
+        FILAMENT_CHECK_PRECONDITION((u & this->usage) == u)
+                << "Requested usage " << utils::to_string(u).c_str()
+                << " not available on imported resource \"" << this->name << "\" with usage "
+                << utils::to_string(this->usage).c_str();
     }
 };
 

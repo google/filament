@@ -30,7 +30,12 @@
 
 #include <math/mathfwd.h>
 
+#include <type_traits>
+#include <utility>
+
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 namespace utils {
     class CString;
@@ -50,11 +55,11 @@ class UTILS_PUBLIC Material : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    using BlendingMode = BlendingMode;
-    using Shading = Shading;
-    using Interpolation = Interpolation;
-    using VertexDomain = VertexDomain;
-    using TransparencyMode = TransparencyMode;
+    using BlendingMode = filament::BlendingMode;
+    using Shading = filament::Shading;
+    using Interpolation = filament::Interpolation;
+    using VertexDomain = filament::VertexDomain;
+    using TransparencyMode = filament::TransparencyMode;
 
     using ParameterType = backend::UniformType;
     using Precision = backend::Precision;
@@ -69,7 +74,7 @@ public:
      */
     struct ParameterInfo {
         //! Name of the parameter.
-        const char* name;
+        const char* UTILS_NONNULL name;
         //! Whether the parameter is a sampler (texture).
         bool isSampler;
         //! Whether the parameter is a subpass type.
@@ -105,7 +110,7 @@ public:
          * @param payload Pointer to the material data, must stay valid until build() is called.
          * @param size Size of the material data pointed to by "payload" in bytes.
          */
-        Builder& package(const void* payload, size_t size);
+        Builder& package(const void* UTILS_NONNULL payload, size_t size);
 
         template<typename T>
         using is_supported_constant_parameter_t = typename std::enable_if<
@@ -127,11 +132,11 @@ public:
          *              in the material definition.
          */
         template<typename T, typename = is_supported_constant_parameter_t<T>>
-        Builder& constant(const char* name, size_t nameLength, T value);
+        Builder& constant(const char* UTILS_NONNULL name, size_t nameLength, T value);
 
         /** inline helper to provide the constant name as a null-terminated C string */
         template<typename T, typename = is_supported_constant_parameter_t<T>>
-        inline Builder& constant(const char* name, T value) {
+        inline Builder& constant(const char* UTILS_NONNULL name, T value) {
             return constant(name, strlen(name), value);
         }
 
@@ -147,7 +152,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Material* build(Engine& engine);
+        Material* UTILS_NULLABLE build(Engine& engine);
     private:
         friend class FMaterial;
     };
@@ -193,22 +198,22 @@ public:
      */
     void compile(CompilerPriorityQueue priority,
             UserVariantFilterMask variants,
-            backend::CallbackHandler* handler = nullptr,
-            utils::Invocable<void(Material*)>&& callback = {}) noexcept;
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {}) noexcept;
 
     inline void compile(CompilerPriorityQueue priority,
             UserVariantFilterBit variants,
-            backend::CallbackHandler* handler = nullptr,
-            utils::Invocable<void(Material*)>&& callback = {}) noexcept {
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {}) noexcept {
         compile(priority, UserVariantFilterMask(variants), handler,
-                std::forward<utils::Invocable<void(Material*)>>(callback));
+                std::forward<utils::Invocable<void(Material* UTILS_NONNULL)>>(callback));
     }
 
     inline void compile(CompilerPriorityQueue priority,
-            backend::CallbackHandler* handler = nullptr,
-            utils::Invocable<void(Material*)>&& callback = {}) noexcept {
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
+            utils::Invocable<void(Material* UTILS_NONNULL)>&& callback = {}) noexcept {
         compile(priority, UserVariantFilterBit::ALL, handler,
-                std::forward<utils::Invocable<void(Material*)>>(callback));
+                std::forward<utils::Invocable<void(Material* UTILS_NONNULL)>>(callback));
     }
 
     /**
@@ -220,13 +225,13 @@ public:
      *
      * @return A pointer to the new instance.
      */
-    MaterialInstance* createInstance(const char* name = nullptr) const noexcept;
+    MaterialInstance* UTILS_NONNULL createInstance(const char* UTILS_NULLABLE name = nullptr) const noexcept;
 
     //! Returns the name of this material as a null-terminated string.
-    const char* getName() const noexcept;
+    const char* UTILS_NONNULL getName() const noexcept;
 
     //! Returns the shading model of this material.
-    Shading getShading()  const noexcept;
+    Shading getShading() const noexcept;
 
     //! Returns the interpolation mode of this material. This affects how variables are interpolated.
     Interpolation getInterpolation() const noexcept;
@@ -312,13 +317,13 @@ public:
      *
      * @return The number of parameters written to the parameters pointer.
      */
-    size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
+    size_t getParameters(ParameterInfo* UTILS_NONNULL parameters, size_t count) const noexcept;
 
     //! Indicates whether a parameter of the given name exists on this material.
-    bool hasParameter(const char* name) const noexcept;
+    bool hasParameter(const char* UTILS_NONNULL name) const noexcept;
 
     //! Indicates whether an existing parameter is a sampler or not.
-    bool isSampler(const char* name) const noexcept;
+    bool isSampler(const char* UTILS_NONNULL name) const noexcept;
 
     /**
      * Sets the value of the given parameter on this material's default instance.
@@ -329,7 +334,7 @@ public:
      * @see getDefaultInstance()
      */
     template <typename T>
-    void setDefaultParameter(const char* name, T value) noexcept {
+    void setDefaultParameter(const char* UTILS_NONNULL name, T value) noexcept {
         getDefaultInstance()->setParameter(name, value);
     }
 
@@ -342,8 +347,8 @@ public:
      *
      * @see getDefaultInstance()
      */
-    void setDefaultParameter(const char* name, Texture const* texture,
-            TextureSampler const& sampler) noexcept {
+    void setDefaultParameter(const char* UTILS_NONNULL name,
+            Texture const* UTILS_NULLABLE texture, TextureSampler const& sampler) noexcept {
         getDefaultInstance()->setParameter(name, texture, sampler);
     }
 
@@ -356,7 +361,7 @@ public:
      *
      * @see getDefaultInstance()
      */
-    void setDefaultParameter(const char* name, RgbType type, math::float3 color) noexcept {
+    void setDefaultParameter(const char* UTILS_NONNULL name, RgbType type, math::float3 color) noexcept {
         getDefaultInstance()->setParameter(name, type, color);
     }
 
@@ -369,15 +374,15 @@ public:
      *
      * @see getDefaultInstance()
      */
-    void setDefaultParameter(const char* name, RgbaType type, math::float4 color) noexcept {
+    void setDefaultParameter(const char* UTILS_NONNULL name, RgbaType type, math::float4 color) noexcept {
         getDefaultInstance()->setParameter(name, type, color);
     }
 
     //! Returns this material's default instance.
-    MaterialInstance* getDefaultInstance() noexcept;
+    MaterialInstance* UTILS_NONNULL getDefaultInstance() noexcept;
 
     //! Returns this material's default instance.
-    MaterialInstance const* getDefaultInstance() const noexcept;
+    MaterialInstance const* UTILS_NONNULL getDefaultInstance() const noexcept;
 
 protected:
     // prevent heap allocation

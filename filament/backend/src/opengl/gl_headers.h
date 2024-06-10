@@ -112,6 +112,7 @@ namespace glext {
 // it is currently called from PlatformEGL.
 void importGLESExtensionsEntryPoints();
 
+#ifndef __EMSCRIPTEN__
 #ifdef GL_OES_EGL_image
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
@@ -150,9 +151,13 @@ extern PFNGLDISCARDFRAMEBUFFEREXTPROC glDiscardFramebufferEXT;
 #ifdef GL_KHR_parallel_shader_compile
 extern PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
 #endif
+#ifdef GL_OVR_multiview
+extern PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
+#endif
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 #endif
+#endif // __EMSCRIPTEN__
 } // namespace glext
 
 using namespace glext;
@@ -190,8 +195,10 @@ using namespace glext;
 
 #if defined(GL_EXT_clip_cull_distance)
 #   define GL_CLIP_DISTANCE0                        GL_CLIP_DISTANCE0_EXT
+#   define GL_CLIP_DISTANCE1                        GL_CLIP_DISTANCE1_EXT
 #else
 #   define GL_CLIP_DISTANCE0                        0x3000
+#   define GL_CLIP_DISTANCE1                        0x3001
 #endif
 
 #if defined(GL_KHR_debug)

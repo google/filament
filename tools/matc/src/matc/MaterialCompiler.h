@@ -70,6 +70,8 @@ private:
     bool compileRawShader(const char* glsl, size_t size, bool isDebug, Config::Output* output,
                 const char* ext) const noexcept;
 
+    bool processMaterialParameters(filamat::MaterialBuilder& builder, const Config& config) const;
+
     // Member function pointer type, this is used to implement a Command design
     // pattern.
     using MaterialConfigProcessor = bool (MaterialCompiler::*)

@@ -56,7 +56,7 @@ void RenderableManager::destroy(utils::Entity e) noexcept {
     return downcast(this)->destroy(e);
 }
 
-void RenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) noexcept {
+void RenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) {
     downcast(this)->setAxisAlignedBoundingBox(instance, aabb);
 }
 
@@ -162,6 +162,11 @@ void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
         MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) {
     downcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex,
             downcast(morphTargetBuffer), offset, count);
+}
+
+void RenderableManager::setMorphTargetBufferAt(
+        Instance instance, uint8_t level, size_t primitiveIndex, size_t offset, size_t count) {
+    downcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex, offset, count);
 }
 
 MorphTargetBuffer* RenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,

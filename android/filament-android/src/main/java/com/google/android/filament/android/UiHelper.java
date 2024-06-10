@@ -27,7 +27,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.TextureView;
 
-import com.google.android.filament.SwapChain;
+import com.google.android.filament.SwapChainFlags;
 
 /**
  * UiHelper is a simple class that can manage either a SurfaceView, TextureView, or a SurfaceHolder
@@ -182,28 +182,85 @@ public class UiHelper {
         void detach();
     }
 
-    private static class SurfaceViewHandler implements RenderSurface {
-        private final SurfaceView mSurfaceView;
+    private class SurfaceViewHandler implements RenderSurface, SurfaceHolder.Callback {
+        @NonNull private final SurfaceView mSurfaceView;
 
-        SurfaceViewHandler(SurfaceView surface) {
-            mSurfaceView = surface;
+        SurfaceViewHandler(@NonNull SurfaceView surfaceView) {
+            mSurfaceView = surfaceView;
+
+            @NonNull SurfaceHolder holder = surfaceView.getHolder();
+            holder.addCallback(this);
+
+            if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                holder.setFixedSize(mDesiredWidth, mDesiredHeight);
+            }
+
+            // in case the SurfaceView's surface already existed
+            final Surface surface = holder.getSurface();
+            if (surface != null && surface.isValid()) {
+                surfaceCreated(holder);
+                // there is no way to retrieve the actual PixelFormat, since it is not used
+                // in the callback, we can use whatever we want.
+                surfaceChanged(holder, PixelFormat.RGBA_8888,
+                    holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
+            }
         }
 
         @Override
         public void resize(int width, int height) {
-            mSurfaceView.getHolder().setFixedSize(width, height);
+            @NonNull SurfaceHolder holder = mSurfaceView.getHolder();
+            holder.setFixedSize(width, height);
         }
 
         @Override
         public void detach() {
+            @NonNull SurfaceHolder holder = mSurfaceView.getHolder();
+            holder.removeCallback(this);
+        }
+
+        @Override
+        public void surfaceCreated(@NonNull SurfaceHolder holder) {
+            if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
+            createSwapChain(holder.getSurface());
+        }
+
+        @Override
+        public void surfaceChanged(
+            @NonNull SurfaceHolder holder, int format, int width, int height) {
+            // Note: this is always called at least once after surfaceCreated()
+            if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
+            if (mRenderCallback != null) {
+                mRenderCallback.onResized(width, height);
+            }
+        }
+
+        @Override
+        public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+            if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
+            destroySwapChain();
         }
     }
 
-    private static class SurfaceHolderHandler implements RenderSurface {
+    private class SurfaceHolderHandler implements RenderSurface, SurfaceHolder.Callback {
         private final SurfaceHolder mSurfaceHolder;
 
-        SurfaceHolderHandler(SurfaceHolder surface) {
-            mSurfaceHolder = surface;
+        SurfaceHolderHandler(@NonNull SurfaceHolder holder) {
+            mSurfaceHolder = holder;
+            holder.addCallback(this);
+
+            if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                holder.setFixedSize(mDesiredWidth, mDesiredHeight);
+            }
+
+            // in case the SurfaceHolder's surface already existed
+            final Surface surface = holder.getSurface();
+            if (surface != null && surface.isValid()) {
+                surfaceCreated(holder);
+                // there is no way to retrieve the actual PixelFormat, since it is not used
+                // in the callback, we can use whatever we want.
+                surfaceChanged(holder, PixelFormat.RGBA_8888,
+                    holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
+            }
         }
 
         @Override
@@ -213,19 +270,55 @@ public class UiHelper {
 
         @Override
         public void detach() {
+            mSurfaceHolder.removeCallback(this);
+        }
+
+        @Override
+        public void surfaceCreated(@NonNull SurfaceHolder holder) {
+            if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
+            createSwapChain(holder.getSurface());
+        }
+
+        @Override
+        public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+            // Note: this is always called at least once after surfaceCreated()
+            if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
+            if (mRenderCallback != null) {
+                mRenderCallback.onResized(width, height);
+            }
+        }
+
+        @Override
+        public void surfaceDestroyed(@NonNull SurfaceHolder surfaceHolder) {
+            if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
+            destroySwapChain();
         }
     }
 
-    private class TextureViewHandler implements RenderSurface {
+    private class TextureViewHandler implements RenderSurface, TextureView.SurfaceTextureListener {
         private final TextureView mTextureView;
         private Surface mSurface;
 
-        TextureViewHandler(TextureView surface) { mTextureView = surface; }
+        TextureViewHandler(@NonNull TextureView view) {
+            mTextureView = view;
+            mTextureView.setSurfaceTextureListener(this);
+            // in case the View's SurfaceTexture already existed
+            if (view.isAvailable()) {
+                SurfaceTexture surfaceTexture = view.getSurfaceTexture();
+                if (surfaceTexture != null) {
+                    this.onSurfaceTextureAvailable(surfaceTexture,
+                        mDesiredWidth, mDesiredHeight);
+                }
+            }
+        }
 
         @Override
         public void resize(int width, int height) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-                mTextureView.getSurfaceTexture().setDefaultBufferSize(width, height);
+                final SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
+                if (surfaceTexture != null) {
+                    surfaceTexture.setDefaultBufferSize(width, height);
+                }
             }
             if (mRenderCallback != null) {
                 // the call above won't cause TextureView.onSurfaceTextureSizeChanged()
@@ -235,10 +328,69 @@ public class UiHelper {
 
         @Override
         public void detach() {
-            setSurface(null);
+            mTextureView.setSurfaceTextureListener(null);
         }
 
-        void setSurface(Surface surface) {
+
+        @Override
+        public void onSurfaceTextureAvailable(
+            @NonNull SurfaceTexture surfaceTexture, int width, int height) {
+            if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureAvailable()");
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+                if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                    surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                }
+            }
+
+            final Surface surface = new Surface(surfaceTexture);
+            setSurface(surface);
+            createSwapChain(surface);
+
+            if (mRenderCallback != null) {
+                // Call this the first time because onSurfaceTextureSizeChanged()
+                // isn't called at initialization time
+                mRenderCallback.onResized(width, height);
+            }
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(
+            @NonNull SurfaceTexture surfaceTexture, int width, int height) {
+            if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureSizeChanged()");
+            if (mRenderCallback != null) {
+                if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                    surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                    mRenderCallback.onResized(mDesiredWidth, mDesiredHeight);
+                } else {
+                    mRenderCallback.onResized(width, height);
+                }
+                // We must recreate the SwapChain to guarantee that it sees the new size.
+                // More precisely, for an EGL client, the EGLSurface must be recreated. For
+                // a Vulkan client, the SwapChain must be recreated. Calling
+                // onNativeWindowChanged() will accomplish that.
+                // This requirement comes from SurfaceTexture.setDefaultBufferSize()
+                // documentation.
+                final Surface surface = getSurface();
+                if (surface != null) {
+                    mRenderCallback.onNativeWindowChanged(surface);
+                }
+            }
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
+            if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureDestroyed()");
+            setSurface(null);
+            destroySwapChain();
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) { }
+
+
+        private void setSurface(@Nullable Surface surface) {
             if (surface == null) {
                 if (mSurface != null) {
                     mSurface.release();
@@ -247,7 +399,7 @@ public class UiHelper {
             mSurface = surface;
         }
 
-        public Surface getSurface() {
+        private Surface getSurface() {
             return mSurface;
         }
     }
@@ -293,6 +445,9 @@ public class UiHelper {
      * {@link #attachTo(TextureView)}, or {@link #attachTo(SurfaceHolder)}.
      */
     public void detach() {
+        if (mRenderSurface != null) {
+            mRenderSurface.detach();
+        }
         destroySwapChain();
         mNativeWindow = null;
         mRenderSurface = null;
@@ -383,7 +538,7 @@ public class UiHelper {
      * the options set on this UiHelper.
      */
     public long getSwapChainFlags() {
-        return isOpaque() ? SwapChain.CONFIG_DEFAULT : SwapChain.CONFIG_TRANSPARENT;
+        return isOpaque() ? SwapChainFlags.CONFIG_DEFAULT : SwapChainFlags.CONFIG_TRANSPARENT;
     }
 
     /**
@@ -402,48 +557,8 @@ public class UiHelper {
                 view.setZOrderOnTop(translucent);
             }
 
-            int format = isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT;
-            view.getHolder().setFormat(format);
-
+            view.getHolder().setFormat(isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT);
             mRenderSurface = new SurfaceViewHandler(view);
-
-            final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
-                @Override
-                public void surfaceCreated(@NonNull SurfaceHolder holder) {
-                    if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
-                    createSwapChain(holder.getSurface());
-                }
-
-                @Override
-                public void surfaceChanged(
-                    @NonNull SurfaceHolder holder, int format, int width, int height) {
-                    // Note: this is always called at least once after surfaceCreated()
-                    if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
-                    if (mRenderCallback != null) {
-                        mRenderCallback.onResized(width, height);
-                    }
-                }
-
-                @Override
-                public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
-                    if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
-                    destroySwapChain();
-                }
-            };
-
-            SurfaceHolder holder = view.getHolder();
-            holder.addCallback(callback);
-            if (mDesiredWidth > 0 && mDesiredHeight > 0) {
-                holder.setFixedSize(mDesiredWidth, mDesiredHeight);
-            }
-
-            // in case the SurfaceView's surface already existed
-            final Surface surface = holder.getSurface();
-            if (surface != null && surface.isValid()) {
-                callback.surfaceCreated(holder);
-                callback.surfaceChanged(holder, format,
-                        holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
-            }
         }
     }
 
@@ -455,76 +570,7 @@ public class UiHelper {
     public void attachTo(@NonNull TextureView view) {
         if (attach(view)) {
             view.setOpaque(isOpaque());
-
             mRenderSurface = new TextureViewHandler(view);
-
-            TextureView.SurfaceTextureListener listener = new TextureView.SurfaceTextureListener() {
-                @Override
-                public void onSurfaceTextureAvailable(
-                    @NonNull SurfaceTexture surfaceTexture, int width, int height) {
-                    if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureAvailable()");
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-                        if (mDesiredWidth > 0 && mDesiredHeight > 0) {
-                            surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
-                        }
-                    }
-
-                    Surface surface = new Surface(surfaceTexture);
-                    TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
-                    textureViewHandler.setSurface(surface);
-
-                    createSwapChain(surface);
-
-                    if (mRenderCallback != null) {
-                        // Call this the first time because onSurfaceTextureSizeChanged()
-                        // isn't called at initialization time
-                        mRenderCallback.onResized(width, height);
-                    }
-                }
-
-                @Override
-                public void onSurfaceTextureSizeChanged(
-                    @NonNull SurfaceTexture surfaceTexture, int width, int height) {
-                    if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureSizeChanged()");
-                    if (mRenderCallback != null) {
-                        if (mDesiredWidth > 0 && mDesiredHeight > 0) {
-                            surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
-                            mRenderCallback.onResized(mDesiredWidth, mDesiredHeight);
-                        } else {
-                            mRenderCallback.onResized(width, height);
-                        }
-                        // We must recreate the SwapChain to guarantee that it sees the new size.
-                        // More precisely, for an EGL client, the EGLSurface must be recreated. For
-                        // a Vulkan client, the SwapChain must be recreated. Calling
-                        // onNativeWindowChanged() will accomplish that.
-                        // This requirement comes from SurfaceTexture.setDefaultBufferSize()
-                        // documentation.
-                        TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
-                        mRenderCallback.onNativeWindowChanged(textureViewHandler.getSurface());
-                    }
-                }
-
-                @Override
-                public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
-                    if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureDestroyed()");
-                    destroySwapChain();
-                    return true;
-                }
-
-                @Override
-                public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) { }
-            };
-
-            view.setSurfaceTextureListener(listener);
-
-            // in case the View's SurfaceTexture already existed
-            if (view.isAvailable()) {
-                SurfaceTexture surfaceTexture = view.getSurfaceTexture();
-                if (surfaceTexture != null) {
-                    listener.onSurfaceTextureAvailable(surfaceTexture, mDesiredWidth, mDesiredHeight);
-                }
-            }
         }
     }
 
@@ -535,46 +581,8 @@ public class UiHelper {
      */
     public void attachTo(@NonNull SurfaceHolder holder) {
         if (attach(holder)) {
-            int format = isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT;
-            holder.setFormat(format);
-
+            holder.setFormat(isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT);
             mRenderSurface = new SurfaceHolderHandler(holder);
-
-            final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
-                @Override
-                public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
-                    if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
-                    createSwapChain(holder.getSurface());
-                }
-
-                @Override
-                public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
-                    // Note: this is always called at least once after surfaceCreated()
-                    if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
-                    if (mRenderCallback != null) {
-                        mRenderCallback.onResized(width, height);
-                    }
-                }
-
-                @Override
-                public void surfaceDestroyed(@NonNull SurfaceHolder surfaceHolder) {
-                    if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
-                    destroySwapChain();
-                }
-            };
-
-            holder.addCallback(callback);
-            if (mDesiredWidth > 0 && mDesiredHeight > 0) {
-                holder.setFixedSize(mDesiredWidth, mDesiredHeight);
-            }
-
-            // in case the SurfaceHolder's surface already existed
-            final Surface surface = holder.getSurface();
-            if (surface != null && surface.isValid()) {
-                callback.surfaceCreated(holder);
-                callback.surfaceChanged(holder, format,
-                        holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
-            }
         }
     }
 
@@ -584,6 +592,10 @@ public class UiHelper {
             if (mNativeWindow == nativeWindow) {
                 // nothing to do
                 return false;
+            }
+            if (mRenderSurface != null) {
+                mRenderSurface.detach();
+                mRenderSurface = null;
             }
             destroySwapChain();
         }
@@ -599,9 +611,6 @@ public class UiHelper {
     }
 
     private void destroySwapChain() {
-        if (mRenderSurface != null) {
-            mRenderSurface.detach();
-        }
         if (mRenderCallback != null) {
             mRenderCallback.onDetachedFromSurface();
         }

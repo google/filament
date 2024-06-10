@@ -49,16 +49,17 @@ void NoopDriver::terminate() {
 void NoopDriver::tick(int) {
 }
 
-void NoopDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void NoopDriver::beginFrame(int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs, uint32_t frameId) {
 }
 
 void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        FrameScheduledCallback callback, void* user) {
+        CallbackHandler* handler, FrameScheduledCallback&& callback) {
 
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
 
 }
 
@@ -75,6 +76,9 @@ void NoopDriver::finish(int) {
 }
 
 void NoopDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+}
+
+void NoopDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
 }
 
 void NoopDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -174,12 +178,28 @@ bool NoopDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool NoopDriver::isProtectedContentSupported() {
+    return false;
+}
+
 bool NoopDriver::isStereoSupported() {
     return false;
 }
 
 bool NoopDriver::isParallelShaderCompileSupported() {
     return false;
+}
+
+bool NoopDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
+bool NoopDriver::isDepthStencilBlitSupported(TextureFormat format) {
+    return true;
+}
+
+bool NoopDriver::isProtectedTexturesSupported() {
+    return true;
 }
 
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
@@ -237,8 +257,8 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
 void NoopDriver::setupExternalImage(void* image) {
 }
 
-bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return false;
+TimerQueryResult NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    return TimerQueryResult::ERROR;
 }
 
 void NoopDriver::setExternalImage(Handle<HwTexture> th, void* image) {
@@ -251,10 +271,6 @@ void NoopDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
 void NoopDriver::generateMipmaps(Handle<HwTexture> th) { }
-
-bool NoopDriver::canGenerateMipmaps() {
-    return true;
-}
 
 void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         BufferDescriptor&& data) {
@@ -296,6 +312,10 @@ void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
 void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
+void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
+        backend::PushConstantVariant value) {
+}
+
 void NoopDriver::insertEventMarker(char const* string, uint32_t len) {
 }
 
@@ -322,17 +342,41 @@ void NoopDriver::readBufferSubData(backend::BufferObjectHandle boh,
     scheduleDestroy(std::move(p));
 }
 
-void NoopDriver::blit(TargetBufferFlags buffers,
+void NoopDriver::blitDEPRECATED(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect,
         SamplerMagFilter filter) {
 }
 
+void NoopDriver::resolve(
+        Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer,
+        Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer) {
+}
+
+void NoopDriver::blit(
+        Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
+        Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
+        math::uint2 size) {
+}
+
+void NoopDriver::bindPipeline(PipelineState const& pipelineState) {
+}
+
+void NoopDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+}
+
+void NoopDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+}
+
 void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        uint32_t instanceCount) {
+        uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
 }
 
 void NoopDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+}
+
+void NoopDriver::scissor(
+        Viewport scissor) {
 }
 
 void NoopDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

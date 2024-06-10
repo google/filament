@@ -430,8 +430,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDebugCamera->lookAt(eye, center, up);
 
         // Update the cube distortion matrix used for frustum visualization.
-        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalLightCamera();
-        lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalShadowCamera();
+        if (lightmapCamera) {
+            lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        }
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
         // Delay rendering for roughly one monitor refresh interval
@@ -448,18 +450,33 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
         }
 
+        if (mReconfigureCameras) {
+            window->configureCamerasForWindow();
+            mReconfigureCameras = false;
+        }
+
+        if (config.splitView) {
+            if(!window->mOrthoView->getView()->hasCamera()) {
+                Camera const* debugDirectionalShadowCamera =
+                        window->mMainView->getView()->getDirectionalShadowCamera();
+                if (debugDirectionalShadowCamera) {
+                    window->mOrthoView->setCamera(
+                            const_cast<Camera*>(debugDirectionalShadowCamera));
+                }
+            }
+        }
+
         if (renderer->beginFrame(window->getSwapChain())) {
-            for (filament::View* offscreenView : mOffscreenViews) {
+            for (filament::View* offscreenView: mOffscreenViews) {
                 renderer->render(offscreenView);
             }
-            for (auto const& view : window->mViews) {
+            for (auto const& view: window->mViews) {
                 renderer->render(view->getView());
             }
             if (postRender) {
                 postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
             }
             renderer->endFrame();
-
         } else {
             ++mSkippedFrames;
         }
@@ -561,14 +578,14 @@ void FilamentApp::loadDirt(const Config& config) {
 }
 
 void FilamentApp::initSDL() {
-    ASSERT_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0, "SDL_Init Failure");
+    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
 }
 
 // ------------------------------------------------------------------------------------------------
 
 FilamentApp::Window::Window(FilamentApp* filamentApp,
         const Config& config, std::string title, size_t w, size_t h)
-        : mFilamentApp(filamentApp), mIsHeadless(config.headless) {
+        : mFilamentApp(filamentApp), mConfig(config), mIsHeadless(config.headless) {
     const int x = SDL_WINDOWPOS_CENTERED;
     const int y = SDL_WINDOWPOS_CENTERED;
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
@@ -596,6 +613,16 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
             }
         #endif
 
+        Engine::Config engineConfig = {};
+        engineConfig.stereoscopicEyeCount = config.stereoscopicEyeCount;
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)
+        engineConfig.stereoscopicType = Engine::StereoscopicType::INSTANCED;
+#elif defined (FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        engineConfig.stereoscopicType = Engine::StereoscopicType::MULTIVIEW;
+#else
+        engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
+#endif
+
         if (backend == Engine::Backend::VULKAN) {
             #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
                 mFilamentApp->mVulkanPlatform =
@@ -604,12 +631,14 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
                         .backend(backend)
                         .platform(mFilamentApp->mVulkanPlatform)
                         .featureLevel(config.featureLevel)
+                        .config(&engineConfig)
                         .build();
             #endif
         }
         return Engine::Builder()
                 .backend(backend)
                 .featureLevel(config.featureLevel)
+                .config(&engineConfig)
                 .build();
     };
 
@@ -657,6 +686,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mSwapChain = mFilamentApp->mEngine->createSwapChain(
                 nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
+
     mRenderer = mFilamentApp->mEngine->createRenderer();
 
     // create cameras
@@ -703,7 +733,10 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mGodView->setCameraManipulator(mDebugCameraMan);
 
         // Ortho view obviously uses an ortho camera
-        mOrthoView->setCamera( (Camera *)mMainView->getView()->getDirectionalLightCamera() );
+        Camera const* debugDirectionalShadowCamera = mMainView->getView()->getDirectionalShadowCamera();
+        if (debugDirectionalShadowCamera) {
+            mOrthoView->setCamera(const_cast<Camera *>(debugDirectionalShadowCamera));
+        }
     }
 
     // configure the cameras
@@ -875,12 +908,23 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
-    mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
+    if (mMainView->getView()->getStereoscopicOptions().enabled) {
+        mat4 projections[4];
+        projections[0] = Camera::projection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
+        projections[1] = projections[0];
+        // simulate foveated rendering
+        projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, 1.0, near, far);
+        projections[3] = projections[2];
+        mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
+    } else {
+        mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
+    }
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
 
     auto aspectRatio = double(mainWidth) / height;
     if (mMainView->getView()->getStereoscopicOptions().enabled) {
-        aspectRatio = double(mainWidth) / 2.0 / height;
+        const int ec = mConfig.stereoscopicEyeCount;
+        aspectRatio = double(mainWidth) / ec / height;
     }
     mMainCamera->setScaling({1.0 / aspectRatio, 1.0});
 

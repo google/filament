@@ -30,11 +30,12 @@
 #include <math/vec4.h>
 
 #include <utils/JobSystem.h>
-#include <utils/SpinLock.h>
+#include <utils/Mutex.h>
 #include <utils/Systrace.h>
 
 #include <cmath>
 #include <cstdlib>
+#include <mutex>
 #include <tuple>
 
 namespace filament {
@@ -648,9 +649,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     Config c;
     // This lock protects the data inside Config, which is written to by the Filament thread,
     // and read from multiple Job threads.
-    utils::SpinLock configLock;
+    utils::Mutex configLock;
     {
-        std::lock_guard<utils::SpinLock> lock(configLock);
+        std::lock_guard<utils::Mutex> const lock(configLock);
         c.lutDimension          = builder->dimension;
         c.adaptationTransform   = adaptationTransform(builder->whiteBalance);
         c.colorGradingIn        = selectColorGradingTransformIn(builder->toneMapping);
@@ -687,7 +688,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 [data, converted, b, &c, &configLock, builder](JobSystem&, JobSystem::Job*) {
             Config config;
             {
-                std::lock_guard<utils::SpinLock> lock(configLock);
+                std::lock_guard<utils::Mutex> lock(configLock);
                 config = c;
             }
             half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;

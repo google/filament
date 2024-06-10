@@ -217,8 +217,8 @@ void normalizeImpl(LinearImage& image) {
 }
 
 void normalize(LinearImage& image) {
-    ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
-                        "Must be a 3 or 4 channel image");
+    FILAMENT_CHECK_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4)
+            << "Must be a 3 or 4 channel image";
     if (image.getChannels() == 3) {
       normalizeImpl< filament::math::float3>(image);
     } else {
@@ -288,11 +288,10 @@ SingleSample::~SingleSample() {
 
 LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t height,
         const ImageSampler& sampler) {
-    ASSERT_PRECONDITION(
-        sampler.east.mode == Boundary::EXCLUDE &&
-        sampler.north.mode == Boundary::EXCLUDE &&
-        sampler.west.mode == Boundary::EXCLUDE &&
-        sampler.south.mode == Boundary::EXCLUDE, "Not yet implemented.");
+    FILAMENT_CHECK_PRECONDITION(sampler.east.mode == Boundary::EXCLUDE &&
+            sampler.north.mode == Boundary::EXCLUDE && sampler.west.mode == Boundary::EXCLUDE &&
+            sampler.south.mode == Boundary::EXCLUDE)
+            << "Not yet implemented.";
     const auto hfilter = sampler.horizontalFilter;
     const auto vfilter = sampler.verticalFilter;
     const float radius = sampler.filterRadiusMultiplier;

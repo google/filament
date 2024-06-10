@@ -21,6 +21,8 @@
 
 #include <math/mathfwd.h>
 
+#include <cstdint>
+
 namespace filament {
 
 /**
@@ -37,10 +39,12 @@ namespace filament {
  *
  * - Configurable tone mapping operators
  *   - GenericToneMapper
+ *   - AgXToneMapper
  * - Fixed-aesthetic tone mapping operators
  *   - ACESToneMapper
  *   - ACESLegacyToneMapper
  *   - FilmicToneMapper
+ *   - PBRNeutralToneMapper
  * - Debug/validation tone mapping operators
  *   - LinearToneMapper
  *   - DisplayRangeToneMapper
@@ -116,10 +120,21 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
 };
 
 /**
+ * Khronos PBR Neutral tone mapping operator. This tone mapper was designed
+ * to preserve the appearance of materials across lighting conditions while
+ * avoiding artifacts in the highlights in high dynamic range conditions.
+ */
+struct UTILS_PUBLIC PBRNeutralToneMapper final : public ToneMapper {
+    PBRNeutralToneMapper() noexcept;
+    ~PBRNeutralToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 x) const noexcept override;
+};
+
+/**
  * AgX tone mapping operator.
  */
 struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
-
     enum class AgxLook : uint8_t {
         NONE = 0,   //!< Base contrast with no look applied
         PUNCHY,     //!< A punchy and more chroma laden look for sRGB displays
@@ -182,9 +197,6 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
 
     /** Returns the contrast of the curve as a strictly positive value. */
     float getContrast() const noexcept;
-
-    /** Returns how fast scene referred values map to output white as a value between 0.0 and 1.0. */
-    float getShoulder() const noexcept;
 
     /** Returns the middle gray point for input values as a value between 0.0 and 1.0. */
     float getMidGrayIn() const noexcept;

@@ -41,6 +41,7 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "emissive",            Property::EMISSIVE },
         { "normal",              Property::NORMAL },
         { "postLightingColor",   Property::POST_LIGHTING_COLOR },
+        { "postLightingMixFactor",  Property::POST_LIGHTING_MIX_FACTOR },
         { "clipSpaceTransform",  Property::CLIP_SPACE_TRANSFORM },
         { "absorption",          Property::ABSORPTION },
         { "transmission",        Property::TRANSMISSION },

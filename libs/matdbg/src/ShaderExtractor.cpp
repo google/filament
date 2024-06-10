@@ -53,6 +53,10 @@ ShaderExtractor::ShaderExtractor(backend::ShaderLanguage target, const void* dat
             mMaterialTag = ChunkType::MaterialMetal;
             mDictionaryTag = ChunkType::DictionaryText;
             break;
+        case backend::ShaderLanguage::METAL_LIBRARY:
+            mMaterialTag = ChunkType::MaterialMetalLibrary;
+            mDictionaryTag = ChunkType::DictionaryMetalLibrary;
+            break;
         case backend::ShaderLanguage::SPIRV:
             mMaterialTag = ChunkType::MaterialSpirv;
             mDictionaryTag = ChunkType::DictionarySpirv;

@@ -19,6 +19,7 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <cstring>
 #include <stddef.h>
 #include <stdint.h>
 

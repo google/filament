@@ -31,6 +31,8 @@
 
 #include "private/backend/SamplerGroup.h"
 
+#include <backend/DriverEnums.h>
+
 #include <utils/bitset.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
@@ -71,9 +73,9 @@ public:
 
     void releaseDrawable();
 
-    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
-    void setFrameCompletedCallback(CallbackHandler* handler,
-            CallbackHandler::Callback callback, void* user);
+    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback);
+    void setFrameCompletedCallback(
+            CallbackHandler* handler, utils::Invocable<void(void)>&& callback);
 
     // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
     // FrameScheduledCallback.
@@ -107,22 +109,23 @@ private:
     NSUInteger headlessWidth = 0;
     NSUInteger headlessHeight = 0;
     CAMetalLayer* layer = nullptr;
+    std::mutex layerDrawableMutex;
     MetalExternalImage externalImage;
     SwapChainType type;
 
-    // These two fields store a callback and user data to notify the client that a frame is ready
-    // for presentation.
-    // If frameScheduledCallback is nullptr, then the Metal backend automatically calls
-    // presentDrawable when the frame is committed.
-    // Otherwise, the Metal backend will not automatically present the frame. Instead, clients bear
-    // the responsibility of presenting the frame by calling the PresentCallable object.
-    FrameScheduledCallback frameScheduledCallback = nullptr;
-    void* frameScheduledUserData = nullptr;
+    // These fields store a callback to notify the client that a frame is ready for presentation. If
+    // !frameScheduled.callback, then the Metal backend automatically calls presentDrawable when the
+    // frame is committed. Otherwise, the Metal backend will not automatically present the frame.
+    // Instead, clients bear the responsibility of presenting the frame by calling the
+    // PresentCallable object.
+    struct {
+        CallbackHandler* handler = nullptr;
+        std::shared_ptr<FrameScheduledCallback> callback = nullptr;
+    } frameScheduled;
 
     struct {
         CallbackHandler* handler = nullptr;
-        CallbackHandler::Callback callback = {};
-        void* user = nullptr;
+        std::shared_ptr<utils::Invocable<void(void)>> callback = nullptr;
     } frameCompleted;
 };
 
@@ -145,28 +148,9 @@ private:
     MetalBuffer buffer;
 };
 
-struct MetalVertexBuffer : public HwVertexBuffer {
-    MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes);
-
-    utils::FixedCapacityVector<MetalBuffer*> buffers;
-};
-
-struct MetalIndexBuffer : public HwIndexBuffer {
-    MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
-            uint32_t indexCount);
-
-    MetalBuffer buffer;
-};
-
-struct MetalRenderPrimitive : public HwRenderPrimitive {
-    MetalRenderPrimitive();
-    void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
-    // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
-    // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
-
-    MetalVertexBuffer* vertexBuffer = nullptr;
-    MetalIndexBuffer* indexBuffer = nullptr;
+struct MetalVertexBufferInfo : public HwVertexBufferInfo {
+    MetalVertexBufferInfo(MetalContext& context,
+            uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes);
 
     // This struct is used to create the pipeline description to describe vertex assembly.
     VertexDescription vertexDescription = {};
@@ -183,6 +167,32 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
                   bufferArgumentIndex(bufferArgumentIndex) {}
     };
     utils::FixedCapacityVector<Entry> bufferMapping;
+};
+
+struct MetalVertexBuffer : public HwVertexBuffer {
+    MetalVertexBuffer(MetalContext& context,
+            uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih);
+
+    Handle<HwVertexBufferInfo> vbih;
+    utils::FixedCapacityVector<MetalBuffer*> buffers;
+};
+
+struct MetalIndexBuffer : public HwIndexBuffer {
+    MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
+            uint32_t indexCount);
+
+    MetalBuffer buffer;
+};
+
+struct MetalRenderPrimitive : public HwRenderPrimitive {
+    MetalRenderPrimitive();
+    void setBuffers(MetalVertexBufferInfo const* const vbi,
+            MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
+    // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
+    // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
+
+    MetalVertexBuffer* vertexBuffer = nullptr;
+    MetalIndexBuffer* indexBuffer = nullptr;
 };
 
 class MetalProgram : public HwProgram {

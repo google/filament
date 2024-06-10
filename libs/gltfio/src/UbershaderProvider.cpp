@@ -393,6 +393,7 @@ const char* toString(BlendingMode blendingMode) noexcept {
         case BlendingMode::FADE: return "fade";
         case BlendingMode::MULTIPLY: return "multiply";
         case BlendingMode::SCREEN: return "screen";
+        case BlendingMode::CUSTOM: return "custom";
     }
 }
 

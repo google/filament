@@ -30,10 +30,12 @@
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 #include <private/filament/ConstantInfo.h>
+#include <private/filament/PushConstantInfo.h>
 
 #include <utils/CString.h>
 
 #include <stdlib.h>
+#include <optional>
 
 using namespace utils;
 using namespace filament::backend;
@@ -42,31 +44,30 @@ using namespace filamat;
 
 namespace filament {
 
-// ------------------------------------------------------------------------------------------------
-
-MaterialParser::MaterialParserDetails::MaterialParserDetails(ShaderLanguage language, const void* data, size_t size)
-        : mManagedBuffer(data, size),
-          mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
-          mMaterialChunk(mChunkContainer) {
+constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage language) {
     switch (language) {
         case ShaderLanguage::ESSL3:
-            mMaterialTag = ChunkType::MaterialGlsl;
-            mDictionaryTag = ChunkType::DictionaryText;
-            break;
+            return { ChunkType::MaterialGlsl, ChunkType::DictionaryText };
         case ShaderLanguage::ESSL1:
-            mMaterialTag = ChunkType::MaterialEssl1;
-            mDictionaryTag = ChunkType::DictionaryText;
-            break;
+            return { ChunkType::MaterialEssl1, ChunkType::DictionaryText };
         case ShaderLanguage::MSL:
-            mMaterialTag = ChunkType::MaterialMetal;
-            mDictionaryTag = ChunkType::DictionaryText;
-            break;
+            return { ChunkType::MaterialMetal, ChunkType::DictionaryText };
         case ShaderLanguage::SPIRV:
-            mMaterialTag = ChunkType::MaterialSpirv;
-            mDictionaryTag = ChunkType::DictionarySpirv;
-            break;
+            return { ChunkType::MaterialSpirv, ChunkType::DictionarySpirv };
+        case ShaderLanguage::METAL_LIBRARY:
+            return { ChunkType::MaterialMetalLibrary, ChunkType::DictionaryMetalLibrary };
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialParser::MaterialParserDetails::MaterialParserDetails(
+        const utils::FixedCapacityVector<ShaderLanguage>& preferredLanguages, const void* data,
+        size_t size)
+    : mManagedBuffer(data, size),
+      mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
+      mPreferredLanguages(preferredLanguages),
+      mMaterialChunk(mChunkContainer) {}
 
 template<typename T>
 UTILS_NOINLINE
@@ -83,9 +84,9 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialParser::MaterialParser(ShaderLanguage language, const void* data, size_t size)
-        : mImpl(language, data, size) {
-}
+MaterialParser::MaterialParser(utils::FixedCapacityVector<ShaderLanguage> preferredLanguages,
+        const void* data, size_t size)
+    : mImpl(preferredLanguages, data, size) {}
 
 ChunkContainer& MaterialParser::getChunkContainer() noexcept {
     return mImpl.mChunkContainer;
@@ -100,18 +101,38 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
     if (UTILS_UNLIKELY(!cc.parse())) {
         return ParseResult::ERROR_OTHER;
     }
-    const ChunkType matTag = mImpl.mMaterialTag;
-    const ChunkType dictTag = mImpl.mDictionaryTag;
-    if (UTILS_UNLIKELY(!cc.hasChunk(matTag) || !cc.hasChunk(dictTag))) {
+
+    using MaybeShaderLanguageAndChunks =
+            std::optional<std::tuple<ShaderLanguage, ChunkType, ChunkType>>;
+    auto chooseLanguage = [this, &cc]() -> MaybeShaderLanguageAndChunks {
+        for (auto language : mImpl.mPreferredLanguages) {
+            const auto [matTag, dictTag] = shaderLanguageToTags(language);
+            if (cc.hasChunk(matTag) && cc.hasChunk(dictTag)) {
+                return std::make_tuple(language, matTag, dictTag);
+            }
+        }
+        return {};
+    };
+    const auto result = chooseLanguage();
+
+    if (!result.has_value()) {
         return ParseResult::ERROR_MISSING_BACKEND;
     }
+
+    const auto [chosenLanguage, matTag, dictTag] = result.value();
     if (UTILS_UNLIKELY(!DictionaryReader::unflatten(cc, dictTag, mImpl.mBlobDictionary))) {
         return ParseResult::ERROR_OTHER;
     }
     if (UTILS_UNLIKELY(!mImpl.mMaterialChunk.initialize(matTag))) {
         return ParseResult::ERROR_OTHER;
     }
+
+    mImpl.mChosenLanguage = chosenLanguage;
     return ParseResult::SUCCESS;
+}
+
+backend::ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
+    return mImpl.mChosenLanguage;
 }
 
 // Accessors
@@ -205,6 +226,14 @@ bool MaterialParser::getConstants(utils::FixedCapacityVector<MaterialConstant>* 
     return ChunkMaterialConstants::unflatten(unflattener, value);
 }
 
+bool MaterialParser::getPushConstants(utils::CString* structVarName,
+        utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(filamat::MaterialPushConstants);
+    if (start == end) return false;
+    Unflattener unflattener(start, end);
+    return ChunkMaterialPushConstants::unflatten(unflattener, structVarName, value);
+}
+
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
 }
@@ -275,6 +304,16 @@ bool MaterialParser::getBlendingMode(BlendingMode* value) const noexcept {
     static_assert(sizeof(BlendingMode) == sizeof(uint8_t),
             "BlendingMode expected size is wrong");
     return mImpl.getFromSimpleChunk(ChunkType::MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
+}
+
+bool MaterialParser::getCustomBlendFunction(std::array<BlendFunction, 4>* value) const noexcept {
+    uint32_t blendFunctions = 0;
+    bool const result =  mImpl.getFromSimpleChunk(ChunkType::MaterialBlendFunction, &blendFunctions);
+    (*value)[0] = BlendFunction((blendFunctions >> 24) & 0xFF);
+    (*value)[1] = BlendFunction((blendFunctions >> 16) & 0xFF);
+    (*value)[2] = BlendFunction((blendFunctions >>  8) & 0xFF);
+    (*value)[3] = BlendFunction((blendFunctions >>  0) & 0xFF);
+    return result;
 }
 
 bool MaterialParser::getMaskThreshold(float* value) const noexcept {
@@ -676,6 +715,48 @@ bool ChunkMaterialConstants::unflatten(filaflat::Unflattener& unflattener,
         (*materialConstants)[i].type = static_cast<backend::ConstantType>(constantType);
     }
 
+    return true;
+}
+
+bool ChunkMaterialPushConstants::unflatten(filaflat::Unflattener& unflattener,
+        utils::CString* structVarName,
+        utils::FixedCapacityVector<MaterialPushConstant>* materialPushConstants) {
+    assert_invariant(materialPushConstants);
+
+    if (!unflattener.read(structVarName)) {
+        return false;
+    }
+
+    // Read number of constants.
+    uint64_t numConstants = 0;
+    if (!unflattener.read(&numConstants)) {
+        return false;
+    }
+
+    materialPushConstants->reserve(numConstants);
+    materialPushConstants->resize(numConstants);
+
+    for (uint64_t i = 0; i < numConstants; i++) {
+        CString constantName;
+        uint8_t constantType = 0;
+        uint8_t shaderStage = 0;
+
+        if (!unflattener.read(&constantName)) {
+            return false;
+        }
+
+        if (!unflattener.read(&constantType)) {
+            return false;
+        }
+
+        if (!unflattener.read(&shaderStage)) {
+            return false;
+        }
+
+        (*materialPushConstants)[i].name = constantName;
+        (*materialPushConstants)[i].type = static_cast<backend::ConstantType>(constantType);
+        (*materialPushConstants)[i].stage = static_cast<backend::ShaderStage>(shaderStage);
+    }
     return true;
 }
 

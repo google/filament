@@ -26,6 +26,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
+import com.google.android.filament.Material
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
 import com.google.android.filament.View.OnPickCallback
@@ -392,6 +393,36 @@ class MainActivity : Activity() {
                     Log.i(TAG, "The Filament backend took $total ms to load the model geometry.")
                     modelViewer.engine.destroyFence(it)
                     loadStartFence = null
+
+                    val materials = mutableSetOf<Material>()
+                    val rcm = modelViewer.engine.renderableManager
+                    modelViewer.scene.forEach {
+                        val entity = it
+                        if (rcm.hasComponent(entity)) {
+                            val ri = rcm.getInstance(entity)
+                            val c = rcm.getPrimitiveCount(ri)
+                            for (i in 0 until c) {
+                                val mi = rcm.getMaterialInstanceAt(ri, i)
+                                val ma = mi.material
+                                materials.add(ma)
+                            }
+                        }
+                    }
+                    materials.forEach {
+                        it.compile(
+                            Material.CompilerPriorityQueue.HIGH,
+                            Material.UserVariantFilterBit.DIRECTIONAL_LIGHTING or
+                            Material.UserVariantFilterBit.DYNAMIC_LIGHTING or
+                            Material.UserVariantFilterBit.SHADOW_RECEIVER,
+                            null, null)
+                        it.compile(
+                            Material.CompilerPriorityQueue.LOW,
+                            Material.UserVariantFilterBit.FOG or
+                            Material.UserVariantFilterBit.SKINNING or
+                            Material.UserVariantFilterBit.SSR or
+                            Material.UserVariantFilterBit.VSM,
+                            null, null)
+                    }
                 }
             }
 

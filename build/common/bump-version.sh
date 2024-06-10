@@ -50,7 +50,7 @@ function replace {
     FIND_STR="${1//\{\{VERSION\}\}/${VERSION_REGEX}}"
     REPLACE_STR="${1//\{\{VERSION\}\}/${NEW_VERSION}}"
     local FILE_NAME="$2"
-    if [ IS_DARWIN ]; then
+    if [ $IS_DARWIN == 1 ]; then
         sed -i '' -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
     else
         sed -i -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"

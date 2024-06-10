@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANBLITTER_H
 #define TNT_FILAMENT_BACKEND_VULKANBLITTER_H
 
+#include "VulkanCommands.h"
 #include "VulkanContext.h"
 
 #include <utils/compiler.h>
@@ -32,46 +33,19 @@ struct VulkanProgram;
 
 class VulkanBlitter {
 public:
-    VulkanBlitter(VulkanStagePool& stagePool, VulkanPipelineCache& pipelineCache,
-            VulkanFboCache& fboCache, VulkanSamplerCache& samplerCache) noexcept;
+    VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept;
 
-    void initialize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator,
-            VulkanCommands* commands, VulkanTexture* emptyTexture) noexcept;
+    void blit(VkFilter filter,
+            VulkanAttachment dst, const VkOffset3D* dstRectPair,
+            VulkanAttachment src, const VkOffset3D* srcRectPair);
 
-    struct BlitArgs {
-        const VulkanRenderTarget* dstTarget;
-        const VkOffset3D* dstRectPair;
-        const VulkanRenderTarget* srcTarget;
-        const VkOffset3D* srcRectPair;
-        VkFilter filter = VK_FILTER_NEAREST;
-        int targetIndex = 0;
-    };
-
-    void blitColor(BlitArgs args);
-    void blitDepth(BlitArgs args);
+    void resolve(VulkanAttachment dst, VulkanAttachment src);
 
     void terminate() noexcept;
 
 private:
-    void lazyInit() noexcept;
-
-    void blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, VulkanAttachment src,
-            VulkanAttachment dst, const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]);
-
-    VulkanBuffer* mTriangleBuffer = nullptr;
-    VulkanBuffer* mParamsBuffer = nullptr;
-    VulkanProgram* mDepthResolveProgram = nullptr;
-
     UTILS_UNUSED VkPhysicalDevice mPhysicalDevice;
-    VkDevice mDevice;
-    VmaAllocator mAllocator;
     VulkanCommands* mCommands;
-    VulkanTexture* mEmptyTexture;
-
-    VulkanStagePool& mStagePool;
-    VulkanPipelineCache& mPipelineCache;
-    VulkanFboCache& mFramebufferCache;
-    VulkanSamplerCache& mSamplerCache;
 };
 
 } // namespace filament::backend

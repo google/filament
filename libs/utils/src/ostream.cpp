@@ -24,16 +24,48 @@
 #include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
+#include <mutex>
 #include <string>
 #include <string_view>
+#include <utility>
 
+#include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 template class utils::PrivateImplementation<utils::io::ostream_>;
 
 namespace utils::io {
 
 ostream::~ostream() = default;
+
+void ostream::setConsumer(ConsumerCallback consumer, void* user) noexcept {
+    auto* const pImpl = mImpl;
+    std::lock_guard const lock(pImpl->mLock);
+    pImpl->mConsumer = { consumer, user };
+}
+
+ostream& flush(ostream& s) noexcept {
+    auto* const pImpl = s.mImpl;
+    pImpl->mLock.lock();
+    auto const callback = pImpl->mConsumer;
+    if (UTILS_UNLIKELY(callback.first)) {
+        auto& buf = s.getBuffer();
+        char const* const data = buf.get();
+        if (UTILS_LIKELY(data)) {
+            char* const str = strdup(data);
+            buf.reset();
+            pImpl->mLock.unlock();
+            // call ConsumerCallback without lock held
+            callback.first(callback.second, str);
+            ::free(str);
+            return s;
+        }
+    }
+    pImpl->mLock.unlock();
+
+    return s.flush();
+}
 
 ostream::Buffer& ostream::getBuffer() noexcept {
     return mImpl->mData;
@@ -69,12 +101,12 @@ ostream& ostream::print(const char* format, ...) noexcept {
     // figure out how much size to we need
     va_start(args0, format);
     va_copy(args1, args0);
-    ssize_t s = vsnprintf(nullptr, 0, format, args0);
+    ssize_t const s = vsnprintf(nullptr, 0, format, args0);
     va_end(args0);
 
 
     { // scope for the lock
-        std::lock_guard lock(mImpl->mLock);
+        std::lock_guard const lock(mImpl->mLock);
 
         Buffer& buf = getBuffer();
 
@@ -205,14 +237,14 @@ ostream::Buffer::~Buffer() noexcept {
 
 void ostream::Buffer::advance(ssize_t n) noexcept {
     if (n > 0) {
-        size_t written = n < size ? size_t(n) : size;
+        size_t const written = n < size ? size_t(n) : size;
         curr += written;
         size -= written;
     }
 }
 
 void ostream::Buffer::reserve(size_t newSize) noexcept {
-    size_t offset = curr - buffer;
+    size_t const offset = curr - buffer;
     if (buffer == nullptr) {
         buffer = (char*)malloc(newSize);
     } else {
@@ -235,10 +267,14 @@ void ostream::Buffer::reset() noexcept {
     size = capacity;
 }
 
+size_t ostream::Buffer::length() const noexcept {
+    return curr - buffer;
+}
+
 std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
     if (UTILS_UNLIKELY(size < s)) {
-        size_t used = curr - buffer;
-        size_t newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
+        size_t const used = curr - buffer;
+        size_t const newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
         reserve(newCapacity);
         assert(size >= s);
     }

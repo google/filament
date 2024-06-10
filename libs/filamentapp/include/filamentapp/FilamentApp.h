@@ -85,6 +85,8 @@ public:
             PostRenderCallback postRender = PostRenderCallback(),
             size_t width = 1024, size_t height = 640);
 
+    void reconfigureCameras() { mReconfigureCameras = true; }
+
     filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }
@@ -189,6 +191,7 @@ private:
         void fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) const;
 
         FilamentApp* const mFilamentApp = nullptr;
+        Config mConfig;
         const bool mIsHeadless;
 
         SDL_Window* mWindow = nullptr;
@@ -251,6 +254,7 @@ private:
     float mCameraFocalLength = 28.0f;
     float mCameraNear = 0.1f;
     float mCameraFar = 100.0f;
+    bool mReconfigureCameras = false;
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     filament::backend::VulkanPlatform* mVulkanPlatform = nullptr;

@@ -76,7 +76,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f worldFromViewMatrix;    // clip    view -> world    : model matrix
     math::mat4f clipFromViewMatrix;     // clip <- view    world    : projection matrix
     math::mat4f viewFromClipMatrix;     // clip -> view    world    : inverse projection matrix
-    math::mat4f clipFromWorldMatrix[CONFIG_STEREOSCOPIC_EYES]; // clip <- view <- world
+    math::mat4f clipFromWorldMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip <- view <- world
     math::mat4f worldFromClipMatrix;    // clip -> view -> world
     math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
     math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
@@ -99,6 +99,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     float lodBias;                  // load bias to apply to user materials
     float refractionLodOffset;
+    math::float2 derivativesScale;
 
     // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
     float oneOverFarMinusNear;      // 1 / (f-n), always positive
@@ -111,8 +112,6 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // AO
     float aoSamplingQualityAndEdgeDistance;     // <0: no AO, 0: bilinear, !0: bilateral edge distance
     float aoBentNormals;                        // 0: no AO bent normal, >0.0 AO bent normals
-    float aoReserved0;
-    float aoReserved1;
 
     // --------------------------------------------------------------------------------------------
     // Dynamic Lighting [variant: DYN]
@@ -203,7 +202,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[48];
+    math::float4 reserved[40];
 };
 
 // 2 KiB == 128 float4s
@@ -328,8 +327,9 @@ struct PerRenderableBoneUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     struct alignas(16) BoneData {
         // bone transform, last row assumed [0,0,0,1]
         math::float4 transform[3];
-        // 8 first cofactor matrix of transform's upper left
-        math::uint4 cof;
+        // 4 first cofactor matrix of transform's upper left
+        math::float3 cof0;
+        float cof1x;
     };
     BoneData bones[CONFIG_MAX_BONE_COUNT];
 };

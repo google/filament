@@ -39,7 +39,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "worldFromViewMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromViewMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "clipFromWorldMatrix",    CONFIG_STEREOSCOPIC_EYES,
+            { "clipFromWorldMatrix",    CONFIG_MAX_STEREOSCOPIC_EYES,
                                            Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -60,6 +60,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "lodBias",                0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "refractionLodOffset",    0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "derivativesScale",       0, Type::FLOAT2                  },
 
             { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "nearOverFarMinusNear",   0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -71,8 +72,6 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // AO
             { "aoSamplingQualityAndEdgeDistance", 0, Type::FLOAT         },
             { "aoBentNormals",          0, Type::FLOAT                   },
-            { "aoReserved0",            0, Type::FLOAT                   },
-            { "aoReserved1",            0, Type::FLOAT                   },
 
             // ------------------------------------------------------------------------------------
             // Dynamic Lighting [variant: DYN]

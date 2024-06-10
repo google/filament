@@ -18,6 +18,17 @@
 
 #include "OpenGLDriverFactory.h"
 
+#include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+
+#include <utils/compiler.h>
+
+#include <utils/Invocable.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
 namespace filament::backend {
 
 Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
@@ -27,12 +38,35 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
+void OpenGLPlatform::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
+        utils::Invocable<void()>, utils::Invocable<void(size_t)>) noexcept {
+    makeCurrent(getCurrentContextType(), drawSwapChain, readSwapChain);
+}
+
+bool OpenGLPlatform::isProtectedContextSupported() const noexcept {
+    return false;
+}
+
 bool OpenGLPlatform::isSRGBSwapChainSupported() const noexcept {
     return false;
 }
 
-uint32_t OpenGLPlatform::createDefaultRenderTarget() noexcept {
+uint32_t OpenGLPlatform::getDefaultFramebufferObject() noexcept {
     return 0;
+}
+
+void OpenGLPlatform::beginFrame(int64_t monotonic_clock_ns, int64_t refreshIntervalNs,
+        uint32_t frameId) noexcept {
+}
+
+void OpenGLPlatform::endFrame(uint32_t frameId) noexcept {
+}
+
+void OpenGLPlatform::preCommit() noexcept {
+}
+
+OpenGLPlatform::ContextType OpenGLPlatform::getCurrentContextType() const noexcept {
+    return ContextType::UNPROTECTED;
 }
 
 void OpenGLPlatform::setPresentationTime(
@@ -105,8 +139,12 @@ AcquiredImage OpenGLPlatform::transformAcquiredImage(AcquiredImage source) noexc
     return source;
 }
 
-TargetBufferFlags OpenGLPlatform::getPreservedFlags(UTILS_UNUSED SwapChain* swapChain) noexcept {
+TargetBufferFlags OpenGLPlatform::getPreservedFlags(UTILS_UNUSED SwapChain*) noexcept {
     return TargetBufferFlags::NONE;
+}
+
+bool OpenGLPlatform::isSwapChainProtected(UTILS_UNUSED SwapChain*) noexcept {
+    return false;
 }
 
 bool OpenGLPlatform::isExtraContextSupported() const noexcept {

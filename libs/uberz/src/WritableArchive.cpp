@@ -76,6 +76,8 @@ static string_view readBlendingMode(string_view cursor, BlendingMode* blending) 
         *blending = BlendingMode::MULTIPLY;
     } else if (sz = readPrefix("screen"sv, cursor); sz > 0) {
         *blending = BlendingMode::SCREEN;
+    } else if (sz = readPrefix("custom"sv, cursor); sz > 0) {
+        *blending = BlendingMode::CUSTOM;
     }
     return { cursor.data(), sz };
 }

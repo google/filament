@@ -43,6 +43,7 @@ public:
             MaterialBuilder::OutputList const& outputs,
             MaterialBuilder::PreprocessorDefineList const& defines,
             MaterialBuilder::ConstantList const& constants,
+            MaterialBuilder::PushConstantList const& pushConstants,
             utils::CString const& materialCode,
             size_t lineOffset,
             utils::CString const& materialVertexCode,
@@ -75,6 +76,7 @@ public:
      * the optimizations have been applied.
      */
     static void fixupExternalSamplers(filament::backend::ShaderModel sm, std::string& shader,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material) noexcept;
 
 private:
@@ -110,12 +112,21 @@ private:
     static void appendShader(utils::io::sstream& ss,
             const utils::CString& shader, size_t lineOffset) noexcept;
 
+    static bool hasSkinningOrMorphing(
+            filament::Variant variant,
+            MaterialBuilder::FeatureLevel featureLevel) noexcept;
+
+    static bool hasStereo(
+            filament::Variant variant,
+            MaterialBuilder::FeatureLevel featureLevel) noexcept;
+
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;
     MaterialBuilder::OutputList mOutputs;
     MaterialBuilder::MaterialDomain mMaterialDomain;
     MaterialBuilder::PreprocessorDefineList mDefines;
     MaterialBuilder::ConstantList mConstants;
+    MaterialBuilder::PushConstantList mPushConstants;
     utils::CString mMaterialFragmentCode;   // fragment or compute code
     utils::CString mMaterialVertexCode;
     size_t mMaterialLineOffset;

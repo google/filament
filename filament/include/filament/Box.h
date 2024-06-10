@@ -21,10 +21,14 @@
 
 #include <utils/compiler.h>
 
-#include <limits>
-
+#include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <float.h>
+
+#include <stddef.h>
 
 namespace filament {
 
@@ -70,7 +74,7 @@ public:
      * @return This bounding box
      */
     Box& set(const math::float3& min, const math::float3& max) noexcept {
-        // float3 ctor needed for visual studio
+        // float3 ctor needed for Visual Studio
         center     = (max + min) * math::float3(0.5f);
         halfExtent = (max - min) * math::float3(0.5f);
         return *this;
@@ -130,17 +134,17 @@ public:
 struct UTILS_PUBLIC Aabb {
 
     /** min coordinates */
-    math::float3 min = std::numeric_limits<float>::max();
+    math::float3 min = FLT_MAX;
 
     /** max coordinates */
-    math::float3 max = std::numeric_limits<float>::lowest();
+    math::float3 max = -FLT_MAX;
 
     /**
      * Computes the center of the box.
      * @return (max + min)/2
      */
     math::float3 center() const noexcept {
-        // float3 ctor needed for visual studio
+        // float3 ctor needed for Visual Studio
         return (max + min) * math::float3(0.5f);
     }
 
@@ -149,7 +153,7 @@ struct UTILS_PUBLIC Aabb {
      * @return (max - min)/2
      */
     math::float3 extent() const noexcept {
-        // float3 ctor needed for visual studio
+        // float3 ctor needed for Visual Studio
         return (max - min) * math::float3(0.5f);
     }
 
@@ -198,12 +202,14 @@ struct UTILS_PUBLIC Aabb {
      * @return the maximum signed distance to the box. Negative if p is in the box
      */
     float contains(math::float3 p) const noexcept {
+        // we don't use std::max to avoid a dependency on <algorithm>
+        auto const maximum = [](auto a, auto b) { return a > b ? a : b; };
         float d = min.x - p.x;
-        d = std::max(d, min.y - p.y);
-        d = std::max(d, min.z - p.z);
-        d = std::max(d, p.x - max.x);
-        d = std::max(d, p.y - max.y);
-        d = std::max(d, p.z - max.z);
+        d = maximum(d, min.y - p.y);
+        d = maximum(d, min.z - p.z);
+        d = maximum(d, p.x - max.x);
+        d = maximum(d, p.y - max.y);
+        d = maximum(d, p.z - max.z);
         return d;
     }
 

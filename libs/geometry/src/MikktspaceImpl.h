@@ -47,6 +47,16 @@ public:
     void run(TangentSpaceMeshOutput* output) noexcept;
 
 private:
+    // sizeof(float3 + float2 + quatf) (pos, uv, tangent)
+    static constexpr size_t const FLOAT3_SIZE = sizeof(float3);
+    static constexpr size_t const FLOAT2_SIZE = sizeof(float2);
+    static constexpr size_t const QUATF_SIZE = sizeof(quatf);
+
+    static constexpr size_t const POS_OFFSET = 0;
+    static constexpr size_t const UV_OFFSET = FLOAT3_SIZE;
+    static constexpr size_t const TBN_OFFSET = FLOAT3_SIZE + FLOAT2_SIZE;
+    static constexpr size_t const BASE_OUTPUT_SIZE = FLOAT3_SIZE + FLOAT2_SIZE + QUATF_SIZE;
+
     static int getNumFaces(SMikkTSpaceContext const* context) noexcept;
     static int getNumVerticesOfFace(SMikkTSpaceContext const* context, int const iFace) noexcept;
     static void getPosition(SMikkTSpaceContext const* context, float fvPosOut[], int const iFace,
@@ -72,7 +82,17 @@ private:
     uint8_t const* mTriangles;
     bool mIsTriangle16;
 
-    std::vector<IOVertex> mOutVertices;
+    struct InputAttribute {
+        AttributeImpl attrib;
+        uint8_t const* data;
+        size_t stride;
+        size_t size;
+    };
+    std::vector<InputAttribute> mInputAttribArrays;
+
+    size_t mOutputElementSize;
+    std::vector<uint8_t> mOutputData;
+    std::vector<uint8_t> EMPTY_ELEMENT;
 };
 
 }// namespace filament::geometry

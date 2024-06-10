@@ -16,6 +16,7 @@
 
 package com.google.android.filament;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 /**
@@ -190,6 +191,52 @@ public class Scene {
         return mNativeObject;
     }
 
+    /**
+     * Returns the list of all entities in the Scene. If outArray is provided and large enough,
+     * it is used to store the list and returned, otherwise a new array is allocated and returned.
+     * @param outArray an array to store the list of entities in the scene.
+     * @return outArray if it was used or a newly allocated array.
+     * @see #getEntityCount
+     */
+    public int[] getEntities(@Nullable int[] outArray) {
+        int c = getEntityCount();
+        if (outArray == null || outArray.length < c) {
+            outArray = new int[c];
+        }
+        boolean success = nGetEntities(getNativeObject(), outArray, outArray.length);
+        if (!success) {
+            throw new IllegalStateException("Error retriving Scene's entities");
+        }
+        return outArray;
+    }
+
+    /**
+     * Returns the list of all entities in the Scene in a newly allocated array.
+     * @return an array containing the list of all entities in the scene.
+     * @see #getEntityCount
+     */
+    public int[] getEntities() {
+        return getEntities(null);
+    }
+
+    public interface EntityProcessor {
+        void process(@Entity int entity);
+    }
+
+    /**
+     * Invokes user functor on each entity in the scene.
+     *
+     * It is not allowed to add or remove an entity from the scene within the functor.
+     *
+     * @param entityProcessor User provided functor called for each entity in the scene
+     */
+    public void forEach(@NonNull EntityProcessor entityProcessor) {
+        int[] entities = getEntities(null);
+        for (int entity : entities) {
+            entityProcessor.process(entity);
+        }
+    }
+
     void clearNativeObject() {
         mNativeObject = 0;
     }
@@ -204,4 +251,5 @@ public class Scene {
     private static native int nGetRenderableCount(long nativeScene);
     private static native int nGetLightCount(long nativeScene);
     private static native boolean nHasEntity(long nativeScene, int entity);
+    private static native boolean nGetEntities(long nativeScene, int[] outArray, int length);
 }

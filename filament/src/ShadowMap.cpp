@@ -16,19 +16,39 @@
 
 #include "ShadowMap.h"
 
-#include "RenderPass.h"
+#include <filament/Box.h>
+#include <filament/Frustum.h>
+#include <filament/LightManager.h>
 
 #include "components/LightManager.h"
 
+#include "details/DebugRegistry.h"
 #include "details/Engine.h"
 #include "details/Scene.h"
 
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Entity.h>
+#include <utils/Slice.h>
 #include <utils/Systrace.h>
 
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/scalar.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <limits>
+#include <type_traits>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace utils;
 
@@ -108,11 +128,13 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         ShadowMapInfo const& shadowMapInfo,
         SceneInfo const& sceneInfo) noexcept {
 
+    // reset the visible shadow status
+    mHasVisibleShadows = false;
+
     FLightManager const& lcm = engine.getLightManager();
     FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     FLightManager::ShadowParams const params = lcm.getShadowParams(li);
 
-    // We can't use LISPSM in stable mode
     const auto direction = lightData.elementAt<FScene::SHADOW_DIRECTION>(index);
 
     auto [Mv, znear, zfar, lsClippedShadowVolume, vertexCount, visibleShadows] =
@@ -137,6 +159,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
      */
 
     mat4f W, Wp, L;
+    // We can't use LISPSM in stable mode
     const bool useLispsm = params.options.lispsm && !params.options.stable;
     if (useLispsm) {
         // Orient the shadow map in the direction of the view vector by constructing a
@@ -236,7 +259,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 ShadowMap::ShaderParameters ShadowMap::updatePunctual(
         mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
         const ShadowMapInfo& shadowMapInfo, const FLightManager::ShadowParams& params) noexcept {
-    const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
+    const mat4f Mp = mat4f::perspective(
+            outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
 
     assert_invariant(shadowMapInfo.textureDimension == mOptions->mapSize);
 

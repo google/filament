@@ -15,10 +15,10 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-14, ubuntu-22.04]
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
@@ -32,7 +32,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
@@ -40,10 +40,10 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -54,10 +54,10 @@ jobs:
 
   build-ios:
     name: build-iOS
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
@@ -67,10 +67,10 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh presubmit

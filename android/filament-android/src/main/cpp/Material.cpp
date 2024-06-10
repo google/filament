@@ -19,6 +19,7 @@
 #include <filament/Material.h>
 
 #include "common/NioUtils.h"
+#include "common/CallbackUtils.h"
 
 using namespace filament;
 
@@ -270,4 +271,18 @@ Java_com_google_android_filament_Material_nHasParameter(JNIEnv* env, jclass,
     bool hasParameter = material->hasParameter(name);
     env->ReleaseStringUTFChars(name_, name);
     return (jboolean) hasParameter;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Material_nCompile(JNIEnv *env, jclass clazz,
+        jlong nativeMaterial, jint priority, jint variants, jobject handler, jobject runnable) {
+    Material* material = (Material*) nativeMaterial;
+    JniCallback* jniCallback = JniCallback::make(env, handler, runnable);
+    material->compile(
+            (Material::CompilerPriorityQueue) priority,
+            (UserVariantFilterBit) variants,
+            jniCallback->getHandler(), [jniCallback](Material*){
+                JniCallback::postToJavaAndDestroy(jniCallback);
+            });
 }

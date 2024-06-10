@@ -34,6 +34,7 @@
 #include "ParametersProcessor.h"
 
 #include <GlslangToSpv.h>
+#include "glslang/Include/intermediate.h"
 
 #include "sca/builtinResource.h"
 
@@ -228,7 +229,9 @@ static bool reflectParameters(const MaterialBuilder& builder) {
             std::cout << R"(      "format": ")" <<
                       Enums::toString(parameter.format) << "\"," << std::endl;
             std::cout << R"(      "precision": ")" <<
-                      Enums::toString(parameter.precision) << "\"" << std::endl;
+                      Enums::toString(parameter.precision) << "\"," << std::endl;
+            std::cout << R"(      "multisample": ")" <<
+                      (parameter.multisample ? "true" : "false")<< "\"" << std::endl;
         } else if (parameter.isUniform()) {
             std::cout << R"(      "type": ")" <<
                       Enums::toString(parameter.uniformType) << "\"," << std::endl;
@@ -398,6 +401,7 @@ bool MaterialCompiler::run(const Config& config) {
 
     builder
         .noSamplerValidation(config.noSamplerValidation())
+        .includeEssl1(config.includeEssl1())
         .includeCallback(includer)
         .fileName(materialFilePath.getName().c_str())
         .platform(config.getPlatform())
@@ -409,6 +413,11 @@ bool MaterialCompiler::run(const Config& config) {
 
     for (const auto& define : config.getDefines()) {
         builder.shaderDefine(define.first.c_str(), define.second.c_str());
+    }
+
+    if (!processMaterialParameters(builder, config)) {
+        std::cerr << "Error while processing material parameters." << std::endl;
+        return false;
     }
 
     JobSystem js;
@@ -614,6 +623,16 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
     output->close();
 
     return true;
+}
+
+bool MaterialCompiler::processMaterialParameters(filamat::MaterialBuilder& builder,
+        const Config& config) const {
+    ParametersProcessor parametersProcessor;
+    bool ok = true;
+    for (const auto& param : config.getMaterialParameters()) {
+        ok &= parametersProcessor.process(builder, param.first, param.second);
+    }
+    return ok;
 }
 
 } // namespace matc

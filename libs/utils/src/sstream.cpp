@@ -15,6 +15,9 @@
  */
 
 #include <utils/sstream.h>
+#include <utils/ostream.h>
+
+#include "ostream_.h"
 
 namespace utils::io {
 
@@ -26,6 +29,10 @@ utils::io::ostream& sstream::flush() noexcept {
 const char* sstream::c_str() const noexcept {
     char const* buffer = getBuffer().get();
     return buffer ? buffer : "";
+}
+
+size_t sstream::length() const noexcept {
+    return getBuffer().length();
 }
 
 } // namespace utils::io

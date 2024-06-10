@@ -15,6 +15,7 @@
  */
 
 #import "FILViewController.h"
+#include <UIKit/UIKit.h>
 
 #import "FILModelView.h"
 
@@ -35,6 +36,9 @@ using namespace filament;
 using namespace utils;
 using namespace ktxreader;
 
+const float kToastAnimationDuration = 0.25f;
+const float kToastDelayDuration = 2.0f;
+
 @interface FILViewController ()
 
 - (void)startDisplayLink;
@@ -43,6 +47,9 @@ using namespace ktxreader;
 - (void)createRenderables;
 - (void)createLights;
 
+- (void)appWillResignActive:(NSNotification*)notification;
+- (void)appDidBecomeActive:(NSNotification*)notification;
+
 @end
 
 @implementation FILViewController {
@@ -50,6 +57,7 @@ using namespace ktxreader;
     CFTimeInterval _startTime;
     viewer::RemoteServer* _server;
     viewer::AutomationEngine* _automation;
+    UILabel* _toastLabel;
 
     Texture* _skyboxTexture;
     Skybox* _skybox;
@@ -57,6 +65,7 @@ using namespace ktxreader;
     IndirectLight* _indirectLight;
     Entity _sun;
 
+    UITapGestureRecognizer* _singleTapRecognizer;
     UITapGestureRecognizer* _doubleTapRecognizer;
 }
 
@@ -66,6 +75,16 @@ using namespace ktxreader;
     [super viewDidLoad];
 
     self.title = @"https://google.github.io/filament/remote";
+
+    // Observe lifecycle notifications to prevent us from rendering in the background.
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(appWillResignActive:)
+                                               name:UIApplicationWillResignActiveNotification
+                                             object:nil];
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(appDidBecomeActive:)
+                                               name:UIApplicationDidBecomeActiveNotification
+                                             object:nil];
 
     // Arguments:
     // --model <path>
@@ -94,9 +113,37 @@ using namespace ktxreader;
     _server = new viewer::RemoteServer();
     _automation = viewer::AutomationEngine::createDefault();
 
-    _doubleTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(reloadModel)];
+    _doubleTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                   action:@selector(reloadModel)];
     _doubleTapRecognizer.numberOfTapsRequired = 2;
     [self.modelView addGestureRecognizer:_doubleTapRecognizer];
+    _singleTapRecognizer =
+            [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                    action:@selector(issuePickingQuery)];
+    _singleTapRecognizer.numberOfTapsRequired = 1;
+    [self.modelView addGestureRecognizer:_singleTapRecognizer];
+
+    // Create a label at the top of the screen to toast messages to the user.
+    CGRect labelRect = self.view.bounds;
+    labelRect.size.height = 50;
+    _toastLabel = [[UILabel alloc] initWithFrame:labelRect];
+    _toastLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    _toastLabel.textAlignment = NSTextAlignmentCenter;
+    _toastLabel.textColor = [UIColor whiteColor];
+    _toastLabel.backgroundColor = [UIColor colorWithWhite:0.0f alpha:0.5f];
+    _toastLabel.numberOfLines = 0;
+    _toastLabel.lineBreakMode = NSLineBreakByWordWrapping;
+    _toastLabel.text = @"";
+    _toastLabel.alpha = 0.0f;
+    [self.view addSubview:_toastLabel];
+}
+
+- (void)appWillResignActive:(NSNotification*)notification {
+    [self stopDisplayLink];
+}
+
+- (void)appDidBecomeActive:(NSNotification*)notification {
+    [self startDisplayLink];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -223,7 +270,8 @@ using namespace ktxreader;
         .indirectLight = _indirectLight,
         .sunlight = _sun,
     };
-    _automation->applySettings(self.modelView.engine, message->buffer, message->bufferByteCount, content);
+    _automation->applySettings(
+            self.modelView.engine, message->buffer, message->bufferByteCount, content);
     ColorGrading* const colorGrading = _automation->getColorGrading(self.modelView.engine);
     self.modelView.view->setColorGrading(colorGrading);
     self.modelView.cameraFocalLength = _automation->getViewerOptions().cameraFocalLength;
@@ -268,7 +316,42 @@ using namespace ktxreader;
     [self createDefaultRenderables];
 }
 
+- (void)issuePickingQuery {
+    CGPoint tapLocation = [_singleTapRecognizer locationInView:self.modelView];
+    __weak typeof(self) weakSelf = self;
+    [self.modelView issuePickQuery:tapLocation
+                          callback:^(utils::Entity entity) {
+                              NSString* name = [self.modelView getEntityName:entity];
+                              if (!name) {
+                                  name = @"<unnamed>";
+                              }
+                              NSString* message = [NSString
+                                      stringWithFormat:@"Picked entity %d (%@) at (%d,%d)",
+                                      entity.getId(), name, int(tapLocation.x), int(tapLocation.y)];
+                              [weakSelf toastMessage:message];
+                          }];
+}
+
+- (void)toastMessage:(NSString*)message {
+    _toastLabel.text = message;
+    _toastLabel.alpha = 0.0f;
+    [UIView animateWithDuration:kToastAnimationDuration
+            animations:^{
+                _toastLabel.alpha = 1.0f;
+            }
+            completion:^(BOOL finished) {
+                [UIView animateWithDuration:kToastAnimationDuration
+                                      delay:kToastDelayDuration
+                                    options:UIViewAnimationOptionCurveEaseInOut
+                                 animations:^{
+                                     _toastLabel.alpha = 0.0f;
+                                 }
+                                 completion:nil];
+            }];
+}
+
 - (void)dealloc {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
     delete _server;
     delete _automation;
     self.modelView.engine->destroy(_indirectLight);

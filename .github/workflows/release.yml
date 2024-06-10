@@ -31,7 +31,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-14, ubuntu-22.04]
 
     steps:
       - name: Decide Git ref
@@ -41,7 +41,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -65,7 +65,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-latest
+    runs-on: macos-14
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:
@@ -76,7 +76,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -98,7 +98,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-latest
+    runs-on: macos-14
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
 
     steps:
@@ -109,7 +109,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - uses: actions/setup-java@v3
@@ -129,7 +129,7 @@ jobs:
       - name: Sign sample-gltf-viewer
         run: |
           echo "${APK_KEYSTORE_BASE64}" > filament.jks.base64
-          base64 --decode filament.jks.base64 > filament.jks
+          base64 --decode -i filament.jks.base64 > filament.jks
           BUILD_TOOLS_VERSION=$(ls ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
           APKSIGNER=${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/apksigner
           IN_FILE="out/sample-gltf-viewer-release.apk"
@@ -152,7 +152,7 @@ jobs:
 
   build-ios:
     name: build-ios
-    runs-on: macos-latest
+    runs-on: macos-14
     if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
 
     steps:
@@ -163,7 +163,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -197,7 +197,7 @@ jobs:
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -205,7 +205,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
           build\windows\build-github.bat release
-          move out\filament-windows.tgz out\filament-$Env:TAG-windows.tgz
+          move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
         shell: cmd
       - uses: actions/github-script@v6
         env:

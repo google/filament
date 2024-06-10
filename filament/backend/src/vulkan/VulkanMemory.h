@@ -31,4 +31,8 @@
 
 #include "vk_mem_alloc.h"
 
+VK_DEFINE_HANDLE(VmaAllocator)
+VK_DEFINE_HANDLE(VmaAllocation)
+VK_DEFINE_HANDLE(VmaPool)
+
 #endif // TNT_FILAMENT_BACKEND_VULKANMEMORY_H

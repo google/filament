@@ -20,6 +20,7 @@
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
 #include "ResourceAllocator.h"
+#include "ShadowMapManager.h"
 
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
@@ -43,6 +44,7 @@
 #include <math/scalar.h>
 #include <math/fast.h>
 
+#include <array>
 #include <memory>
 
 using namespace utils;
@@ -59,8 +61,8 @@ FView::FView(FEngine& engine)
         : mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
-          mPerViewUniforms(engine),
-          mShadowMapManager(engine) {
+          mPerViewUniforms(engine) {
+
     DriverApi& driver = engine.getDriverApi();
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
@@ -76,7 +78,11 @@ FView::FView(FEngine& engine)
 
 #ifndef NDEBUG
     debugRegistry.registerDataSource("d.view.frame_info",
-            mDebugFrameHistory.data(), mDebugFrameHistory.size());
+            [this]() -> DebugRegistry::DataSource {
+                assert_invariant(!mDebugFrameHistory);
+                mDebugFrameHistory = std::make_unique<std::array<DebugRegistry::FrameHistory, 5*60>>();
+                return { mDebugFrameHistory->data(), mDebugFrameHistory->size() };
+            });
     debugRegistry.registerProperty("d.view.pid.kp", &engine.debug.view.pid.kp);
     debugRegistry.registerProperty("d.view.pid.ki", &engine.debug.view.pid.ki);
     debugRegistry.registerProperty("d.view.pid.kd", &engine.debug.view.pid.kd);
@@ -113,7 +119,8 @@ void FView::terminate(FEngine& engine) {
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mRenderableUbh);
     drainFrameHistory(engine);
-    mShadowMapManager.terminate(engine);
+
+    ShadowMapManager::terminate(engine, mShadowMapManager);
     mPerViewUniforms.terminate(driver);
     mFroxelizer.terminate(driver);
 
@@ -242,21 +249,24 @@ float2 FView::updateScale(FEngine& engine,
 
 #ifndef NDEBUG
     // only for debugging...
-    using duration_ms = std::chrono::duration<float, std::milli>;
-    const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
-    const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
-    std::move(mDebugFrameHistory.begin() + 1,
-            mDebugFrameHistory.end(), mDebugFrameHistory.begin());
-    mDebugFrameHistory.back() = {
-            .target             = target,
-            .targetWithHeadroom = targetWithHeadroom,
-            .frameTime          = std::chrono::duration_cast<duration_ms>(info.frameTime).count(),
-            .frameTimeDenoised  = std::chrono::duration_cast<duration_ms>(info.denoisedFrameTime).count(),
-            .scale              = mScale.x * mScale.y,
-            .pid_e              = mPidController.getError(),
-            .pid_i              = mPidController.getIntegral(),
-            .pid_d              = mPidController.getDerivative()
-    };
+    if (mDebugFrameHistory) {
+        using namespace std::chrono;
+        using duration_ms = duration<float, std::milli>;
+        const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
+        const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
+        std::move(mDebugFrameHistory->begin() + 1,
+                mDebugFrameHistory->end(), mDebugFrameHistory->begin());
+        mDebugFrameHistory->back() = {
+                .target             = target,
+                .targetWithHeadroom = targetWithHeadroom,
+                .frameTime          = duration_cast<duration_ms>(info.frameTime).count(),
+                .frameTimeDenoised  = duration_cast<duration_ms>(info.denoisedFrameTime).count(),
+                .scale              = mScale.x * mScale.y,
+                .pid_e              = mPidController.getError(),
+                .pid_i              = mPidController.getIntegral(),
+                .pid_d              = mPidController.getDerivative()
+        };
+    }
 #endif
 
     return mScale;
@@ -281,9 +291,9 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         return;
     }
 
-    mShadowMapManager.reset();
-
     auto& lcm = engine.getLightManager();
+
+    ShadowMapManager::Builder builder;
 
     // dominant directional light is always as index 0
     FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
@@ -292,7 +302,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
         assert_invariant(shadowOptions.shadowCascades >= 1 &&
                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
-        mShadowMapManager.setDirectionalShadowMap(0, &shadowOptions);
+        builder.directionalShadowMap(0, &shadowOptions);
     }
 
     // Find all shadow-casting spotlights.
@@ -313,6 +323,10 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         }
 
         if (UTILS_LIKELY(!lcm.isShadowCaster(li))) {
+            // Because we early exit here, we need to make sure we mark the light as non-casting.
+            // See `ShadowMapManager::updateSpotShadowMaps` for const_cast<> justification.
+            const_cast<FScene::ShadowInfo&>(
+                    lightData.elementAt<FScene::SHADOW_INFO>(l)).castsShadows = false;
             continue; // doesn't cast shadows
         }
 
@@ -322,7 +336,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         if (shadowMapCount + shadowMapCountNeeded <= CONFIG_MAX_SHADOWMAPS) {
             shadowMapCount += shadowMapCountNeeded;
             const auto& shadowOptions = lcm.getShadowOptions(li);
-            mShadowMapManager.addShadowMap(l, spotLight, &shadowOptions);
+            builder.shadowMap(l, spotLight, &shadowOptions);
         }
 
         if (shadowMapCount >= CONFIG_MAX_SHADOWMAPS) {
@@ -330,15 +344,17 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         }
     }
 
-    auto shadowTechnique = mShadowMapManager.update(engine, *this, cameraInfo,
-            renderableData, lightData);
+    if (builder.hasShadowMaps()) {
+        ShadowMapManager::createIfNeeded(engine, mShadowMapManager);
+        auto shadowTechnique = mShadowMapManager->update(builder, engine, *this,
+                cameraInfo, renderableData, lightData);
 
-    mHasShadowing = any(shadowTechnique);
-    mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
+        mHasShadowing = any(shadowTechnique);
+        mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
+    }
 }
 
-void FView::prepareLighting(FEngine& engine, ArenaScope& arena,
-        CameraInfo const& cameraInfo) noexcept {
+void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
@@ -350,7 +366,7 @@ void FView::prepareLighting(FEngine& engine, ArenaScope& arena,
      */
 
     if (hasDynamicLighting()) {
-        scene->prepareDynamicLights(cameraInfo, arena, mLightUbh);
+        scene->prepareDynamicLights(cameraInfo, mLightUbh);
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
@@ -423,7 +439,7 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
     return { *camera, mat4{ rotation } * mat4::translation(translation) };
 }
 
-void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
+void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootArenaScope,
         filament::Viewport viewport, CameraInfo cameraInfo,
         float4 const& userTime, bool needsAlphaChannel) noexcept {
 
@@ -461,7 +477,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(js, arena.getAllocator(),
+    scene->prepare(js, rootArenaScope,
             cameraInfo.worldTransform,
             hasVSM());
 
@@ -471,14 +487,22 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
 
     JobSystem::Job* froxelizeLightsJob = nullptr;
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
-    if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
+    size_t const lightCount = scene->getLightData().size();
+    if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
         // create and start the prepareVisibleLights job
         // note: this job updates LightData (non const)
+        // allocate a scratch buffer for distances outside the job below, so we don't need
+        // to use a locked allocator; the downside is that we need to account for the worst case.
+        size_t const positionalLightCount = lightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
+        float* const distances = rootArenaScope.allocate<float>(
+                (positionalLightCount + 3u) & ~3u, CACHELINE_SIZE);
+
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [&engine, &arena, &viewMatrix = cameraInfo.view, &cullingFrustum,
+                [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
                  &lightData = scene->getLightData()]
                         (JobSystem&, JobSystem::Job*) {
-                    FView::prepareVisibleLights(engine.getLightManager(), arena,
+                    FView::prepareVisibleLights(engine.getLightManager(),
+                            { distances, distances + positionalLightCount },
                             viewMatrix, cullingFrustum, lightData);
                 }));
     }
@@ -526,7 +550,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
         if (hasDynamicLighting()) {
             auto& froxelizer = mFroxelizer;
-            if (froxelizer.prepare(driver, arena, viewport,
+            if (froxelizer.prepare(driver, rootArenaScope, viewport,
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
                 // TODO: might be more consistent to do this in prepareLighting(), but it's not
                 //       strictly necessary
@@ -602,7 +626,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
                 uint32_t(endDirCastersOnly - beginRenderables)};
 
         merged = { 0, uint32_t(endPotentialSpotCastersOnly - beginRenderables) };
-        if (!mShadowMapManager.hasSpotShadows()) {
+        if (!needsShadowMap() || !mShadowMapManager->hasSpotShadows()) {
             // we know we don't have spot shadows, we can reduce the range to not even include
             // the potential spot casters
             merged = { 0, uint32_t(endDirCastersOnly - beginRenderables) };
@@ -625,7 +649,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
                 const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
                 mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableData));
                 driver.destroyBufferObject(mRenderableUbh);
-                mRenderableUbh = driver.createBufferObject(mRenderableUBOSize + sizeof(PerRenderableUib),
+                mRenderableUbh = driver.createBufferObject(
+                        mRenderableUBOSize + sizeof(PerRenderableUib),
                         BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
             } else {
                 // TODO: should we shrink the underlying UBO at some point?
@@ -641,7 +666,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Relies on FScene::prepare() and prepareVisibleLights()
      */
 
-    prepareLighting(engine, arena, cameraInfo);
+    prepareLighting(engine, cameraInfo);
 
     /*
      * Update driver state
@@ -668,8 +693,11 @@ void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noe
     driver.bindUniformBuffer(+UniformBindingPoints::LIGHTS,
             mLightUbh);
 
-    driver.bindUniformBuffer(+UniformBindingPoints::SHADOW,
-            mShadowMapManager.getShadowUniformsHandle());
+    if (needsShadowMap()) {
+        assert_invariant(mShadowMapManager->getShadowUniformsHandle());
+        driver.bindUniformBuffer(+UniformBindingPoints::SHADOW,
+                mShadowMapManager->getShadowUniformsHandle());
+    }
 
     driver.bindUniformBuffer(+UniformBindingPoints::FROXEL_RECORDS,
             mFroxelizer.getRecordBuffer());
@@ -721,11 +749,22 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareUpscaler(float2 scale) const noexcept {
+void FView::prepareUpscaler(float2 scale,
+        TemporalAntiAliasingOptions const& taaOptions,
+        DynamicResolutionOptions const& dsrOptions) const noexcept {
     SYSTRACE_CALL();
-    const float bias = (mDynamicResolution.quality >= QualityLevel::HIGH) ?
-            std::log2(std::min(scale.x, scale.y)) : 0.0f;
-    mPerViewUniforms.prepareLodBias(bias);
+    float bias = 0.0f;
+    float2 derivativesScale{ 1.0f };
+    if (dsrOptions.enabled && dsrOptions.quality >= QualityLevel::HIGH) {
+        bias = std::log2(std::min(scale.x, scale.y));
+    }
+    if (taaOptions.enabled) {
+        bias += taaOptions.lodBias;
+        if (taaOptions.upscaling) {
+            derivativesScale = 0.5f;
+        }
+    }
+    mPerViewUniforms.prepareLodBias(bias, derivativesScale);
 }
 
 void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {
@@ -759,7 +798,12 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
 }
 
 void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
-    const auto& uniforms = mShadowMapManager.getShadowMappingUniforms();
+    // when needsShadowMap() is not set, this method only just sets a dummy texture
+    // in the needed samplers (in that case `texture` is actually a dummy texture).
+    ShadowMapManager::ShadowMappingUniforms uniforms;
+    if (needsShadowMap()) {
+        uniforms = mShadowMapManager->getShadowMappingUniforms();
+    }
     switch (mShadowType) {
         case filament::ShadowType::PCF:
             mPerViewUniforms.prepareShadowPCF(texture, uniforms);
@@ -835,7 +879,8 @@ void FView::cullRenderables(JobSystem&,
     functor(0, renderableData.size());
 }
 
-void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
+void FView::prepareVisibleLights(FLightManager const& lcm,
+        utils::Slice<float> scratch,
         mat4f const& viewMatrix, Frustum const& frustum,
         FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
@@ -903,28 +948,25 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
      * - This helps our limited numbers of spot-shadow as well.
      */
 
-    ArenaScope arena(rootArena.getAllocator());
-    size_t const size = visibleLightCount;
     // number of point/spotlights
-    size_t const positionalLightCount = size - FScene::DIRECTIONAL_LIGHTS_COUNT;
+    size_t const positionalLightCount = visibleLightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (positionalLightCount) {
-        // always allocate at least 4 entries, because the vectorized loops below rely on that
-        float* const UTILS_RESTRICT distances =
-                arena.allocate<float>((size + 3u) & ~3u, CACHELINE_SIZE);
-
+        assert_invariant(positionalLightCount <= scratch.size());
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
+        float* const UTILS_RESTRICT distances = scratch.data();
         float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
-        computeLightCameraDistances(distances, viewMatrix, spheres, size);
+        computeLightCameraDistances(distances, viewMatrix, spheres, visibleLightCount);
 
         // skip directional light
         Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
-        std::sort(b + FScene::DIRECTIONAL_LIGHTS_COUNT, b + size,
+        std::sort(b + FScene::DIRECTIONAL_LIGHTS_COUNT, b + visibleLightCount,
                 [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
     }
 
     // drop excess lights
-    lightData.resize(std::min(size, CONFIG_MAX_LIGHT_COUNT + FScene::DIRECTIONAL_LIGHTS_COUNT));
+    lightData.resize(std::min(visibleLightCount,
+            CONFIG_MAX_LIGHT_COUNT + FScene::DIRECTIONAL_LIGHTS_COUNT));
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
@@ -957,8 +999,10 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
 }
 
 FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGraph& fg,
-        CameraInfo const& cameraInfo, float4 const& userTime, RenderPass const& pass) noexcept {
-    return mShadowMapManager.render(engine, fg, pass, *this, cameraInfo, userTime);
+        CameraInfo const& cameraInfo, float4 const& userTime,
+        RenderPassBuilder const& passBuilder) noexcept {
+    assert_invariant(needsShadowMap());
+    return mShadowMapManager->render(engine, fg, passBuilder, *this, cameraInfo, userTime);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
@@ -981,15 +1025,15 @@ void FView::drainFrameHistory(FEngine& engine) noexcept {
 }
 
 void FView::executePickingQueries(backend::DriverApi& driver,
-        backend::RenderTargetHandle handle, float scale) noexcept {
+        backend::RenderTargetHandle handle, float2 scale) noexcept {
 
     while (mActivePickingQueriesList) {
         FPickingQuery* const pQuery = mActivePickingQueriesList;
         mActivePickingQueriesList = pQuery->next;
 
         // adjust for dynamic resolution and structure buffer scale
-        const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
-        const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
+        const uint32_t x = uint32_t(float(pQuery->x) * scale.x);
+        const uint32_t y = uint32_t(float(pQuery->y) * scale.y);
 
         if (UTILS_UNLIKELY(driver.getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
             driver.readPixels(handle, x, y, 1, 1, {
@@ -1126,19 +1170,19 @@ View::PickingQuery& FView::pick(uint32_t x, uint32_t y, backend::CallbackHandler
     return *pQuery;
 }
 
-void FView::setStereoscopicOptions(const StereoscopicOptions& options) {
-    ASSERT_PRECONDITION(!options.enabled || mIsStereoSupported,
-            "Stereo rendering is not supported.");
+void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
     mStereoscopicOptions = options;
 }
 
 void FView::setMaterialGlobal(uint32_t index, float4 const& value) {
-    ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
+    FILAMENT_CHECK_PRECONDITION(index < 4)
+            << "material global variable index (" << +index << ") out of range";
     mMaterialGlobals[index] = value;
 }
 
 math::float4 FView::getMaterialGlobal(uint32_t index) const {
-    ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
+    FILAMENT_CHECK_PRECONDITION(index < 4)
+            << "material global variable index (" << +index << ") out of range";
     return mMaterialGlobals[index];
 }
 

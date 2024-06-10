@@ -96,24 +96,25 @@ void FSkinningBuffer::terminate(FEngine& engine) {
 
 void FSkinningBuffer::setBones(FEngine& engine,
         RenderableManager::Bone const* transforms, size_t count, size_t offset) {
-
-    ASSERT_PRECONDITION((offset + count) <= mBoneCount,
-            "SkinningBuffer (size=%lu) overflow (boneCount=%u, offset=%u)",
-            (unsigned)mBoneCount, (unsigned)count, (unsigned)offset);
+    FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
+            << "SkinningBuffer (size=" << (unsigned)mBoneCount
+            << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
+            << ")";
 
     setBones(engine, mHandle, transforms, count, offset);
 }
 
 void FSkinningBuffer::setBones(FEngine& engine,
         math::mat4f const* transforms, size_t count, size_t offset) {
-
-    ASSERT_PRECONDITION((offset + count) <= mBoneCount,
-            "SkinningBuffer (size=%lu) overflow (boneCount=%u, offset=%u)",
-            (unsigned)mBoneCount, (unsigned)count, (unsigned)offset);
+    FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
+            << "SkinningBuffer (size=" << (unsigned)mBoneCount
+            << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
+            << ")";
 
     setBones(engine, mHandle, transforms, count, offset);
 }
 
+UTILS_UNUSED
 static uint32_t packHalf2x16(half2 v) noexcept {
     uint32_t lo = getBits(v[0]);
     uint32_t hi = getBits(v[1]);
@@ -144,13 +145,8 @@ PerRenderableBoneUib::BoneData FSkinningBuffer::makeBone(mat4f transform) noexce
                     transform[1],
                     transform[2]
             },
-            .cof = {
-                    packHalf2x16({ cofactors[0].x, cofactors[0].y }),
-                    packHalf2x16({ cofactors[0].z, cofactors[1].x }),
-                    packHalf2x16({ cofactors[1].y, cofactors[1].z }),
-                    packHalf2x16({ cofactors[2].x, cofactors[2].y })
-                    // cofactor[2][2] is not stored because we don't have space for it
-            }
+            .cof0 = cofactors[0],
+            .cof1x = cofactors[1].x
     };
 }
 

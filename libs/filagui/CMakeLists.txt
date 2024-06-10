@@ -33,12 +33,18 @@ endif()
 set(MATERIAL_SRCS
         src/materials/uiBlit.mat)
 
+if (ANDROID)
+    list(APPEND MATERIAL_SRCS
+            src/materials/uiBlitExternal.mat)
+endif()
+
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
     set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+
     add_custom_command(
             OUTPUT ${output_path}
             COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}

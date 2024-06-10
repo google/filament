@@ -79,6 +79,20 @@ ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment,
           mVertexBlob(transpileShader(ShaderStage::VERTEX, std::move(vertex), backend, isMobile, sib)),
           mFragmentBlob(transpileShader(ShaderStage::FRAGMENT, std::move(fragment), backend,
                   isMobile, sib)) {
+    switch (backend) {
+        case Backend::OPENGL:
+            mShaderLanguage = filament::backend::ShaderLanguage::ESSL3;
+            break;
+        case Backend::VULKAN:
+            mShaderLanguage = filament::backend::ShaderLanguage::SPIRV;
+            break;
+        case Backend::METAL:
+            mShaderLanguage = filament::backend::ShaderLanguage::MSL;
+            break;
+        case Backend::NOOP:
+            mShaderLanguage = filament::backend::ShaderLanguage::ESSL3;
+            break;
+    }
 }
 
 ShaderGenerator::Blob ShaderGenerator::transpileShader(
@@ -160,6 +174,7 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(
 
 Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
     Program program;
+    program.shaderLanguage(mShaderLanguage);
     program.shader(ShaderStage::VERTEX, mVertexBlob.data(), mVertexBlob.size());
     program.shader(ShaderStage::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
     return program;

@@ -35,7 +35,7 @@
 #include "eiff/ChunkContainer.h"
 #include "eiff/DictionarySpirvChunk.h"
 #include "eiff/DictionaryTextChunk.h"
-#include "eiff/MaterialSpirvChunk.h"
+#include "eiff/MaterialBinaryChunk.h"
 #include "eiff/MaterialTextChunk.h"
 #include "eiff/LineDictionary.h"
 
@@ -73,7 +73,7 @@ private:
     vector<TextEntry> mShaderRecords;
 };
 
-// Tiny database of data blobs that can import / export MaterialSpirvChunk and DictionarySpirvChunk.
+// Tiny database of data blobs that can import / export MaterialBinaryChunk and DictionarySpirvChunk.
 // The blobs are stored *after* they have been compressed by SMOL-V.
 class BlobIndex {
 public:
@@ -90,7 +90,7 @@ public:
 private:
     const ChunkType mDictTag;
     const ChunkType mMatTag;
-    vector<SpirvEntry> mShaderRecords;
+    vector<BinaryEntry> mShaderRecords;
     filaflat::BlobDictionary mDataBlobs;
 };
 
@@ -364,7 +364,7 @@ BlobIndex::BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkC
     const auto& offsets = matChunk.getOffsets();
     mShaderRecords.reserve(offsets.size());
     for (auto [key, offset] : offsets) {
-        SpirvEntry info;
+        BinaryEntry info;
         filaflat::MaterialChunk::decodeKey(key, &info.shaderModel, &info.variant, &info.stage);
         info.dictionaryIndex = offset;
         mShaderRecords.emplace_back(info);
@@ -378,7 +378,7 @@ void BlobIndex::writeChunks(ostream& stream) {
         const auto& src = mDataBlobs[record.dictionaryIndex];
         assert(src.size() % 4 == 0);
         const uint32_t* ptr = (const uint32_t*) src.data();
-        record.dictionaryIndex = blobs.addBlob(vector<uint32_t>(ptr, ptr + src.size() / 4));
+        record.dictionaryIndex = blobs.addBlob(vector<uint8_t>(ptr, ptr + src.size()));
     }
 
     // Adjust start cursor of flatteners to match alignment of output stream.
@@ -391,7 +391,7 @@ void BlobIndex::writeChunks(ostream& stream) {
 
     // Apply SMOL-V compression and write out the results.
     filamat::ChunkContainer cc;
-    cc.push<MaterialSpirvChunk>(std::move(mShaderRecords));
+    cc.push<MaterialBinaryChunk>(std::move(mShaderRecords), ChunkType::MaterialSpirv);
     cc.push<DictionarySpirvChunk>(std::move(blobs), false);
 
     Flattener prepass = Flattener::getDryRunner();

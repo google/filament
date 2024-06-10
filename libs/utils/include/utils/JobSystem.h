@@ -17,15 +17,6 @@
 #ifndef TNT_UTILS_JOBSYSTEM_H
 #define TNT_UTILS_JOBSYSTEM_H
 
-#include <assert.h>
-
-#include <atomic>
-#include <functional>
-#include <thread>
-#include <vector>
-
-#include <tsl/robin_map.h>
-
 #include <utils/Allocator.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
@@ -34,7 +25,21 @@
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
+#include <utils/ostream.h>
 #include <utils/WorkStealingDequeue.h>
+
+#include <tsl/robin_map.h>
+
+#include <atomic>
+#include <functional>
+#include <mutex>
+#include <type_traits>
+#include <thread>
+#include <vector>
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 
@@ -169,8 +174,9 @@ public:
     // the caller must ensure the object will outlive the Job
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T* data) noexcept {
-        Job* job = create(parent, [](void* user, JobSystem& js, Job* job) {
-            (*static_cast<T**>(user)->*method)(js, job);
+        Job* job = create(parent, +[](void* storage, JobSystem& js, Job* job) {
+            T* const that = static_cast<T*>(reinterpret_cast<void**>(storage)[0]);
+            (that->*method)(js, job);
         });
         if (job) {
             job->storage[0] = data;
@@ -182,8 +188,8 @@ public:
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T data) noexcept {
         static_assert(sizeof(data) <= sizeof(Job::storage), "user data too large");
-        Job* job = create(parent, [](void* user, JobSystem& js, Job* job) {
-            T* that = static_cast<T*>(user);
+        Job* job = create(parent, [](void* storage, JobSystem& js, Job* job) {
+            T* const that = static_cast<T*>(storage);
             (that->*method)(js, job);
             that->~T();
         });
@@ -197,10 +203,10 @@ public:
     template<typename T>
     Job* createJob(Job* parent, T functor) noexcept {
         static_assert(sizeof(functor) <= sizeof(Job::storage), "functor too large");
-        Job* job = create(parent, [](void* user, JobSystem& js, Job* job){
-            T& that = *static_cast<T*>(user);
-            that(js, job);
-            that.~T();
+        Job* job = create(parent, [](void* storage, JobSystem& js, Job* job){
+            T* const that = static_cast<T*>(storage);
+            that->operator()(js, job);
+            that->~T();
         });
         if (job) {
             new(job->storage) T(std::move(functor));
@@ -224,7 +230,7 @@ public:
      *
      * This job MUST BE waited on with waitAndRelease(), or released with release().
      */
-    Job* retain(Job* job) noexcept;
+    static Job* retain(Job* job) noexcept;
 
     /*
      * Releases a reference from a Job obtained with runAndRetain() or a call to retain().
@@ -239,7 +245,7 @@ public:
 
     /*
      * Add job to this thread's execution queue. It's reference will drop automatically.
-     * Current thread must be owned by JobSystem's thread pool. See adopt().
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * The job can't be used after this call.
      */
@@ -252,8 +258,8 @@ public:
     void signal() noexcept;
 
     /*
-     * Add job to this thread's execution queue and and keep a reference to it.
-     * Current thread must be owned by JobSystem's thread pool. See adopt().
+     * Add job to this thread's execution queue and keep a reference to it.
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * This job MUST BE waited on with wait(), or released with release().
      */
@@ -261,7 +267,7 @@ public:
 
     /*
      * Wait on a job and destroys it.
-     * Current thread must be owned by JobSystem's thread pool. See adopt().
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * The job must first be obtained from runAndRetain() or retain().
      * The job can't be used after this call.
@@ -325,11 +331,10 @@ private:
         WorkQueue workQueue;
 
         // these are not accessed by the worker threads
-        alignas(CACHELINE_SIZE)     // this causes 56-bytes padding
-        JobSystem* js;
-        std::thread thread;
+        alignas(CACHELINE_SIZE)         // this causes 56-bytes padding
+        JobSystem* js;                  // this is in fact const and always initialized
+        std::thread thread;             // unused for adopted threads
         default_random_engine rndGen;
-        uint32_t id;
     };
 
     static_assert(sizeof(ThreadState) % CACHELINE_SIZE == 0,
@@ -337,12 +342,12 @@ private:
 
     ThreadState& getState() noexcept;
 
-    void incRef(Job const* job) noexcept;
+    static void incRef(Job const* job) noexcept;
     void decRef(Job const* job) noexcept;
 
     Job* allocateJob() noexcept;
     JobSystem::ThreadState* getStateToStealFrom(JobSystem::ThreadState& state) noexcept;
-    bool hasJobCompleted(Job const* job) noexcept;
+    static bool hasJobCompleted(Job const* job) noexcept;
 
     void requestExit() noexcept;
     bool exitRequested() const noexcept;
@@ -358,20 +363,20 @@ private:
     Job* steal(WorkQueue& workQueue) noexcept;
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
+    void wake(size_t hint) noexcept;
     void wakeAll() noexcept;
-    void wakeOne() noexcept;
 
     // these have thread contention, keep them together
     utils::Mutex mWaiterLock;
     utils::Condition mWaiterCondition;
 
-    std::atomic<uint32_t> mActiveJobs = { 0 };
+    std::atomic<int32_t> mActiveJobs = { 0 };
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>
     using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
 
-    // these are essentially const, make sure they're on a different cache-lines than the
+    // These are essentially const, make sure they're on a different cache-lines than the
     // read-write atomics.
     // We can't use "alignas(CACHELINE_SIZE)" because the standard allocator can't make this
     // guarantee.
@@ -386,7 +391,7 @@ private:
     uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for
     Job* mRootJob = nullptr;
 
-    utils::SpinLock mThreadMapLock; // this should have very little contention
+    utils::Mutex mThreadMapLock; // this should have very little contention
     tsl::robin_map<std::thread::id, ThreadState *> mThreadMap;
 };
 

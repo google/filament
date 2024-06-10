@@ -75,7 +75,7 @@ window.MonacoEnvironment = {
 };
 
 const _validDict = (obj) => {
-    return obj && Object.keys(obj) > 0;
+    return obj && Object.keys(obj).length > 0;
 }
 
 const _isMatInfoMode = (database) => {

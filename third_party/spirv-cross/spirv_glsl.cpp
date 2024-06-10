@@ -14977,7 +14977,12 @@ string CompilerGLSL::flags_to_qualifiers_glsl(const SPIRType &type, const Bitset
 	{
 		auto &execution = get_entry_point();
 
-		if (flags.get(DecorationRelaxedPrecision))
+		if (type.basetype == SPIRType::UInt && is_legacy_es())
+		{
+			// HACK: This is a bool. See comment in type_to_glsl().
+			qual += "lowp ";
+		}
+		else if (flags.get(DecorationRelaxedPrecision))
 		{
 			bool implied_fmediump = type.basetype == SPIRType::Float &&
 			                        options.fragment.default_float_precision == Options::Mediump &&
@@ -15503,7 +15508,11 @@ string CompilerGLSL::type_to_glsl(const SPIRType &type, uint32_t id)
 	if (type.basetype == SPIRType::UInt && is_legacy())
 	{
 		if (options.es)
-			SPIRV_CROSS_THROW("Unsigned integers are not supported on legacy ESSL.");
+			// HACK: spirv-cross changes bools into uints and generates code which compares them to
+			// zero. Input code will have already been validated as not to have contained any uints,
+			// so any remaining uints must in fact be bools. However, simply returning "bool" here
+			// will result in invalid code. Instead, return an int.
+			return backend.basic_int_type;
 		else
 			require_extension_internal("GL_EXT_gpu_shader4");
 	}

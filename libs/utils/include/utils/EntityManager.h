@@ -17,11 +17,12 @@
 #ifndef TNT_UTILS_ENTITYMANAGER_H
 #define TNT_UTILS_ENTITYMANAGER_H
 
-#include <assert.h>
-#include <stdint.h>
-
 #include <utils/Entity.h>
 #include <utils/compiler.h>
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifndef FILAMENT_UTILS_TRACK_ENTITIES
 #define FILAMENT_UTILS_TRACK_ENTITIES false

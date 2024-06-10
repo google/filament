@@ -44,6 +44,7 @@ set_target_properties(uberarchive PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libuberarchive.a)
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
 set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/Animator.h
@@ -81,9 +82,20 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/TangentsJob.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/UbershaderProvider.cpp
+        ${GLTFIO_DIR}/src/Utility.cpp
+        ${GLTFIO_DIR}/src/Utility.h
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/downcast.h
+        ${GLTFIO_DIR}/src/extended/AssetLoaderExtended.cpp
+        ${GLTFIO_DIR}/src/extended/AssetLoaderExtended.h
+        ${GLTFIO_DIR}/src/extended/ResourceLoaderExtended.cpp
+        ${GLTFIO_DIR}/src/extended/ResourceLoaderExtended.h
+        ${GLTFIO_DIR}/src/extended/TangentsJobExtended.cpp
+        ${GLTFIO_DIR}/src/extended/TangentsJobExtended.h
+        ${GLTFIO_DIR}/src/extended/TangentSpaceMeshWrapper.cpp
+        ${GLTFIO_DIR}/src/extended/TangentSpaceMeshWrapper.h
+
 
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp
@@ -108,7 +120,6 @@ set(GLTFIO_INCLUDE_DIRS
         ../../third_party/cgltf
         ../../third_party/meshoptimizer/src
         ../../third_party/robin-map
-        ../../third_party/hat-trie
         ../../third_party/stb
         ../../libs/utils/include
         ../../libs/ktxreader/include

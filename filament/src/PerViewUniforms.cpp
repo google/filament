@@ -50,7 +50,7 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     if (engine.getDFG().isValid()) {
-        TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
+        TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
         mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
                 { engine.getDFG().getTexture(), sampler.getSamplerParams() });
     }
@@ -82,7 +82,8 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
 
     mat4f const& headFromWorld = camera.view;
-    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+    Engine::Config const& config = engine.getConfig();
+    for (int i = 0; i < config.stereoscopicEyeCount; i++) {
         mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
         mat4f const& clipFromEye = camera.eyeProjection[i];
         // clipFromEye * eyeFromHead * headFromWorld
@@ -95,9 +96,10 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
-void PerViewUniforms::prepareLodBias(float bias) noexcept {
+void PerViewUniforms::prepareLodBias(float bias, float2 derivativesScale) noexcept {
     auto& s = mUniforms.edit();
     s.lodBias = bias;
+    s.derivativesScale = derivativesScale;
 }
 
 void PerViewUniforms::prepareExposure(float ev100) noexcept {

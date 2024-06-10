@@ -21,13 +21,25 @@
 
 #include <backend/AcquiredImage.h>
 #include <backend/BufferDescriptor.h>
+#include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 #include <utils/Systrace.h>
 
 #include <math/half.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+
+#include <functional>
+#include <mutex>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace utils;
 using namespace filament::math;
@@ -119,7 +131,8 @@ void DriverBase::purge() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
-    scheduleCallback(buffer.getHandler(), [buffer = std::move(buffer)]() {
+    auto const handler = buffer.getHandler();
+    scheduleCallback(handler, [buffer = std::move(buffer)]() {
         // user callback is called when BufferDescriptor gets destroyed
     });
 }
@@ -201,7 +214,7 @@ size_t Driver::getElementTypeSize(ElementType type) noexcept {
 
 Driver::~Driver() noexcept = default;
 
-void Driver::execute(std::function<void(void)> const& fn) noexcept {
+void Driver::execute(std::function<void(void)> const& fn) {
     fn();
 }
 

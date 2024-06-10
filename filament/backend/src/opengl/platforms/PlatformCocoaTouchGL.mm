@@ -61,7 +61,7 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext, const Pl
     EAGLSharegroup* sharegroup = (__bridge EAGLSharegroup*) sharedGLContext;
 
     EAGLContext *context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3 sharegroup:sharegroup];
-    ASSERT_POSTCONDITION(context, "Unable to create OpenGL ES context.");
+    FILAMENT_CHECK_POSTCONDITION(context) << "Unable to create OpenGL ES context.";
 
     [EAGLContext setCurrentContext:context];
 
@@ -103,7 +103,7 @@ void PlatformCocoaTouchGL::createContext(bool shared) {
     EAGLContext* const context = [[EAGLContext alloc]
                                   initWithAPI:kEAGLRenderingAPIOpenGLES3
                                    sharegroup:sharegroup];
-    ASSERT_POSTCONDITION(context, "Unable to create extra OpenGL ES context.");
+    FILAMENT_CHECK_POSTCONDITION(context) << "Unable to create extra OpenGL ES context.";
     [EAGLContext setCurrentContext:context];
     pImpl->mAdditionalContexts.push_back(context);
 }
@@ -143,11 +143,12 @@ void PlatformCocoaTouchGL::destroySwapChain(Platform::SwapChain* swapChain) noex
     }
 }
 
-uint32_t PlatformCocoaTouchGL::createDefaultRenderTarget() noexcept {
+uint32_t PlatformCocoaTouchGL::getDefaultFramebufferObject() noexcept {
     return pImpl->mDefaultFramebuffer;
 }
 
-void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept {
+bool PlatformCocoaTouchGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "PlatformCocoaTouchGL does not support using distinct draw/read swap chains.");
     CAEAGLLayer* const glLayer = (__bridge CAEAGLLayer*) drawSwapChain;
@@ -179,9 +180,11 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebuffer);
         glBindFramebuffer(GL_FRAMEBUFFER, pImpl->mDefaultFramebuffer);
         GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
+        FILAMENT_CHECK_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE)
+                << "Incomplete framebuffer.";
         glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer);
     }
+    return true;
 }
 
 void PlatformCocoaTouchGL::commit(Platform::SwapChain* swapChain) noexcept {

@@ -53,7 +53,7 @@ FScene::~FScene() noexcept = default;
 
 
 void FScene::prepare(utils::JobSystem& js,
-        LinearAllocatorArena& allocator,
+        RootArenaScope& rootArenaScope,
         mat4 const& worldTransform,
         bool shadowReceiversAreCasters) noexcept {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
@@ -64,7 +64,7 @@ void FScene::prepare(utils::JobSystem& js,
     SYSTRACE_CONTEXT();
 
     // This will reset the allocator upon exiting
-    ArenaScope const arena(allocator);
+    ArenaScope<RootArenaScope::Arena> localArenaScope(rootArenaScope.getArena());
 
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
@@ -85,10 +85,10 @@ void FScene::prepare(utils::JobSystem& js,
             utils::STLAllocator< LightContainerData, LinearAllocatorArena >, false>;
 
     RenderableInstanceContainer renderableInstances{
-            RenderableInstanceContainer::with_capacity(entities.size(), allocator) };
+            RenderableInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
 
     LightInstanceContainer lightInstances{
-            LightInstanceContainer::with_capacity(entities.size(), allocator) };
+            LightInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
 
     SYSTRACE_NAME_BEGIN("InstanceLoop");
 
@@ -148,7 +148,7 @@ void FScene::prepare(utils::JobSystem& js,
 
     // TODO: the resize below could happen in a job
 
-    if (sceneData.size() != renderableInstances.size()) {
+    if (!sceneData.capacity() || sceneData.size() != renderableInstances.size()) {
         sceneData.clear();
         if (sceneData.capacity() < renderableDataCapacity) {
             sceneData.setCapacity(renderableDataCapacity);
@@ -267,16 +267,16 @@ void FScene::prepare(utils::JobSystem& js,
         // in the code below, we only transform directions, so the translation of the
         // world transform is irrelevant, and we don't need to use getWorldTransformAccurate()
 
+        mat3 const worldDirectionTransform =
+                mat3::getTransformForNormals(tcm.getWorldTransformAccurate(ti).upperLeft());
         FLightManager::ShadowParams const params = lcm.getShadowParams(li);
-        float3 const localDirection = lcm.getLocalDirection(li);
-        float3 const shadowLocalDirection = params.options.transform * localDirection;
-        mat3 const worldDirectionTransform = tcm.getWorldTransformAccurate(ti).upperLeft();
-        mat3 const shaderWorldTransform = worldTransform.upperLeft() * worldDirectionTransform;
+        float3 const localDirection = worldDirectionTransform * lcm.getLocalDirection(li);
+        double3 const shadowLocalDirection = params.options.transform * localDirection;
 
         // using mat3::getTransformForNormals handles non-uniform scaling
         // note: in the common case of the rigid-body transform, getTransformForNormals() returns
         // identity.
-        mat3 const worlTransformNormals = mat3::getTransformForNormals(shaderWorldTransform);
+        mat3 const worlTransformNormals = mat3::getTransformForNormals(worldTransform.upperLeft());
         double3 const d = worlTransformNormals * localDirection;
         double3 const s = worlTransformNormals * shadowLocalDirection;
 
@@ -290,10 +290,8 @@ void FScene::prepare(utils::JobSystem& js,
             // is pointing down, which is a common case for lights. See ShadowMap.cpp.
             return transpose(mat3::lookTo(direction, double3{ 1, 0, 0 }));
         };
-        double3 const worldDirection =
-                mat3::getTransformForNormals(worldDirectionTransform) * shadowLocalDirection;
         double3 const worldOrigin = transpose(worldTransform.upperLeft()) * worldTransform[3].xyz;
-        mat3 const Mv = getMv(worldDirection);
+        mat3 const Mv = getMv(shadowLocalDirection);
         double2 const lsReferencePoint = (Mv * worldOrigin).xy;
 
         constexpr float inf = std::numeric_limits<float>::infinity();
@@ -390,9 +388,6 @@ void FScene::updateUBOs(
     SYSTRACE_CALL();
     FEngine::DriverApi& driver = mEngine.getDriverApi();
 
-    // store the UBO handle
-    mRenderableViewUbh = renderableUbh;
-
     // don't allocate more than 16 KiB directly into the render stream
     static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
     const size_t count = visibleRenderables.size();
@@ -444,19 +439,12 @@ void FScene::updateUBOs(
                 delete weakShared;
             }, weakShared
     }, 0);
-
-    // update skybox
-    if (mSkybox) {
-        mSkybox->commit(driver);
-    }
 }
 
 void FScene::terminate(FEngine&) {
-    // DO NOT destroy this UBO, it's owned by the View
-    mRenderableViewUbh.clear();
 }
 
-void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope&,
+void FScene::prepareDynamicLights(const CameraInfo& camera,
         Handle<HwBufferObject> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager const& lcm = mEngine.getLightManager();

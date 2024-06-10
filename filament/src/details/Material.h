@@ -22,17 +22,44 @@
 #include "details/MaterialInstance.h"
 
 #include <filament/Material.h>
+#include <filament/MaterialEnums.h>
 
+#include <private/filament/EngineEnums.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 #include <private/filament/ConstantInfo.h>
 
+#include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/Program.h>
+
 #include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
+#include <array>
 #include <atomic>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <optional>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#endif
 
 namespace filament {
 
@@ -42,7 +69,8 @@ class  FEngine;
 
 class FMaterial : public Material {
 public:
-    FMaterial(FEngine& engine, const Material::Builder& builder);
+    FMaterial(FEngine& engine, const Material::Builder& builder,
+            std::unique_ptr<MaterialParser> materialParser);
     ~FMaterial() noexcept;
 
     class DefaultMaterialBuilder : public Material::Builder {
@@ -77,8 +105,13 @@ public:
 
     BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
 
-    FMaterialInstance const* getDefaultInstance() const noexcept { return &mDefaultInstance; }
-    FMaterialInstance* getDefaultInstance() noexcept { return &mDefaultInstance; }
+    FMaterialInstance const* getDefaultInstance() const noexcept {
+        return const_cast<FMaterial*>(this)->getDefaultInstance();
+    }
+
+    FMaterialInstance* getDefaultInstance() noexcept {
+        return std::launder(reinterpret_cast<FMaterialInstance*>(&mDefaultInstanceStorage));
+    }
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
@@ -126,7 +159,6 @@ public:
     Shading getShading() const noexcept { return mShading; }
     Interpolation getInterpolation() const noexcept { return mInterpolation; }
     BlendingMode getBlendingMode() const noexcept { return mBlendingMode; }
-    BlendingMode getRenderBlendingMode() const noexcept { return mRenderBlendingMode; }
     VertexDomain getVertexDomain() const noexcept { return mVertexDomain; }
     MaterialDomain getMaterialDomain() const noexcept { return mMaterialDomain; }
     CullingMode getCullingMode() const noexcept { return mCullingMode; }
@@ -165,6 +197,14 @@ public:
 
     void destroyPrograms(FEngine& engine);
 
+    // return the id of a specialization constant specified by name for this material
+    std::optional<uint32_t> getSpecializationConstantId(std::string_view name) const noexcept ;
+
+    // Sets a specialization constant by id. call is no-op if the id is invalid.
+    // Return true is the value was changed.
+    template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
+    bool setConstant(uint32_t id, T value) noexcept;
+
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
 
@@ -189,7 +229,7 @@ public:
     static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
 
     void checkProgramEdits() noexcept {
-        if (UTILS_UNLIKELY(mPendingEdits.load())) {
+        if (UTILS_UNLIKELY(hasPendingEdits())) {
             applyPendingEdits();
         }
     }
@@ -208,19 +248,28 @@ private:
     backend::Program getProgramWithVariants(Variant variant,
             Variant vertexVariant, Variant fragmentVariant) const noexcept;
 
+    void processBlendingMode(MaterialParser const* parser);
+
+    void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
+            MaterialParser const* parser);
+
+    void processPushConstants(FEngine& engine, MaterialParser const* parser);
+
+    void processDepthVariants(FEngine& engine, MaterialParser const* parser);
+
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
     backend::RasterState mRasterState;
-    BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
     bool mIsVariantLit = false;
     backend::FeatureLevel mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
     Shading mShading = Shading::UNLIT;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    std::array<backend::BlendFunction, 4> mCustomBlendFunctions = {};
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
@@ -243,7 +292,10 @@ private:
     bool mIsDefaultMaterial = false;
     bool mSpecularAntiAliasing = false;
 
-    FMaterialInstance mDefaultInstance;
+    // reserve some space to construct the default material instance
+    std::aligned_storage<sizeof(FMaterialInstance), alignof(FMaterialInstance)>::type mDefaultInstanceStorage;
+    static_assert(sizeof(mDefaultInstanceStorage) >= sizeof(mDefaultInstanceStorage));
+
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
@@ -261,13 +313,27 @@ private:
 
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
+    // Constants defined by this Material
+    utils::FixedCapacityVector<MaterialConstant> mMaterialConstants;
+    // A map from the Constant name to the mMaterialConstant index
+    std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
+    // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+
+    // current push constants for the HwProgram
+    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
+            backend::Program::SHADER_TYPE_COUNT>
+            mPushConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
     mutable utils::Mutex mActiveProgramsLock;
     mutable VariantList mActivePrograms;
-    std::atomic<MaterialParser*> mPendingEdits = {};
+    mutable utils::Mutex mPendingEditsLock;
+    std::unique_ptr<MaterialParser> mPendingEdits;
+    void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
+    bool hasPendingEdits() noexcept;
+    void latchPendingEdits() noexcept;
 #endif
 
     utils::CString mName;
@@ -275,7 +341,7 @@ private:
     const uint32_t mMaterialId;
     uint64_t mCacheId = 0;
     mutable uint32_t mMaterialInstanceId = 0;
-    MaterialParser* mMaterialParser = nullptr;
+    std::unique_ptr<MaterialParser> mMaterialParser;
 };
 
 

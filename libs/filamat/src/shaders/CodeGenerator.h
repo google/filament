@@ -107,7 +107,8 @@ public:
 
     // generate declarations for non-custom "in" variables
     utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderStage type,
-        const filament::AttributeBitset& attributes, filament::Interpolation interpolation) const;
+            const filament::AttributeBitset& attributes, filament::Interpolation interpolation,
+            MaterialBuilder::PushConstantList const& pushConstants) const;
     static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderStage type);
 
     // generate declarations for custom output variables
@@ -156,12 +157,17 @@ public:
     utils::io::sstream& generateSpecializationConstant(utils::io::sstream& out,
             const char* name, uint32_t id, std::variant<int, float, bool> value) const;
 
+    utils::io::sstream& generatePushConstants(utils::io::sstream& out,
+            MaterialBuilder::PushConstantList const& pushConstants,
+            size_t const layoutLocation) const;
+
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);
     static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderStage type);
 
     static void fixupExternalSamplers(
-            std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
+            std::string& shader, filament::SamplerInterfaceBlock const& sib,
+            FeatureLevel featureLevel) noexcept;
 
     // These constants must match the equivalent in MetalState.h.
     // These values represent the starting index for uniform, ssbo, and sampler group [[buffer(n)]]

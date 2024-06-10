@@ -505,6 +505,7 @@ export class View {
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
     public setGuardBandOptions(options: View$GuardBandOptions): void;
+    public setStereoscopicOptions(options: View$StereoscopicOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
@@ -545,6 +546,8 @@ export class Engine {
     public createSwapChain(): SwapChain;
     public createTextureFromJpeg(urlOrBuffer: BufferReference, options?: object): Texture;
     public createTextureFromPng(urlOrBuffer: BufferReference, options?: object): Texture;
+
+    public static getMaxStereoscopicEyes(): number;
 
     public createIblFromKtx1(urlOrBuffer: BufferReference): IndirectLight;
     public createSkyFromKtx1(urlOrBuffer: BufferReference): Skybox;
@@ -1407,6 +1410,10 @@ export interface View$DepthOfFieldOptions {
      */
     cocScale?: number;
     /**
+     * width/height aspect ratio of the circle of confusion (simulate anamorphic lenses)
+     */
+    cocAspectRatio?: number;
+    /**
      * maximum aperture diameter in meters (zero to disable rotation)
      */
     maxApertureDiameter?: number;
@@ -1611,7 +1618,7 @@ export interface View$AmbientOcclusionOptions {
 }
 
 /**
- * Options for Temporal Multi-Sample Anti-aliasing (MSAA)
+ * Options for Multi-Sample Anti-aliasing (MSAA)
  * @see setMultiSampleAntiAliasingOptions()
  */
 export interface View$MultiSampleAntiAliasingOptions {
@@ -1633,13 +1640,40 @@ export interface View$MultiSampleAntiAliasingOptions {
     customResolve?: boolean;
 }
 
+export enum View$TemporalAntiAliasingOptions$BoxType {
+    AABB, // use an AABB neighborhood
+    VARIANCE, // use the variance of the neighborhood (not recommended)
+    AABB_VARIANCE, // use both AABB and variance
+}
+
+export enum View$TemporalAntiAliasingOptions$BoxClipping {
+    ACCURATE, // Accurate box clipping
+    CLAMP, // clamping
+    NONE, // no rejections (use for debugging)
+}
+
+export enum View$TemporalAntiAliasingOptions$JitterPattern {
+    RGSS_X4,
+    UNIFORM_HELIX_X4,
+    HALTON_23_X8,
+    HALTON_23_X16,
+    HALTON_23_X32,
+}
+
 /**
  * Options for Temporal Anti-aliasing (TAA)
+ * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
+ * shaders to be recompiled. These options should be changed or set during initialization.
+ * `filterWidth`, `feedback` and `jitterPattern`, however, can be changed at any time.
+ *
+ * `feedback` of 0.1 effectively accumulates a maximum of 19 samples in steady state.
+ * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.
+ *
  * @see setTemporalAntiAliasingOptions()
  */
 export interface View$TemporalAntiAliasingOptions {
     /**
-     * reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+     * reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
      */
     filterWidth?: number;
     /**
@@ -1647,9 +1681,51 @@ export interface View$TemporalAntiAliasingOptions {
      */
     feedback?: number;
     /**
+     * texturing lod bias (typically -1 or -2)
+     */
+    lodBias?: number;
+    /**
+     * post-TAA sharpen, especially useful when upscaling is true.
+     */
+    sharpness?: number;
+    /**
      * enables or disables temporal anti-aliasing
      */
     enabled?: boolean;
+    /**
+     * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+     */
+    upscaling?: boolean;
+    /**
+     * whether to filter the history buffer
+     */
+    filterHistory?: boolean;
+    /**
+     * whether to apply the reconstruction filter to the input
+     */
+    filterInput?: boolean;
+    /**
+     * whether to use the YcoCg color-space for history rejection
+     */
+    useYCoCg?: boolean;
+    /**
+     * type of color gamut box
+     */
+    boxType?: View$TemporalAntiAliasingOptions$BoxType;
+    /**
+     * clipping algorithm
+     */
+    boxClipping?: View$TemporalAntiAliasingOptions$BoxClipping;
+    jitterPattern?: View$TemporalAntiAliasingOptions$JitterPattern;
+    varianceGamma?: number;
+    /**
+     * adjust the feedback dynamically to reduce flickering
+     */
+    preventFlickering?: boolean;
+    /**
+     * whether to apply history reprojection (debug option)
+     */
+    historyReprojection?: boolean;
 }
 
 /**

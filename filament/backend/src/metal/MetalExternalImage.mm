@@ -21,6 +21,7 @@
 #include "MetalUtils.h"
 
 #include <utils/Panic.h>
+#include <utils/Log.h>
 #include <utils/trap.h>
 
 #define NSERROR_CHECK(message)                                                                     \
@@ -28,7 +29,7 @@
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding]; \
         utils::slog.e << description << utils::io::endl;                                           \
     }                                                                                              \
-    ASSERT_POSTCONDITION(error == nil, message);
+    FILAMENT_CHECK_POSTCONDITION(error == nil) << message;
 
 namespace filament {
 namespace backend {
@@ -85,14 +86,14 @@ void MetalExternalImage::set(CVPixelBufferRef image) noexcept {
     }
 
     OSType formatType = CVPixelBufferGetPixelFormatType(image);
-    ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA ||
-                         formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
-            "Metal external images must be in either 32BGRA or 420f format.");
+    FILAMENT_CHECK_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA ||
+            formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+            << "Metal external images must be in either 32BGRA or 420f format.";
 
     size_t planeCount = CVPixelBufferGetPlaneCount(image);
-    ASSERT_POSTCONDITION(planeCount == 0 || planeCount == 2,
-            "The Metal backend does not support images with plane counts of %d.", planeCount);
-
+    FILAMENT_CHECK_POSTCONDITION(planeCount == 0 || planeCount == 2)
+            << "The Metal backend does not support images with plane counts of " << planeCount
+            << ".";
 
     if (planeCount == 0) {
         mImage = image;
@@ -137,8 +138,8 @@ void MetalExternalImage::set(CVPixelBufferRef image, size_t plane) noexcept {
     }
 
     const OSType formatType = CVPixelBufferGetPixelFormatType(image);
-    ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
-            "Metal planar external images must be in the 420f format.");
+    FILAMENT_CHECK_POSTCONDITION(formatType == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+            << "Metal planar external images must be in the 420f format.";
 
     mImage = image;
 
@@ -190,8 +191,8 @@ CVMetalTextureRef MetalExternalImage::createTextureFromImage(CVPixelBufferRef im
     CVMetalTextureRef texture;
     CVReturn result = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
             mContext.textureCache, image, nullptr, format, width, height, plane, &texture);
-    ASSERT_POSTCONDITION(result == kCVReturnSuccess,
-            "Could not create a CVMetalTexture from CVPixelBuffer.");
+    FILAMENT_CHECK_POSTCONDITION(result == kCVReturnSuccess)
+            << "Could not create a CVMetalTexture from CVPixelBuffer.";
 
     return texture;
 }
@@ -202,8 +203,8 @@ void MetalExternalImage::shutdown(MetalContext& context) noexcept {
 
 void MetalExternalImage::assertWritableImage(CVPixelBufferRef image) {
     OSType formatType = CVPixelBufferGetPixelFormatType(image);
-    ASSERT_PRECONDITION(formatType == kCVPixelFormatType_32BGRA,
-            "Metal SwapChain images must be in the 32BGRA format.");
+    FILAMENT_CHECK_PRECONDITION(formatType == kCVPixelFormatType_32BGRA)
+            << "Metal SwapChain images must be in the 32BGRA format.";
 }
 
 void MetalExternalImage::unset() {

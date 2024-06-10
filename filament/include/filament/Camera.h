@@ -28,6 +28,11 @@
 #include <math/vec4.h>
 #include <math/mat4.h>
 
+#include <math.h>
+
+#include <stdint.h>
+#include <stddef.h>
+
 namespace utils {
 class Entity;
 } // namespace utils
@@ -184,7 +189,7 @@ public:
      * @see Fov.
      */
     static math::mat4 projection(Fov direction, double fovInDegrees,
-            double aspect, double near, double far = std::numeric_limits<double>::infinity());
+            double aspect, double near, double far = INFINITY);
 
     /** Returns the projection matrix from the focal length.
      *
@@ -194,7 +199,7 @@ public:
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
     static math::mat4 projection(double focalLengthInMillimeters,
-            double aspect, double near, double far = std::numeric_limits<double>::infinity());
+            double aspect, double near, double far = INFINITY);
 
 
     /** Sets the projection matrix from a frustum defined by six planes.
@@ -286,19 +291,22 @@ public:
     /** Sets a custom projection matrix for each eye.
      *
      * The projectionForCulling, near, and far parameters establish a "culling frustum" which must
-     * encompass anything either eye can see.
+     * encompass anything any eye can see. All projection matrices must be set simultaneously. The
+     * number of stereoscopic eyes is controlled by the stereoscopicEyeCount setting inside of
+     * Engine::Config.
      *
-     * @param projection an array of projection matrices, only the first
-     *                   CONFIG_STEREOSCOPIC_EYES (2) are read
+     * @param projection an array of projection matrices, only the first config.stereoscopicEyeCount
+     *                   are read
      * @param count size of the projection matrix array to set, must be
-     *              >= CONFIG_STEREOSCOPIC_EYES (2)
+     *              >= config.stereoscopicEyeCount
      * @param projectionForCulling custom projection matrix for culling, must encompass both eyes
      * @param near distance in world units from the camera to the culling near plane. \p near > 0.
      * @param far distance in world units from the camera to the culling far plane. \p far > \p
      * near.
      * @see setCustomProjection
+     * @see Engine::Config::stereoscopicEyeCount
      */
-    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
+    void setCustomEyeProjection(math::mat4 const* UTILS_NONNULL projection, size_t count,
             math::mat4 const& projectionForCulling, double near, double far);
 
     /** Sets an additional matrix that scales the projection matrix.
@@ -357,8 +365,8 @@ public:
      * The projection matrix used for rendering always has its far plane set to infinity. This
      * is why it may differ from the matrix set through setProjection() or setLensProjection().
      *
-     * @param eyeId the index of the eye to return the projection matrix for, must be <
-     *              CONFIG_STEREOSCOPIC_EYES (2)
+     * @param eyeId the index of the eye to return the projection matrix for, must be
+     *              < config.stereoscopicEyeCount
      * @return The projection matrix used for rendering
      *
      * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix,
@@ -416,7 +424,7 @@ public:
      * This method is not intended to be called every frame. Instead, to update the position of the
      * head, use Camera::setModelMatrix.
      *
-     * @param eyeId the index of the eye to set, must be < CONFIG_STEREOSCOPIC_EYES (2)
+     * @param eyeId the index of the eye to set, must be < config.stereoscopicEyeCount
      * @param model the model matrix for an individual eye
      */
     void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);

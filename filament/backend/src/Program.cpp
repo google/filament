@@ -21,7 +21,7 @@ namespace filament::backend {
 using namespace utils;
 
 // We want these in the .cpp file, so they're not inlined (not worth it)
-Program::Program() noexcept { // NOLINT(modernize-use-equals-default)
+Program::Program() noexcept {  // NOLINT(modernize-use-equals-default)
 }
 
 Program::Program(Program&& rhs) noexcept = default;
@@ -44,6 +44,11 @@ Program& Program::shader(ShaderStage shader, void const* data, size_t size) {
     ShaderBlob blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
     mShadersSource[size_t(shader)] = std::move(blob);
+    return *this;
+}
+
+Program& Program::shaderLanguage(ShaderLanguage shaderLanguage) {
+    mShaderLanguage = shaderLanguage;
     return *this;
 }
 
@@ -86,8 +91,19 @@ Program& Program::specializationConstants(
     return *this;
 }
 
+Program& Program::pushConstants(ShaderStage stage,
+        utils::FixedCapacityVector<PushConstant> constants) noexcept {
+    mPushConstants[static_cast<uint8_t>(stage)] = std::move(constants);
+    return *this;
+}
+
 Program& Program::cacheId(uint64_t cacheId) noexcept {
     mCacheId = cacheId;
+    return *this;
+}
+
+Program& Program::multiview(bool multiview) noexcept {
+    mMultiview = multiview;
     return *this;
 }
 

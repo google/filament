@@ -31,21 +31,23 @@ namespace filament {
 namespace geometry {
 
 using namespace filament::math;
-using Builder = TangentSpaceMesh::Builder;
-using Algorithm = TangentSpaceMesh::Algorithm;
-using MethodPtr = void(*)(TangentSpaceMeshInput const*, TangentSpaceMeshOutput*);
 
 namespace {
 
-uint8_t const NORMALS_BIT = 0x01;
-uint8_t const UVS_BIT = 0x02;
-uint8_t const POSITIONS_BIT = 0x04;
-uint8_t const INDICES_BIT = 0x08;
+using Builder = TangentSpaceMesh::Builder;
+using MethodPtr = void(*)(TangentSpaceMeshInput const*, TangentSpaceMeshOutput*);
+
+constexpr uint8_t const NORMALS_BIT = 0x01;
+constexpr uint8_t const UVS_BIT = 0x02;
+constexpr uint8_t const POSITIONS_BIT = 0x04;
+constexpr uint8_t const TANGENTS_BIT = 0x08;
+constexpr uint8_t const INDICES_BIT = 0x10;
 
 // Input types
-uint8_t const NORMALS = NORMALS_BIT;
-uint8_t const POSITIONS_INDICES = POSITIONS_BIT | INDICES_BIT;
-uint8_t const NORMALS_UVS_POSITIONS_INDICES = NORMALS_BIT | UVS_BIT | POSITIONS_BIT | INDICES_BIT;
+constexpr uint8_t const NORMALS = NORMALS_BIT;
+constexpr uint8_t const POSITIONS_INDICES = POSITIONS_BIT | INDICES_BIT;
+constexpr uint8_t const NORMALS_UVS_POSITIONS_INDICES = NORMALS_BIT | UVS_BIT | POSITIONS_BIT | INDICES_BIT;
+constexpr uint8_t const NORMALS_TANGENTS = NORMALS_BIT | TANGENTS_BIT;
 
 std::string_view to_string(Algorithm const algorithm) noexcept {
     switch (algorithm) {
@@ -59,8 +61,25 @@ std::string_view to_string(Algorithm const algorithm) noexcept {
             return "HUGHES_MOLLER";
         case Algorithm::FRISVAD:
             return "FRISVAD";
-        case Algorithm::FLAT_SHADING:
+    }
+}
+
+std::string_view to_string(AlgorithmImpl const algorithm) noexcept {
+    switch (algorithm) {
+        case AlgorithmImpl::INVALID:
+            return "INVALID";
+        case AlgorithmImpl::MIKKTSPACE:
+            return "MIKKTSPACE";
+        case AlgorithmImpl::LENGYEL:
+            return "LENGYEL";
+        case AlgorithmImpl::HUGHES_MOLLER:
+            return "HUGHES_MOLLER";
+        case AlgorithmImpl::FRISVAD:
+            return "FRISVAD";
+        case AlgorithmImpl::FLAT_SHADING:
             return "FLAT_SHADING";
+        case AlgorithmImpl::TANGENTS_PROVIDED:
+            return "TANGENTS_PROVIDED";
     }
 }
 
@@ -73,75 +92,71 @@ inline void takeStride(InputType*& out, size_t const stride) noexcept {
     out = pointerAdd(out, 1, stride);
 }
 
-inline Algorithm selectBestDefaultAlgorithm(uint8_t const inputType) {
-    Algorithm outAlgo;
+inline AlgorithmImpl selectBestDefaultAlgorithm(uint8_t const inputType) {
     if (isInputType(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
-        outAlgo = Algorithm::MIKKTSPACE;
+        return AlgorithmImpl::MIKKTSPACE;
+    } else if (isInputType(inputType, NORMALS_TANGENTS)) {
+        return AlgorithmImpl::TANGENTS_PROVIDED;
     } else if (isInputType(inputType, POSITIONS_INDICES)) {
-        outAlgo = Algorithm::FLAT_SHADING;
+        return AlgorithmImpl::FLAT_SHADING;
     } else {
-        ASSERT_PRECONDITION(inputType & NORMALS,
-                "Must at least have normals or (positions + indices) as input");
-        outAlgo = Algorithm::FRISVAD;
+        FILAMENT_CHECK_PRECONDITION(inputType & NORMALS)
+                << "Must at least have normals or (positions + indices) as input";
+        return AlgorithmImpl::FRISVAD;
     }
-    return outAlgo;
 }
 
-Algorithm selectAlgorithm(TangentSpaceMeshInput *input) noexcept {
+AlgorithmImpl selectAlgorithm(TangentSpaceMeshInput *input) noexcept {
     uint8_t inputType = 0;
-    if (input->normals) {
+    auto normals = input->normals();
+    auto positions = input->positions();
+    auto uvs = input->uvs();
+    auto tangents = input->tangents();
+
+    if (normals) {
         inputType |= NORMALS_BIT;
     }
-    if (input->positions) {
+    if (positions) {
         inputType |= POSITIONS_BIT;
     }
-    if (input->uvs) {
+    if (uvs) {
         inputType |= UVS_BIT;
     }
     if (input->triangles32 || input->triangles16) {
         inputType |= INDICES_BIT;
     }
+    if (tangents) {
+        inputType |= TANGENTS_BIT;
+    }
 
-    bool foundAlgo = false;
-    Algorithm outAlgo = Algorithm::DEFAULT;
+    AlgorithmImpl outAlgo = AlgorithmImpl::INVALID;
     switch (input->algorithm) {
         case Algorithm::DEFAULT:
             outAlgo = selectBestDefaultAlgorithm(inputType);
-            foundAlgo = true;
             break;
         case Algorithm::MIKKTSPACE:
             if (isInputType(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
-                outAlgo = Algorithm::MIKKTSPACE;
-                foundAlgo = true;
+                outAlgo = AlgorithmImpl::MIKKTSPACE;
             }
             break;
         case Algorithm::LENGYEL:
             if (isInputType(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
-                outAlgo = Algorithm::LENGYEL;
-                foundAlgo = true;
+                outAlgo = AlgorithmImpl::LENGYEL;
             }
             break;
         case Algorithm::HUGHES_MOLLER:
             if (isInputType(inputType, NORMALS)) {
-                outAlgo = Algorithm::HUGHES_MOLLER;
-                foundAlgo = true;
+                outAlgo = AlgorithmImpl::HUGHES_MOLLER;
             }
             break;
         case Algorithm::FRISVAD:
             if (isInputType(inputType, NORMALS)) {
-                outAlgo = Algorithm::FRISVAD;
-                foundAlgo = true;
-            }
-            break;
-        case Algorithm::FLAT_SHADING:
-            if (isInputType(inputType, POSITIONS_INDICES)) {
-                outAlgo = Algorithm::FLAT_SHADING;
-                foundAlgo = true;
+                outAlgo = AlgorithmImpl::FRISVAD;
             }
             break;
     }
 
-    if (!foundAlgo) {
+    if (outAlgo == AlgorithmImpl::INVALID) {
         outAlgo = selectBestDefaultAlgorithm(inputType);
         utils::slog.w << "Cannot satisfy algorithm=" << to_string(input->algorithm)
             << ". Selected algorithm=" << to_string(outAlgo) << " instead"
@@ -170,10 +185,10 @@ inline std::pair<float3, float3> frisvadKernel(float3 const& n) {
 void frisvadMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output)
         noexcept {
     size_t const vertexCount = input->vertexCount;
-    quatf* quats = output->tangentSpace.allocate(vertexCount);
+    quatf* quats = output->tspace().allocate(vertexCount);
 
-    float3 const* UTILS_RESTRICT normals = input->normals;
-    size_t nstride = input->normalStride ? input->normalStride : sizeof(float3);
+    float3 const* UTILS_RESTRICT normals = input->normals();
+    size_t const nstride = input->normalsStride();
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 const n = *normals;
@@ -181,11 +196,10 @@ void frisvadMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
         quats[qindex] = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
         normals = pointerAdd(normals, 1, nstride);
     }
-
     output->vertexCount = input->vertexCount;
     output->triangleCount = input->triangleCount;
-    output->uvs.borrow(input->uvs);
-    output->positions.borrow(input->positions);
+    output->passthrough(input->attributeData, {AttributeImpl::UV0, AttributeImpl::POSITIONS});
+    output->passthrough(input->attributeData, input->getAuxAttributes());
     output->triangles32.borrow(input->triangles32);
     output->triangles16.borrow(input->triangles16);
 }
@@ -193,10 +207,10 @@ void frisvadMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
 void hughesMollerMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output)
         noexcept {
     size_t const vertexCount = input->vertexCount;
-    quatf* quats = output->tangentSpace.allocate(vertexCount);
+    quatf* quats = output->tspace().allocate(vertexCount);
 
-    float3 const* UTILS_RESTRICT normals = input->normals;
-    size_t nstride = input->normalStride ? input->normalStride : sizeof(float3);
+    float3 const* UTILS_RESTRICT normals = input->normals();
+    size_t const nstride = input->normalsStride();
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 const n = *normals;
@@ -215,31 +229,82 @@ void hughesMollerMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutp
     }
     output->vertexCount = input->vertexCount;
     output->triangleCount = input->triangleCount;
-    output->uvs.borrow(input->uvs);
-    output->positions.borrow(input->positions);
+    output->passthrough(input->attributeData, {AttributeImpl::UV0, AttributeImpl::POSITIONS});
+    output->passthrough(input->attributeData, input->getAuxAttributes());
     output->triangles32.borrow(input->triangles32);
     output->triangles16.borrow(input->triangles16);
 }
 
 void flatShadingMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output)
         noexcept {
-    float3 const* positions = input->positions;
-    size_t const pstride = input->positionStride ? input->positionStride : sizeof(float3);
-
-    float2 const* uvs = input->uvs;
-    size_t const uvstride = input->uvStride ? input->uvStride : sizeof(float2);
-
     bool const isTriangle16 = input->triangles16 != nullptr;
+    size_t const triangleCount = input->triangleCount;
+    size_t const tstride = isTriangle16 ? sizeof(ushort3) : sizeof(uint3);
+    size_t const outVertexCount = triangleCount * 3;
+
+    using InData = TangentSpaceMesh::InData;
+    using OutData = std::variant<float2*, float3*, float4*, ushort3*, ushort4*>;
+
+    // We make sure to initialize arrays for the auxilliary attributes that will also be mapped in
+    // the new mesh.
+    std::vector<std::tuple<InData, OutData, AttributeImpl, size_t>> outAttributes;
+    {
+        auto const initArray = [output, count = outVertexCount](AttributeImpl attrib,
+                                       InData indata) -> OutData {
+            if (std::holds_alternative<float2 const*>(indata)) {
+                if (std::get<float2 const*>(indata)) {
+                    return output->data<float2>(attrib).allocate(count);
+                }
+                return (float2*) nullptr;
+            } else if (std::holds_alternative<float3 const*>(indata)) {
+                if (std::get<float3 const*>(indata)) {
+                    return output->data<float3>(attrib).allocate(count);
+                }
+                return (float3*) nullptr;
+            } else if (std::holds_alternative<float4 const*>(indata)) {
+                if (std::get<float4 const*>(indata)) {
+                    return output->data<float4>(attrib).allocate(count);
+                }
+                return (float4*) nullptr;
+            } else if (std::holds_alternative<ushort3 const*>(indata)) {
+                if (std::get<ushort3 const*>(indata)) {
+                    return output->data<ushort3>(attrib).allocate(count);
+                }
+                return (ushort3*) nullptr;
+            } else if (std::holds_alternative<ushort4 const*>(indata)) {
+                if (std::get<ushort4 const*>(indata)) {
+                    return output->data<ushort4>(attrib).allocate(count);
+                }
+                return (ushort4*) nullptr;
+            }
+            return (float2*) nullptr;
+        };
+        auto attributes = input->getAuxAttributes();
+        if (input->uvs()) {
+            auto uvs = input->uvs();
+            attributes.push_back(AttributeImpl::UV0);
+        }
+        std::for_each(attributes.begin(), attributes.end(),
+                [=, &outAttributes](AttributeImpl attrib) {
+                    auto indata = input->data(attrib);
+                    outAttributes.push_back({
+                            indata,
+                            initArray(attrib, indata),
+                            attrib,
+                            input->stride(attrib),
+                    });
+                });
+
+    }
+
+    float3 const* positions = input->positions();
+    size_t const pstride = input->positionsStride();
+
     uint8_t const* triangles = isTriangle16 ? (uint8_t const*) input->triangles16 :
             (uint8_t const*) input->triangles32;
 
-    size_t const triangleCount = input->triangleCount;
-    size_t const tstride = isTriangle16 ? sizeof(ushort3) : sizeof(uint3);
-
-    size_t const outVertexCount = triangleCount * 3;
-    float3* outPositions = output->positions.allocate(outVertexCount);
-    float2* outUvs = uvs ? output->uvs.allocate(outVertexCount) : nullptr;
-    quatf* quats = output->tangentSpace.allocate(outVertexCount);
+    float3* outPositions = output->positions().allocate(outVertexCount);
+    quatf* quats = output->tspace().allocate(outVertexCount);
 
     size_t const outTriangleCount = triangleCount;
     uint3* outTriangles = output->triangles32.allocate(outTriangleCount);
@@ -269,15 +334,78 @@ void flatShadingMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutpu
         quats[i1] = tspace;
         quats[i2] = tspace;
 
-        if (outUvs) {
-            outUvs[i0] = *pointerAdd(uvs, tri.x, uvstride);
-            outUvs[i1] = *pointerAdd(uvs, tri.y, uvstride);
-            outUvs[i2] = *pointerAdd(uvs, tri.z, uvstride);
+        // We need to make sure that the aux data is ported to the new mesh
+        for (auto& [indata, outdata, attrib, stride]: outAttributes) {
+            if (std::holds_alternative<float2 const*>(indata)) {
+                float2* out = std::get<float2*>(outdata);
+                float2 const* in = std::get<float2 const*>(indata);
+                out[i0] = *pointerAdd(in, tri.x, stride);
+                out[i1] = *pointerAdd(in, tri.y, stride);
+                out[i2] = *pointerAdd(in, tri.z, stride);
+            } else if (std::holds_alternative<float3 const*>(indata)) {
+                float3* out = std::get<float3*>(outdata);
+                float3 const* in = std::get<float3 const*>(indata);
+                out[i0] = *pointerAdd(in, tri.x, stride);
+                out[i1] = *pointerAdd(in, tri.y, stride);
+                out[i2] = *pointerAdd(in, tri.z, stride);
+            } else if (std::holds_alternative<float4 const*>(indata)) {
+                float4* out = std::get<float4*>(outdata);
+                float4 const* in = std::get<float4 const*>(indata);
+                out[i0] = *pointerAdd(in, tri.x, stride);
+                out[i1] = *pointerAdd(in, tri.y, stride);
+                out[i2] = *pointerAdd(in, tri.z, stride);
+            } else if (std::holds_alternative<ushort3 const*>(indata)) {
+                ushort3* out = std::get<ushort3*>(outdata);
+                ushort3 const* in = std::get<ushort3 const*>(indata);
+                out[i0] = *pointerAdd(in, tri.x, stride);
+                out[i1] = *pointerAdd(in, tri.y, stride);
+                out[i2] = *pointerAdd(in, tri.z, stride);
+            } else if (std::holds_alternative<ushort4 const*>(indata)) {
+                ushort4* out = std::get<ushort4*>(outdata);
+                ushort4 const* in = std::get<ushort4 const*>(indata);
+                out[i0] = *pointerAdd(in, tri.x, stride);
+                out[i1] = *pointerAdd(in, tri.y, stride);
+                out[i2] = *pointerAdd(in, tri.z, stride);
+            }
         }
     }
 
     output->vertexCount = outVertexCount;
     output->triangleCount = outTriangleCount;
+}
+
+void tangentsProvidedMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output)
+        noexcept {
+    size_t const vertexCount = input->vertexCount;
+    quatf* quats = output->tspace().allocate(vertexCount);
+
+    float3 const* normal = input->normals();
+    size_t const nstride = input->normalsStride();
+
+    float4 const* tanvec = input->tangents();
+    size_t const tstride = input->tangentsStride();
+
+    for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
+        float3 const& n = *pointerAdd(normal, qindex, nstride);
+        float4 const& t4 = *pointerAdd(tanvec, qindex, nstride);
+        float3 tv = t4.xyz;
+        float3 b = t4.w > 0 ? cross(tv, n) : cross(n, tv);
+
+        // Some assets do not provide perfectly orthogonal tangents and normals, so we adjust the
+        // tangent to enforce orthonormality. We would rather honor the exact normal vector than
+        // the exact tangent vector since the latter is only used for bump mapping and anisotropic
+        // lighting.
+        tv = t4.w > 0 ? cross(n, b) : cross(b, n);
+
+        quats[qindex] = mat3f::packTangentFrame({tv, b, n});
+    }
+
+    output->vertexCount = vertexCount;
+    output->triangleCount = input->triangleCount;
+    output->passthrough(input->attributeData, {AttributeImpl::UV0, AttributeImpl::POSITIONS});
+    output->passthrough(input->attributeData, input->getAuxAttributes());
+    output->triangles32.borrow(input->triangles32);
+    output->triangles16.borrow(input->triangles16);
 }
 
 void mikktspaceMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output) {
@@ -298,14 +426,14 @@ inline float3 randomPerp(float3 const& n) {
 void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output) {
     size_t const vertexCount = input->vertexCount;
     size_t const triangleCount = input->triangleCount;
-    size_t const positionStride = input->positionStride ? input->positionStride : sizeof(float3);
-    size_t const normalStride = input->normalStride ? input->normalStride : sizeof(float3);
-    size_t const uvStride = input->uvStride ? input->uvStride : sizeof(float2);
+    size_t const positionStride = input->positionsStride();
+    size_t const normalStride = input->normalsStride();
+    size_t const uvStride = input->uvsStride();
     auto const* triangles16 = input->triangles16;
     auto const* triangles32 = input->triangles32;
-    auto const* positions = input->positions;
-    auto const* uvs = input->uvs;
-    auto const* normals = input->normals;
+    auto positions = input->positions();
+    auto uvs = input->uvs();
+    auto normals = input->normals();
 
     std::vector<float3> tan1(vertexCount, float3{0.0f});
     std::vector<float3> tan2(vertexCount, float3{0.0f});
@@ -351,7 +479,7 @@ void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
         tan2[tri.z] += tdir;
     }
 
-    quatf* quats = output->tangentSpace.allocate(vertexCount);
+    quatf* quats = output->tspace().allocate(vertexCount);
     for (size_t a = 0; a < vertexCount; a++) {
         float3 const& n = *pointerAdd(normals, a, normalStride);
         float3 const& t1 = tan1[a];
@@ -369,10 +497,18 @@ void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
 
     output->vertexCount = vertexCount;
     output->triangleCount = triangleCount;
-    output->uvs.borrow(uvs);
-    output->positions.borrow(positions);
+    output->passthrough(input->attributeData, {AttributeImpl::UV0, AttributeImpl::POSITIONS});
+    output->passthrough(input->attributeData, input->getAuxAttributes());
     output->triangles32.borrow(triangles32);
     output->triangles16.borrow(triangles16);
+}
+
+void auxImpl(TangentSpaceMeshInput::AttributeMap& attributeData, AttributeImpl attribute,
+        InData data, size_t stride) noexcept {
+    attributeData[attribute] = {
+            data,
+            stride ? stride : TangentSpaceMeshInput::attributeSize(attribute),
+    };
 }
 
 } // anonymous namespace
@@ -399,20 +535,27 @@ Builder& Builder::vertexCount(size_t vertexCount) noexcept {
 }
 
 Builder& Builder::normals(float3 const* normals, size_t stride) noexcept {
-    mMesh->mInput->normals = normals;
-    mMesh->mInput->normalStride = stride;
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::NORMALS, normals, stride);
     return *this;
 }
 
 Builder& Builder::uvs(float2 const* uvs, size_t stride) noexcept {
-    mMesh->mInput->uvs = uvs;
-    mMesh->mInput->uvStride = stride;
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::UV0, uvs, stride);
     return *this;
 }
 
 Builder& Builder::positions(float3 const* positions, size_t stride) noexcept {
-    mMesh->mInput->positions = positions;
-    mMesh->mInput->positionStride = stride;
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::POSITIONS, positions, stride);
+    return *this;
+}
+
+Builder& Builder::tangents(float4 const* tangents, size_t stride) noexcept {
+    auxImpl(mMesh->mInput->attributeData, AttributeImpl::TANGENTS, tangents, stride);
+    return *this;
+}
+
+Builder& Builder::aux(AuxAttribute attribute, InData data, size_t stride) noexcept {
+    auxImpl(mMesh->mInput->attributeData, static_cast<AttributeImpl>(attribute), data, stride);
     return *this;
 }
 
@@ -437,27 +580,36 @@ Builder& Builder::algorithm(Algorithm algo) noexcept {
 }
 
 TangentSpaceMesh* Builder::build() {
-    ASSERT_PRECONDITION(!mMesh->mInput->triangles32 || !mMesh->mInput->triangles16,
-            "Cannot provide both uint32 triangles and uint16 triangles");
+    FILAMENT_CHECK_PRECONDITION(!mMesh->mInput->triangles32 || !mMesh->mInput->triangles16)
+            << "Cannot provide both uint32 triangles and uint16 triangles";
 
-    // Work in progress. Not for use.
+    // Validate whether the provided data for an attribute is of the right data type.
+    for (auto attribute: mMesh->mInput->getAuxAttributes()) {
+        FILAMENT_CHECK_PRECONDITION(
+                TangentSpaceMeshInput::isDataTypeCorrect(attribute, mMesh->mInput->data(attribute)))
+                << "Incorrect attribute data type";
+    }
+
     mMesh->mOutput->algorithm = selectAlgorithm(mMesh->mInput);
     MethodPtr method = nullptr;
     switch (mMesh->mOutput->algorithm) {
-        case Algorithm::MIKKTSPACE:
+        case AlgorithmImpl::MIKKTSPACE:
             method = mikktspaceMethod;
             break;
-        case Algorithm::LENGYEL:
+        case AlgorithmImpl::LENGYEL:
             method = lengyelMethod;
             break;
-        case Algorithm::HUGHES_MOLLER:
+        case AlgorithmImpl::HUGHES_MOLLER:
             method = hughesMollerMethod;
             break;
-        case Algorithm::FRISVAD:
+        case AlgorithmImpl::FRISVAD:
             method = frisvadMethod;
             break;
-        case Algorithm::FLAT_SHADING:
+        case AlgorithmImpl::FLAT_SHADING:
             method = flatShadingMethod;
+            break;
+        case AlgorithmImpl::TANGENTS_PROVIDED:
+            method = tangentsProvidedMethod;
             break;
         default:
             break;
@@ -501,9 +653,10 @@ size_t TangentSpaceMesh::getVertexCount() const noexcept {
 }
 
 void TangentSpaceMesh::getPositions(float3* positions, size_t stride) const {
-    ASSERT_PRECONDITION(mInput->positions, "Must provide input positions");
+    auto inPositions = mInput->positions();
+    FILAMENT_CHECK_PRECONDITION(inPositions) << "Must provide input positions";
     stride = stride ? stride : sizeof(decltype(*positions));
-    auto outPositions = mOutput->positions.get();
+    auto const& outPositions = mOutput->positions();
     for (size_t i = 0; i < mOutput->vertexCount; ++i) {
         *positions = outPositions[i];
         takeStride(positions, stride);
@@ -511,9 +664,10 @@ void TangentSpaceMesh::getPositions(float3* positions, size_t stride) const {
 }
 
 void TangentSpaceMesh::getUVs(float2* uvs, size_t stride) const {
-    ASSERT_PRECONDITION(mInput->uvs, "Must provide input UVs");
+    auto inUVs = mInput->uvs();
+    FILAMENT_CHECK_PRECONDITION(inUVs) << "Must provide input positions";
     stride = stride ? stride : sizeof(decltype(*uvs));
-    auto outUvs = mOutput->uvs.get();
+    auto const& outUvs = mOutput->uvs();
     for (size_t i = 0; i < mOutput->vertexCount; ++i) {
         *uvs = outUvs[i];
         takeStride(uvs, stride);
@@ -525,11 +679,12 @@ size_t TangentSpaceMesh::getTriangleCount() const noexcept {
 }
 
 void TangentSpaceMesh::getTriangles(uint3* out) const {
-    ASSERT_PRECONDITION(mInput->triangles16 || mInput->triangles32, "Must provide input triangles");
+    FILAMENT_CHECK_PRECONDITION(mInput->triangles16 || mInput->triangles32)
+            << "Must provide input triangles";
 
     bool const is16 = (bool) mOutput->triangles16;
-    auto triangles16 = mOutput->triangles16.get();
-    auto triangles32 = mOutput->triangles32.get();
+    auto const& triangles16 = mOutput->triangles16;
+    auto const& triangles32 = mOutput->triangles32;
     size_t const stride = sizeof(decltype(*out));
     for (size_t i = 0; i < mOutput->triangleCount; ++i) {
         *out = is16 ? uint3{triangles16[i]} : triangles32[i];
@@ -538,20 +693,21 @@ void TangentSpaceMesh::getTriangles(uint3* out) const {
 }
 
 void TangentSpaceMesh::getTriangles(ushort3* out) const {
-    ASSERT_PRECONDITION(mInput->triangles16 || mInput->triangles32, "Must provide input triangles");
+    FILAMENT_CHECK_PRECONDITION(mInput->triangles16 || mInput->triangles32)
+            << "Must provide input triangles";
 
     const bool is16 = (bool) mOutput->triangles16;
-    auto triangles16 = mOutput->triangles16.get();
-    auto triangles32 = mOutput->triangles32.get();
+    auto const& triangles16 = mOutput->triangles16;
+    auto const& triangles32 = mOutput->triangles32;
     const size_t stride = sizeof(decltype(*out));
     for (size_t i = 0, c = mOutput->triangleCount; i < c; ++i) {
         if (is16) {
             *out = triangles16[i];
         } else {
             uint3 const& tri = triangles32[i];
-            ASSERT_PRECONDITION(tri.x <= USHRT_MAX &&
-                                tri.y <= USHRT_MAX &&
-                                tri.z <= USHRT_MAX, "Overflow when casting uint3 to ushort3");
+            FILAMENT_CHECK_PRECONDITION(
+                    tri.x <= USHRT_MAX && tri.y <= USHRT_MAX && tri.z <= USHRT_MAX)
+                    << "Overflow when casting uint3 to ushort3";
             *out = ushort3{static_cast<uint16_t>(tri.x),
                            static_cast<uint16_t>(tri.y),
                            static_cast<uint16_t>(tri.z)};
@@ -562,36 +718,70 @@ void TangentSpaceMesh::getTriangles(ushort3* out) const {
 
 void TangentSpaceMesh::getQuats(quatf* out, size_t stride) const noexcept {
     stride = stride ? stride : sizeof(decltype((*out)));
-    auto tangentSpace = mOutput->tangentSpace.get();
+    auto const& tangents = mOutput->tspace();
     size_t const vertexCount = mOutput->vertexCount;
     for (size_t i = 0; i < vertexCount; ++i) {
-        *out = tangentSpace[i];
+        *out = tangents[i];
         takeStride(out, stride);
     }
 }
 
 void TangentSpaceMesh::getQuats(short4* out, size_t stride) const noexcept {
     stride = stride ? stride : sizeof(decltype((*out)));
-    auto tangentSpace = mOutput->tangentSpace.get();
+    auto const& tangents = mOutput->tspace();
     size_t const vertexCount = mOutput->vertexCount;
     for (size_t i = 0; i < vertexCount; ++i) {
-        *out = packSnorm16(tangentSpace[i].xyzw);
+        *out = packSnorm16(tangents[i].xyzw);
         takeStride(out, stride);
     }
 }
 
 void TangentSpaceMesh::getQuats(quath* out, size_t stride) const noexcept {
     stride = stride ? stride : sizeof(decltype((*out)));
-    auto tangentSpace = mOutput->tangentSpace.get();
+    auto const& tangents = mOutput->tspace();
     size_t const vertexCount = mOutput->vertexCount;
     for (size_t i = 0; i < vertexCount; ++i) {
-        *out = quath(tangentSpace[i].xyzw);
+        *out = quath(tangents[i].xyzw);
         takeStride(out, stride);
     }
 }
 
-Algorithm TangentSpaceMesh::getAlgorithm() const noexcept {
-    return mOutput->algorithm;
+template void TangentSpaceMesh::getAux<float2>(AuxAttribute attribute, float2* out,
+        size_t stride) const noexcept;
+
+template void TangentSpaceMesh::getAux<float3>(AuxAttribute attribute, float3* out,
+        size_t stride) const noexcept;
+
+template void TangentSpaceMesh::getAux<float4>(AuxAttribute attribute, float4* out,
+        size_t stride) const noexcept;
+
+template void TangentSpaceMesh::getAux<ushort3>(AuxAttribute attribute, ushort3* out,
+        size_t stride) const noexcept;
+
+template void TangentSpaceMesh::getAux<ushort4>(AuxAttribute attribute, ushort4* out,
+        size_t stride) const noexcept;
+
+template<typename T, typename>
+void TangentSpaceMesh::getAux(AuxAttribute attribute, T* out, size_t stride) const noexcept {
+    AttributeImpl attrib = static_cast<AttributeImpl>(attribute);
+    auto inAux = mInput->data<T>(attrib);
+    FILAMENT_CHECK_PRECONDITION(inAux) << "Must provide input auxilliary attribute";
+    stride = stride ? stride : sizeof(decltype(*out));
+    auto const& outAux = mOutput->data<T>(attrib);
+    for (size_t i = 0; i < mOutput->vertexCount; ++i) {
+        *out = outAux[i];
+        takeStride(out, stride);
+    }
+}
+
+bool TangentSpaceMesh::remeshed() const noexcept {
+    switch(mOutput->algorithm) {
+        case AlgorithmImpl::MIKKTSPACE:
+        case AlgorithmImpl::FLAT_SHADING:
+            return true;
+        default:
+            return false;
+    }
 }
 
 }

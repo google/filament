@@ -18,12 +18,14 @@
 
 #include <math/mat3.h>
 #include <math/norm.h>
-
+#include <utils/Panic.h>
 
 #include <meshoptimizer.h>
 #include <mikktspace/mikktspace.h>
 
 #include <vector>
+
+#include <string.h>  // memcpy
 
 namespace filament::geometry {
 
@@ -75,27 +77,66 @@ void MikktspaceImpl::setTSpaceBasic(SMikkTSpaceContext const* context, float con
     float3 const pos = *pointerAdd(wrapper->mPositions, vertInd, wrapper->mPositionStride);
     float3 const n = normalize(*pointerAdd(wrapper->mNormals, vertInd, wrapper->mNormalStride));
     float2 const uv = *pointerAdd(wrapper->mUVs, vertInd, wrapper->mUVStride);
-    float3 const t{fvTangent[0], fvTangent[1], fvTangent[2]};
+    float3 const t { fvTangent[0], fvTangent[1], fvTangent[2] };
     float3 const b = fSign * normalize(cross(n, t));
 
     // TODO: packTangentFrame actually changes the orientation of b.
     quatf const quat = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
 
-    wrapper->mOutVertices.push_back({pos, uv, quat});
+    auto& output = wrapper->mOutputData;
+    auto const& EMPTY_ELEMENT = wrapper->EMPTY_ELEMENT;
+
+    size_t const outputCurSize = output.size();
+
+    // Prepare for the next element
+    output.insert(output.end(), EMPTY_ELEMENT.begin(), EMPTY_ELEMENT.end());
+
+    uint8_t* cursor = output.data() + outputCurSize;
+
+    *((float3*) (cursor + POS_OFFSET)) = pos;
+    *((float2*) (cursor + UV_OFFSET)) = uv;
+    *((quatf*) (cursor + TBN_OFFSET)) = quat;
+
+    cursor += BASE_OUTPUT_SIZE;
+    for (auto const& inputAttrib: wrapper->mInputAttribArrays) {
+        uint8_t const* input = pointerAdd(inputAttrib.data, vertInd, inputAttrib.stride);
+        memcpy(cursor, input, inputAttrib.size);
+        cursor += inputAttrib.size;
+    }
 }
 
 MikktspaceImpl::MikktspaceImpl(const TangentSpaceMeshInput* input) noexcept
     : mFaceCount((int) input->triangleCount),
-      mPositions(input->positions),
-      mPositionStride(input->positionStride ? input->positionStride : sizeof(float3)),
-      mNormals(input->normals),
-      mNormalStride(input->normalStride ? input->normalStride : sizeof(float3)),
-      mUVs(input->uvs),
-      mUVStride(input->uvStride ? input->uvStride : sizeof(float2)),
+      mPositions(input->positions()),
+      mPositionStride(input->positionsStride()),
+      mNormals(input->normals()),
+      mNormalStride(input->normalsStride()),
+      mUVs(input->uvs()),
+      mUVStride(input->uvsStride()),
       mIsTriangle16(input->triangles16),
       mTriangles(
-              input->triangles16 ? (uint8_t*) input->triangles16 : (uint8_t*) input->triangles32) {
-    mOutVertices.reserve(mFaceCount * 3);
+              input->triangles16 ? (uint8_t*) input->triangles16 : (uint8_t*) input->triangles32),
+      mOutputElementSize(BASE_OUTPUT_SIZE) {
+
+    // We don't know how many attributes there are so we have to create an ordering of the
+    // output components.  The first three components are
+    //   - float3 positions
+    //   - float2 uv
+    //   - quatf tangent
+    for (auto attrib: input->getAuxAttributes()) {
+        size_t const attribSize =input->attributeSize(attrib);
+        mOutputElementSize += attribSize;
+        mInputAttribArrays.push_back({
+            .attrib = attrib,
+            .data = input->raw(attrib),
+            .stride = input->stride(attrib),
+            .size = attribSize,
+        });
+    }
+    mOutputData.reserve(mFaceCount * 3 * mOutputElementSize);
+
+    // We will insert 0s to signify a new element being added to the output.
+    EMPTY_ELEMENT = std::vector<uint8_t>(mOutputElementSize);
 }
 
 MikktspaceImpl* MikktspaceImpl::getThis(SMikkTSpaceContext const* context) noexcept {
@@ -120,25 +161,65 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
     SMikkTSpaceContext context{.m_pInterface = &interface, .m_pUserData = this};
     genTangSpaceDefault(&context);
 
-    std::vector<unsigned int> remap(mOutVertices.size());
-    size_t vertexCount = meshopt_generateVertexRemap(remap.data(), NULL, mOutVertices.size(),
-            mOutVertices.data(), mOutVertices.size(), sizeof(IOVertex));
+    size_t oVertexCount = mOutputData.size() / mOutputElementSize;
+    std::vector<unsigned int> remap;
+    remap.resize(oVertexCount);
+    size_t vertexCount = meshopt_generateVertexRemap(remap.data(), NULL, remap.size(),
+            mOutputData.data(), oVertexCount, mOutputElementSize);
 
-    std::vector<IOVertex> newVertices(vertexCount);
-    meshopt_remapVertexBuffer((void*) newVertices.data(), mOutVertices.data(), mOutVertices.size(),
-            sizeof(IOVertex), remap.data());
+    std::vector<uint8_t> newVertices(vertexCount * mOutputElementSize);
+    meshopt_remapVertexBuffer((void*) newVertices.data(), mOutputData.data(), oVertexCount,
+            mOutputElementSize, remap.data());
 
     uint3* triangles32 = output->triangles32.allocate(mFaceCount);
-    meshopt_remapIndexBuffer((uint32_t*) triangles32, NULL, mOutVertices.size(), remap.data());
+    meshopt_remapIndexBuffer((uint32_t*) triangles32, NULL, remap.size(), remap.data());
 
-    float3* outPositions = output->positions.allocate(vertexCount);
-    float2* outUVs = output->uvs.allocate(vertexCount);
-    quatf* outQuats = output->tangentSpace.allocate(vertexCount);
+    float3* outPositions = output->positions().allocate(vertexCount);
+    float2* outUVs = output->uvs().allocate(vertexCount);
+    quatf* outQuats = output->tspace().allocate(vertexCount);
 
-    for (size_t i = 0; i < vertexCount; ++i) {
-        outPositions[i] = newVertices[i].position;
-        outUVs[i] = newVertices[i].uv;
-        outQuats[i] = newVertices[i].tangentSpace;
+    uint8_t* const verts = newVertices.data();
+
+    std::vector<std::tuple<AttributeImpl, void*, size_t>> attributes;
+
+    for (auto const& inputAttrib: mInputAttribArrays) {
+        auto const attrib = inputAttrib.attrib;
+        switch(attrib) {
+            case AttributeImpl::UV1:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_UV1>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            case AttributeImpl::COLORS:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_COLORS>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            case AttributeImpl::JOINTS:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_JOINTS>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            case AttributeImpl::WEIGHTS:
+                attributes.push_back(
+                        {attrib, output->data<DATA_TYPE_WEIGHTS>(attrib).allocate(vertexCount),
+                                inputAttrib.size});
+                break;
+            default:
+                PANIC_POSTCONDITION("Unexpected attribute=%d", (int) inputAttrib.attrib);
+        }
+    }
+
+    for (size_t i = 0, vi=0; i < vertexCount; ++i, vi+=mOutputElementSize) {
+        outPositions[i] =  *((float3*) (verts + vi + POS_OFFSET));
+        outUVs[i] = *((float2*) (verts + vi + UV_OFFSET));
+        outQuats[i] = *((quatf*) (verts + vi + TBN_OFFSET));
+
+        uint8_t* cursor = verts + vi + BASE_OUTPUT_SIZE;
+        for (auto const [attrib, outdata, size] : attributes) {
+            memcpy((uint8_t*) outdata + (i * size), cursor, size);
+            cursor += size;
+        }
     }
 
     output->vertexCount = vertexCount;

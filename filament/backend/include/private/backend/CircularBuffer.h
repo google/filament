@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 
-#include <utils/compiler.h>
+#include <utils/debug.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -40,28 +40,36 @@ public:
 
     ~CircularBuffer() noexcept;
 
-    // allocates 'size' bytes in the circular buffer and returns a pointer to the memory
-    // return the current head and moves it forward by size bytes
-    inline void* allocate(size_t size) noexcept {
+    static size_t getBlockSize() noexcept { return sPageSize; }
+
+    // Total size of circular buffer. This is a constant.
+    size_t size() const noexcept { return mSize; }
+
+    // Allocates `s` bytes in the circular buffer and returns a pointer to the memory. All
+    // allocations must not exceed size() bytes.
+    inline void* allocate(size_t s) noexcept {
+        // We can never allocate more that size().
+        assert_invariant(getUsed() + s <= size());
         char* const cur = static_cast<char*>(mHead);
-        mHead = cur + size;
+        mHead = cur + s;
         return cur;
     }
 
-    // Total size of circular buffer
-    size_t size() const noexcept { return mSize; }
-
-    // returns true if the buffer is empty (e.g. after calling flush)
+    // Returns true if the buffer is empty, i.e.: no allocations were made since
+    // calling getBuffer();
     bool empty() const noexcept { return mTail == mHead; }
 
-    void* getHead() const noexcept { return mHead; }
+    // Returns the size used since the last call to getBuffer()
+    size_t getUsed() const noexcept { return intptr_t(mHead) - intptr_t(mTail); }
 
-    void* getTail() const noexcept { return mTail; }
-
-    // call at least once every getRequiredSize() bytes allocated from the buffer
-    void circularize() noexcept;
-
-    static size_t getBlockSize() noexcept { return sPageSize; }
+    // Retrieves the current allocated range and frees it. It is the responsibility of the caller
+    // to make sure the returned range is no longer in use by the time allocate() allocates
+    // (size() - getUsed()) bytes.
+    struct Range {
+        void* tail;
+        void* head;
+    };
+    Range getBuffer() noexcept;
 
 private:
     void* alloc(size_t size) noexcept;
@@ -69,10 +77,10 @@ private:
 
     // pointer to the beginning of the circular buffer (constant)
     void* mData = nullptr;
-    int mUsesAshmem = -1;
+    int mAshmemFd = -1;
 
     // size of the circular buffer (constant)
-    size_t mSize = 0;
+    size_t const mSize;
 
     // pointer to the beginning of recorded data
     void* mTail = nullptr;

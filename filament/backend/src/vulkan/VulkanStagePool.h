@@ -17,7 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 #define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
+#include "VulkanCommands.h"
 #include "VulkanContext.h"
+#include "VulkanMemory.h"
 
 #include <map>
 #include <unordered_set>
@@ -45,7 +47,7 @@ struct VulkanStageImage {
 // This class manages two types of host-mappable staging areas: buffer stages and image stages.
 class VulkanStagePool {
 public:
-    void initialize(VmaAllocator allocator, VulkanCommands* commands) noexcept;
+    VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands);
 
     // Finds or creates a stage whose capacity is at least the given number of bytes.
     // The stage is automatically released back to the pool after TIME_BEFORE_EVICTION frames.

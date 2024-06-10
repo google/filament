@@ -40,6 +40,7 @@ class FEngine;
 
 class FVertexBuffer : public VertexBuffer {
 public:
+    using VertexBufferInfoHandle = backend::VertexBufferInfoHandle;
     using VertexBufferHandle = backend::VertexBufferHandle;
     using BufferObjectHandle = backend::BufferObjectHandle;
 
@@ -50,6 +51,8 @@ public:
     void terminate(FEngine& engine);
 
     VertexBufferHandle getHwHandle() const noexcept { return mHandle; }
+
+    VertexBufferInfoHandle getVertexBufferInfoHandle() const { return mVertexBufferInfoHandle; }
 
     size_t getVertexCount() const noexcept;
 
@@ -69,13 +72,9 @@ public:
 
 private:
     friend class VertexBuffer;
-
-    struct AttributeData : backend::Attribute {
-        AttributeData() : backend::Attribute{ .type = backend::ElementType::FLOAT4 } {}
-    };
-
+    VertexBufferInfoHandle mVertexBufferInfoHandle;
     VertexBufferHandle mHandle;
-    std::array<AttributeData, backend::MAX_VERTEX_ATTRIBUTE_COUNT> mAttributes;
+    backend::AttributeArray mAttributes;
     std::array<BufferObjectHandle, backend::MAX_VERTEX_BUFFER_COUNT> mBufferObjects;
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;

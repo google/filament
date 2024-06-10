@@ -7,6 +7,127 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.52.3
+
+
+## v1.52.2
+
+
+## v1.52.1
+
+- Add instructions for using Mesa for software rasterization
+
+## v1.51.9
+
+
+## v1.51.8
+
+- filagui: Fix regression which broke WebGL
+- Add a new Engine::Config setting to control preferred shader language
+- Add `getEyeIndex` vertex API
+- ios: Remove bitcode from iOS builds
+
+## v1.51.7
+
+- Add new matedit tool
+- filagui: Support rendering `GL_TEXTURE_EXTERNAL_OES` textures.
+- `setFrameScheduledCallback` now takes a `utils::Invocable`.
+- engine: Add `isPaused()`
+
+## v1.51.6
+
+- Add new matedit tool
+- filagui: Support rendering `GL_TEXTURE_EXTERNAL_OES` textures.
+
+## v1.51.5
+
+
+## v1.51.4
+
+
+## v1.51.3
+
+
+## v1.51.2
+
+- engine: Add experimental APIs `Engine::builder::paused()` and `Engine::setPaused()`
+
+## v1.51.1
+
+
+## v1.51.0
+
+- materials: add support for post-lighting mix factor (b/328498606) [⚠️ **New Material Version**]
+
+## v1.50.6
+
+- Add new API `SwapChain::getFrameScheduledCallback`
+- vulkan: fixed validation error VUID-vkAcquireNextImageKHR-semaphore-01779
+- opengl: Add support for protected content swapchains and contexts
+
+## v1.50.5
+
+- android: NDK 26.1.10909125 is used by default
+- android: Minimum API level on Android is now API 21 instead of API 19. This allows the use of OpenGL ES 3.1
+- rendering: New PBR Neutral tone mapper, designed to preserve materials color appearance
+- android: Change default frameRateOptions.interval to 1.0
+
+## v1.50.4
+
+
+## v1.50.3
+
+
+## v1.50.2
+
+
+## v1.50.1
+
+- Metal: fix some shader artifacts by disabling fast math optimizations.
+- backend: remove `atan2` overload which had a typo and wasn't useful. Fixes b/320856413.
+- utils: remove usages of `SpinLock`. Fixes b/321101014.
+
+## v1.50.0
+- engine: TAA now supports 4x upscaling [BETA] [⚠️ **New Material Version**]
+
+## v1.49.3
+
+- matc: Generate stereo variants for FL0 materials [⚠️ **Recompile materials**]
+
+## v1.49.2
+
+
+## v1.49.1
+
+
+## v1.49.0
+
+- matc: Fix ESSL 1.0 codegen when using external samplers [⚠️ **Recompile materials**]
+
+## v1.48.0
+
+- matc: New option `-1` to disable generation of ESSL 1.0 code in Feature Level 0 materials
+- matc: Support optimizations for ESSL 1.0 code [⚠️ **Recompile materials**]
+
+## v1.47.0
+
+- engine: Support up to 4 side-by-side stereoscopic eyes, configurable at Engine creation time. See
+  `Engine::Config::stereoscopicEyeCount`. [⚠️ **Recompile Materials**]
+
+## v1.46.0
+
+- engine: Allow instantiating Engine at a given feature level via `Engine::Builder::featureLevel`
+- matc: Enable `GL_OES_standard_derivatives` extension in ESSL 1.0 shaders
+- matc: Fix code generation of double sided and masked materials in ESSL 1.0 shaders
+- filagui: Add support for feature level 0
+- matc: Add support for post-process materials in feature level 0
+- engine: Add `Material::getFeatureLevel()`
+- engine: Add missing `Material::getReflectionMode()` method in Java
+- engine: Support basic usage of post-processing materials on feature level 0
+- engine: Fix critical GLES 2.0 bugs
+- engine: Add `FILAMENT_ENABLE_FEATURE_LEVEL_0` build-time option optionally allow building Filament
+  without FL0 support.
+
 ## v1.45.1
 
 - engine: Added parameter for configuring JobSystem thread count

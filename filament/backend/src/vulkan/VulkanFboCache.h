@@ -35,24 +35,25 @@ namespace filament::backend {
 //
 class VulkanFboCache {
 public:
+    constexpr static VulkanLayout FINAL_COLOR_ATTACHMENT_LAYOUT = VulkanLayout::COLOR_ATTACHMENT;
+    constexpr static VulkanLayout FINAL_RESOLVE_ATTACHMENT_LAYOUT = VulkanLayout::COLOR_ATTACHMENT;
+    constexpr static VulkanLayout FINAL_DEPTH_ATTACHMENT_LAYOUT = VulkanLayout::DEPTH_ATTACHMENT;
+
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
-    // TODO: This struct can be reduced in size by using a subset of formats instead of VkFormat
-    //       and removing the "finalDepthLayout" field.
     struct alignas(8) RenderPassKey {
         // For each target, we need to know three image layouts: the layout BEFORE the pass, the
         // layout DURING the pass, and the layout AFTER the pass. Here are the rules:
         // - For depth, we explicitly specify all three layouts.
         // - Color targets have their initial image layout specified with a bitmask.
         // - For each color target, the pre-existing layout is either UNDEFINED (0) or GENERAL (1).
-        // - The render pass and final images layout for color buffers is always GENERAL.
+        // - The render pass and final images layout for color buffers is always
+        //   VulkanLayout::COLOR_ATTACHMENT.
         uint8_t initialColorLayoutMask;
 
         // Note that if VulkanLayout grows beyond 16, we'd need to up this.
-        VulkanLayout initialDepthLayout : 4;
-        VulkanLayout renderPassDepthLayout : 4;
-        VulkanLayout finalDepthLayout : 4;
-        uint8_t padding0 : 4;
+        VulkanLayout initialDepthLayout : 8;
+        uint8_t padding0;
         uint8_t padding1;
 
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
@@ -63,7 +64,7 @@ public:
         uint8_t samples; // 1 byte
         uint8_t needsResolveMask; // 1 byte
         uint8_t subpassMask; // 1 byte
-        bool padding2; // 1 byte
+        uint8_t padding2; // 1 byte
     };
     struct RenderPassVal {
         VkRenderPass handle;
@@ -104,9 +105,8 @@ public:
         bool operator()(const FboKey& k1, const FboKey& k2) const;
     };
 
+    explicit VulkanFboCache(VkDevice device);
     ~VulkanFboCache();
-
-    void initialize(VkDevice device) noexcept;
 
     // Retrieves or creates a VkFramebuffer handle.
     VkFramebuffer getFramebuffer(FboKey config) noexcept;

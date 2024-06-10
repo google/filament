@@ -17,18 +17,41 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H
 #define TNT_FILAMENT_BACKEND_OPENGL_TIMERQUERY_H
 
-#include "OpenGLDriver.h"
+#include <backend/DriverEnums.h>
+
+#include "DriverBase.h"
 
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
+#include "gl_headers.h"
+
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <memory>
 #include <thread>
 #include <vector>
+
+#include <stdint.h>
 
 namespace filament::backend {
 
 class OpenGLPlatform;
-class OpenGLTimerQueryInterface;
+class OpenGLContext;
+class OpenGLDriver;
+class TimerQueryFactoryInterface;
+
+struct GLTimerQuery : public HwTimerQuery {
+    struct State {
+        struct {
+            GLuint query;
+        } gl;
+        int64_t then{};
+        std::atomic<int64_t> elapsed{};
+    };
+    std::shared_ptr<State> state;
+};
 
 /*
  * We need two implementation of timer queries (only elapsed time), because
@@ -38,83 +61,80 @@ class OpenGLTimerQueryInterface;
  * These classes implement the various strategies...
  */
 
-
-class OpenGLTimerQueryFactory {
+class TimerQueryFactory {
     static bool mGpuTimeSupported;
 public:
-    static OpenGLTimerQueryInterface* init(
-            OpenGLPlatform& platform, OpenGLDriver& driver) noexcept;
+    static TimerQueryFactoryInterface* init(
+            OpenGLPlatform& platform, OpenGLContext& context) noexcept;
 
     static bool isGpuTimeSupported() noexcept {
         return mGpuTimeSupported;
     }
 };
 
-class OpenGLTimerQueryInterface {
+class TimerQueryFactoryInterface {
 protected:
-    using GLTimerQuery = OpenGLDriver::GLTimerQuery;
+    using GLTimerQuery = filament::backend::GLTimerQuery;
     using clock = std::chrono::steady_clock;
 
 public:
-    virtual ~OpenGLTimerQueryInterface();
+    virtual ~TimerQueryFactoryInterface();
     virtual void createTimerQuery(GLTimerQuery* query) = 0;
     virtual void destroyTimerQuery(GLTimerQuery* query) = 0;
     virtual void beginTimeElapsedQuery(GLTimerQuery* query) = 0;
-    virtual void endTimeElapsedQuery(GLTimerQuery* query) = 0;
+    virtual void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) = 0;
 
-    static bool getTimerQueryValue(GLTimerQuery* tq, uint64_t* elapsedTime) noexcept;
+    static TimerQueryResult getTimerQueryValue(GLTimerQuery* tq, uint64_t* elapsedTime) noexcept;
 };
 
 #if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
 
-class TimerQueryNative : public OpenGLTimerQueryInterface {
+class TimerQueryNativeFactory final : public TimerQueryFactoryInterface {
 public:
-    explicit TimerQueryNative(OpenGLDriver& driver);
-    ~TimerQueryNative() override;
+    explicit TimerQueryNativeFactory(OpenGLContext& context);
+    ~TimerQueryNativeFactory() override;
 private:
     void createTimerQuery(GLTimerQuery* query) override;
     void destroyTimerQuery(GLTimerQuery* query) override;
     void beginTimeElapsedQuery(GLTimerQuery* query) override;
-    void endTimeElapsedQuery(GLTimerQuery* query) override;
-    OpenGLDriver& mDriver;
+    void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) override;
+    OpenGLContext& mContext;
 };
 
 #endif
 
-class OpenGLTimerQueryFence : public OpenGLTimerQueryInterface {
+class TimerQueryFenceFactory final : public TimerQueryFactoryInterface {
 public:
-    explicit OpenGLTimerQueryFence(OpenGLPlatform& platform);
-    ~OpenGLTimerQueryFence() override;
+    explicit TimerQueryFenceFactory(OpenGLPlatform& platform);
+    ~TimerQueryFenceFactory() override;
 private:
     using Job = std::function<void()>;
+    using Container = std::vector<Job>;
+
     void createTimerQuery(GLTimerQuery* query) override;
     void destroyTimerQuery(GLTimerQuery* query) override;
     void beginTimeElapsedQuery(GLTimerQuery* tq) override;
-    void endTimeElapsedQuery(GLTimerQuery* tq) override;
+    void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* tq) override;
 
-    void enqueue(Job&& job);
-    template<typename CALLABLE, typename ... ARGS>
-    void push(CALLABLE&& func, ARGS&& ... args) {
-        enqueue(Job(std::bind(std::forward<CALLABLE>(func), std::forward<ARGS>(args)...)));
-    }
+    void push(Job&& job);
 
     OpenGLPlatform& mPlatform;
     std::thread mThread;
     mutable utils::Mutex mLock;
     mutable utils::Condition mCondition;
-    std::vector<Job> mQueue;
+    Container mQueue;
     bool mExitRequested = false;
 };
 
-class TimerQueryFallback : public OpenGLTimerQueryInterface {
+class TimerQueryFallbackFactory final : public TimerQueryFactoryInterface {
 public:
-    explicit TimerQueryFallback();
-    ~TimerQueryFallback() override;
+    explicit TimerQueryFallbackFactory();
+    ~TimerQueryFallbackFactory() override;
 private:
     void createTimerQuery(GLTimerQuery* query) override;
     void destroyTimerQuery(GLTimerQuery* query) override;
     void beginTimeElapsedQuery(GLTimerQuery* query) override;
-    void endTimeElapsedQuery(GLTimerQuery* query) override;
+    void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) override;
 };
 
 } // namespace filament::backend

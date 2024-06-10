@@ -37,8 +37,9 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/SpinLock.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
 )
 
@@ -80,6 +81,7 @@ if (WIN32)
 endif()
 if (ANDROID)
     list(APPEND SRCS src/android/ThermalManager.cpp)
+    list(APPEND SRCS src/android/PerformanceHintManager.cpp)
     list(APPEND SRCS src/android/Systrace.cpp)
 endif()
 if (LINUX OR ANDROID)
@@ -114,6 +116,11 @@ endif()
 if (WIN32)
     # Needed for shlwapi.h (GetModuleFileName)
     target_link_libraries(${TARGET} PUBLIC Shlwapi)
+endif()
+
+if (APPLE)
+    # Needed for NSTemporaryDirectory()
+    target_link_libraries(${TARGET} PRIVATE "-framework Foundation")
 endif()
 
 if (LINUX)

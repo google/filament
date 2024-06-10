@@ -23,6 +23,8 @@
 #include "FNodeManager.h"
 #include "FTrsTransformManager.h"
 #include "GltfEnums.h"
+#include "Utility.h"
+#include "extended/AssetLoaderExtended.h"
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -42,6 +44,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
@@ -51,10 +54,11 @@
 
 #include <tsl/robin_map.h>
 
-#define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
 #include "downcast.h"
+
+#include <memory>
 
 using namespace filament;
 using namespace filament::math;
@@ -83,21 +87,6 @@ static constexpr cgltf_material kDefaultMat = {
         .roughness_factor = 1.0,
     },
 };
-
-// Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
-// compute the correct size of the vertex buffer. Filament automatically infers the size of
-// driver-level vertex buffers from the attribute data (stride, count, offset) and clients are
-// expected to avoid uploading data blobs that exceed this size. Since this information doesn't
-// exist in the glTF we need to compute it manually. This is a bit of a cheat, cgltf_calc_size is
-// private but its implementation file is available in this cpp file.
-uint32_t computeBindingSize(const cgltf_accessor* accessor) {
-    cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
-    return uint32_t(accessor->stride * (accessor->count - 1) + element_size);
-}
-
-uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
-    return uint32_t(accessor->offset + accessor->buffer_view->offset);
-}
 
 static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName) {
     if (node->name) return node->name;
@@ -216,14 +205,21 @@ private:
 };
 
 struct FAssetLoader : public AssetLoader {
-    FAssetLoader(const AssetConfiguration& config) :
+    FAssetLoader(AssetConfiguration const& config) :
             mEntityManager(config.entities ? *config.entities : EntityManager::get()),
             mRenderableManager(config.engine->getRenderableManager()),
             mNameManager(config.names),
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(*config.materials),
             mEngine(*config.engine),
-            mDefaultNodeName(config.defaultNodeName) {}
+            mDefaultNodeName(config.defaultNodeName) {
+        if (config.ext) {
+            FILAMENT_CHECK_PRECONDITION(AssetConfigurationExtended::isSupported())
+                    << "Extend asset loading is not supported on this platform";
+            mLoaderExtended = std::make_unique<AssetLoaderExtended>(
+                    *config.ext, config.engine, mMaterials);
+        }
+    }
 
     FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
@@ -306,6 +302,9 @@ public:
 
     // Weak reference to the largest dummy buffer so far in the current loading phase.
     BufferObject* mDummyBufferObject = nullptr;
+
+public:
+    std::unique_ptr<AssetLoaderExtended> mLoaderExtended;
 };
 
 FILAMENT_DOWNCAST(AssetLoader)
@@ -436,7 +435,7 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
 
     mDummyBufferObject = nullptr;
     FFilamentAsset* fAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager,
-            &mNodeManager, &mTrsTransformManager, srcAsset);
+            &mNodeManager, &mTrsTransformManager, srcAsset, (bool) mLoaderExtended);
 
     // It is not an error for a glTF file to have zero scenes.
     fAsset->mScenes.clear();
@@ -535,12 +534,6 @@ void FAssetLoader::createInstances(size_t numInstances, FFilamentAsset* fAsset) 
     std::partition(fAsset->mEntities.begin(), fAsset->mEntities.end(), [&rm](Entity a) {
         return rm.hasComponent(a);
     });
-
-    if (mError) {
-        destroyAsset(fAsset);
-        fAsset = nullptr;
-        mError = false;
-    }
 }
 
 void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
@@ -616,15 +609,15 @@ void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Ent
 
 void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         FFilamentAsset* fAsset) {
-    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+    cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
-    assert_invariant(srcAsset != nullptr);
+    assert_invariant(gltf != nullptr);
     assert_invariant(mesh != nullptr);
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive), otherwise allocate a new list of
     // pointers for the primitives.
-    FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
+    FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - gltf->meshes];
     if (prims.empty()) {
         prims.reserve(mesh->primitives_count);
         prims.resize(mesh->primitives_count);
@@ -634,12 +627,41 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
 
     for (cgltf_size index = 0, n = mesh->primitives_count; index < n; ++index) {
         Primitive& outputPrim = prims[index];
-        const cgltf_primitive& inputPrim = mesh->primitives[index];
+        cgltf_primitive& inputPrim = mesh->primitives[index];
 
-        // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim.vertices && !createPrimitive(inputPrim, name, &outputPrim, fAsset)) {
-            mError = true;
-            return;
+        if (!outputPrim.vertices) {
+            if (mLoaderExtended) {
+                auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+                resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+                AssetLoaderExtended::Input input{
+                        .gltf = gltf,
+                        .prim = &inputPrim,
+                        .name = name,
+                        .dracoCache = &fAsset->mSourceAsset->dracoCache,
+                        .material = getMaterial(gltf, inputPrim.material, &outputPrim.uvmap,
+                                utility::primitiveHasVertexColor(&inputPrim)),
+                };
+
+                mError = !mLoaderExtended->createPrimitive(&input, &outputPrim, resourceInfo.slots);
+                if (!mError) {
+                    if (outputPrim.vertices) {
+                        fAsset->mVertexBuffers.push_back(outputPrim.vertices);
+                    }
+                    if (outputPrim.indices) {
+                        fAsset->mIndexBuffers.push_back(outputPrim.indices);
+                    }
+                    if (outputPrim.targets) {
+                        fAsset->mMorphTargetBuffers.push_back(outputPrim.targets);
+                    }
+                }
+            } else {
+                // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't
+                // already.
+                mError = !createPrimitive(inputPrim, name, &outputPrim, fAsset);
+            }
+            if (mError) {
+                return;
+            }
         }
 
         // Expand the object-space bounding box.
@@ -768,7 +790,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
 void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
         FFilamentAsset* fAsset, FFilamentInstance* instance) {
-    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     UvMap uvmap {};
     for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
         const cgltf_primitive& srcPrim = mesh->primitives[prim];
@@ -791,6 +812,9 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* name,
         Primitive* outPrim, FFilamentAsset* fAsset) {
+
+    using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+
     Material* material = getMaterial(fAsset->mSourceAsset->hierarchy,
                 inPrim.material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
     AttributeBitset requiredAttributes = material->getRequiredAttributes();
@@ -801,8 +825,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     // request from Google.
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
-    auto slots = &fAsset->mBufferSlots;
-    auto addBufferSlot = [slots](BufferSlot entry) {
+    auto slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
+    auto addBufferSlot = [slots](FFilamentAsset::ResourceInfo::BufferSlot entry) {
         slots->push_back(entry);
     };
 
@@ -821,7 +845,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             .bufferType(indexType)
             .build(mEngine);
 
-        BufferSlot slot = { accessor };
+        FFilamentAsset::ResourceInfo::BufferSlot slot = { accessor };
         slot.indexBuffer = indices;
         addBufferSlot(slot);
     } else if (inPrim.attributes_count > 0) {
@@ -849,7 +873,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
 
-    const size_t firstSlot = fAsset->mBufferSlots.size();
+    const size_t firstSlot = slots->size();
     int slot = 0;
 
     for (cgltf_size aindex = 0; aindex < inPrim.attributes_count; aindex++) {
@@ -891,6 +915,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             utils::slog.e << "Too many joints in " << name << utils::io::endl;
             continue;
         }
+
         if (atype == cgltf_attribute_type_texcoord) {
             if (index >= UvMapSize) {
                 utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
@@ -1062,11 +1087,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
-    fAsset->mPrimitives.push_back({&inPrim, vertices});
+    auto& primitives = std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mPrimitives;
+    primitives.push_back({&inPrim, vertices});
     fAsset->mVertexBuffers.push_back(vertices);
 
-    for (size_t i = firstSlot; i < fAsset->mBufferSlots.size(); ++i) {
-        fAsset->mBufferSlots[i].vertexBuffer = vertices;
+    for (size_t i = firstSlot; i < slots->size(); ++i) {
+        (*slots)[i].vertexBuffer = vertices;
     }
 
     if (targetsCount > 0) {
@@ -1076,7 +1102,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                 .build(mEngine);
         outPrim->targets = targets;
         fAsset->mMorphTargetBuffers.push_back(targets);
-        const cgltf_accessor* previous = nullptr;
+        UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
             for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
@@ -1593,6 +1619,14 @@ void FAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* gl
             dstSkin.joints[i] = nodeMap[srcSkin.joints[i] - gltf->nodes];
         }
     }
+}
+
+bool AssetConfigurationExtended::isSupported() {
+#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
+    return false;
+#else
+    return true;
+#endif
 }
 
 AssetLoader* AssetLoader::create(const AssetConfiguration& config) {

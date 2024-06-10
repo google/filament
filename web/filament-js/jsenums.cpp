@@ -274,6 +274,8 @@ enum_<Texture::Usage>("Texture$Usage") // aka backend::TextureUsage
     .value("STENCIL_ATTACHMENT", Texture::Usage::STENCIL_ATTACHMENT)
     .value("UPLOADABLE", Texture::Usage::UPLOADABLE)
     .value("SAMPLEABLE", Texture::Usage::SAMPLEABLE)
+    .value("BLIT_SRC", Texture::Usage::BLIT_SRC)
+    .value("BLIT_DST", Texture::Usage::BLIT_DST)
     .value("SUBPASS_INPUT", Texture::Usage::SUBPASS_INPUT);
 
 enum_<Texture::CubemapFace>("Texture$CubemapFace") // aka backend::TextureCubemapFace

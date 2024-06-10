@@ -18,7 +18,14 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_OPENGLPLATFORM_H
 
 #include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+
+#include <utils/compiler.h>
+#include <utils/Invocable.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -38,8 +45,8 @@ protected:
      * Derived classes can use this to instantiate the default OpenGLDriver backend.
      * This is typically called from your implementation of createDriver()
      */
-    static Driver* createDefaultDriver(OpenGLPlatform* platform,
-            void* sharedContext, const DriverConfig& driverConfig);
+    static Driver* UTILS_NULLABLE createDefaultDriver(OpenGLPlatform* UTILS_NONNULL platform,
+            void* UTILS_NULLABLE sharedContext, const DriverConfig& driverConfig);
 
     ~OpenGLPlatform() noexcept override;
 
@@ -58,6 +65,22 @@ public:
     virtual void terminate() noexcept = 0;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
+     * The default implementation returns false.
+     *
+     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
+     */
+    virtual bool isSRGBSwapChainSupported() const noexcept;
+
+    /**
+     * Return whether protected contexts are supported by this backend.
+     * If protected context are supported, the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag can be
+     * used when creating a SwapChain.
+     * The default implementation returns false.
+     */
+    virtual bool isProtectedContextSupported() const noexcept;
+
+    /**
      * Called by the driver to create a SwapChain for this driver.
      *
      * @param nativeWindow  a token representing the native window. See concrete implementation
@@ -66,15 +89,8 @@ public:
      * @return              The driver's SwapChain object.
      *
      */
-    virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept = 0;
-
-    /**
-     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
-     * The default implementation returns false.
-     *
-     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
-     */
-    virtual bool isSRGBSwapChainSupported() const noexcept;
+    virtual SwapChain* UTILS_NULLABLE createSwapChain(
+            void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
 
     /**
      * Called by the driver create a headless SwapChain.
@@ -87,13 +103,14 @@ public:
      * TODO: we need a more generic way of passing construction parameters
      *       A void* might be enough.
      */
-    virtual SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
+    virtual SwapChain* UTILS_NULLABLE createSwapChain(
+            uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
 
     /**
      * Called by the driver to destroys the SwapChain
      * @param swapChain SwapChain to be destroyed.
      */
-    virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
+    virtual void destroySwapChain(SwapChain* UTILS_NONNULL swapChain) noexcept = 0;
 
     /**
      * Returns the set of buffers that must be preserved up to the call to commit().
@@ -106,28 +123,103 @@ public:
      * @return buffer that must be preserved
      * @see commit()
      */
-    virtual TargetBufferFlags getPreservedFlags(SwapChain* swapChain) noexcept;
+    virtual TargetBufferFlags getPreservedFlags(SwapChain* UTILS_NONNULL swapChain) noexcept;
+
+    /**
+     * Returns true if the swapchain is protected
+     */
+    virtual bool isSwapChainProtected(Platform::SwapChain* UTILS_NONNULL swapChain) noexcept;
 
     /**
      * Called by the driver to establish the default FBO. The default implementation returns 0.
-      * @return a GLuint casted to a uint32_t that is an OpenGL framebuffer object.
+     *
+     * This method can be called either on the regular or protected OpenGL contexts and can return
+     * a different or identical name, since these names exist in different namespaces.
+     *
+     * @return a GLuint casted to a uint32_t that is an OpenGL framebuffer object.
      */
-    virtual uint32_t createDefaultRenderTarget() noexcept;
+    virtual uint32_t getDefaultFramebufferObject() noexcept;
+
+    /**
+     * Called by the backend when a frame starts.
+     * @param steady_clock_ns vsync time point on the monotonic clock
+     * @param refreshIntervalNs refresh interval in nanosecond
+     * @param frameId a frame id
+     */
+    virtual void beginFrame(
+            int64_t monotonic_clock_ns,
+            int64_t refreshIntervalNs,
+            uint32_t frameId) noexcept;
+
+    /**
+     * Called by the backend when a frame ends.
+     * @param frameId the frame id used in beginFrame
+     */
+    virtual void endFrame(
+            uint32_t frameId) noexcept;
+
+    /**
+     * Type of contexts available
+     */
+    enum class ContextType {
+        NONE,           //!< No current context
+        UNPROTECTED,    //!< current context is unprotected
+        PROTECTED       //!< current context supports protected content
+    };
+
+    /**
+     * Returns the type of the context currently in use. This value is updated by makeCurrent()
+     * and therefore can be cached between calls. ContextType::PROTECTED can only be returned
+     * if isProtectedContextSupported() is true.
+     * @return ContextType
+     */
+    virtual ContextType getCurrentContextType() const noexcept;
+
+    /**
+     * Binds the requested context to the current thread and drawSwapChain to the default FBO
+     * returned by getDefaultFramebufferObject().
+     *
+     * @param type type of context to bind to the current thread.
+     * @param drawSwapChain SwapChain to draw to. It must be bound to the default FBO.
+     * @param readSwapChain SwapChain to read from (for operation like `glBlitFramebuffer`)
+     * @return true on success, false on error.
+     */
+    virtual bool makeCurrent(ContextType type,
+            SwapChain* UTILS_NONNULL drawSwapChain,
+            SwapChain* UTILS_NONNULL readSwapChain) noexcept = 0;
 
     /**
      * Called by the driver to make the OpenGL context active on the calling thread and bind
-     * the drawSwapChain to the default render target (FBO) created with createDefaultRenderTarget.
+     * the drawSwapChain to the default FBO returned by getDefaultFramebufferObject().
+     * The context used is either the default context or the protected context. When a context
+     * change is necessary, the preContextChange and postContextChange callbacks are called,
+     * before and after the context change respectively. postContextChange is given the index
+     * of the new context (0 for default and 1 for protected).
+     * The default implementation just calls makeCurrent(getCurrentContextType(), SwapChain*, SwapChain*).
+     *
      * @param drawSwapChain SwapChain to draw to. It must be bound to the default FBO.
      * @param readSwapChain SwapChain to read from (for operation like `glBlitFramebuffer`)
+     * @param preContextChange called before the context changes
+     * @param postContextChange called after the context changes
      */
-    virtual void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept = 0;
+    virtual void makeCurrent(
+            SwapChain* UTILS_NONNULL drawSwapChain,
+            SwapChain* UTILS_NONNULL readSwapChain,
+            utils::Invocable<void()> preContextChange,
+            utils::Invocable<void(size_t index)> postContextChange) noexcept;
+
+    /**
+     * Called by the backend just before calling commit()
+     * @see commit()
+     */
+    virtual void preCommit() noexcept;
 
     /**
      * Called by the driver once the current frame finishes drawing. Typically, this should present
      * the drawSwapChain. This is for example where `eglMakeCurrent()` would be called.
      * @param swapChain the SwapChain to present.
      */
-    virtual void commit(SwapChain* swapChain) noexcept = 0;
+    virtual void commit(SwapChain* UTILS_NONNULL swapChain) noexcept = 0;
 
     /**
      * Set the time the next committed buffer should be presented to the user at.
@@ -152,14 +244,14 @@ public:
      *
      * @return A Fence object. The default implementation returns nullptr.
      */
-    virtual Fence* createFence() noexcept;
+    virtual Fence* UTILS_NULLABLE createFence() noexcept;
 
     /**
      * Destroys a Fence object. The default implementation does nothing.
      *
      * @param fence Fence to destroy.
      */
-    virtual void destroyFence(Fence* fence) noexcept;
+    virtual void destroyFence(Fence* UTILS_NONNULL fence) noexcept;
 
     /**
      * Waits on a Fence.
@@ -169,7 +261,7 @@ public:
      * @return Whether the fence signaled or timed out. See backend::FenceStatus.
      *         The default implementation always return backend::FenceStatus::ERROR.
      */
-    virtual backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept;
+    virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
 
     // --------------------------------------------------------------------------------------------
@@ -183,13 +275,13 @@ public:
      * @param nativeStream The native stream, this parameter depends on the concrete implementation.
      * @return A new Stream object.
      */
-    virtual Stream* createStream(void* nativeStream) noexcept;
+    virtual Stream* UTILS_NULLABLE createStream(void* UTILS_NULLABLE nativeStream) noexcept;
 
     /**
      * Destroys a Stream.
      * @param stream Stream to destroy.
      */
-    virtual void destroyStream(Stream* stream) noexcept;
+    virtual void destroyStream(Stream* UTILS_NONNULL stream) noexcept;
 
     /**
      * The specified stream takes ownership of the texture (tname) object
@@ -199,20 +291,21 @@ public:
      * @param stream Stream to take ownership of the texture
      * @param tname  GL texture id to "bind" to the Stream.
      */
-    virtual void attach(Stream* stream, intptr_t tname) noexcept;
+    virtual void attach(Stream* UTILS_NONNULL stream, intptr_t tname) noexcept;
 
     /**
      * Destroys the texture associated to the stream
      * @param stream Stream to detach from its texture
      */
-    virtual void detach(Stream* stream) noexcept;
+    virtual void detach(Stream* UTILS_NONNULL stream) noexcept;
 
     /**
      * Updates the content of the texture attached to the stream.
      * @param stream Stream to update
      * @param timestamp Output parameter: Timestamp of the image bound to the texture.
      */
-    virtual void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
+    virtual void updateTexImage(Stream* UTILS_NONNULL stream,
+            int64_t* UTILS_NONNULL timestamp) noexcept;
 
 
     // --------------------------------------------------------------------------------------------
@@ -225,13 +318,13 @@ public:
      *         implementation could just return { 0, GL_TEXTURE_2D } at this point. The actual
      *         values can be delayed until setExternalImage.
      */
-    virtual ExternalTexture *createExternalImageTexture() noexcept;
+    virtual ExternalTexture* UTILS_NULLABLE createExternalImageTexture() noexcept;
 
     /**
      * Destroys an external texture handle and associated data.
      * @param texture a pointer to the handle to destroy.
      */
-    virtual void destroyExternalImage(ExternalTexture* texture) noexcept;
+    virtual void destroyExternalImage(ExternalTexture* UTILS_NONNULL texture) noexcept;
 
     // called on the application thread to allow Filament to take ownership of the image
 
@@ -244,7 +337,7 @@ public:
      * @param externalImage A token representing the platform's external image.
      * @see destroyExternalImage
      */
-    virtual void retainExternalImage(void* externalImage) noexcept;
+    virtual void retainExternalImage(void* UTILS_NONNULL externalImage) noexcept;
 
     /**
      * Called to bind the platform-specific externalImage to an ExternalTexture.
@@ -258,7 +351,8 @@ public:
      * @param texture an in/out pointer to ExternalTexture, id and target can be updated if necessary.
      * @return true on success, false on error.
      */
-    virtual bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept;
+    virtual bool setExternalImage(void* UTILS_NONNULL externalImage,
+            ExternalTexture* UTILS_NONNULL texture) noexcept;
 
     /**
      * The method allows platforms to convert a user-supplied external image object into a new type

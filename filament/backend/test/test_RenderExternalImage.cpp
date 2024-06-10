@@ -45,10 +45,10 @@ std::string fragment (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
 
-layout(location = 0, set = 1) uniform sampler2D tex;
+layout(location = 0, set = 1) uniform sampler2D test_tex;
 
 void main() {
-    fragColor = texture(tex, uv);
+    fragColor = texture(test_tex, uv);
 }
 )");
 
@@ -66,7 +66,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     auto swapChain = createSwapChain();
 
     SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("backend_test_sib")
+            .name("Test")
             .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
             .add( {{"tex", SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
             .build();
@@ -74,7 +74,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(getDriverApi());
-    Program::Sampler sampler { utils::CString("tex"), 0 };
+    Program::Sampler sampler { utils::CString("test_tex"), 0 };
     p.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, &sampler, 1);
     backend::Handle<HwProgram> program = getDriverApi().createProgram(std::move(p));
 
@@ -109,7 +109,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     getDriverApi().startCapture(0);
     getDriverApi().makeCurrent(swapChain, swapChain);
-    getDriverApi().beginFrame(0, 0);
+    getDriverApi().beginFrame(0, 0, 0);
 
     SamplerGroup samplers(1);
     samplers.setSampler(0, { texture, {} });
@@ -120,7 +120,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     // Render a triangle.
     getDriverApi().beginRenderPass(defaultRenderTarget, params);
-    getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+    getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
     getDriverApi().endRenderPass();
 
     getDriverApi().flush();
@@ -146,7 +146,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     auto swapChain = createSwapChain();
 
     SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("backend_test_sib")
+            .name("Test")
             .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
             .add( {{"tex", SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
             .build();
@@ -154,7 +154,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(getDriverApi());
-    Program::Sampler sampler { utils::CString("tex"), 0 };
+    Program::Sampler sampler { utils::CString("test_tex"), 0 };
     p.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, &sampler, 1);
     auto program = getDriverApi().createProgram(std::move(p));
 
@@ -231,7 +231,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     getDriverApi().startCapture(0);
     getDriverApi().makeCurrent(swapChain, swapChain);
-    getDriverApi().beginFrame(0, 0);
+    getDriverApi().beginFrame(0, 0, 0);
 
     SamplerGroup samplers(1);
     samplers.setSampler(0, { texture, {} });
@@ -242,7 +242,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     // Render a triangle.
     getDriverApi().beginRenderPass(defaultRenderTarget, params);
-    getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+    getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
     getDriverApi().endRenderPass();
 
     getDriverApi().flush();

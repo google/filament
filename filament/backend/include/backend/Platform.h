@@ -19,10 +19,11 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORM_H
 
-#include <backend/DriverEnums.h>
-
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -40,19 +41,61 @@ public:
     struct Fence {};
     struct Stream {};
 
+    /**
+     * The type of technique for stereoscopic rendering. (Note that the materials used will need to
+     * be compatible with the chosen technique.)
+     */
+    enum class StereoscopicType : uint8_t {
+        /**
+         * No stereoscopic rendering
+         */
+        NONE,
+        /**
+         * Stereoscopic rendering is performed using instanced rendering technique.
+         */
+        INSTANCED,
+        /**
+         * Stereoscopic rendering is performed using the multiview feature from the graphics
+         * backend.
+         */
+        MULTIVIEW,
+    };
+
     struct DriverConfig {
-        /*
-         * size of handle arena in bytes. Setting to 0 indicates default value is to be used.
+        /**
+         * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
          * Driver clamps to valid values.
          */
         size_t handleArenaSize = 0;
 
-        /*
-         * this number of most-recently destroyed textures will be tracked for use-after-free.
+        /**
+         * This number of most-recently destroyed textures will be tracked for use-after-free.
          * Throws an exception when a texture is freed but still bound to a SamplerGroup and used in
          * a draw call. 0 disables completely. Currently only respected by the Metal backend.
          */
         size_t textureUseAfterFreePoolSize = 0;
+
+        /**
+         * Set to `true` to forcibly disable parallel shader compilation in the backend.
+         * Currently only honored by the GL and Metal backends.
+         */
+        bool disableParallelShaderCompile = false;
+
+        /**
+         * Disable backend handles use-after-free checks.
+         */
+        bool disableHandleUseAfterFreeCheck = false;
+
+        /**
+         * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
+         * GLES 3.x backends.
+         */
+        bool forceGLES2Context = false;
+
+        /**
+         * Sets the technique for stereoscopic rendering.
+         */
+        StereoscopicType stereoscopicType = StereoscopicType::NONE;
     };
 
     Platform() noexcept;
@@ -78,7 +121,7 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual backend::Driver* createDriver(void* sharedContext,
+    virtual backend::Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
             const DriverConfig& driverConfig) noexcept = 0;
 
     /**
@@ -96,7 +139,8 @@ public:
      * cache.
      */
     using InsertBlobFunc = utils::Invocable<
-            void(const void* key, size_t keySize, const void* value, size_t valueSize)>;
+            void(const void* UTILS_NONNULL key, size_t keySize,
+                    const void* UTILS_NONNULL value, size_t valueSize)>;
 
     /*
      * RetrieveBlobFunc is an Invocable to an application-provided function that a
@@ -104,7 +148,8 @@ public:
      * cache.
      */
     using RetrieveBlobFunc = utils::Invocable<
-            size_t(const void* key, size_t keySize, void* value, size_t valueSize)>;
+            size_t(const void* UTILS_NONNULL key, size_t keySize,
+                    void* UTILS_NONNULL value, size_t valueSize)>;
 
     /**
      * Sets the callback functions that the backend can use to interact with caching functionality
@@ -157,7 +202,8 @@ public:
      * @param value         pointer to the beginning of the value data that is to be inserted
      * @param valueSize     specifies the size in byte of the data pointed to by <value>
      */
-    void insertBlob(const void* key, size_t keySize, const void* value, size_t valueSize);
+    void insertBlob(const void* UTILS_NONNULL key, size_t keySize,
+            const void* UTILS_NONNULL value, size_t valueSize);
 
     /**
      * To retrieve the binary value associated with a given key from the cache, a
@@ -176,11 +222,43 @@ public:
      * @return             If the cache contains a value associated with the given key then the
      *                     size of that binary value in bytes is returned. Otherwise 0 is returned.
      */
-    size_t retrieveBlob(const void* key, size_t keySize, void* value, size_t valueSize);
+    size_t retrieveBlob(const void* UTILS_NONNULL key, size_t keySize,
+            void* UTILS_NONNULL value, size_t valueSize);
+
+    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key, uint64_t value)>;
+
+    /**
+     * Sets the callback function that the backend can use to update backend-specific statistics
+     * to aid with debugging. This callback is guaranteed to be called on the Filament driver
+     * thread.
+     *
+     * @param debugUpdateStat   an Invocable that updates debug statistics
+     */
+    void setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept;
+
+    /**
+     * @return true if debugUpdateStat is valid.
+     */
+    bool hasDebugUpdateStatFunc() const noexcept;
+
+    /**
+     * To track backend-specific statistics, the backend implementation can call the
+     * application-provided callback function debugUpdateStatFunc to associate or update a value
+     * with a given key. It is possible for this function to be called multiple times with the
+     * same key, in which case newer values should overwrite older values.
+     *
+     * This function is guaranteed to be called only on a single thread, the Filament driver
+     * thread.
+     *
+     * @param key          a null-terminated C-string with the key of the debug statistic
+     * @param value        the updated value of key
+     */
+    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t value);
 
 private:
     InsertBlobFunc mInsertBlob;
     RetrieveBlobFunc mRetrieveBlob;
+    DebugUpdateStatFunc mDebugUpdateStat;
 };
 
 } // namespace filament

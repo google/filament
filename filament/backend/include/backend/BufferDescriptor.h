@@ -23,7 +23,6 @@
 #include <utils/ostream.h>
 
 #include <stddef.h>
-#include <stdint.h>
 
 namespace filament::backend {
 
@@ -113,7 +112,7 @@ public:
     /**
      * Helper to create a BufferDescriptor that uses a KNOWN method pointer w/ object passed
      * by pointer as the callback. e.g.:
-     *     auto bd = BufferDescriptor::make(buffer, size, &Foo::method, foo);
+     *     auto bd = BufferDescriptor::make<Foo, &Foo::method>(buffer, size, foo);
      *
      * @param buffer    Memory address of the CPU buffer to reference
      * @param size      Size of the CPU buffer in bytes
@@ -121,12 +120,12 @@ public:
      * @return          a new BufferDescriptor
      */
     template<typename T, void(T::*method)(void const*, size_t)>
-    static BufferDescriptor make(
-            void const* buffer, size_t size, T* data, CallbackHandler* handler = nullptr) noexcept {
+    static BufferDescriptor make(void const* buffer, size_t size, T* data,
+            CallbackHandler* handler = nullptr) noexcept {
         return {
                 buffer, size,
                 handler, [](void* b, size_t s, void* u) {
-                    (*static_cast<T**>(u)->*method)(b, s);
+                    (static_cast<T*>(u)->*method)(b, s);
                 }, data
         };
     }
@@ -145,14 +144,14 @@ public:
      * @return          a new BufferDescriptor
      */
     template<typename T>
-    static BufferDescriptor make(
-            void const* buffer, size_t size, T&& functor, CallbackHandler* handler = nullptr) noexcept {
+    static BufferDescriptor make(void const* buffer, size_t size, T&& functor,
+            CallbackHandler* handler = nullptr) noexcept {
         return {
                 buffer, size,
                 handler, [](void* b, size_t s, void* u) {
-                    T& that = *static_cast<T*>(u);
-                    that(b, s);
-                    delete &that;
+                    T* const that = static_cast<T*>(u);
+                    that->operator()(b, s);
+                    delete that;
                 },
                 new T(std::forward<T>(functor))
         };
@@ -201,7 +200,7 @@ public:
         return mUser;
     }
 
-    //! CPU mempry-buffer virtual address
+    //! CPU memory-buffer virtual address
     void* buffer = nullptr;
 
     //! CPU memory-buffer size in bytes

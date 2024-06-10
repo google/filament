@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 45;
+static constexpr size_t MATERIAL_VERSION = 53;
 
 /**
  * Supported shading models
@@ -80,6 +80,8 @@ enum class BlendingMode : uint8_t {
     MULTIPLY,
     //! material brightens what's behind it
     SCREEN,
+    //! custom blending function
+    CUSTOM,
 };
 
 /**
@@ -201,7 +203,7 @@ enum class ReflectionMode : uint8_t {
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 28;
+static constexpr size_t MATERIAL_PROPERTIES_COUNT = 29;
 enum class Property : uint8_t {
     BASE_COLOR,              //!< float4, all shading models
     ROUGHNESS,               //!< float,  lit shading models only
@@ -223,6 +225,7 @@ enum class Property : uint8_t {
     EMISSIVE,                //!< float4, all shading models
     NORMAL,                  //!< float3, all shading models only, except unlit
     POST_LIGHTING_COLOR,     //!< float4, all shading models
+    POST_LIGHTING_MIX_FACTOR,//!< float, all shading models
     CLIP_SPACE_TRANSFORM,    //!< mat4,   vertex shader only
     ABSORPTION,              //!< float3, how much light is absorbed by the material
     TRANSMISSION,            //!< float,  how much light is refracted through the material

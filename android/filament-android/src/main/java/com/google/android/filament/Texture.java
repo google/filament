@@ -849,6 +849,10 @@ public class Texture {
         public static final int SAMPLEABLE = 0x10;
         /** Texture can be used as a subpass input */
         public static final int SUBPASS_INPUT = 0x20;
+        /** Texture can be used the source of a blit() */
+        public static final int BLIT_SRC = 0x40;
+        /** Texture can be used the destination of a blit() */
+        public static final int BLIT_DST = 0x80;
         /** by default textures are <code>UPLOADABLE</code> and <code>SAMPLEABLE</code>*/
         public static final int DEFAULT = UPLOADABLE | SAMPLEABLE;
     }

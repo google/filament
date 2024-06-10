@@ -36,6 +36,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <array>
 #include <random>
 #include <string_view>
 #include <variant>
@@ -49,6 +50,7 @@ class FMaterialInstance;
 class FrameGraph;
 class PerViewUniforms;
 class RenderPass;
+class RenderPassBuilder;
 struct CameraInfo;
 
 class PostProcessManager {
@@ -86,6 +88,10 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
+
+    void configureTemporalAntiAliasingMaterial(
+            TemporalAntiAliasingOptions const& taaOptions) noexcept;
+
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
@@ -94,12 +100,12 @@ public:
         FrameGraphId<FrameGraphTexture> picking;
     };
     StructurePassOutput structure(FrameGraph& fg,
-            RenderPass const& pass, uint8_t structureRenderFlags,
+            RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
     // reflections pass
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
-            RenderPass const& pass,
+            RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
             CameraInfo const& cameraInfo,
             PerViewUniforms& uniforms,
@@ -158,7 +164,7 @@ public:
             FrameGraphId<FrameGraphTexture> depth,
             const CameraInfo& cameraInfo,
             bool translucent,
-            float bokehAspectRatio,
+            math::float2 bokehScale,
             const DepthOfFieldOptions& dofOptions) noexcept;
 
     // Bloom
@@ -167,7 +173,9 @@ public:
         FrameGraphId<FrameGraphTexture> flare;
     };
     BloomPassOutput bloom(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
-            BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
+            backend::TextureFormat outFormat,
+            BloomOptions& inoutBloomOptions,
+            TemporalAntiAliasingOptions const& taaOptions,
             math::float2 scale) noexcept;
 
     FrameGraphId<FrameGraphTexture> flarePass(FrameGraph& fg,
@@ -207,7 +215,9 @@ public:
             backend::TextureFormat outFormat, bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+    void prepareTaa(FrameGraph& fg,
+            filament::Viewport const& svp,
+            TemporalAntiAliasingOptions const& taaOptions,
             FrameHistory& frameHistory,
             FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             CameraInfo* inoutCameraInfo,
@@ -221,32 +231,47 @@ public:
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig const& colorGradingConfig) noexcept;
 
-    // Blit/rescaling/resolves
-    FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-            FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+    /*
+     * Blit/rescaling/resolves
+     */
 
+    // high quality upscaler
+    //  - when translucent, reverts to LINEAR
+    //  - doens't handle sub-resouces
     FrameGraphId<FrameGraphTexture> upscale(FrameGraph& fg, bool translucent,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+            backend::SamplerMagFilter filter) noexcept;
 
-    FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
-            FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
+    FrameGraphId<FrameGraphTexture> rcas(
+            FrameGraph& fg,
+            float sharpness,
+            FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+            bool translucent);
 
-    // resolve base level of input and outputs a 1-level texture
-    FrameGraphId<FrameGraphTexture> resolveBaseLevel(FrameGraph& fg,
-            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
+    // color blitter using shaders
+    FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
+            FrameGraphId<FrameGraphTexture> input,
+            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+            backend::SamplerMagFilter filterMag,
+            backend::SamplerMinFilter filterMin) noexcept;
 
-    // resolves base level of input and outputs a texture from outDesc. outDesc must
-    // have the same dimensions and format as input, or this will fail.
-    // outDesc can have mipmaps.
-    FrameGraphId<FrameGraphTexture> resolveBaseLevelNoCheck(FrameGraph& fg,
+    // depth blitter using shaders
+    FrameGraphId<FrameGraphTexture> blitDepth(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input) noexcept;
+
+    // Resolves base level of input and outputs a texture from outDesc.
+    // outDesc with, height, format and samples will be overridden.
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor const& outDesc) noexcept;
+            FrameGraphTexture::Descriptor outDesc) noexcept;
+
+    // Resolves base level of input and outputs a texture from outDesc.
+    // outDesc with, height, format and samples will be overridden.
+    FrameGraphId<FrameGraphTexture> resolveDepth(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor outDesc) noexcept;
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
@@ -262,52 +287,24 @@ public:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth) noexcept;
 
+    FrameGraphId<FrameGraphTexture> debugDisplayShadowTexture(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> shadowmap, float scale,
+            uint8_t layer, uint8_t level, uint8_t channel, float power) noexcept;
+
+    // Combine an array texture pointed to by `input` into a single image, then return it.
+    // This is only useful to check the multiview rendered scene as a debugging purpose, thus this
+    // is not expected to be used in normal cases.
+    FrameGraphId<FrameGraphTexture> debugCombineArrayTexture(FrameGraph& fg, bool translucent,
+        FrameGraphId<FrameGraphTexture> input,
+        filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+        backend::SamplerMagFilter filterMag,
+        backend::SamplerMinFilter filterMin) noexcept;
+
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;
     backend::Handle<backend::HwTexture> getZeroTextureArray() const;
-
-    math::float2 halton(size_t index) const noexcept {
-        return mHaltonSamples[index & 0xFu];
-    }
-
-private:
-    FEngine& mEngine;
-    class PostProcessMaterial;
-
-    struct BilateralPassConfig {
-        uint8_t kernelSize = 11;
-        bool bentNormals = false;
-        float standardDeviation = 1.0f;
-        float bilateralThreshold = 0.0625f;
-        float scale = 1.0f;
-    };
-
-    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphId<FrameGraphTexture> depth,
-            math::int2 axis, float zf, backend::TextureFormat format,
-            BilateralPassConfig const& config) noexcept;
-
-    BloomPassOutput bloomPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
-
-    FrameGraphId<FrameGraphTexture> downscalePass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor const& outDesc,
-            bool threshold, float highlight, bool fireflies) noexcept;
-
-    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
-            PostProcessMaterial const& material, uint8_t variant,
-            backend::DriverApi& driver) const noexcept;
-
-    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
-            PostProcessMaterial const& material,
-            backend::DriverApi& driver) const noexcept;
-
-    void render(FrameGraphResources::RenderPassInfo const& out,
-            backend::PipelineState const& pipeline,
-            backend::DriverApi& driver) const noexcept;
 
     class PostProcessMaterial {
     public:
@@ -327,7 +324,7 @@ private:
         FMaterial* getMaterial(FEngine& engine) const noexcept;
         FMaterialInstance* getMaterialInstance(FEngine& engine) const noexcept;
 
-        backend::PipelineState getPipelineState(FEngine& engine,
+        std::pair<backend::PipelineState, backend::Viewport> getPipelineState(FEngine& engine,
                 Variant::type_t variantKey = 0u) const noexcept;
 
     private:
@@ -342,21 +339,68 @@ private:
         utils::FixedCapacityVector<ConstantInfo> mConstants{};
     };
 
+    void registerPostProcessMaterial(std::string_view name, MaterialInfo const& info);
+
+    PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
+
+    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
+            PostProcessMaterial const& material, uint8_t variant,
+            backend::DriverApi& driver) const noexcept;
+
+    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
+            PostProcessMaterial const& material,
+            backend::DriverApi& driver) const noexcept;
+
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline, backend::Viewport const& scissor,
+            backend::DriverApi& driver) const noexcept;
+
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            std::pair<backend::PipelineState, backend::Viewport> const& combo,
+            backend::DriverApi& driver) const noexcept {
+        render(out, combo.first, combo.second, driver);
+    }
+
+private:
+    FEngine& mEngine;
+
+    struct BilateralPassConfig {
+        uint8_t kernelSize = 11;
+        bool bentNormals = false;
+        float standardDeviation = 1.0f;
+        float bilateralThreshold = 0.0625f;
+        float scale = 1.0f;
+    };
+
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphId<FrameGraphTexture> depth,
+            math::int2 axis, float zf, backend::TextureFormat format,
+            BilateralPassConfig const& config) noexcept;
+
+    FrameGraphId<FrameGraphTexture> downscalePass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc,
+            bool threshold, float highlight, bool fireflies) noexcept;
+
     using MaterialRegistryMap = tsl::robin_map<
             std::string_view,
             PostProcessMaterial>;
 
     MaterialRegistryMap mMaterialRegistry;
 
-    void registerPostProcessMaterial(std::string_view name, MaterialInfo const& info);
-    PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
-
     backend::Handle<backend::HwTexture> mStarburstTexture;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
-    static const math::float2 sHaltonSamples[16];
-    math::float2 const* mHaltonSamples = sHaltonSamples;
+    template<size_t SIZE>
+    struct JitterSequence {
+        auto operator()(size_t i) const noexcept { return positions[i % SIZE] - 0.5f; }
+        const std::array<math::float2, SIZE> positions;
+    };
+
+    static const JitterSequence<4> sRGSS4;
+    static const JitterSequence<4> sUniformHelix4;
+    static const JitterSequence<32> sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
     bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;

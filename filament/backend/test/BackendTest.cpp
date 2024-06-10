@@ -51,7 +51,7 @@ void BackendTest::init(Backend backend, bool isMobilePlatform) {
 }
 
 BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
-            CONFIG_COMMAND_BUFFERS_SIZE) {
+        CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
     initializeDriver();
 }
 
@@ -86,13 +86,16 @@ void BackendTest::executeCommands() {
 }
 
 void BackendTest::flushAndWait() {
-    auto& api = getDriverApi();
-    api.finish();
+    getDriverApi().finish();
     executeCommands();
+    getDriver().purge();
 }
 
 Handle<HwSwapChain> BackendTest::createSwapChain() {
     const NativeView& view = getNativeView();
+    if (!view.ptr) {
+        return getDriverApi().createSwapChainHeadless(view.width, view.height, 0);
+    }
     return getDriverApi().createSwapChain(view.ptr, 0);
 }
 
@@ -140,7 +143,7 @@ void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    api.draw(state, triangle.getRenderPrimitive(), 1);
+    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
 
     api.endRenderPass();
 }
@@ -212,4 +215,3 @@ int runTests() {
 }
 
 } // namespace test
-

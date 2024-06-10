@@ -43,9 +43,6 @@ using namespace backend;
 using namespace gltfio;
 using namespace utils;
 
-constexpr uint32_t WIDTH = 64;
-constexpr uint32_t HEIGHT = 64;
-
 char const* ANIMATED_MORPH_CUBE_GLB = "AnimatedMorphCube.glb";
 
 static std::ifstream::pos_type getFileSize(const char* filename) {
@@ -178,7 +175,6 @@ do {                                                            \
 TEST_F(glTFIOTest, AnimatedMorphCubeTransforms) {
     FilamentAsset const& morphCubeAsset = *mData[ANIMATED_MORPH_CUBE_GLB]->getAsset();
     auto const& transformManager = mEngine->getTransformManager();
-    auto const& renderableManager = mEngine->getRenderableManager();
     Entity const* renderables = morphCubeAsset.getRenderableEntities();
 
     EXPECT_EQ(morphCubeAsset.getRenderableEntityCount(), 1u);

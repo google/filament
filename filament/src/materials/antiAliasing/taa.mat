@@ -24,8 +24,60 @@ material {
             precision: high
         },
         {
-            type : float[9],
+            type : float2,
+            name : jitter,
+            precision: high
+        },
+        {
+            type : float4[9],
             name : filterWeights
+        }
+    ],
+    constants : [
+        {
+            type : bool,
+            name : upscaling,
+            default : false
+        },
+        {
+            type : bool,
+            name : historyReprojection,
+            default : true
+        },
+        {
+            type : bool,
+            name : filterHistory,
+            default : true
+        },
+        {
+            type : bool,
+            name : filterInput,
+            default : true
+        },
+        {
+            type : int,
+            name : boxClipping,
+            default : 0
+        },
+        {
+            type : int,
+            name : boxType,
+            default : 1
+        },
+        {
+            type : bool,
+            name : useYCoCg,
+            default : false
+        },
+        {
+            type : bool,
+            name : preventFlickering,
+            default : false
+        },
+        {
+            type : float,
+            name : varianceGamma,
+            default : 1.0
         }
     ],
     variables : [
@@ -44,14 +96,6 @@ vertex {
 
 fragment {
 
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-#define TEXTURE_SPACE_UP    -1
-#define TEXTURE_SPACE_DN     1
-#else
-#define TEXTURE_SPACE_UP     1
-#define TEXTURE_SPACE_DN    -1
-#endif
-
 /* Clipping box type */
 
 // min/max neighborhood
@@ -60,9 +104,6 @@ fragment {
 #define BOX_TYPE_VARIANCE       1
 // uses both min/max and variance
 #define BOX_TYPE_AABB_VARIANCE  2
-
-// High VARIANCE_GAMMA [0.75, 1.25] increases ghosting artefact, lower values increases jittering
-#define VARIANCE_GAMMA          1.0
 
 /* Clipping algorithm */
 
@@ -73,34 +114,41 @@ fragment {
 // no clipping (for debugging only)
 #define BOX_CLIPPING_NONE       2
 
-/* Configuration mobile/desktop */
+float rcp(float x) {
+    return 1.0 / x;
+}
 
-#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
-#define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
-#define BOX_TYPE                BOX_TYPE_VARIANCE
-#define USE_YCoCg               0
-#define FILTER_INPUT            1
-#define FILTER_HISTORY          0
-#else
-#define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
-#define BOX_TYPE                BOX_TYPE_AABB_VARIANCE
-#define USE_YCoCg               1
-#define FILTER_INPUT            1
-#define FILTER_HISTORY          1
-#endif
+float lumaRGB(const vec3 c) {
+    return luminance(c);
+}
 
-/* debugging helper */
+float lumaYCoCg(const vec3 c) {
+    return c.x;
+}
 
-#define HISTORY_REPROJECTION    1
-#define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
+float luma(const vec3 c) {
+    return materialConstants_useYCoCg ? lumaYCoCg(c) : lumaRGB(c);
+}
 
+vec3 tonemap(const vec3 c) {
+    return c * rcp(1.0 + max3(c));
+}
 
-float luma(const vec3 color) {
-#if USE_YCoCg
-    return color.x;
-#else
-    return luminance(color);
-#endif
+vec4 tonemap(const vec4 c) {
+    return vec4(c.rgb * rcp(1.0 + max3(c.rgb)), c.a);
+}
+
+vec3 tonemap(const float w, const vec3 c) {
+    return c * (w * rcp(1.0 + max3(c)));
+}
+
+vec4 tonemap(const float w, const vec4 c) {
+    return vec4(c.rgb * (w * rcp(1.0 + max3(c.rgb))), c.a);
+}
+
+vec3 untonemap(const vec3 c) {
+    const float epsilon = 1.0 / 65504.0;
+    return c * rcp(max(epsilon, 1.0 - max3(c)));
 }
 
 vec3 RGB_YCoCg(const vec3 c) {
@@ -145,15 +193,16 @@ vec4 clipToBox(const int quality,
 // Optimized to 5 taps by removing the corner samples
 // And modified for mediump support
 vec4 sampleTextureCatmullRom(const sampler2D tex, const highp vec2 uv, const highp vec2 texSize) {
-    // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
-    // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
-    // location [1, 1] in the grid, where [0, 0] is the top left corner.
+    // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate.
+    // We'll do this by rounding down the sample location to get the exact center of our "starting"
+    // texel. The starting texel will be at location [1, 1] in the grid, where [0, 0] is the
+    // top left corner.
 
     highp vec2 samplePos = uv * texSize;
     highp vec2 texPos1 = floor(samplePos - 0.5) + 0.5;
 
-    // Compute the fractional offset from our starting texel to our original sample location, which we'll
-    // feed into the Catmull-Rom spline function to get our filter weights.
+    // Compute the fractional offset from our starting texel to our original sample location,
+    // which we'll feed into the Catmull-Rom spline function to get our filter weights.
     highp vec2 f = samplePos - texPos1;
     highp vec2 f2 = f * f;
     highp vec2 f3 = f2 * f;
@@ -186,13 +235,23 @@ vec4 sampleTextureCatmullRom(const sampler2D tex, const highp vec2 uv, const hig
     float k3 = w3.x  * w12.y;
     float k4 = w12.x * w3.y;
 
-    vec4 result =   textureLod(tex, vec2(texPos12.x, texPos0.y),  0.0) * k0
-                  + textureLod(tex, vec2(texPos0.x,  texPos12.y), 0.0) * k1
-                  + textureLod(tex, vec2(texPos12.x, texPos12.y), 0.0) * k2
-                  + textureLod(tex, vec2(texPos3.x,  texPos12.y), 0.0) * k3
-                  + textureLod(tex, vec2(texPos12.x, texPos3.y),  0.0) * k4;
+    vec4 s[5];
+    s[0] = textureLod(tex, vec2(texPos12.x, texPos0.y),  0.0);
+    s[1] = textureLod(tex, vec2(texPos0.x,  texPos12.y), 0.0);
+    s[2] = textureLod(tex, vec2(texPos12.x, texPos12.y), 0.0);
+    s[3] = textureLod(tex, vec2(texPos3.x,  texPos12.y), 0.0);
+    s[4] = textureLod(tex, vec2(texPos12.x, texPos3.y),  0.0);
 
-    result *= 1.0 / (k0 + k1 + k2 + k3 + k4);
+    vec4 result =   k0 * s[0]
+                  + k1 * s[1]
+                  + k2 * s[2]
+                  + k3 * s[3]
+                  + k4 * s[4];
+
+    result *= rcp(k0 + k1 + k2 + k3 + k4);
+
+    // we could end-up with negative values
+    result = max(vec4(0), result);
 
     return result;
 }
@@ -200,127 +259,156 @@ vec4 sampleTextureCatmullRom(const sampler2D tex, const highp vec2 uv, const hig
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec4 uv = variable_vertex.xyxy; // interpolated to pixel center
 
-    // read the depth buffer center sample for reprojection
-    float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
-
-#if HISTORY_REPROJECTION
-    uv.zw = uvToRenderTargetUV(uv.zw);
-    // reproject history to current frame
-    highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
-    uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
-    uv.zw = uvToRenderTargetUV(uv.zw);
-#endif
+    if (materialConstants_historyReprojection) {
+        // read the depth buffer center sample for reprojection
+        highp float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
+        // reproject history to current frame
+        uv.zw = uvToRenderTargetUV(uv.zw);
+        highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
+        uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
+        uv.zw = uvToRenderTargetUV(uv.zw);
+    }
 
     // read center color and history samples
-    vec4 color = textureLod(materialParams_color, uv.xy, 0.0);
-#if FILTER_HISTORY
-    vec4 history = sampleTextureCatmullRom(materialParams_history, uv.zw,
-            vec2(textureSize(materialParams_history, 0)));
-#else
-    vec4 history = textureLod(materialParams_history, uv.zw, 0.0);
-#endif
+    vec4 history;
+    if (materialConstants_filterHistory) {
+        history = sampleTextureCatmullRom(materialParams_history, uv.zw,
+                vec2(textureSize(materialParams_history, 0)));
+    } else {
+        history = textureLod(materialParams_history, uv.zw, 0.0);
+    }
 
-#if USE_YCoCg
-    history.rgb = RGB_YCoCg(history.rgb);
-#endif
+    if (materialConstants_useYCoCg) {
+        history.rgb = RGB_YCoCg(history.rgb);
+    }
+
+    highp vec2 size = vec2(textureSize(materialParams_color, 0));
+    highp vec2 p = (floor(uv.xy * size) + 0.5) / size;
+    vec4 filtered = textureLod(materialParams_color, p, 0.0);
+
+    vec3 s[9];
+    if (materialConstants_filterInput || materialConstants_boxClipping != BOX_CLIPPING_NONE) {
+        s[0] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1, -1)).rgb;
+        s[1] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 0, -1)).rgb;
+        s[2] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1, -1)).rgb;
+        s[3] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  0)).rgb;
+        s[4] = filtered.rgb;
+        s[5] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  0)).rgb;
+        s[6] = textureLodOffset(materialParams_color, p, 0.0, ivec2(-1,  1)).rgb;
+        s[7] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 0,  1)).rgb;
+        s[8] = textureLodOffset(materialParams_color, p, 0.0, ivec2( 1,  1)).rgb;
+        if (materialConstants_useYCoCg) {
+            for (int i = 0; i < 9; i++) {
+                s[i] = RGB_YCoCg(s[i]);
+            }
+        }
+    }
+
+    vec2 subPixelOffset = p - uv.xy;  // +/- [0.25, 0.25]
+    float confidence = materialConstants_upscaling ? 0.0 : 1.0;
+
+    if (materialConstants_filterInput) {
+        // unjitter/filter input
+        // figure out which set of coeficients to use
+        filtered = vec4(0, 0, 0, filtered.a);
+        if (materialConstants_upscaling) {
+            int jxp = subPixelOffset.y > 0.0 ? 3 : 0;
+            int jxn = subPixelOffset.y > 0.0 ? 2 : 1;
+            int j   = subPixelOffset.x > 0.0 ? jxp : jxn;
+            for (int i = 0; i < 9; i++) {
+                float w = materialParams.filterWeights[i][j];
+                filtered.rgb += s[i] * w;
+                confidence = max(confidence, w);
+            }
+        } else {
+            for (int i = 0; i < 9; i++) {
+                float w = materialParams.filterWeights[i][0];
+                filtered.rgb += s[i] * w;
+            }
+        }
+    } else {
+        if (materialConstants_useYCoCg) {
+            filtered.rgb = RGB_YCoCg(filtered.rgb);
+        }
+        if (materialConstants_upscaling) {
+            confidence = float(materialParams.jitter.x * subPixelOffset.x > 0.0 &&
+                               materialParams.jitter.y * subPixelOffset.y > 0.0);
+        }
+    }
 
     // build the history clamping box
-    vec3 s[9];
-    s[0] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2(-1, TEXTURE_SPACE_DN)).rgb;
-    s[1] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0, TEXTURE_SPACE_DN)).rgb;
-    s[2] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, TEXTURE_SPACE_DN)).rgb;
-    s[3] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2(-1, 0)).rgb;
-    s[4] = color.rgb;
-    s[5] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, 0)).rgb;
-    s[6] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2(-1, TEXTURE_SPACE_UP)).rgb;
-    s[7] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0, TEXTURE_SPACE_UP)).rgb;
-    s[8] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, TEXTURE_SPACE_UP)).rgb;
+    if (materialConstants_boxClipping != BOX_CLIPPING_NONE) {
+        vec3 boxmin;
+        vec3 boxmax;
+        if (materialConstants_boxType == BOX_TYPE_AABB ||
+                materialConstants_boxType == BOX_TYPE_AABB_VARIANCE) {
+            boxmin = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
+            boxmax = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
+            vec3 box9min = min(boxmin, min(min(s[0], s[2]), min(s[6], s[8])));
+            vec3 box9max = max(boxmax, max(max(s[0], s[2]), max(s[6], s[8])));
+            // round the corners of the 3x3 box
+            boxmin = (boxmin + box9min) * 0.5;
+            boxmax = (boxmax + box9max) * 0.5;
+        }
 
-#if USE_YCoCg
-    for (int i = 0 ; i < 9 ; i++) {
-        s[i] = RGB_YCoCg(s[i]);
+        if (materialConstants_boxType == BOX_TYPE_VARIANCE ||
+                materialConstants_boxType == BOX_TYPE_AABB_VARIANCE) {
+            // "An Excursion in Temporal Supersampling" by Marco Salvi
+            highp vec3 m0 = s[4];// conversion to highp
+            highp vec3 m1 = m0 * m0;
+            // we use only 5 samples instead of all 9
+            for (int i = 1; i < 9; i+=2) {
+                highp vec3 c = s[i];// conversion to highp
+                m0 += c;
+                m1 += c * c;
+            }
+            highp vec3 a0 = m0 * (1.0 / 5.0);
+            highp vec3 a1 = m1 * (1.0 / 5.0);
+            highp vec3 sigma = sqrt(a1 - a0 * a0);
+            if (materialConstants_boxType == BOX_TYPE_VARIANCE) {
+                boxmin = a0 - materialConstants_varianceGamma * sigma;
+                boxmax = a0 + materialConstants_varianceGamma * sigma;
+            } else {
+                // intersect both bounding boxes
+                boxmin = max(boxmin, a0 - materialConstants_varianceGamma * sigma);
+                boxmax = min(boxmax, a0 + materialConstants_varianceGamma * sigma);
+            }
+        }
+        // history clamping
+        history = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
     }
-    color.rgb = s[4].rgb;
-#endif
 
-#if FILTER_INPUT
-    // unjitter/filter input
-    vec4 filtered = vec4(0, 0, 0, color.a);
-    for (int i = 0 ; i < 9 ; i++) {
-        filtered.rgb += s[i] * materialParams.filterWeights[i];
+    float alpha = materialParams.alpha * confidence;
+    if (materialConstants_preventFlickering) {
+        // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
+        float lumaColor = luma(filtered.rgb);
+        float lumaHistory = luma(history.rgb);
+        float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
+        alpha *= diff * diff;
     }
-#else
-    vec4 filtered = color;
-#endif
 
-#if BOX_TYPE == BOX_TYPE_AABB || BOX_TYPE == BOX_TYPE_AABB_VARIANCE
-    vec3 boxmin = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
-    vec3 boxmax = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
-    vec3 box9min = min(boxmin, min(min(s[0], s[2]), min(s[6], s[8])));
-    vec3 box9max = max(boxmax, max(max(s[0], s[2]), max(s[6], s[8])));
-    // round the corners of the 3x3 box
-    boxmin = (boxmin + box9min) * 0.5;
-    boxmax = (boxmax + box9max) * 0.5;
-#endif
-
-#if BOX_TYPE == BOX_TYPE_VARIANCE || BOX_TYPE == BOX_TYPE_AABB_VARIANCE
-    // "An Excursion in Temporal Supersampling" by Marco Salvi
-    vec3 m0 = s[4];
-    vec3 m1 = s[4] * s[4];
-    // we use only 5 samples instead of all 9
-    for (int i = 1 ; i < 9 ; i+=2) {
-        m0 += s[i];
-        m1 += s[i] * s[i];
+    // go back to RGB space before tonemapping
+    if (materialConstants_useYCoCg) {
+        filtered.rgb = YCoCg_RGB(filtered.rgb);
+        history.rgb = YCoCg_RGB(history.rgb);
     }
-    vec3 a0 = m0 * (1.0 / 5.0);
-    vec3 a1 = m1 * (1.0 / 5.0);
-    vec3 sigma = sqrt(a1 - a0 * a0);
-#if BOX_TYPE == BOX_TYPE_VARIANCE
-    vec3 boxmin = a0 - VARIANCE_GAMMA * sigma;
-    vec3 boxmax = a0 + VARIANCE_GAMMA * sigma;
-#else
-    boxmin = min(boxmin, a0 - VARIANCE_GAMMA * sigma);
-    boxmax = max(boxmax, a0 + VARIANCE_GAMMA * sigma);
-#endif
-#endif
 
-    // history clamping
-    history = clipToBox(BOX_CLIPPING, boxmin, boxmax, filtered, history);
-
-    float lumaColor   = luma(filtered.rgb);
-    float lumaHistory = luma(history.rgb);
-
-    float alpha = materialParams.alpha;
-#if PREVENT_FLICKERING
-    // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
-    float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
-    alpha *= diff * diff;
-#endif
-
-    // tonemapping for handling HDR
-    filtered.rgb *= 1.0 / (1.0 + lumaColor);
-    history.rgb  *= 1.0 / (1.0 + lumaHistory);
+    // tonemap before mixing
+    filtered.rgb = tonemap(filtered.rgb);
+    history.rgb = tonemap(history.rgb);
 
     // combine history and current frame
     vec4 result = mix(history, filtered, alpha);
 
     // untonemap result
-    result.rgb *= 1.0 / (1.0 - luma(result.rgb));
-
-#if USE_YCoCg
-    result.rgb = YCoCg_RGB(result.rgb);
-#endif
-
-    // store result (which will becomes new history)
-    // we could end-up with negative values due to the bicubic filter, which never recover on
-    // their own.
-    result = max(vec4(0), result);
+    result.rgb = untonemap(result.rgb);
 
 #if POST_PROCESS_OPAQUE
     // kill the work performed above
     result.a = 1.0;
 #endif
 
+    // store result (which will becomes new history)
     postProcess.color = result;
 }
 

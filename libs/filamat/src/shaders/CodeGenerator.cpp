@@ -17,6 +17,7 @@
 #include "CodeGenerator.h"
 
 #include "MaterialInfo.h"
+#include "../PushConstantDefinitions.h"
 
 #include "generated/shaders.h"
 
@@ -63,14 +64,23 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     out << "#extension GL_OES_EGL_image_external : require\n\n";
                 }
             }
-            if (v.hasInstancedStereo() && stage == ShaderStage::VERTEX) {
-                // If we're not processing the shader through glslang (in the case of unoptimized
-                // OpenGL shaders), then we need to add the #extension string ourselves.
-                // If we ARE running the shader through glslang, then we must not include it,
-                // otherwise glslang will complain.
-                out << "#ifndef FILAMENT_GLSLANG\n";
-                out << "#extension GL_EXT_clip_cull_distance : require\n";
-                out << "#endif\n\n";
+            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+                switch (material.stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    // If we're not processing the shader through glslang (in the case of unoptimized
+                    // OpenGL shaders), then we need to add the #extension string ourselves.
+                    // If we ARE running the shader through glslang, then we must not include it,
+                    // otherwise glslang will complain.
+                    out << "#ifndef FILAMENT_GLSLANG\n";
+                    out << "#extension GL_EXT_clip_cull_distance : require\n";
+                    out << "#endif\n\n";
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    out << "#extension GL_OVR_multiview2 : require\n";
+                    break;
+                case StereoscopicType::NONE:
+                    break;
+                }
             }
             break;
         case ShaderModel::DESKTOP:
@@ -83,6 +93,18 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 out << "#version 410 core\n\n";
                 out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
+            if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+                switch (material.stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    // Nothing to generate
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    out << "#extension GL_OVR_multiview2 : require\n";
+                    break;
+                case StereoscopicType::NONE:
+                    break;
+                }
+            }
             break;
     }
 
@@ -93,6 +115,19 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // This allows our includer system to use the #line directive to denote the source file for
     // #included code. This way, glslang reports errors more accurately.
     out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
+
+    if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+        switch (material.stereoscopicType) {
+        case StereoscopicType::INSTANCED:
+            // Nothing to generate
+            break;
+        case StereoscopicType::MULTIVIEW:
+            out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            break;
+        case StereoscopicType::NONE:
+            break;
+        }
+    }
 
     if (stage == ShaderStage::COMPUTE) {
         out << "layout(local_size_x = " << material.groupSize.x
@@ -149,6 +184,47 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
 
     if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
+    }
+
+    // During compilation and optimization, __VERSION__ reflects the shader language version of the
+    // intermediate code, not the version of the final code. spirv-cross automatically adapts
+    // certain language features (e.g. fragment output) but leaves others untouched (e.g. sampler
+    // functions, bit shift operations). Client code may have to make decisions based on this
+    // information, so define a FILAMENT_EFFECTIVE_VERSION constant.
+    const char *effective_version;
+    if (mTargetLanguage == TargetLanguage::GLSL) {
+        effective_version = "__VERSION__";
+    } else {
+        switch (mShaderModel) {
+            case ShaderModel::MOBILE:
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    effective_version = "300";
+                } else {
+                    effective_version = "100";
+                }
+                break;
+            case ShaderModel::DESKTOP:
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                    effective_version = "450";
+                } else {
+                    effective_version = "410";
+                }
+                break;
+            default:
+                assert(false);
+        }
+    }
+    generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
+
+    switch (material.stereoscopicType) {
+    case StereoscopicType::INSTANCED:
+        generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
+        break;
+    case StereoscopicType::MULTIVIEW:
+        generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
+        break;
+    case StereoscopicType::NONE:
+        break;
     }
 
     if (stage == ShaderStage::VERTEX) {
@@ -253,10 +329,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_POWER_VR_SHADER_WORKAROUNDS",
             +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
 
-    // CONFIG_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
+    generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
+            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, material.stereoscopicEyeCount);
+
+    // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for
     // example), we'd run into a GPU crash.
-    out << "#define CONFIG_STEREOSCOPIC_EYES " << (int) CONFIG_STEREOSCOPIC_EYES << "\n";
+    out << "#define CONFIG_MAX_STEREOSCOPIC_EYES " << (int) CONFIG_MAX_STEREOSCOPIC_EYES << "\n";
 
     if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
@@ -268,8 +347,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
-    if (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0 &&
-            material.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+    if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
+            (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
+                    || mTargetLanguage == TargetLanguage::SPIRV)) {
         // Insert compatibility definitions for ESSL 1.0 functions which were removed in ESSL 3.0.
 
         // This is the minimum required value according to the OpenGL ES Shading Language Version
@@ -383,8 +463,8 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
 }
 
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
-        const AttributeBitset& attributes, Interpolation interpolation) const {
-
+        const AttributeBitset& attributes, Interpolation interpolation,
+        MaterialBuilder::PushConstantList const& pushConstants) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
     const char* shading = getInterpolationQualifier(interpolation);
@@ -408,6 +488,9 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
             }
             out << getTypeName(attribute.type) << " " << attribute.getAttributeName() << ";\n";
         });
+
+        out << "\n";
+        generatePushConstants(out, pushConstants, attributes.size());
     }
 
     out << "\n";
@@ -457,11 +540,14 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     const char* materialTypeString = getOutputTypeName(materialOutputType);
     const char* typeString = getOutputTypeName(outputType);
 
+    bool generate_essl3_code = mTargetLanguage == TargetLanguage::SPIRV
+            || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1;
+
     out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
-    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
-    } else {
+    if (generate_essl3_code) {
         out << "\n#define FRAG_OUTPUT_AT"        << index << " output_" << name.c_str();
+    } else {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
     }
     out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
     out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
@@ -469,7 +555,7 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
     out << "\n";
 
-    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+    if (generate_essl3_code) {
         out << "\nlayout(location=" << index << ") out " << precisionString << " "
             << typeString << " output_" << name.c_str() << ";\n";
     }
@@ -741,7 +827,7 @@ io::sstream& CodeGenerator::generateSubpass(io::sstream& out, SubpassInfo subpas
 }
 
 void CodeGenerator::fixupExternalSamplers(
-        std::string& shader, SamplerInterfaceBlock const& sib) noexcept {
+        std::string& shader, SamplerInterfaceBlock const& sib, FeatureLevel featureLevel) noexcept {
     auto const& infos = sib.getSamplerInfoList();
     if (infos.empty()) {
         return;
@@ -776,7 +862,10 @@ void CodeGenerator::fixupExternalSamplers(
         while (shader[index] != '\n') index++;
         index++;
 
-        shader.insert(index, "#extension GL_OES_EGL_image_external_essl3 : require\n");
+        const char *extensionLine = (featureLevel >= FeatureLevel::FEATURE_LEVEL_1)
+                ? "#extension GL_OES_EGL_image_external_essl3 : require\n\n"
+                : "#extension GL_OES_EGL_image_external : require\n\n";
+        shader.insert(index, extensionLine);
     }
 }
 
@@ -829,6 +918,41 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     return out;
 }
 
+utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
+        MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
+    static constexpr char const* STRUCT_NAME = "Constants";
+
+    bool const outputSpirv =
+            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
+    auto const getType = [](ConstantType const& type) {
+        switch (type) {
+            case ConstantType::BOOL:
+                return "bool";
+            case ConstantType::INT:
+                return "int";
+            case ConstantType::FLOAT:
+                return "float";
+        }
+    };
+    if (outputSpirv) {
+        out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
+    } else {
+        out << "struct " << STRUCT_NAME << " {\n";
+    }
+
+    for (auto const& constant: pushConstants) {
+        out << getType(constant.type) << " " << constant.name.c_str() << ";\n";
+    }
+
+    if (outputSpirv) {
+        out << "} " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    } else {
+        out << "};\n";
+        out << "LAYOUT_LOCATION(" << static_cast<int>(layoutLocation) << ") uniform " << STRUCT_NAME
+            << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << ";\n";
+    }
+    return out;
+}
 
 io::sstream& CodeGenerator::generateMaterialProperty(io::sstream& out,
         MaterialBuilder::Property property, bool isSet) {
@@ -1038,34 +1162,35 @@ io::sstream& CodeGenerator::generateShaderReflections(utils::io::sstream& out, S
 char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) noexcept {
     using Property = MaterialBuilder::Property;
     switch (property) {
-        case Property::BASE_COLOR:            return "BASE_COLOR";
-        case Property::ROUGHNESS:             return "ROUGHNESS";
-        case Property::METALLIC:              return "METALLIC";
-        case Property::REFLECTANCE:           return "REFLECTANCE";
-        case Property::AMBIENT_OCCLUSION:     return "AMBIENT_OCCLUSION";
-        case Property::CLEAR_COAT:            return "CLEAR_COAT";
-        case Property::CLEAR_COAT_ROUGHNESS:  return "CLEAR_COAT_ROUGHNESS";
-        case Property::CLEAR_COAT_NORMAL:     return "CLEAR_COAT_NORMAL";
-        case Property::ANISOTROPY:            return "ANISOTROPY";
-        case Property::ANISOTROPY_DIRECTION:  return "ANISOTROPY_DIRECTION";
-        case Property::THICKNESS:             return "THICKNESS";
-        case Property::SUBSURFACE_POWER:      return "SUBSURFACE_POWER";
-        case Property::SUBSURFACE_COLOR:      return "SUBSURFACE_COLOR";
-        case Property::SHEEN_COLOR:           return "SHEEN_COLOR";
-        case Property::SHEEN_ROUGHNESS:       return "SHEEN_ROUGHNESS";
-        case Property::GLOSSINESS:            return "GLOSSINESS";
-        case Property::SPECULAR_COLOR:        return "SPECULAR_COLOR";
-        case Property::EMISSIVE:              return "EMISSIVE";
-        case Property::NORMAL:                return "NORMAL";
-        case Property::POST_LIGHTING_COLOR:   return "POST_LIGHTING_COLOR";
-        case Property::CLIP_SPACE_TRANSFORM:  return "CLIP_SPACE_TRANSFORM";
-        case Property::ABSORPTION:            return "ABSORPTION";
-        case Property::TRANSMISSION:          return "TRANSMISSION";
-        case Property::IOR:                   return "IOR";
-        case Property::MICRO_THICKNESS:       return "MICRO_THICKNESS";
-        case Property::BENT_NORMAL:           return "BENT_NORMAL";
-        case Property::SPECULAR_FACTOR:       return "SPECULAR_FACTOR";
-        case Property::SPECULAR_COLOR_FACTOR: return "SPECULAR_COLOR_FACTOR";
+        case Property::BASE_COLOR:                  return "BASE_COLOR";
+        case Property::ROUGHNESS:                   return "ROUGHNESS";
+        case Property::METALLIC:                    return "METALLIC";
+        case Property::REFLECTANCE:                 return "REFLECTANCE";
+        case Property::AMBIENT_OCCLUSION:           return "AMBIENT_OCCLUSION";
+        case Property::CLEAR_COAT:                  return "CLEAR_COAT";
+        case Property::CLEAR_COAT_ROUGHNESS:        return "CLEAR_COAT_ROUGHNESS";
+        case Property::CLEAR_COAT_NORMAL:           return "CLEAR_COAT_NORMAL";
+        case Property::ANISOTROPY:                  return "ANISOTROPY";
+        case Property::ANISOTROPY_DIRECTION:        return "ANISOTROPY_DIRECTION";
+        case Property::THICKNESS:                   return "THICKNESS";
+        case Property::SUBSURFACE_POWER:            return "SUBSURFACE_POWER";
+        case Property::SUBSURFACE_COLOR:            return "SUBSURFACE_COLOR";
+        case Property::SHEEN_COLOR:                 return "SHEEN_COLOR";
+        case Property::SHEEN_ROUGHNESS:             return "SHEEN_ROUGHNESS";
+        case Property::GLOSSINESS:                  return "GLOSSINESS";
+        case Property::SPECULAR_COLOR:              return "SPECULAR_COLOR";
+        case Property::EMISSIVE:                    return "EMISSIVE";
+        case Property::NORMAL:                      return "NORMAL";
+        case Property::POST_LIGHTING_COLOR:         return "POST_LIGHTING_COLOR";
+        case Property::POST_LIGHTING_MIX_FACTOR:    return "POST_LIGHTING_MIX_FACTOR";
+        case Property::CLIP_SPACE_TRANSFORM:        return "CLIP_SPACE_TRANSFORM";
+        case Property::ABSORPTION:                  return "ABSORPTION";
+        case Property::TRANSMISSION:                return "TRANSMISSION";
+        case Property::IOR:                         return "IOR";
+        case Property::MICRO_THICKNESS:             return "MICRO_THICKNESS";
+        case Property::BENT_NORMAL:                 return "BENT_NORMAL";
+        case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";
+        case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
     }
 }
 
@@ -1112,13 +1237,12 @@ char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) n
 
 char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat format,
         bool multisample) const noexcept {
-    assert(!multisample);   // multisample samplers not yet supported.
     switch (type) {
         case SamplerType::SAMPLER_2D:
             switch (format) {
-                case SamplerFormat::INT:    return "isampler2D";
-                case SamplerFormat::UINT:   return "usampler2D";
-                case SamplerFormat::FLOAT:  return "sampler2D";
+                case SamplerFormat::INT:    return multisample ? "isampler2DMS" : "isampler2D";
+                case SamplerFormat::UINT:   return multisample ? "usampler2DMS" : "usampler2D";
+                case SamplerFormat::FLOAT:  return multisample ? "sampler2DMS" : "sampler2D";
                 case SamplerFormat::SHADOW: return "sampler2DShadow";
             }
         case SamplerType::SAMPLER_3D:
@@ -1131,9 +1255,9 @@ char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat fo
             }
         case SamplerType::SAMPLER_2D_ARRAY:
             switch (format) {
-                case SamplerFormat::INT:    return "isampler2DArray";
-                case SamplerFormat::UINT:   return "usampler2DArray";
-                case SamplerFormat::FLOAT:  return "sampler2DArray";
+                case SamplerFormat::INT:    return multisample ? "isampler2DMSArray": "isampler2DArray";
+                case SamplerFormat::UINT:   return multisample ? "usampler2DMSArray": "usampler2DArray";
+                case SamplerFormat::FLOAT:  return multisample ? "sampler2DMSArray": "sampler2DArray";
                 case SamplerFormat::SHADOW: return "sampler2DArrayShadow";
             }
         case SamplerType::SAMPLER_CUBEMAP:

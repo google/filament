@@ -51,7 +51,10 @@ endif()
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
+# No need to install since we're combining this lib and the dependent libs into a combined lib
+# install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
 install(DIRECTORY ${PUBLIC_HDR_DIR}/geometry DESTINATION include)
 
 set(COMBINED_DEPS

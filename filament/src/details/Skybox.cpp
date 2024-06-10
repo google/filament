@@ -17,21 +17,28 @@
 #include "details/Skybox.h"
 
 #include "details/Engine.h"
-#include "details/Texture.h"
-#include "details/VertexBuffer.h"
-#include "details/IndexBuffer.h"
 #include "details/IndirectLight.h"
 #include "details/Material.h"
-#include "details/MaterialInstance.h"
+#include "details/Texture.h"
+#include "details/VertexBuffer.h"
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
 #include <filament/TextureSampler.h>
+#include <filament/Skybox.h>
 
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
-#include <filament/Skybox.h>
+
+#include <math/vec4.h>
+
+#include <stdint.h>
 
 
 #include "generated/resources/materials.h"
@@ -78,8 +85,8 @@ Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
 Skybox* Skybox::Builder::build(Engine& engine) {
     FTexture* cubemap = downcast(mImpl->mEnvironmentMap);
 
-    ASSERT_PRECONDITION(!cubemap || cubemap->isCubemap(),
-            "environment maps must be a cubemap");
+    FILAMENT_CHECK_PRECONDITION(!cubemap || cubemap->isCubemap())
+            << "environment maps must be a cubemap";
 
     return downcast(engine).createSkybox(*this);
 }
@@ -118,10 +125,26 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     Material::Builder builder;
+#ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
     if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == Engine::FeatureLevel::FEATURE_LEVEL_0)) {
-        builder.package(MATERIALS_SKYBOX0_DATA, MATERIALS_SKYBOX0_SIZE);
-    } else {
-        builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
+        builder.package(MATERIALS_SKYBOX_FL0_DATA, MATERIALS_SKYBOX_FL0_SIZE);
+    } else
+#endif
+    {
+        switch (engine.getConfig().stereoscopicType) {
+            case Engine::StereoscopicType::NONE:
+            case Engine::StereoscopicType::INSTANCED:
+                builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
+                break;
+            case Engine::StereoscopicType::MULTIVIEW:
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+                builder.package(MATERIALS_SKYBOX_MULTIVIEW_DATA, MATERIALS_SKYBOX_MULTIVIEW_SIZE);
+#else
+                PANIC_POSTCONDITION("Multiview is enabled in the Engine, but this build has not "
+                                    "been compiled for multiview.");
+#endif
+                break;
+        }
     }
     auto material = builder.build(engine);
     return downcast(material);
@@ -148,10 +171,6 @@ void FSkybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
 
 void FSkybox::setColor(math::float4 color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
-}
-
-void FSkybox::commit(backend::DriverApi& driver) noexcept {
-    mSkyboxMaterialInstance->commit(driver);
 }
 
 } // namespace filament

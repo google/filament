@@ -24,6 +24,7 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -141,7 +142,7 @@ public:
             CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type, alignment, left, top, stride,
                 handler, [](void* b, size_t s, void* u) {
-                    (*static_cast<T**>(u)->*method)(b, s); }, data };
+                    (static_cast<T*>(u)->*method)(b, s); }, data };
     }
 
     template<typename T, void(T::*method)(void const*, size_t)>
@@ -149,7 +150,7 @@ public:
             PixelDataFormat format, PixelDataType type, T* data,
             CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type, handler, [](void* b, size_t s, void* u) {
-                    (*static_cast<T**>(u)->*method)(b, s); }, data };
+                    (static_cast<T*>(u)->*method)(b, s); }, data };
     }
 
     template<typename T, void(T::*method)(void const*, size_t)>
@@ -157,7 +158,7 @@ public:
             backend::CompressedPixelDataType format, uint32_t imageSize, T* data,
             CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, imageSize, handler, [](void* b, size_t s, void* u) {
-                    (*static_cast<T**>(u)->*method)(b, s); }, data
+                    (static_cast<T*>(u)->*method)(b, s); }, data
         };
     }
 
@@ -168,9 +169,9 @@ public:
             CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type, alignment, left, top, stride,
                 handler, [](void* b, size_t s, void* u) {
-                    T& that = *static_cast<T*>(u);
-                    that(b, s);
-                    delete &that;
+                    T* const that = static_cast<T*>(u);
+                    that->operator()(b, s);
+                    delete that;
                 }, new T(std::forward<T>(functor))
         };
     }
@@ -181,9 +182,9 @@ public:
             CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, type,
                  handler, [](void* b, size_t s, void* u) {
-                    T& that = *static_cast<T*>(u);
-                    that(b, s);
-                    delete &that;
+                    T* const that = static_cast<T*>(u);
+                    that->operator()(b, s);
+                    delete that;
                 }, new T(std::forward<T>(functor))
         };
     }
@@ -194,9 +195,9 @@ public:
             CallbackHandler* handler = nullptr) noexcept {
         return { buffer, size, format, imageSize,
                  handler, [](void* b, size_t s, void* u) {
-                    T& that = *static_cast<T*>(u);
-                    that(b, s);
-                    delete &that;
+                    T* const that = static_cast<T*>(u);
+                    that->operator()(b, s);
+                    delete that;
                 }, new T(std::forward<T>(functor))
         };
     }

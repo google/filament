@@ -93,7 +93,7 @@ private:
         ShaderMinifier minifier;
     };
 
-    void fullOptimization(const glslang::TShader& tShader,
+    bool fullOptimization(const glslang::TShader& tShader,
             GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const;
 
     void preprocessOptimization(glslang::TShader& tShader,

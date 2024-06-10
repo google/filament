@@ -95,38 +95,6 @@ public:
             CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
 
 private:
-    OpenGLDriver& mDriver;
-    OpenGLBlobCache mBlobCache;
-    CallbackManager mCallbackManager;
-    CompilerThreadPool mCompilerThreadPool;
-
-    const bool KHR_parallel_shader_compile;
-    uint32_t mShaderCompilerThreadCount = 0u;
-
-    GLuint initialize(ShaderCompilerService::program_token_t& token) noexcept;
-
-    static void getProgramFromCompilerPool(program_token_t& token) noexcept;
-
-        static void compileShaders(
-            OpenGLContext& context,
-            Program::ShaderSource shadersSource,
-            utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
-            std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
-            std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
-
-    static std::string_view process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
-            char* source, size_t len) noexcept;
-
-    static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
-
-    static std::array<std::string_view, 2> splitShaderSource(std::string_view source) noexcept;
-
-    static GLuint linkProgram(OpenGLContext& context,
-            std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders,
-            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& attributes) noexcept;
-
-    static bool checkProgramStatus(program_token_t const& token) noexcept;
-
     struct Job {
         template<typename FUNC>
         Job(FUNC&& fn) : fn(std::forward<FUNC>(fn)) {}
@@ -140,14 +108,57 @@ private:
         CallbackHandler::Callback callback{};
     };
 
+    enum class Mode {
+        UNDEFINED,      // init() has not been called yet.
+        SYNCHRONOUS,    // synchronous shader compilation
+        THREAD_POOL,    // asynchronous shader compilation using a thread-pool (most common)
+        ASYNCHRONOUS    // asynchronous shader compilation using KHR_parallel_shader_compile
+    };
+
+    OpenGLDriver& mDriver;
+    OpenGLBlobCache mBlobCache;
+    CallbackManager mCallbackManager;
+    CompilerThreadPool mCompilerThreadPool;
+
+    uint32_t mShaderCompilerThreadCount = 0u;
+    Mode mMode = Mode::UNDEFINED; // valid after init() is called
+
+    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
+    std::vector<ContainerType> mRunAtNextTickOps;
+
+    GLuint initialize(ShaderCompilerService::program_token_t& token) noexcept;
+
+    static void getProgramFromCompilerPool(program_token_t& token) noexcept;
+
+    static void compileShaders(
+            OpenGLContext& context,
+            Program::ShaderSource shadersSource,
+            utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
+            bool multiview,
+            std::array<GLuint, Program::SHADER_TYPE_COUNT>& outShaders,
+            std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
+
+    static void process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+            char* source, size_t len) noexcept;
+
+    static void process_OVR_multiview2(OpenGLContext& context, int32_t eyeCount,
+            char* source, size_t len) noexcept;
+
+    static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
+
+    static std::array<std::string_view, 2> splitShaderSource(std::string_view source) noexcept;
+
+    static GLuint linkProgram(OpenGLContext& context,
+            std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders,
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& attributes) noexcept;
+
+    static bool checkProgramStatus(program_token_t const& token) noexcept;
+
     void runAtNextTick(CompilerPriorityQueue priority,
             const program_token_t& token, Job job) noexcept;
     void executeTickOps() noexcept;
     bool cancelTickOp(program_token_t token) noexcept;
     // order of insertion is important
-
-    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
-    std::vector<ContainerType> mRunAtNextTickOps;
 };
 
 } // namespace filament::backend

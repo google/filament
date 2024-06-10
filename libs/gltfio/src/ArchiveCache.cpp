@@ -16,16 +16,30 @@
 
 #include "ArchiveCache.h"
 
+#include <filament/Material.h>
+
+#include <uberz/ArchiveEnums.h>
 #include <uberz/ReadableArchive.h>
+
+#include <utils/compiler.h>
+#include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Log.h>
+#include <utils/Panic.h>
+#include <utils/debug.h>
 #include <utils/memalign.h>
+#include <utils/ostream.h>
 
 #include <zstd.h>
+
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
 
 using namespace utils;
 using namespace filament::uberz;
 
 namespace filament::gltfio {
-
 
 // Set this to a certain spec index to find out why it was deemed unsuitable.
 // To find the spec index of interest, try invoking uberz with the verbose flag.
@@ -60,6 +74,9 @@ void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
 // This loops though all ubershaders and returns the first one that meets the given requirements.
 Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
     assert_invariant(mArchive && "Please call load() before requesting any materials.");
+    if (mArchive == nullptr) {
+        return nullptr;
+    }
 
     for (uint64_t i = 0; i < mArchive->specsCount; ++i) {
         const ArchiveSpec& spec = mArchive->specs[i];
@@ -101,7 +118,7 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
         // mesh doesn't have it, then this ubershader is not suitable. This occurs very rarely, so
         // it intentionally comes after the other suitability check.
         for (uint64_t j = 0; j < spec.flagsCount && specIsSuitable; ++j) {
-            ArchiveFlag& flag = spec.flags[j];
+            ArchiveFlag const& flag = spec.flags[j];
             if (UTILS_UNLIKELY(flag.value == ArchiveFeature::REQUIRED)) {
                 // This allocates a new CString just to make a robin_map lookup, but this is rare
                 // because almost none of our feature flags are REQUIRED.
@@ -118,21 +135,6 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                 mMaterials[i] = Material::Builder()
                     .package(spec.package, spec.packageByteCount)
                     .build(mEngine);
-
-                // Don't attempt to precompile shaders on WebGL.
-                // Chrome already suffers from slow shader compilation:
-                // https://github.com/google/filament/issues/6615
-                // Precompiling shaders exacerbates the problem.
-    #if !defined(__EMSCRIPTEN__)
-                // First compile high priority variants
-                mMaterials[i]->compile(Material::CompilerPriorityQueue::HIGH,
-                        UserVariantFilterBit::DIRECTIONAL_LIGHTING |
-                        UserVariantFilterBit::DYNAMIC_LIGHTING |
-                        UserVariantFilterBit::SHADOW_RECEIVER);
-
-                // and then, everything else at low priority
-                mMaterials[i]->compile(Material::CompilerPriorityQueue::LOW);
-    #endif
             }
 
             return mMaterials[i];
@@ -144,6 +146,7 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
 Material* ArchiveCache::getDefaultMaterial() {
     assert_invariant(mArchive && "Please call load() before requesting any materials.");
     assert_invariant(!mMaterials.empty() && "Archive must have at least one material.");
+    if (!mArchive) return nullptr;
     if (mMaterials[0] == nullptr) {
         mMaterials[0] = Material::Builder()
             .package(mArchive->specs[0].package, mArchive->specs[0].packageByteCount)
@@ -173,7 +176,7 @@ FeatureMap ArchiveCache::getFeatureMap(Material* material) const {
 }
 
 ArchiveCache::~ArchiveCache() {
-    assert_invariant(mMaterials.size() == 0 &&
+    assert_invariant(mMaterials.empty() &&
         "Please call destroyMaterials explicitly to ensure correct destruction order");
     utils::aligned_free(mArchive);
 }

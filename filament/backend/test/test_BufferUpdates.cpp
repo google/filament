@@ -143,7 +143,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         }
 
         getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0);
+        getDriverApi().beginFrame(0, 0, 0);
 
         // Draw 10 triangles, updating the vertex buffer / index buffer each time.
         size_t triangleIndex = 0;
@@ -172,7 +172,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
             }
 
             getDriverApi().beginRenderPass(defaultRenderTarget, params);
-            getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+            getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
             getDriverApi().endRenderPass();
 
             triangleIndex++;
@@ -216,7 +216,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     auto colorTexture = getDriverApi().createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
     auto renderTarget = getDriverApi().createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, {{colorTexture}}, {}, {});
+            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {});
 
     // Upload uniforms for the first triangle.
     {

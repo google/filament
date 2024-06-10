@@ -18,6 +18,8 @@
 
 #include "MetalEnums.h"
 
+#include <utils/Log.h>
+
 namespace filament {
 namespace backend {
 
@@ -88,11 +90,17 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     NSError* error = nullptr;
     id<MTLRenderPipelineState> pipeline = [device newRenderPipelineStateWithDescriptor:descriptor
                                                                                  error:&error];
-    if (error) {
-        auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+    if (UTILS_UNLIKELY(pipeline == nil)) {
+        NSString *errorMessage =
+            [NSString stringWithFormat:@"Could not create Metal pipeline state: %@",
+                error ? error.localizedDescription : @"unknown error"];
+        auto description = [errorMessage cStringUsingEncoding:NSUTF8StringEncoding];
         utils::slog.e << description << utils::io::endl;
+        [[NSException exceptionWithName:@"MetalRenderPipelineFailure"
+                                 reason:errorMessage
+                               userInfo:nil] raise];
     }
-    ASSERT_POSTCONDITION(error == nil, "Could not create Metal pipeline state.");
+    FILAMENT_CHECK_POSTCONDITION(error == nil) << "Could not create Metal pipeline state.";
 
     return pipeline;
 }

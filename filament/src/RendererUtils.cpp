@@ -16,16 +16,34 @@
 
 #include "RendererUtils.h"
 
+#include "PostProcessManager.h"
+
 #include "details/Engine.h"
 #include "details/View.h"
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
 
+#include <filament/Options.h>
+#include <filament/RenderableManager.h>
+#include <filament/Viewport.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Panic.h>
+
+#include <algorithm>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -36,7 +54,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
         FrameGraph& fg, const char* name, FEngine& engine, FView const& view,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
         ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
-        RenderPass::Executor const& passExecutor) noexcept {
+        RenderPass::Executor passExecutor) noexcept {
 
     struct ColorPassData {
         FrameGraphId<FrameGraphTexture> shadows;
@@ -57,6 +75,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 TargetBufferFlags const clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearStencilFlags = config.clearFlags & TargetBufferFlags::STENCIL;
+                uint8_t layerCount = 0;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
@@ -89,7 +108,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
-                const bool canResolveDepth = engine.getDriverApi().isAutoDepthResolveSupported();
+                const bool canAutoResolveDepth = engine.getDriverApi().isAutoDepthResolveSupported();
 
                 if (!data.depth) {
                     // clear newly allocated depth/stencil buffers, regardless of given clear flags
@@ -114,13 +133,19 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                     data.depth = builder.createTexture(name, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
-                            // If the color attachment requested MS, we assume this means the MS buffer
-                            // must be kept, and for that reason we allocate the depth buffer with MS
-                            // as well. On the other hand, if the color attachment was allocated without
-                            // MS, no need to allocate the depth buffer with MS, if the RT is MS,
-                            // the tile depth buffer will be MS, but it'll be resolved to single
-                            // sample automatically -- which is what we want.
-                            .samples = canResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
+                            // If the color attachment requested MS, we assume this means the MS
+                            // buffer must be kept, and for that reason we allocate the depth
+                            // buffer with MS as well.
+                            // On the other hand, if the color attachment was allocated without
+                            // MS, no need to allocate the depth buffer with MS; Either it's not
+                            // multi-sampled or it is auto-resolved.
+                            // One complication above is that some backends don't support
+                            // depth auto-resolve, in which case we must allocate the depth
+                            // buffer with MS and manually resolve it (see "Resolved Depth Buffer"
+                            // pass).
+                            .depth = colorBufferDesc.depth,
+                            .samples = canAutoResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
+                            .type = colorBufferDesc.type,
                             .format = format,
                     });
                     if (config.enabledStencilBuffer) {
@@ -147,6 +172,9 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
 
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                if (engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
+                    layerCount = engine.getConfig().stereoscopicEyeCount;
+                }
 
                 /*
                  * There is a bit of magic happening here regarding the viewport used.
@@ -168,10 +196,11 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                         .stencil = data.stencil },
                         .clearColor = config.clearColor,
                         .samples = config.msaa,
-                        .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags });
+                        .layerCount = layerCount,
+                        .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags});
                 blackboard["depth"] = data.depth;
             },
-            [=, &view, &engine](FrameGraphResources const& resources,
+            [=, passExecutor = std::move(passExecutor), &view, &engine](FrameGraphResources const& resources,
                     ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderPassInfo();
 
@@ -224,10 +253,6 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                     out.params.subpassMask = 1;
                 }
 
-                // this is a good time to flush the CommandStream, because we're about to potentially
-                // output a lot of commands. This guarantees here that we have at least
-                // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
-                engine.flush();
                 driver.beginRenderPass(out.target, out.params);
                 passExecutor.execute(engine, resources.getPassName());
                 driver.endRenderPass();
@@ -282,7 +307,7 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
 
         input = RendererUtils::colorPass(fg, "Color Pass (opaque)", engine, view, {
                         // When rendering the opaques, we need to conserve the sample buffer,
-                        // so create config that specifies the sample count.
+                        // so create a config that specifies the sample count.
                         .width = config.physicalViewport.width,
                         .height = config.physicalViewport.height,
                         .samples = config.msaa,
@@ -312,11 +337,11 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
                 config, colorGradingConfig, pass.getExecutor(refraction, pass.end()));
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
-            // We need to do a resolve here because later passes (such as color grading or DoF) will need
-            // to sample from 'output'. However, because we have MSAA, we know we're not sampleable.
-            // And this is because in the SSR case, we had to use a renderbuffer to conserve the
-            // multi-sample buffer.
-            output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", output);
+            // We need to do a resolve here because later passes (such as color grading or DoF) will
+            // need to sample from 'output'. However, because we have MSAA, we know we're not
+            // sampleable. And this is because in the SSR case, we had to use a renderbuffer to
+            // conserve the multi-sample buffer.
+            output = ppm.resolve(fg, "Resolved Color Buffer", output, { .levels = 1 });
         }
     } else {
         output = input;
@@ -328,14 +353,12 @@ UTILS_NOINLINE
 void RendererUtils::readPixels(backend::DriverApi& driver, Handle<HwRenderTarget> renderTargetHandle,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         backend::PixelBufferDescriptor&& buffer) {
-    ASSERT_PRECONDITION(
-            buffer.type != PixelDataType::COMPRESSED,
-            "buffer.format cannot be COMPRESSED");
+    FILAMENT_CHECK_PRECONDITION(buffer.type != PixelDataType::COMPRESSED)
+            << "buffer.format cannot be COMPRESSED";
 
-    ASSERT_PRECONDITION(
-            buffer.alignment > 0 && buffer.alignment <= 8 &&
-            !(buffer.alignment & (buffer.alignment - 1u)),
-            "buffer.alignment must be 1, 2, 4 or 8");
+    FILAMENT_CHECK_PRECONDITION(buffer.alignment > 0 && buffer.alignment <= 8 &&
+            !(buffer.alignment & (buffer.alignment - 1u)))
+            << "buffer.alignment must be 1, 2, 4 or 8";
 
     // It's not really possible to know here which formats will be supported because
     // it can vary depending on the RenderTarget, in GL the following are ALWAYS supported though:
@@ -348,8 +371,9 @@ void RendererUtils::readPixels(backend::DriverApi& driver, Handle<HwRenderTarget
             buffer.top + height,
             buffer.alignment);
 
-    ASSERT_PRECONDITION(buffer.size >= sizeNeeded,
-            "Pixel buffer too small: has %u bytes, needs %u bytes", buffer.size, sizeNeeded);
+    FILAMENT_CHECK_PRECONDITION(buffer.size >= sizeNeeded)
+            << "Pixel buffer too small: has " << buffer.size << " bytes, needs " << sizeNeeded
+            << " bytes";
 
     driver.readPixels(renderTargetHandle, xoffset, yoffset, width, height, std::move(buffer));
 }

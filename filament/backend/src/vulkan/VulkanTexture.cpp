@@ -18,9 +18,9 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
+#include <DataReshaper.h>
+#include <backend/DriverEnums.h>
 #include <private/backend/BackendUtils.h>
-
-#include "DataReshaper.h"
 
 #include <utils/Panic.h>
 
@@ -28,7 +28,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-using ImgUtil = VulkanImageUtility;
 VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
         VkImage image, VkFormat format, uint8_t samples, uint32_t width, uint32_t height,
         TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated)
@@ -37,7 +36,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanComm
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
       mVkFormat(format),
-      mViewType(ImgUtil::getViewType(target)),
+      mViewType(imgutil::getViewType(target)),
       mSwizzle({}),
       mTextureImage(image),
       mFullViewRange{
@@ -62,7 +61,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
       mVkFormat(backend::getVkFormat(tformat)),
-      mViewType(ImgUtil::getViewType(target)),
+      mViewType(imgutil::getViewType(target)),
       mSwizzle(swizzle),
       mStagePool(stagePool),
       mDevice(device),
@@ -100,8 +99,12 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
-    const VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+    constexpr VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    if (any(usage & (TextureUsage::BLIT_DST | TextureUsage::BLIT_SRC))) {
+        imageInfo.usage |= blittable;
+    }
 
     if (any(usage & TextureUsage::SAMPLEABLE)) {
 
@@ -159,7 +162,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     imageInfo.samples = (VkSampleCountFlagBits) samples;
 
     VkResult error = vkCreateImage(mDevice, &imageInfo, VKALLOC, &mTextureImage);
-    if (error || FVK_ENABLED_BOOL(FVK_DEBUG_TEXTURE)) {
+    if (error || FVK_ENABLED(FVK_DEBUG_TEXTURE)) {
         utils::slog.d << "vkCreateImage: "
             << "image = " << mTextureImage << ", "
             << "result = " << error << ", "
@@ -174,7 +177,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             << "target = " << static_cast<int>(target) <<", "
             << "format = " << mVkFormat << utils::io::endl;
     }
-    ASSERT_POSTCONDITION(!error, "Unable to create image.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create image.";
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs = {};
@@ -183,8 +186,8 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
-            "VulkanTexture: unable to find a memory type that meets requirements.");
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanTexture: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -192,9 +195,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         .memoryTypeIndex = memoryTypeIndex,
     };
     error = vkAllocateMemory(mDevice, &allocInfo, nullptr, &mTextureImageMemory);
-    ASSERT_POSTCONDITION(!error, "Unable to allocate image memory.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to allocate image memory.";
     error = vkBindImageMemory(mDevice, mTextureImage, mTextureImageMemory, 0);
-    ASSERT_POSTCONDITION(!error, "Unable to bind image.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to bind image.";
 
     uint32_t layerCount = 0;
     if (target == SamplerType::SAMPLER_CUBEMAP) {
@@ -232,7 +235,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanCommandBuffer& commands = mCommands->get();
         VkCommandBuffer const cmdbuf = commands.buffer();
         commands.acquire(this);
-        transitionLayout(cmdbuf, mFullViewRange, ImgUtil::getDefaultLayout(imageInfo.usage));
+        transitionLayout(cmdbuf, mFullViewRange, imgutil::getDefaultLayout(imageInfo.usage));
     }
 }
 
@@ -323,10 +326,10 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
     VulkanLayout nextLayout = getLayout(transitionRange.baseArrayLayer, miplevel);
-    VkImageLayout const newVkLayout = ImgUtil::getVkLayout(newLayout);
+    VkImageLayout const newVkLayout = imgutil::getVkLayout(newLayout);
 
     if (nextLayout == VulkanLayout::UNDEFINED) {
-        nextLayout = ImgUtil::getDefaultLayout(this->usage);
+        nextLayout = imgutil::getDefaultLayout(this->usage);
     }
 
     transitionLayout(cmdbuf, transitionRange, newLayout);
@@ -370,8 +373,8 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(cmdbuf, range, newLayout);
 
-    vkCmdBlitImage(cmdbuf, stage->image, ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            mTextureImage, ImgUtil::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
+    vkCmdBlitImage(cmdbuf, stage->image, imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            mTextureImage, imgutil::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
 
     transitionLayout(cmdbuf, range, oldLayout);
 }
@@ -463,7 +466,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
         for (uint32_t i = firstLayer; i < lastLayer; ++i) {
             for (uint32_t j = firstLevel; j < lastLevel; ++j) {
                 VulkanLayout const layout = getLayout(i, j);
-                ImgUtil::transitionLayout(cmdbuf, {
+                imgutil::transitionLayout(cmdbuf, {
                         .image = mTextureImage,
                         .oldLayout = layout,
                         .newLayout = newLayout,
@@ -478,7 +481,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
             }
         }
     } else {
-        ImgUtil::transitionLayout(cmdbuf, {
+        imgutil::transitionLayout(cmdbuf, {
             .image = mTextureImage,
             .oldLayout = oldLayout,
             .newLayout = newLayout,

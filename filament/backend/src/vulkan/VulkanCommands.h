@@ -89,6 +89,15 @@ struct VulkanCommandBuffer {
     inline void reset() {
         fence.reset();
         mResourceManager.clear();
+        mPipeline = VK_NULL_HANDLE;
+    }
+
+    inline void setPipeline(VkPipeline pipeline) {
+        mPipeline = pipeline;
+    }
+
+    inline VkPipeline pipeline() const {
+        return mPipeline;
     }
 
     inline VkCommandBuffer buffer() const {
@@ -103,6 +112,7 @@ struct VulkanCommandBuffer {
 private:
     VulkanAcquireOnlyResourceManager mResourceManager;
     VkCommandBuffer mBuffer;
+    VkPipeline mPipeline;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.
@@ -139,71 +149,72 @@ public:
 //    - We do this because vkGetFenceStatus must be called from the rendering thread.
 //
 class VulkanCommands {
-    public:
-        VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-                VulkanContext* context, VulkanResourceAllocator* allocator);
-        ~VulkanCommands();
+public:
+    VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
+            VulkanContext* context, VulkanResourceAllocator* allocator);
 
-        // Creates a "current" command buffer if none exists, otherwise returns the current one.
-        VulkanCommandBuffer& get();
+    void terminate();
 
-        // Submits the current command buffer if it exists, then sets "current" to null.
-        // If there are no outstanding commands then nothing happens and this returns false.
-        bool flush();
+    // Creates a "current" command buffer if none exists, otherwise returns the current one.
+    VulkanCommandBuffer& get();
 
-        // Returns the "rendering finished" semaphore for the most recent flush and removes
-        // it from the existing dependency chain. This is especially useful for setting up
-        // vkQueuePresentKHR.
-        VkSemaphore acquireFinishedSignal();
+    // Submits the current command buffer if it exists, then sets "current" to null.
+    // If there are no outstanding commands then nothing happens and this returns false.
+    bool flush();
 
-        // Takes a semaphore that signals when the next flush can occur. Only one injected
-        // semaphore is allowed per flush. Useful after calling vkAcquireNextImageKHR.
-        void injectDependency(VkSemaphore next);
+    // Returns the "rendering finished" semaphore for the most recent flush and removes
+    // it from the existing dependency chain. This is especially useful for setting up
+    // vkQueuePresentKHR.
+    VkSemaphore acquireFinishedSignal();
 
-        // Destroys all command buffers that are no longer in use.
-        void gc();
+    // Takes a semaphore that signals when the next flush can occur. Only one injected
+    // semaphore is allowed per flush. Useful after calling vkAcquireNextImageKHR.
+    void injectDependency(VkSemaphore next);
 
-        // Waits for all outstanding command buffers to finish.
-        void wait();
+    // Destroys all command buffers that are no longer in use.
+    void gc();
 
-        // Updates the atomic "status" variable in every extant fence.
-        void updateFences();
+    // Waits for all outstanding command buffers to finish.
+    void wait();
 
-        // Sets an observer who is notified every time a new command buffer has been made "current".
-        // The observer's event handler can only be called during get().
-        void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
+    // Updates the atomic "status" variable in every extant fence.
+    void updateFences();
+
+    // Sets an observer who is notified every time a new command buffer has been made "current".
+    // The observer's event handler can only be called during get().
+    void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-        void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
+    void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
 
-        void popGroupMarker();
+    void popGroupMarker();
 
-        void insertEventMarker(char const* string, uint32_t len);
+    void insertEventMarker(char const* string, uint32_t len);
 
-        std::string getTopGroupMarker() const;
+    std::string getTopGroupMarker() const;
 #endif
 
-    private:
-        static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
-        VkDevice const mDevice;
-        VkQueue const mQueue;
-        VkCommandPool const mPool;
-        VulkanContext const* mContext;
+private:
+    static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
+    VkDevice const mDevice;
+    VkQueue const mQueue;
+    VkCommandPool const mPool;
+    VulkanContext const* mContext;
 
-        // int8 only goes up to 127, therefore capacity must be less than that.
-        static_assert(CAPACITY < 128);
-        int8_t mCurrentCommandBufferIndex = -1;
-        VkSemaphore mSubmissionSignal = {};
-        VkSemaphore mInjectedSignal = {};
-        utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
-        VkFence mFences[CAPACITY] = {};
-        VkSemaphore mSubmissionSignals[CAPACITY] = {};
-        uint8_t mAvailableBufferCount = CAPACITY;
-        CommandBufferObserver* mObserver = nullptr;
+    // int8 only goes up to 127, therefore capacity must be less than that.
+    static_assert(CAPACITY < 128);
+    int8_t mCurrentCommandBufferIndex = -1;
+    VkSemaphore mSubmissionSignal = {};
+    VkSemaphore mInjectedSignal = {};
+    utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
+    VkFence mFences[CAPACITY] = {};
+    VkSemaphore mSubmissionSignals[CAPACITY] = {};
+    uint8_t mAvailableBufferCount = CAPACITY;
+    CommandBufferObserver* mObserver = nullptr;
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-        std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
-        std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
+    std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
+    std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
 #endif
 };
 

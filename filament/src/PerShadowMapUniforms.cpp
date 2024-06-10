@@ -16,12 +16,19 @@
 
 #include "PerShadowMapUniforms.h"
 
-#include "ShadowMapManager.h"
-
 #include "details/Camera.h"
 #include "details/Engine.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
+
+#include <backend/DriverEnums.h>
+
+#include <utils/debug.h>
+
+#include <math/mat4.h>
+
+#include <stdint.h>
 
 namespace filament {
 
@@ -71,8 +78,7 @@ void PerShadowMapUniforms::prepareCamera(Transaction const& transaction,
     s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
-void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction,
-        float bias) noexcept {
+void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction, float bias) noexcept {
     auto& s = edit(transaction);
     s.lodBias = bias;
 }
@@ -89,8 +95,8 @@ void PerShadowMapUniforms::prepareViewport(Transaction const& transaction,
 void PerShadowMapUniforms::prepareTime(Transaction const& transaction,
         FEngine& engine, math::float4 const& userTime) noexcept {
     auto& s = edit(transaction);
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
-    const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
+    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1'000'000'000;
+    const float fraction = float(double(oneSecondRemainder) / 1'000'000'000.0);
     s.time = fraction;
     s.userTime = userTime;
 }
@@ -103,7 +109,6 @@ void PerShadowMapUniforms::prepareShadowMapping(Transaction const& transaction,
     s.vsmExponent = highPrecision ? high : low;
 }
 
-
 PerShadowMapUniforms::Transaction PerShadowMapUniforms::open(backend::DriverApi& driver) noexcept {
     Transaction transaction;
     // TODO: use out-of-line buffer if too large
@@ -115,7 +120,7 @@ PerShadowMapUniforms::Transaction PerShadowMapUniforms::open(backend::DriverApi&
 void PerShadowMapUniforms::commit(Transaction& transaction,
         backend::DriverApi& driver) noexcept {
     driver.updateBufferObject(mUniformBufferHandle, {
-        transaction.uniforms, sizeof(PerViewUib) }, 0);
+            transaction.uniforms, sizeof(PerViewUib) }, 0);
     transaction.uniforms = nullptr;
 }
 

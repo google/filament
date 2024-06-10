@@ -18,11 +18,13 @@
 #define TNT_UTILS_STOPWATCH_H
 
 #include <utils/Log.h>
+#include <utils/ostream.h>
 
 #include <chrono>
 #include <limits>
+#include <ratio>
 
-#include <stdint.h>
+#include <stddef.h>
 
 namespace utils {
 

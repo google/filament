@@ -20,6 +20,7 @@
 
 #include "Includes.h"
 #include "MaterialVariants.h"
+#include "PushConstantDefinitions.h"
 #include "shaders/SibGenerator.h"
 #include "shaders/UibGenerator.h"
 
@@ -33,11 +34,12 @@
 #include "eiff/LineDictionary.h"
 #include "eiff/MaterialInterfaceBlockChunk.h"
 #include "eiff/MaterialTextChunk.h"
-#include "eiff/MaterialSpirvChunk.h"
+#include "eiff/MaterialBinaryChunk.h"
 #include "eiff/ChunkContainer.h"
 #include "eiff/SimpleFieldChunk.h"
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
+#include "eiff/DictionaryMetalLibraryChunk.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -139,13 +141,13 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
                 glTargetLanguage,
                 effectiveFeatureLevel,
             });
-            if (featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0
-                && shaderModel == ShaderModel::MOBILE) {
-                // ESSL1 code may never be compiled to SPIR-V.
+            if (mIncludeEssl1
+                    && featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0
+                    && shaderModel == ShaderModel::MOBILE) {
                 mCodeGenPermutations.push_back({
                     shaderModel,
                     TargetApi::OPENGL,
-                    TargetLanguage::GLSL,
+                    glTargetLanguage,
                     filament::backend::FeatureLevel::FEATURE_LEVEL_0
                 });
             }
@@ -172,6 +174,8 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
 MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
     std::fill_n(mProperties, MATERIAL_PROPERTIES_COUNT, false);
     mShaderModels.reset();
+
+    initPushConstants();
 }
 
 MaterialBuilder::~MaterialBuilder() = default;
@@ -238,7 +242,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, size_t size, UniformType type,
         ParameterPrecision precision) noexcept {
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
+    FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
     mParameters[mParameterCount++] = { name, type, size, precision };
     return *this;
 }
@@ -250,15 +254,17 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType type,
 
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision) noexcept {
-    ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
-    mParameters[mParameterCount++] = { name, samplerType, format, precision };
-    return *this;
-}
+        SamplerFormat format, ParameterPrecision precision, bool multisample) noexcept {
+    FILAMENT_CHECK_PRECONDITION(!multisample ||
+            (format != SamplerFormat::SHADOW &&
+                    (samplerType == SamplerType::SAMPLER_2D ||
+                            samplerType == SamplerType::SAMPLER_2D_ARRAY)))
+            << "multisample samplers only possible with SAMPLER_2D or SAMPLER_2D_ARRAY,"
+               " as long as type is not SHADOW";
 
-MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        ParameterPrecision precision) noexcept {
-    return parameter(name, samplerType, SamplerFormat::FLOAT, precision);
+    FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample };
+    return *this;
 }
 
 template<typename T, typename>
@@ -266,8 +272,8 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType type, 
     auto result = std::find_if(mConstants.begin(), mConstants.end(), [name](const Constant& c) {
         return c.name == utils::CString(name);
     });
-    ASSERT_POSTCONDITION(result == mConstants.end(),
-            "There is already a constant parameter present with the name %s.", name);
+    FILAMENT_CHECK_POSTCONDITION(result == mConstants.end())
+            << "There is already a constant parameter present with the name " << name << ".";
     Constant constant {
             .name = CString(name),
             .type = type,
@@ -280,19 +286,20 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType type, 
         }
     };
 
-    const char* const errMessage =
-            "Constant %s was declared with type %s but given %s default value.";
     if constexpr (std::is_same_v<T, int32_t>) {
-        ASSERT_POSTCONDITION(
-                type == ConstantType::INT, errMessage, name, toString(type), "an int");
+        FILAMENT_CHECK_POSTCONDITION(type == ConstantType::INT)
+                << "Constant " << name << " was declared with type " << toString(type)
+                << " but given an int default value.";
         constant.defaultValue.i = defaultValue;
     } else if constexpr (std::is_same_v<T, float>) {
-        ASSERT_POSTCONDITION(
-                type == ConstantType::FLOAT, errMessage, name, toString(type), "a float");
+        FILAMENT_CHECK_POSTCONDITION(type == ConstantType::FLOAT)
+                << "Constant " << name << " was declared with type " << toString(type)
+                << " but given a float default value.";
         constant.defaultValue.f = defaultValue;
     } else if constexpr (std::is_same_v<T, bool>) {
-        ASSERT_POSTCONDITION(
-                type == ConstantType::BOOL, errMessage, name, toString(type), "a bool");
+        FILAMENT_CHECK_POSTCONDITION(type == ConstantType::BOOL)
+                << "Constant " << name << " was declared with type " << toString(type)
+                << " but given a bool default value.";
         constant.defaultValue.b = defaultValue;
     } else {
         assert_invariant(false);
@@ -309,17 +316,17 @@ template MaterialBuilder& MaterialBuilder::constant<bool>(
         const char* name, ConstantType type, bool defaultValue);
 
 MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
-    ASSERT_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT, "Too many buffers");
+    FILAMENT_CHECK_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT) << "Too many buffers";
     mBuffers.emplace_back(std::make_unique<filament::BufferInterfaceBlock>(std::move(bib)));
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
         ParameterPrecision precision, const char* name) noexcept {
-    ASSERT_PRECONDITION(format == SamplerFormat::FLOAT,
-            "Subpass parameters must have FLOAT format.");
+    FILAMENT_CHECK_PRECONDITION(format == SamplerFormat::FLOAT)
+            << "Subpass parameters must have FLOAT format.";
 
-    ASSERT_POSTCONDITION(mSubpassCount < MAX_SUBPASS_COUNT, "Too many subpasses");
+    FILAMENT_CHECK_POSTCONDITION(mSubpassCount < MAX_SUBPASS_COUNT) << "Too many subpasses";
     mSubpasses[mSubpassCount++] = { name, subpassType, format, precision };
     return *this;
 }
@@ -382,6 +389,16 @@ MaterialBuilder& MaterialBuilder::featureLevel(FeatureLevel featureLevel) noexce
 
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::customBlendFunctions(
+        BlendFunction srcRGB, BlendFunction srcA,
+        BlendFunction dstRGB, BlendFunction dstA) noexcept {
+    mCustomBlendFunctions[0] = srcRGB;
+    mCustomBlendFunctions[1] = srcA;
+    mCustomBlendFunctions[2] = dstRGB;
+    mCustomBlendFunctions[3] = dstA;
     return *this;
 }
 
@@ -495,6 +512,16 @@ MaterialBuilder& MaterialBuilder::transparencyMode(TransparencyMode mode) noexce
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::stereoscopicType(StereoscopicType stereoscopicType) noexcept {
+    mStereoscopicType = stereoscopicType;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::stereoscopicEyeCount(uint8_t eyeCount) noexcept {
+    mStereoscopicEyeCount = eyeCount;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::reflectionMode(ReflectionMode mode) noexcept {
     mReflectionMode = mode;
     return *this;
@@ -556,7 +583,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
             sbb.add({ param.name.data(), param.name.size() },
-                    param.samplerType, param.format, param.precision);
+                    param.samplerType, param.format, param.precision, param.multisample);
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
                       uint32_t(param.size == 1u ? 0u : param.size), param.uniformType,
@@ -629,9 +656,24 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
     info.featureLevel = mFeatureLevel;
     info.groupSize = mGroupSize;
+    info.stereoscopicType = mStereoscopicType;
+    info.stereoscopicEyeCount = mStereoscopicEyeCount;
 
     // This is determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
+}
+
+void MaterialBuilder::initPushConstants() noexcept {
+    mPushConstants.reserve(PUSH_CONSTANTS.size());
+    mPushConstants.resize(PUSH_CONSTANTS.size());
+    std::transform(PUSH_CONSTANTS.cbegin(), PUSH_CONSTANTS.cend(), mPushConstants.begin(),
+            [](filament::MaterialPushConstant const& inConstant) -> PushConstant {
+                return {
+                    .name = inConstant.name,
+                    .type = inConstant.type,
+                    .stage = inConstant.stage,
+                };
+            });
 }
 
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
@@ -796,13 +838,13 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     Mutex entriesLock;
     std::vector<TextEntry> glslEntries;
     std::vector<TextEntry> essl1Entries;
-    std::vector<SpirvEntry> spirvEntries;
+    std::vector<BinaryEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
     LineDictionary textDictionary;
     BlobDictionary spirvDictionary;
     // End: must be protected by lock
 
-    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants,
+    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants, mPushConstants,
             mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
@@ -847,7 +889,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
 
                 TextEntry glslEntry{};
-                SpirvEntry spirvEntry{};
+                BinaryEntry spirvEntry{};
                 TextEntry metalEntry{};
 
                 glslEntry.shaderModel  = params.shaderModel;
@@ -891,7 +933,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .domain = mMaterialDomain,
                         .materialInfo = &info,
                         .hasFramebufferFetch = mEnableFramebufferFetch,
-                        .usesClipDistance = v.variant.hasInstancedStereo(),
+                        .usesClipDistance = v.variant.hasStereo() && info.stereoscopicType == StereoscopicType::INSTANCED,
                         .glsl = {},
                 };
 
@@ -912,7 +954,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
                 if (targetApi == TargetApi::OPENGL) {
                     if (targetLanguage == TargetLanguage::SPIRV) {
-                        ShaderGenerator::fixupExternalSamplers(shaderModel, shader, info);
+                        ShaderGenerator::fixupExternalSamplers(shaderModel, shader, featureLevel,
+                                info);
                     }
                 }
 
@@ -937,12 +980,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                             glslEntries.push_back(glslEntry);
                         }
                         break;
-                    case TargetApi::VULKAN:
+                    case TargetApi::VULKAN: {
                         assert(!spirv.empty());
+                        const std::vector<uint8_t> d(reinterpret_cast<uint8_t*>(spirv.data()),
+                                reinterpret_cast<uint8_t*>(spirv.data() + spirv.size()));
                         spirvEntry.stage = v.stage;
-                        spirvEntry.spirv = std::move(spirv);
+                        spirvEntry.data = std::move(d);
                         spirvEntries.push_back(spirvEntry);
                         break;
+                    }
                     case TargetApi::METAL:
                         assert(!spirv.empty());
                         assert(msl.length() > 0);
@@ -992,7 +1038,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         textDictionary.addText(s.shader);
     }
     for (auto& s : spirvEntries) {
-        std::vector<uint32_t> spirv = std::move(s.spirv);
+        std::vector<uint8_t> spirv = std::move(s.data);
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
     for (const auto& s : metalEntries) {
@@ -1015,11 +1061,11 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 dictionaryChunk.getDictionary(), ChunkType::MaterialEssl1);
     }
 
-    // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
+    // Emit SPIRV chunks (SpirvDictionaryReader and MaterialBinaryChunk).
     if (!spirvEntries.empty()) {
         const bool stripInfo = !mGenerateDebugInfo;
         container.push<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
-        container.push<MaterialSpirvChunk>(std::move(spirvEntries));
+        container.push<MaterialBinaryChunk>(std::move(spirvEntries), ChunkType::MaterialSpirv);
     }
 
     // Emit Metal chunk (MaterialTextChunk).
@@ -1033,14 +1079,14 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
         Precision precision, OutputType type, const char* name, int location) noexcept {
+    FILAMENT_CHECK_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT)
+            << "Depth outputs must be of type FLOAT.";
+    FILAMENT_CHECK_PRECONDITION(
+            target != OutputTarget::DEPTH || qualifier == VariableQualifier::OUT)
+            << "Depth outputs must use OUT qualifier.";
 
-    ASSERT_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT,
-            "Depth outputs must be of type FLOAT.");
-    ASSERT_PRECONDITION(target != OutputTarget::DEPTH || qualifier == VariableQualifier::OUT,
-            "Depth outputs must use OUT qualifier.");
-
-    ASSERT_PRECONDITION(location >= -1,
-            "Output location must be >= 0 (or use -1 for default location).");
+    FILAMENT_CHECK_PRECONDITION(location >= -1)
+            << "Output location must be >= 0 (or use -1 for default location).";
 
     // A location value of -1 signals using the default location. We'll simply take the previous
     // output's location and add 1.
@@ -1062,10 +1108,10 @@ MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarg
         }
     }
 
-    ASSERT_PRECONDITION(colorOutputCount <= MAX_COLOR_OUTPUT,
-            "A maximum of %d COLOR outputs is allowed.", MAX_COLOR_OUTPUT);
-    ASSERT_PRECONDITION(depthOutputCount <= MAX_DEPTH_OUTPUT,
-            "A maximum of %d DEPTH output is allowed.", MAX_DEPTH_OUTPUT);
+    FILAMENT_CHECK_PRECONDITION(colorOutputCount <= MAX_COLOR_OUTPUT)
+            << "A maximum of " << MAX_COLOR_OUTPUT << " COLOR outputs is allowed.";
+    FILAMENT_CHECK_PRECONDITION(depthOutputCount <= MAX_DEPTH_OUTPUT)
+            << "A maximum of " << MAX_DEPTH_OUTPUT << " DEPTH output is allowed.";
 
     assert(mOutputs.size() <= MAX_COLOR_OUTPUT + MAX_DEPTH_OUTPUT);
 
@@ -1162,10 +1208,8 @@ error:
         mVariantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::SKINNING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
         mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::STE);
     }
 
     // Create chunk tree.
@@ -1330,7 +1374,7 @@ bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
 std::string MaterialBuilder::peek(backend::ShaderStage stage,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mConstants,
+    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mConstants, mPushConstants,
             mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
@@ -1421,15 +1465,15 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         uniforms.push_back({
                 "objectUniforms.data[0].morphTargetCount",
                 offsetof(PerRenderableUib, data[0].morphTargetCount), 1,
-                UniformType::UINT });
+                UniformType::INT });
         uniforms.push_back({
                 "objectUniforms.data[0].flagsChannels",
                 offsetof(PerRenderableUib, data[0].flagsChannels), 1,
-                UniformType::UINT });
+                UniformType::INT });
         uniforms.push_back({
                 "objectUniforms.data[0].objectId",
                 offsetof(PerRenderableUib, data[0].objectId), 1,
-                UniformType::UINT });
+                UniformType::INT });
         uniforms.push_back({
                 "objectUniforms.data[0].userData",
                 offsetof(PerRenderableUib, data[0].userData), 1,
@@ -1484,6 +1528,14 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
             [](Constant const& c) { return MaterialConstant(c.name.c_str(), c.type); });
     container.push<MaterialConstantParametersChunk>(std::move(constantsEntry));
 
+    utils::FixedCapacityVector<MaterialPushConstant> pushConstantsEntry(mPushConstants.size());
+    std::transform(mPushConstants.begin(), mPushConstants.end(), pushConstantsEntry.begin(),
+            [](PushConstant const& c) {
+                return MaterialPushConstant(c.name.c_str(), c.type, c.stage);
+            });
+    container.push<MaterialPushConstantParametersChunk>(
+            utils::CString(PUSH_CONSTANT_STRUCT_VAR_NAME), std::move(pushConstantsEntry));
+
     // TODO: should we write the SSBO info? this would only be needed if we wanted to provide
     //       an interface to set [get?] values in the buffer. But we can do that easily
     //       with a c-struct (what about kotlin/java?). tbd.
@@ -1496,6 +1548,16 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.emplace<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
         container.emplace<uint8_t>(ChunkType::MaterialBlendingMode,
                 static_cast<uint8_t>(mBlendingMode));
+
+        if (mBlendingMode == BlendingMode::CUSTOM) {
+            uint32_t const blendFunctions =
+                    (uint32_t(mCustomBlendFunctions[0]) << 24) |
+                    (uint32_t(mCustomBlendFunctions[1]) << 16) |
+                    (uint32_t(mCustomBlendFunctions[2]) <<  8) |
+                    (uint32_t(mCustomBlendFunctions[3]) <<  0);
+            container.emplace< uint32_t >(ChunkType::MaterialBlendFunction, blendFunctions);
+        }
+
         container.emplace<uint8_t>(ChunkType::MaterialTransparencyMode,
                 static_cast<uint8_t>(mTransparencyMode));
         container.emplace<uint8_t>(ChunkType::MaterialReflectionMode,
@@ -1562,6 +1624,11 @@ void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexce
 
 MaterialBuilder& MaterialBuilder::noSamplerValidation(bool enabled) noexcept {
     mNoSamplerValidation = enabled;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::includeEssl1(bool enabled) noexcept {
+    mIncludeEssl1 = enabled;
     return *this;
 }
 

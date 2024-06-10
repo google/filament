@@ -41,7 +41,7 @@ public:
     using TargetApi = filamat::MaterialBuilder::TargetApi;
     using Optimization = filamat::MaterialBuilder::Optimization;
 
-    // For defines and template args, we use an ordered map with a transparent comparator.
+    // For defines, template, and material parameters, we use an ordered map with a transparent comparator.
     // Even though the key is stored using std::string, this allows you to make lookups using
     // std::string_view. There is no need to construct a std::string object just to make a lookup.
     using StringReplacementMap = std::map<std::string, std::string, std::less<>>;
@@ -119,6 +119,10 @@ public:
         return mNoSamplerValidation;
     }
 
+    bool includeEssl1() const noexcept {
+        return mIncludeEssl1;
+    }
+
     filament::UserVariantFilterMask getVariantFilter() const noexcept {
         return mVariantFilter;
     }
@@ -129,6 +133,10 @@ public:
 
     const StringReplacementMap& getTemplateMap() const noexcept {
         return mTemplateMap;
+    }
+
+    const StringReplacementMap& getMaterialParameters() const noexcept {
+        return mMaterialParameters;
     }
 
     filament::backend::FeatureLevel getFeatureLevel() const noexcept {
@@ -149,7 +157,9 @@ protected:
     filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
     StringReplacementMap mDefines;
     StringReplacementMap mTemplateMap;
+    StringReplacementMap mMaterialParameters;
     filament::UserVariantFilterMask mVariantFilter = 0;
+    bool mIncludeEssl1 = true;
 };
 
 }

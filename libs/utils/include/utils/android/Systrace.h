@@ -97,7 +97,7 @@
 namespace utils {
 namespace details {
 
-class Systrace {
+class UTILS_PUBLIC Systrace {
    public:
 
     enum tags {
@@ -220,7 +220,7 @@ class Systrace {
 
 // ------------------------------------------------------------------------------------------------
 
-class ScopedTrace {
+class UTILS_PUBLIC ScopedTrace {
 public:
     // we don't inline this because it's relatively heavy due to a global check
     ScopedTrace(uint32_t tag, const char* name) noexcept: mTrace(tag), mTag(tag) {

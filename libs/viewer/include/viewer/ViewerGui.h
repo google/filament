@@ -231,8 +231,6 @@ public:
 
     int getCurrentCamera() const { return mCurrentCamera; }
 
-    float getOcularDistance() const { return mOcularDistance; }
-
 private:
     using SceneMask = gltfio::NodeManager::SceneMask;
 
@@ -267,9 +265,6 @@ private:
     std::vector<float> mMorphWeights;
     SceneMask mVisibleScenes;
     bool mShowingRestPose = false;
-
-    // Stereoscopic debugging
-    float mOcularDistance = 0.0f;
 
     // 0 is the default "free camera". Additional cameras come from the gltf file (1-based index).
     int mCurrentCamera = 0;

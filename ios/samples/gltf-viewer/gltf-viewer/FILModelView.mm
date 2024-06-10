@@ -127,13 +127,12 @@ const float kSensitivity = 100.0f;
 
     _swapChain = _engine->createSwapChain((__bridge void*)self.layer);
 
-    _materialProvider = createUbershaderProvider(_engine,
-            UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+    _materialProvider =
+            createUbershaderProvider(_engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
     EntityManager& em = EntityManager::get();
     NameComponentManager* ncm = new NameComponentManager(em);
     _assetLoader = AssetLoader::create({_engine, _materialProvider, ncm, &em});
-    _resourceLoader = new ResourceLoader(
-            {.engine = _engine, .normalizeSkinningWeights = true});
+    _resourceLoader = new ResourceLoader({.engine = _engine, .normalizeSkinningWeights = true});
     _stbDecoder = createStbProvider(_engine);
     _ktxDecoder = createKtx2Provider(_engine);
     _resourceLoader->addTextureProvider("image/png", _stbDecoder);
@@ -180,6 +179,26 @@ const float kSensitivity = 100.0f;
     _assetLoader->destroyAsset(_asset);
     _asset = nullptr;
     _animator = nullptr;
+}
+
+- (void)issuePickQuery:(CGPoint)point callback:(PickCallback)callback {
+    CGPoint pointOriginBottomLeft = CGPointMake(point.x, self.bounds.size.height - point.y);
+    CGPoint pointScaled = CGPointMake(pointOriginBottomLeft.x * self.contentScaleFactor,
+            pointOriginBottomLeft.y * self.contentScaleFactor);
+    _view->pick(pointScaled.x, pointScaled.y,
+            [callback](View::PickingQueryResult const& result) { callback(result.renderable); });
+}
+
+- (NSString* _Nullable)getEntityName:(utils::Entity)entity {
+    if (!_asset) {
+        return nil;
+    }
+    NameComponentManager* ncm = _assetLoader->getNames();
+    NameComponentManager::Instance instance = ncm->getInstance(entity);
+    if (instance) {
+        return [NSString stringWithUTF8String:ncm->getName(ncm->getInstance(entity))];
+    }
+    return nil;
 }
 
 - (void)transformToUnitCube {
@@ -256,16 +275,16 @@ const float kSensitivity = 100.0f;
 - (void)dealloc {
     [self destroyModel];
 
-    delete _manipulator;
-    delete _stbDecoder;
-    delete _ktxDecoder;
-
     _materialProvider->destroyMaterials();
     delete _materialProvider;
     auto* ncm = _assetLoader->getNames();
     delete ncm;
     AssetLoader::destroy(&_assetLoader);
     delete _resourceLoader;
+
+    delete _manipulator;
+    delete _stbDecoder;
+    delete _ktxDecoder;
 
     _engine->destroy(_swapChain);
     _engine->destroy(_view);

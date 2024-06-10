@@ -38,7 +38,7 @@ Java_com_google_android_filament_EntityManager_nCreateArray(JNIEnv* env, jclass,
     // (which it is), but still.
     em->create((size_t) n, reinterpret_cast<Entity *>(entities));
 
-    env->ReleaseIntArrayElements(entities_, entities, 0);
+    env->ReleaseIntArrayElements(entities_, entities, JNI_ABORT);
 }
 
 extern "C" JNIEXPORT jint JNICALL

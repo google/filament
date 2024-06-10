@@ -17,8 +17,6 @@
 #ifndef TNT_UTILS_GENERIC_THERMALMANAGER_H
 #define TNT_UTILS_GENERIC_THERMALMANAGER_H
 
-#include <utils/compiler.h>
-
 #include <stdint.h>
 
 namespace utils {

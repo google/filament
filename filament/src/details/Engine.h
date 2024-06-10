@@ -23,6 +23,7 @@
 #include "DFG.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
+#include "HwVertexBufferInfoFactory.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -58,27 +59,28 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
-#if FILAMENT_ENABLE_MATDBG
-#include <matdbg/DebugServer.h>
-#else
-namespace filament {
-namespace matdbg {
-class DebugServer;
-using MaterialKey = uint32_t;
-} // namespace matdbg
-} // namespace filament
-#endif
-
-#include <utils/compiler.h>
 #include <utils/Allocator.h>
-#include <utils/JobSystem.h>
 #include <utils/CountDownLatch.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/JobSystem.h>
+#include <utils/compiler.h>
 
 #include <chrono>
 #include <memory>
 #include <new>
 #include <random>
+#include <thread>
+#include <type_traits>
 #include <unordered_map>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#else
+namespace filament::matdbg {
+class DebugServer;
+using MaterialKey = uint32_t;
+} // namespace filament::matdbg
+#endif
 
 namespace filament {
 
@@ -142,7 +144,7 @@ public:
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
     // we'll simply have to use separate Areas (for instance).
-    LinearAllocatorArena& getPerRenderPassAllocator() noexcept { return mPerRenderPassAllocator; }
+    LinearAllocatorArena& getPerRenderPassArena() noexcept { return mPerRenderPassArena; }
 
     // Material IDs...
     uint32_t getMaterialId() const noexcept { return mMaterialId++; }
@@ -182,7 +184,13 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported() const noexcept { return getDriver().isStereoSupported(); }
+    bool isStereoSupported() const noexcept {
+        return getDriver().isStereoSupported();
+    }
+
+    static size_t getMaxStereoscopicEyes() noexcept {
+        return CONFIG_MAX_STEREOSCOPIC_EYES;
+    }
 
     PostProcessManager const& getPostProcessManager() const noexcept {
         return mPostProcessManager;
@@ -224,19 +232,25 @@ public:
         return mPlatform;
     }
 
-    backend::ShaderLanguage getShaderLanguage() const noexcept {
+    // Return a vector of shader languages, in order of preference.
+    utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
         switch (mBackend) {
             case Backend::DEFAULT:
             case Backend::NOOP:
             default:
-                return backend::ShaderLanguage::ESSL3;
+                return { backend::ShaderLanguage::ESSL3 };
             case Backend::OPENGL:
-                return getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
-                        ? backend::ShaderLanguage::ESSL1 : backend::ShaderLanguage::ESSL3;
+                return { getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
+                                ? backend::ShaderLanguage::ESSL1
+                                : backend::ShaderLanguage::ESSL3 };
             case Backend::VULKAN:
-                return backend::ShaderLanguage::SPIRV;
+                return { backend::ShaderLanguage::SPIRV };
             case Backend::METAL:
-                return backend::ShaderLanguage::MSL;
+                const auto& lang = mConfig.preferredShaderLanguage;
+                if (lang == Config::ShaderLanguage::MSL) {
+                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
+                }
+                return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
     }
 
@@ -256,8 +270,8 @@ public:
         return mDefaultRenderTarget;
     }
 
-    template <typename T>
-    T* create(ResourceList<T>& list, typename T::Builder const& builder) noexcept;
+    template <typename T, typename ... ARGS>
+    T* create(ResourceList<T>& list, typename T::Builder const& builder, ARGS&& ... args) noexcept;
 
     FBufferObject* createBufferObject(const BufferObject::Builder& builder) noexcept;
     FVertexBuffer* createVertexBuffer(const VertexBuffer::Builder& builder) noexcept;
@@ -266,7 +280,7 @@ public:
     FMorphTargetBuffer* createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept;
     FInstanceBuffer* createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
-    FMaterial* createMaterial(const Material::Builder& builder) noexcept;
+    FMaterial* createMaterial(const Material::Builder& builder, std::unique_ptr<MaterialParser> materialParser) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
     FColorGrading* createColorGrading(const ColorGrading::Builder& builder) noexcept;
@@ -311,27 +325,31 @@ public:
     bool destroy(const FView* p);
     bool destroy(const FInstanceBuffer* p);
 
-    bool isValid(const FBufferObject* p);
-    bool isValid(const FVertexBuffer* p);
-    bool isValid(const FFence* p);
-    bool isValid(const FIndexBuffer* p);
-    bool isValid(const FSkinningBuffer* p);
-    bool isValid(const FMorphTargetBuffer* p);
-    bool isValid(const FIndirectLight* p);
-    bool isValid(const FMaterial* p);
-    bool isValid(const FMaterialInstance* p);
-    bool isValid(const FRenderer* p);
-    bool isValid(const FScene* p);
-    bool isValid(const FSkybox* p);
-    bool isValid(const FColorGrading* p);
-    bool isValid(const FSwapChain* p);
-    bool isValid(const FStream* p);
-    bool isValid(const FTexture* p);
-    bool isValid(const FRenderTarget* p);
-    bool isValid(const FView* p);
-    bool isValid(const FInstanceBuffer* p);
+    bool isValid(const FBufferObject* p) const;
+    bool isValid(const FVertexBuffer* p) const;
+    bool isValid(const FFence* p) const;
+    bool isValid(const FIndexBuffer* p) const;
+    bool isValid(const FSkinningBuffer* p) const;
+    bool isValid(const FMorphTargetBuffer* p) const;
+    bool isValid(const FIndirectLight* p) const;
+    bool isValid(const FMaterial* p) const;
+    bool isValid(const FMaterial* m, const FMaterialInstance* p) const;
+    bool isValidExpensive(const FMaterialInstance* p) const;
+    bool isValid(const FRenderer* p) const;
+    bool isValid(const FScene* p) const;
+    bool isValid(const FSkybox* p) const;
+    bool isValid(const FColorGrading* p) const;
+    bool isValid(const FSwapChain* p) const;
+    bool isValid(const FStream* p) const;
+    bool isValid(const FTexture* p) const;
+    bool isValid(const FRenderTarget* p) const;
+    bool isValid(const FView* p) const;
+    bool isValid(const FInstanceBuffer* p) const;
 
     void destroy(utils::Entity e);
+
+    bool isPaused() const noexcept;
+    void setPaused(bool paused);
 
     void flushAndWait();
 
@@ -388,6 +406,8 @@ public:
         getDriver().purge();
     }
 
+    void unprotected() noexcept;
+
     void setAutomaticInstancingEnabled(bool enable) noexcept {
         // instancing is not allowed at feature level 0
         if (hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
@@ -397,6 +417,10 @@ public:
 
     bool isAutomaticInstancingEnabled() const noexcept {
         return mAutomaticInstancingEnabled;
+    }
+
+    HwVertexBufferInfoFactory& getVertexBufferInfoFactory() noexcept {
+        return mHwVertexBufferInfoFactory;
     }
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
@@ -431,7 +455,7 @@ private:
     backend::Driver& getDriver() const noexcept { return *mDriver; }
 
     template<typename T>
-    bool isValid(const T* ptr, ResourceList<T>& list);
+    bool isValid(const T* ptr, ResourceList<T> const& list) const;
 
     template<typename T>
     bool terminateAndDestroy(const T* p, ResourceList<T>& list);
@@ -467,6 +491,7 @@ private:
     FLightManager mLightManager;
     FCameraManager mCameraManager;
     ResourceAllocator* mResourceAllocator = nullptr;
+    HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
     ResourceList<FRenderer> mRenderers{ "Renderer" };
@@ -504,7 +529,7 @@ private:
 
     uint32_t mFlushCounter = 0;
 
-    LinearAllocatorArena mPerRenderPassAllocator;
+    RootArenaScope::Arena mPerRenderPassArena;
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
@@ -516,6 +541,7 @@ private:
 
     mutable FMaterial const* mDefaultMaterial = nullptr;
     mutable FMaterial const* mSkyboxMaterial = nullptr;
+    mutable FSwapChain* mUnprotectedDummySwapchain = nullptr;
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
@@ -544,12 +570,20 @@ public:
     struct {
         struct {
             bool debug_directional_shadowmap = false;
+            bool display_shadow_texture = false;
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;
             bool tightly_bound_scene = true;
             float dzn = -1.0f;
             float dzf =  1.0f;
+            float display_shadow_texture_scale = 0.25f;
+            int display_shadow_texture_layer = 0;
+            int display_shadow_texture_level = 0;
+            int display_shadow_texture_channel = 0;
+            int display_shadow_texture_layer_count = 0;
+            int display_shadow_texture_level_count = 0;
+            float display_shadow_texture_power = 1;
         } shadowmap;
         struct {
             bool camera_at_origin = true;
@@ -568,6 +602,9 @@ public:
         struct {
             bool debug_froxel_visualization = false;
         } lighting;
+        struct {
+            bool combine_multiview_images = false;
+        } stereo;
         matdbg::DebugServer* server = nullptr;
     } debug;
 };

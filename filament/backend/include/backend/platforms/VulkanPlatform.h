@@ -20,12 +20,17 @@
 #include <backend/Platform.h>
 
 #include <bluevk/BlueVK.h>
+
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
 #include <tuple>
 #include <unordered_set>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -41,6 +46,14 @@ struct VulkanPlatformPrivate;
  */
 class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
+
+    struct ExtensionHashFn {
+        std::size_t operator()(utils::CString const& s) const noexcept {
+            return std::hash<std::string>{}(s.data());
+        }
+    };
+    // Utility for managing device or instance extensions during initialization.
+    using ExtensionSet = std::unordered_set<utils::CString, ExtensionHashFn>;
 
     /**
      * A collection of handles to objects and metadata that comprises a Vulkan context. The client
@@ -188,6 +201,13 @@ public:
             VkExtent2D extent = {0, 0});
 
     /**
+     * Allows implementers to provide instance extensions that they'd like to include in the
+     * instance creation.
+     * @return          A set of extensions to enable for the instance.
+     */
+    virtual ExtensionSet getRequiredInstanceExtensions() { return {}; }
+
+    /**
      * Destroy the swapchain.
      * @param handle    The handle returned by createSwapChain()
      */
@@ -231,10 +251,9 @@ public:
     VkQueue getGraphicsQueue() const noexcept;
 
 private:
-    // Platform dependent helper methods
-    using ExtensionSet = std::unordered_set<std::string_view>;
-    static ExtensionSet getRequiredInstanceExtensions();
+    static ExtensionSet getSwapchainInstanceExtensions();
 
+    // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
     static SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
             uint64_t flags) noexcept;

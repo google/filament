@@ -66,11 +66,13 @@ set(PRIVATE_HDRS
 # OpenGL / OpenGL ES Sources
 # ==================================================================================================
 
-if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
+if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
     list(APPEND SRCS
             include/backend/platforms/OpenGLPlatform.h
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
+            src/opengl/GLBufferObject.h
+            src/opengl/GLTexture.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
             src/opengl/OpenGLBlobCache.cpp
@@ -166,9 +168,15 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
+            src/vulkan/caching/VulkanDescriptorSetManager.cpp
+            src/vulkan/caching/VulkanDescriptorSetManager.h
+            src/vulkan/caching/VulkanPipelineLayoutCache.cpp
+            src/vulkan/caching/VulkanPipelineLayoutCache.h
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+            src/vulkan/spirv/VulkanSpirvUtils.cpp
+            src/vulkan/spirv/VulkanSpirvUtils.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
@@ -313,6 +321,7 @@ endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
+    target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
 if (FILAMENT_SUPPORTS_METAL)
@@ -397,8 +406,8 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
 
-if (APPLE)
-    add_library(backend_test STATIC
+if (APPLE OR LINUX)
+    set(BACKEND_TEST_SRC
         test/BackendTest.cpp
         test/ShaderGenerator.cpp
         test/TrianglePrimitive.cpp
@@ -408,21 +417,30 @@ if (APPLE)
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
+        test/test_Callbacks.cpp
         test/test_MRT.cpp
+        test/test_PushConstants.cpp
         test/test_LoadImage.cpp
-        test/test_RenderExternalImage.cpp
         test/test_StencilBuffer.cpp
         test/test_Scissor.cpp
         test/test_MipLevels.cpp
-        )
-
-    target_link_libraries(backend_test PRIVATE
+    )
+    set(BACKEND_TEST_LIBS
         backend
         getopt
         gtest
+        imageio
         filamat
         SPIRV
         spirv-cross-glsl)
+endif()
+
+if (APPLE)
+    # TODO: we should expand this test to Linux and other platforms.
+    list(APPEND BACKEND_TEST_SRC
+         test/test_RenderExternalImage.cpp)
+    add_library(backend_test STATIC ${BACKEND_TEST_SRC})
+    target_link_libraries(backend_test PRIVATE ${BACKEND_TEST_LIBS})
 
     set(BACKEND_TEST_DEPS
             OGLCompiler
@@ -436,12 +454,11 @@ if (APPLE)
             glslang
             spirv-cross-core
             spirv-cross-glsl
-            spirv-cross-msl
-            )
+            spirv-cross-msl)
 
     if (NOT IOS)
         target_link_libraries(backend_test PRIVATE image imageio)
-        list(APPEND BACKEND_TEST_DEPS image imageio)
+        list(APPEND BACKEND_TEST_DEPS image)
     endif()
 
     set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
@@ -455,15 +472,25 @@ if (APPLE)
     endif()
 
     set_target_properties(backend_test PROPERTIES FOLDER Tests)
+
+    if (APPLE AND NOT IOS)
+       add_executable(backend_test_mac test/mac_runner.mm)
+       target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
+       # Because each test case is a separate file, the -force_load flag is necessary to prevent the
+       # linker from removing "unused" symbols.
+       target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
+       set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
+
+       # This is needed after XCode 15.3
+       set_target_properties(backend_test_mac PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
+       set_target_properties(backend_test_mac PROPERTIES INSTALL_RPATH /usr/local/lib)
+    endif()
 endif()
 
-if (APPLE AND NOT IOS)
-    add_executable(backend_test_mac test/mac_runner.mm)
-    target_link_libraries(backend_test_mac PRIVATE "-framework Metal -framework AppKit -framework QuartzCore")
-    # Because each test case is a separate file, the -force_load flag is necessary to prevent the
-    # linker from removing "unused" symbols.
-    target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
-    set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
+if (LINUX)
+    add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
+    target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
+    set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
 endif()
 
 # ==================================================================================================

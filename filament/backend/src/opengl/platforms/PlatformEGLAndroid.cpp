@@ -14,20 +14,40 @@
  * limitations under the License.
  */
 
+#include <backend/AcquiredImage.h>
+#include <backend/Platform.h>
+#include <backend/platforms/PlatformEGL.h>
 #include <backend/platforms/PlatformEGLAndroid.h>
+
+#include <private/backend/VirtualMachineEnv.h>
 
 #include "opengl/GLUtils.h"
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
+#include <android/hardware_buffer.h>
+
+#include <utils/android/PerformanceHintManager.h>
+
+#include <utils/compiler.h>
+#include <utils/ostream.h>
+#include <utils/Log.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include <utils/compiler.h>
-#include <utils/Log.h>
-
 #include <sys/system_properties.h>
+
+#include <jni.h>
+
+#include <chrono>
+#include <new>
+
+#include <unistd.h>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 // We require filament to be built with an API 19 toolchain, before that, OpenGLES 3.0 didn't exist
 // Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
@@ -64,9 +84,23 @@ using EGLStream = Platform::Stream;
 
 // ---------------------------------------------------------------------------------------------
 
+PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmForPerformanceManagerIfNeeded() {
+    // PerformanceHintManager() needs the calling thread to be a Java thread; so we need
+    // to attach this thread to the JVM before we initialize PerformanceHintManager.
+    // This should be done in PerformanceHintManager(), but libutils doesn't have access to
+    // VirtualMachineEnv.
+    if (PerformanceHintManager::isSupported()) {
+        (void)VirtualMachineEnv::get().getEnvironment();
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
         : PlatformEGL(),
-          mExternalStreamManager(ExternalStreamManagerAndroid::create()) {
+          mExternalStreamManager(ExternalStreamManagerAndroid::create()),
+          mInitializeJvmForPerformanceManagerIfNeeded(),
+          mPerformanceHintManager() {
 
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("ro.build.version.release", scratch);
@@ -99,8 +133,38 @@ void PlatformEGLAndroid::terminate() noexcept {
     PlatformEGL::terminate();
 }
 
+void PlatformEGLAndroid::beginFrame(
+        int64_t monotonic_clock_ns,
+        int64_t refreshIntervalNs,
+        uint32_t frameId) noexcept {
+    if (mPerformanceHintSession.isValid()) {
+        if (refreshIntervalNs <= 0) {
+            // we're not provided with a target time, assume 16.67ms
+            refreshIntervalNs = 16'666'667;
+        }
+        mStartTimeOfActualWork = clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns));
+        mPerformanceHintSession.updateTargetWorkDuration(refreshIntervalNs);
+    }
+    PlatformEGL::beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
+}
+
+void backend::PlatformEGLAndroid::preCommit() noexcept {
+    if (mPerformanceHintSession.isValid()) {
+        auto const actualWorkDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                clock::now() - mStartTimeOfActualWork);
+        mPerformanceHintSession.reportActualWorkDuration(actualWorkDuration.count());
+    }
+    PlatformEGL::preCommit();
+}
+
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
+
+    // the refresh rate default value doesn't matter, we change it later
+    int32_t const tid = gettid();
+    mPerformanceHintSession = PerformanceHintManager::Session{
+            mPerformanceHintManager, &tid, 1, 16'666'667 };
+
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
@@ -129,11 +193,12 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 }
 
 void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
-    if (mCurrentDrawSurface != EGL_NO_SURFACE) {
+    EGLSurface currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
+    if (currentDrawSurface != EGL_NO_SURFACE) {
         if (eglPresentationTimeANDROID) {
             eglPresentationTimeANDROID(
                     mEGLDisplay,
-                    mCurrentDrawSurface,
+                    currentDrawSurface,
                     presentationTimeInNanosecond);
         }
     }
@@ -165,14 +230,28 @@ int PlatformEGLAndroid::getOSVersion() const noexcept {
 
 AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) noexcept {
     // Convert the AHardwareBuffer to EGLImage.
-    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID((const AHardwareBuffer*)source.image);
+    AHardwareBuffer const* const pHardwareBuffer = (const AHardwareBuffer*)source.image;
+
+    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(pHardwareBuffer);
     if (!clientBuffer) {
         slog.e << "Unable to get EGLClientBuffer from AHardwareBuffer." << io::endl;
         return {};
     }
-    // Note that this cannot be used to stream protected video (for now) because we do not set EGL_PROTECTED_CONTENT_EXT.
-    EGLint attrs[] = { EGL_NONE, EGL_NONE };
-    EGLImageKHR eglImage = eglCreateImageKHR(mEGLDisplay, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attrs);
+
+    PlatformEGL::Config attributes;
+
+    if (__builtin_available(android 26, *)) {
+        AHardwareBuffer_Desc desc;
+        AHardwareBuffer_describe(pHardwareBuffer, &desc);
+        bool const isProtectedContent =
+                desc.usage & AHardwareBuffer_UsageFlags::AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
+        if (isProtectedContent) {
+            attributes[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
+        }
+    }
+
+    EGLImageKHR eglImage = eglCreateImageKHR(mEGLDisplay,
+            EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attributes.data());
     if (eglImage == EGL_NO_IMAGE_KHR) {
         slog.e << "eglCreateImageKHR returned no image." << io::endl;
         return {};

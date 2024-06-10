@@ -28,6 +28,12 @@
 
 #include <math/mathfwd.h>
 
+#include <type_traits>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
 namespace filament {
 
 class Material;
@@ -41,7 +47,7 @@ class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
     using StringLiteralHelper = const char[N];
 
     struct StringLiteral {
-        const char* data;
+        const char* UTILS_NONNULL data;
         size_t size;
         template<size_t N>
         StringLiteral(StringLiteralHelper<N> const& s) noexcept // NOLINT(google-explicit-constructor)
@@ -89,17 +95,18 @@ public:
      * @param name  A name for the new MaterialInstance or nullptr to use the template's name
      * @return      A new MaterialInstance
      */
-    static MaterialInstance* duplicate(MaterialInstance const* other, const char* name = nullptr) noexcept;
+    static MaterialInstance* UTILS_NONNULL duplicate(MaterialInstance const* UTILS_NONNULL other,
+            const char* UTILS_NULLABLE name = nullptr) noexcept;
 
     /**
      * @return the Material associated with this instance
      */
-    Material const* getMaterial() const noexcept;
+    Material const* UTILS_NONNULL getMaterial() const noexcept;
 
     /**
      * @return the name associated with this instance
      */
-    const char* getName() const noexcept;
+    const char* UTILS_NONNULL getName() const noexcept;
 
     /**
      * Set a uniform by name
@@ -110,7 +117,7 @@ public:
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, size_t nameLength, T const& value);
+    void setParameter(const char* UTILS_NONNULL name, size_t nameLength, T const& value);
 
     /** inline helper to provide the name as a null-terminated string literal */
     template<typename T, typename = is_supported_parameter_t<T>>
@@ -120,7 +127,7 @@ public:
 
     /** inline helper to provide the name as a null-terminated C string */
     template<typename T, typename = is_supported_parameter_t<T>>
-    inline void setParameter(const char* name, T const& value) {
+    inline void setParameter(const char* UTILS_NONNULL name, T const& value) {
         setParameter<T>(name, strlen(name), value);
     }
 
@@ -135,17 +142,19 @@ public:
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(const char* name, size_t nameLength, const T* values, size_t count);
+    void setParameter(const char* UTILS_NONNULL name, size_t nameLength,
+            const T* UTILS_NONNULL values, size_t count);
 
     /** inline helper to provide the name as a null-terminated string literal */
     template<typename T, typename = is_supported_parameter_t<T>>
-    inline void setParameter(StringLiteral name, const T* values, size_t count) {
+    inline void setParameter(StringLiteral name, const T* UTILS_NONNULL values, size_t count) {
         setParameter<T>(name.data, name.size, values, count);
     }
 
     /** inline helper to provide the name as a null-terminated C string */
     template<typename T, typename = is_supported_parameter_t<T>>
-    inline void setParameter(const char* name, const T* values, size_t count) {
+    inline void setParameter(const char* UTILS_NONNULL name,
+            const T* UTILS_NONNULL values, size_t count) {
         setParameter<T>(name, strlen(name), values, count);
     }
 
@@ -162,18 +171,18 @@ public:
      * @param sampler       Sampler parameters.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, size_t nameLength,
-            Texture const* texture, TextureSampler const& sampler);
+    void setParameter(const char* UTILS_NONNULL name, size_t nameLength,
+            Texture const* UTILS_NULLABLE texture, TextureSampler const& sampler);
 
     /** inline helper to provide the name as a null-terminated string literal */
     inline void setParameter(StringLiteral name,
-            Texture const* texture, TextureSampler const& sampler) {
+            Texture const* UTILS_NULLABLE texture, TextureSampler const& sampler) {
         setParameter(name.data, name.size, texture, sampler);
     }
 
     /** inline helper to provide the name as a null-terminated C string */
-    inline void setParameter(const char* name,
-            Texture const* texture, TextureSampler const& sampler) {
+    inline void setParameter(const char* UTILS_NONNULL name,
+            Texture const* UTILS_NULLABLE texture, TextureSampler const& sampler) {
         setParameter(name, strlen(name), texture, sampler);
     }
 
@@ -188,7 +197,8 @@ public:
      * @param color         Array of read, green, blue channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, size_t nameLength, RgbType type, math::float3 color);
+    void setParameter(const char* UTILS_NONNULL name, size_t nameLength,
+            RgbType type, math::float3 color);
 
     /** inline helper to provide the name as a null-terminated string literal */
     inline void setParameter(StringLiteral name, RgbType type, math::float3 color) {
@@ -196,7 +206,7 @@ public:
     }
 
     /** inline helper to provide the name as a null-terminated C string */
-    inline void setParameter(const char* name, RgbType type, math::float3 color) {
+    inline void setParameter(const char* UTILS_NONNULL name, RgbType type, math::float3 color) {
         setParameter(name, strlen(name), type, color);
     }
 
@@ -211,7 +221,8 @@ public:
      * @param color         Array of read, green, blue and alpha channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, size_t nameLength, RgbaType type, math::float4 color);
+    void setParameter(const char* UTILS_NONNULL name, size_t nameLength,
+            RgbaType type, math::float4 color);
 
     /** inline helper to provide the name as a null-terminated string literal */
     inline void setParameter(StringLiteral name, RgbaType type, math::float4 color) {
@@ -219,7 +230,7 @@ public:
     }
 
     /** inline helper to provide the name as a null-terminated C string */
-    inline void setParameter(const char* name, RgbaType type, math::float4 color) {
+    inline void setParameter(const char* UTILS_NONNULL name, RgbaType type, math::float4 color) {
         setParameter(name, strlen(name), type, color);
     }
 

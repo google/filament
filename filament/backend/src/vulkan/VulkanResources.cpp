@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-
 #include "VulkanResources.h"
 #include "VulkanHandles.h"
 #include "VulkanResourceAllocator.h"
+#include "VulkanPipelineCache.h"
 
 namespace filament::backend {
 
@@ -53,16 +53,27 @@ void deallocateResource(VulkanResourceAllocator* allocator, VulkanResourceType t
         case VulkanResourceType::TIMER_QUERY:
             allocator->destruct<VulkanTimerQuery>(Handle<HwTimerQuery>(id));
             break;
+        case VulkanResourceType::VERTEX_BUFFER_INFO:
+            allocator->destruct<VulkanVertexBufferInfo>(Handle<HwVertexBufferInfo>(id));
+            break;
         case VulkanResourceType::VERTEX_BUFFER:
             allocator->destruct<VulkanVertexBuffer>(Handle<HwVertexBuffer>(id));
             break;
         case VulkanResourceType::RENDER_PRIMITIVE:
             allocator->destruct<VulkanRenderPrimitive>(Handle<VulkanRenderPrimitive>(id));
             break;
+        case VulkanResourceType::DESCRIPTOR_SET_LAYOUT:
+            allocator->destruct<VulkanDescriptorSetLayout>(Handle<VulkanDescriptorSetLayout>(id));
+            break;
+        case VulkanResourceType::DESCRIPTOR_SET:
+            allocator->destruct<VulkanDescriptorSet>(Handle<VulkanDescriptorSet>(id));
+            break;
+
         // If the resource is heap allocated, then the resource manager just skip refcounted
         // destruction.
         case VulkanResourceType::FENCE:
         case VulkanResourceType::HEAP_ALLOCATED:
+        case VulkanResourceType::END_TYPE:
             break;
     }
 }

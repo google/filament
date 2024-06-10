@@ -50,8 +50,8 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     };
     VkImage image;
     VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &image);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS,
-            "Unable to create image: ", static_cast<int32_t>(result));
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "Unable to create image: " << static_cast<int32_t>(result);
 
     // Allocate memory for the VkImage and bind it.
     VkDeviceMemory imageMemory;
@@ -61,8 +61,8 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
-            "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.");
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -70,9 +70,9 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
             .memoryTypeIndex = memoryTypeIndex,
     };
     result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to allocate image memory.");
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory.";
     result = vkBindImageMemory(device, image, imageMemory, 0);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to bind image.");
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image.";
     return std::tuple(image, imageMemory);
 }
 
@@ -178,8 +178,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             break;
         }
     }
-    ASSERT_POSTCONDITION(surfaceFormat.format != VK_FORMAT_UNDEFINED,
-            "Cannot find suitable swapchain format");
+    FILAMENT_CHECK_POSTCONDITION(surfaceFormat.format != VK_FORMAT_UNDEFINED)
+            << "Cannot find suitable swapchain format";
 
     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
@@ -193,8 +193,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             break;
         }
     }
-    ASSERT_POSTCONDITION(foundSuitablePresentMode,
-            "Desired present mode is not supported by this device.");
+    FILAMENT_CHECK_POSTCONDITION(foundSuitablePresentMode)
+            << "Desired present mode is not supported by this device.";
 
     // Create the low-level swap chain.
     if (caps.currentExtent.width == VULKAN_UNDEFINED_EXTENT
@@ -237,13 +237,13 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             .oldSwapchain = mSwapchain,
     };
     VkResult result = vkCreateSwapchainKHR(mDevice, &createInfo, VKALLOC, &mSwapchain);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceFormatsKHR error: %d",
-            static_cast<int32_t>(result));
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkGetPhysicalDeviceSurfaceFormatsKHR error: " << static_cast<int32_t>(result);
 
     mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
-            selectDepthFormat(mContext.getAttachmentDepthFormats(), mHasStencil);
+            selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
 
     slog.i << "vkCreateSwapchain"
@@ -330,7 +330,7 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
 
     bool const hasStencil = (flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
     mSwapChainBundle.depthFormat =
-            selectDepthFormat(mContext.getAttachmentDepthFormats(), hasStencil);
+            selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), hasStencil);
     mSwapChainBundle.depth = createImage(extent, mSwapChainBundle.depthFormat);
 }
 

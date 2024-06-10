@@ -23,6 +23,7 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
+#include "backend/DriverEnums.h"
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
 
@@ -32,6 +33,7 @@
 
 #include "MetalArgumentBuffer.h"
 #include "SpirvFixup.h"
+#include "utils/ostream.h"
 
 #include <filament/MaterialEnums.h>
 
@@ -167,6 +169,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
     }
 
     mslOptions.argument_buffers = true;
+    mslOptions.ios_support_base_vertex_instance = true;
 
     // We're using argument buffers for texture resources, however, we cannot rely on spirv-cross to
     // generate the argument buffer definitions.
@@ -232,7 +235,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
         for (const auto& info: infoList) {
             const std::string name = info.uniformName.c_str();
             argBufferBuilder
-                    .texture(info.offset * 2, name, info.type, info.format)
+                    .texture(info.offset * 2, name, info.type, info.format, info.multisample)
                     .sampler(info.offset * 2 + 1, name + "Smplr");
         }
 
@@ -251,6 +254,17 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
                 CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
         mslCompiler.add_msl_resource_binding(argBufferBinding);
     }
+
+    // Bind push constants to [buffer(26)]
+    MSLResourceBinding pushConstantBinding;
+    // the baseType doesn't matter, but can't be UNKNOWN
+    pushConstantBinding.basetype = SPIRType::BaseType::Struct;
+    pushConstantBinding.stage = executionModel;
+    pushConstantBinding.desc_set = kPushConstDescSet;
+    pushConstantBinding.binding = kPushConstBinding;
+    pushConstantBinding.count = 1;
+    pushConstantBinding.msl_buffer = 26;
+    mslCompiler.add_msl_resource_binding(pushConstantBinding);
 
     auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
@@ -395,7 +409,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
-            fullOptimization(tShader, config, internalConfig);
+            if (!fullOptimization(tShader, config, internalConfig)) {
+                return false;
+            }
             break;
     }
 
@@ -478,7 +494,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 }
 
-void GLSLPostProcessor::fullOptimization(const TShader& tShader,
+bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
     SpirvBlob spirv;
 
@@ -532,6 +548,21 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
             glslOptions.emit_uniform_buffer_as_plain_uniforms = true;
         }
 
+        if (config.variant.hasStereo() && config.shaderType == ShaderStage::VERTEX) {
+            switch (config.materialInfo->stereoscopicType) {
+            case StereoscopicType::MULTIVIEW:
+                // For stereo variants using multiview feature, this generates the shader code below.
+                //   #extension GL_OVR_multiview2 : require
+                //   layout(num_views = 2) in;
+                glslOptions.ovr_multiview_view_count = config.materialInfo->stereoscopicEyeCount;
+                break;
+            case StereoscopicType::INSTANCED:
+            case StereoscopicType::NONE:
+                // Nothing to generate
+                break;
+            }
+        }
+
         CompilerGLSL glslCompiler(std::move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
@@ -546,19 +577,29 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
             }
         }
 
+#ifdef SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
         *internalConfig.glslOutput = glslCompiler.compile();
+#else
+        try {
+            *internalConfig.glslOutput = glslCompiler.compile();
+        } catch (spirv_cross::CompilerError e) {
+            slog.e << "ERROR: " << e.what() << io::endl;
+            return false;
+        }
+#endif
 
         // spirv-cross automatically redeclares gl_ClipDistance if it's used. Some drivers don't
         // like this, so we simply remove it.
         // According to EXT_clip_cull_distance, gl_ClipDistance can be
         // "implicitly sized by indexing it only with integral constant expressions".
         std::string& str = *internalConfig.glslOutput;
-        const std::string clipDistanceDefinition = "out float gl_ClipDistance[1];";
+        const std::string clipDistanceDefinition = "out float gl_ClipDistance[2];";
         size_t const found = str.find(clipDistanceDefinition);
         if (found != std::string::npos) {
             str.replace(found, clipDistanceDefinition.length(), "");
         }
     }
+    return true;
 }
 
 std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
@@ -575,7 +616,13 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
     });
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
-        registerSizePasses(*optimizer, config);
+        // When optimizing for size, we don't run the SPIR-V through any size optimization passes
+        // when targeting MSL. This results in better line dictionary compression. We do, however,
+        // still register the passes necessary (below) to support half precision floating point
+        // math.
+        if (config.targetApi != MaterialBuilder::TargetApi::METAL) {
+            registerSizePasses(*optimizer, config);
+        }
     } else if (optimization == MaterialBuilder::Optimization::PERFORMANCE) {
         registerPerformancePasses(*optimizer, config);
     }
@@ -690,7 +737,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
@@ -699,11 +745,9 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateCCPPass());
     RegisterPass(CreateLoopUnrollPass(true));
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateScalarReplacementPass(0));
     RegisterPass(CreateLocalSingleStoreElimPass());
     RegisterPass(CreateIfConversionPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
@@ -719,7 +763,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateBlockMergePass());
     RegisterPass(CreateLocalMultiStoreElimPass());
     RegisterPass(CreateRedundancyEliminationPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateCFGCleanupPass());
 }

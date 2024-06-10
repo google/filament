@@ -19,6 +19,8 @@
 
 #include <Metal/Metal.h>
 
+#include "MetalBuffer.h"
+
 #include <map>
 #include <mutex>
 #include <unordered_set>
@@ -30,7 +32,7 @@ struct MetalContext;
 
 // Immutable POD representing a shared CPU-GPU buffer.
 struct MetalBufferPoolEntry {
-    id<MTLBuffer> buffer;
+    TrackedMetalBuffer buffer;
     size_t capacity;
     mutable uint64_t lastAccessed;
     mutable uint32_t referenceCount;
@@ -73,7 +75,10 @@ private:
     std::unordered_set<MetalBufferPoolEntry const*> mUsedStages;
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
-    uint64_t mCurrentFrame = 0;
+    // An atomic is necessary as mCurrentFrame is incremented in gc() (called on
+    // the driver thread) and read from acquireBuffer() and releaseBuffer(),
+    // which may be called on non-driver threads.
+    std::atomic<uint64_t> mCurrentFrame = 0;
     static constexpr uint32_t TIME_BEFORE_EVICTION = 10;
 };
 

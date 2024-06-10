@@ -154,7 +154,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext,
     }
 
     result = bluegl::bind();
-    ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
+    FILAMENT_CHECK_POSTCONDITION(!result) << "Unable to load OpenGL entry points.";
 
     return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
 
@@ -255,8 +255,8 @@ void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     wglMakeCurrent(mWhdc, mContext);
 }
 
-void PlatformWGL::makeCurrent(Platform::SwapChain* drawSwapChain,
-                              Platform::SwapChain* readSwapChain) noexcept {
+bool PlatformWGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
                                   "PlatformWGL does not support distinct draw/read swap chains.");
 
@@ -269,6 +269,7 @@ void PlatformWGL::makeCurrent(Platform::SwapChain* drawSwapChain,
             wglMakeCurrent(0, NULL);
         }
     }
+    return true;
 }
 
 void PlatformWGL::commit(Platform::SwapChain* swapChain) noexcept {

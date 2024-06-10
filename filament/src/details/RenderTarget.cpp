@@ -34,6 +34,7 @@ struct RenderTarget::BuilderDetails {
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
+    uint8_t mLayerCount = 0;// currently not settable in the public facing API
 };
 
 using BuilderType = RenderTarget;
@@ -70,20 +71,20 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[(size_t)AttachmentPoint::DEPTH];
 
     if (color.texture) {
-        ASSERT_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
-                "Texture usage must contain COLOR_ATTACHMENT");
+        FILAMENT_CHECK_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT)
+                << "Texture usage must contain COLOR_ATTACHMENT";
     }
 
     if (depth.texture) {
-        ASSERT_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
-                "Texture usage must contain DEPTH_ATTACHMENT");
+        FILAMENT_CHECK_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT)
+                << "Texture usage must contain DEPTH_ATTACHMENT";
     }
 
     const size_t maxDrawBuffers = downcast(engine).getDriverApi().getMaxDrawBuffers();
     for (size_t i = maxDrawBuffers; i < MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT; i++) {
-        ASSERT_PRECONDITION(!mImpl->mAttachments[i].texture,
-                "Only %u color attachments are supported, but COLOR%u attachment is set",
-                maxDrawBuffers, i);
+        FILAMENT_CHECK_PRECONDITION(!mImpl->mAttachments[i].texture)
+                << "Only " << maxDrawBuffers << " color attachments are supported, but COLOR" << i
+                << " attachment is set";
     }
     
     uint32_t minWidth = std::numeric_limits<uint32_t>::max();
@@ -101,8 +102,8 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
         }
     }
 
-    ASSERT_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight,
-            "All attachments dimensions must match");
+    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight)
+            << "All attachments dimensions must match";
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
@@ -160,7 +161,8 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createRenderTarget(mAttachmentMask,
-            builder.mImpl->mWidth, builder.mImpl->mHeight, builder.mImpl->mSamples, mrt, dinfo, {});
+            builder.mImpl->mWidth, builder.mImpl->mHeight, builder.mImpl->mSamples,
+            builder.mImpl->mLayerCount, mrt, dinfo, {});
 }
 
 void FRenderTarget::terminate(FEngine& engine) {

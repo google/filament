@@ -20,6 +20,8 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.opengl.Matrix
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Choreographer
 import android.view.Surface
 import android.view.SurfaceView
@@ -157,6 +159,14 @@ class MainActivity : Activity() {
     private fun loadMaterial() {
         readUncompressedAsset("materials/baked_color.filamat").let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
+            material.compile(
+                Material.CompilerPriorityQueue.HIGH,
+                Material.UserVariantFilterBit.ALL,
+                Handler(Looper.getMainLooper())) {
+                        android.util.Log.i("hellotriangle",
+                            "Material " + material.name + " compiled.")
+            }
+            engine.flush()
         }
     }
 
@@ -311,7 +321,7 @@ class MainActivity : Activity() {
             var flags = uiHelper.swapChainFlags
             if (engine.activeFeatureLevel == Engine.FeatureLevel.FEATURE_LEVEL_0) {
                 if (SwapChain.isSRGBSwapChainSupported(engine)) {
-                    flags = flags or SwapChain.CONFIG_SRGB_COLORSPACE
+                    flags = flags or SwapChainFlags.CONFIG_SRGB_COLORSPACE
                 }
             }
 

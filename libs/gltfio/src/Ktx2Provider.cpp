@@ -116,7 +116,7 @@ Texture* Ktx2Provider::pushTexture(const uint8_t* data, size_t byteCount,
     }
 
     JobSystem* js = &mEngine->getJobSystem();
-    item->job = jobs::createJob(*js, mDecoderRootJob, [this, item] {
+    item->job = jobs::createJob(*js, mDecoderRootJob, [item] {
         using Result = ktxreader::Ktx2Reader::Result;
         const bool success = Result::SUCCESS == item->async->doTranscoding();
         item->transcoderState.store(success ? TranscoderState::SUCCESS : TranscoderState::ERROR);

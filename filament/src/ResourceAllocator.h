@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_RESOURCEALLOCATOR_H
 #define TNT_FILAMENT_RESOURCEALLOCATOR_H
 
+#include <filament/Engine.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
@@ -27,7 +29,9 @@
 
 #include <array>
 #include <vector>
+#include <utility>
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
@@ -41,6 +45,7 @@ public:
             uint32_t width,
             uint32_t height,
             uint8_t samples,
+            uint8_t layerCount,
             backend::MRT color,
             backend::TargetBufferInfo depth,
             backend::TargetBufferInfo stencil) noexcept = 0;
@@ -62,7 +67,8 @@ protected:
 
 class ResourceAllocator final : public ResourceAllocatorInterface {
 public:
-    explicit ResourceAllocator(backend::DriverApi& driverApi) noexcept;
+    explicit ResourceAllocator(
+            Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
     ~ResourceAllocator() noexcept override;
 
     void terminate() noexcept;
@@ -72,6 +78,7 @@ public:
             uint32_t width,
             uint32_t height,
             uint8_t samples,
+            uint8_t layerCount,
             backend::MRT color,
             backend::TargetBufferInfo depth,
             backend::TargetBufferInfo stencil) noexcept override;
@@ -89,9 +96,7 @@ public:
     void gc() noexcept;
 
 private:
-    // TODO: these should be settings of the engine
-    static constexpr size_t CACHE_CAPACITY = 64u << 20u;   // 64 MiB
-    static constexpr size_t CACHE_MAX_AGE  = 30u;
+    size_t const mCacheMaxAge;
 
     struct TextureKey {
         const char* name; // doesn't participate in the hash
@@ -190,7 +195,7 @@ private:
     using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
     using InUseContainer = AssociativeContainer<backend::TextureHandle, TextureKey>;
 
-    CacheContainer::iterator purge(CacheContainer::iterator const& pos);
+    void purge(ResourceAllocator::CacheContainer::iterator const& pos);
 
     backend::DriverApi& mBackend;
     CacheContainer mTextureCache;

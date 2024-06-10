@@ -24,9 +24,12 @@
 #include <filament/SwapChain.h>
 
 #include <backend/CallbackHandler.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
 
 #include <utils/Invocable.h>
-#include <utils/compiler.h>
+
+#include <stdint.h>
 
 namespace filament {
 
@@ -39,45 +42,67 @@ public:
     void terminate(FEngine& engine) noexcept;
 
     void makeCurrent(backend::DriverApi& driverApi) noexcept {
-        driverApi.makeCurrent(mSwapChain, mSwapChain);
+        driverApi.makeCurrent(mHwSwapChain, mHwSwapChain);
     }
 
     void commit(backend::DriverApi& driverApi) noexcept {
-        driverApi.commit(mSwapChain);
+        driverApi.commit(mHwSwapChain);
     }
 
     void* getNativeWindow() const noexcept {
         return mNativeWindow;
     }
 
-    constexpr bool isTransparent() const noexcept {
+    bool isTransparent() const noexcept {
         return (mConfigFlags & CONFIG_TRANSPARENT) != 0;
     }
 
-    constexpr bool isReadable() const noexcept {
+    bool isReadable() const noexcept {
         return (mConfigFlags & CONFIG_READABLE) != 0;
     }
 
-    constexpr bool hasStencilBuffer() const noexcept {
+    bool hasStencilBuffer() const noexcept {
         return (mConfigFlags & CONFIG_HAS_STENCIL_BUFFER) != 0;
     }
 
-    backend::Handle<backend::HwSwapChain> getHwHandle() const noexcept {
-      return mSwapChain;
+    bool isProtected() const noexcept {
+        return (mConfigFlags & CONFIG_PROTECTED_CONTENT) != 0;
     }
 
-    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
+    // This returns the effective flags. Unsupported flags are cleared automatically.
+    uint64_t getFlags() const noexcept {
+        return mConfigFlags;
+    }
+
+    backend::Handle<backend::HwSwapChain> getHwHandle() const noexcept {
+      return mHwSwapChain;
+    }
+
+    void setFrameScheduledCallback(
+            backend::CallbackHandler* handler, FrameScheduledCallback&& callback);
+
+    bool isFrameScheduledCallbackSet() const noexcept;
 
     void setFrameCompletedCallback(backend::CallbackHandler* handler,
                 utils::Invocable<void(SwapChain*)>&& callback) noexcept;
 
     static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
 
+    static bool isProtectedContentSupported(FEngine& engine) noexcept;
+
+    // This is currently only used for debugging. This allows to recreate the HwSwapChain with
+    // new flags.
+    void recreateWithNewFlags(FEngine& engine, uint64_t flags) noexcept;
+
 private:
     FEngine& mEngine;
-    backend::Handle<backend::HwSwapChain> mSwapChain;
-    void* mNativeWindow = nullptr;
-    uint64_t mConfigFlags = 0;
+    backend::Handle<backend::HwSwapChain> mHwSwapChain;
+    bool mFrameScheduledCallbackIsSet = false;
+    void* mNativeWindow{};
+    uint32_t mWidth{};
+    uint32_t mHeight{};
+    uint64_t mConfigFlags{};
+    static uint64_t initFlags(FEngine& engine, uint64_t flags) noexcept;
 };
 
 FILAMENT_DOWNCAST(SwapChain)

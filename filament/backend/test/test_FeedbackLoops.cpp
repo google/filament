@@ -50,7 +50,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform sampler2D tex;
+layout(location = 0, set = 1) uniform sampler2D test_tex;
 
 uniform Params {
     highp float fbWidth;
@@ -61,7 +61,7 @@ uniform Params {
 void main() {
     vec2 fbsize = vec2(params.fbWidth, params.fbHeight);
     vec2 uv = (gl_FragCoord.xy + 0.5) / fbsize;
-    fragColor = textureLod(tex, uv, params.sourceLevel);
+    fragColor = textureLod(test_tex, uv, params.sourceLevel);
 })";
 
 static uint32_t sPixelHashResult = 0;
@@ -112,6 +112,7 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
         std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
         ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
         #endif
+        free(buffer);
     };
     PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
     dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
@@ -133,24 +134,24 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a program.
         ProgramHandle program;
         {
-            SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-                    .name("backend_test_sib")
+            SamplerInterfaceBlock const sib = filament::SamplerInterfaceBlock::Builder()
+                    .name("Test")
                     .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
                     .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
                     .build();
             ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform, &sib);
             Program prog = shaderGen.getProgram(api);
-            Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
+            Program::Sampler psamplers[] = { utils::CString("test_tex"), 0 };
             prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
             prog.uniformBlockBindings({{"params", 1}});
             program = api.createProgram(std::move(prog));
         }
 
-        TrianglePrimitive triangle(getDriverApi());
+        TrianglePrimitive const triangle(getDriverApi());
 
         // Create a texture.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> texture = api.createTexture(
+        Handle<HwTexture> const texture = api.createTexture(
             SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage);
 
         // Create a RenderTarget for each miplevel.
@@ -159,7 +160,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             slog.i << "Level " << int(level) << ": " <<
                     (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
             renderTargets[level] = api.createRenderTarget( TargetBufferFlags::COLOR,
-                    kTexWidth >> level, kTexHeight >> level, 1, { texture, level, 0 }, {}, {});
+                    kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {});
         }
 
         // Fill the base level of the texture with interesting colors.
@@ -199,7 +200,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);
-            api.beginFrame(0, 0);
+            api.beginFrame(0, 0, 0);
             api.bindSamplers(0, sgroup);
             api.bindUniformBuffer(0, ubuffer);
 
@@ -217,7 +218,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 1);
+                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
             }
 
@@ -236,7 +237,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 1);
+                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
             }
 
@@ -264,7 +265,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         for (auto rt : renderTargets)  api.destroyRenderTarget(rt);
     }
 
-    const uint32_t expected = 0xe93a4a07;
+    const uint32_t expected = 0x70695aa1;
     printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sPixelHashResult, expected);
     EXPECT_TRUE(sPixelHashResult == expected);
 }

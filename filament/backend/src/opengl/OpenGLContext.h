@@ -17,25 +17,39 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
 #define TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H
 
-#include <math/vec4.h>
 
-#include <utils/CString.h>
-#include <utils/debug.h>
+#include "OpenGLTimerQuery.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
+
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include "GLUtils.h"
+#include "gl_headers.h"
+
+#include <utils/compiler.h>
+#include <utils/bitset.h>
+#include <utils/debug.h>
+
+#include <math/vec2.h>
+#include <math/vec4.h>
+
+#include <tsl/robin_map.h>
 
 #include <array>
-#include <set>
+#include <functional>
+#include <optional>
 #include <tuple>
-#include <utility>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
 class OpenGLPlatform;
 
-class OpenGLContext {
+class OpenGLContext final : public TimerQueryFactoryInterface {
 public:
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = MAX_SAMPLER_COUNT;
     static constexpr const size_t DUMMY_TEXTURE_BINDING = 7; // highest binding guaranteed to work with ES2
@@ -46,19 +60,29 @@ public:
     struct RenderPrimitive {
         static_assert(MAX_VERTEX_ATTRIBUTE_COUNT <= 16);
 
-        GLuint vao = 0;                                         // 4
+        GLuint vao[2] = {};                                     // 4
         GLuint elementArray = 0;                                // 4
-        utils::bitset<uint16_t> vertexAttribArray;              // 2
+        mutable utils::bitset<uint16_t> vertexAttribArray;      // 2
 
-        // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
-        // then the VAO needs to be updated.
+        // if this differs from vertexBufferWithObjects->bufferObjectsVersion, this VAO needs to
+        // be updated (see OpenGLDriver::updateVertexArrayObject())
         uint8_t vertexBufferVersion = 0;                        // 1
+
+        // if this differs from OpenGLContext::state.age, this VAO needs to
+        // be updated (see OpenGLDriver::updateVertexArrayObject())
+        uint8_t stateVersion = 0;                               // 1
+
+        // If this differs from OpenGLContext::state.age, this VAO's name needs to be updated.
+        // See OpenGLContext::bindVertexArray()
+        uint8_t nameVersion = 0;                                // 1
+
+        // Size in bytes of indices in the index buffer
         uint8_t indicesSize = 0;                                // 1
 
         // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
         // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
         // immutable.
-        Handle<HwVertexBuffer> vertexBufferWithObjects = {};    // 4
+        Handle<HwVertexBuffer> vertexBufferWithObjects;         // 4
 
         GLenum getIndicesType() const noexcept {
             return indicesSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
@@ -67,7 +91,22 @@ public:
 
     static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
-    OpenGLContext() noexcept;
+    explicit OpenGLContext(OpenGLPlatform& platform,
+            Platform::DriverConfig const& driverConfig) noexcept;
+
+    ~OpenGLContext() noexcept final;
+
+    void terminate() noexcept;
+
+    // TimerQueryInterface ------------------------------------------------------------------------
+
+    // note: OpenGLContext being final ensures (clang) these are not called through the vtable
+    void createTimerQuery(GLTimerQuery* query) override;
+    void destroyTimerQuery(GLTimerQuery* query) override;
+    void beginTimeElapsedQuery(GLTimerQuery* query) override;
+    void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* query) override;
+
+    // --------------------------------------------------------------------------------------------
 
     template<int MAJOR, int MINOR>
     inline bool isAtLeastGL() const noexcept {
@@ -99,7 +138,6 @@ public:
 #endif
     }
 
-    constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 
@@ -111,10 +149,10 @@ public:
 
           void pixelStore(GLenum, GLint) noexcept;
     inline void activeTexture(GLuint unit) noexcept;
-    inline void bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept;
     inline void bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
 
            void unbindTexture(GLenum target, GLuint id) noexcept;
+           void unbindTextureUnit(GLuint unit) noexcept;
     inline void bindVertexArray(RenderPrimitive const* p) noexcept;
     inline void bindSampler(GLuint unit, GLuint sampler) noexcept;
            void unbindSampler(GLuint sampler) noexcept;
@@ -123,10 +161,11 @@ public:
     inline void bindBufferRange(GLenum target, GLuint index, GLuint buffer,
             GLintptr offset, GLsizeiptr size) noexcept;
 
-    inline void bindFramebuffer(GLenum target, GLuint buffer) noexcept;
+    GLuint bindFramebuffer(GLenum target, GLuint buffer) noexcept;
+    void unbindFramebuffer(GLenum target) noexcept;
 
-    inline void enableVertexAttribArray(GLuint index) noexcept;
-    inline void disableVertexAttribArray(GLuint index) noexcept;
+    inline void enableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept;
+    inline void disableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept;
     inline void enable(GLenum cap) noexcept;
     inline void disable(GLenum cap) noexcept;
     inline void frontFace(GLenum mode) noexcept;
@@ -148,7 +187,9 @@ public:
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
-    void deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept;
+    void deleteVertexArray(GLuint vao) noexcept;
+
+    void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept;
 
     // glGet*() values
     struct Gets {
@@ -183,6 +224,7 @@ public:
         bool EXT_discard_framebuffer;
         bool EXT_multisampled_render_to_texture2;
         bool EXT_multisampled_render_to_texture;
+        bool EXT_protected_textures;
         bool EXT_shader_framebuffer_fetch;
         bool EXT_texture_compression_bptc;
         bool EXT_texture_compression_etc2;
@@ -205,6 +247,7 @@ public:
         bool OES_standard_derivatives;
         bool OES_texture_npot;
         bool OES_vertex_array_object;
+        bool OVR_multiview2;
         bool WEBGL_compressed_texture_etc;
         bool WEBGL_compressed_texture_s3tc;
         bool WEBGL_compressed_texture_s3tc_srgb;
@@ -221,10 +264,6 @@ public:
 
         // Some drivers have gl state issues when drawing from shared contexts
         bool disable_shared_context_draws;
-
-        // Some drivers require the GL_TEXTURE_EXTERNAL_OES target to be bound when
-        // the texture image changes, even if it's already bound to that texture
-        bool texture_external_needs_rebind;
 
         // Some web browsers seem to immediately clear the default framebuffer when calling
         // glInvalidateFramebuffer with WebGL 2.0
@@ -272,10 +311,6 @@ public:
         // a glFinish. So we must delay the destruction until we know the GPU is finished.
         bool delay_fbo_destruction;
 
-        // The driver has some threads pinned, and we can't easily know on which core, it can hurt
-        // performance more if we end-up pinned on the same one.
-        bool disable_thread_affinity;
-
         // Force feature level 0. Typically used for low end ES3 devices with significant driver
         // bugs or performance issues.
         bool force_feature_level0;
@@ -287,15 +322,32 @@ public:
 
     // function to handle state changes we don't control
     void updateTexImage(GLenum target, GLuint id) noexcept {
-        const size_t index = getIndexForTextureTarget(target);
-        state.textures.units[state.textures.active].targets[index].texture_id = id;
+        assert_invariant(target == GL_TEXTURE_EXTERNAL_OES);
+        // if another target is bound to this texture unit, unbind that texture
+        if (UTILS_UNLIKELY(state.textures.units[state.textures.active].target != target)) {
+            glBindTexture(state.textures.units[state.textures.active].target, 0);
+            state.textures.units[state.textures.active].target = GL_TEXTURE_EXTERNAL_OES;
+        }
+        // the texture is already bound to `target`, we just update our internal state
+        state.textures.units[state.textures.active].id = id;
     }
     void resetProgram() noexcept { state.program.use = 0; }
 
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
+    // This is the index of the context in use. Must be 0 or 1. This is used to manange the
+    // OpenGL name of ContainerObjects within each context.
+    uint32_t contextIndex = 0;
+
     // Try to keep the State structure sorted by data-access patterns
     struct State {
+        State() noexcept = default;
+        // make sure we don't copy this state by accident
+        State(State const& rhs) = delete;
+        State(State&& rhs) noexcept = delete;
+        State& operator=(State const& rhs) = delete;
+        State& operator=(State&& rhs) noexcept = delete;
+
         GLint major = 0;
         GLint minor = 0;
 
@@ -380,9 +432,8 @@ public:
             GLuint active = 0;      // zero-based
             struct {
                 GLuint sampler = 0;
-                struct {
-                    GLuint texture_id = 0;
-                } targets[7];  // this must match getIndexForTextureTarget()
+                GLuint target = 0;
+                GLuint id = 0;
             } units[MAX_TEXTURE_UNIT_COUNT];
         } textures;
 
@@ -400,6 +451,7 @@ public:
             vec4gli viewport { 0 };
             vec2glf depthRange { 0.0f, 1.0f };
         } window;
+        uint8_t age = 0;
     } state;
 
     struct Procs {
@@ -419,9 +471,49 @@ public:
         void (* maxShaderCompilerThreadsKHR)(GLuint count);
     } procs{};
 
+    void unbindEverything() noexcept;
+    void synchronizeStateAndCache(size_t index) noexcept;
+    void setEs2UniformBinding(size_t index, GLuint id, void const* data, uint16_t age) noexcept {
+        mUniformBindings[index] = { id, data, age };
+    }
+    auto getEs2UniformBinding(size_t index) const noexcept {
+        return mUniformBindings[index];
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    GLuint getSamplerSlow(SamplerParams sp) const noexcept;
+
+    inline GLuint getSampler(SamplerParams sp) const noexcept {
+        assert_invariant(!sp.padding0);
+        assert_invariant(!sp.padding1);
+        assert_invariant(!sp.padding2);
+        auto& samplerMap = mSamplerMap;
+        auto pos = samplerMap.find(sp);
+        if (UTILS_UNLIKELY(pos == samplerMap.end())) {
+            return getSamplerSlow(sp);
+        }
+        return pos->second;
+    }
+#endif
+
+
 private:
+    OpenGLPlatform& mPlatform;
     ShaderModel mShaderModel = ShaderModel::MOBILE;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
+    TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
+    std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
+    RenderPrimitive mDefaultVAO;
+    std::optional<GLuint> mDefaultFbo[2];
+    std::array<
+            std::tuple<GLuint, void const*, uint16_t>,
+            CONFIG_UNIFORM_BINDING_COUNT> mUniformBindings = {};
+    mutable tsl::robin_map<SamplerParams, GLuint,
+            SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
+
+    Platform::DriverConfig const mDriverConfig;
+
+    void bindFramebufferResolved(GLenum target, GLuint buffer) noexcept;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
             {   bugs.disable_glFlush,
@@ -432,9 +524,6 @@ private:
                     ""},
             {   bugs.disable_shared_context_draws,
                     "disable_shared_context_draws",
-                    ""},
-            {   bugs.texture_external_needs_rebind,
-                    "texture_external_needs_rebind",
                     ""},
             {   bugs.disable_invalidate_framebuffer,
                     "disable_invalidate_framebuffer",
@@ -469,15 +558,10 @@ private:
             {   bugs.delay_fbo_destruction,
                     "delay_fbo_destruction",
                     ""},
-            {   bugs.disable_thread_affinity,
-                    "disable_thread_affinity",
-                    ""},
             {   bugs.force_feature_level0,
                     "force_feature_level0",
                     ""},
     }};
-
-    RenderPrimitive mDefaultVAO;
 
     // this is chosen to minimize code size
 #if defined(BACKEND_OPENGL_VERSION_GLES)
@@ -521,30 +605,9 @@ private:
     }
 
     void setDefaultState() noexcept;
-
-    static constexpr const size_t TEXTURE_TARGET_COUNT =
-            sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);
-
 };
 
 // ------------------------------------------------------------------------------------------------
-
-constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept {
-    // this must match state.textures[].targets[]
-    switch (target) {
-        case GL_TEXTURE_2D:                     return 0;
-        case GL_TEXTURE_2D_ARRAY:               return 1;
-        case GL_TEXTURE_CUBE_MAP:               return 2;
-#if defined(BACKEND_OPENGL_LEVEL_GLES31)
-        case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
-#endif
-        case GL_TEXTURE_EXTERNAL_OES:           return 4;
-        case GL_TEXTURE_3D:                     return 5;
-        case GL_TEXTURE_CUBE_MAP_ARRAY:         return 6;
-        default:
-            return 0;
-    }
-}
 
 constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
     size_t index = 0;
@@ -636,11 +699,26 @@ void OpenGLContext::depthRange(GLclampf near, GLclampf far) noexcept {
 void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
     RenderPrimitive* vao = p ? const_cast<RenderPrimitive *>(p) : &mDefaultVAO;
     update_state(state.vao.p, vao, [&]() {
-        procs.bindVertexArray(vao->vao);
+
+        // See if we need to create a name for this VAO on the fly, this would happen if:
+        // - we're not the default VAO, because its name is always 0
+        // - our name is 0, this could happen if this VAO was created in the "other" context
+        // - the nameVersion is out of date *and* we're on the protected context, in this case:
+        //      - the name must be stale from a previous use of this context because we always
+        //        destroy the protected context when we're done with it.
+        bool const recreateVaoName = p != &mDefaultVAO &&
+                ((vao->vao[contextIndex] == 0) ||
+                        (vao->nameVersion != state.age && contextIndex == 1));
+        if (UTILS_UNLIKELY(recreateVaoName)) {
+            vao->nameVersion = state.age;
+            procs.genVertexArrays(1, &vao->vao[contextIndex]);
+        }
+
+        procs.bindVertexArray(vao->vao[contextIndex]);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
         size_t const targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
         state.buffers.genericBinding[targetIndex] = vao->elementArray;
-        if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding)) {
+        if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding || recreateVaoName)) {
             // This shouldn't be needed, but it looks like some drivers don't do the implicit
             // glBindBuffer().
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vao->elementArray);
@@ -678,44 +756,15 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
 #endif
 }
 
-void OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
-    switch (target) {
-        case GL_FRAMEBUFFER:
-            if (state.draw_fbo != buffer || state.read_fbo != buffer) {
-                state.draw_fbo = state.read_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        case GL_DRAW_FRAMEBUFFER:
-            if (state.draw_fbo != buffer) {
-                state.draw_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-        case GL_READ_FRAMEBUFFER:
-            if (state.read_fbo != buffer) {
-                state.read_fbo = buffer;
-                glBindFramebuffer(target, buffer);
-            }
-            break;
-#endif
-        default:
-            break;
-    }
-}
-
-void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept {
-    assert_invariant(targetIndex == getIndexForTextureTarget(target));
-    assert_invariant(targetIndex < TEXTURE_TARGET_COUNT);
-    update_state(state.textures.units[unit].targets[targetIndex].texture_id, texId, [&]() {
+void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
+    update_state(state.textures.units[unit].target, target, [&]() {
+        activeTexture(unit);
+        glBindTexture(state.textures.units[unit].target, 0);
+    });
+    update_state(state.textures.units[unit].id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
-    }, (target == GL_TEXTURE_EXTERNAL_OES) && bugs.texture_external_needs_rebind);
-}
-
-void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
-    bindTexture(unit, target, texId, getIndexForTextureTarget(target));
+    }, target == GL_TEXTURE_EXTERNAL_OES);
 }
 
 void OpenGLContext::useProgram(GLuint program) noexcept {
@@ -724,20 +773,22 @@ void OpenGLContext::useProgram(GLuint program) noexcept {
     });
 }
 
-void OpenGLContext::enableVertexAttribArray(GLuint index) noexcept {
-    assert_invariant(state.vao.p);
-    assert_invariant(index < state.vao.p->vertexAttribArray.size());
-    if (UTILS_UNLIKELY(!state.vao.p->vertexAttribArray[index])) {
-        state.vao.p->vertexAttribArray.set(index);
+void OpenGLContext::enableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept {
+    assert_invariant(rp);
+    assert_invariant(index < rp->vertexAttribArray.size());
+    bool const force = rp->stateVersion != state.age;
+    if (UTILS_UNLIKELY(force || !rp->vertexAttribArray[index])) {
+        rp->vertexAttribArray.set(index);
         glEnableVertexAttribArray(index);
     }
 }
 
-void OpenGLContext::disableVertexAttribArray(GLuint index) noexcept {
-    assert_invariant(state.vao.p);
-    assert_invariant(index < state.vao.p->vertexAttribArray.size());
-    if (UTILS_UNLIKELY(state.vao.p->vertexAttribArray[index])) {
-        state.vao.p->vertexAttribArray.unset(index);
+void OpenGLContext::disableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept {
+    assert_invariant(rp);
+    assert_invariant(index < rp->vertexAttribArray.size());
+    bool const force = rp->stateVersion != state.age;
+    if (UTILS_UNLIKELY(force || rp->vertexAttribArray[index])) {
+        rp->vertexAttribArray.unset(index);
         glDisableVertexAttribArray(index);
     }
 }

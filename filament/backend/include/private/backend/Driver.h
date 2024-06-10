@@ -29,6 +29,7 @@
 
 #include <functional>
 
+#include <stddef.h>
 #include <stdint.h>
 
 // Command debugging off. debugging virtuals are not called.
@@ -75,7 +76,7 @@ public:
     // the fn function will execute a batch of driver commands
     // this gives the driver a chance to wrap their execution in a meaningful manner
     // the default implementation simply calls fn
-    virtual void execute(std::function<void(void)> const& fn) noexcept;
+    virtual void execute(std::function<void(void)> const& fn);
 
     // This is called on debug build, or when enabled manually on the backend thread side.
     virtual void debugCommandBegin(CommandStream* cmds,

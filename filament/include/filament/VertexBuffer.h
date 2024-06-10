@@ -27,6 +27,9 @@
 
 #include <utils/compiler.h>
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace filament {
 
 class FVertexBuffer;
@@ -160,14 +163,13 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this VertexBuffer with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object.
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        VertexBuffer* build(Engine& engine);
+        VertexBuffer* UTILS_NONNULL build(Engine& engine);
 
     private:
         friend class FVertexBuffer;
@@ -206,7 +208,8 @@ public:
      *                    and Builder::bufferCount() - 1.
      * @param bufferObject The handle to the GPU data that will be used in this buffer slot.
      */
-    void setBufferObjectAt(Engine& engine, uint8_t bufferIndex, BufferObject const* bufferObject);
+    void setBufferObjectAt(Engine& engine, uint8_t bufferIndex,
+            BufferObject const*  UTILS_NONNULL bufferObject);
 
 protected:
     // prevent heap allocation

@@ -17,7 +17,9 @@
 #ifndef MATDBG_APIHANDLER_H
 #define MATDBG_APIHANDLER_H
 
-#include <utils/Mutex.h>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 #include <CivetServer.h>
 
@@ -53,14 +55,14 @@ private:
 
     DebugServer* mServer;
 
-    utils::Mutex mStatusMutex;
+    std::mutex mStatusMutex;
     std::condition_variable mStatusCondition;
     char statusMaterialId[9] = {};
 
     // This variable is to implement a *hanging* effect for /api/status. The call to /api/status
     // will always block until statusMaterialId is updated again. The client is expected to keep
     // calling /api/status (a constant "pull" to simulate a push).
-    std::atomic_uint64_t mCurrentStatus = 0;
+    std::atomic<uint64_t> mCurrentStatus = 0;
 };
 
 } // filament::matdbg

@@ -231,6 +231,32 @@ float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
 }
 
 //------------------------------------------------------------------------------
+// PBR Neutral tone mapper
+//------------------------------------------------------------------------------
+
+DEFAULT_CONSTRUCTORS(PBRNeutralToneMapper)
+
+float3 PBRNeutralToneMapper::operator()(math::float3 color) const noexcept {
+    // PBR Tone Mapping, https://modelviewer.dev/examples/tone-mapping.html
+    constexpr float startCompression = 0.8f - 0.04f;
+    constexpr float desaturation = 0.15f;
+
+    float x = min(color.r, min(color.g, color.b));
+    float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
+    color -= offset;
+
+    float peak = max(color.r, max(color.g, color.b));
+    if (peak < startCompression) return color;
+
+    float d = 1.0f - startCompression;
+    float newPeak = 1.0f - d * d / (peak + d - startCompression);
+    color *= newPeak / peak;
+
+    float g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
+    return mix(color, float3(newPeak), g);
+}
+
+//------------------------------------------------------------------------------
 // AgX tone mapper
 //------------------------------------------------------------------------------
 
@@ -262,14 +288,14 @@ float3 agxDefaultContrastApprox(float3 x) {
     float3 x2 = x * x;
     float3 x4 = x2 * x2;
     float3 x6 = x4 * x2;
-    return  - 17.86     * x6 * x
-            + 78.01     * x6
-            - 126.7     * x4 * x
-            + 92.06     * x4
-            - 28.72     * x2 * x
-            + 4.361     * x2
-            - 0.1718    * x
-            + 0.002857;
+    return  - 17.86f    * x6 * x
+            + 78.01f    * x6
+            - 126.7f    * x4 * x
+            + 92.06f    * x4
+            - 28.72f    * x2 * x
+            + 4.361f    * x2
+            - 0.1718f   * x
+            + 0.002857f;
 }
 
 // Adapted from https://iolite-engine.com/blog_posts/minimal_agx_implementation
@@ -278,23 +304,23 @@ float3 agxLook(float3 val, AgxToneMapper::AgxLook look) {
         return val;
     }
 
-    const float3 lw = float3(0.2126, 0.7152, 0.0722);
+    const float3 lw = float3(0.2126f, 0.7152f, 0.0722f);
     float luma = dot(val, lw);
 
     // Default
-    float3 offset = float3(0.0);
-    float3 slope = float3(1.0);
-    float3 power = float3(1.0);
-    float sat = 1.0;
+    float3 offset = float3(0.0f);
+    float3 slope = float3(1.0f);
+    float3 power = float3(1.0f);
+    float sat = 1.0f;
 
     if (look == AgxToneMapper::AgxLook::GOLDEN) {
-        slope = float3(1.0, 0.9, 0.5);
-        power = float3(0.8);
+        slope = float3(1.0f, 0.9f, 0.5f);
+        power = float3(0.8f);
         sat = 1.3;
     }
     if (look == AgxToneMapper::AgxLook::PUNCHY) {
-        slope = float3(1.0);
-        power = float3(1.35, 1.35, 1.35);
+        slope = float3(1.0f);
+        power = float3(1.35f, 1.35f, 1.35f);
         sat = 1.4;
     }
 
@@ -305,16 +331,16 @@ float3 agxLook(float3 val, AgxToneMapper::AgxLook look) {
 
 float3 AgxToneMapper::operator()(float3 v) const noexcept {
     // Ensure no negative values
-    v = max(float3(0.0), v);
+    v = max(float3(0.0f), v);
 
     v = AgXInsetMatrix * v;
 
     // Log2 encoding
-    v = max(v, 1E-10); // avoid 0 or negative numbers for log2
+    v = max(v, 1E-10f); // avoid 0 or negative numbers for log2
     v = log2(v);
     v = (v - AgxMinEv) / (AgxMaxEv - AgxMinEv);
 
-    v = clamp(v, 0, 1);
+    v = clamp(v, 0.0f, 1.0f);
 
     // Apply sigmoid
     v = agxDefaultContrastApprox(v);
@@ -325,7 +351,7 @@ float3 AgxToneMapper::operator()(float3 v) const noexcept {
     v = AgXOutsetMatrix * v;
 
     // Linearize
-    v = pow(max(float3(0.0), v), 2.2);
+    v = pow(max(float3(0.0f), v), 2.2f);
 
     return v;
 }
