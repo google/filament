@@ -95,6 +95,8 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.renderer.doFrameCapture);
     debugRegistry.registerProperty("d.renderer.disable_buffer_padding",
             &engine.debug.renderer.disable_buffer_padding);
+    debugRegistry.registerProperty("d.renderer.disable_subpasses",
+            &engine.debug.renderer.disable_subpasses);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture",
             &engine.debug.shadowmap.display_shadow_texture);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_scale",
@@ -596,12 +598,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     hasColorGrading &&
                     msaaSampleCount <= 1 &&
                     !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
-                    driver.isFrameBufferFetchSupported(),
+                    driver.isFrameBufferFetchSupported() &&
+                    !engine.debug.renderer.disable_subpasses,
             .customResolve =
                     msaaOptions.customResolve &&
                     msaaSampleCount > 1 &&
                     hasColorGrading &&
-                    driver.isFrameBufferFetchMultiSampleSupported(),
+                    driver.isFrameBufferFetchMultiSampleSupported() &&
+                    !engine.debug.renderer.disable_subpasses,
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
             .dithering = hasDithering,
