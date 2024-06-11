@@ -329,6 +329,7 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         if (mImageReady[i] != VK_NULL_HANDLE) {
             vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
+            mImageReady[i] = VK_NULL_HANDLE;
         }
     }
 }
