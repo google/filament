@@ -718,6 +718,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                 = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;
         deviceExts = prunedDeviceExts;
+
+        if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
+            deviceExts.erase(VK_KHR_MULTIVIEW_EXTENSION_NAME);
+        }
     }
 
     mImpl->mDevice
@@ -725,10 +729,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                       context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex, deviceExts)
                                                : mImpl->mDevice;
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
-    
-    if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
-        deviceExts.erase(VK_KHR_MULTIVIEW_EXTENSION_NAME);
-    }
 
     vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
             &mImpl->mGraphicsQueue);
