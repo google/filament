@@ -725,6 +725,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                       context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex, deviceExts)
                                                : mImpl->mDevice;
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
+    
+    if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
+        deviceExts.erase(VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    }
 
     vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
             &mImpl->mGraphicsQueue);
@@ -733,7 +737,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Store the extension support in the context
     context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    context.mMultiviewSupported = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
 
 #ifdef NDEBUG
     // If we are in release build, we should not have turned on debug extensions

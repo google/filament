@@ -131,8 +131,8 @@ public:
         return mDebugUtilsSupported;
     }
 
-    inline bool isMultiviewSupported() const noexcept {
-        return mMultiviewSupported;
+    inline bool isMultiviewEnabled() const noexcept {
+        return mMultiviewEnabled;
     }
 
     inline bool isClipDistanceSupported() const noexcept {
@@ -145,7 +145,7 @@ private:
     VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mMultiviewSupported = false;
+    bool mMultiviewEnabled = false;
 
     VkFormatList mDepthStencilFormats;
     VkFormatList mBlittableDepthStencilFormats;
