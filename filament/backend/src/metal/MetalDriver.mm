@@ -171,6 +171,8 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
     mContext->samplerStateCache.setDevice(mContext->device);
     mContext->argumentEncoderCache.setDevice(mContext->device);
     mContext->bufferPool = new MetalBufferPool(*mContext);
+    mContext->stagingAllocator =
+            new MetalStagingAllocator(mContext->device, driverConfig.metalStagingBufferSizeBytes);
     mContext->blitter = new MetalBlitter(*mContext);
 
     if (@available(iOS 12, *)) {
@@ -209,6 +211,7 @@ MetalDriver::~MetalDriver() noexcept {
     mContext->emptyTexture = nil;
     CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
+    delete mContext->stagingAllocator;
     delete mContext->blitter;
     delete mContext->timerQueryImpl;
     delete mContext->shaderCompiler;

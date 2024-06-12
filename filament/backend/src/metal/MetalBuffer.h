@@ -204,6 +204,15 @@ public:
 
 private:
 
+    enum class UploadStrategy {
+        POOL,
+        STAGING_ALLOCATOR,
+    };
+
+    void uploadWithPoolBuffer(void* src, size_t size, size_t byteOffset) const;
+    void uploadWithStagingAllocator(void* src, size_t size, size_t byteOffset) const;
+
+    UploadStrategy mUploadStrategy;
     TrackedMetalBuffer mBuffer;
     size_t mBufferSize = 0;
     void* mCpuBuffer = nullptr;
