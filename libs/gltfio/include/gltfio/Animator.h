@@ -106,13 +106,17 @@ private:
 
     // If "instance" is null, then this is the primary animator.
     Animator(FFilamentAsset const* asset, FFilamentInstance* instance);
-    ~Animator();
 
     Animator(const Animator& animator) = delete;
     Animator(Animator&& animator) = delete;
     Animator& operator=(const Animator&) = delete;
 
     AnimatorImpl* mImpl;
+public:
+    Animator(FilamentAsset *asset, FilamentInstance *instance) : Animator(reinterpret_cast<FFilamentAsset*>(asset), reinterpret_cast<FFilamentInstance*>(instance))
+    {
+    }
+    ~Animator();
 };
 
 } // namespace filament::gltfio
