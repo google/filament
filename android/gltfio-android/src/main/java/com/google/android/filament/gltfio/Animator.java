@@ -37,9 +37,28 @@ import java.nio.Buffer;
  */
 public class Animator {
     private long mNativeObject;
+    private Boolean mIsOwner = false;
 
     Animator(long nativeObject) {
         mNativeObject = nativeObject;
+    }
+
+    public Animator(FilamentAsset asset, FilamentInstance instance) {
+        mNativeObject = nCreateAnimatorFromAssetAndInstance(asset.getNativeObject(), instance.getNativeObject());
+        mIsOwner = true;
+    }
+    
+    @Override
+    public void finalize() {
+        try {
+            super.finalize();
+        } catch (Throwable t) { // Ignore
+        } finally {
+            if (mIsOwner) {
+                nDestroyAnimator(mNativeObject);
+                mNativeObject = 0;
+            }
+        }
     }
 
     /**
@@ -137,6 +156,8 @@ public class Animator {
         mNativeObject = 0;
     }
 
+    private static native long nCreateAnimatorFromAssetAndInstance(long nativeAsset, long nativeInstance);
+    private static native void nDestroyAnimator(long nativeAnimator);
     private static native void nApplyAnimation(long nativeAnimator, int index, float time);
     private static native void nUpdateBoneMatrices(long nativeAnimator);
     private static native void nApplyCrossFade(long nativeAnimator, int animIndex, float animTime, float alpha);
