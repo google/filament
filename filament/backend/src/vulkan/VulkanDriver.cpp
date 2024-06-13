@@ -115,15 +115,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
         VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
         int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        utils::slog.e << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
+        FVK_LOGE << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
     } else {
         // TODO: emit best practices warnings about aggressive pipeline barriers.
         if (strstr(pMessage, "ALL_GRAPHICS_BIT") || strstr(pMessage, "ALL_COMMANDS_BIT")) {
             return VK_FALSE;
         }
-        utils::slog.w << "VULKAN WARNING: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
+        FVK_LOGW << "VULKAN WARNING: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
     }
-    utils::slog.e << utils::io::endl;
+    FVK_LOGE << utils::io::endl;
     return VK_FALSE;
 }
 #endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
@@ -133,18 +133,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
     if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage
-                      << utils::io::endl;
+        FVK_LOGE << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage
+                 << utils::io::endl;
     } else {
         // TODO: emit best practices warnings about aggressive pipeline barriers.
         if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT")
                 || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
             return VK_FALSE;
         }
-        utils::slog.w << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage
-                      << utils::io::endl;
+        FVK_LOGW << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") " << cbdata->pMessage
+                 << utils::io::endl;
     }
-    utils::slog.e << utils::io::endl;
+    FVK_LOGE << utils::io::endl;
     return VK_FALSE;
 }
 #endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
@@ -292,7 +292,7 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
     //    VulkanRenderTarget            : 312       few
     // -- less than or equal to 312 bytes
 
-    utils::slog.d
+    FVK_LOGD
            << "\nVulkanSwapChain: " << sizeof(VulkanSwapChain)
            << "\nVulkanBufferObject: " << sizeof(VulkanBufferObject)
            << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
@@ -660,8 +660,8 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
-        utils::slog.w << "sRGB swapchain requested, but Platform does not support it"
-                      << utils::io::endl;
+        FVK_LOGW << "sRGB swapchain requested, but Platform does not support it"
+                 << utils::io::endl;
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
     auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
@@ -672,7 +672,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
-        utils::slog.w << "sRGB swapchain requested, but Platform does not support it"
+        FVK_LOGW << "sRGB swapchain requested, but Platform does not support it"
                       << utils::io::endl;
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
@@ -1862,9 +1862,9 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
         // matching characteristics. (e.g. if the missing texture is a 3D texture)
         if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE) && FVK_ENABLED_DEBUG_SAMPLER_NAME
-            utils::slog.w << "Uninitialized texture bound to '" << bindingToName[binding] << "'";
-            utils::slog.w << " in material '" << program->name.c_str() << "'";
-            utils::slog.w << " at binding point " << +binding << utils::io::endl;
+            FVK_LOGW << "Uninitialized texture bound to '" << bindingToName[binding] << "'";
+            FVK_LOGW << " in material '" << program->name.c_str() << "'";
+            FVK_LOGW << " at binding point " << +binding << utils::io::endl;
 #endif
             texture = mEmptyTexture;
         }
@@ -2014,7 +2014,7 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
         assert_invariant(inRenderPass);
         inRenderPass = false;
     } else if (inRenderPass && OUTSIDE_COMMANDS.find(command) != OUTSIDE_COMMANDS.end()) {
-        utils::slog.e << command.data() << " issued inside a render pass." << utils::io::endl;
+        FVK_LOGE << command.data() << " issued inside a render pass." << utils::io::endl;
     }
 #endif
 }
