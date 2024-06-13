@@ -207,7 +207,17 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
 
                     size_t const requiredSize = byteCount * vertexCount;
                     auto gendata = (uint8_t*) malloc(requiredSize);
-                    memset(gendata, 0xff, requiredSize);
+
+                    if (vattr == filament::VertexAttribute::COLOR) {
+                        // Assume white as the default if colors need to be generated.
+                        float4* dataf = (float4*) gendata;
+                        for (size_t i = 0; i < vertexCount; ++i) {
+                            dataf[i] = float4(1.0, 1.0, 1.0, 1.0f);
+                        }
+                    } else {
+                        memset(gendata, 0xff, requiredSize);
+                    }
+
                     vslots.push_back({
                         .slot = slot,
                         .sizeInBytes = requiredSize,

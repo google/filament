@@ -598,6 +598,7 @@ public:
             // capture to file. At the moment, only supported by the Metal backend.
             bool doFrameCapture = false;
             bool disable_buffer_padding = false;
+            bool disable_subpasses = false;
         } renderer;
         struct {
             bool debug_froxel_visualization = false;
