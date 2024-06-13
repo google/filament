@@ -198,6 +198,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
             VK_KHR_MAINTENANCE1_EXTENSION_NAME,
             VK_KHR_MAINTENANCE2_EXTENSION_NAME,
             VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+            VK_KHR_MULTIVIEW_EXTENSION_NAME,
     };
     ExtensionSet exts;
     // Identify supported physical device extensions
@@ -334,6 +335,7 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     deviceCreateInfo.enabledExtensionCount = (uint32_t) requestExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = requestExtensions.data();
 
+    void* pNext = nullptr;
     VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
             .pNext = nullptr,
@@ -341,8 +343,23 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
             .mutableComparisonSamplers = VK_TRUE,
     };
     if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
-        deviceCreateInfo.pNext = &portability;
+        portability.pNext = pNext;
+        pNext = &portability;
     }
+
+    VkPhysicalDeviceMultiviewFeaturesKHR multiview = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
+            .pNext = nullptr,
+            .multiview = VK_TRUE,
+            .multiviewGeometryShader = VK_FALSE,
+            .multiviewTessellationShader = VK_FALSE
+    };
+    if (setContains(deviceExtensions, VK_KHR_MULTIVIEW_EXTENSION_NAME)) {
+        multiview.pNext = pNext;
+        pNext = &multiview;
+    }
+
+    deviceCreateInfo.pNext = pNext;
 
     VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
@@ -701,6 +718,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                 = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;
         deviceExts = prunedDeviceExts;
+
+        if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
+            deviceExts.erase(VK_KHR_MULTIVIEW_EXTENSION_NAME);
+        }
     }
 
     mImpl->mDevice
@@ -716,6 +737,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Store the extension support in the context
     context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
 
 #ifdef NDEBUG
     // If we are in release build, we should not have turned on debug extensions
