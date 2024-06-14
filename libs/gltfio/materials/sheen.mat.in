@@ -64,7 +64,6 @@ material {
         { type : sampler2d, name : specularMap },
         { type : mat3, name : specularUvMatrix, precision: high },
         { type : int, name : specularColorIndex },
-        //{ type : sampler2d, name : specularColorMap },
         { type : mat3, name : specularColorUvMatrix, precision: high }
 
         ${CUSTOM_PARAMS}
