@@ -125,7 +125,9 @@ class ModelViewer(
         view.camera = camera
 
         materialProvider = UbershaderProvider(engine)
-        assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
+        // Just pass in an empty string, see https://github.com/google/filament/issues/7905#issuecomment-2161779784,
+        // to opt for the extended asset loader until https://github.com/google/filament/issues/7782 is done
+        assetLoader = AssetLoader(engine, materialProvider, EntityManager.get(), "")
         resourceLoader = ResourceLoader(engine, normalizeSkinningWeights)
 
         // Always add a direct light source since it is required for shadowing.
