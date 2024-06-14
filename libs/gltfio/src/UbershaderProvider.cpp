@@ -290,12 +290,12 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
                     getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
         }
         if (config->hasSpecular) {
-            mi->setParameter("specularUvMatrix", identity );
-            mi->setParameter( "specularIndex",
-                              getUvIndex( config->specularTextureUV, config->hasSpecularTexture ));
-            mi->setParameter("specularColorUvMatrix", identity );
-            mi->setParameter( "specularColorIndex",
-                              getUvIndex( config->specularColorTextureUV, config->hasSpecularColorTexture ));
+            mi->setParameter("specularUvMatrix", identity);
+            mi->setParameter("specularIndex",
+                    getUvIndex(config->specularTextureUV, config->hasSpecularTexture));
+            mi->setParameter("specularColorUvMatrix", identity);
+            mi->setParameter("specularColorIndex",
+                    getUvIndex(config->specularColorTextureUV, config->hasSpecularColorTexture));
         }
     }
 
