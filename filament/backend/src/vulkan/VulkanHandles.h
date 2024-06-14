@@ -319,9 +319,12 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     VulkanAttachment& getMsaaDepth();
     uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
+    uint8_t getLayerCount() { return mLayerCount; }
     bool hasDepth() const { return mDepth.texture; }
     bool isSwapChain() const { return !mOffscreen; }
     void bindToSwapChain(VulkanSwapChain& surf);
+    void setLayerCount(uint8_t layerCount) { mLayerCount = layerCount; }
+
 
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
@@ -330,6 +333,7 @@ private:
     VulkanAttachment mMsaaDepthAttachment = {};
     const bool mOffscreen : 1;
     uint8_t mSamples : 7;
+    uint8_t mLayerCount = 0;
 };
 
 struct VulkanBufferObject;

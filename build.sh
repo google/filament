@@ -168,8 +168,6 @@ VULKAN_ANDROID_GRADLE_OPTION=""
 
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
-MULTIVIEW_OPTION="-DFILAMENT_SAMPLES_STEREO_TYPE=multiview"
-
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 MATDBG_GRADLE_OPTION=""
 
@@ -243,7 +241,6 @@ function build_desktop_target {
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${architectures} \
-            ${MULTIVIEW_OPTION} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
            ../../compile_commands.json
