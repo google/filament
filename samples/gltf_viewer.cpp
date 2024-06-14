@@ -856,6 +856,8 @@ int main(int argc, char** argv) {
                 }
                 ImGui::Checkbox("Disable buffer padding",
                         debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
+                ImGui::Checkbox("Disable sub-passes",
+                        debug.getPropertyAddress<bool>("d.renderer.disable_subpasses"));
                 ImGui::Checkbox("Camera at origin",
                         debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);

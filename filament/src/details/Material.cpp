@@ -661,7 +661,7 @@ bool FMaterial::hasPendingEdits() noexcept {
 
 void FMaterial::latchPendingEdits() noexcept {
     std::lock_guard const lock(mPendingEditsLock);
-    std::swap(mPendingEdits, mMaterialParser);
+    mMaterialParser.reset(mPendingEdits.release());
 }
 
 /**
