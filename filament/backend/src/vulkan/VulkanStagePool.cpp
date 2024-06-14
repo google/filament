@@ -61,7 +61,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
 
 #if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
     if (result != VK_SUCCESS) {
-        utils::slog.e << "Allocation error: " << result << utils::io::endl;
+        FVK_LOGE << "Allocation error: " << result << utils::io::endl;
     }
 #endif
 

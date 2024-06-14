@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONSTANTS_H
 #define TNT_FILAMENT_BACKEND_VULKANCONSTANTS_H
 
+#include <utils/Log.h>
+
 #include <stdint.h>
 
 // In debug builds, we enable validation layers and set up a debug callback.
@@ -69,6 +71,11 @@
 // Use this to debug potential Handle/Resource leakage. It will print out reference counts for all
 // the currently active resources.
 #define FVK_DEBUG_RESOURCE_LEAK           0x00010000
+
+// Set this to enable logging "only" to one output stream. This is useful in the case where we want
+// to debug with print statements and want ordered logging (e.g slog.i and slog.e will not appear in
+// order of calls).
+#define FVK_DEBUG_FORCE_LOG_TO_I          0x00020000
 
 // Useful default combinations
 #define FVK_DEBUG_EVERYTHING              0xFFFFFFFF
@@ -131,6 +138,18 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 
 #ifndef FVK_HANDLE_ARENA_SIZE_IN_MB
 #define FVK_HANDLE_ARENA_SIZE_IN_MB 8
+#endif
+
+#if FVK_ENABLED(FVK_DEBUG_FORCE_LOG_TO_I)
+    #define FVK_LOGI (utils::slog.i)
+    #define FVK_LOGD FVK_LOGI
+    #define FVK_LOGE FVK_LOGI
+    #define FVK_LOGW FVK_LOGI
+#else
+    #define FVK_LOGE (utils::slog.e)
+    #define FVK_LOGW (utils::slog.w)
+    #define FVK_LOGD (utils::slog.d)
+    #define FVK_LOGI (utils::slog.i)
 #endif
 
 // All vkCreate* functions take an optional allocator. For now we select the default allocator by
