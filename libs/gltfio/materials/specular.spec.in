@@ -3,18 +3,18 @@ ShadingModel=lit
 # Required Aspects
 BlendingMode = ${BLENDING}
 
-VertexColors=optional
-BaseColorTexture=optional
-NormalTexture=optional
-OcclusionTexture=optional
-EmissiveTexture=optional
-MetallicRoughnessTexture=optional
-TextureTransforms=optional
+VertexColors = optional
+BaseColorTexture = optional
+NormalTexture = optional
+OcclusionTexture = optional
+EmissiveTexture = optional
+MetallicRoughnessTexture = optional
+TextureTransforms = optional
 
 # KHR_materials_specular Features
-Specular=optional
-SpecularTexture=optional
-SpecularColorTexture=optional
+Specular = optional
+SpecularTexture = optional
+SpecularColorTexture = optional
 
 # ClearCoat Features
 ClearCoat = optional
