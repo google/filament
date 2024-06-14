@@ -51,10 +51,8 @@ material {
         { type : sampler2d, name : clearCoatMap },
         { type : mat3, name : clearCoatUvMatrix, precision: high },
         { type : int, name : clearCoatRoughnessIndex },
-        //{ type : sampler2d, name : clearCoatRoughnessMap }, // due to 8 samplers limit, we need to drop the texture.
         { type : mat3, name : clearCoatRoughnessUvMatrix, precision: high },
         { type : int, name : clearCoatNormalIndex },
-        //{ type : sampler2d, name : clearCoatNormalMap }, // due to 8 samplers limit, we need to drop the texture.
         { type : mat3, name : clearCoatNormalUvMatrix, precision: high },
         { type : float, name : clearCoatNormalScale },
 
