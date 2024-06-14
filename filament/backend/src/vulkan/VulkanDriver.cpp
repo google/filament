@@ -27,8 +27,6 @@
 
 #include <backend/platforms/VulkanPlatform.h>
 
-#include <string>
-#include <iostream>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
@@ -597,7 +595,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             colorTargets[i] = {
                 .texture = mResourceAllocator.handle_cast<VulkanTexture*>(color[i].handle),
                 .level = color[i].level,
-                .viewCount = layerCount,
                 .baseViewIndex = color[i].baseViewIndex,
                 .layer = color[i].layer,
             };
@@ -613,7 +610,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[0] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(depth.handle),
             .level = depth.level,
-            .viewCount = layerCount,
             .baseViewIndex = depth.baseViewIndex,
             .layer = depth.layer,
         };
@@ -627,7 +623,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[1] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(stencil.handle),
             .level = stencil.level,
-            .viewCount = layerCount,
             .baseViewIndex = stencil.baseViewIndex,
             .layer = stencil.layer,
         };
@@ -646,8 +641,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, width, height,
             samples, colorTargets, depthStencil, mStagePool);
+    renderTarget->setLayerCount(layerCount);
     mResourceManager.acquire(renderTarget);
-    std::cout << "Layer Count: " << std::to_string(layerCount) << std::endl;
 }
 
 void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -1286,25 +1281,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .discardEnd = discardEndVal,
         .samples = rt->getSamples(),
         .subpassMask = uint8_t(params.subpassMask),
-        .viewCount = rt->getColor(0).viewCount,
+        .viewCount = rt->getLayerCount(),
     };
-
-    std::cout << "HERE rt[0] viewcount: " << std::to_string(rpkey.viewCount) << std::endl;
-    std::cout << "HERE rt[1] viewcount: " << std::to_string(rt->getColor(1).viewCount) << std::endl;
-
-
-    if (depth.texture && rpkey.viewCount > 1) {
-        depth.texture->transitionLayout(cmdbuffer, depth.getSubresourceRange(), VulkanLayout::DEPTH_ATTACHMENT);
-    }
 
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const VulkanAttachment& info = rt->getColor(i);
 
-        if (info.texture && rpkey.viewCount > 1) {
-            info.texture->transitionLayout(cmdbuffer, info.getSubresourceRange(), VulkanLayout::READ_WRITE);
-        }
-
         if (info.texture) {
+            rpkey.viewCount = info.texture->getLayerCount();
             rpkey.initialColorLayoutMask |= 1 << i;
             rpkey.colorFormat[i] = info.getFormat();
             if (rpkey.samples > 1 && info.texture->samples == 1) {
@@ -1344,9 +1328,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             assert_invariant(fbkey.color[i]);
         } else {
             auto& msaaColorAttachment = rt->getMsaaColor(i);
-            #ifdef FILAMENT_ENABLE_MULTIVIEW
-            msaaColorAttachment.texture->transitionLayout(cmdbuffer, msaaColorAttachment.getSubresourceRange(), VulkanLayout::READ_WRITE);
-            #endif
             renderPassAttachments.insert(msaaColorAttachment);
 
             auto& colorAttachment = rt->getColor(i);
