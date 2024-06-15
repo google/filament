@@ -640,8 +640,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, width, height,
-            samples, colorTargets, depthStencil, mStagePool);
-    renderTarget->setLayerCount(layerCount);
+            samples, colorTargets, depthStencil, mStagePool, layerCount);
     mResourceManager.acquire(renderTarget);
 }
 

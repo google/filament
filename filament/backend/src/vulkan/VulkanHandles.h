@@ -304,7 +304,7 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
             VulkanContext const& context, VmaAllocator allocator,
             VulkanCommands* commands, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-            VulkanAttachment depthStencil[2], VulkanStagePool& stagePool);
+            VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget();
@@ -323,8 +323,6 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     bool hasDepth() const { return mDepth.texture; }
     bool isSwapChain() const { return !mOffscreen; }
     void bindToSwapChain(VulkanSwapChain& surf);
-    void setLayerCount(uint8_t layerCount) { mLayerCount = layerCount; }
-
 
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
@@ -333,7 +331,7 @@ private:
     VulkanAttachment mMsaaDepthAttachment = {};
     const bool mOffscreen : 1;
     uint8_t mSamples : 7;
-    uint8_t mLayerCount = 0;
+    uint8_t mLayerCount = 1;
 };
 
 struct VulkanBufferObject;
