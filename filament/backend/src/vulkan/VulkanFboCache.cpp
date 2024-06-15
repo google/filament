@@ -188,23 +188,20 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     };
 
     VkRenderPassMultiviewCreateInfo multiviewCreateInfo = {};
+    uint32_t subpassViewMask = (1 << config.viewCount) - 1;
+    // Prepare a view mask array for the maximum number of subpasses. All subpasses have all views
+    // activated.
+    uint32_t viewMasks[2] = {subpassViewMask, subpassViewMask};
     if (config.viewCount > 1) {
-      // Enable all the views.
-      uint32_t subpass_view_mask = (1 << config.viewCount) - 1;
-
-      // Prepare a view mask array for the maximum number of subpasses.
-      // All subpasses have all views activated.
-      uint32_t view_masks[2] = {subpass_view_mask, subpass_view_mask};
       // Fill the multiview create info.
-      multiviewCreateInfo.sType =
-          VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+      multiviewCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
       multiviewCreateInfo.pNext = nullptr;
       multiviewCreateInfo.subpassCount = hasSubpasses ? 2u : 1u;
-      multiviewCreateInfo.pViewMasks = view_masks;
+      multiviewCreateInfo.pViewMasks = viewMasks;
       multiviewCreateInfo.dependencyCount = 0;
       multiviewCreateInfo.pViewOffsets = nullptr;
       multiviewCreateInfo.correlationMaskCount = 1;
-      multiviewCreateInfo.pCorrelationMasks = &subpass_view_mask;
+      multiviewCreateInfo.pCorrelationMasks = &subpassViewMask;
 
       renderPassInfo.pNext = &multiviewCreateInfo;
     }
@@ -316,10 +313,6 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         depthAttachmentRef.attachment = attachmentIndex;
         VkImageLayout initialLayout = imgutil::getVkLayout(config.initialDepthLayout);
         
-        if (loadOp == VK_ATTACHMENT_LOAD_OP_LOAD && imgutil::getVkLayout(config.initialDepthLayout) == VK_IMAGE_LAYOUT_UNDEFINED) {
-            initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        }
-
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
