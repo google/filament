@@ -125,6 +125,11 @@ extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBu
     builder->groundPlane(a, b, c, d);
 }
 
+extern "C" JNIEXPORT void Java_com_google_android_filament_utils_Manipulator_nBuilderpanDisabled(JNIEnv*, jclass, jlong nativeBuilder, jboolean enabled) {
+    Builder* builder = (Builder*) nativeBuilder;
+    builder->panDisabled(enabled);
+}
+
 extern "C" JNIEXPORT long Java_com_google_android_filament_utils_Manipulator_nBuilderBuild(JNIEnv*, jclass, jlong nativeBuilder, jint mode) {
     Builder* builder = (Builder*) nativeBuilder;
     return (jlong) builder->build((Mode) mode);
