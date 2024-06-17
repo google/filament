@@ -144,7 +144,7 @@ public:
         Builder& groundPlane(FLOAT a, FLOAT b, FLOAT c, FLOAT d);  //! Plane equation used as a raycast fallback
         Builder& raycastCallback(RayCallback cb, void* userdata);  //! Raycast function for accurate grab-and-pan
 
-        Builder& panDisabled(bool enabled);  //! Sets whether panning with two fingers is enabled
+        Builder& panDisabled(bool enabled);  //! Sets whether panning is enabled
 
         /**
          * Creates a new camera manipulator, either ORBIT, MAP, or FREE_FLIGHT.
