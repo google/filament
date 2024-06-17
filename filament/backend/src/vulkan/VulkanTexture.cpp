@@ -113,7 +113,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physicalDevice, mVkFormat, &props);
         if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-            utils::slog.w << "Texture usage is SAMPLEABLE but format " << mVkFormat << " is not "
+            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << mVkFormat << " is not "
                     "sampleable with optimal tiling." << utils::io::endl;
         }
 #endif
@@ -163,7 +163,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     VkResult error = vkCreateImage(mDevice, &imageInfo, VKALLOC, &mTextureImage);
     if (error || FVK_ENABLED(FVK_DEBUG_TEXTURE)) {
-        utils::slog.d << "vkCreateImage: "
+        FVK_LOGD << "vkCreateImage: "
             << "image = " << mTextureImage << ", "
             << "result = " << error << ", "
             << "handle = " << utils::io::hex << mTextureImage << utils::io::dec << ", "
@@ -450,7 +450,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
     }
 
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-    utils::slog.d << "transition texture=" << mTextureImage
+    FVK_LOGD << "transition texture=" << mTextureImage
                   << " (" << range.baseArrayLayer
                   << "," << range.baseMipLevel << ")"
                   << " count=(" << range.layerCount
@@ -539,7 +539,7 @@ void VulkanTexture::print() const {
                 layer < (mPrimaryViewRange.baseArrayLayer + mPrimaryViewRange.layerCount) &&
                 level >= mPrimaryViewRange.baseMipLevel &&
                 level < (mPrimaryViewRange.baseMipLevel + mPrimaryViewRange.levelCount);
-            utils::slog.d << "[" << mTextureImage << "]: (" << layer << "," << level
+            FVK_LOGD << "[" << mTextureImage << "]: (" << layer << "," << level
                           << ")=" << getLayout(layer, level)
                           << " primary=" << primary
                           << utils::io::endl;
@@ -548,7 +548,7 @@ void VulkanTexture::print() const {
 
     for (auto view: mCachedImageViews) {
         auto& range = view.first.range;
-        utils::slog.d << "[" << mTextureImage << ", imageView=" << view.second << "]=>"
+        FVK_LOGD << "[" << mTextureImage << ", imageView=" << view.second << "]=>"
                       << " (" << range.baseArrayLayer << "," << range.baseMipLevel << ")"
                       << " count=(" << range.layerCount << "," << range.levelCount << ")"
                       << " aspect=" << range.aspectMask << " viewType=" << view.first.type

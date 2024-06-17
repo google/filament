@@ -154,7 +154,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // the number of images, though there may be limits related to the total amount of memory used
     // by presentable images."
     if (maxImageCount != 0 && desiredImageCount > maxImageCount) {
-        utils::slog.e << "Swap chain does not support " << desiredImageCount << " images."
+        FVK_LOGE << "Swap chain does not support " << desiredImageCount << " images."
                       << utils::io::endl;
         desiredImageCount = caps.minImageCount;
     }
@@ -247,7 +247,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
 
-    slog.i << "vkCreateSwapchain"
+    FVK_LOGI << "vkCreateSwapchain"
            << ": " << mSwapChainBundle.extent.width << "x" << mSwapChainBundle.extent.height << ", "
            << surfaceFormat.format << ", " << surfaceFormat.colorSpace << ", "
            << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
@@ -277,7 +277,7 @@ VkResult VulkanPlatformSurfaceSwapChain::acquire(VulkanPlatform::ImageSyncData* 
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
     // log messages or a loop of re-creations.
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         mSuboptimal = true;
     }
     return result;
@@ -299,7 +299,7 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
     // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
         mSuboptimal = true;
     }
     return result;

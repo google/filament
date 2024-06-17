@@ -95,7 +95,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
                 .pNext = &driverProperties,
         };
         vkGetPhysicalDeviceProperties2(device, &physicalDeviceProperties2);
-        utils::slog.i << "Vulkan device driver: " << driverProperties.driverName << " "
+        FVK_LOGI << "Vulkan device driver: " << driverProperties.driverName << " "
                       << driverProperties.driverInfo << utils::io::endl;
     }
 
@@ -128,7 +128,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     const FixedCapacityVector<VkPhysicalDevice> physicalDevices
             = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
 
-    utils::slog.i << "Selected physical device '" << deviceProperties.deviceName << "' from "
+    FVK_LOGI << "Selected physical device '" << deviceProperties.deviceName << "' from "
                   << physicalDevices.size() << " physical devices. "
                   << "(vendor " << utils::io::hex << vendorID << ", "
                   << "device " << deviceID << ", "
@@ -142,15 +142,15 @@ void printDepthFormats(VkPhysicalDevice device) {
     // Note that Vulkan is more constrained than OpenGL ES 3.1 in this area.
     const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
                                               | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-    utils::slog.i << "Sampleable depth formats: ";
+    FVK_LOGI << "Sampleable depth formats: ";
     for (VkFormat format : ALL_VK_FORMATS) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
         if ((props.optimalTilingFeatures & required) == required) {
-            utils::slog.i << format << " ";
+            FVK_LOGI << format << " ";
         }
     }
-    utils::slog.i << utils::io::endl;
+    FVK_LOGI << utils::io::endl;
 }
 #endif
 
@@ -242,11 +242,11 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
     } else {
 #if defined(__ANDROID__)
-        utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
-                      << "gradle file?" << utils::io::endl;
+        FVK_LOGD << "Validation layers are not available; did you set jniLibs in your "
+                 << "gradle file?" << utils::io::endl;
 #else
-        utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
-                      << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
+        FVK_LOGD << "Validation layer not available; did you install the Vulkan SDK?\n"
+                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
 #endif // __ANDROID__
 
     }
@@ -435,8 +435,8 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
         case VK_PHYSICAL_DEVICE_TYPE_OTHER:
             return 1;
         default:
-            utils::slog.w << "deviceTypeOrder: Unexpected deviceType: " << deviceType
-                          << utils::io::endl;
+            FVK_LOGW << "deviceTypeOrder: Unexpected deviceType: " << deviceType
+                     << utils::io::endl;
             return -1;
     }
 }
