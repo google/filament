@@ -772,8 +772,8 @@ VulkanPlatform::SwapChainBundle VulkanPlatform::getSwapChainBundle(SwapChainPtr 
     SWAPCHAIN_RET_FUNC(getSwapChainBundle, handle, )
 }
 
-VkResult VulkanPlatform::acquire(SwapChainPtr handle, VkSemaphore clientSignal, uint32_t* index) {
-    SWAPCHAIN_RET_FUNC(acquire, handle, clientSignal, index)
+VkResult VulkanPlatform::acquire(SwapChainPtr handle, ImageSyncData* outImageSyncData) {
+    SWAPCHAIN_RET_FUNC(acquire, handle, outImageSyncData)
 }
 
 VkResult VulkanPlatform::present(SwapChainPtr handle, uint32_t index,
