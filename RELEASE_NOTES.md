@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.53.1
+
+
 ## v1.53.0
 
 - engine: fix skinning normals with large transforms (b/342459864) [⚠️ **New Material Version**]
