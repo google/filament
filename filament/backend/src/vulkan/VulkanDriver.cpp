@@ -397,7 +397,10 @@ void VulkanDriver::collectGarbage() {
 }
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("beginFrame");
     // Do nothing.
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,

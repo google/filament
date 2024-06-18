@@ -388,6 +388,8 @@ class_<Engine>("Engine")
         return Engine::create();
     }, allow_raw_pointers())
 
+    .function("unprotected", &Engine::unprotected)
+
     .function("enableAccurateTranslations", &Engine::enableAccurateTranslations)
 
     .function("setAutomaticInstancingEnabled", &Engine::setAutomaticInstancingEnabled)

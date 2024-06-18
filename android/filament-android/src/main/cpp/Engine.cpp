@@ -420,6 +420,13 @@ Java_com_google_android_filament_Engine_nSetPaused(JNIEnv*, jclass,
     engine->setPaused(paused);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nUnprotected(JNIEnv*, jclass,
+        jlong nativeEngine, jboolean paused) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->unprotected();
+}
+
 // Managers...
 
 extern "C" JNIEXPORT jlong JNICALL

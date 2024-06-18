@@ -18,7 +18,7 @@ jobs:
         os: [macos-14, ubuntu-22.04]
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
@@ -32,7 +32,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           build\windows\build-github.bat presubmit
@@ -43,7 +43,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -57,7 +57,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           cd build/ios && printf "y" | ./build.sh presubmit
@@ -70,7 +70,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh presubmit

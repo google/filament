@@ -1289,6 +1289,18 @@ public class Engine {
         nSetPaused(getNativeObject(), paused);
     }
 
+    /**
+     * Switch the command queue to unprotected mode. Protected mode can be activated via
+     * Renderer::beginFrame() using a protected SwapChain.
+
+     * @see Renderer
+     * @see SwapChain
+     */
+    public void unprotected() {
+        nUnprotected(getNativeObject());
+    }
+
+
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1366,6 +1378,7 @@ public class Engine {
     private static native void nFlush(long nativeEngine);
     private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);
+    private static native void nUnprotected(long nativeEngine);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);
