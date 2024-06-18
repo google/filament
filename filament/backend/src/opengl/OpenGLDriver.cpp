@@ -303,6 +303,13 @@ void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
 void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
     assert_invariant(stage == ShaderStage::VERTEX || stage == ShaderStage::FRAGMENT);
+
+#if FILAMENT_ENABLE_MATDBG
+    if (UTILS_UNLIKELY(!mValidProgram)) {
+        return;
+    }
+#endif
+
     utils::Slice<std::pair<GLint, ConstantType>> constants;
     if (stage == ShaderStage::VERTEX) {
         constants = mCurrentPushConstants->vertexConstants;
@@ -339,34 +346,33 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
-    if (UTILS_UNLIKELY(!p->isValid())) {
-        // If the program is not valid, we can't call use().
-        return false;
-    }
-
     if (UTILS_UNLIKELY(mBoundProgram == p)) {
         // program didn't change, don't do anything.
         return true;
     }
 
-    // TODO: we could even improve this if the program could tell us which of the descriptors
-    //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
-    //       change often.
-    decltype(mInvalidDescriptorSetBindings) changed;
-    changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
-    mInvalidDescriptorSetBindings |= changed;
-
-    mBoundProgram = p;
-
     // compile/link the program if needed and call glUseProgram
-    p->use(this, mContext);
+    bool const success = p->use(this, mContext);
+    assert_invariant(success == p->isValid());
+  
+    if (success) {
+        // TODO: we could even improve this if the program could tell us which of the descriptors
+        //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
+        //       change often.
+        decltype(mInvalidDescriptorSetBindings) changed;
+        changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+        mInvalidDescriptorSetBindings |= changed;
 
-    if (UTILS_UNLIKELY(mContext.isES2())) {
+        mBoundProgram = p;
+    }
+
+    if (UTILS_UNLIKELY(mContext.isES2() && success)) {
         // Set the output colorspace for this program (linear or rec709). This is only relevant
         // when mPlatform.isSRGBSwapChainSupported() is false (no need to check though).
         p->setRec709ColorSpace(mRec709OutputColorspace);
     }
-    return true;
+
+    return success;
 }
 
 
