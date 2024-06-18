@@ -304,6 +304,13 @@ void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
 void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
     assert_invariant(stage == ShaderStage::VERTEX || stage == ShaderStage::FRAGMENT);
+
+#if FILAMENT_ENABLE_MATDBG
+    if (UTILS_UNLIKELY(!mValidProgram)) {
+        return;
+    }
+#endif
+
     utils::Slice<std::pair<GLint, ConstantType>> constants;
     if (stage == ShaderStage::VERTEX) {
         constants = mCurrentPushConstants->vertexConstants;
@@ -340,15 +347,11 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
-    if (UTILS_UNLIKELY(!p->isValid())) {
-        // If the program is not valid, we can't call use().
-        return false;
-    }
-
     // set-up textures and samplers in the proper TMUs (as specified in setSamplers)
-    p->use(this, mContext);
+    bool const success = p->use(this, mContext);
+    assert_invariant(success == p->isValid());
 
-    if (UTILS_UNLIKELY(mContext.isES2())) {
+    if (UTILS_UNLIKELY(mContext.isES2() && success)) {
         for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
             auto [id, buffer, age] = mContext.getEs2UniformBinding(i);
             if (buffer) {
@@ -359,7 +362,8 @@ bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
         // when mPlatform.isSRGBSwapChainSupported() is false (no need to check though).
         p->setRec709ColorSpace(mRec709OutputColorspace);
     }
-    return true;
+
+    return success;
 }
 
 

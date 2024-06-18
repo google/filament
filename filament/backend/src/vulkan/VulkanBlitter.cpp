@@ -37,7 +37,7 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
         VulkanAttachment src, VulkanAttachment dst,
         const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
-        utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
+        FVK_LOGD << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
                       << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
                       << " layout=" << dst.getLayout() << utils::io::endl;
@@ -76,7 +76,7 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
 inline void resolveFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
         VulkanAttachment src, VulkanAttachment dst) {
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
-        utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
+        FVK_LOGD << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
                       << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
                       << " layout=" << dst.getLayout() << utils::io::endl;
