@@ -72,6 +72,7 @@ public:
         }
 
         context.useProgram(gl.program);
+        return true;
     }
 
     GLuint getBufferBinding(descriptor_set_t set, descriptor_binding_t binding) const noexcept {
