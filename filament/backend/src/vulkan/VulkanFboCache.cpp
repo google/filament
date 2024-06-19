@@ -95,7 +95,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
     }
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
-    utils::slog.d << "Creating framebuffer " << config.width << "x" << config.height << " "
+    FVK_LOGD << "Creating framebuffer " << config.width << "x" << config.height << " "
         << "for render pass " << config.renderPass << ", "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (config.depth ? 1 : 0) << ", "
@@ -310,7 +310,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
-    utils::slog.d << "Created render pass " << renderPass << " with "
+    FVK_LOGD << "Created render pass " << renderPass << " with "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (hasDepth ? 1 : 0) << ", "
         << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount

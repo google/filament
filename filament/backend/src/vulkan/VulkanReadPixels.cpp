@@ -167,9 +167,9 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
     vkCreateImage(device, &imageInfo, VKALLOC, &stagingImage);
 
 #if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
-    utils::slog.d << "readPixels created image=" << stagingImage
-                  << " to copy from image=" << srcTexture->getVkImage()
-                  << " src-layout=" << srcTexture->getLayout(0, 0) << utils::io::endl;
+    FVK_LOGD << "readPixels created image=" << stagingImage
+             << " to copy from image=" << srcTexture->getVkImage()
+             << " src-layout=" << srcTexture->getLayout(0, 0) << utils::io::endl;
 #endif
 
     VkMemoryRequirements memReqs;
@@ -185,7 +185,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
     if (memoryTypeIndex >= VK_MAX_MEMORY_TYPES) {
         memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        utils::slog.w
+        FVK_LOGW
                 << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available"
                 << utils::io::endl;
     }
@@ -303,7 +303,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
         // Fence hasn't been reached. Try waiting again.
         if (status != VK_SUCCESS) {
-            utils::slog.e << "Failed to wait for readPixels fence" << utils::io::endl;
+            FVK_LOGE << "Failed to wait for readPixels fence" << utils::io::endl;
             return;
         }
 
@@ -321,7 +321,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
                     getComponentCount(srcFormat), srcPixels,
                     static_cast<int>(subResourceLayout.rowPitch), static_cast<int>(width),
                     static_cast<int>(height), swizzle)) {
-            utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
+            FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
         }
 
         vkUnmapMemory(device, stagingMemory);

@@ -100,7 +100,7 @@ std::tuple<uint32_t, uint32_t> VulkanTimestamps::getNextQuery() {
 	    return std::make_tuple(timerIndex * 2, timerIndex * 2 + 1);
         }
     }
-    utils::slog.e << "More than " << maxTimers << " timers are not supported." << utils::io::endl;
+    FVK_LOGE << "More than " << maxTimers << " timers are not supported." << utils::io::endl;
     return std::make_tuple(0, 1);
 }
 
