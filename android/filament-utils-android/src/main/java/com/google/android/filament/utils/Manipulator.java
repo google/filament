@@ -280,8 +280,8 @@ public class Manipulator {
          * @return this <code>Builder</code> object for chaining calls
          */
         @NonNull
-        public Builder panDisabled(Boolean enabled) {
-            nBuilderpanDisabled(mNativeBuilder, enabled);
+        public Builder panning(Boolean enabled) {
+            nBuilderpanning(mNativeBuilder, enabled);
             return this;
         }
 
@@ -494,7 +494,7 @@ public class Manipulator {
     private static native void nBuilderFlightPanSpeed(long nativeBuilder, float x, float y);
     private static native void nBuilderFlightMoveDamping(long nativeBuilder, float damping);
     private static native void nBuilderGroundPlane(long nativeBuilder, float a, float b, float c, float d);
-    private static native void nBuilderpanDisabled(long nativeBuilder, Boolean enabled);
+    private static native void nBuilderPanning(long nativeBuilder, Boolean enabled);
     private static native long nBuilderBuild(long nativeBuilder, int mode);
 
     private static native void nDestroyManipulator(long nativeManip);

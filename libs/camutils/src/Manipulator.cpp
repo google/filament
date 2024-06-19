@@ -147,8 +147,8 @@ Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::raycastCallback(RayCal
 
 
 template <typename FLOAT> typename
-Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::panDisabled(bool enabled) {
-    details.panDisabled = enabled;
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::panning(bool enabled) {
+    details.panning = enabled;
     return *this;
 }
 
