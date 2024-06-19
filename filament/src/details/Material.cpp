@@ -119,6 +119,7 @@ struct Material::BuilderDetails {
     const void* mPayload = nullptr;
     size_t mSize = 0;
     bool mDefaultMaterial = false;
+    bool mShBandsCount = 3;
     std::unordered_map<
         utils::CString,
         std::variant<int32_t, float, bool>,
@@ -140,6 +141,11 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 Material::Builder& Material::Builder::package(const void* payload, size_t size) {
     mImpl->mPayload = payload;
     mImpl->mSize = size;
+    return *this;
+}
+
+Material::Builder& Material::Builder::sphericalHarmonicsBandCount(size_t shBandCount) noexcept {
+    mImpl->mShBandsCount = math::clamp(shBandCount, size_t(1), size_t(3));
     return *this;
 }
 
@@ -897,6 +903,8 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
             (int)engine.getConfig().stereoscopicEyeCount });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT, builder->mShBandsCount });
     if (UTILS_UNLIKELY(parser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({
