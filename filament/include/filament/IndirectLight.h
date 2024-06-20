@@ -158,6 +158,8 @@ public:
          *
          * @return This Builder, for chaining calls.
          *
+         * @see Material::Builder::sphericalHarmonicsBandCount()
+         *
          * @note
          * Because the coefficients are pre-scaled, `sh[0]` is the environment's
          * average irradiance.

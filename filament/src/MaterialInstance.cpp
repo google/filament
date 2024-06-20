@@ -183,6 +183,35 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 
 // ------------------------------------------------------------------------------------------------
 
+template<typename T>
+T FMaterialInstance::getParameterImpl(std::string_view name) const {
+    ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
+    assert_invariant(offset>=0);
+    return downcast(this)->getUniformBuffer().getUniform<T>(offset);
+}
+
+template<typename T>
+T MaterialInstance::getParameter(const char* name, size_t nameLength) const {
+    return downcast(this)->getParameterImpl<T>({ name, nameLength });
+}
+
+// explicit template instantiation of our supported types
+template UTILS_PUBLIC float MaterialInstance::getParameter<float>        (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC int32_t MaterialInstance::getParameter<int32_t>  (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC uint32_t MaterialInstance::getParameter<uint32_t>(const char* name, size_t nameLength) const;
+template UTILS_PUBLIC int2 MaterialInstance::getParameter<int2>        (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC int3 MaterialInstance::getParameter<int3>        (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC int4 MaterialInstance::getParameter<int4>        (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC uint2 MaterialInstance::getParameter<uint2>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC uint3 MaterialInstance::getParameter<uint3>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC uint4 MaterialInstance::getParameter<uint4>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC float2 MaterialInstance::getParameter<float2>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC float3 MaterialInstance::getParameter<float3>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC float4 MaterialInstance::getParameter<float4>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC mat3f MaterialInstance::getParameter<mat3f>      (const char* name, size_t nameLength) const;
+
+// ------------------------------------------------------------------------------------------------
+
 Material const* MaterialInstance::getMaterial() const noexcept {
     return downcast(this)->getMaterial();
 }

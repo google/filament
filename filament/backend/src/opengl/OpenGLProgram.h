@@ -53,9 +53,19 @@ public:
 
     bool isValid() const noexcept { return mToken || gl.program != 0; }
 
-    void use(OpenGLDriver* const gld, OpenGLContext& context) noexcept {
-        if (UTILS_UNLIKELY(!gl.program)) {
+    bool use(OpenGLDriver* const gld, OpenGLContext& context) noexcept {
+        // both non-null is impossible by construction
+        assert_invariant(!mToken || !gl.program);
+
+        if (UTILS_UNLIKELY(mToken && !gl.program)) {
+            // first time a program is used
             initialize(*gld);
+        }
+
+        if (UTILS_UNLIKELY(!gl.program)) {
+            // compilation failed (token should be null)
+            assert_invariant(!mToken);
+            return false;
         }
 
         context.useProgram(gl.program);
@@ -74,6 +84,7 @@ public:
 
             updateSamplers(gld);
         }
+        return true;
     }
 
     // For ES2 only
