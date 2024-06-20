@@ -1021,6 +1021,21 @@ public:
     void resetBackendState() noexcept;
 #endif
 
+    /**
+     * Get the current time. This is a convenience function that simply returns the
+     * time in nanosecond since epoch of std::chrono::steady_clock.
+     * A possible implementation is:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *     return std::chrono::steady_clock::now().time_since_epoch().count();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * @return current time in nanosecond since epoch of std::chrono::steady_clock.
+     * @see Renderer::beginFrame()
+     */
+    static uint64_t getSteadyClockTimeNano() noexcept;
+
+
     DebugRegistry& getDebugRegistry() noexcept;
 
 protected:

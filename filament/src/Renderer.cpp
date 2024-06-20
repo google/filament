@@ -89,4 +89,8 @@ void Renderer::renderStandaloneView(View const* view) {
     downcast(this)->renderStandaloneView(downcast(view));
 }
 
+void Renderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
+    downcast(this)->setVsyncTime(steadyClockTimeNano);
+}
+
 } // namespace filament
