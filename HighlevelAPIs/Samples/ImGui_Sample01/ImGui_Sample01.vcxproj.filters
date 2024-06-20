@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="sample01.cpp" />
+    <ClCompile Include="..\imgui_common\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_common\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_common\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_common\imgui_tables.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_common\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_common\glfw_vulkan\imgui_impl_glfw.cpp">
+      <Filter>imgui_backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_common\glfw_vulkan\imgui_impl_vulkan.cpp">
+      <Filter>imgui_backend</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{f4059672-8b9a-496f-98fe-b35e1d6f2869}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui_backend">
+      <UniqueIdentifier>{7b02dd07-a8b0-4694-8bf0-8b23f2c64c5b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\imgui_common\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\imstb_rectpack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\imstb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\imstb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\glfw_vulkan\imgui_impl_glfw.h">
+      <Filter>imgui_backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_common\glfw_vulkan\imgui_impl_vulkan.h">
+      <Filter>imgui_backend</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
