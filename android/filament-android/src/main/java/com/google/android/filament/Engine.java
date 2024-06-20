@@ -159,9 +159,12 @@ public class Engine {
     };
 
     /**
-     * The type of technique for stereoscopic rendering
+     * The type of technique for stereoscopic rendering. (Note that the materials used will need to be
+     * compatible with the chosen technique.)
      */
     public enum StereoscopicType {
+        /** No stereoscopic rendering. */
+        NONE,
         /** Stereoscopic rendering is performed using instanced rendering technique. */
         INSTANCED,
         /** Stereoscopic rendering is performed using the multiview feature from the graphics backend. */
@@ -405,7 +408,7 @@ public class Engine {
          *
          * @see View#setStereoscopicOptions
          */
-        public StereoscopicType stereoscopicType = StereoscopicType.INSTANCED;
+        public StereoscopicType stereoscopicType = StereoscopicType.NONE;
 
         /**
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
@@ -1286,6 +1289,18 @@ public class Engine {
         nSetPaused(getNativeObject(), paused);
     }
 
+    /**
+     * Switch the command queue to unprotected mode. Protected mode can be activated via
+     * Renderer::beginFrame() using a protected SwapChain.
+
+     * @see Renderer
+     * @see SwapChain
+     */
+    public void unprotected() {
+        nUnprotected(getNativeObject());
+    }
+
+
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1363,6 +1378,7 @@ public class Engine {
     private static native void nFlush(long nativeEngine);
     private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);
+    private static native void nUnprotected(long nativeEngine);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);

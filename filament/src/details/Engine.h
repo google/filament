@@ -184,8 +184,8 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
-        return getDriver().isStereoSupported(stereoscopicType);
+    bool isStereoSupported() const noexcept {
+        return getDriver().isStereoSupported();
     }
 
     static size_t getMaxStereoscopicEyes() noexcept {
@@ -406,6 +406,8 @@ public:
         getDriver().purge();
     }
 
+    void unprotected() noexcept;
+
     void setAutomaticInstancingEnabled(bool enable) noexcept {
         // instancing is not allowed at feature level 0
         if (hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
@@ -539,6 +541,7 @@ private:
 
     mutable FMaterial const* mDefaultMaterial = nullptr;
     mutable FMaterial const* mSkyboxMaterial = nullptr;
+    mutable FSwapChain* mUnprotectedDummySwapchain = nullptr;
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
@@ -595,12 +598,13 @@ public:
             // capture to file. At the moment, only supported by the Metal backend.
             bool doFrameCapture = false;
             bool disable_buffer_padding = false;
+            bool disable_subpasses = false;
         } renderer;
         struct {
             bool debug_froxel_visualization = false;
         } lighting;
         struct {
-            bool combine_multiview_images = true;
+            bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
     } debug;

@@ -78,6 +78,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 case StereoscopicType::MULTIVIEW:
                     out << "#extension GL_OVR_multiview2 : require\n";
                     break;
+                case StereoscopicType::NONE:
+                    break;
                 }
             }
             break;
@@ -99,6 +101,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 case StereoscopicType::MULTIVIEW:
                     out << "#extension GL_OVR_multiview2 : require\n";
                     break;
+                case StereoscopicType::NONE:
+                    break;
                 }
             }
             break;
@@ -119,6 +123,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             break;
         case StereoscopicType::MULTIVIEW:
             out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            break;
+        case StereoscopicType::NONE:
             break;
         }
     }
@@ -216,6 +222,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         break;
     case StereoscopicType::MULTIVIEW:
         generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
+        break;
+    case StereoscopicType::NONE:
         break;
     }
 

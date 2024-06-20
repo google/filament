@@ -50,8 +50,8 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     };
     VkImage image;
     VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &image);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS,
-            "Unable to create image: ", static_cast<int32_t>(result));
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "Unable to create image: " << static_cast<int32_t>(result);
 
     // Allocate memory for the VkImage and bind it.
     VkDeviceMemory imageMemory;
@@ -61,8 +61,8 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
-            "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.");
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -70,9 +70,9 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
             .memoryTypeIndex = memoryTypeIndex,
     };
     result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to allocate image memory.");
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory.";
     result = vkBindImageMemory(device, image, imageMemory, 0);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to bind image.");
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image.";
     return std::tuple(image, imageMemory);
 }
 
@@ -153,7 +153,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // the number of images, though there may be limits related to the total amount of memory used
     // by presentable images."
     if (maxImageCount != 0 && desiredImageCount > maxImageCount) {
-        utils::slog.e << "Swap chain does not support " << desiredImageCount << " images."
+        FVK_LOGE << "Swap chain does not support " << desiredImageCount << " images."
                       << utils::io::endl;
         desiredImageCount = caps.minImageCount;
     }
@@ -178,8 +178,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             break;
         }
     }
-    ASSERT_POSTCONDITION(surfaceFormat.format != VK_FORMAT_UNDEFINED,
-            "Cannot find suitable swapchain format");
+    FILAMENT_CHECK_POSTCONDITION(surfaceFormat.format != VK_FORMAT_UNDEFINED)
+            << "Cannot find suitable swapchain format";
 
     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
@@ -193,8 +193,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             break;
         }
     }
-    ASSERT_POSTCONDITION(foundSuitablePresentMode,
-            "Desired present mode is not supported by this device.");
+    FILAMENT_CHECK_POSTCONDITION(foundSuitablePresentMode)
+            << "Desired present mode is not supported by this device.";
 
     // Create the low-level swap chain.
     if (caps.currentExtent.width == VULKAN_UNDEFINED_EXTENT
@@ -237,8 +237,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             .oldSwapchain = mSwapchain,
     };
     VkResult result = vkCreateSwapchainKHR(mDevice, &createInfo, VKALLOC, &mSwapchain);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceFormatsKHR error: %d",
-            static_cast<int32_t>(result));
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkGetPhysicalDeviceSurfaceFormatsKHR error: " << static_cast<int32_t>(result);
 
     mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
@@ -246,7 +246,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
 
-    slog.i << "vkCreateSwapchain"
+    FVK_LOGI << "vkCreateSwapchain"
            << ": " << mSwapChainBundle.extent.width << "x" << mSwapChainBundle.extent.height << ", "
            << surfaceFormat.format << ", " << surfaceFormat.colorSpace << ", "
            << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
@@ -266,7 +266,7 @@ VkResult VulkanPlatformSurfaceSwapChain::acquire(VkSemaphore clientSignal, uint3
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
     // log messages or a loop of re-creations.
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         mSuboptimal = true;
     }
     return result;
@@ -288,7 +288,7 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
     // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
         mSuboptimal = true;
     }
     return result;

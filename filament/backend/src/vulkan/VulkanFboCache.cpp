@@ -64,8 +64,8 @@ VulkanFboCache::VulkanFboCache(VkDevice device)
     : mDevice(device) {}
 
 VulkanFboCache::~VulkanFboCache() {
-    ASSERT_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty(),
-            "Please explicitly call terminate() while the VkDevice is still alive.");
+    FILAMENT_CHECK_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty())
+            << "Please explicitly call terminate() while the VkDevice is still alive.";
 }
 
 VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
@@ -95,7 +95,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
     }
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
-    utils::slog.d << "Creating framebuffer " << config.width << "x" << config.height << " "
+    FVK_LOGD << "Creating framebuffer " << config.width << "x" << config.height << " "
         << "for render pass " << config.renderPass << ", "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (config.depth ? 1 : 0) << ", "
@@ -115,7 +115,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
     mRenderPassRefCount[info.renderPass]++;
     VkFramebuffer framebuffer;
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
-    ASSERT_POSTCONDITION(!error, "Unable to create framebuffer.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create framebuffer.";
     mFramebufferCache[config] = {framebuffer, mCurrentTime};
     return framebuffer;
 }
@@ -306,11 +306,11 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     // Finally, create the VkRenderPass.
     VkRenderPass renderPass;
     VkResult error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
-    ASSERT_POSTCONDITION(!error, "Unable to create render pass.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create render pass.";
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
     #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
-    utils::slog.d << "Created render pass " << renderPass << " with "
+    FVK_LOGD << "Created render pass " << renderPass << " with "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (hasDepth ? 1 : 0) << ", "
         << "colorAttachmentCount[0] = " << subpasses[0].colorAttachmentCount

@@ -578,7 +578,7 @@ void FilamentApp::loadDirt(const Config& config) {
 }
 
 void FilamentApp::initSDL() {
-    ASSERT_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0, "SDL_Init Failure");
+    FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -619,6 +619,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         engineConfig.stereoscopicType = Engine::StereoscopicType::INSTANCED;
 #elif defined (FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
         engineConfig.stereoscopicType = Engine::StereoscopicType::MULTIVIEW;
+#else
+        engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
 #endif
 
         if (backend == Engine::Backend::VULKAN) {

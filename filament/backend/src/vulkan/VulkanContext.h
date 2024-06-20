@@ -120,14 +120,23 @@ public:
     }
 
     inline bool isImageCubeArraySupported() const noexcept {
-        return mPhysicalDeviceFeatures.imageCubeArray;
+        return mPhysicalDeviceFeatures.imageCubeArray == VK_TRUE;
     }
 
     inline bool isDebugMarkersSupported() const noexcept {
         return mDebugMarkersSupported;
     }
+
     inline bool isDebugUtilsSupported() const noexcept {
         return mDebugUtilsSupported;
+    }
+
+    inline bool isMultiviewEnabled() const noexcept {
+        return mMultiviewEnabled;
+    }
+
+    inline bool isClipDistanceSupported() const noexcept {
+        return mPhysicalDeviceFeatures.shaderClipDistance == VK_TRUE;
     }
 
 private:
@@ -136,6 +145,7 @@ private:
     VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
+    bool mMultiviewEnabled = false;
 
     VkFormatList mDepthStencilFormats;
     VkFormatList mBlittableDepthStencilFormats;

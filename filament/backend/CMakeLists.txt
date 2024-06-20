@@ -66,7 +66,7 @@ set(PRIVATE_HDRS
 # OpenGL / OpenGL ES Sources
 # ==================================================================================================
 
-if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
+if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
     list(APPEND SRCS
             include/backend/platforms/OpenGLPlatform.h
             src/opengl/gl_headers.cpp
@@ -417,7 +417,9 @@ if (APPLE OR LINUX)
         test/test_MissingRequiredAttributes.cpp
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
+        test/test_Callbacks.cpp
         test/test_MRT.cpp
+        test/test_PushConstants.cpp
         test/test_LoadImage.cpp
         test/test_StencilBuffer.cpp
         test/test_Scissor.cpp

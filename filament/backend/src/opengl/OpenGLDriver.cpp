@@ -241,7 +241,15 @@ OpenGLDriver::~OpenGLDriver() noexcept { // NOLINT(modernize-use-equals-default)
 }
 
 Dispatcher OpenGLDriver::getDispatcher() const noexcept {
-    return ConcreteDispatcher<OpenGLDriver>::make();
+    auto dispatcher = ConcreteDispatcher<OpenGLDriver>::make();
+    if (mContext.isES2()) {
+        dispatcher.draw2_ = +[](Driver& driver, CommandBase* base, intptr_t* next){
+            using Cmd = COMMAND_TYPE(draw2);
+            OpenGLDriver& concreteDriver = static_cast<OpenGLDriver&>(driver);
+            Cmd::execute(&OpenGLDriver::draw2GLES2, concreteDriver, base, next);
+        };
+    }
+    return dispatcher;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -924,16 +932,18 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 }
 
 void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
-    // NOTE: this is called from draw() and must be as efficient as possible.
+    // NOTE: this is called often and must be as efficient as possible.
 
     auto& gl = mContext;
 
+#ifndef NDEBUG
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
         GLint vaoBinding;
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
         assert_invariant(vaoBinding == (GLint)rp->gl.vao[gl.contextIndex]);
     }
+#endif
 
     if (UTILS_LIKELY(rp->gl.vertexBufferVersion == vb->bufferObjectsVersion &&
                      rp->gl.stateVersion == gl.state.age)) {
@@ -949,7 +959,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
             // if a buffer is defined it must not be invalid.
             assert_invariant(vb->gl.buffers[bi]);
 
-            // if w're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
+            // if we're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
@@ -1484,9 +1494,8 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
-    ASSERT_POSTCONDITION(sc->swapChain,
-            "createSwapChain(%p, 0x%lx) failed. See logs for details.",
-            nativeWindow, flags);
+    FILAMENT_CHECK_POSTCONDITION(sc->swapChain) << "createSwapChain(" << nativeWindow << ", "
+                                                << flags << ") failed. See logs for details.";
 #endif
 
     // See if we need the emulated rec709 output conversion
@@ -1505,9 +1514,9 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 #if !defined(__EMSCRIPTEN__)
     // note: in practice this should never happen on Android
-    ASSERT_POSTCONDITION(sc->swapChain,
-            "createSwapChainHeadless(%u, %u, 0x%lx) failed. See logs for details.",
-            width, height, flags);
+    FILAMENT_CHECK_POSTCONDITION(sc->swapChain)
+            << "createSwapChainHeadless(" << width << ", " << height << ", " << flags
+            << ") failed. See logs for details.";
 #endif
 
     // See if we need the emulated rec709 output conversion
@@ -2040,19 +2049,19 @@ bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
 
-bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+bool OpenGLDriver::isStereoSupported() {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    switch (stereoscopicType) {
-    case backend::StereoscopicType::INSTANCED:
-        return mContext.ext.EXT_clip_cull_distance;
-    case backend::StereoscopicType::MULTIVIEW:
-        return mContext.ext.OVR_multiview2;
-    default:
-        return false;
+    switch (mDriverConfig.stereoscopicType) {
+        case backend::StereoscopicType::INSTANCED:
+            return mContext.ext.EXT_clip_cull_distance;
+        case backend::StereoscopicType::MULTIVIEW:
+            return mContext.ext.OVR_multiview2;
+        case backend::StereoscopicType::NONE:
+            return false;
     }
 }
 
@@ -3459,7 +3468,7 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+        CallbackHandler* handler, utils::Invocable<void(void)>&& callback) {
     DEBUG_MARKER()
 }
 
@@ -3596,13 +3605,11 @@ void OpenGLDriver::resolve(
     assert_invariant(s);
     assert_invariant(d);
 
-    ASSERT_PRECONDITION(
-            d->width == s->width && d->height == s->height,
-            "invalid resolve: src and dst sizes don't match");
+    FILAMENT_CHECK_PRECONDITION(d->width == s->width && d->height == s->height)
+            << "invalid resolve: src and dst sizes don't match";
 
-    ASSERT_PRECONDITION(s->samples > 1 && d->samples == 1,
-            "invalid resolve: src.samples=%u, dst.samples=%u",
-            +s->samples, +d->samples);
+    FILAMENT_CHECK_PRECONDITION(s->samples > 1 && d->samples == 1)
+            << "invalid resolve: src.samples=" << +s->samples << ", dst.samples=" << +d->samples;
 
     blit(   dst, dstLevel, dstLayer, {},
             src, srcLevel, srcLayer, {},
@@ -3758,12 +3765,12 @@ void OpenGLDriver::blitDEPRECATED(TargetBufferFlags buffers,
     UTILS_UNUSED_IN_RELEASE auto& gl = mContext;
     assert_invariant(!gl.isES2());
 
-    ASSERT_PRECONDITION(buffers == TargetBufferFlags::COLOR0,
-            "blitDEPRECATED only supports COLOR0");
+    FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
+            << "blitDEPRECATED only supports COLOR0";
 
-    ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
-                        dstRect.left >= 0 && dstRect.bottom >= 0,
-            "Source and destination rects must be positive.");
+    FILAMENT_CHECK_PRECONDITION(
+            srcRect.left >= 0 && srcRect.bottom >= 0 && dstRect.left >= 0 && dstRect.bottom >= 0)
+            << "Source and destination rects must be positive.";
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 
@@ -3837,7 +3844,7 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
 #endif
 }
 
-void OpenGLDriver::bindPipeline(PipelineState state) {
+void OpenGLDriver::bindPipeline(PipelineState const& state) {
     DEBUG_MARKER()
     auto& gl = mContext;
     setRasterState(state.rasterState);
@@ -3875,20 +3882,35 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
         return;
     }
 
-    if (UTILS_LIKELY(instanceCount <= 1)) {
-        glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
-    } else {
-        assert_invariant(!mContext.isES2());
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
-                rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
-                (GLsizei)instanceCount);
+    assert_invariant(!mContext.isES2());
+    glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
+            rp->gl.getIndicesType(),
+            reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
+            (GLsizei)instanceCount);
 #endif
+
+#if FILAMENT_ENABLE_MATDBG
+    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+#else
+    CHECK_GL_ERROR(utils::slog.e)
+#endif
+}
+
+void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
+    if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
+        return;
     }
 
-#ifdef FILAMENT_ENABLE_MATDBG
+    assert_invariant(mContext.isES2());
+    assert_invariant(instanceCount == 1);
+
+    glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
+            reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
+
+
+#if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
 #else
     CHECK_GL_ERROR(utils::slog.e)
@@ -3907,7 +3929,11 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
     state.vertexBufferInfo = rp->vbih;
     bindPipeline(state);
     bindRenderPrimitive(rph);
-    draw2(indexOffset, indexCount, instanceCount);
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        draw2GLES2(indexOffset, indexCount, instanceCount);
+    } else {
+        draw2(indexOffset, indexCount, instanceCount);
+    }
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
@@ -3934,7 +3960,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
     glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
 #endif // BACKEND_OPENGL_LEVEL_GLES31
 
-#ifdef FILAMENT_ENABLE_MATDBG
+#if FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
 #else
     CHECK_GL_ERROR(utils::slog.e)

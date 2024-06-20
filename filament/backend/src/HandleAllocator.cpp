@@ -113,9 +113,9 @@ HandleBase::HandleId HandleAllocator<P0, P1, P2>::allocateHandleSlow(size_t size
 
     HandleBase::HandleId id = (++mId) | HANDLE_HEAP_FLAG;
 
-    ASSERT_POSTCONDITION(mId < HANDLE_HEAP_FLAG,
+    FILAMENT_CHECK_POSTCONDITION(mId < HANDLE_HEAP_FLAG) <<
             "No more Handle ids available! This can happen if HandleAllocator arena has been full"
-            " for a while. Please increase FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB");
+            " for a while. Please increase FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB";
 
     mOverflowMap.emplace(id, p);
     lock.unlock();

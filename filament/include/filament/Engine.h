@@ -315,7 +315,7 @@ public:
          *
          * @see View::setStereoscopicOptions
          */
-        StereoscopicType stereoscopicType = StereoscopicType::INSTANCED;
+        StereoscopicType stereoscopicType = StereoscopicType::NONE;
 
         /*
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
@@ -929,6 +929,14 @@ public:
      * which may increase latency in certain applications.</p>
      */
     void pumpMessageQueues();
+
+    /**
+     * Switch the command queue to unprotected mode. Protected mode can be activated via
+     * Renderer::beginFrame() using a protected SwapChain.
+     * @see Renderer
+     * @see SwapChain
+     */
+    void unprotected() noexcept;
 
     /**
      * Returns the default Material.

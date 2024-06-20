@@ -22,6 +22,7 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
+#include <backend/Platform.h>
 #include <backend/PresentCallable.h>
 
 #include <utils/Invocable.h>
@@ -117,7 +118,7 @@ static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
         "The number of buffer objects that can be attached to a VertexBuffer must be "
         "less than or equal to the maximum number of vertex attributes.");
 
-static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 10;  // This is guaranteed by OpenGL ES.
+static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 9;   // This is guaranteed by OpenGL ES.
 static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 4;   // This is guaranteed by OpenGL ES.
 
 /**
@@ -1250,13 +1251,7 @@ enum class Workaround : uint16_t {
     POWER_VR_SHADER_WORKAROUNDS,
 };
 
-//! The type of technique for stereoscopic rendering
-enum class StereoscopicType : uint8_t {
-    // Stereoscopic rendering is performed using instanced rendering technique.
-    INSTANCED,
-    // Stereoscopic rendering is performed using the multiview feature from the graphics backend.
-    MULTIVIEW,
-};
+using StereoscopicType = backend::Platform::StereoscopicType;
 
 } // namespace filament::backend
 

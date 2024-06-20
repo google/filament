@@ -86,7 +86,7 @@ VulkanTimestamps::VulkanTimestamps(VkDevice device) : mDevice(device) {
     std::unique_lock<utils::Mutex> lock(mMutex);
     tqpCreateInfo.queryCount = mUsed.size() * 2;
     VkResult result = vkCreateQueryPool(mDevice, &tqpCreateInfo, VKALLOC, &mPool);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateQueryPool error.");
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateQueryPool error.";
     mUsed.reset();
 }
 
@@ -100,7 +100,7 @@ std::tuple<uint32_t, uint32_t> VulkanTimestamps::getNextQuery() {
 	    return std::make_tuple(timerIndex * 2, timerIndex * 2 + 1);
         }
     }
-    utils::slog.e << "More than " << maxTimers << " timers are not supported." << utils::io::endl;
+    FVK_LOGE << "More than " << maxTimers << " timers are not supported." << utils::io::endl;
     return std::make_tuple(0, 1);
 }
 
@@ -134,8 +134,8 @@ VulkanTimestamps::QueryResult VulkanTimestamps::getResult(VulkanTimerQuery const
     VkResult vkresult =
             vkGetQueryPoolResults(mDevice, mPool, index, 2, dataSize, (void*) result.data(),
                     stride, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-    ASSERT_POSTCONDITION(vkresult == VK_SUCCESS || vkresult == VK_NOT_READY,
-            "vkGetQueryPoolResults error: %d", static_cast<int32_t>(vkresult));
+    FILAMENT_CHECK_POSTCONDITION(vkresult == VK_SUCCESS || vkresult == VK_NOT_READY)
+            << "vkGetQueryPoolResults error: " << static_cast<int32_t>(vkresult);
     if (vkresult == VK_NOT_READY) {
         return {0, 0, 0, 0};
     }

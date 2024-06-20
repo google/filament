@@ -113,7 +113,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physicalDevice, mVkFormat, &props);
         if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-            utils::slog.w << "Texture usage is SAMPLEABLE but format " << mVkFormat << " is not "
+            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << mVkFormat << " is not "
                     "sampleable with optimal tiling." << utils::io::endl;
         }
 #endif
@@ -163,7 +163,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     VkResult error = vkCreateImage(mDevice, &imageInfo, VKALLOC, &mTextureImage);
     if (error || FVK_ENABLED(FVK_DEBUG_TEXTURE)) {
-        utils::slog.d << "vkCreateImage: "
+        FVK_LOGD << "vkCreateImage: "
             << "image = " << mTextureImage << ", "
             << "result = " << error << ", "
             << "handle = " << utils::io::hex << mTextureImage << utils::io::dec << ", "
@@ -177,7 +177,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             << "target = " << static_cast<int>(target) <<", "
             << "format = " << mVkFormat << utils::io::endl;
     }
-    ASSERT_POSTCONDITION(!error, "Unable to create image.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create image.";
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs = {};
@@ -186,8 +186,8 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
-            "VulkanTexture: unable to find a memory type that meets requirements.");
+    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
+            << "VulkanTexture: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -195,9 +195,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         .memoryTypeIndex = memoryTypeIndex,
     };
     error = vkAllocateMemory(mDevice, &allocInfo, nullptr, &mTextureImageMemory);
-    ASSERT_POSTCONDITION(!error, "Unable to allocate image memory.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to allocate image memory.";
     error = vkBindImageMemory(mDevice, mTextureImage, mTextureImageMemory, 0);
-    ASSERT_POSTCONDITION(!error, "Unable to bind image.");
+    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to bind image.";
 
     uint32_t layerCount = 0;
     if (target == SamplerType::SAMPLER_CUBEMAP) {
@@ -450,7 +450,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
     }
 
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-    utils::slog.d << "transition texture=" << mTextureImage
+    FVK_LOGD << "transition texture=" << mTextureImage
                   << " (" << range.baseArrayLayer
                   << "," << range.baseMipLevel << ")"
                   << " count=(" << range.layerCount
@@ -539,7 +539,7 @@ void VulkanTexture::print() const {
                 layer < (mPrimaryViewRange.baseArrayLayer + mPrimaryViewRange.layerCount) &&
                 level >= mPrimaryViewRange.baseMipLevel &&
                 level < (mPrimaryViewRange.baseMipLevel + mPrimaryViewRange.levelCount);
-            utils::slog.d << "[" << mTextureImage << "]: (" << layer << "," << level
+            FVK_LOGD << "[" << mTextureImage << "]: (" << layer << "," << level
                           << ")=" << getLayout(layer, level)
                           << " primary=" << primary
                           << utils::io::endl;
@@ -548,7 +548,7 @@ void VulkanTexture::print() const {
 
     for (auto view: mCachedImageViews) {
         auto& range = view.first.range;
-        utils::slog.d << "[" << mTextureImage << ", imageView=" << view.second << "]=>"
+        FVK_LOGD << "[" << mTextureImage << ", imageView=" << view.second << "]=>"
                       << " (" << range.baseArrayLayer << "," << range.baseMipLevel << ")"
                       << " count=(" << range.layerCount << "," << range.levelCount << ")"
                       << " aspect=" << range.aspectMask << " viewType=" << view.first.type

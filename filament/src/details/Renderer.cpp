@@ -95,6 +95,8 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.renderer.doFrameCapture);
     debugRegistry.registerProperty("d.renderer.disable_buffer_padding",
             &engine.debug.renderer.disable_buffer_padding);
+    debugRegistry.registerProperty("d.renderer.disable_subpasses",
+            &engine.debug.renderer.disable_subpasses);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture",
             &engine.debug.shadowmap.display_shadow_texture);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_scale",
@@ -387,8 +389,8 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
         PixelBufferDescriptor&& buffer) {
 #ifndef NDEBUG
     const bool withinFrame = mSwapChain != nullptr;
-    ASSERT_PRECONDITION(withinFrame, "readPixels() on a SwapChain must be called after"
-                                     " beginFrame() and before endFrame().");
+    FILAMENT_CHECK_PRECONDITION(withinFrame) << "readPixels() on a SwapChain must be called after"
+                                                " beginFrame() and before endFrame().";
 #endif
     RendererUtils::readPixels(mEngine.getDriverApi(), mRenderTargetHandle,
             xoffset, yoffset, width, height, std::move(buffer));
@@ -454,8 +456,8 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
     using namespace std::chrono;
 
-    ASSERT_PRECONDITION(view->getRenderTarget(),
-            "View \"%s\" must have a RenderTarget associated", view->getName());
+    FILAMENT_CHECK_PRECONDITION(view->getRenderTarget())
+            << "View \"" << view->getName() << "\" must have a RenderTarget associated";
 
     if (UTILS_LIKELY(view->getScene())) {
         mPreviousRenderTargets.clear();
@@ -596,12 +598,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     hasColorGrading &&
                     msaaSampleCount <= 1 &&
                     !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
-                    driver.isFrameBufferFetchSupported(),
+                    driver.isFrameBufferFetchSupported() &&
+                    !engine.debug.renderer.disable_subpasses,
             .customResolve =
                     msaaOptions.customResolve &&
                     msaaSampleCount > 1 &&
                     hasColorGrading &&
-                    driver.isFrameBufferFetchMultiSampleSupported(),
+                    driver.isFrameBufferFetchMultiSampleSupported() &&
+                    !engine.debug.renderer.disable_subpasses,
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
             .dithering = hasDithering,
@@ -1230,9 +1234,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     if (UTILS_UNLIKELY(outputIsSwapChain && view.isStencilBufferEnabled())) {
         assert_invariant(mSwapChain);
-        ASSERT_PRECONDITION(mSwapChain->hasStencilBuffer(),
-                "View has stencil buffer enabled, but SwapChain does not have "
-                "SwapChain::CONFIG_HAS_STENCIL_BUFFER flag set.");
+        FILAMENT_CHECK_PRECONDITION(mSwapChain->hasStencilBuffer())
+                << "View has stencil buffer enabled, but SwapChain does not have "
+                   "SwapChain::CONFIG_HAS_STENCIL_BUFFER flag set.";
     }
 
     if (UTILS_UNLIKELY(engine.debug.shadowmap.display_shadow_texture)) {

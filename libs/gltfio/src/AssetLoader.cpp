@@ -214,8 +214,8 @@ struct FAssetLoader : public AssetLoader {
             mEngine(*config.engine),
             mDefaultNodeName(config.defaultNodeName) {
         if (config.ext) {
-            ASSERT_PRECONDITION(AssetConfigurationExtended::isSupported(),
-                    "Extend asset loading is not supported on this platform");
+            FILAMENT_CHECK_PRECONDITION(AssetConfigurationExtended::isSupported())
+                    << "Extend asset loading is not supported on this platform";
             mLoaderExtended = std::make_unique<AssetLoaderExtended>(
                     *config.ext, config.engine, mMaterials);
         }
@@ -534,12 +534,6 @@ void FAssetLoader::createInstances(size_t numInstances, FFilamentAsset* fAsset) 
     std::partition(fAsset->mEntities.begin(), fAsset->mEntities.end(), [&rm](Entity a) {
         return rm.hasComponent(a);
     });
-
-    if (mError) {
-        destroyAsset(fAsset);
-        fAsset = nullptr;
-        mError = false;
-    }
 }
 
 void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,

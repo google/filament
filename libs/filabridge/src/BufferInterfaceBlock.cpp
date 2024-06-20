@@ -86,16 +86,16 @@ BufferInterfaceBlock BufferInterfaceBlock::Builder::build() {
     });
 
     // if there is one, check it's the last entry
-    ASSERT_PRECONDITION(pos == mEntries.end() || pos == mEntries.end() - 1,
-            "the variable-size array must be the last entry");
+    FILAMENT_CHECK_PRECONDITION(pos == mEntries.end() || pos == mEntries.end() - 1)
+            << "the variable-size array must be the last entry";
 
     // if we have a variable size array, we can't be a UBO
-    ASSERT_PRECONDITION(pos == mEntries.end() || mTarget == Target::SSBO,
-            "variable size arrays not supported for UBOs");
+    FILAMENT_CHECK_PRECONDITION(pos == mEntries.end() || mTarget == Target::SSBO)
+            << "variable size arrays not supported for UBOs";
 
     // std430 not available for UBOs
-    ASSERT_PRECONDITION(mAlignment == Alignment::std140 || mTarget == Target::SSBO,
-            "UBOs must use std140");
+    FILAMENT_CHECK_PRECONDITION(mAlignment == Alignment::std140 || mTarget == Target::SSBO)
+            << "UBOs must use std140";
 
     return BufferInterfaceBlock(*this);
 }
@@ -166,8 +166,7 @@ ssize_t BufferInterfaceBlock::getFieldOffset(std::string_view name, size_t index
 BufferInterfaceBlock::FieldInfo const* BufferInterfaceBlock::getFieldInfo(
         std::string_view name) const {
     auto pos = mInfoMap.find(name);
-    ASSERT_PRECONDITION(pos != mInfoMap.end(),
-            "uniform named \"%.*s\" not found", name.size(), name.data());
+    FILAMENT_CHECK_PRECONDITION(pos != mInfoMap.end()) << "uniform named \"%.*s\" not found";
     return &mFieldInfoList[pos->second];
 }
 

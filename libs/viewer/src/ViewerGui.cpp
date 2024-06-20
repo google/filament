@@ -387,6 +387,9 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
     mSettings.view.ssao.enabled = true;
     mSettings.view.bloom.enabled = true;
 
+    DebugRegistry& debug = mEngine->getDebugRegistry();
+    *debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images") = true;
+
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(mSettings.lighting.sunlightColor)
@@ -1094,9 +1097,18 @@ void ViewerGui::updateUserInterface() {
             ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(), cstrings.size());
         }
 
-        ImGui::Checkbox("Instanced stereo", &mSettings.view.stereoscopicOptions.enabled);
-        ImGui::SliderFloat(
-                "Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f, 1.0f);
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED)                                                \
+        || defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        ImGui::Checkbox("Stereo mode", &mSettings.view.stereoscopicOptions.enabled);
+#if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+        ImGui::Indent();
+        ImGui::Checkbox("Combine Multiview Images",
+                debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
+        ImGui::Unindent();
+#endif
+#endif
+        ImGui::SliderFloat("Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f,
+                1.0f);
 
         float toeInDegrees = mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
         ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");

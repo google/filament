@@ -34,25 +34,32 @@ int getVertexIndex() {
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 #define MAX_SKINNING_BUFFER_WIDTH 2048u
-vec3 mulBoneNormal(vec3 n, uint i) {
+vec3 mulBoneNormal(vec3 n, uint j) {
 
     highp mat3 cof;
 
-    // the first 8 elements of the cofactor matrix are stored as fp16
-    highp vec2 x0y0 = unpackHalf2x16(bonesUniforms.bones[i].cof[0]);
-    highp vec2 z0x1 = unpackHalf2x16(bonesUniforms.bones[i].cof[1]);
-    highp vec2 y1z1 = unpackHalf2x16(bonesUniforms.bones[i].cof[2]);
-    highp vec2 x2y2 = unpackHalf2x16(bonesUniforms.bones[i].cof[3]);
-
     // the last element must be computed by hand
-    highp float a = bonesUniforms.bones[i].transform[0][0];
-    highp float b = bonesUniforms.bones[i].transform[0][1];
-    highp float d = bonesUniforms.bones[i].transform[1][0];
-    highp float e = bonesUniforms.bones[i].transform[1][1];
+    highp float a = bonesUniforms.bones[j].transform[0][0];
+    highp float b = bonesUniforms.bones[j].transform[0][1];
+    highp float c = bonesUniforms.bones[j].transform[0][2];
+    highp float d = bonesUniforms.bones[j].transform[1][0];
+    highp float e = bonesUniforms.bones[j].transform[1][1];
+    highp float f = bonesUniforms.bones[j].transform[1][2];
+    highp float g = bonesUniforms.bones[j].transform[2][0];
+    highp float h = bonesUniforms.bones[j].transform[2][1];
+    highp float i = bonesUniforms.bones[j].transform[2][2];
 
-    cof[0].xyz = vec3(x0y0, z0x1.x);
-    cof[1].xyz = vec3(z0x1.y, y1z1);
-    cof[2].xyz = vec3(x2y2, a * e - b * d);
+    cof[0] = bonesUniforms.bones[j].cof0;
+
+    cof[1].xyz = vec3(
+            bonesUniforms.bones[j].cof1x,
+            a * i - c * g,
+            c * d - a * f);
+
+    cof[2].xyz = vec3(
+            d * h - e * g,
+            b * g - a * h,
+            a * e - b * d);
 
     return normalize(cof * n);
 }
@@ -146,7 +153,8 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
 #define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
 
 void morphPosition(inout vec4 p) {
-    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -159,7 +167,8 @@ void morphPosition(inout vec4 p) {
 
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
-    ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
+    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];

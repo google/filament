@@ -44,6 +44,7 @@ set_target_properties(uberarchive PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libuberarchive.a)
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
 set(GLTFIO_SRCS
         ${GLTFIO_DIR}/include/gltfio/Animator.h
@@ -119,7 +120,6 @@ set(GLTFIO_INCLUDE_DIRS
         ../../third_party/cgltf
         ../../third_party/meshoptimizer/src
         ../../third_party/robin-map
-        ../../third_party/hat-trie
         ../../third_party/stb
         ../../libs/utils/include
         ../../libs/ktxreader/include

@@ -157,6 +157,8 @@ public:
     void setMorphWeights(Instance instance, float const* weights, size_t count, size_t offset);
     void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
             FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count);
+    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            size_t offset, size_t count);
     MorphTargetBuffer* getMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     size_t getMorphTargetCount(Instance instance) const noexcept;
 
@@ -308,10 +310,10 @@ FILAMENT_DOWNCAST(RenderableManager)
 
 void FRenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) {
     if (instance) {
-        ASSERT_PRECONDITION(
-                static_cast<Visibility const&>(
-                        mManager[instance].visibility).geometryType == GeometryType::DYNAMIC,
-                "This renderable has staticBounds enabled; its AABB cannot change.");
+        FILAMENT_CHECK_PRECONDITION(
+                static_cast<Visibility const&>(mManager[instance].visibility).geometryType ==
+                GeometryType::DYNAMIC)
+                << "This renderable has staticBounds enabled; its AABB cannot change.";
         mManager[instance].aabb = aabb;
     }
 }
@@ -387,9 +389,8 @@ void FRenderableManager::setSkinning(Instance instance, bool enable) {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
 
-        ASSERT_PRECONDITION(
-                visibility.geometryType != GeometryType::STATIC || !enable,
-                "Skinning can't be used with STATIC geometry");
+        FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
+                << "Skinning can't be used with STATIC geometry";
 
         visibility.skinning = enable;
     }
@@ -399,9 +400,8 @@ void FRenderableManager::setMorphing(Instance instance, bool enable) {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
 
-        ASSERT_PRECONDITION(
-                visibility.geometryType != GeometryType::STATIC || !enable,
-                "Morphing can't be used with STATIC geometry");
+        FILAMENT_CHECK_PRECONDITION(visibility.geometryType != GeometryType::STATIC || !enable)
+                << "Morphing can't be used with STATIC geometry";
 
         visibility.morphing = enable;
     }

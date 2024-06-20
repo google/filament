@@ -7,6 +7,23 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.53.0
+
+- engine: fix skinning normals with large transforms (b/342459864) [⚠️ **New Material Version**]
+
+## v1.52.3
+
+
+## v1.52.2
+
+
+## v1.52.1
+
+- Add instructions for using Mesa for software rasterization
+
+## v1.51.9
+
+
 ## v1.51.8
 
 - filagui: Fix regression which broke WebGL

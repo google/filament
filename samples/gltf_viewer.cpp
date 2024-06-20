@@ -856,6 +856,8 @@ int main(int argc, char** argv) {
                 }
                 ImGui::Checkbox("Disable buffer padding",
                         debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
+                ImGui::Checkbox("Disable sub-passes",
+                        debug.getPropertyAddress<bool>("d.renderer.disable_subpasses"));
                 ImGui::Checkbox("Camera at origin",
                         debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
@@ -893,11 +895,6 @@ int main(int argc, char** argv) {
                                     "d.shadowmap.display_shadow_texture_channel"), 0, 3);
                     ImGui::Unindent();
                 }
-#if defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
-                ImGui::Checkbox("Combine Multiview Images",
-                    debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
-#endif
-
                 bool debugFroxelVisualization;
                 if (debug.getProperty("d.lighting.debug_froxel_visualization",
                         &debugFroxelVisualization)) {

@@ -299,6 +299,16 @@ public:
         }
     }
 
+    UTILS_NOINLINE
+    void shrink_to_fit() {
+        if (size() < capacity()) {
+            FixedCapacityVector t(construct_with_capacity, size(), allocator());
+            t.mSize = size();
+            std::uninitialized_move(begin(), end(), t.begin());
+            this->swap(t);
+        }
+    }
+
 private:
     enum construct_with_capacity_tag{ construct_with_capacity };
 
@@ -318,9 +328,9 @@ private:
 
     iterator assertCapacityForSize(size_type s) {
         if constexpr(CapacityCheck || FILAMENT_FORCE_CAPACITY_CHECK) {
-            ASSERT_PRECONDITION(capacity() >= s,
-                    "capacity exceeded: requested size %lu, available capacity %lu.",
-                    (unsigned long)s, (unsigned long)capacity());
+            FILAMENT_CHECK_PRECONDITION(capacity() >= s)
+                    << "capacity exceeded: requested size " << (unsigned long)s
+                    << "u, available capacity " << (unsigned long)capacity() << "u.";
         }
         return end();
     }

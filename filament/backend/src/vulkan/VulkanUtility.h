@@ -56,13 +56,13 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 // considered, but because the "variadic" part of the vk methods (i.e. the inputs) are before the
 // non-variadic parts, this breaks the template type matching logic. Hence, we use a macro approach
 // here.
-#define EXPAND_ENUM(...)\
-    uint32_t size = 0;\
-    VkResult result = func(__VA_ARGS__, nullptr);\
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate size error");\
-    utils::FixedCapacityVector<OutType> ret(size);\
-    result = func(__VA_ARGS__, ret.data());\
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate error");\
+#define EXPAND_ENUM(...)                                                          \
+    uint32_t size = 0;                                                            \
+    VkResult result = func(__VA_ARGS__, nullptr);                                 \
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "enumerate size error"; \
+    utils::FixedCapacityVector<OutType> ret(size);                                \
+    result = func(__VA_ARGS__, ret.data());                                       \
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "enumerate error";      \
     return std::move(ret);
 
 #define EXPAND_ENUM_NO_ARGS() EXPAND_ENUM(&size)

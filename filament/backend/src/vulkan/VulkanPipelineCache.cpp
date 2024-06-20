@@ -79,10 +79,6 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     commands->setPipeline(cacheEntry->handle);
 }
 
-void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept {
-    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
-}
-
 VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() noexcept {
     assert_invariant(mPipelineRequirements.shaders[0] && "Vertex shader is not bound.");
     assert_invariant(mPipelineRequirements.layout && "No pipeline layout specified");
@@ -234,14 +230,15 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     PipelineCacheEntry cacheEntry = {};
 
     #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-        utils::slog.d << "vkCreateGraphicsPipelines with shaders = ("
-                << shaderStages[0].module << ", " << shaderStages[1].module << ")" << utils::io::endl;
+        FVK_LOGD << "vkCreateGraphicsPipelines with shaders = ("
+                 << shaderStages[0].module << ", " << shaderStages[1].module << ")"
+                 << utils::io::endl;
     #endif
     VkResult error = vkCreateGraphicsPipelines(mDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo,
             VKALLOC, &cacheEntry.handle);
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
-        utils::slog.e << "vkCreateGraphicsPipelines error " << error << utils::io::endl;
+        FVK_LOGE << "vkCreateGraphicsPipelines error " << error << utils::io::endl;
         return nullptr;
     }
 
@@ -256,7 +253,7 @@ void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
     if (mPipelineRequirements.shaders[0] == VK_NULL_HANDLE ||
             mPipelineRequirements.shaders[1] == VK_NULL_HANDLE) {
-        utils::slog.e << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
+        FVK_LOGE << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
     }
 #endif
 }
@@ -306,7 +303,6 @@ void VulkanPipelineCache::gc() noexcept {
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     mBoundPipeline = {};
-    mCurrentScissor = {};
 
     // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
 
