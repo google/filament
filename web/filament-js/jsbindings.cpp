@@ -388,6 +388,8 @@ class_<Engine>("Engine")
         return Engine::create();
     }, allow_raw_pointers())
 
+    .function("getSteadyClockTimeNano", &Engine::getSteadyClockTimeNano)
+
     .function("unprotected", &Engine::unprotected)
 
     .function("enableAccurateTranslations", &Engine::enableAccurateTranslations)

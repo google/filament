@@ -261,8 +261,8 @@ public:
      * @note
      * All calls to render() must happen *after* beginFrame().
      *
-     * @see
-     * endFrame()
+     * @see endFrame()
+     * @see Engine::getSteadyClockTimeNano()
      */
     bool beginFrame(SwapChain* UTILS_NONNULL swapChain,
             uint64_t vsyncSteadyClockTimeNano = 0u);

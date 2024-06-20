@@ -1292,7 +1292,6 @@ public class Engine {
     /**
      * Switch the command queue to unprotected mode. Protected mode can be activated via
      * Renderer::beginFrame() using a protected SwapChain.
-
      * @see Renderer
      * @see SwapChain
      */
@@ -1300,6 +1299,13 @@ public class Engine {
         nUnprotected(getNativeObject());
     }
 
+    /**
+     * Get the current time. This is a convenience function that simply returns the
+     * time in nanosecond since epoch of std::chrono::steady_clock.
+     * @return current time in nanosecond since epoch of std::chrono::steady_clock.
+     * @see Renderer#beginFrame
+     */
+    public static native long getSteadyClockTimeNano();
 
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
