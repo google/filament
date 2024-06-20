@@ -38,6 +38,12 @@ struct VulkanTexture : public HwTexture, VulkanResource {
             TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated = false,
             VkComponentMapping swizzle = {});
 
+    // constructor for creating a texture view
+    VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
+            VmaAllocator allocator, VulkanCommands* commands,
+            VulkanTexture const* src, uint8_t baseLevel, uint8_t levelCount,
+            VulkanStagePool& stagePool);
+
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     // The texture will never destroy the given VkImage, but it does manages its subresources.
     VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanCommands* commands, VkImage image,

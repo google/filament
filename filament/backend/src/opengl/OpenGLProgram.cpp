@@ -17,6 +17,7 @@
 #include "OpenGLProgram.h"
 
 #include "GLUtils.h"
+#include "GLTexture.h"
 #include "OpenGLDriver.h"
 #include "ShaderCompilerService.h"
 
@@ -24,8 +25,9 @@
 #include <backend/Program.h>
 #include <backend/Handle.h>
 
-#include <utils/debug.h>
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/Systrace.h>

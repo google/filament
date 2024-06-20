@@ -17,6 +17,7 @@
 #include "OpenGLDriver.h"
 
 #include "CommandStreamDispatcher.h"
+#include "GLTexture.h"
 #include "GLUtils.h"
 #include "OpenGLContext.h"
 #include "OpenGLDriverFactory.h"
@@ -40,6 +41,7 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/DriverApi.h"
 
+#include <type_traits>
 #include <utils/BitmaskEnum.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
@@ -512,6 +514,10 @@ Handle<HwTexture> OpenGLDriver::createTextureSwizzledS() noexcept {
     return initHandle<GLTexture>();
 }
 
+Handle<HwTexture> OpenGLDriver::createTextureViewS() noexcept {
+    return initHandle<GLTexture>();
+}
+
 Handle<HwTexture> OpenGLDriver::importTextureS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -897,6 +903,45 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
         glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, (GLint)getSwizzleChannel(a));
     }
 #endif
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+    DEBUG_MARKER()
+    GLTexture const* const src = handle_cast<GLTexture const*>(srch);
+
+    FILAMENT_CHECK_PRECONDITION(any(src->usage & TextureUsage::SAMPLEABLE))
+            << "TextureView can only be created on a SAMPLEABLE texture";
+
+    FILAMENT_CHECK_PRECONDITION(!src->gl.imported)
+            << "TextureView can't be created on imported textures";
+
+    if (!src->ref) {
+        // lazily create the ref handle, because most textures will never get a texture view
+        src->ref = initHandle<GLTextureRef>();
+    }
+
+    GLTexture* t = construct<GLTexture>(th,
+            src->target,
+            src->levels,
+            src->samples,
+            src->width, src->height, src->depth,
+            src->format,
+            src->usage);
+
+    t->gl = src->gl;
+    t->gl.sidecarRenderBufferMS = 0;
+    t->gl.sidecarSamples = 1;
+    t->gl.baseLevel = (int8_t)std::min(127, src->gl.baseLevel + baseLevel);
+    t->gl.maxLevel  = (int8_t)std::min(127, t->gl.baseLevel + levelCount - 1);
+
+    // increase reference count to this texture handle
+    t->ref = src->ref;
+    GLTextureRef* ref = handle_cast<GLTextureRef*>(t->ref);
+    assert_invariant(ref);
+    ref->count++;
 
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -1653,16 +1698,35 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         auto& gl = mContext;
         GLTexture* t = handle_cast<GLTexture*>(th);
+
         if (UTILS_LIKELY(!t->gl.imported)) {
             if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
-                gl.unbindTexture(t->gl.target, t->gl.id);
-                if (UTILS_UNLIKELY(t->hwStream)) {
-                    detachStream(t);
+                // drop a reference
+                uint16_t count = 0;
+                if (UTILS_UNLIKELY(t->ref)) {
+                    // the common case is that we don't have a ref handle
+                    GLTextureRef* const ref = handle_cast<GLTextureRef*>(t->ref);
+                    count = --(ref->count);
+                    if (count == 0) {
+                        destruct(t->ref, ref);
+                    }
                 }
-                if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-                    mPlatform.destroyExternalImage(t->externalTexture);
+                if (count == 0) {
+                    // if this was the last reference, we destroy the refcount as well as
+                    // the GL texture name itself.
+                    gl.unbindTexture(t->gl.target, t->gl.id);
+                    if (UTILS_UNLIKELY(t->hwStream)) {
+                        detachStream(t);
+                    }
+                    if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+                        mPlatform.destroyExternalImage(t->externalTexture);
+                    } else {
+                        glDeleteTextures(1, &t->gl.id);
+                    }
                 } else {
-                    glDeleteTextures(1, &t->gl.id);
+                    // The Handle<HwTexture> is always destroyed. For extra precaution we also
+                    // check that the GLTexture has a trivial destructor.
+                    static_assert(std::is_trivially_destructible_v<GLTexture>);
                 }
             } else {
                 assert_invariant(t->gl.target == GL_RENDERBUFFER);
@@ -2364,23 +2428,14 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescript
 void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
     DEBUG_MARKER()
 
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     auto& gl = mContext;
     if (!gl.isES2()) {
         GLTexture* t = handle_cast<GLTexture*>(th);
-        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-        gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
-
         // Must fit within int8_t.
         assert_invariant(minLevel <= 0x7f && maxLevel <= 0x7f);
-
         t->gl.baseLevel = (int8_t)minLevel;
-        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
-
         t->gl.maxLevel = (int8_t)maxLevel; // NOTE: according to the GL spec, the default value of this 1000
-        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
     }
-#endif
 }
 
 void OpenGLDriver::update3DImage(Handle<HwTexture> th,
@@ -2414,13 +2469,6 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
 
     t->gl.baseLevel = 0;
     t->gl.maxLevel = static_cast<int8_t>(t->levels - 1);
-
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    if (!gl.isES2()) {
-        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
-        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
-    }
-#endif
 
     glGenerateMipmap(t->gl.target);
 
@@ -2531,20 +2579,16 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         }
     }
 
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!gl.isES2()) {
         // Update the base/max LOD, so we don't access undefined LOD. this allows the app to
         // specify levels as they become available.
         if (int8_t(level) < t->gl.baseLevel) {
             t->gl.baseLevel = int8_t(level);
-            glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
         }
         if (int8_t(level) > t->gl.maxLevel) {
             t->gl.maxLevel = int8_t(level);
-            glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
         }
     }
-#endif
 
     scheduleDestroy(std::move(p));
 
@@ -2632,20 +2676,16 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
         }
     }
 
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!gl.isES2()) {
         // Update the base/max LOD, so we don't access undefined LOD. this allows the app to
         // specify levels as they become available.
         if (int8_t(level) < t->gl.baseLevel) {
             t->gl.baseLevel = int8_t(level);
-            glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
         }
         if (int8_t(level) > t->gl.maxLevel) {
             t->gl.maxLevel = int8_t(level);
-            glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
         }
     }
-#endif
 
     scheduleDestroy(std::move(p));
 
@@ -3763,26 +3803,19 @@ void OpenGLDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept {
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     auto& gl = mContext;
     if (!gl.isES2()) {
         if (texture && any(texture->usage & TextureUsage::SAMPLEABLE)) {
             if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
-                bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, texture);
-                gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
                 if (targetLevel < texture->gl.baseLevel) {
                     texture->gl.baseLevel = targetLevel;
-                    glTexParameteri(texture->gl.target, GL_TEXTURE_BASE_LEVEL, targetLevel);
                 }
                 if (targetLevel > texture->gl.maxLevel) {
                     texture->gl.maxLevel = targetLevel;
-                    glTexParameteri(texture->gl.target, GL_TEXTURE_MAX_LEVEL, targetLevel);
                 }
             }
-            CHECK_GL_ERROR(utils::slog.e)
         }
     }
-#endif
 }
 
 void OpenGLDriver::bindPipeline(PipelineState const& state) {
@@ -3863,7 +3896,8 @@ void OpenGLDriver::updateDescriptors(utils::bitset8 invalidDescriptorSets) noexc
                 ds->validate(mHandleAllocator, mCurrentSetLayout[set]);
             }
 #endif
-            ds->bind(context, boundProgram, set, entry.offsets.data(), offsetOnly[set]);
+            ds->bind(context, mHandleAllocator, boundProgram,
+                    set, entry.offsets.data(), offsetOnly[set]);
         }
     });
     mInvalidDescriptorSetBindings.clear();

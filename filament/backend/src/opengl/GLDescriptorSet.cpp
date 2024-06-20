@@ -20,6 +20,7 @@
 #include "GLDescriptorSetLayout.h"
 #include "GLTexture.h"
 #include "GLUtils.h"
+#include "OpenGLDriver.h"
 #include "OpenGLContext.h"
 #include "OpenGLProgram.h"
 
@@ -168,9 +169,16 @@ void GLDescriptorSet::update(OpenGLContext& gl,
 
             arg.target = t ? t->gl.target : 0;
             arg.id = t ? t->gl.id : 0;
-            arg.anisotropy = float(1u << params.anisotropyLog2);
             if constexpr (std::is_same_v<T, Sampler> ||
                           std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
+                if constexpr (std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
+                    arg.anisotropy = float(1u << params.anisotropyLog2);
+                }
+                if (t) {
+                    arg.ref = t->ref;
+                    arg.baseLevel = t->gl.baseLevel;
+                    arg.maxLevel = t->gl.maxLevel;
+                }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
                 arg.sampler = gl.getSampler(params);
 #else
@@ -186,8 +194,36 @@ void GLDescriptorSet::update(OpenGLContext& gl,
     }, descriptors[binding].desc);
 }
 
-void GLDescriptorSet::bind(OpenGLContext& gl, OpenGLProgram const& p, descriptor_set_t set,
-        uint32_t const* offsets, bool offsetsOnly) const noexcept {
+template<typename T>
+void GLDescriptorSet::updateTextureLod(OpenGLContext& gl,
+        HandleAllocatorGL& handleAllocator, GLuint unit, T const& desc) noexcept {
+    // The common case is that we don't have a ref handle (we only have one if
+    // the texture ever had a View on it.
+    GLTextureRef* const ref = handleAllocator.handle_cast<GLTextureRef*>(desc.ref);
+    if (UTILS_UNLIKELY((desc.baseLevel != ref->baseLevel
+                        || desc.maxLevel != ref->maxLevel))) {
+        // If we have views, then it's still uncommon that we'll switch often
+        // handle the case where we reset to the original texture
+        GLint baseLevel = desc.baseLevel;
+        GLint maxLevel = desc.maxLevel;
+        if (baseLevel > maxLevel) {
+            baseLevel = 0;
+            maxLevel = 1000; // per OpenGL spec
+        }
+        // that is very unfortunate that we have to call activeTexture here
+        gl.activeTexture(unit);
+        glTexParameteri(desc.target, GL_TEXTURE_BASE_LEVEL, desc.baseLevel);
+        glTexParameteri(desc.target, GL_TEXTURE_MAX_LEVEL,  desc.maxLevel);
+        ref->baseLevel = desc.baseLevel;
+        ref->maxLevel = desc.maxLevel;
+    }
+}
+
+void GLDescriptorSet::bind(
+        OpenGLContext& gl,
+        HandleAllocatorGL& handleAllocator,
+        OpenGLProgram const& p,
+        descriptor_set_t set, uint32_t const* offsets, bool offsetsOnly) const noexcept {
     // TODO: check that offsets is sized correctly
     size_t dynamicOffsetIndex = 0;
 
@@ -197,7 +233,8 @@ void GLDescriptorSet::bind(OpenGLContext& gl, OpenGLProgram const& p, descriptor
     }
 
     // loop only over the active indices for this program
-    activeDescriptorBindings.forEachSetBit([this, &gl, &p, set, offsets, &dynamicOffsetIndex]
+    activeDescriptorBindings.forEachSetBit(
+            [this,&gl, &handleAllocator, &p, set, offsets, &dynamicOffsetIndex]
             (size_t binding) {
 
         // This would fail here if we're trying to set a descriptor that doesn't exist in the
@@ -205,7 +242,9 @@ void GLDescriptorSet::bind(OpenGLContext& gl, OpenGLProgram const& p, descriptor
         assert_invariant(binding < descriptors.size());
 
         auto const& entry = descriptors[binding];
-        std::visit([&gl, &p, &dynamicOffsetIndex, set, binding, offsets](auto&& arg) {
+        std::visit(
+                [&gl, &handleAllocator, &p, &dynamicOffsetIndex, set, binding, offsets]
+                (auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, Buffer>) {
                 GLuint const bindingPoint = p.getBufferBinding(set, binding);
@@ -232,6 +271,9 @@ void GLDescriptorSet::bind(OpenGLContext& gl, OpenGLProgram const& p, descriptor
                 if (arg.target) {
                     gl.bindTexture(unit, arg.target, arg.id);
                     gl.bindSampler(unit, arg.sampler);
+                    if (UTILS_UNLIKELY(arg.ref)) {
+                        updateTextureLod(gl, handleAllocator, unit, arg);
+                    }
                 } else {
                     gl.unbindTextureUnit(unit);
                 }
@@ -240,11 +282,14 @@ void GLDescriptorSet::bind(OpenGLContext& gl, OpenGLProgram const& p, descriptor
                 if (arg.target) {
                     gl.bindTexture(unit, arg.target, arg.id);
                     gl.bindSampler(unit, arg.sampler);
+                    if (UTILS_UNLIKELY(arg.ref)) {
+                        updateTextureLod(gl, handleAllocator, unit, arg);
+                    }
 #if defined(GL_EXT_texture_filter_anisotropic)
                     // Driver claims to support anisotropic filtering, but it fails when set on
                     // the sampler, we have to set it on the texture instead.
                     glTexParameterf(arg.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
-                            std::min(gl.gets.max_anisotropy, arg.anisotropy));
+                            std::min(gl.gets.max_anisotropy, float(arg.anisotropy)));
 #endif
                 } else {
                     gl.unbindTextureUnit(unit);

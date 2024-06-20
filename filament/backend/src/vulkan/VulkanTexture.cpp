@@ -231,6 +231,24 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     transitionLayout(&commandsBuf, mFullViewRange, imgutil::getDefaultLayout(imageInfo.usage));
 }
 
+
+VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
+        VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
+        VulkanTexture const* src, uint8_t baseLevel, uint8_t levelCount,
+        VulkanStagePool& stagePool)
+        : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+                src->format, src->usage),
+          VulkanResource(VulkanResourceType::TEXTURE),
+          mVkFormat(src->mVkFormat),
+          mViewType(src->mViewType),
+          mSwizzle(src->mSwizzle),
+          mStagePool(stagePool),
+          mDevice(device),
+          mAllocator(allocator),
+          mCommands(commands) {
+    // TODO: implement me
+}
+
 VulkanTexture::~VulkanTexture() {
     if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);

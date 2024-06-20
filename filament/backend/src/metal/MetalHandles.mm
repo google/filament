@@ -615,6 +615,18 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     }
 }
 
+MetalTexture::MetalTexture(MetalContext& context,
+        MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept
+        : HwTexture(src->target, src->levels, src->samples,
+                src->width, src->height, src->depth, src->format, src->usage),
+          context(context),
+          externalImage(context) {
+    minLod = src->minLod + baseLevel;
+    maxLod = minLod + levelCount;
+    // FIXME: this doesn't keep the original swizzling
+    texture = createTextureViewWithLodRange(src->texture, minLod, maxLod);
+}
+
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         id<MTLTexture> metalTexture) noexcept

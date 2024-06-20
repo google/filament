@@ -196,6 +196,11 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
         uint32_t, depth,
         backend::TextureUsage, usage)
 
+DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureView,
+        backend::TextureHandle, texture,
+        uint8_t, baseLevel,
+        uint8_t, levelCount)
+
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureSwizzled,
         backend::SamplerType, target,
         uint8_t, levels,
