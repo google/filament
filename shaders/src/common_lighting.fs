@@ -18,6 +18,11 @@ struct PixelParams {
     float perceptualRoughness;
     float perceptualRoughnessUnclamped;
     vec3  f0;
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    float f90;
+    float specular;
+    vec3  specularColor;
+#endif
     float roughness;
     vec3  dfg;
     vec3  energyCompensation;

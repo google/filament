@@ -137,7 +137,11 @@ vec3 specularDFG(const PixelParams pixel) {
 #if defined(SHADING_MODEL_CLOTH)
     return pixel.f0 * pixel.dfg.z;
 #else
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR) || defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0) * pixel.specular;
+#else
     return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0);
+#endif
 #endif
 }
 
@@ -663,7 +667,6 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     // Combine all terms
     // Note: iblLuminance is already premultiplied by the exposure
-
     color.rgb += Fr + Fd;
 #if defined(MATERIAL_HAS_REFRACTION)
     color.rgb += Ft;

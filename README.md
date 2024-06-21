@@ -176,6 +176,7 @@ steps:
   - [x] KHR_materials_unlit
   - [x] KHR_materials_variants
   - [x] KHR_materials_volume
+  - [x] KHR_materials_specular
   - [x] KHR_mesh_quantization
   - [x] KHR_texture_basisu
   - [x] KHR_texture_transform

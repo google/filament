@@ -1,8 +1,8 @@
+ShadingModel=lit
+
 # Required Aspects
-ShadingModel = ${SHADINGMODEL}
 BlendingMode = ${BLENDING}
 
-# Core Features
 VertexColors = optional
 BaseColorTexture = optional
 NormalTexture = optional
@@ -11,11 +11,14 @@ EmissiveTexture = optional
 MetallicRoughnessTexture = optional
 TextureTransforms = optional
 
+# KHR_materials_specular Features
+Specular = optional
+SpecularTexture = optional
+SpecularColorTexture = optional
+
 # ClearCoat Features
 ClearCoat = optional
 ClearCoatTexture = optional
-ClearCoatRoughnessTexture = optional
-ClearCoatNormalTexture = optional
 
 # Sheen Features
 Sheen = unsupported
@@ -24,14 +27,9 @@ SheenRoughnessTexture = unsupported
 
 # Transmission and IOR Features
 Transmission = unsupported
-Ior = unsupported
+Ior = optional
 TransmissionTexture = unsupported
 
 # Volume Features
 Volume = unsupported
 VolumeThicknessTexture = unsupported
-
-# Specular Features
-Specular = unsupported
-SpecularTexture = unsupported
-SpecularColorTexture = unsupported

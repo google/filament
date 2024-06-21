@@ -1222,6 +1222,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
     auto trConfig = inputMat->transmission;
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
+    auto spConfig = inputMat->specular;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
@@ -1238,7 +1239,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
         ccConfig.clearcoat_normal_texture.has_transform ||
         shConfig.sheen_color_texture.has_transform ||
         shConfig.sheen_roughness_texture.has_transform ||
-        trConfig.transmission_texture.has_transform;
+        trConfig.transmission_texture.has_transform ||
+        spConfig.specular_color_texture.has_transform ||
+        spConfig.specular_texture.has_transform;
 
     MaterialKey matkey {
         .doubleSided = !!inputMat->double_sided,
@@ -1273,6 +1276,11 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
         .hasSheen = !!inputMat->has_sheen,
         .hasIOR = !!inputMat->has_ior,
         .hasVolume = !!inputMat->has_volume,
+        .hasSpecular = !!inputMat->has_specular,
+        .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
+        .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
+        .specularTextureUV = (uint8_t) spConfig.specular_texture.texcoord,
+        .specularColorTextureUV = (uint8_t) spConfig.specular_color_texture.texcoord,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1361,6 +1369,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto trConfig = inputMat->transmission;
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
+    auto spConfig = inputMat->specular;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -1558,6 +1567,30 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     if (mi->getMaterial()->hasParameter("emissiveStrength")) {
         mi->setParameter("emissiveStrength", inputMat->has_emissive_strength ?
                 inputMat->emissive_strength.emissive_strength : 1.0f);
+    }
+
+    if (matkey.hasSpecular) {
+        const float* s = spConfig.specular_color_factor;
+        mi->setParameter("specularColorFactor", float3{s[0], s[1], s[2]});
+        mi->setParameter("specularStrength", spConfig.specular_factor);
+
+        if (matkey.hasSpecularColorTexture) {
+            fAsset->addTextureBinding(mi, "specularColorMap", spConfig.specular_color_texture.texture, sRGB);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform uvt = spConfig.specular_color_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("specularColorUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasSpecularTexture) {
+            bool sameTexture = spConfig.specular_color_texture.texture == spConfig.specular_texture.texture;
+            fAsset->addTextureBinding(mi, "specularMap", spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform uvt = spConfig.specular_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("specularUvMatrix", uvmat);
+            }
+        }
     }
 
     *cacheEntry = { mi, *uvmap };
