@@ -2,9 +2,6 @@
 // Image based lighting configuration
 //------------------------------------------------------------------------------
 
-// Number of spherical harmonics bands (1, 2 or 3)
-#define SPHERICAL_HARMONICS_BANDS           3
-
 // IBL integration algorithm
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
 #define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
@@ -44,21 +41,25 @@ vec3 prefilteredDFG(float perceptualRoughness, float NoV) {
 //------------------------------------------------------------------------------
 
 vec3 Irradiance_SphericalHarmonics(const vec3 n) {
-    return max(
-          frameUniforms.iblSH[0]
-#if SPHERICAL_HARMONICS_BANDS >= 2
-        + frameUniforms.iblSH[1] * (n.y)
-        + frameUniforms.iblSH[2] * (n.z)
-        + frameUniforms.iblSH[3] * (n.x)
-#endif
-#if SPHERICAL_HARMONICS_BANDS >= 3
-        + frameUniforms.iblSH[4] * (n.y * n.x)
-        + frameUniforms.iblSH[5] * (n.y * n.z)
-        + frameUniforms.iblSH[6] * (3.0 * n.z * n.z - 1.0)
-        + frameUniforms.iblSH[7] * (n.z * n.x)
-        + frameUniforms.iblSH[8] * (n.x * n.x - n.y * n.y)
-#endif
-        , 0.0);
+    vec3 sphericalHarmonics = frameUniforms.iblSH[0];
+
+    if (CONFIG_SH_BANDS_COUNT >= 2) {
+        sphericalHarmonics +=
+                  frameUniforms.iblSH[1] * (n.y)
+                + frameUniforms.iblSH[2] * (n.z)
+                + frameUniforms.iblSH[3] * (n.x);
+    }
+
+    if (CONFIG_SH_BANDS_COUNT >= 3) {
+        sphericalHarmonics +=
+                  frameUniforms.iblSH[4] * (n.y * n.x)
+                + frameUniforms.iblSH[5] * (n.y * n.z)
+                + frameUniforms.iblSH[6] * (3.0 * n.z * n.z - 1.0)
+                + frameUniforms.iblSH[7] * (n.z * n.x)
+                + frameUniforms.iblSH[8] * (n.x * n.x - n.y * n.y);
+    }
+
+    return max(sphericalHarmonics, 0.0);
 }
 
 vec3 Irradiance_RoughnessOne(const vec3 n) {
