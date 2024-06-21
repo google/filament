@@ -1353,8 +1353,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
     if (any(t->usage & TextureUsage::SAMPLEABLE)) {
         // In a sense, drawing to a texture level is similar to calling setTextureData on it; in
         // both cases, we update the base/max LOD to give shaders access to levels as they become
-        // available.  Note that this can only expand the LOD range (never shrink it), and that
-        // users can override this range by calling setMinMaxLevels().
+        // available.  Note that this can only expand the LOD range (never shrink it).
         updateTextureLodRange(t, (int8_t)binfo.level);
     }
 
@@ -2423,19 +2422,6 @@ void OpenGLDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
 void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescriptor&& data) {
     // TODO: goes away
-}
-
-void OpenGLDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    DEBUG_MARKER()
-
-    auto& gl = mContext;
-    if (!gl.isES2()) {
-        GLTexture* t = handle_cast<GLTexture*>(th);
-        // Must fit within int8_t.
-        assert_invariant(minLevel <= 0x7f && maxLevel <= 0x7f);
-        t->gl.baseLevel = (int8_t)minLevel;
-        t->gl.maxLevel = (int8_t)maxLevel; // NOTE: according to the GL spec, the default value of this 1000
-    }
 }
 
 void OpenGLDriver::update3DImage(Handle<HwTexture> th,
@@ -3727,8 +3713,7 @@ void OpenGLDriver::blit(
     if (any(d->usage & TextureUsage::SAMPLEABLE)) {
         // In a sense, blitting to a texture level is similar to calling setTextureData on it; in
         // both cases, we update the base/max LOD to give shaders access to levels as they become
-        // available.  Note that this can only expand the LOD range (never shrink it), and that
-        // users can override this range by calling setMinMaxLevels().
+        // available.  Note that this can only expand the LOD range (never shrink it).
         updateTextureLodRange(d, int8_t(dstLevel));
     }
 

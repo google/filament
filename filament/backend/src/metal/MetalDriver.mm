@@ -1058,14 +1058,6 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
-void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    auto tex = handle_cast<MetalTexture>(th);
-    tex->setLodRange(minLevel, maxLevel);
-
-    printf("setMinMaxLevels(th = %d, minLevel = %d, maxLevel = %d)\n", th.getId(), minLevel,
-            maxLevel);
-}
-
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,

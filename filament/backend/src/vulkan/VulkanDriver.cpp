@@ -1141,11 +1141,6 @@ void VulkanDriver::resetBufferObject(Handle<HwBufferObject> boh) {
     // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
 }
 
-void VulkanDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    auto texture = mResourceAllocator.handle_cast<VulkanTexture*>(th);
-    texture->setPrimaryRange(minLevel, maxLevel);
-}
-
 void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
         uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {

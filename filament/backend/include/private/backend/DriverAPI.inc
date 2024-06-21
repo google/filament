@@ -379,11 +379,6 @@ DECL_DRIVER_API_N(updateSamplerGroup,
         backend::SamplerGroupHandle, ubh,
         backend::BufferDescriptor&&, data)
 
-DECL_DRIVER_API_N(setMinMaxLevels,
-        backend::TextureHandle, th,
-        uint32_t, minLevel,
-        uint32_t, maxLevel)
-
 DECL_DRIVER_API_N(update3DImage,
         backend::TextureHandle, th,
         uint32_t, level,

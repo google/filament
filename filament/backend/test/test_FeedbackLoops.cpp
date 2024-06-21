@@ -170,7 +170,6 @@ TEST_F(BackendTest, FeedbackLoops) {
                          DescriptorFlags::NONE, 0
                  }}});
 
-        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
 
         TrianglePrimitive const triangle(getDriverApi());
 
@@ -178,17 +177,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
         Handle<HwTexture> const texture = api.createTexture(
             SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-                .filterMag = SamplerMagFilter::LINEAR,
-                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-        });
 
         // Create ubo
         auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-        api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
-
-        api.bindDescriptorSet(descriptorSet, 1, {});
 
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
@@ -237,7 +229,16 @@ TEST_F(BackendTest, FeedbackLoops) {
                 const uint32_t sourceLevel = targetLevel - 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
-                getDriverApi().setMinMaxLevels(texture, sourceLevel, sourceLevel);
+
+                auto textureView = api.createTextureView(texture, sourceLevel, 1);
+                DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                });
+                api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
+                api.bindDescriptorSet(descriptorSet, 1, {});
+
                 uploadUniforms(getDriverApi(), ubuffer, {
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
@@ -246,6 +247,8 @@ TEST_F(BackendTest, FeedbackLoops) {
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
+                api.destroyTexture(textureView);
+                api.destroyDescriptorSet(descriptorSet);
             }
 
             // Upsample passes
@@ -256,7 +259,16 @@ TEST_F(BackendTest, FeedbackLoops) {
                 const uint32_t sourceLevel = targetLevel + 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
-                getDriverApi().setMinMaxLevels(texture, sourceLevel, sourceLevel);
+
+                auto textureView = api.createTextureView(texture, sourceLevel, 1);
+                DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                });
+                api.updateDescriptorSetBuffer(descriptorSet, 1, ubuffer, 0, sizeof(MaterialParams));
+                api.bindDescriptorSet(descriptorSet, 1, {});
+
                 uploadUniforms(getDriverApi(), ubuffer, {
                     .fbWidth = float(params.viewport.width),
                     .fbHeight = float(params.viewport.height),
@@ -265,9 +277,9 @@ TEST_F(BackendTest, FeedbackLoops) {
                 api.beginRenderPass(renderTargets[targetLevel], params);
                 api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
+                api.destroyTexture(textureView);
+                api.destroyDescriptorSet(descriptorSet);
             }
-
-            getDriverApi().setMinMaxLevels(texture, 0, 0x7f);
 
             // Read back the render target corresponding to the base level.
             //
@@ -285,7 +297,6 @@ TEST_F(BackendTest, FeedbackLoops) {
             getDriver().purge();
         }
 
-        api.destroyDescriptorSet(descriptorSet);
         api.destroyDescriptorSetLayout(descriptorSetLayout);
         api.destroyProgram(program);
         api.destroySwapChain(swapChain);

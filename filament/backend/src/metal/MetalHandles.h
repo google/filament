@@ -258,7 +258,6 @@ public:
     // - calling loadImage
     // - calling generateMipmaps
     // - using the texture as a render target attachment
-    // - calling setMinMaxLevels
     // A texture's available mips are consistent throughout a render pass.
     void setLodRange(uint16_t minLevel, uint16_t maxLevel);
     void extendLodRangeTo(uint16_t level);

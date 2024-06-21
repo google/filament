@@ -533,14 +533,14 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 auto in = resources.getTexture(data.depth);
                 auto& material = getPostProcessMaterial("mipmapDepth");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("depth", in, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 // The first mip already exists, so we process n-1 lods
                 for (size_t level = 0; level < levelCount - 1; level++) {
                     auto out = resources.getRenderPassInfo(level);
-                    driver.setMinMaxLevels(in, level, level);
+                    auto th = driver.createTextureView(in, level, 1);
+                    mi->setParameter("depth", th, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     commitAndRender(out, material, driver);
+                    driver.destroyTexture(th);
                 }
-                driver.setMinMaxLevels(in, 0, levelCount - 1);
             });
 
     return { depth, structurePass->picking };
@@ -1644,27 +1644,25 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMipmap");
                 FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("color", inOutColor, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->setParameter("coc",   inOutCoc,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
-                mi->commit(driver);
-                mi->use(driver);
 
                 auto const pipeline = material.getPipelineState(mEngine, variant);
 
                 for (size_t level = 0 ; level < mipmapCount - 1u ; level++) {
                     const float w = FTexture::valueForLevel(level, desc.width);
                     const float h = FTexture::valueForLevel(level, desc.height);
-
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
-                    driver.setMinMaxLevels(inOutColor, level, level);
-                    driver.setMinMaxLevels(inOutCoc, level, level);
+                    auto inColor = driver.createTextureView(inOutColor, level, 1);
+                    auto inCoc = driver.createTextureView(inOutCoc, level, 1);
+                    mi->setParameter("color", inColor, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                    mi->setParameter("coc",   inCoc,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("weightScale", 0.5f / float(1u << level));   // FIXME: halfres?
                     mi->setParameter("texelSize", float2{ 1.0f / w, 1.0f / h });
                     mi->commit(driver);
+                    mi->use(driver);
                     render(out, pipeline, driver);
+                    driver.destroyTexture(inColor);
+                    driver.destroyTexture(inCoc);
                 }
-                driver.setMinMaxLevels(inOutColor, 0, mipmapCount - 1u);
-                driver.setMinMaxLevels(inOutCoc, 0, mipmapCount - 1u);
             });
 
     /*
@@ -2084,17 +2082,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                 auto* mi9 = material9.getMaterialInstance(mEngine);
                 auto* mi13 = material13.getMaterialInstance(mEngine);
 
-                mi9->setParameter("source", hwOut, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
-
-                mi13->setParameter("source", hwOut, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
-
-                mi9->commit(driver);
-                mi13->commit(driver);
-
                 // PipelineState for both materials should be the same
                 auto const pipeline = material9.getPipelineState(mEngine);
 
@@ -2107,11 +2094,15 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     // 9 samples filter.
                     auto vp = resources.getRenderPassInfo(data.outRT[i-1]).params.viewport;
                     auto* const mi = (vp.width & 1 || vp.height & 1) ? mi13 : mi9;
+                    auto hwOutView = driver.createTextureView(hwOut, i - 1, 1);
+                    mi->setParameter("source", hwOutView, {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+                    mi->commit(driver);
                     mi->use(driver);
-                    driver.setMinMaxLevels(hwOut, i - 1, i - 1); // this offsets baseLevel to i-1
                     render(hwDstRT, pipeline, driver);
+                    driver.destroyTexture(hwOutView);
                 }
-                driver.setMinMaxLevels(hwOut, 0, inoutBloomOptions.levels - 1);
             });
 
     // output of bloom downsample pass becomes input of next (flare) pass
@@ -2135,11 +2126,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("bloomUpsample");
                 auto* mi = material.getMaterialInstance(mEngine);
-                mi->setParameter("source", hwOut, {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST});
-                mi->commit(driver);
-                mi->use(driver);
 
                 auto pipeline = material.getPipelineState(mEngine);
                 pipeline.first.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
@@ -2151,12 +2137,16 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
                     auto w = FTexture::valueForLevel(i - 1, outDesc.width);
                     auto h = FTexture::valueForLevel(i - 1, outDesc.height);
+                    auto hwOutView = driver.createTextureView(hwOut, i, 1);
                     mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
+                    mi->setParameter("source", hwOutView, {
+                            .filterMag = SamplerMagFilter::LINEAR,
+                            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST});
                     mi->commit(driver);
-                    driver.setMinMaxLevels(hwOut, i, i); // this offsets baseLevel to i
+                    mi->use(driver);
                     render(hwDstRT, pipeline, driver);
+                    driver.destroyTexture(hwOutView);
                 }
-                driver.setMinMaxLevels(hwOut, 0, inoutBloomOptions.levels - 1);
             });
 
     return { bloomUpsamplePass->out, flare };
@@ -3260,7 +3250,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
-        math::float4 clearColor, bool finalize) noexcept {
+        math::float4 clearColor) noexcept {
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -3284,15 +3274,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                auto in = resources.getTexture(data.in);
+                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1);
                 auto out = resources.getRenderPassInfo();
 
                 auto const& inDesc = resources.getDescriptor(data.in);
                 auto width = inDesc.width;
                 assert_invariant(width == inDesc.height);
                 int const dim = width >> (level + 1);
-
-                driver.setMinMaxLevels(in, level, level);
 
                 auto& material = getPostProcessMaterial("vsmMipmap");
 
@@ -3311,10 +3299,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 mi->commit(driver);
                 mi->use(driver);
                 render(out, pipeline, scissor, driver);
-
-                if (finalize) {
-                   driver.setMinMaxLevels(in, 0, level);
-                }
+                driver.destroyTexture(in); // `in` is just a view on `data.in`
             });
 
     return depthMipmapPass->in;
