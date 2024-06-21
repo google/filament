@@ -571,3 +571,9 @@ Java_com_google_android_filament_Engine_nBuilderBuild(JNIEnv*, jclass, jlong nat
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     return (jlong) builder->build();
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_getSteadyClockTimeNano(JNIEnv *env, jclass clazz) {
+    return (jlong)Engine::getSteadyClockTimeNano();
+}

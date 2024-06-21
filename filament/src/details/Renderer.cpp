@@ -232,6 +232,10 @@ void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
     driver.setPresentationTime(monotonic_clock_ns);
 }
 
+void FRenderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
+    mVsyncSteadyClockTimeNano = steadyClockTimeNano;
+}
+
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
@@ -251,6 +255,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         swapChain->recreateWithNewFlags(mEngine, flags);
     }
 #endif
+
+    if (!vsyncSteadyClockTimeNano) {
+        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
+        mVsyncSteadyClockTimeNano = 0;
+    }
 
     // get the timestamp as soon as possible
     using namespace std::chrono;
