@@ -189,8 +189,10 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
 }
 
 void MetalSwapChain::releaseDrawable() {
-    std::lock_guard<std::mutex> lock(*layerDrawableMutex);
-    drawable = nil;
+    if (drawable) {
+        std::lock_guard<std::mutex> lock(*layerDrawableMutex);
+        drawable = nil;
+    }
 }
 
 id<MTLTexture> MetalSwapChain::acquireDepthTexture() {
@@ -293,7 +295,7 @@ private:
         : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver) {}
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
-        {
+        if (that->mDrawable) {
             std::lock_guard<std::mutex> lock(*(that->mDrawableMutex));
             that->mDrawable = nil;
         }
