@@ -119,7 +119,7 @@ struct Material::BuilderDetails {
     const void* mPayload = nullptr;
     size_t mSize = 0;
     bool mDefaultMaterial = false;
-    bool mShBandsCount = 3;
+    int32_t mShBandsCount = 3;
     std::unordered_map<
         utils::CString,
         std::variant<int32_t, float, bool>,

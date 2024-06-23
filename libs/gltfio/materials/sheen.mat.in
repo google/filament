@@ -55,7 +55,16 @@ material {
         { type : mat3, name : sheenRoughnessUvMatrix, precision: high },
 
         // Reflectance
-        { type : float, name : reflectance }
+        { type : float, name : reflectance },
+
+        // KHR_materials_specular
+        { type : float, name : specularStrength },
+        { type : float3, name : specularColorFactor },
+        { type : int, name : specularIndex },
+        { type : sampler2d, name : specularMap },
+        { type : mat3, name : specularUvMatrix, precision: high },
+        { type : int, name : specularColorIndex },
+        { type : mat3, name : specularColorUvMatrix, precision: high }
 
         ${CUSTOM_PARAMS}
     ],
@@ -134,6 +143,15 @@ fragment {
             highp float2 uv = uvs[materialParams.emissiveIndex];
             uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
             material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
+        }
+
+        material.specularFactor = materialParams.specularStrength;
+        material.specularColorFactor = materialParams.specularColorFactor;
+
+        if (materialParams.specularIndex > -1) {
+            highp float2 uv = uvs[materialParams.specularIndex];
+            uv = (vec3(uv, 1.0) * materialParams.specularUvMatrix).xy;
+            material.specularFactor *= texture(materialParams_specularMap, uv).a;
         }
 
         ${CUSTOM_FRAGMENT}
