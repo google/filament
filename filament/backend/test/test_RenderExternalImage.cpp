@@ -73,11 +73,9 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
-    filamat::DescriptorSetInfoVector descriptors = {
-            {1, {
-                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
-            }}
-    };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
     ShaderGenerator shaderGen(
             vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 
@@ -163,11 +161,9 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
-    filamat::DescriptorSetInfoVector descriptors = {
-            {1, {
-                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
-            }}
-    };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
     ShaderGenerator shaderGen(
             vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 

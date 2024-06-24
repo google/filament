@@ -303,11 +303,9 @@ TEST_F(BackendTest, UpdateImage2D) {
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
             SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
-        filamat::DescriptorSetInfoVector descriptors = {
-                {1, {
-                        {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
-                }}
-        };
+        filamat::DescriptorSets descriptors;
+        descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+                samplerInfo } };
 
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
@@ -391,11 +389,10 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    filamat::DescriptorSetInfoVector descriptors = {
-            {1, {
-                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
-            }}
-    };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
+
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
     ShaderGenerator shaderGen(
@@ -487,11 +484,9 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    filamat::DescriptorSetInfoVector descriptors = {
-            {1, {
-                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
-            }}
-    };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
     std::string const fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
     ShaderGenerator shaderGen(
@@ -569,11 +564,9 @@ TEST_F(BackendTest, UpdateImage3D) {
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D_ARRAY, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    filamat::DescriptorSetInfoVector descriptors = {
-            {1, {
-                    {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo}
-            }}
-    };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
     ShaderGenerator shaderGen(

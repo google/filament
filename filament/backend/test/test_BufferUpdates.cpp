@@ -31,7 +31,7 @@ layout(location = 0) in vec4 mesh_position;
 
 layout(location = 0) out uvec4 indices;
 
-layout(binding = 0, set = 0) uniform Params {
+layout(binding = 0, set = 1) uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
     highp vec4 color;
@@ -51,7 +51,7 @@ std::string fragment (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
-uniform Params {
+layout(binding = 0, set = 1) uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
     highp vec4 color;
@@ -96,15 +96,13 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        filamat::DescriptorSetInfoVector descriptors = {
-                {1, {
-                        {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0}, {}}
-                }}
-        };
+        filamat::DescriptorSets descriptors;
+        descriptors[1] = { { "Params",
+                { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0 }, {} } };
         ShaderGenerator shaderGen(
                 vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
         Program p = shaderGen.getProgram(api);
-        p.descriptorBindings(0, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
+        p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
         auto program = api.createProgram(std::move(p));
 
         DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
@@ -144,7 +142,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
 
         api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
-        api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet, 1, {});
 
         api.startCapture(0);
 
@@ -226,15 +224,13 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a program.
-    filamat::DescriptorSetInfoVector descriptors = {
-            {1, {
-                    {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0}, {}}
-            }}
-    };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "Params",
+            { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0 }, {} } };
     ShaderGenerator shaderGen(
             vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
     Program p = shaderGen.getProgram(api);
-    p.descriptorBindings(0, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
+    p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
     auto program = api.createProgram(std::move(p));
 
     DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
@@ -254,7 +250,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
 
     api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
-    api.bindDescriptorSet(descriptorSet, 0, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Create a render target.
     auto colorTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,

@@ -41,7 +41,7 @@ public:
      * @param fragment The fragment shader, written in GLSL 450 core.
      */
     ShaderGenerator(std::string vertex, std::string fragment, Backend backend, bool isMobile,
-            filamat::DescriptorSetInfoVector&& descriptorSets = {}) noexcept;
+            filamat::DescriptorSets&& descriptorSets = {}) noexcept;
 
     ShaderGenerator(const ShaderGenerator& rhs) = delete;
     ShaderGenerator& operator=(const ShaderGenerator& rhs) = delete;
@@ -53,7 +53,7 @@ private:
 
     using Blob = std::vector<char>;
     static Blob transpileShader(ShaderStage stage, std::string shader, Backend backend,
-            bool isMobile, const filamat::DescriptorSetInfoVector& descriptorSets) noexcept;
+            bool isMobile, const filamat::DescriptorSets& descriptorSets) noexcept;
 
     Backend mBackend;
 

@@ -74,7 +74,7 @@ void ShaderGenerator::shutdown() {
 }
 
 ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment, Backend backend,
-        bool isMobile, filamat::DescriptorSetInfoVector&& descriptorSets) noexcept
+        bool isMobile, filamat::DescriptorSets&& descriptorSets) noexcept
     : mBackend(backend),
       mVertexBlob(transpileShader(
               ShaderStage::VERTEX, std::move(vertex), backend, isMobile, descriptorSets)),
@@ -97,7 +97,7 @@ ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment, Backe
 }
 
 ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::string shader,
-        Backend backend, bool isMobile, const filamat::DescriptorSetInfoVector& descriptorSets) noexcept {
+        Backend backend, bool isMobile, const filamat::DescriptorSets& descriptorSets) noexcept {
     TProgram program;
     const EShLanguage language = stage == ShaderStage::VERTEX ? EShLangVertex : EShLangFragment;
     TShader tShader(language);

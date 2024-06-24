@@ -348,11 +348,10 @@ TEST_F(BackendTest, ColorResolve) {
     // Create a program.
     ProgramHandle program;
     {
-        filamat::DescriptorSetInfoVector descriptors = {
-                {1, {
-                        {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0}, {}}
-                }}
-        };
+        filamat::DescriptorSets descriptors;
+        descriptors[1] = { { "Params",
+                { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0 },
+                {} } };
         ShaderGenerator shaderGen(
                 triangleVs, triangleFs, sBackend, sIsMobilePlatform, std::move(descriptors));
         Program prog = shaderGen.getProgram(api);

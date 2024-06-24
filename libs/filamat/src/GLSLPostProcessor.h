@@ -47,8 +47,7 @@ using DescriptorInfo = std::tuple<
         filament::backend::DescriptorSetLayoutBinding,
         std::optional<filament::SamplerInterfaceBlock::SamplerInfo>>;
 using DescriptorSetInfo = utils::FixedCapacityVector<DescriptorInfo>;
-using BindingPointAndDescriptorSetInfo = std::pair<uint8_t, DescriptorSetInfo>;
-using DescriptorSetInfoVector = utils::FixedCapacityVector<BindingPointAndDescriptorSetInfo>;
+using DescriptorSets = std::array<DescriptorSetInfo, filament::backend::MAX_DESCRIPTOR_SET_COUNT>;
 
 class GLSLPostProcessor {
 public:
@@ -86,7 +85,7 @@ public:
     // public so backend_test can also use it
     static void spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
             filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
-            const DescriptorSetInfoVector& descriptorSets, const ShaderMinifier* minifier);
+            const DescriptorSets& descriptorSets, const ShaderMinifier* minifier);
 
 private:
     struct InternalConfig {

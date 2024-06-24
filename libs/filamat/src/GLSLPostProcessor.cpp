@@ -266,7 +266,7 @@ static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
     }
 }
 
-void prettyPrintDescriptorSetInfoVector(DescriptorSetInfoVector const& sets) {
+void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
     auto getName = [](uint8_t set) {
         switch (set) {
             case +DescriptorSetBindingPoints::PER_VIEW:
@@ -279,8 +279,8 @@ void prettyPrintDescriptorSetInfoVector(DescriptorSetInfoVector const& sets) {
                 return "unknown";
         }
     };
-    for (auto const& set : sets) {
-        auto const& [setIndex, descriptors] = set;
+    for (size_t setIndex = 0; setIndex < MAX_DESCRIPTOR_SET_COUNT; setIndex++) {
+        auto const& descriptors = sets[setIndex];
         printf("[DS] info (%s) = [\n", getName(setIndex));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
@@ -305,22 +305,20 @@ void prettyPrintDescriptorSetInfoVector(DescriptorSetInfoVector const& sets) {
 }
 
 // TODO: maybe rename to collectDescriptorSets
-static void collectDescriptors(
-        const GLSLPostProcessor::Config& config, DescriptorSetInfoVector& sets) {
+static void collectDescriptors(const GLSLPostProcessor::Config& config, DescriptorSets& sets) {
     auto perViewDescriptors = DescriptorSetInfo::with_capacity(MAX_DESCRIPTOR_COUNT);
     collectDescriptorsForSet(DescriptorSetBindingPoints::PER_VIEW, config, perViewDescriptors);
-    sets.emplace_back(+DescriptorSetBindingPoints::PER_VIEW, std::move(perViewDescriptors));
+    sets[+DescriptorSetBindingPoints::PER_VIEW] = std::move(perViewDescriptors);
 
     auto perRenderableDescriptors = DescriptorSetInfo::with_capacity(MAX_DESCRIPTOR_COUNT);
     collectDescriptorsForSet(
             DescriptorSetBindingPoints::PER_RENDERABLE, config, perRenderableDescriptors);
-    sets.emplace_back(
-            +DescriptorSetBindingPoints::PER_RENDERABLE, std::move(perRenderableDescriptors));
+    sets[+DescriptorSetBindingPoints::PER_RENDERABLE] = std::move(perRenderableDescriptors);
 
     auto perMaterialDescriptors = DescriptorSetInfo::with_capacity(MAX_DESCRIPTOR_COUNT);
     collectDescriptorsForSet(
             DescriptorSetBindingPoints::PER_MATERIAL, config, perMaterialDescriptors);
-    sets.emplace_back(+DescriptorSetBindingPoints::PER_MATERIAL, std::move(perMaterialDescriptors));
+    sets[+DescriptorSetBindingPoints::PER_MATERIAL] = std::move(perMaterialDescriptors);
 }
 
 } // namespace msl
@@ -386,7 +384,7 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
 
 void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
         filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
-        const DescriptorSetInfoVector& descriptorSets, const ShaderMinifier* minifier) {
+        const DescriptorSets& descriptorSets, const ShaderMinifier* minifier) {
     using namespace msl;
 
     CompilerMSL mslCompiler(*spirv);
@@ -548,8 +546,8 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     // with our own that contain all the descriptors, even those optimized away.
     std::vector<MetalArgumentBuffer*> argumentBuffers;
     size_t dynamicOffsetsBufferIndex = 0;
-    for (auto const& set : descriptorSets) {
-        auto const& [setIndex, descriptors] = set;
+    for (size_t setIndex = 0; setIndex < MAX_DESCRIPTOR_SET_COUNT; setIndex++) {
+        auto const& descriptors = descriptorSets[setIndex];
         auto argBufferBuilder = MetalArgumentBuffer::Builder().name(
                 "spvDescriptorSetBuffer" + std::to_string(int(setIndex)));
         for (auto const& descriptor : descriptors) {
@@ -697,14 +695,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 fixupClipDistance(*internalConfig.spirvOutput, config);
                 if (internalConfig.mslOutput) {
                     auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
-                    auto descriptors =
-                            DescriptorSetInfoVector::with_capacity(MAX_DESCRIPTOR_SET_COUNT);
-                    /*
-                    descriptors = { { 0,
-                            { { { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0,
-                                        DescriptorFlags::NONE },
-                                    {} } } } };
-                    */
+                    DescriptorSets descriptors {};
                     msl::collectDescriptors(config, descriptors);
                     msl::prettyPrintDescriptorSetInfoVector(descriptors);
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
@@ -794,8 +785,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (internalConfig.mslOutput) {
-        auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
-        auto descriptors = DescriptorSetInfoVector::with_capacity(MAX_DESCRIPTOR_SET_COUNT);
+        DescriptorSets descriptors {};
         msl::collectDescriptors(config, descriptors);
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
         spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
@@ -837,8 +827,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
     }
 
     if (internalConfig.mslOutput) {
-        auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
-        auto descriptors = DescriptorSetInfoVector::with_capacity(MAX_DESCRIPTOR_SET_COUNT);
+        DescriptorSets descriptors {};
         msl::collectDescriptors(config, descriptors);
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,

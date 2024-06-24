@@ -142,11 +142,11 @@ TEST_F(BackendTest, FeedbackLoops) {
         {
             filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
                 SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-            filamat::DescriptorSetInfoVector descriptors = {
-                    {1, {
-                            {"test_tex", {DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0}, samplerInfo},
-                            {"Params", {DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 1}, {}}
-                    }}
+            filamat::DescriptorSets descriptors;
+            descriptors[1] = {
+                { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+                        samplerInfo },
+                { "Params", { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 1 }, {} }
             };
             ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform,
                     std::move(descriptors));
