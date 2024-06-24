@@ -44,7 +44,7 @@ namespace backend {
 class MetalDriver;
 class MetalBlitter;
 class MetalBufferPool;
-class MetalStagingAllocator;
+class MetalBumpAllocator;
 class MetalRenderTarget;
 class MetalSamplerGroup;
 class MetalSwapChain;
@@ -142,7 +142,7 @@ struct MetalContext {
     utils::FixedCircularBuffer<Handle<HwTexture>> texturesToDestroy;
 
     MetalBufferPool* bufferPool;
-    MetalStagingAllocator* stagingAllocator;
+    MetalBumpAllocator* bumpAllocator;
 
     MetalSwapChain* currentDrawSwapChain = nil;
     MetalSwapChain* currentReadSwapChain = nil;

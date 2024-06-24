@@ -116,7 +116,7 @@ void MetalBufferPool::reset() noexcept {
     mFreeStages.clear();
 }
 
-MetalStagingAllocator::MetalStagingAllocator(id<MTLDevice> device, size_t capacity)
+MetalBumpAllocator::MetalBumpAllocator(id<MTLDevice> device, size_t capacity)
     : mDevice(device), mCapacity(capacity) {
     if (mCapacity > 0) {
         mCurrentUploadBuffer = { [device newBufferWithLength:capacity options:MTLStorageModeShared],
@@ -124,7 +124,7 @@ MetalStagingAllocator::MetalStagingAllocator(id<MTLDevice> device, size_t capaci
     }
 }
 
-std::pair<id<MTLBuffer>, size_t> MetalStagingAllocator::allocateStagingArea(size_t size) {
+std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t size) {
     if (size == 0) {
         return { nil, 0 };
     }

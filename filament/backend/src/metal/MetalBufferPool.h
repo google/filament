@@ -38,9 +38,9 @@ struct MetalBufferPoolEntry {
     mutable uint32_t referenceCount;
 };
 
-class MetalStagingAllocator {
+class MetalBumpAllocator {
 public:
-    MetalStagingAllocator(id<MTLDevice> device, size_t capacity);
+    MetalBumpAllocator(id<MTLDevice> device, size_t capacity);
 
     /**
      * Allocates a staging area of the given size. Returns a pair of the buffer and the offset
