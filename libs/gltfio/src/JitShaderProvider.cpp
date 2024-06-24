@@ -308,6 +308,35 @@ std::string shaderFromKey(const MaterialKey& config) {
                 material.ior = materialParams.ior;
             )SHADER";
         }
+
+        if (config.hasSpecular) {
+            shader += R"SHADER(
+                material.specularFactor = materialParams.specularStrength;
+                material.specularColorFactor = materialParams.specularColorFactor;
+            )SHADER";
+
+            if (config.hasSpecularTexture) {
+                shader += "highp float2 specularUV = ${specular};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "specularUV = (vec3(specularUV, 1.0) * "
+                              "materialParams.specularUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.specularFactor *= texture(materialParams_specularMap, specularUV).a;
+                )SHADER";
+            }
+
+            if (config.hasSpecularColorTexture) {
+                shader += "highp float2 specularColorUV = ${specularColor};\n";
+                if (config.hasTextureTransforms) {
+                    shader += "specularColorUV = (vec3(specularColorUV, 1.0) * "
+                              "materialParams.specularColorUvMatrix).xy;\n";
+                }
+                shader += R"SHADER(
+                    material.specularColorFactor *= texture(materialParams_specularColorMap, specularColorUV).rgb;
+                )SHADER";
+            }
+        }
     }
 
     shader += "}\n";
@@ -459,6 +488,26 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
             if (config.hasTextureTransforms) {
                 builder.parameter("sheenRoughnessUvMatrix", MaterialBuilder::UniformType::MAT3,
                         MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+    }
+
+    // SPECULAR
+    if (config.hasSpecular) {
+        builder.parameter("specularStrength", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("specularColorFactor", MaterialBuilder::UniformType::FLOAT3);
+        if (config.hasSpecularTexture) {
+            builder.parameter("specularMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("specularUvMatrix", MaterialBuilder::UniformType::MAT3,
+                                  MaterialBuilder::ParameterPrecision::HIGH);
+            }
+        }
+        if (config.hasSpecularColorTexture) {
+            builder.parameter("specularColorMap", MaterialBuilder::SamplerType::SAMPLER_2D);
+            if (config.hasTextureTransforms) {
+                builder.parameter("specularColorUvMatrix", MaterialBuilder::UniformType::MAT3,
+                                  MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
     }

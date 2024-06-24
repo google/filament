@@ -254,6 +254,11 @@ private:
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
+    template<typename B>
+    bool is_valid(Handle<B>& handle) {
+        return mHandleAllocator.is_valid(handle);
+    }
+
     template<typename Dp, typename B>
     inline typename std::enable_if_t<
             std::is_pointer_v<Dp> &&

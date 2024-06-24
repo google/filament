@@ -22,6 +22,7 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
+#include <backend/Handle.h>
 
 #include <utils/debug.h>
 #include <utils/compiler.h>
@@ -29,6 +30,7 @@
 #include <utils/Log.h>
 #include <utils/Systrace.h>
 
+#include <algorithm>
 #include <array>
 #include <algorithm>
 #include <new>
