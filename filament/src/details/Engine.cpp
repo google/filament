@@ -102,7 +102,7 @@ Engine* FEngine::create(Engine::Builder const& builder) {
         DriverConfig const driverConfig{
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
-                .metalStagingBufferSizeBytes = instance->getConfig().metalStagingBufferSizeBytes,
+                .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
                 .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
@@ -679,7 +679,7 @@ int FEngine::loop() {
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
-            .metalStagingBufferSizeBytes = mConfig.metalStagingBufferSizeBytes,
+            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
             .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
             .forceGLES2Context = mConfig.forceGLES2Context,

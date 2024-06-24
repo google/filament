@@ -314,7 +314,7 @@ public:
          *
          * Only respected by the Metal backend.
          */
-        size_t metalStagingBufferSizeBytes = 512 * 1024;
+        size_t metalUploadBufferSizeBytes = 512 * 1024;
 
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.

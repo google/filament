@@ -172,7 +172,7 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
     mContext->argumentEncoderCache.setDevice(mContext->device);
     mContext->bufferPool = new MetalBufferPool(*mContext);
     mContext->bumpAllocator =
-            new MetalBumpAllocator(mContext->device, driverConfig.metalStagingBufferSizeBytes);
+            new MetalBumpAllocator(mContext->device, driverConfig.metalUploadBufferSizeBytes);
     mContext->blitter = new MetalBlitter(*mContext);
 
     if (@available(iOS 12, *)) {
