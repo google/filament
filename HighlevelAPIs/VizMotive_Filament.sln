@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizAPIs_Windows", "VizAPIs_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImGui_Sample01", "Samples\ImGui_Sample01\ImGui_Sample01.vcxproj", "{D8D4F4C4-B10A-49ED-92CD-967605441C2A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "API_SOURCE", "API_SOURCE\API_SOURCE.vcxitems", "{FC26158A-596B-4679-82AF-18A6126DB44F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

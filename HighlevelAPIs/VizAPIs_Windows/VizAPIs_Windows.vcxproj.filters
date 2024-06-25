@@ -8,5 +8,6 @@
     <ClInclude Include="VizEngineAPIs.h" />
     <ClInclude Include="VizComponentAPIs.h" />
     <ClInclude Include="VizCoreUtils.h" />
+    <ClInclude Include="CustomComponents.h" />
   </ItemGroup>
 </Project>

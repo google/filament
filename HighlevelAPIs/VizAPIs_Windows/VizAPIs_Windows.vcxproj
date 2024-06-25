@@ -108,10 +108,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_ITERATOR_DEBUG_LEVEL=0;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_ITERATOR_DEBUG_LEVEL=0;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../VisualStudio/install/include/;D:\VizMotive_Filament\libs\bluevk\include;D:\VizMotive_Filament\libs\filamentapp\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../VisualStudio/install/include/;D:\VizMotive_Filament\libs\bluevk\include;D:\VizMotive_Filament\libs\utils\include;D:\VizMotive_Filament\libs\filamentapp\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -145,6 +145,7 @@
     <ClCompile Include="VizCoreUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CustomComponents.h" />
     <ClInclude Include="VizComponentAPIs.h" />
     <ClInclude Include="VizCoreUtils.h" />
     <ClInclude Include="VizEngineAPIs.h" />

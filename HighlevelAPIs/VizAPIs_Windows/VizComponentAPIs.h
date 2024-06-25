@@ -113,35 +113,25 @@ namespace vzm
         const_iterator end() const { return __params.end(); }
     };
 
-    enum class RENDERER_SHADER_GROUP
-    {
-        ALL = 0,
-        EMITTER_SYSTEM,
-        PARTICLE_RENDER,
-    };
-
     enum class COMPONENT_TYPE
     {
         UNDEFINED = 0,
         BASE,
+        SCENE,
         CAMERA,
-        ACTOR,
-        GEOMETRY,
-        MATERIAL,
         LIGHT,
-        EMITTER,
-        ANIMATION,
-        WEATHER,
-        COLLIDER
+        ACTOR,
     };
 
-    __dojostruct VmBaseComponent
+    __dojostruct VzBaseComp
     {
         VID componentVID = INVALID_VID;
         COMPONENT_TYPE compType = COMPONENT_TYPE::UNDEFINED;
         TimeStamp timeStamp = {}; // will be automatically set 
         ParamMap<std::string> attributes;
-
+    };
+    __dojostruct VzSceneComp : VzBaseComp
+    {
         void GetWorldPosition(float v[3]);
         void GetWorldForward(float v[3]);
         void GetWorldRight(float v[3]);
@@ -159,7 +149,7 @@ namespace vzm
 
         VID GetParentVid();
     };
-    __dojostruct VmRenderer
+    __dojostruct VzRenderer
     {
         void* renderer;
         bool IsActivated = false;
@@ -386,7 +376,7 @@ namespace vzm
         void SetGIBoost(float value);
         float GetGIBoost();
     };
-    __dojostruct VmCamera : VmBaseComponent, VmRenderer
+    __dojostruct VzCamera : VzSceneComp, VzRenderer
     {
         // Pose parameters are defined in WS (not local space)
         void SetPose(const float pos[3], const float view[3], const float up[3]);
@@ -396,119 +386,7 @@ namespace vzm
         void GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovY, float* aspectRatio);
         void GetCanvasSize(float* w, float* h, float* dpi);
     };
-    __dojostruct VmActor : VmBaseComponent
-    {
-        // 
-    };
-    __dojostruct VmMesh : VmBaseComponent
-    {
-        //  
-    };
-    __dojostruct VmMaterial : VmBaseComponent
-    {
-    };
-    __dojostruct VmEmitter : VmBaseComponent
-    {
-        struct ParticleCounters
-        {
-            uint aliveCount;
-            uint deadCount;
-            uint realEmitCount;
-            uint aliveCount_afterSimulation;
-            uint culledCount;
-            uint cellAllocator;
-        };
-
-        enum PARTICLESHADERTYPE
-        {
-            SOFT,
-            SOFT_DISTORTION,
-            SIMPLE,
-            SOFT_LIGHTING,
-            PARTICLESHADERTYPE_COUNT,
-            ENUM_FORCE_UINT32 = 0xFFFFFFFF,
-        };
-
-        void Burst(int num);
-        void Restart();
-
-        void GetStatistics(ParticleCounters& statistics);
-
-        PARTICLESHADERTYPE GetShaderType();
-        void SetShaderType(const PARTICLESHADERTYPE shaderType);
-
-        VID GetMeshVid();
-        void SetMeshVid(const VID vid);
-
-        // -1 : variable timestep; >=0 : fixed timestep
-        float GetFixedTimeStep();
-        void SetFixedTimeStep(const float FIXED_TIMESTEP);
-
-        float GetSize();
-        void SetSize(const float size);
-        float GetRandomFactor();
-        void SetRandomFactor(const float random_factor);
-        float GetNormalFactor();
-        void SetNormalFactor(const float normal_factor);
-        float GetCount();
-        void SetCount(const float count);
-        float GetLife();
-        void SetLife(const float life);
-        float GetRandomLife();
-        void SetRandomLife(const float random_life);
-        void GetScaleXY(float* scaleX, float* scaleY);
-        void SetScaleXY(const float scaleX, const float scaleY);
-        float GetRotation();
-        void SetRotation(const float rotation);
-        float GetMotionBlurAmount();
-        void SetMotionBlurAmount(const float motionBlurAmount);
-        float GetMass();
-        void SetMass(const float mass);
-        float GetRandomColor();
-        void SetRandomColor(const float random_color);
-
-        void GetVelocity(float velocity[3]);
-        void SetVelocity(const float velocity[3]);
-        void GetGravity(float gravity[3]);
-        void SetGravity(const float gravity[3]);
-        float GetDrag();
-        void SetDrag(const float drag);
-        float GetRestitution();
-        void SetRestitution(const float restitution);
-
-        // smoothing radius, pressure constant, reference density, viscosity constant
-        void GetSPHProps(float* SPH_h, float* SPH_K, float* SPH_p0, float* SPH_e);
-        void SetSPHProps(const float SPH_h, const float SPH_K, const float SPH_p0, const float SPH_e);
-
-        void GetSpriteSheetProps(uint32_t* framesX, uint32_t* framesY, uint32_t* frameCount, uint32_t* frameStart);
-        void SetSpriteSheetProps(const uint32_t framesX, const uint32_t framesY, const uint32_t frameCount, const uint32_t frameStart);
-
-        // Core Component Intrinsics
-        void SetMaxParticleCount(uint32_t value);
-        uint32_t GetMaxParticleCount();
-        uint64_t GetMemorySizeInBytes();
-
-        bool IsDebug();
-        bool IsPaused();
-        bool IsSorted();
-        bool IsDepthCollisionEnabled();
-        bool IsSPHEnabled();
-        bool IsVolumeEnabled();
-        bool IsFrameBlendingEnabled();
-        bool IsCollidersDisabled();
-        bool IsTakeColorFromMesh();
-
-        void SetDebug(const bool value);
-        void SetPaused(const bool value);
-        void SetSorted(const bool value);
-        void SetDepthCollisionEnabled(const bool value);
-        void SetSPHEnabled(const bool value);
-        void SetVolumeEnabled(const bool value);
-        void SetFrameBlendingEnabled(const bool value);
-        void SetCollidersDisabled(const bool value);
-        void SetTakeColorFromMesh(const bool value);
-    };
-    __dojostruct VmLight : VmBaseComponent
+    __dojostruct VzLight : VzSceneComp
     {
         void SetColor(const float value[3]);
         void SetIntensity(const float value);
@@ -543,88 +421,8 @@ namespace vzm
         void SetType(const LightType val);
         LightType GetType();
     };
-    __dojostruct VmWeather : VmBaseComponent
+    __dojostruct VzActor : VzSceneComp
     {
-        void SetWeatherPreset(const uint32_t index);
-
-        bool IsOceanEnabled();
-        bool IsRealisticSky();
-        bool IsVolumetricClouds();
-        bool IsHeightFog();
-        bool IsVolumetricCloudsCastShadow();
-        bool IsOverrideFogColor();
-        bool IsRealisticSkyAerialPerspective();
-        bool IsRealisticSkyHighQuality();
-        bool IsRealisticSkyReceiveShadow();
-        bool IsVolumetricCloudsReceiveShadow();
-
-        void SetOceanEnabled(const bool value);
-        void SetRealisticSky(const bool value);
-        void SetVolumetricClouds(const bool value);
-        void SetHeightFog(const bool value);
-        void SetVolumetricCloudsCastShadow(const bool value);
-        void SetOverrideFogColor(const bool value);
-        void SetRealisticSkyAerialPerspective(const bool value);
-        void SetRealisticSkyHighQuality(const bool value);
-        void SetRealisticSkyReceiveShadow(const bool value);
-        void SetVolumetricCloudsReceiveShadow(const bool value);
-
-        void SetSunColor(const float value[3]);
-        void SetDirectionColor(const float value[3]);
-        void SetSkyExposure(const float value);
-        void SetHorizonColor(const float value[3]);
-        void SetZenithColor(const float value[3]);
-        void SetAmbient(const float value[3]);
-        void SetFogStart(const float value);
-        void SetFogDensity(const float value);
-        void SetFogHightStart(const float value);
-        void SetFogHightEnd(const float value);
-        void SetWindDirection(const float value[3]);
-        void SetWindowRandomness(const float value);
-        void SetWindWaveSize(const float value);
-        void SetWindSpeed(const float value);
-        void SetStars(const float value);
-        void SetGravity(const float value[3]);
-        void SetSkyRotation(const float value);
-        void SetRainAmount(const float value);
-        void SetRainLength(const float value);
-        void SetRainSpeed(const float value);
-        void SetRainScale(const float value);
-        void SetRainSplashScale(const float value);
-        void SetRainColor(const float value[4]);
-    };
-    __dojostruct VmAnimation : VmBaseComponent
-    {
-        bool IsPlaying();
-        bool IsLooped();
-        float GetLength();
-        bool IsEnded();
-        bool IsRootMotion();
-        void Play();
-        void Pause();
-        void Stop();
-        void SetLooped(const bool value);
-        void SetRootMotion(const bool value);
-    };
-    __dojostruct VmCollider : VmBaseComponent
-    {
-        enum class Shape
-        {
-            Sphere,
-            Capsule,
-            Plane,
-        };
-        void SetCPUEnabled(const bool value);
-        void SetGPUEnabled(const bool value);
-        bool IsCPUEnabled();
-        bool IsGPUEnabled();
-        float GetRadius();
-        void SetRadius(const float r);
-        void GetOffset(float offset[3]);
-        void SetOffset(const float offset[3]);
-        void GetTail(float tail[3]);
-        void SetTail(const float tail[3]);
-        Shape GetShape();
-        void SetShape(const Shape shape);
+        // 
     };
 }

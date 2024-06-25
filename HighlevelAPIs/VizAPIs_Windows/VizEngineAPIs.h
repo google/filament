@@ -7,15 +7,14 @@ namespace vzm
 {
     // This must be called before using engine APIs
     //  - paired with DeinitEngineLib()
-    __dojostatic VZRESULT InitEngineLib(const std::string& coreName = "FilamentEngine", const std::string& logFileName = "EngineApi.log");
+    __dojostatic VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& argument = vzm::ParamMap<std::string>());
 
-    /*
     // Get Entity ID 
     //  - return zero in case of failure 
     __dojostatic VID GetFirstVidByName(const std::string& name);
     // Get Entity IDs whose name is the input name (VID is allowed for redundant name)
     //  - return # of entities
-    __dojostatic uint32_t GetVidsByName(const std::string& name, std::vector<VID>& vids);
+    __dojostatic size_t GetVidsByName(const std::string& name, std::vector<VID>& vids);
     // Get Entity's name if possible
     //  - return name string if entity's name exists, if not, return "" 
     __dojostatic bool GetNameByVid(const VID vid, std::string& name);
@@ -63,6 +62,4 @@ namespace vzm
     // Display Engine's states and profiling information
     //  - return canvas VID (use this as a camVid)
     __dojostatic VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile = true, const bool displayEngineStates = true);
-    /**/
-    __dojostatic VZRESULT DeinitEngineLib();
 }
