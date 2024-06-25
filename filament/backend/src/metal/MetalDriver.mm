@@ -324,7 +324,15 @@ void MetalDriver::updateDescriptorSetBuffer(
 
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    descriptorSet->buffers[binding] = { bo->getBuffer()->getGpuBufferForDraw(), offset, size };
+    id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
+    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
+    ShaderStageFlags stageFlags = descriptorSet->layout->getBindings()[binding].stageFlags;
+    if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+        descriptorSet->vertexResources.push_back(mtlBuffer);
+    }
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+        descriptorSet->fragmentResources.push_back(mtlBuffer);
+    }
 }
 
 void MetalDriver::updateDescriptorSetTexture(
@@ -339,8 +347,21 @@ void MetalDriver::updateDescriptorSetTexture(
 
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* texture = handle_cast<MetalTexture>(th);
-    descriptorSet->textures[binding] =
-            MetalDescriptorSet::TextureBinding { texture->getMtlTextureForRead(), params };
+    id<MTLTexture> mtlTexture = texture->getMtlTextureForRead();
+    descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding { mtlTexture, params };
+
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    assert_invariant(found != bindings.end());
+
+    ShaderStageFlags stageFlags = found->stageFlags;
+    if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+        descriptorSet->vertexResources.push_back(mtlTexture);
+    }
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+        descriptorSet->fragmentResources.push_back(mtlTexture);
+    }
 }
 
 void MetalDriver::flush(int) {

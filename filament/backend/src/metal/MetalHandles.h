@@ -44,6 +44,7 @@
 #include <condition_variable>
 #include <memory>
 #include <type_traits>
+#include <vector>
 
 namespace filament {
 namespace backend {
@@ -570,42 +571,30 @@ private:
 
 struct MetalDescriptorSet : public HwDescriptorSet {
     MetalDescriptorSet(MetalDescriptorSetLayout* layout) noexcept;
-    MetalDescriptorSetLayout* layout;
 
     void finalize(MetalDriver* driver) {
         [driver->mContext->currentRenderPassEncoder useResource:driver->mContext->emptyBuffer
                                                           usage:MTLResourceUsageRead];
-        [driver->mContext->currentRenderPassEncoder useResource:getOrCreateEmptyTexture(driver->mContext)
-                                                          usage:MTLResourceUsageRead];
-        auto const& bindings = this->layout->getBindings();
-        for (auto const& binding : bindings) {
-            switch (binding.type) {
-                case DescriptorType::UNIFORM_BUFFER:
-                case DescriptorType::SHADER_STORAGE_BUFFER: {
-                    auto found = buffers.find(binding.binding);
-                    if (found == buffers.end()) {
-                        continue;
-                    }
+        [driver->mContext->currentRenderPassEncoder
+                useResource:getOrCreateEmptyTexture(driver->mContext)
+                      usage:MTLResourceUsageRead];
 
-                    auto const& bufferBinding = buffers[binding.binding];
-                    [driver->mContext->currentRenderPassEncoder useResource:bufferBinding.buffer
-                                                                      usage:MTLResourceUsageRead];
-                    break;
-                }
-                case DescriptorType::SAMPLER: {
-                    auto found = textures.find(binding.binding);
-                    if (found == textures.end()) {
-                        continue;
-                    }
-
-                    auto const& textureBinding = textures[binding.binding];
-                    [driver->mContext->currentRenderPassEncoder useResource:textureBinding.texture
-                                                                      usage:MTLResourceUsageRead];
-                    break;
-                }
-                case DescriptorType::INPUT_ATTACHMENT:
-                    break;
-            }
+        if (@available(iOS 13.0, *)) {
+            [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                               count:vertexResources.size()
+                                                               usage:MTLResourceUsageRead
+                                                              stages:MTLRenderStageVertex];
+            [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                               count:fragmentResources.size()
+                                                               usage:MTLResourceUsageRead
+                                                              stages:MTLRenderStageFragment];
+        } else {
+            [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                               count:vertexResources.size()
+                                                               usage:MTLResourceUsageRead];
+            [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                               count:fragmentResources.size()
+                                                               usage:MTLResourceUsageRead];
         }
     }
 
@@ -684,6 +673,8 @@ struct MetalDescriptorSet : public HwDescriptorSet {
         return buffer;
     }
 
+    MetalDescriptorSetLayout* layout;
+
     struct BufferBinding {
         id<MTLBuffer> buffer;
         uint32_t offset;
@@ -695,6 +686,9 @@ struct MetalDescriptorSet : public HwDescriptorSet {
     };
     tsl::robin_map<descriptor_binding_t, BufferBinding> buffers;
     tsl::robin_map<descriptor_binding_t, TextureBinding> textures;
+
+    std::vector<id<MTLResource>> vertexResources;
+    std::vector<id<MTLResource>> fragmentResources;
 
     id<MTLBuffer> buffer = nil;
 };
