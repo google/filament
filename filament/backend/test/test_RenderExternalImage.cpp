@@ -116,7 +116,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     PipelineState state;
     state.program = program;
-    state.pipelineLayout.setLayout = { descriptorSetLayout };
+    state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -247,7 +247,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     PipelineState state;
     state.program = program;
-    state.pipelineLayout.setLayout = { descriptorSetLayout };
+    state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;

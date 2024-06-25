@@ -352,7 +352,8 @@ TEST_F(BackendTest, UpdateImage2D) {
 
         api.bindDescriptorSet(descriptorSet, 1, {});
 
-        renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
+        renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
+                defaultRenderTarget, swapChain, program);
 
         readPixelsAndAssertHash(t.name, 512, 512, defaultRenderTarget, expectedHash);
 
@@ -446,7 +447,8 @@ TEST_F(BackendTest, UpdateImageSRGB) {
 
     api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
+            defaultRenderTarget, swapChain, program);
 
     static const uint32_t expectedHash = 359858623;
     readPixelsAndAssertHash("UpdateImageSRGB", 512, 512, defaultRenderTarget, expectedHash);
@@ -524,7 +526,8 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
 
     api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
+            defaultRenderTarget, swapChain, program);
 
     static const uint32_t expectedHash = 3644679986;
     readPixelsAndAssertHash("UpdateImageMipLevel", 512, 512, defaultRenderTarget, expectedHash);
@@ -614,7 +617,8 @@ TEST_F(BackendTest, UpdateImage3D) {
 
     api.bindDescriptorSet(descriptorSet, 1, {});
 
-    renderTriangle({ descriptorSetLayout }, defaultRenderTarget, swapChain, program);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
+            defaultRenderTarget, swapChain, program);
 
     static const uint32_t expectedHash = 3644679986;
     readPixelsAndAssertHash("UpdateImage3D", 512, 512, defaultRenderTarget, expectedHash);

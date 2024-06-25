@@ -225,7 +225,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.depthWrite = false;
             state.rasterState.depthFunc = RasterState::DepthFunc::A;
             state.program = program;
-            state.pipelineLayout.setLayout = { descriptorSetLayout };
+            state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);

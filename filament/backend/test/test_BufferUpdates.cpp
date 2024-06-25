@@ -129,7 +129,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 
         PipelineState state;
         state.program = program;
-        state.pipelineLayout.setLayout = { descriptorSetLayout };
+        state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -280,7 +280,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
     params.viewport.width = 512;
-    renderTriangle({ descriptorSetLayout },
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
             renderTarget, swapChain, program, params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
@@ -301,7 +301,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;
-    renderTriangle({ descriptorSetLayout },
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
             renderTarget, swapChain, program, params);
 
     static const uint32_t expectedHash = 91322442;
