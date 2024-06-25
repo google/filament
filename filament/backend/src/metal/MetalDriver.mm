@@ -323,7 +323,8 @@ void MetalDriver::updateDescriptorSetBuffer(
             dsh.getId(), binding, boh.getId(), offset, size);
 
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
-    descriptorSet->buffers[binding] = { boh, offset, size };
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    descriptorSet->buffers[binding] = { bo->getBuffer()->getGpuBufferForDraw(), offset, size };
 }
 
 void MetalDriver::updateDescriptorSetTexture(
@@ -337,7 +338,9 @@ void MetalDriver::updateDescriptorSetTexture(
             dsh.getId(), binding, th.getId());
 
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
-    descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding{ th, params };
+    auto* texture = handle_cast<MetalTexture>(th);
+    descriptorSet->textures[binding] =
+            MetalDescriptorSet::TextureBinding { texture->getMtlTextureForRead(), params };
 }
 
 void MetalDriver::flush(int) {

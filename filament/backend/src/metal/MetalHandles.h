@@ -588,10 +588,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     }
 
                     auto const& bufferBinding = buffers[binding.binding];
-                    auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
-                                                ->getBuffer()
-                                                ->getGpuBufferForDraw();
-                    [driver->mContext->currentRenderPassEncoder useResource:metalBuffer
+                    [driver->mContext->currentRenderPassEncoder useResource:bufferBinding.buffer
                                                                       usage:MTLResourceUsageRead];
                     break;
                 }
@@ -602,9 +599,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     }
 
                     auto const& textureBinding = textures[binding.binding];
-                    auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
-                                            ->getMtlTextureForRead();
-                    [driver->mContext->currentRenderPassEncoder useResource:texture
+                    [driver->mContext->currentRenderPassEncoder useResource:textureBinding.texture
                                                                       usage:MTLResourceUsageRead];
                     break;
                 }
@@ -626,9 +621,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
             MTLTextureType textureType = MTLTextureType2D;
             if (auto found = textures.find(binding.binding); found != textures.end()) {
                 auto const& textureBinding = textures[binding.binding];
-                auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
-                                    ->getMtlTextureForRead();
-                textureType = texture.textureType;
+                textureType = textureBinding.texture.textureType;
             }
             textureTypes.push_back(textureType);
         }
@@ -655,10 +648,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     }
 
                     auto const& bufferBinding = buffers[binding.binding];
-                    auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
-                                                ->getBuffer()
-                                                ->getGpuBufferForDraw();
-                    [encoder setBuffer:metalBuffer
+                    [encoder setBuffer:bufferBinding.buffer
                                 offset:bufferBinding.offset
                                atIndex:binding.binding * 2];
                     break;
@@ -676,9 +666,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     }
 
                     auto const& textureBinding = textures[binding.binding];
-                    auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
-                                            ->getMtlTextureForRead();
-                    [encoder setTexture:texture atIndex:binding.binding * 2];
+                    [encoder setTexture:textureBinding.texture atIndex:binding.binding * 2];
                     SamplerState samplerState {
                             .samplerParams = textureBinding.sampler
                     };
@@ -697,12 +685,12 @@ struct MetalDescriptorSet : public HwDescriptorSet {
     }
 
     struct BufferBinding {
-        BufferObjectHandle buffer;
+        id<MTLBuffer> buffer;
         uint32_t offset;
         uint32_t size;
     };
     struct TextureBinding {
-        TextureHandle texture;
+        id<MTLTexture> texture;
         SamplerParams sampler;
     };
     tsl::robin_map<descriptor_binding_t, BufferBinding> buffers;
