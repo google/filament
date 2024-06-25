@@ -2356,7 +2356,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
         bloomStrength = clamp(bloomOptions.strength, 0.0f, 1.0f);
         if (bloomOptions.dirt) {
             FTexture* fdirt = downcast(bloomOptions.dirt);
-            FrameGraphTexture const frameGraphTexture{ .handle = fdirt->getHwHandle() };
+            FrameGraphTexture const frameGraphTexture{ .handle = fdirt->getHwHandleForSampling() };
             bloomDirt = fg.import("dirt", {
                     .width = (uint32_t)fdirt->getWidth(0u),
                     .height = (uint32_t)fdirt->getHeight(0u),

@@ -27,12 +27,15 @@
 
 #include "private/filament/EngineEnums.h"
 
+#include <filament/MaterialEnums.h>
 #include <filament/TextureSampler.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/CString.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
@@ -176,6 +179,14 @@ void FMaterialInstance::commit(DriverApi& driver) const {
     if (mUniforms.isDirty()) {
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
+    if (!mTextureParameters.empty()) {
+        for (auto const& [binding, p]: mTextureParameters) {
+            assert_invariant(p.texture);
+            Handle<HwTexture> handle = p.texture->getHwHandleForSampling();
+            assert_invariant(handle);
+            mDescriptorSet.setSampler(binding, handle, p.params);
+        }
+    }
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
 }
@@ -205,17 +216,25 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
                 PANIC_LOG("Depth textures can't be sampled with a linear filter "
                           "unless the comparison mode is set to COMPARE_TO_TEXTURE. "
                           "(material: \"%s\", parameter: \"%.*s\")",
-                          getMaterial()->getName().c_str(), name.size(), name.data());
+                        getMaterial()->getName().c_str(), name.size(), name.data());
             }
         }
     }
 #endif
 
-    Handle<HwTexture> handle{};
-    if (UTILS_LIKELY(texture)) {
-        handle = texture->getHwHandle();
+    auto binding = mMaterial->getSamplerBinding(name);
+    if (texture && texture->canHaveTextureView()) {
+        mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
+    } else {
+        Handle<HwTexture> handle{};
+        if (texture) {
+            handle = texture->getHwHandleForSampling();
+            assert_invariant(handle == texture->getHwHandle());
+        } else {
+            mTextureParameters.erase(binding);
+        }
+        mDescriptorSet.setSampler(binding, handle, sampler.getSamplerParams());
     }
-    setParameter(name, handle, sampler.getSamplerParams());
 }
 
 void FMaterialInstance::setMaskThreshold(float threshold) noexcept {

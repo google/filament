@@ -212,8 +212,8 @@ void GLDescriptorSet::updateTextureLod(OpenGLContext& gl,
         }
         // that is very unfortunate that we have to call activeTexture here
         gl.activeTexture(unit);
-        glTexParameteri(desc.target, GL_TEXTURE_BASE_LEVEL, desc.baseLevel);
-        glTexParameteri(desc.target, GL_TEXTURE_MAX_LEVEL,  desc.maxLevel);
+        glTexParameteri(desc.target, GL_TEXTURE_BASE_LEVEL, baseLevel);
+        glTexParameteri(desc.target, GL_TEXTURE_MAX_LEVEL,  maxLevel);
         ref->baseLevel = desc.baseLevel;
         ref->maxLevel = desc.maxLevel;
     }
