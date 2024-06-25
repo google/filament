@@ -19,11 +19,16 @@
 
 #include "downcast.h"
 
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <filament/Texture.h>
 
 #include <utils/compiler.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -38,6 +43,7 @@ public:
     void terminate(FEngine& engine);
 
     backend::Handle<backend::HwTexture> getHwHandle() const noexcept { return mHandle; }
+    backend::Handle<backend::HwTexture> getHwHandleForSampling() const noexcept;
 
     size_t getWidth(size_t level = 0) const noexcept;
     size_t getHeight(size_t level = 0) const noexcept;
@@ -114,20 +120,31 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
+    bool canHaveTextureView() const noexcept;
+    void updateLodRange(backend::DriverApi& driver, uint8_t level) const noexcept;
+
 private:
     friend class Texture;
+    struct LodRange {
+        // 0,0 means lod-range unset (all levels are available)
+        uint8_t first = 0;  // first lod
+        uint8_t last = 0;   // 1 past last lod
+    };
+    void updateLodRange(backend::DriverApi& driver, uint8_t baseLevel, uint8_t levelCount) const noexcept;
+
     FStream* mStream = nullptr;
     backend::Handle<backend::HwTexture> mHandle;
+    mutable backend::Handle<backend::HwTexture> mHandleForSampling;
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Sampler mTarget = Sampler::SAMPLER_2D;
+    mutable LodRange mLodRange;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
     Usage mUsage = Usage::DEFAULT;
 };
-
 
 FILAMENT_DOWNCAST(Texture)
 

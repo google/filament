@@ -934,8 +934,15 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     t->gl = src->gl;
     t->gl.sidecarRenderBufferMS = 0;
     t->gl.sidecarSamples = 1;
-    t->gl.baseLevel = (int8_t)std::min(127, src->gl.baseLevel + baseLevel);
-    t->gl.maxLevel  = (int8_t)std::min(127, t->gl.baseLevel + levelCount - 1);
+
+    auto srcBaseLevel = src->gl.baseLevel;
+    auto srcMaxLevel = src->gl.maxLevel;
+    if (srcBaseLevel > srcMaxLevel) {
+        srcBaseLevel = 0;
+        srcMaxLevel = 127;
+    }
+    t->gl.baseLevel = (int8_t)std::min(127, srcBaseLevel + baseLevel);
+    t->gl.maxLevel  = (int8_t)std::min(127, srcBaseLevel + baseLevel + levelCount - 1);
 
     // increase reference count to this texture handle
     t->ref = src->ref;
@@ -1349,13 +1356,6 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
     }
 
     rt->gl.resolve |= resolveFlags;
-
-    if (any(t->usage & TextureUsage::SAMPLEABLE)) {
-        // In a sense, drawing to a texture level is similar to calling setTextureData on it; in
-        // both cases, we update the base/max LOD to give shaders access to levels as they become
-        // available.  Note that this can only expand the LOD range (never shrink it).
-        updateTextureLodRange(t, (int8_t)binfo.level);
-    }
 
     CHECK_GL_ERROR(utils::slog.e)
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
@@ -2453,9 +2453,6 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
     bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
     gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
 
-    t->gl.baseLevel = 0;
-    t->gl.maxLevel = static_cast<int8_t>(t->levels - 1);
-
     glGenerateMipmap(t->gl.target);
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -2565,17 +2562,6 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         }
     }
 
-    if (!gl.isES2()) {
-        // Update the base/max LOD, so we don't access undefined LOD. this allows the app to
-        // specify levels as they become available.
-        if (int8_t(level) < t->gl.baseLevel) {
-            t->gl.baseLevel = int8_t(level);
-        }
-        if (int8_t(level) > t->gl.maxLevel) {
-            t->gl.maxLevel = int8_t(level);
-        }
-    }
-
     scheduleDestroy(std::move(p));
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -2659,17 +2645,6 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + faceSize * face);
             }
             break;
-        }
-    }
-
-    if (!gl.isES2()) {
-        // Update the base/max LOD, so we don't access undefined LOD. this allows the app to
-        // specify levels as they become available.
-        if (int8_t(level) < t->gl.baseLevel) {
-            t->gl.baseLevel = int8_t(level);
-        }
-        if (int8_t(level) > t->gl.maxLevel) {
-            t->gl.maxLevel = int8_t(level);
         }
     }
 
@@ -3709,14 +3684,6 @@ void OpenGLDriver::blit(
     gl.unbindFramebuffer(GL_DRAW_FRAMEBUFFER);
     gl.unbindFramebuffer(GL_READ_FRAMEBUFFER);
     glDeleteFramebuffers(2, fbo);
-
-    if (any(d->usage & TextureUsage::SAMPLEABLE)) {
-        // In a sense, blitting to a texture level is similar to calling setTextureData on it; in
-        // both cases, we update the base/max LOD to give shaders access to levels as they become
-        // available.  Note that this can only expand the LOD range (never shrink it).
-        updateTextureLodRange(d, int8_t(dstLevel));
-    }
-
 #endif
 }
 
@@ -3785,22 +3752,6 @@ void OpenGLDriver::blitDEPRECATED(TargetBufferFlags buffers,
             GL_COLOR_BUFFER_BIT, glFilterMode);
     CHECK_GL_ERROR(utils::slog.e)
 #endif
-}
-
-void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept {
-    auto& gl = mContext;
-    if (!gl.isES2()) {
-        if (texture && any(texture->usage & TextureUsage::SAMPLEABLE)) {
-            if (targetLevel < texture->gl.baseLevel || targetLevel > texture->gl.maxLevel) {
-                if (targetLevel < texture->gl.baseLevel) {
-                    texture->gl.baseLevel = targetLevel;
-                }
-                if (targetLevel > texture->gl.maxLevel) {
-                    texture->gl.maxLevel = targetLevel;
-                }
-            }
-        }
-    }
 }
 
 void OpenGLDriver::bindPipeline(PipelineState const& state) {

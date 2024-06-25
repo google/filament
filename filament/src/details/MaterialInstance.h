@@ -29,10 +29,13 @@
 
 #include <filament/MaterialInstance.h>
 
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
+
+#include <tsl/robin_map.h>
 
 #include <algorithm>
 #include <limits>
@@ -45,6 +48,7 @@
 namespace filament {
 
 class FMaterial;
+class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
@@ -238,7 +242,13 @@ private:
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
 
+    struct TextureParameter {
+        FTexture const* texture;
+        backend::SamplerParams params;
+    };
+
     backend::Handle<backend::HwBufferObject> mUbHandle;
+    tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable filament::DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
 

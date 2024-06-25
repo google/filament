@@ -121,7 +121,8 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
     backend::MRT mrt{};
     TargetBufferInfo dinfo{};
 
-    auto setAttachment = [this](TargetBufferInfo& info, AttachmentPoint attachmentPoint) {
+    auto setAttachment = [this, &driver = engine.getDriverApi()]
+            (TargetBufferInfo& info, AttachmentPoint attachmentPoint) {
         Attachment const& attachment = mAttachments[(size_t)attachmentPoint];
         auto t = downcast(attachment.texture);
         info.handle = t->getHwHandle();
@@ -131,6 +132,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         } else {
             info.layer = attachment.layer;
         }
+        t->updateLodRange(driver, info.level);
     };
 
     UTILS_NOUNROLL
