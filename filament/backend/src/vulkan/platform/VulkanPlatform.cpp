@@ -220,153 +220,6 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
     return exts;
 }
 
-VkInstance createInstance(ExtensionSet const& requiredExts) {
-    VkInstance instance;
-    VkInstanceCreateInfo instanceCreateInfo = {};
-    bool validationFeaturesSupported = false;
-
-#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-    auto const enabledLayers = getEnabledLayers();
-    if (!enabledLayers.empty()) {
-        // If layers are supported, Check if VK_EXT_validation_features is supported.
-        FixedCapacityVector<VkExtensionProperties> const availableValidationExts
-                = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
-                        "VK_LAYER_KHRONOS_validation");
-        for (auto const& extProps: availableValidationExts) {
-            if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
-                validationFeaturesSupported = true;
-                break;
-            }
-        }
-        instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
-        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
-    } else {
-#if defined(__ANDROID__)
-        FVK_LOGD << "Validation layers are not available; did you set jniLibs in your "
-                 << "gradle file?" << utils::io::endl;
-#else
-        FVK_LOGD << "Validation layer not available; did you install the Vulkan SDK?\n"
-                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
-#endif // __ANDROID__
-
-    }
-#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
-
-    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
-    // instance extensions here in the common code. So that's a max of 7.
-    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
-    const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
-    uint32_t enabledExtensionCount = 0;
-
-    if (validationFeaturesSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
-    }
-    // Request platform-specific extensions.
-    for (auto const& requiredExt: requiredExts) {
-        assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
-        ppEnabledExtensions[enabledExtensionCount++] = requiredExt.data();
-    }
-
-    // Create the Vulkan instance.
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pEngineName = "Filament";
-    appInfo.apiVersion
-            = VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0);
-    instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
-    instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
-    if (setContains(requiredExts, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
-        instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    }
-
-    VkValidationFeaturesEXT features = {};
-    VkValidationFeatureEnableEXT enables[] = {
-            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-    };
-    if (validationFeaturesSupported) {
-        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-        features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
-        features.pEnabledValidationFeatures = enables;
-        instanceCreateInfo.pNext = &features;
-    }
-
-    VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "Unable to create Vulkan instance. Result=" << result;
-    return instance;
-}
-
-VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
-        VkPhysicalDeviceFeatures const& features, uint32_t graphicsQueueFamilyIndex,
-        ExtensionSet const& deviceExtensions) {
-    VkDevice device;
-    VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
-    const float queuePriority[] = {1.0f};
-    VkDeviceCreateInfo deviceCreateInfo = {};
-    FixedCapacityVector<const char*> requestExtensions;
-    requestExtensions.reserve(deviceExtensions.size() + 1);
-
-    // TODO: We don't really need this if we only ever expect headless swapchains.
-    requestExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    for (auto const& ext: deviceExtensions) {
-        requestExtensions.push_back(ext.data());
-    }
-    deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    deviceQueueCreateInfo->queueFamilyIndex = graphicsQueueFamilyIndex;
-    deviceQueueCreateInfo->queueCount = 1;
-    deviceQueueCreateInfo->pQueuePriorities = &queuePriority[0];
-    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.queueCreateInfoCount = 1;
-    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
-
-    // We could simply enable all supported features, but since that may have performance
-    // consequences let's just enable the features we need.
-    VkPhysicalDeviceFeatures enabledFeatures{
-            .samplerAnisotropy = features.samplerAnisotropy,
-            .textureCompressionETC2 = features.textureCompressionETC2,
-            .textureCompressionBC = features.textureCompressionBC,
-            .shaderClipDistance = features.shaderClipDistance,
-    };
-
-    deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
-    deviceCreateInfo.enabledExtensionCount = (uint32_t) requestExtensions.size();
-    deviceCreateInfo.ppEnabledExtensionNames = requestExtensions.data();
-
-    void* pNext = nullptr;
-    VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
-            .pNext = nullptr,
-            .imageViewFormatSwizzle = VK_TRUE,
-            .mutableComparisonSamplers = VK_TRUE,
-    };
-    if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
-        portability.pNext = pNext;
-        pNext = &portability;
-    }
-
-    VkPhysicalDeviceMultiviewFeaturesKHR multiview = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
-            .pNext = nullptr,
-            .multiview = VK_TRUE,
-            .multiviewGeometryShader = VK_FALSE,
-            .multiviewTessellationShader = VK_FALSE
-    };
-    if (setContains(deviceExtensions, VK_KHR_MULTIVIEW_EXTENSION_NAME)) {
-        multiview.pNext = pNext;
-        pNext = &multiview;
-    }
-
-    deviceCreateInfo.pNext = pNext;
-
-    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
-
-    return device;
-}
-
 // This method is used to enable/disable extensions based on external factors (i.e.
 // driver/device workarounds).
 std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
@@ -759,6 +612,153 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     mImpl->mContext = context;
 
     return VulkanDriver::create(this, context, driverConfig);
+}
+
+VkInstance VulkanPlatform::createInstance(ExtensionSet const& requiredExts) {
+    VkInstance instance;
+    VkInstanceCreateInfo instanceCreateInfo = {};
+    bool validationFeaturesSupported = false;
+
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+    auto const enabledLayers = getEnabledLayers();
+    if (!enabledLayers.empty()) {
+        // If layers are supported, Check if VK_EXT_validation_features is supported.
+        FixedCapacityVector<VkExtensionProperties> const availableValidationExts
+                = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+                        "VK_LAYER_KHRONOS_validation");
+        for (auto const& extProps: availableValidationExts) {
+            if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
+                validationFeaturesSupported = true;
+                break;
+            }
+        }
+        instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
+        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+    } else {
+#if defined(__ANDROID__)
+        FVK_LOGD << "Validation layers are not available; did you set jniLibs in your "
+                 << "gradle file?" << utils::io::endl;
+#else
+        FVK_LOGD << "Validation layer not available; did you install the Vulkan SDK?\n"
+                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
+#endif // __ANDROID__
+
+    }
+#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
+
+    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
+    // instance extensions here in the common code. So that's a max of 7.
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
+    const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
+    uint32_t enabledExtensionCount = 0;
+
+    if (validationFeaturesSupported) {
+        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
+    }
+    // Request platform-specific extensions.
+    for (auto const& requiredExt: requiredExts) {
+        assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
+        ppEnabledExtensions[enabledExtensionCount++] = requiredExt.data();
+    }
+
+    // Create the Vulkan instance.
+    VkApplicationInfo appInfo = {};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pEngineName = "Filament";
+    appInfo.apiVersion
+            = VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0);
+    instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instanceCreateInfo.pApplicationInfo = &appInfo;
+    instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
+    instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+    if (setContains(requiredExts, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+        instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
+
+    VkValidationFeaturesEXT features = {};
+    VkValidationFeatureEnableEXT enables[] = {
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+    };
+    if (validationFeaturesSupported) {
+        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
+        features.pEnabledValidationFeatures = enables;
+        instanceCreateInfo.pNext = &features;
+    }
+
+    VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "Unable to create Vulkan instance. Result=" << result;
+    return instance;
+}
+
+VkDevice VulkanPlatform::createLogicalDevice(VkPhysicalDevice physicalDevice,
+        VkPhysicalDeviceFeatures const& features, uint32_t graphicsQueueFamilyIndex,
+        ExtensionSet const& deviceExtensions) {
+    VkDevice device;
+    VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
+    const float queuePriority[] = {1.0f};
+    VkDeviceCreateInfo deviceCreateInfo = {};
+    FixedCapacityVector<const char*> requestExtensions;
+    requestExtensions.reserve(deviceExtensions.size() + 1);
+
+    // TODO: We don't really need this if we only ever expect headless swapchains.
+    requestExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    for (auto const& ext: deviceExtensions) {
+        requestExtensions.push_back(ext.data());
+    }
+    deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    deviceQueueCreateInfo->queueFamilyIndex = graphicsQueueFamilyIndex;
+    deviceQueueCreateInfo->queueCount = 1;
+    deviceQueueCreateInfo->pQueuePriorities = &queuePriority[0];
+    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.queueCreateInfoCount = 1;
+    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
+
+    // We could simply enable all supported features, but since that may have performance
+    // consequences let's just enable the features we need.
+    VkPhysicalDeviceFeatures enabledFeatures{
+            .samplerAnisotropy = features.samplerAnisotropy,
+            .textureCompressionETC2 = features.textureCompressionETC2,
+            .textureCompressionBC = features.textureCompressionBC,
+            .shaderClipDistance = features.shaderClipDistance,
+    };
+
+    deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
+    deviceCreateInfo.enabledExtensionCount = (uint32_t) requestExtensions.size();
+    deviceCreateInfo.ppEnabledExtensionNames = requestExtensions.data();
+
+    void* pNext = nullptr;
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+            .pNext = nullptr,
+            .imageViewFormatSwizzle = VK_TRUE,
+            .mutableComparisonSamplers = VK_TRUE,
+    };
+    if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+        portability.pNext = pNext;
+        pNext = &portability;
+    }
+
+    VkPhysicalDeviceMultiviewFeaturesKHR multiview = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
+            .pNext = nullptr,
+            .multiview = VK_TRUE,
+            .multiviewGeometryShader = VK_FALSE,
+            .multiviewTessellationShader = VK_FALSE
+    };
+    if (setContains(deviceExtensions, VK_KHR_MULTIVIEW_EXTENSION_NAME)) {
+        multiview.pNext = pNext;
+        pNext = &multiview;
+    }
+
+    deviceCreateInfo.pNext = pNext;
+
+    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
+
+    return device;
 }
 
 // This needs to be explictly written for

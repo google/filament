@@ -267,6 +267,14 @@ public:
      */
     VkQueue getGraphicsQueue() const noexcept;
 
+   protected:
+    virtual VkDevice createLogicalDevice(
+        VkPhysicalDevice physicalDevice,
+        const VkPhysicalDeviceFeatures& features,
+        uint32_t graphicsQueueFamilyIndex,
+        const ExtensionSet& deviceExtensions);
+    virtual VkInstance createInstance(ExtensionSet const& requiredExts);
+
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
 
