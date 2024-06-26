@@ -281,7 +281,7 @@ public class Manipulator {
          */
         @NonNull
         public Builder panning(Boolean enabled) {
-            nBuilderpanning(mNativeBuilder, enabled);
+            nBuilderPanning(mNativeBuilder, enabled);
             return this;
         }
 
