@@ -51,7 +51,7 @@ VulkanSwapChain::~VulkanSwapChain() {
     mCommands->flush();
     mCommands->wait();
 
-    mPlatform->destroy(swapChain);
+    mPlatform->destroySwapChain(swapChain);
 }
 
 void VulkanSwapChain::update() {

@@ -228,7 +228,7 @@ public:
      * Destroy the swapchain.
      * @param handle    The handle returned by createSwapChain()
      */
-    virtual void destroy(SwapChainPtr handle);
+    virtual void destroySwapChain(SwapChainPtr handle);
 
     /**
      * Clean up any resources owned by the Platform. For example, if the Vulkan instance handle was

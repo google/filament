@@ -789,7 +789,7 @@ VkResult VulkanPlatform::recreate(SwapChainPtr handle) {
     SWAPCHAIN_RET_FUNC(recreate, handle, )
 }
 
-void VulkanPlatform::destroy(SwapChainPtr handle) {
+void VulkanPlatform::destroySwapChain(SwapChainPtr handle) {
     if (mImpl->mSurfaceSwapChains.erase(handle)) {
         delete static_cast<VulkanPlatformSurfaceSwapChain*>(handle);
     } else if (mImpl->mHeadlessSwapChains.erase(handle)) {
