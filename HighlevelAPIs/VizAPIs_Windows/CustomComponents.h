@@ -7,7 +7,7 @@
 // NOTE THAT ALL ENTITIES ARE SUPPOSED TO HAVE NAME COMPONENTS
 namespace vzm
 {
-    class VzNameCompManager : utils::NameComponentManager
+    class VzNameCompManager : public utils::NameComponentManager
     {
     private:
         std::unordered_multimap<std::string, utils::Entity> nameToEntities_;
@@ -75,7 +75,7 @@ namespace vzm
             }
             return std::string(getName(ins));
         }
-        static VzNameCompManager& Get(const bool init = false) noexcept
+        static VzNameCompManager& Get() noexcept
         {
             static VzNameCompManager* ncm = new (std::nothrow) VzNameCompManager(utils::EntityManager::get());
             return *ncm;

@@ -134,6 +134,15 @@ int main(int argc, char** argv) {
         rcm.setCastShadows(rcm.getInstance(app.mesh.renderable), false);
         scene->addEntity(app.mesh.renderable);
 
+
+        //app.mesh.renderable = em.create();
+        RenderableManager::Builder(0)
+            .build(*engine, app.mesh.renderable);
+
+
+
+
+
         // Add light sources into the scene.
         app.light = em.create();
         LightManager::Builder(LightManager::Type::SUN)

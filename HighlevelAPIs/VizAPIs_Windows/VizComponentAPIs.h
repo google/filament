@@ -113,25 +113,33 @@ namespace vzm
         const_iterator end() const { return __params.end(); }
     };
 
-    enum class COMPONENT_TYPE
+    enum class SCENE_COMPONENT_TYPE
     {
-        UNDEFINED = 0,
-        BASE,
-        SCENE,
+        SCENEBASE = 0,
         CAMERA,
         LIGHT,
-        ACTOR,
+        ACTOR, // kind of renderable component
+    };
+
+    enum class RES_COMPONENT_TYPE
+    {
+        GEOMATRY = 0,
+        MATERIAL,
     };
 
     __dojostruct VzBaseComp
     {
         VID componentVID = INVALID_VID;
-        COMPONENT_TYPE compType = COMPONENT_TYPE::UNDEFINED;
         TimeStamp timeStamp = {}; // will be automatically set 
         ParamMap<std::string> attributes;
+
+        VID GetName();
+        VID SetName(const std::string& name);
     };
     __dojostruct VzSceneComp : VzBaseComp
     {
+        SCENE_COMPONENT_TYPE compType = SCENE_COMPONENT_TYPE::SCENEBASE;
+
         void GetWorldPosition(float v[3]);
         void GetWorldForward(float v[3]);
         void GetWorldRight(float v[3]);
@@ -149,232 +157,13 @@ namespace vzm
 
         VID GetParentVid();
     };
+
+    class VzRenderPath;
     __dojostruct VzRenderer
     {
-        void* renderer;
-        bool IsActivated = false;
-        // Renderer Configurations
-        enum class Tonemap
-        {
-            Reinhard,
-            ACES
-        };
-        enum class AO
-        {
-            AO_DISABLED,	// no ambient occlusion
-            AO_SSAO,		// simple brute force screen space ambient occlusion
-            AO_HBAO,		// horizon based screen space ambient occlusion
-            AO_MSAO,		// multi scale screen space ambient occlusion
-            AO_RTAO,		// ray traced ambient occlusion
-            // Don't alter order! (bound to lua manually)
-        };
-        enum class FSR2_Preset
-        {
-            // Guidelines: https://github.com/GPUOpen-Effects/FidelityFX-FSR2#scaling-modes
-            Quality,
-            Balanced,
-            Performance,
-            Ultra_Performance,
-        };
-        enum class SURFEL_DEBUG
-        {
-            SURFEL_DEBUG_NONE,
-            SURFEL_DEBUG_NORMAL,
-            SURFEL_DEBUG_COLOR,
-            SURFEL_DEBUG_POINT,
-            SURFEL_DEBUG_RANDOM,
-            SURFEL_DEBUG_HEATMAP,
-            SURFEL_DEBUG_INCONSISTENCY,
+        VzRenderPath* renderPath = nullptr;
 
-            SURFEL_DEBUG_FORCE_UINT = 0xFFFFFFFF,
-        };
-
-        // renderpath-bind
-        float GetExposure();
-        float GetBrightness();
-        float GetContrast();
-        float GetSaturation();
-        float GetBloomThreshold();
-        float GetMotionBlurStrength();
-        float GetDepthOfFieldStrength();
-        float GetSharpenFilterAmount();
-        float GetOutlineThreshold();
-        float GetOutlineThickness();
-        void GetOutlineColor(const float color[4]);
-        float GetAORange();
-        uint32_t GetAOSampleCount();
-        float GetAOPower();
-        float GetChromaticAberrationAmount();
-        uint32_t GetScreenSpaceShadowSampleCount();
-        float GetScreenSpaceShadowRange();
-        float GetEyeAdaptionKey();
-        float GetEyeAdaptionRate();
-        float GetFSRSharpness();
-        float GetFSR2Sharpness();
-        float GetLightShaftsStrength();
-        float GetRaytracedDiffuseRange();
-        float GetRaytracedReflectionsRange();
-        float GetReflectionRoughnessCutoff();
-        float GetSSGIDepthRejection();
-        Tonemap GetTonemap();
-
-        bool GetAOEnabled();
-        AO GetAO();
-        bool GetSSREnabled();
-        bool GetSSGIEnabled();
-        bool GetRaytracedDiffuseEnabled();
-        bool GetRaytracedReflectionEnabled();
-        bool GetShadowsEnabled();
-        bool GetReflectionsEnabled();
-        bool GetFXAAEnabled();
-        bool GetBloomEnabled();
-        bool GetColorGradingEnabled();
-        bool GetVolumeLightsEnabled();
-        bool GetLightShaftsEnabled();
-        bool GetLensFlareEnabled();
-        bool GetMotionBlurEnabled();
-        bool GetDepthOfFieldEnabled();
-        bool GetEyeAdaptionEnabled();
-        bool GetSharpenFilterEnabled();
-        bool GetOutlineEnabled();
-        bool GetChromaticAberrationEnabled();
-        bool GetDitherEnabled();
-        bool GetOcclusionCullingEnabled();
-        bool GetSceneUpdateEnabled();
-        bool GetFSREnabled();
-        bool GetFSR2Enabled();
-
-        uint32_t GetMSAASampleCount();
-
-        void SetExposure(const float value);
-        void SetBrightness(const float value);
-        void SetContrast(const float value);
-        void SetSaturation(const float value);
-        void SetBloomThreshold(const float value);
-        void SetMotionBlurStrength(const float value);
-        void SetDepthOfFieldStrength(const float value);
-        void SetSharpenFilterAmount(const float value);
-        void SetOutlineThreshold(const float value);
-        void SetOutlineThickness(const float value);
-        void SetOutlineColor(const float value[4]);
-        void SetAORange(const float value);
-        void SetAOSampleCount(uint32_t value);
-        void SetAOPower(const float value);
-        void SetChromaticAberrationAmount(const float value);
-        void SetScreenSpaceShadowSampleCount(uint32_t value);
-        void SetScreenSpaceShadowRange(const float value);
-        void SetEyeAdaptionKey(const float value);
-        void SetEyeAdaptionRate(const float value);
-        void SetFSRSharpness(const float value);
-        void SetFSR2Sharpness(const float value);
-        void SetLightShaftsStrength(const float value);
-        void SetRaytracedDiffuseRange(const float value);
-        void SetRaytracedReflectionsRange(const float value);
-        void SetReflectionRoughnessCutoff(const float value);
-        void SetSSGIDepthRejection(const float value);
-        void SetTonemap(const Tonemap value);
-
-        void SetAO(const AO value);
-        void SetSSREnabled(bool value);
-        void SetSSGIEnabled(const bool value);
-        void SetRaytracedReflectionsEnabled(const bool value);
-        void SetRaytracedDiffuseEnabled(const bool value);
-        void SetMotionBlurEnabled(const bool value);
-        void SetDepthOfFieldEnabled(const bool value);
-        void SetEyeAdaptionEnabled(const bool value);
-        void SetReflectionsEnabled(const bool value);
-        void SetBloomEnabled(const bool value);
-        void SetVolumeLightsEnabled(const bool value);
-        void SetLightShaftsEnabled(const bool value);
-        void SetOutlineEnabled(const bool value);
-        void SetShadowsEnabled(const bool value);
-        void SetFXAAEnabled(const bool value);
-        void SetColorGradingEnabled(const bool value);
-        void SetLensFlareEnabled(const bool value);
-        void SetSharpenFilterEnabled(const bool value);
-        void SetChromaticAberrationEnabled(const bool value);
-        void SetDitherEnabled(const bool value);
-        void SetOcclusionCullingEnabled(const bool value);
-        void SetSceneUpdateEnabled(const bool value);
-        void SetFSREnabled(const bool value);
-        void SetFSR2Enabled(const bool value);
-        void SetFSR2Preset(const FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias
-
-        void SetMSAASampleCount(const uint32_t value);
-
-        // rendercore-bind (basically global options)
-        void SetShadowProps2D(int max_resolution);
-        void SetShadowPropsCube(int max_resolution);
-        void SetTransparentShadowsEnabled(bool value);
-        float GetTransparentShadowsEnabled();
-        void SetWireRender(bool value);
-        bool IsWireRender();
-        void SetToDrawDebugBoneLines(bool param);
-        bool GetToDrawDebugBoneLines();
-        void SetToDrawDebugPartitionTree(bool param);
-        bool GetToDrawDebugPartitionTree();
-        bool GetToDrawDebugEnvProbes();
-        void SetToDrawDebugEnvProbes(bool value);
-        void SetToDrawDebugEmitters(bool param);
-        bool GetToDrawDebugEmitters();
-        void SetToDrawDebugForceFields(bool param);
-        bool GetToDrawDebugForceFields();
-        void SetToDrawDebugCameras(bool param);
-        bool GetToDrawDebugCameras();
-        void SetToDrawDebugColliders(bool param);
-        bool GetToDrawDebugColliders();
-        bool GetToDrawGridHelper();
-        void SetToDrawGridHelper(bool value);
-        bool GetToDrawVoxelHelper();
-        void SetToDrawVoxelHelper(bool value, int clipmap_level);
-        void SetDebugLightCulling(bool enabled);
-        bool GetDebugLightCulling();
-        void SetAdvancedLightCulling(bool enabled);
-        bool GetAdvancedLightCulling();
-        void SetVariableRateShadingClassification(bool enabled);
-        bool GetVariableRateShadingClassification();
-        void SetVariableRateShadingClassificationDebug(bool enabled);
-        bool GetVariableRateShadingClassificationDebug();
-        void SetTemporalAAEnabled(bool enabled);
-        bool GetTemporalAAEnabled();
-        void SetTemporalAADebugEnabled(bool enabled);
-        bool GetTemporalAADebugEnabled();
-        void SetFreezeCullingCameraEnabled(bool enabled);
-        bool GetFreezeCullingCameraEnabled();
-        void SetVXGIEnabled(bool enabled);
-        bool GetVXGIEnabled();
-        void SetVXGIReflectionsEnabled(bool enabled);
-        bool GetVXGIReflectionsEnabled();
-        void SetGameSpeed(float value);
-        float GetGameSpeed();
-        void SetRaytraceBounceCount(uint32_t bounces);
-        uint32_t GetRaytraceBounceCount();
-        void SetRaytraceDebugBVHVisualizerEnabled(bool value);
-        bool GetRaytraceDebugBVHVisualizerEnabled();
-        void SetRaytracedShadowsEnabled(bool value);
-        bool GetRaytracedShadowsEnabled();
-        void SetTessellationEnabled(bool value);
-        bool GetTessellationEnabled();
-        void SetDisableAlbedoMaps(bool value);
-        bool IsDisableAlbedoMaps();
-        void SetForceDiffuseLighting(bool value);
-        bool IsForceDiffuseLighting();
-        void SetScreenSpaceShadowsEnabled(bool value);
-        bool GetScreenSpaceShadowsEnabled();
-        void SetSurfelGIEnabled(bool value);
-        bool GetSurfelGIEnabled();
-        void SetSurfelGIDebugEnabled(SURFEL_DEBUG value);
-        SURFEL_DEBUG GetSurfelGIDebugEnabled();
-        void SetDDGIEnabled(bool value);
-        bool GetDDGIEnabled();
-        void SetDDGIDebugEnabled(bool value);
-        bool GetDDGIDebugEnabled();
-        void SetDDGIRayCount(uint32_t value);
-        uint32_t GetDDGIRayCount();
-        void SetDDGIBlendSpeed(float value);
-        float GetDDGIBlendSpeed();
-        void SetGIBoost(float value);
-        float GetGIBoost();
+        // setters and getters of rendering options
     };
     __dojostruct VzCamera : VzSceneComp, VzRenderer
     {

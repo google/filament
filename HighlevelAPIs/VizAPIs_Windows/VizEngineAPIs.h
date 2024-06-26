@@ -8,7 +8,7 @@ namespace vzm
     // This must be called before using engine APIs
     //  - paired with DeinitEngineLib()
     __dojostatic VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& argument = vzm::ParamMap<std::string>());
-
+    __dojostatic VZRESULT DeinitEngineLib();
     // Get Entity ID 
     //  - return zero in case of failure 
     __dojostatic VID GetFirstVidByName(const std::string& name);
@@ -23,22 +23,21 @@ namespace vzm
     // Create new scene and return scene (NOT a scene item) ID, a scene 
     //  - return zero in case of failure (the name is already registered or overflow VID)
     __dojostatic VID NewScene(const std::string& sceneName);
-    // Create new scene component and return its component (scene item) ID (global entity)
+    // Create new scene component (SCENE_COMPONENT_TYPE::CAMERA, ACTOR, LIGHT) NOT SCENE_COMPONENT_TYPE::SCENEBASE
     //  - Must belong to a scene
+    //  - parentVid cannot be a scene (renderable or 0)
     //  - return zero in case of failure (invalid sceneID, the name is already registered, or overflow VID)
-    __dojostatic VID NewSceneComponent(const COMPONENT_TYPE compType, const VID sceneVid, const std::string& compName, const VID parentVid = 0u, VmBaseComponent** baseComp = nullptr);
+    __dojostatic VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, const std::string& compName, const VID parentVid = 0u, VzSceneComp** sceneComp = nullptr);
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
-    __dojostatic VID AppendComponentTo(const VID vid, const VID parentVid);
+    __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
-    __dojostatic VmBaseComponent* GetComponent(const COMPONENT_TYPE compType, const VID vid);
+    __dojostatic VzSceneComp* GetSceneComponent(const SCENE_COMPONENT_TYPE compType, const VID vid);
     // Get Component IDs in a scene
     //  - return # of scene Components 
-    __dojostatic uint32_t GetSceneCompoenentVids(const COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids);	// Get CameraParams and return its pointer registered in renderer
-    // Get VmWeather and return its pointer 
-    //  - return nullptr in case of failure 
-    __dojostatic VmWeather* GetSceneActivatedWeather(const VID sceneVid);
+    __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids);	// Get CameraParams and return its pointer registered in renderer
+    /*
     // Load scene components into a new scene and return the scene ID
     //  - Must belong to the internal scene
     //  - return zero in case of failure
@@ -62,4 +61,5 @@ namespace vzm
     // Display Engine's states and profiling information
     //  - return canvas VID (use this as a camVid)
     __dojostatic VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile = true, const bool displayEngineStates = true);
+    /**/
 }

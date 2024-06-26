@@ -1,7 +1,9 @@
 //#pragma warning(disable:4819)
 #include "VizEngineAPIs.h" 
+#include "VizComponentAPIs.h"
 
 #include <iostream>
+#include <memory>
 
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
@@ -36,12 +38,11 @@ using namespace filamesh;
 using namespace filament::math;
 using namespace filament::backend;
 
-static std::unordered_map<std::string, vzm::COMPONENT_TYPE> vzcomptypes = {
-    {typeid(vzm::VzBaseComp).name(), vzm::COMPONENT_TYPE::BASE},
-    {typeid(vzm::VzSceneComp).name(), vzm::COMPONENT_TYPE::SCENE},
-    {typeid(vzm::VzCamera).name(), vzm::COMPONENT_TYPE::CAMERA},
-    {typeid(vzm::VzLight).name(), vzm::COMPONENT_TYPE::LIGHT},
-    {typeid(vzm::VzActor).name(), vzm::COMPONENT_TYPE::ACTOR},
+static std::unordered_map<std::string, vzm::SCENE_COMPONENT_TYPE> vzcomptypes = {
+    {typeid(vzm::VzSceneComp).name(), vzm::SCENE_COMPONENT_TYPE::SCENEBASE},
+    {typeid(vzm::VzCamera).name(), vzm::SCENE_COMPONENT_TYPE::CAMERA},
+    {typeid(vzm::VzLight).name(), vzm::SCENE_COMPONENT_TYPE::LIGHT},
+    {typeid(vzm::VzActor).name(), vzm::SCENE_COMPONENT_TYPE::ACTOR},
 };
 
 
@@ -266,7 +267,7 @@ namespace vzm
         }
     };
 
-    class VzRenderPath : VzCanvas
+    class VzRenderPath : public VzCanvas
     {
     private:
 
@@ -380,14 +381,14 @@ namespace vzm
         using SceneVID = VID;
         using CamVID = VID;
         using RenderableVID = VID;
-        // archive
+        using LightVID = VID;
+
+        std::unordered_map<SceneVID, filament::Scene*> scenes_;
         // note a VzRenderPath involves a view that includes
         // 1. camera and 2. scene
         std::unordered_map<CamVID, VzRenderPath> renderPaths_;
-        std::unordered_map<SceneVID, filament::Scene*> scenes_;
-
-        std::unordered_multimap<SceneVID, CamVID> sceneCameraVids_;
-        std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_; // lights and renderable entities
+        std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_;
+        std::unordered_map<LightVID, SceneVID> lightSceneVids_;
 
         std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzComponents_;
 
@@ -411,24 +412,60 @@ namespace vzm
 
             return vid;
         }
+        inline bool RemoveScene(SceneVID sceneVid)
+        {
+            Scene* scene = GetScene(sceneVid);
+            if (scene == nullptr)
+            {
+                return false;
+            }
+            auto& rcm = gEngine->getRenderableManager();
+            auto& lcm = gEngine->getLightManager();
+            scene->forEach([&](utils::Entity ett) {
+                if (rcm.hasComponent(ett))
+                {
+                    renderableSceneVids_[ett.getId()] = 0;
+                }
+                else if (lcm.hasComponent(ett))
+                {
+                    lightSceneVids_[ett.getId()] = 0;
+                }
+                else
+                {
+                    backlog::post("entity : " + std::to_string(ett.getId()), backlog::LogLevel::Warning);
+                }
+                });
+            gEngine->destroy(scene);
+            scenes_.erase(sceneVid);
+            for (auto& it : renderPaths_)
+            {
+                VzRenderPath* render_path = &it.second;
+                render_path->GetView()->setScene(nullptr);
+            }
+            return true;
+        }
+
         inline VzRenderPath* CreateRendePath(const CamVID camVid, const SceneVID sceneVid)
         {
             auto it = renderPaths_.find(camVid);
             assert(it == renderPaths_.end());
-
-            auto sit = scenes_.find(sceneVid);
-            assert(sit != scenes_.end());
-            Scene* scene = sit->second;
 
             // I organize the renderPath with filament::View that involves
             // 1. Camera (involving the camera component and the transform component)
             // 2. Scene
             VzRenderPath* renderPath = &renderPaths_[camVid];
             filament::View* view = renderPath->GetView();
-            view->setScene(scene);
+
+            auto sit = scenes_.find(sceneVid);
+            if (sit != scenes_.end())
+            {
+                Scene* scene = sit->second;
+                view->setScene(scene);
+            }
 
             utils::EntityManager& em = utils::EntityManager::get();
-            utils::Entity camEntity = em.create();
+            utils::Entity camEntity;
+            camEntity.import(camVid);
 
             // 1. Instance const i = manager.addComponent(entity);
             // 2. tcm.create(entity); where FTransformManager& tcm = engine.getTransformManager();
@@ -491,6 +528,35 @@ namespace vzm
             ett.import(vid);
             return ncm.GetName(ett);
         }
+        inline bool HasComponent(const VID vid)
+        {
+            VzNameCompManager& ncm = VzNameCompManager::Get();
+            utils::Entity ett;
+            ett.import(vid);
+            return ncm.hasComponent(ett);
+        }
+        inline bool IsRenderable(const RenderableVID vid)
+        {
+            auto it = renderableSceneVids_.find(vid);
+            bool ret = it != renderableSceneVids_.end();
+#ifdef _DEBUG
+            utils::Entity ett;
+            ett.import(vid);
+            assert(ret == gEngine->getRenderableManager().hasComponent(ett));
+#endif
+            return ret;
+        }
+        inline bool IsLight(const LightVID vid)
+        {
+            auto it = lightSceneVids_.find(vid);
+            bool ret = it != lightSceneVids_.end();
+#ifdef _DEBUG
+            utils::Entity ett;
+            ett.import(vid);
+            assert(ret == gEngine->getRenderableManager().hasComponent(ett));
+#endif
+            return ret;
+        }
         inline Scene* GetScene(const SceneVID sid)
         {
             auto it = scenes_.find(sid);
@@ -533,9 +599,33 @@ namespace vzm
             }
             return &it->second;
         }
+        inline size_t GetCameraVids(std::vector<CamVID>& camVids)
+        {
+            camVids.clear();
+            camVids.reserve(renderPaths_.size());
+            for (auto& it : renderPaths_)
+            {
+                camVids.push_back(it.first);
+            }
+            return camVids.size();
+        }
         inline VzRenderPath* GetFirstRenderPathByName(const std::string& name)
         {
             return GetRenderPath(GetFirstVidByName(name));
+        }
+        inline SceneVID GetSceneVidBelongTo(const VID vid)
+        {
+            auto itr = renderableSceneVids_.find(vid);
+            if (itr != renderableSceneVids_.end())
+            {
+                return itr->second;
+            }
+            auto itl = lightSceneVids_.find(vid);
+            if (itl != lightSceneVids_.end())
+            {
+                return itl->second;
+            }
+            return INVALID_VID;
         }
 
         inline void AppendSceneEntityToParent(const VID vidSrc, const VID vidDst)
@@ -543,32 +633,33 @@ namespace vzm
             assert(vidSrc != vidDst);
             auto getSceneAndVid = [this](Scene** scene, const VID vid)
                 {
-                    SceneVID vidScene = vid;
-                    *scene = GetScene(vidScene);
+                    SceneVID vid_scene = vid;
+                    *scene = GetScene(vid_scene);
                     if (scene == nullptr)
                     {
-                        auto it = renderableSceneVids_.find(vidScene);
-                        if (it == renderableSceneVids_.end())
+                        auto itr = renderableSceneVids_.find(vid_scene);
+                        auto itl = lightSceneVids_.find(vid_scene);
+                        if (itr == renderableSceneVids_.end() && itl == renderableSceneVids_.end())
                         {
-                            vidScene = INVALID_VID;
+                            vid_scene = INVALID_VID;
                         }
-                        else
+                        else 
                         {
-                            vidScene = it->second;
-                            *scene = GetScene(vidScene);
+                            vid_scene = itr == renderableSceneVids_.end() ? itl->second : itr->second;
+                            *scene = GetScene(vid_scene);
                         }
                     }
-                    return vidScene;
+                    return vid_scene;
                 };
 
-            Scene* sceneSrc = nullptr;
-            Scene* sceneDst = nullptr;
-            SceneVID vidSceneSrc = getSceneAndVid(&sceneSrc, vidSrc);
-            SceneVID vidSceneDst = getSceneAndVid(&sceneDst, vidDst);
+            Scene* scene_src = nullptr;
+            Scene* scene_dst = nullptr;
+            SceneVID vid_scene_src = getSceneAndVid(&scene_src, vidSrc);
+            SceneVID vid_scene_dst = getSceneAndVid(&scene_dst, vidDst);
 
-            utils::Entity ettSrc, ettDst;
-            ettSrc.import(vidSrc);
-            ettDst.import(vidDst);
+            utils::Entity ett_src, ett_dst;
+            ett_src.import(vidSrc);
+            ett_dst.import(vidDst);
             //auto& em = gEngine->getEntityManager();
             auto& tcm = gEngine->getTransformManager();
 
@@ -577,125 +668,170 @@ namespace vzm
             // case 3. src is renderable and dst is scene
             // case 4. both entities are scenes
             // note that renderable entity must have transform component!
-            std::vector<utils::Entity> entitiesMoving;
-            auto moveToRenderable = [&tcm, this](Scene* sceneSrc, Scene* sceneDst,
-                std::vector<utils::Entity>& entitiesMoving,
-                utils::Entity ettSrc, utils::Entity ettDst)
-                {
-                    auto insDst = tcm.getInstance(ettDst);
-                    assert(insDst.asValue() != 0);
-                    sceneSrc->forEach([&](utils::Entity ett) {
-                        entitiesMoving.push_back(ett);
-
-                        auto ins = tcm.getInstance(ett);
-                        utils::Entity ettParent = tcm.getParent(ins);
-                        if (ettParent.isNull())
-                        {
-                            tcm.setParent(ins, insDst);
-                        }
-                        });
-
-                    if (sceneSrc && sceneSrc != sceneDst)
-                    {
-                        sceneSrc->remove(ettSrc);
-                        renderableSceneVids_[ettSrc.getId()] = 0;
-                    }
-                };
-            if (vidSrc != vidSceneSrc && vidDst != vidSceneDst)
+            std::vector<utils::Entity> entities_moving;
+            if (vidSrc != vid_scene_src && vidDst != vid_scene_dst)
             {
                 // case 1. both entities are renderable
-                auto insSrc = tcm.getInstance(ettSrc);
-                auto insDst = tcm.getInstance(ettDst);
-                assert(insSrc.asValue() != 0 && insDst.asValue() != 0);
+                auto ins_src = tcm.getInstance(ett_src);
+                auto ins_dst = tcm.getInstance(ett_dst);
+                assert(ins_src.asValue() != 0 && ins_dst.asValue() != 0);
 
-                tcm.setParent(insSrc, insDst);
-                if (sceneSrc && sceneSrc != sceneDst)
+                tcm.setParent(ins_src, ins_dst);
+
+                entities_moving.push_back(ett_src); 
+                for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
                 {
-                    sceneSrc->remove(ettSrc);
-                    renderableSceneVids_[ettSrc.getId()] = 0;
-
-                    entitiesMoving.push_back(ettSrc);
-
-                    for (auto it = tcm.getChildrenBegin(insSrc); it != tcm.getChildrenEnd(insSrc); it++)
-                    {
-                        utils::Entity ett = tcm.getEntity(*it);
-                        sceneSrc->remove(ett);
-                        renderableSceneVids_[ett.getId()] = 0;
-
-                        entitiesMoving.push_back(ett);
-                    }
+                    utils::Entity ett = tcm.getEntity(*it);
+                    entities_moving.push_back(ett);
                 }
             }
-            else if (vidSrc == vidSceneSrc && vidDst != vidSceneDst)
+            else if (vidSrc == vid_scene_src && vidDst != vid_scene_dst)
             {
+                assert(scene_src != scene_dst && "scene cannot be appended to its component");
+
                 // case 2. src is scene and dst is renderable
-                moveToRenderable(sceneSrc, sceneDst, entitiesMoving, ettSrc, ettDst);
+                auto ins_dst = tcm.getInstance(ett_dst);
+                assert(ins_dst.asValue() != 0 && "vidDst is invalid");
+                scene_src->forEach([&](utils::Entity ett) {
+                    entities_moving.push_back(ett);
+
+                    auto ins = tcm.getInstance(ett);
+                    utils::Entity ett_parent = tcm.getParent(ins);
+                    if (ett_parent.isNull())
+                    {
+                        tcm.setParent(ins, ins_dst);
+                    }
+                    });
             }
-            else if (vidSrc != vidSceneSrc && vidDst == vidSceneDst)
+            else if (vidSrc != vid_scene_src && vidDst == vid_scene_dst)
             {
                 // case 3. src is renderable and dst is scene
-                moveToRenderable(sceneDst, sceneSrc, entitiesMoving, ettDst, ettSrc);
+                // scene_src == scene_dst means that 
+                //    vidSrc is appended to its root
+
+                auto ins_src = tcm.getInstance(ett_src);
+                assert(ins_src.asValue() != 0 && "vidSrc is invalid");
+
+                entities_moving.push_back(ett_src);
+                for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
+                {
+                    utils::Entity ett = tcm.getEntity(*it);
+                    entities_moving.push_back(ett);
+                }
             }
             else 
             {
-                assert(vidSrc == vidSceneSrc && vidDst == vidSceneDst);
-                assert(sceneSrc != sceneDst);
+                assert(vidSrc == vid_scene_src && vidDst == vid_scene_dst);
+                assert(scene_src != scene_dst);
                 // case 4. both entities are scenes
-                sceneSrc->forEach([&](utils::Entity ett) {
-                    entitiesMoving.push_back(ett);
+                scene_src->forEach([&](utils::Entity ett) {
+                    entities_moving.push_back(ett);
                     });
 
-                for (auto& it : entitiesMoving)
-                {
-                    sceneSrc->remove(it);
-                    sceneDst->addEntity(it);
-                    renderableSceneVids_[it.getId()] = vidSceneDst;
-                }
-                return;
+                RemoveScene(vid_scene_src);
             }
 
-            if (sceneDst && sceneSrc != sceneDst)
+            for (auto& it : entities_moving)
             {
-                for (auto& it : entitiesMoving)
+                auto itr = renderableSceneVids_.find(it.getId());
+                auto itl = lightSceneVids_.find(it.getId());
+                if (itr != renderableSceneVids_.end())
+                    itr->second = 0;
+                else if (itl != lightSceneVids_.end())
+                    itl->second = 0;
+                if (scene_src)
                 {
-                    sceneDst->addEntity(it);
-                    renderableSceneVids_[it.getId()] = vidSceneDst;
+                    scene_src->remove(ett_src);
+                }
+            }
+
+            if (scene_dst)
+            {
+                for (auto& it : entities_moving)
+                {
+                    scene_dst->addEntity(it);
+
+                    auto itr = renderableSceneVids_.find(it.getId());
+                    auto itl = lightSceneVids_.find(it.getId());
+                    if (itr != renderableSceneVids_.end())
+                        itr->second = vid_scene_dst;
+                    else if (itl != lightSceneVids_.end())
+                        itl->second = vid_scene_dst;
                 }
             }
         }
 
-        template <typename VZCOMP>
-        inline VZCOMP* CreateVzComp(const VID vid)
+        inline VzSceneComp* CreateSceneComponent(SCENE_COMPONENT_TYPE compType, const std::string& name)
         {
-            auto it = vzComponents_.find(vid);
-            assert(it == vzComponents_.end());
-
-            std::string typeName = typeid(VZCOMP).name();
-            COMPONENT_TYPE compType = vzcomptypes[typeName];
-            if (compType == COMPONENT_TYPE::UNDEFINED)
+            //std::string type_name = typeid(VZCOMP).name();
+            //SCENE_COMPONENT_TYPE comp_type = vzcomptypes[type_name];
+            if (compType == SCENE_COMPONENT_TYPE::SCENEBASE)
             {
                 return nullptr;
             }
 
-            utils::Entity ett;
-            ett.import(vid);
+            auto& em = gEngine->getEntityManager();
+            utils::Entity ett = em.create();
+            VID vid = ett.getId();
+            
+            VzSceneComp* v_comp = nullptr;
+            
+            switch (compType)
+            {
+            case SCENE_COMPONENT_TYPE::ACTOR:
+            {
+                RenderableManager::Builder(0)
+                    .build(*gEngine, ett);
+                renderableSceneVids_[vid] = 0;
+
+                auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
+                v_comp = (VzSceneComp*)it.first->second.get();
+                break;
+            }
+            case SCENE_COMPONENT_TYPE::LIGHT:
+            {
+                LightManager::Builder(LightManager::Type::SUN)
+                    .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+                    .intensity(110000)
+                    .direction({ 0.7, -1, -0.8 })
+                    .sunAngularRadius(1.9f)
+                    .castShadows(false)
+                    .build(*gEngine, ett);
+                lightSceneVids_[vid] = 0;
+
+                auto it = vzComponents_.emplace(vid, std::make_unique<VzLight>());
+                v_comp = (VzSceneComp*)it.first->second.get();
+                break;
+            }
+            case SCENE_COMPONENT_TYPE::CAMERA:
+            {
+                vzm::VzRenderPath* render_path = CreateRendePath(vid, 0);
+
+                auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
+                v_comp = (VzSceneComp*)it.first->second.get();
+                vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
+                v_cam->renderPath = render_path;
+                render_path->Init(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
+                render_path->UpdateVzCamera(v_cam);
+                break;
+            }
+            default:
+                assert(0);
+            }
+            v_comp->componentVID = vid;
+            v_comp->compType = compType;
+            v_comp->timeStamp = std::chrono::high_resolution_clock::now();
 
             auto& ncm = VzNameCompManager::Get();
-            auto ins = ncm.getInstance(ett);
-            if (ins.asValue() == 0)
-            {
-                return nullptr;
-            }
+            auto& tcm = gEngine->getTransformManager();
+            ncm.CreateNameComp(ett, name);
+            tcm.create(ett);
 
-            VZCOMP vzComp;
-            vzComp.componentVID = vid;
-            vzComp.compType = compType;
-            vzComponents_.insert(std::make_pair(vid, std::make_unique<VZCOMP>(vzComp)));
-            return (VZCOMP*)vzComponents_[vid].get();
+            return v_comp;
         }
 
         template <typename VZCOMP>
-        inline VZCOMP* GetVzComp(const VID vid)
+        inline VZCOMP* GetSceneComponent(const VID vid)
         {
             auto it = vzComponents_.find(vid);
             if (it == vzComponents_.end())
@@ -704,52 +840,8 @@ namespace vzm
             }
             return (VZCOMP*)it->second.get();
         }
-        template <typename COMP>
-        inline COMP* GetEngineCompInstance(const VID vid)
-        {
-            std::string typeName = typeid(COMP).name();
-            FCompType compType = comptypes[typeName];
-            COMP* comp = nullptr;
 
-            utils::Entity ett;
-            ett.import(vid);
-
-            switch (compType)
-            {
-            case FCompType::NameComponent:
-            {
-                auto& ncm = VzNameCompManager::Get();
-                comp = ncm->getInstance(ett);
-                break;
-            }
-            case FCompType::CameraComponent:
-            {
-                comp = gEngine->getCameraComponent(ett);
-                break;
-            }
-            case FCompType::TransformComponent:
-            {
-                auto& tcm = gEngine->getTransformManager();
-                comp = tcm->getInstance(ett);
-                break;
-            }
-            case FCompType::LightComponent:
-            {
-                auto& lcm = gEngine->getLightManager();
-                comp = lcm->getInstance(ett);
-                break;
-            }
-            case FCompType::RenderableComponent:
-            {
-                auto& rcm = gEngine->getRenderableManager();
-                comp = rcm->getInstance(ett);
-                break;
-            }
-            default: assert(0 && "Not allowed GetEngineCompInstance");  return nullptr;
-            }
-            return comp;
-        }
-
+        // SceneVID, CamVID, RenderableVID (light and actor), 
         inline void RemoveEntity(const VID vid)
         {
             utils::Entity ett;
@@ -758,54 +850,21 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
             ncm.RemoveEntity(ett);
 
-            Scene* scene = GetScene(vid);
-            if (scene)
-            {
-                // vid is SCeneVID
-                gEngine->destroy(scene);
-
-                // check if the views reset the scene.
-                auto range = sceneCameraVids_.equal_range(vid);
-                for (auto it = range.first; it != range.second; ++it) {
-                    auto renderPath = GetRenderPath(it->second);
-                    assert(renderPath);
-                    renderPath->GetView()->setScene(nullptr);
-                }
-
-                scenes_.erase(vid);
-                sceneCameraVids_.erase(vid);
-            }
-            else
+            if (!RemoveScene(vid))
             {
                 auto& em = utils::EntityManager::get();
-                
-                if (em.isAlive(ett))
+                // this calls built-in destroy functions in the filament entity managers
+                em.destroy(ett);
+
+                vzComponents_.erase(vid);
+                renderableSceneVids_.erase(vid);
+                lightSceneVids_.erase(vid);
+                renderPaths_.erase(vid);
+
+                for (auto& it : scenes_)
                 {
-                    em.destroy(ett);
-
-                    // check the following //
-                    vzComponents_.erase(vid);
-
-                    if (renderPaths_.erase(vid) > 0)
-                    {
-                        // vid is CamVID
-                        for (auto it = sceneCameraVids_.begin(); it != sceneCameraVids_.end(); )
-                        {
-                            if (it->second == vid)
-                            {
-                                it = sceneCameraVids_.erase(it);
-                            }
-                            else
-                            {
-                                it++;
-                            }
-                        }
-                    }
-                    //sceneCameraVids_.erase(
-                    //    std::remove_if(sceneCameraVids_.begin(), sceneCameraVids_.end(),
-                    //        [vid](const auto& pair) { return pair.second == vid; }),
-                    //    sceneCameraVids_.end()
-                    //);
+                    Scene* scene = it.second;
+                    scene->remove(ett);
                 }
             }
         }
@@ -935,205 +994,116 @@ namespace vzm
         Scene* scene = gEngineApp.GetFirstSceneByName(sceneName);
         if (scene != nullptr)
         {
+            backlog::post("scene name must be unique!", backlog::LogLevel::Error);
             return INVALID_VID;
         }
 
         return gEngineApp.CreateSceneEntity(sceneName);
     }
 
-    bool moveToParent(const utils::Entity ett, const utils::Entity ettParent, Scene* scene)
+    VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, const std::string& compName, const VID parentVid, VzSceneComp** sceneComp)
     {
-        assert(ett != ettParent);
-
-        auto& tcm = gEngine->getTransformManager();
-        auto ins = tcm.getInstance(ett);
-        auto insParent = tcm.getInstance(ettParent);
-        if (ins.asValue() == 0 || insParent.asValue() == 0)
+        VzSceneComp* v_comp = nullptr;
+        Scene* scene = gEngineApp.GetScene(sceneVid);
+        v_comp = gEngineApp.CreateSceneComponent(compType, compName);
+        if (v_comp == nullptr)
         {
-            backlog::post("moveToParent >> invald entities", backlog::LogLevel::Error);
-            return;
+            backlog::post("NewSceneComponent >> failure to gEngineApp.CreateSceneComponent", backlog::LogLevel::Error);
+            return 0;
+        }
+        if (compType == SCENE_COMPONENT_TYPE::CAMERA)
+        {
+            gEngineApp.SetSceneToRenderPath(v_comp->componentVID, sceneVid);
         }
 
-        if (!ettParent.isNull())
+        VID appendVid = gEngineApp.IsRenderable(parentVid) ? parentVid : scene ? sceneVid : 0;
+        if (appendVid != 0)
         {
-
-            // TO DO
-
-            for (auto& entry : scene->componentLibrary.entries)
-            {
-                if (entry.second.component_manager->Contains(ettParent))
-                {
-                    scene->hierarchy.Create(ett).parentID = ettParent;
-                    return true;
-                }
-            }
+            gEngineApp.AppendSceneEntityToParent(v_comp->componentVID, appendVid);
         }
-        return false;
+
+        if (sceneComp)
+        {
+            *sceneComp = v_comp;
+        }
+        return v_comp->componentVID;
     }
 
-    VID NewSceneComponent(const COMPONENT_TYPE compType, const VID sceneVid, const std::string& compName, const VID parentVid, VmBaseComponent** baseComp)
+    VID AppendSceneComponentTo(const VID vid, const VID parentVid)
     {
-        VzmScene* scene = gEngineApp.GetScene(sceneVid);
-        if (scene == nullptr)
+        gEngineApp.AppendSceneEntityToParent(vid, parentVid);
+        Scene* scene = gEngineApp.GetScene(parentVid);
+        if (scene)
         {
-            return INVALID_ENTITY;
+            return parentVid;
         }
-        Entity ett = INVALID_ENTITY;
-        switch (compType)
-        {
-        case COMPONENT_TYPE::ACTOR:
-        {
-            ett = scene->Entity_CreateObject(compName);
-            VmActor* vmActor = gEngineApp.CreateVmComp<VmActor>(ett);
-            if (baseComp) *baseComp = vmActor;
-            break;
-        }
-        case COMPONENT_TYPE::CAMERA:
-        {
-            ett = scene->Entity_CreateCamera(compName, CANVAS_INIT_W, CANVAS_INIT_H);
-            VmCamera* vmCam = gEngineApp.CreateVmComp<VmCamera>(ett);
-
-            CameraComponent* camComponent = scene->cameras.GetComponent(ett);
-            VzmRenderer* renderer = gEngineApp.CreateRenderer(ett);
-            renderer->scene = scene;
-            assert(renderer->camera == camComponent);
-
-            vmCam->compType = compType;
-            vmCam->componentVID = ett;
-            vmCam->renderer = (void*)renderer;
-            renderer->UpdateVmCamera(vmCam);
-            renderer->init(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
-            renderer->Load(); // Calls renderer->Start()
-            if (baseComp) *baseComp = renderer->GetVmCamera();
-            break;
-        }
-        case COMPONENT_TYPE::LIGHT:
-        {
-            ett = scene->Entity_CreateLight(compName);// , XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
-            VmLight* vmLight = gEngineApp.CreateVmComp<VmLight>(ett);
-            if (baseComp) *baseComp = vmLight;
-            break;
-        }
-        case COMPONENT_TYPE::EMITTER:
-        {
-            ett = scene->Entity_CreateEmitter(compName);
-            VmEmitter* vmEmitter = gEngineApp.CreateVmComp<VmEmitter>(ett);
-            if (baseComp) *baseComp = vmEmitter;
-            break;
-        }
-        case COMPONENT_TYPE::MATERIAL:
-        {
-            ett = scene->Entity_CreateMaterial(compName);
-            VmMaterial* vmMat = gEngineApp.CreateVmComp<VmMaterial>(ett);
-            if (baseComp) *baseComp = vmMat;
-            break;
-        }
-        case COMPONENT_TYPE::COLLIDER:
-        {
-            ett = CreateEntity();
-            scene->names.Create(ett) = compName;
-            scene->colliders.Create(ett);
-            scene->transforms.Create(ett);
-            VmCollider* vmCollider = gEngineApp.CreateVmComp<VmCollider>(ett);
-            if (baseComp) *baseComp = vmCollider;
-            break;
-        }
-        case COMPONENT_TYPE::WEATHER:
-        {
-            ett = CreateEntity();
-            scene->names.Create(ett) = compName;
-            scene->weathers.Create(ett);
-            VmWeather* vmWeather = gEngineApp.CreateVmComp<VmWeather>(ett);
-            if (baseComp) *baseComp = vmWeather;
-            break;
-        }
-        case COMPONENT_TYPE::ANIMATION:
-        default:
-            return INVALID_ENTITY;
-        }
-        moveToParent(ett, parentVid, scene);
-        return ett;
+        return gEngineApp.GetSceneVidBelongTo(parentVid);
     }
-
-    VID AppendComponentTo(const VID vid, const VID parentVid)
-    {
-        HierarchyComponent* hierarchy = gEngineApp.GetEngineComp<HierarchyComponent>(vid);
-        if (hierarchy)
-        {
-            if (hierarchy->parentID == parentVid)
-            {
-                auto scenes = gEngineApp.GetScenes();
-                for (auto it = scenes->begin(); it != scenes->end(); it++)
-                {
-                    VzmScene* scene = &it->second;
-                    if (scene->hierarchy.GetComponent(vid))
-                    {
-                        return scene->sceneVid;
-                    }
-                }
-                assert("There must be a scene containing the hierarchy entity");
-            }
-        }
-
-        auto scenes = gEngineApp.GetScenes();
-        bool ret = false;
-        for (auto it = scenes->begin(); it != scenes->end(); it++)
-        {
-            VzmScene* scene = &it->second;
-            if (moveToParent(vid, parentVid, scene))
-            {
-                return scene->sceneVid;
-            }
-        }
-        return INVALID_VID;
-    }
-
-    VmBaseComponent* GetComponent(const COMPONENT_TYPE compType, const VID vid)
+    
+    VzSceneComp* GetComponent(const SCENE_COMPONENT_TYPE compType, const VID vid)
     {
         switch (compType)
         {
-        case COMPONENT_TYPE::BASE: return gEngineApp.GetVmComp<VmBaseComponent>(vid);
-        case COMPONENT_TYPE::CAMERA: return gEngineApp.GetVmComp<VmCamera>(vid);
-        case COMPONENT_TYPE::ACTOR: return gEngineApp.GetVmComp<VmActor>(vid);
-        case COMPONENT_TYPE::LIGHT: return gEngineApp.GetVmComp<VmLight>(vid);
-        case COMPONENT_TYPE::EMITTER: return gEngineApp.GetVmComp<VmEmitter>(vid);
-        case COMPONENT_TYPE::WEATHER: return gEngineApp.GetVmComp<VmWeather>(vid);
-        case COMPONENT_TYPE::ANIMATION: return gEngineApp.GetVmComp<VmAnimation>(vid);
+        case SCENE_COMPONENT_TYPE::SCENEBASE: return gEngineApp.GetSceneComponent<VzSceneComp>(vid);
+        case SCENE_COMPONENT_TYPE::CAMERA: return gEngineApp.GetSceneComponent<VzCamera>(vid);
+        case SCENE_COMPONENT_TYPE::ACTOR: return gEngineApp.GetSceneComponent<VzActor>(vid);
+        case SCENE_COMPONENT_TYPE::LIGHT: return gEngineApp.GetSceneComponent<VzLight>(vid);
         default: break;
         }
         return nullptr;
     }
 
-    uint32_t GetSceneCompoenentVids(const COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids)
+    size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids)
     {
         Scene* scene = gEngineApp.GetScene(sceneVid);
         if (scene == nullptr)
         {
-            return 0u;
+            return 0;
         }
+
         switch (compType)
         {
-        case COMPONENT_TYPE::CAMERA: vids = scene->cameras.GetEntityArray(); break;
-        case COMPONENT_TYPE::ACTOR: vids = scene->objects.GetEntityArray(); break;
-        case COMPONENT_TYPE::LIGHT: vids = scene->lights.GetEntityArray(); break;
-        case COMPONENT_TYPE::EMITTER: vids = scene->emitters.GetEntityArray(); break;
-        case COMPONENT_TYPE::WEATHER: vids = scene->weathers.GetEntityArray(); break;
-        case COMPONENT_TYPE::ANIMATION: vids = scene->animations.GetEntityArray(); break;
+        case SCENE_COMPONENT_TYPE::CAMERA:
+        {
+            std::vector<VID> cam_vids;
+            size_t num_cameras = gEngineApp.GetCameraVids(cam_vids);
+            for (auto cid : cam_vids)
+            {
+                if (gEngineApp.GetRenderPath(cid)->GetView()->getScene() == scene)
+                {
+                    vids.push_back(cid);
+                }
+            }
+            break;
+        }
+        case SCENE_COMPONENT_TYPE::ACTOR:
+        {
+            scene->forEach([&](utils::Entity ett) {
+                VID vid = ett.getId();
+                if (gEngineApp.IsRenderable(vid))
+                {
+                    vids.push_back(vid);
+                }
+                });
+            break;
+        }
+        case SCENE_COMPONENT_TYPE::LIGHT:
+        {
+            auto& lcm = gEngine->getLightManager();
+            scene->forEach([&](utils::Entity ett) {
+                VID vid = ett.getId();
+                if (gEngineApp.IsLight(vid))
+                {
+                    vids.push_back(vid);
+                }
+                });
+            break;
+        }
         default: break;
         }
-        return (uint32_t)vids.size();
+        return vids.size();
     }
-
-    VmWeather* GetSceneActivatedWeather(const VID sceneVid)
-    {
-        VzmScene* scene = gEngineApp.GetScene(sceneVid);
-        if (scene == nullptr)
-        {
-            return nullptr;
-        }
-        return &scene->vmWeather;
-    }
-
+    /*
     void LoadFileIntoNewSceneAsync(const std::string& file, const std::string& rootName, const std::string& sceneName, const std::function<void(VID sceneVid, VID rootVid)>& callback)
     {
         struct loadingJob
@@ -1259,7 +1229,7 @@ namespace vzm
             renderer->scene = dstScene;
             assert(renderer->camera == camComponent);
 
-            vmCam->compType = COMPONENT_TYPE::CAMERA;
+            vmCam->compType = SCENE_COMPONENT_TYPE::CAMERA;
             vmCam->componentVID = ett;
             vmCam->renderer = (void*)renderer;
             renderer->UpdateVmCamera(vmCam);
@@ -1510,5 +1480,5 @@ namespace vzm
         //return graphicsDevice->OpenSharedResource(graphicsDev2, &renderer->rtPostprocess);
         return graphicsDevice->OpenSharedResource(graphicsDev2, srv_desc_heap2, descriptor_index, const_cast<wi::graphics::Texture*>(&renderer->renderResult));
     }
-
+    /**/
 }
