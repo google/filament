@@ -508,30 +508,64 @@ static void onClick(App& app, View* view, ImVec2 pos) {
     });
 }
 
-static utils::Path getPathForAsset(std::string_view string) {
+static utils::Path getPathForIBLAsset(std::string_view string) {
+    auto isIBL = [] (utils::Path file) -> bool {
+        return file.getExtension() == "ktx" || file.getExtension() == "hdr";
+    };
+
     utils::Path filename{ string };
     if (!filename.exists()) {
         std::cerr << "file " << filename << " not found!" << std::endl;
         return {};
     }
+
     if (filename.isDirectory()) {
-        auto files = filename.listContents();
-        for (const auto& file: files) {
-            if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
+        bool found = false;
+        for (const auto& file: filename.listContents()) {
+            if (isIBL(file)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return {};
+        }
+    } else if (!isIBL(filename)) {
+        return {};
+    }
+
+    return filename;
+}
+
+static utils::Path getPathForGLTFAsset(std::string_view string) {
+    auto isGLTF = [] (utils::Path file) -> bool {
+        return file.getExtension() == "gltf" || file.getExtension() == "glb";
+    };
+
+    utils::Path filename{ string };
+    if (!filename.exists()) {
+        std::cerr << "file " << filename << " not found!" << std::endl;
+        return {};
+    }
+
+    if (filename.isDirectory()) {
+        for (const auto& file: filename.listContents()) {
+            if (isGLTF(file)) {
                 filename = file;
                 break;
             }
         }
         if (filename.isDirectory()) {
-            std::cerr << "no glTF file found in " << filename << std::endl;
             return {};
         }
+    } else if (!isGLTF(filename)) {
+        return {};
     }
+
     return filename;
 }
 
-
-static bool checkAsset(const utils::Path& filename) {
+static bool checkGLTFAsset(const utils::Path& filename) {
     // Peek at the file size to allow pre-allocation.
     long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
     if (contentSize <= 0) {
@@ -571,8 +605,9 @@ int main(int argc, char** argv) {
     utils::Path filename;
     int const num_args = argc - optionIndex;
     if (num_args >= 1) {
-        filename = getPathForAsset(argv[optionIndex]);
+        filename = getPathForGLTFAsset(argv[optionIndex]);
         if (filename.isEmpty()) {
+            std::cerr << "no glTF file found in " << filename << std::endl;
             return 1;
         }
     }
@@ -1125,9 +1160,9 @@ int main(int argc, char** argv) {
     filamentApp.resize(resize);
 
     filamentApp.setDropHandler([&](std::string_view path) {
-        utils::Path const filename = getPathForAsset(path);
+        utils::Path filename = getPathForGLTFAsset(path);
         if (!filename.isEmpty()) {
-            if (checkAsset(filename)) {
+            if (checkGLTFAsset(filename)) {
                 app.resourceLoader->asyncCancelLoad();
                 app.resourceLoader->evictResourceData();
                 app.viewer->removeAsset();
@@ -1136,6 +1171,13 @@ int main(int argc, char** argv) {
                 loadResources(filename);
                 app.viewer->setAsset(app.asset, app.instance);
             }
+            return;
+        }
+
+        filename = getPathForIBLAsset(path);
+        if (!filename.isEmpty()) {
+            FilamentApp::get().loadIBL(path);
+            return;
         }
     });
 
