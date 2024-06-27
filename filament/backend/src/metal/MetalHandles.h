@@ -642,24 +642,19 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                                              options:MTLResourceStorageModeShared];
         [encoder setArgumentBuffer:buffer offset:0];
 
-        printf("finalizeAndGetBuffer -- encoding begin --\n");
         for (auto const& binding : bindings) {
-            printf("    binding %d: ", binding.binding);
             switch (binding.type) {
                 case DescriptorType::UNIFORM_BUFFER:
                 case DescriptorType::SHADER_STORAGE_BUFFER: {
-                    printf("uniform, ");
                     auto found = buffers.find(binding.binding);
                     if (found == buffers.end()) {
                         [encoder setBuffer:driver->mContext->emptyBuffer
                                     offset:0
                                    atIndex:binding.binding * 2];
-                        printf("empty buffer\n");
                         continue;
                     }
 
                     auto const& bufferBinding = buffers[binding.binding];
-                    printf("buffer handle: %d", bufferBinding.buffer.getId());
                     auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
                                                 ->getBuffer()
                                                 ->getGpuBufferForDraw();
@@ -669,7 +664,6 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     break;
                 }
                 case DescriptorType::SAMPLER: {
-                    printf("sampler, ");
                     auto found = textures.find(binding.binding);
                     if (found == textures.end()) {
                         [encoder setTexture:driver->mContext->emptyTexture
@@ -678,12 +672,10 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                                 driver->mContext->samplerStateCache.getOrCreateState({});
                         [encoder setSamplerState:sampler
                                          atIndex:binding.binding * 2 + 1];
-                        printf("empty texture\n");
                         continue;
                     }
 
                     auto const& textureBinding = textures[binding.binding];
-                    printf("texture handle: %d", textureBinding.texture.getId());
                     auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
                                             ->getMtlTextureForRead();
                     [encoder setTexture:texture atIndex:binding.binding * 2];
@@ -699,9 +691,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     assert_invariant(false);
                     break;
             }
-            printf("\n");
         }
-        printf("finalizeAndGetBuffer -- end --\n");
 
         return buffer;
     }

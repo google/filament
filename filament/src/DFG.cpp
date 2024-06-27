@@ -31,13 +31,11 @@ void DFG::init(FEngine& engine) noexcept {
 
     static_assert(sizeof(DFG_LUT) == byteCount, "DFG_LUT_SIZE doesn't match size of the DFG LUT");
 
-    printf("DFG LUT --begin--:\n");
     Texture* lut = Texture::Builder()
             .width(DFG_LUT_SIZE)
             .height(DFG_LUT_SIZE)
             .format(backend::TextureFormat::RGB16F)
             .build(engine);
-    printf("DFG LUT --end--:\n");
 
     Texture::PixelBufferDescriptor buffer(DFG_LUT, byteCount,
             Texture::Format::RGB, Texture::Type::HALF);
