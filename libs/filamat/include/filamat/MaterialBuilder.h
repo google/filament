@@ -588,7 +588,7 @@ public:
     MaterialBuilder& printShaders(bool printShaders) noexcept;
 
     /**
-     * If true, will will write the raw generated GLSL for each variant to a text file in the
+     * If true, this will write the raw generated GLSL for each variant to a text file in the
      * current directory. The file will be named after the material name and the variant name. Its
      * extension will be derived from the shader stage. For example, mymaterial_0x0e.frag,
      * mymaterial_0x18.vert, etc.
