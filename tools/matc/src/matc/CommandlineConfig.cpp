@@ -103,6 +103,8 @@ static void usage(char* name) {
             "       Skip validation of number of sampler used\n\n"
             "   --print, -t\n"
             "       Print generated shaders for debugging\n\n"
+            "   --save-raw-variants, -R\n"
+            "       Write the raw generated GLSL for each variant to a text file in the current directory.\n\n"
     );
     const std::string from("MATC");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -179,7 +181,7 @@ static void parseDefine(std::string defineString, Config::StringReplacementMap& 
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1";
+    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'L' },
@@ -204,6 +206,7 @@ bool CommandlineConfig::parse() {
             { "version",                 no_argument, nullptr, 'v' },
             { "raw",                     no_argument, nullptr, 'w' },
             { "no-sampler-validation",   no_argument, nullptr, 'F' },
+            { "save-raw-variants",       no_argument, nullptr, 'R' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -326,6 +329,8 @@ bool CommandlineConfig::parse() {
                 break;
             case 'F':
                 mNoSamplerValidation = true;
+            case 'R':
+                mSaveRawVariants = true;
                 break;
         }
     }
