@@ -69,7 +69,7 @@ public:
     }
 
     void grabBegin(int x, int y, bool strafe) override {
-        mGrabState = strafe ? PANNING : ORBITING;
+        mGrabState = strafe && Base::mProps.panning ? PANNING : ORBITING;
         mGrabPivot = mPivot;
         mGrabEye = Base::mEye;
         mGrabTarget = Base::mTarget;
