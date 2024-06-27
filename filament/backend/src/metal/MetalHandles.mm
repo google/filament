@@ -621,12 +621,8 @@ MetalTexture::MetalTexture(MetalContext& context,
                 src->width, src->height, src->depth, src->format, src->usage),
           context(context),
           externalImage(context) {
-    if (src->swizzledTextureView) {
-        swizzledTextureView = createTextureViewWithLodRange(src->swizzledTextureView,
-                baseLevel, baseLevel + levelCount - 1);
-    }
-    texture = createTextureViewWithLodRange(src->texture,
-            baseLevel, baseLevel + levelCount - 1);
+    texture = createTextureViewWithLodRange(
+            src->getMtlTextureForRead(), baseLevel, baseLevel + levelCount - 1);
 }
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
@@ -649,10 +645,9 @@ MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }
 
-id<MTLTexture> MetalTexture::getMtlTextureForRead() noexcept {
-    // TODO: get LODs to work correctly with swizzeling
-    id<MTLTexture> tex = swizzledTextureView ? swizzledTextureView : texture;
-    return tex;
+id<MTLTexture> MetalTexture::getMtlTextureForRead() const noexcept {
+    // TODO: get LODs to work correctly with swizzling
+    return swizzledTextureView ? swizzledTextureView : texture;
 }
 
 MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFormat format) {

@@ -241,12 +241,11 @@ public:
 
     ~MetalTexture();
 
-    // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle and
-    // LOD clamping.
-    id<MTLTexture> getMtlTextureForRead() noexcept;
+    // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle.
+    id<MTLTexture> getMtlTextureForRead() const noexcept;
 
     // Returns the id<MTLTexture> for attaching to a render pass.
-    id<MTLTexture> getMtlTextureForWrite() noexcept {
+    id<MTLTexture> getMtlTextureForWrite() const noexcept {
         return texture;
     }
 
