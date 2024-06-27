@@ -36,11 +36,13 @@ namespace filament::backend {
 
 struct VulkanHeadlessSwapChain;
 struct VulkanSurfaceSwapChain;
+class VulkanResourceAllocator;
 
 // A wrapper around the platform implementation of swapchain.
 struct VulkanSwapChain : public HwSwapChain, VulkanResource {
     VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context, VmaAllocator allocator,
-            VulkanCommands* commands, VulkanStagePool& stagePool,
+            VulkanCommands* commands, VulkanResourceAllocator* handleAllocator,
+            VulkanStagePool& stagePool,
             void* nativeWindow, uint64_t flags, VkExtent2D extent = {0, 0});
 
     ~VulkanSwapChain();
@@ -80,6 +82,7 @@ private:
     VulkanPlatform* mPlatform;
     VulkanCommands* mCommands;
     VmaAllocator mAllocator;
+    VulkanResourceAllocator* const mHandleAllocator;
     VulkanStagePool& mStagePool;
     bool const mHeadless;
     bool const mFlushAndWaitOnResize;

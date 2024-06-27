@@ -320,6 +320,7 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
+        VulkanResourceAllocator* handleAllocator,
         uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool)
@@ -352,6 +353,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             if (UTILS_UNLIKELY(!msTexture)) {
                 // TODO: This should be allocated with the ResourceAllocator.
                 msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
+                        handleAllocator,
                         texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
                         samples, texture->width, texture->height, texture->depth, texture->usage,
                         stagePool, true /* heap allocated */);
@@ -381,7 +383,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     VulkanTexture* msTexture = depthTexture->getSidecar();
     if (UTILS_UNLIKELY(!msTexture)) {
         msTexture = new VulkanTexture(device, physicalDevice, context, allocator,
-                commands, depthTexture->target, msLevel, depthTexture->format, samples,
+                commands, handleAllocator,
+                depthTexture->target, msLevel, depthTexture->format, samples,
                 depthTexture->width, depthTexture->height, depthTexture->depth, depthTexture->usage,
                 stagePool, true /* heap allocated */);
         depthTexture->setSidecar(msTexture);

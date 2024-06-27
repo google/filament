@@ -297,7 +297,9 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     // Creates an offscreen render target.
     VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
             VulkanContext const& context, VmaAllocator allocator,
-            VulkanCommands* commands, uint32_t width, uint32_t height,
+            VulkanCommands* commands,
+            VulkanResourceAllocator* handleAllocator,
+            uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool);
 
