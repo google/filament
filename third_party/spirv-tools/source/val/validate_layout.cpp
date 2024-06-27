@@ -14,12 +14,9 @@
 
 // Source code for logical layout validation as described in section 2.4
 
-#include <cassert>
-
 #include "DebugInfo.h"
 #include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
-#include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/operand.h"
 #include "source/val/function.h"

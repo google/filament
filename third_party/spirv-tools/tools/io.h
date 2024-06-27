@@ -127,7 +127,7 @@ class OutputFile {
  public:
   // Opens |filename| in the given mode.  If |filename| is nullptr, the empty
   // string or "-", stdout will be set to the given mode.
-  OutputFile(const char* filename, const char* mode) {
+  OutputFile(const char* filename, const char* mode) : old_mode_(0) {
     const bool use_stdout =
         !filename || (filename[0] == '-' && filename[1] == '\0');
     if (use_stdout) {
@@ -144,6 +144,7 @@ class OutputFile {
 
   ~OutputFile() {
     if (fp_ == stdout) {
+      fflush(stdout);
       SET_STDOUT_MODE(old_mode_);
     } else if (fp_ != nullptr) {
       fclose(fp_);

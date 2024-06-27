@@ -18,7 +18,6 @@
 #include <string>
 #include <vector>
 
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 
@@ -75,7 +74,7 @@ OpExtension "SPV_KHR_non_semantic_info"
 ; CHECK: OpExtension "SPV_KHR_storage_buffer_storage_class"
 OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %2 "MainPs" %3 %4
-; CHECK: OpEntryPoint Fragment %2 "MainPs" %3 %4 %gl_FragCoord
+; CHECK: OpEntryPoint Fragment %2 "MainPs" %3 %4
 OpExecutionMode %2 OriginUpperLeft
 %5 = OpString "Color is %vn"
 )";
@@ -88,10 +87,7 @@ OpDecorate %7 DescriptorSet 0
 OpDecorate %7 Binding 0
 OpDecorate %3 Location 0
 OpDecorate %4 Location 0
-; CHECK: OpDecorate %_runtimearr_uint ArrayStride 4
-)" + kOutputDecorations + R"(
-; CHECK: OpDecorate %gl_FragCoord BuiltIn FragCoord
-)";
+)" + kOutputDecorations;
 
   const std::string globals =
       R"(%void = OpTypeVoid
@@ -111,14 +107,11 @@ OpDecorate %4 Location 0
 %_ptr_Output_v4float = OpTypePointer Output %v4float
 %4 = OpVariable %_ptr_Output_v4float Output
 ; CHECK: %uint = OpTypeInt 32 0
-; CHECK: %38 = OpTypeFunction %void %uint %uint %uint %uint %uint %uint
+; CHECK: [[func_type:%\w+]] = OpTypeFunction %void %uint %uint %uint %uint %uint %uint %uint
 ; CHECK: %_runtimearr_uint = OpTypeRuntimeArray %uint
 )" + kOutputGlobals + R"(
 ; CHECK: %_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
 ; CHECK: %bool = OpTypeBool
-; CHECK: %_ptr_Input_v4float = OpTypePointer Input %v4float
-; CHECK: %gl_FragCoord = OpVariable %_ptr_Input_v4float Input
-; CHECK: %v4uint = OpTypeVector %uint 4
 )";
   // clang-format on
 
@@ -132,76 +125,64 @@ OpDecorate %4 Location 0
 %25 = OpImageSampleImplicitLod %v4float %24 %21
 %26 = OpExtInst %void %1 1 %5 %25
 ; CHECK-NOT: %26 = OpExtInst %void %1 1 %5 %25
-; CHECK: %29 = OpCompositeExtract %float %25 0
-; CHECK: %30 = OpBitcast %uint %29
-; CHECK: %31 = OpCompositeExtract %float %25 1
-; CHECK: %32 = OpBitcast %uint %31
-; CHECK: %33 = OpCompositeExtract %float %25 2
-; CHECK: %34 = OpBitcast %uint %33
-; CHECK: %35 = OpCompositeExtract %float %25 3
-; CHECK: %36 = OpBitcast %uint %35
-; CHECK: %101 = OpFunctionCall %void %inst_printf_stream_write_6 %uint_36 %uint_5 %30 %32 %34 %36
-; CHECK: OpBranch %102
-; CHECK: %102 = OpLabel
+; CHECK: {{%\w+}} = OpCompositeExtract %float %25 0
+; CHECK: {{%\w+}} = OpBitcast %uint {{%\w+}}
+; CHECK: {{%\w+}} = OpCompositeExtract %float %25 1
+; CHECK: {{%\w+}} = OpBitcast %uint {{%\w+}}
+; CHECK: {{%\w+}} = OpCompositeExtract %float %25 2
+; CHECK: {{%\w+}} = OpBitcast %uint {{%\w+}}
+; CHECK: {{%\w+}} = OpCompositeExtract %float %25 3
+; CHECK: {{%\w+}} = OpBitcast %uint {{%\w+}}
+; CHECK: {{%\w+}} = OpFunctionCall %void %inst_printf_stream_write_5 %uint_23 %uint_36 %uint_5 {{%\w+}} {{%\w+}} {{%\w+}} {{%\w+}}
+; CHECK: OpBranch {{%\w+}}
+; CHECK: {{%\w+}} = OpLabel
 OpStore %4 %25
 OpReturn
 OpFunctionEnd
 )";
 
   const std::string output_func = R"(
-; CHECK: %inst_printf_stream_write_6 = OpFunction %void None %38
-; CHECK: [[param_1:%\w+]] = OpFunctionParameter %uint
-; CHECK: [[param_2:%\w+]] = OpFunctionParameter %uint
-; CHECK: [[param_3:%\w+]] = OpFunctionParameter %uint
-; CHECK: [[param_4:%\w+]] = OpFunctionParameter %uint
-; CHECK: [[param_5:%\w+]] = OpFunctionParameter %uint
-; CHECK: [[param_6:%\w+]] = OpFunctionParameter %uint
+; CHECK: %inst_printf_stream_write_5 = OpFunction %void None {{%\w+}}
+; CHECK: [[sw_shader_id:%\w+]] = OpFunctionParameter %uint
+; CHECK: [[sw_inst_idx:%\w+]] = OpFunctionParameter %uint
+; CHECK: [[sw_param_1:%\w+]] = OpFunctionParameter %uint
+; CHECK: [[sw_param_2:%\w+]] = OpFunctionParameter %uint
+; CHECK: [[sw_param_3:%\w+]] = OpFunctionParameter %uint
+; CHECK: [[sw_param_4:%\w+]] = OpFunctionParameter %uint
+; CHECK: [[sw_param_5:%\w+]] = OpFunctionParameter %uint
 ; CHECK: {{%\w+}} = OpLabel
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_1
-; CHECK: {{%\w+}} = OpAtomicIAdd %uint {{%\w+}} %uint_4 %uint_0 %uint_12
-; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_12
-; CHECK: {{%\w+}} = OpArrayLength %uint %inst_printf_output_buffer 2
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_1
+; CHECK: {{%\w+}} = OpAtomicIAdd %uint {{%\w+}} %uint_4 %uint_0 %uint_8
+; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_8
+; CHECK: {{%\w+}} = OpArrayLength %uint [[output_buffer_var]] 2
 ; CHECK: {{%\w+}} = OpULessThanEqual %bool {{%\w+}} {{%\w+}}
 ; CHECK: OpSelectionMerge {{%\w+}} None
 ; CHECK: OpBranchConditional {{%\w+}} {{%\w+}} {{%\w+}}
 ; CHECK: {{%\w+}} = OpLabel
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_0
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} %uint_12
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} %uint_8
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_1
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} %uint_23
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_shader_id]]
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_2
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} [[param_1]]
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_inst_idx]]
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_3
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} %uint_4
-; CHECK: {{%\w+}} = OpLoad %v4float %gl_FragCoord
-; CHECK: {{%\w+}} = OpBitcast %v4uint {{%\w+}}
-; CHECK: {{%\w+}} = OpCompositeExtract %uint {{%\w+}} 0
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_param_1]]
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_4
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} {{%\w+}}
-; CHECK: {{%\w+}} = OpCompositeExtract %uint {{%\w+}} 1
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_param_2]]
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_5
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} {{%\w+}}
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_param_3]]
+; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_6
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_param_4]]
 ; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_7
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} [[param_2]]
-; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_8
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} [[param_3]]
-; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_9
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} [[param_4]]
-; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_10
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} [[param_5]]
-; CHECK: {{%\w+}} = OpIAdd %uint {{%\w+}} %uint_11
-; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint %inst_printf_output_buffer %uint_2 {{%\w+}}
-; CHECK: OpStore {{%\w+}} [[param_6]]
+; CHECK: {{%\w+}} = OpAccessChain %_ptr_StorageBuffer_uint [[output_buffer_var]] %uint_2 {{%\w+}}
+; CHECK: OpStore {{%\w+}} [[sw_param_5]]
 ; CHECK: OpBranch {{%\w+}}
 ; CHECK: {{%\w+}} = OpLabel
 ; CHECK: OpReturn

@@ -36,6 +36,7 @@ list(APPEND DIFF_TEST_FILES
 "diff_files/large_functions_small_diffs_autogen.cpp"
 "diff_files/multiple_different_entry_points_autogen.cpp"
 "diff_files/multiple_same_entry_points_autogen.cpp"
+"diff_files/ray_query_types_autogen.cpp"
 "diff_files/reordered_if_blocks_autogen.cpp"
 "diff_files/reordered_switch_blocks_autogen.cpp"
 "diff_files/small_functions_small_diffs_autogen.cpp"

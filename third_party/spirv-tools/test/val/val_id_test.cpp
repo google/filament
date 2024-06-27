@@ -1056,7 +1056,7 @@ TEST_P(ValidateIdWithMessage, OpTypeArrayLengthNull) {
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr(make_message("OpTypeArray Length <id> '2[%2]' default "
-                                     "value must be at least 1.")));
+                                     "value must be at least 1: found 0")));
 }
 
 TEST_P(ValidateIdWithMessage, OpTypeArrayLengthSpecConst) {
@@ -2317,7 +2317,7 @@ OpFunctionEnd
           "be used with non-externally visible shader Storage Classes: "
           "Workgroup, CrossWorkgroup, Private, Function, Input, Output, "
           "RayPayloadKHR, IncomingRayPayloadKHR, HitAttributeKHR, "
-          "CallableDataKHR, or IncomingCallableDataKHR")));
+          "CallableDataKHR, IncomingCallableDataKHR, or UniformConstant")));
 }
 
 TEST_P(ValidateIdWithMessage, OpVariableContainsBoolPrivateGood) {
@@ -2327,6 +2327,25 @@ TEST_P(ValidateIdWithMessage, OpVariableContainsBoolPrivateGood) {
 %block = OpTypeStruct %bool %int
 %_ptr_Private_block = OpTypePointer Private %block
 %var = OpVariable %_ptr_Private_block Private
+%void = OpTypeVoid
+%fnty = OpTypeFunction %void
+%main = OpFunction %void None %fnty
+%entry = OpLabel
+%load = OpLoad %block %var
+OpReturn
+OpFunctionEnd
+)";
+  CompileSuccessfully(spirv.c_str());
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_P(ValidateIdWithMessage, OpVariableContainsBoolUniformConstantGood) {
+  std::string spirv = kGLSL450MemoryModel + R"(
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%block = OpTypeStruct %bool %int
+%_ptr_UniformConstant_block = OpTypePointer UniformConstant %block
+%var = OpVariable %_ptr_UniformConstant_block UniformConstant
 %void = OpTypeVoid
 %fnty = OpTypeFunction %void
 %main = OpFunction %void None %fnty
@@ -4206,7 +4225,7 @@ OpReturn
 OpFunctionEnd
   )";
   const std::string expected_err = "Index is out of bounds: " + instr +
-                                   " can not find index 3 into the structure "
+                                   " cannot find index 3 into the structure "
                                    "<id> '25[%_struct_25]'. This structure "
                                    "has 3 members. Largest valid index is 2.";
   CompileSuccessfully(spirv);

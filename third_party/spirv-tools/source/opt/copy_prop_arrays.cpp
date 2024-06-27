@@ -35,6 +35,32 @@ bool IsDebugDeclareOrValue(Instruction* di) {
          dbg_opcode == CommonDebugInfoDebugValue;
 }
 
+// Returns the number of members in |type|.  If |type| is not a composite type
+// or the number of components is not known at compile time, the return value
+// will be 0.
+uint32_t GetNumberOfMembers(const analysis::Type* type, IRContext* context) {
+  if (const analysis::Struct* struct_type = type->AsStruct()) {
+    return static_cast<uint32_t>(struct_type->element_types().size());
+  } else if (const analysis::Array* array_type = type->AsArray()) {
+    const analysis::Constant* length_const =
+        context->get_constant_mgr()->FindDeclaredConstant(
+            array_type->LengthId());
+
+    if (length_const == nullptr) {
+      // This can happen if the length is an OpSpecConstant.
+      return 0;
+    }
+    assert(length_const->type()->AsInteger());
+    return length_const->GetU32();
+  } else if (const analysis::Vector* vector_type = type->AsVector()) {
+    return vector_type->element_count();
+  } else if (const analysis::Matrix* matrix_type = type->AsMatrix()) {
+    return matrix_type->element_count();
+  } else {
+    return 0;
+  }
+}
+
 }  // namespace
 
 Pass::Status CopyPropagateArrays::Process() {
@@ -357,22 +383,9 @@ CopyPropagateArrays::BuildMemoryObjectFromInsert(Instruction* insert_inst) {
 
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
   analysis::TypeManager* type_mgr = context()->get_type_mgr();
-  analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
   const analysis::Type* result_type = type_mgr->GetType(insert_inst->type_id());
 
-  uint32_t number_of_elements = 0;
-  if (const analysis::Struct* struct_type = result_type->AsStruct()) {
-    number_of_elements =
-        static_cast<uint32_t>(struct_type->element_types().size());
-  } else if (const analysis::Array* array_type = result_type->AsArray()) {
-    const analysis::Constant* length_const =
-        const_mgr->FindDeclaredConstant(array_type->LengthId());
-    number_of_elements = length_const->GetU32();
-  } else if (const analysis::Vector* vector_type = result_type->AsVector()) {
-    number_of_elements = vector_type->element_count();
-  } else if (const analysis::Matrix* matrix_type = result_type->AsMatrix()) {
-    number_of_elements = matrix_type->element_count();
-  }
+  uint32_t number_of_elements = GetNumberOfMembers(result_type, context());
 
   if (number_of_elements == 0) {
     return nullptr;
@@ -800,23 +813,8 @@ uint32_t CopyPropagateArrays::MemoryObject::GetNumberOfMembers() {
   std::vector<uint32_t> access_indices = GetAccessIds();
   type = type_mgr->GetMemberType(type, access_indices);
 
-  if (const analysis::Struct* struct_type = type->AsStruct()) {
-    return static_cast<uint32_t>(struct_type->element_types().size());
-  } else if (const analysis::Array* array_type = type->AsArray()) {
-    const analysis::Constant* length_const =
-        context->get_constant_mgr()->FindDeclaredConstant(
-            array_type->LengthId());
-    assert(length_const->type()->AsInteger());
-    return length_const->GetU32();
-  } else if (const analysis::Vector* vector_type = type->AsVector()) {
-    return vector_type->element_count();
-  } else if (const analysis::Matrix* matrix_type = type->AsMatrix()) {
-    return matrix_type->element_count();
-  } else {
-    return 0;
-  }
+  return opt::GetNumberOfMembers(type, context);
 }
-
 template <class iterator>
 CopyPropagateArrays::MemoryObject::MemoryObject(Instruction* var_inst,
                                                 iterator begin, iterator end)

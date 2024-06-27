@@ -26,7 +26,6 @@
 #include "source/macro.h"
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
-#include "source/spirv_target_env.h"
 
 // For now, assume unified1 contains up to SPIR-V 1.3 and no later
 // SPIR-V version.
@@ -48,7 +47,7 @@ spv_result_t spvOperandTableGet(spv_operand_table* pOperandTable,
   return SPV_SUCCESS;
 }
 
-spv_result_t spvOperandTableNameLookup(spv_target_env env,
+spv_result_t spvOperandTableNameLookup(spv_target_env,
                                        const spv_operand_table table,
                                        const spv_operand_type_t type,
                                        const char* name,
@@ -57,31 +56,18 @@ spv_result_t spvOperandTableNameLookup(spv_target_env env,
   if (!table) return SPV_ERROR_INVALID_TABLE;
   if (!name || !pEntry) return SPV_ERROR_INVALID_POINTER;
 
-  const auto version = spvVersionForTargetEnv(env);
   for (uint64_t typeIndex = 0; typeIndex < table->count; ++typeIndex) {
     const auto& group = table->types[typeIndex];
     if (type != group.type) continue;
     for (uint64_t index = 0; index < group.count; ++index) {
       const auto& entry = group.entries[index];
       // We consider the current operand as available as long as
-      // 1. The target environment satisfies the minimal requirement of the
-      //    operand; or
-      // 2. There is at least one extension enabling this operand; or
-      // 3. There is at least one capability enabling this operand.
-      //
-      // Note that the second rule assumes the extension enabling this operand
-      // is indeed requested in the SPIR-V code; checking that should be
-      // validator's work.
+      // it is in the grammar.  It might not be *valid* to use,
+      // but that should be checked by the validator, not by parsing.
       if (nameLength == strlen(entry.name) &&
           !strncmp(entry.name, name, nameLength)) {
-        if ((version >= entry.minVersion && version <= entry.lastVersion) ||
-            entry.numExtensions > 0u || entry.numCapabilities > 0u) {
-          *pEntry = &entry;
-          return SPV_SUCCESS;
-        } else {
-          // if there is no extension/capability then the version is wrong
-          return SPV_ERROR_WRONG_VERSION;
-        }
+        *pEntry = &entry;
+        return SPV_SUCCESS;
       }
     }
   }
@@ -89,7 +75,7 @@ spv_result_t spvOperandTableNameLookup(spv_target_env env,
   return SPV_ERROR_INVALID_LOOKUP;
 }
 
-spv_result_t spvOperandTableValueLookup(spv_target_env env,
+spv_result_t spvOperandTableValueLookup(spv_target_env,
                                         const spv_operand_table table,
                                         const spv_operand_type_t type,
                                         const uint32_t value,
@@ -110,33 +96,15 @@ spv_result_t spvOperandTableValueLookup(spv_target_env env,
     const auto beg = group.entries;
     const auto end = group.entries + group.count;
 
-    // We need to loop here because there can exist multiple symbols for the
-    // same operand value, and they can be introduced in different target
-    // environments, which means they can have different minimal version
-    // requirements. For example, SubgroupEqMaskKHR can exist in any SPIR-V
-    // version as long as the SPV_KHR_shader_ballot extension is there; but
-    // starting from SPIR-V 1.3, SubgroupEqMask, which has the same numeric
-    // value as SubgroupEqMaskKHR, is available in core SPIR-V without extension
-    // requirements.
     // Assumes the underlying table is already sorted ascendingly according to
     // opcode value.
-    const auto version = spvVersionForTargetEnv(env);
-    for (auto it = std::lower_bound(beg, end, needle, comp);
-         it != end && it->value == value; ++it) {
-      // We consider the current operand as available as long as
-      // 1. The target environment satisfies the minimal requirement of the
-      //    operand; or
-      // 2. There is at least one extension enabling this operand; or
-      // 3. There is at least one capability enabling this operand.
-      //
-      // Note that the second rule assumes the extension enabling this operand
-      // is indeed requested in the SPIR-V code; checking that should be
-      // validator's work.
-      if ((version >= it->minVersion && version <= it->lastVersion) ||
-          it->numExtensions > 0u || it->numCapabilities > 0u) {
-        *pEntry = it;
-        return SPV_SUCCESS;
-      }
+    auto it = std::lower_bound(beg, end, needle, comp);
+    if (it != end && it->value == value) {
+      // The current operand is considered available as long as
+      // it is in the grammar.  It might not be *valid* to use,
+      // but that should be checked by the validator, not by parsing.
+      *pEntry = it;
+      return SPV_SUCCESS;
     }
   }
 
@@ -155,6 +123,7 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_LITERAL_INTEGER:
     case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_INTEGER:
     case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_NUMBER:
+    case SPV_OPERAND_TYPE_LITERAL_FLOAT:
       return "literal number";
     case SPV_OPERAND_TYPE_OPTIONAL_TYPED_LITERAL_INTEGER:
       return "possibly multi-word literal integer";
@@ -236,6 +205,26 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_PACKED_VECTOR_FORMAT:
     case SPV_OPERAND_TYPE_OPTIONAL_PACKED_VECTOR_FORMAT:
       return "packed vector format";
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_OPERANDS:
+    case SPV_OPERAND_TYPE_OPTIONAL_COOPERATIVE_MATRIX_OPERANDS:
+      return "cooperative matrix operands";
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_LAYOUT:
+      return "cooperative matrix layout";
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_USE:
+      return "cooperative matrix use";
+    case SPV_OPERAND_TYPE_INITIALIZATION_MODE_QUALIFIER:
+      return "initialization mode qualifier";
+    case SPV_OPERAND_TYPE_HOST_ACCESS_QUALIFIER:
+      return "host access qualifier";
+    case SPV_OPERAND_TYPE_LOAD_CACHE_CONTROL:
+      return "load cache control";
+    case SPV_OPERAND_TYPE_STORE_CACHE_CONTROL:
+      return "store cache control";
+    case SPV_OPERAND_TYPE_NAMED_MAXIMUM_NUMBER_OF_REGISTERS:
+      return "named maximum number of registers";
+    case SPV_OPERAND_TYPE_RAW_ACCESS_CHAIN_OPERANDS:
+    case SPV_OPERAND_TYPE_OPTIONAL_RAW_ACCESS_CHAIN_OPERANDS:
+      return "raw access chain operands";
     case SPV_OPERAND_TYPE_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
       return "image";
@@ -325,6 +314,7 @@ bool spvOperandIsConcrete(spv_operand_type_t type) {
   }
   switch (type) {
     case SPV_OPERAND_TYPE_LITERAL_INTEGER:
+    case SPV_OPERAND_TYPE_LITERAL_FLOAT:
     case SPV_OPERAND_TYPE_EXTENSION_INSTRUCTION_NUMBER:
     case SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER:
     case SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER:
@@ -369,6 +359,13 @@ bool spvOperandIsConcrete(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_QUANTIZATION_MODES:
     case SPV_OPERAND_TYPE_OVERFLOW_MODES:
     case SPV_OPERAND_TYPE_PACKED_VECTOR_FORMAT:
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_LAYOUT:
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_USE:
+    case SPV_OPERAND_TYPE_INITIALIZATION_MODE_QUALIFIER:
+    case SPV_OPERAND_TYPE_HOST_ACCESS_QUALIFIER:
+    case SPV_OPERAND_TYPE_LOAD_CACHE_CONTROL:
+    case SPV_OPERAND_TYPE_STORE_CACHE_CONTROL:
+    case SPV_OPERAND_TYPE_NAMED_MAXIMUM_NUMBER_OF_REGISTERS:
       return true;
     default:
       break;
@@ -387,6 +384,8 @@ bool spvOperandIsConcreteMask(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_FRAGMENT_SHADING_RATE:
     case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_OPERANDS:
+    case SPV_OPERAND_TYPE_RAW_ACCESS_CHAIN_OPERANDS:
       return true;
     default:
       break;
@@ -405,7 +404,9 @@ bool spvOperandIsOptional(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_STRING:
     case SPV_OPERAND_TYPE_OPTIONAL_ACCESS_QUALIFIER:
     case SPV_OPERAND_TYPE_OPTIONAL_PACKED_VECTOR_FORMAT:
+    case SPV_OPERAND_TYPE_OPTIONAL_COOPERATIVE_MATRIX_OPERANDS:
     case SPV_OPERAND_TYPE_OPTIONAL_CIV:
+    case SPV_OPERAND_TYPE_OPTIONAL_RAW_ACCESS_CHAIN_OPERANDS:
       return true;
     default:
       break;

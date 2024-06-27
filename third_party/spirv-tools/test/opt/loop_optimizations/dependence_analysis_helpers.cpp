@@ -13,17 +13,11 @@
 // limitations under the License.
 
 #include <memory>
-#include <string>
-#include <unordered_set>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "source/opt/iterator.h"
 #include "source/opt/loop_dependence.h"
 #include "source/opt/loop_descriptor.h"
-#include "source/opt/pass.h"
 #include "source/opt/scalar_analysis.h"
-#include "source/opt/tree_iterator.h"
 #include "test/opt/assembly_builder.h"
 #include "test/opt/function_utils.h"
 #include "test/opt/pass_fixture.h"

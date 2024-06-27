@@ -24,13 +24,8 @@
 
 namespace spvtools {
 
-class LinkerOptions {
+class SPIRV_TOOLS_EXPORT LinkerOptions {
  public:
-  LinkerOptions()
-      : create_library_(false),
-        verify_ids_(false),
-        allow_partial_linkage_(false) {}
-
   // Returns whether a library or an executable should be produced by the
   // linking phase.
   //
@@ -63,10 +58,16 @@ class LinkerOptions {
     allow_partial_linkage_ = allow_partial_linkage;
   }
 
+  bool GetUseHighestVersion() const { return use_highest_version_; }
+  void SetUseHighestVersion(bool use_highest_vers) {
+    use_highest_version_ = use_highest_vers;
+  }
+
  private:
-  bool create_library_;
-  bool verify_ids_;
-  bool allow_partial_linkage_;
+  bool create_library_{false};
+  bool verify_ids_{false};
+  bool allow_partial_linkage_{false};
+  bool use_highest_version_{false};
 };
 
 // Links one or more SPIR-V modules into a new SPIR-V module. That is, combine
@@ -83,14 +84,15 @@ class LinkerOptions {
 // * Some entry points were defined multiple times;
 // * Some imported symbols did not have an exported counterpart;
 // * Possibly other reasons.
-spv_result_t Link(const Context& context,
-                  const std::vector<std::vector<uint32_t>>& binaries,
-                  std::vector<uint32_t>* linked_binary,
-                  const LinkerOptions& options = LinkerOptions());
-spv_result_t Link(const Context& context, const uint32_t* const* binaries,
-                  const size_t* binary_sizes, size_t num_binaries,
-                  std::vector<uint32_t>* linked_binary,
-                  const LinkerOptions& options = LinkerOptions());
+SPIRV_TOOLS_EXPORT spv_result_t
+Link(const Context& context, const std::vector<std::vector<uint32_t>>& binaries,
+     std::vector<uint32_t>* linked_binary,
+     const LinkerOptions& options = LinkerOptions());
+SPIRV_TOOLS_EXPORT spv_result_t
+Link(const Context& context, const uint32_t* const* binaries,
+     const size_t* binary_sizes, size_t num_binaries,
+     std::vector<uint32_t>* linked_binary,
+     const LinkerOptions& options = LinkerOptions());
 
 }  // namespace spvtools
 

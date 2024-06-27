@@ -17,14 +17,25 @@
 #endif
 
 #include "source/diff/diff.h"
-
 #include "source/opt/build_module.h"
 #include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.hpp"
 #include "tools/io.h"
 #include "tools/util/cli_consumer.h"
+#include "tools/util/flags.h"
 
-static void print_usage(char* argv0) {
+namespace {
+
+constexpr auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+
+constexpr bool kColorIsPossible =
+#if SPIRV_COLOR_TERMINAL
+    true;
+#else
+    false;
+#endif
+
+void print_usage(const char* argv0) {
   printf(R"(%s - Compare two SPIR-V files
 
 Usage: %s <src_filename> <dst_filename>
@@ -38,11 +49,12 @@ logical transformation from src to dst, in src's id-space.
   -h, --help      Print this help.
   --version       Display diff version information.
 
-  --color         Force color output.  The default when printing to a terminal.
-                  Overrides a previous --no-color option.
-  --no-color      Don't print in color.  Overrides a previous --color option.
-                  The default when output goes to something other than a
-                  terminal (e.g. a pipe, or a shell redirection).
+  --color         Force color output. The default when printing to a terminal.
+                  If both --color and --no-color is present, --no-color prevails.
+  --no-color      Don't print in color. The default when output goes to
+                  something other than a terminal (e.g. a pipe, or a shell
+                  redirection).
+                  If both --color and --no-color is present, --no-color prevails.
 
   --no-indent     Don't indent instructions.
 
@@ -58,9 +70,7 @@ logical transformation from src to dst, in src's id-space.
          argv0, argv0);
 }
 
-static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
-
-static bool is_assembly(const char* path) {
+bool is_assembly(const char* path) {
   const char* suffix = strrchr(path, '.');
   if (suffix == nullptr) {
     return false;
@@ -69,7 +79,7 @@ static bool is_assembly(const char* path) {
   return strcmp(suffix, ".spvasm") == 0;
 }
 
-static std::unique_ptr<spvtools::opt::IRContext> load_module(const char* path) {
+std::unique_ptr<spvtools::opt::IRContext> load_module(const char* path) {
   if (is_assembly(path)) {
     std::vector<char> contents;
     if (!ReadTextFile<char>(path, &contents)) return {};
@@ -89,101 +99,62 @@ static std::unique_ptr<spvtools::opt::IRContext> load_module(const char* path) {
                                contents.data(), contents.size());
 }
 
-int main(int argc, char** argv) {
-  const char* src_file = nullptr;
-  const char* dst_file = nullptr;
-  bool color_is_possible =
-#if SPIRV_COLOR_TERMINAL
-      true;
-#else
-      false;
-#endif
-  bool force_color = false;
-  bool force_no_color = false;
-  bool allow_indent = true;
-  bool no_header = false;
-  bool dump_id_map = false;
-  bool ignore_set_binding = false;
-  bool ignore_location = false;
+}  // namespace
 
-  for (int argi = 1; argi < argc; ++argi) {
-    if ('-' == argv[argi][0]) {
-      switch (argv[argi][1]) {
-        case 'h':
-          print_usage(argv[0]);
-          return 0;
-        case '-': {
-          // Long options
-          if (strcmp(argv[argi], "--no-color") == 0) {
-            force_no_color = true;
-            force_color = false;
-          } else if (strcmp(argv[argi], "--color") == 0) {
-            force_no_color = false;
-            force_color = true;
-          } else if (strcmp(argv[argi], "--no-indent") == 0) {
-            allow_indent = false;
-          } else if (strcmp(argv[argi], "--no-header") == 0) {
-            no_header = true;
-          } else if (strcmp(argv[argi], "--with-id-map") == 0) {
-            dump_id_map = true;
-          } else if (strcmp(argv[argi], "--ignore-set-binding") == 0) {
-            ignore_set_binding = true;
-          } else if (strcmp(argv[argi], "--ignore-location") == 0) {
-            ignore_location = true;
-          } else if (strcmp(argv[argi], "--help") == 0) {
-            print_usage(argv[0]);
-            return 0;
-          } else if (strcmp(argv[argi], "--version") == 0) {
-            printf("%s\n", spvSoftwareVersionDetailsString());
-            printf("Target: %s\n",
-                   spvTargetEnvDescription(kDefaultEnvironment));
-            return 0;
-          } else {
-            print_usage(argv[0]);
-            return 1;
-          }
-        } break;
-        default:
-          print_usage(argv[0]);
-          return 1;
-      }
-    } else {
-      if (src_file == nullptr) {
-        src_file = argv[argi];
-      } else if (dst_file == nullptr) {
-        dst_file = argv[argi];
-      } else {
-        fprintf(stderr, "error: More than two input files specified\n");
-        return 1;
-      }
-    }
-  }
+// clang-format off
+FLAG_SHORT_bool(h,                  /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( help,               /* default_value= */ false, /* required= */false);
+FLAG_LONG_bool( version,            /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( color,              /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( no_color,           /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( no_indent,          /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( no_header,          /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( with_id_map,        /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( ignore_set_binding, /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool( ignore_location,    /* default_value= */ false, /* required= */ false);
+// clang-format on
 
-  if (src_file == nullptr || dst_file == nullptr) {
-    print_usage(argv[0]);
+int main(int, const char* argv[]) {
+  if (!flags::Parse(argv)) {
     return 1;
   }
 
-  spvtools::diff::Options options;
-
-  if (allow_indent) options.indent = true;
-  if (no_header) options.no_header = true;
-  if (dump_id_map) options.dump_id_map = true;
-  if (ignore_set_binding) options.ignore_set_binding = true;
-  if (ignore_location) options.ignore_location = true;
-
-  if (color_is_possible && !force_no_color) {
-    bool output_is_tty = true;
-#if defined(_POSIX_VERSION)
-    output_is_tty = isatty(fileno(stdout));
-#endif
-    if (output_is_tty || force_color) {
-      options.color_output = true;
-    }
+  if (flags::h.value() || flags::help.value()) {
+    print_usage(argv[0]);
+    return 0;
   }
 
-  std::unique_ptr<spvtools::opt::IRContext> src = load_module(src_file);
-  std::unique_ptr<spvtools::opt::IRContext> dst = load_module(dst_file);
+  if (flags::version.value()) {
+    printf("%s\n", spvSoftwareVersionDetailsString());
+    printf("Target: %s\n", spvTargetEnvDescription(kDefaultEnvironment));
+    return 0;
+  }
+
+  if (flags::positional_arguments.size() != 2) {
+    fprintf(stderr, "error: two input files required.\n");
+    return 1;
+  }
+
+#if defined(_POSIX_VERSION)
+  const bool output_is_tty = isatty(fileno(stdout));
+#else
+  const bool output_is_tty = true;
+#endif
+
+  const std::string& src_file = flags::positional_arguments[0];
+  const std::string& dst_file = flags::positional_arguments[1];
+
+  spvtools::diff::Options options;
+  options.color_output = (output_is_tty || flags::color.value()) &&
+                         !flags::no_color.value() && kColorIsPossible;
+  options.indent = !flags::no_indent.value();
+  options.no_header = flags::no_header.value();
+  options.dump_id_map = flags::with_id_map.value();
+  options.ignore_set_binding = flags::ignore_set_binding.value();
+  options.ignore_location = flags::ignore_location.value();
+
+  std::unique_ptr<spvtools::opt::IRContext> src = load_module(src_file.c_str());
+  std::unique_ptr<spvtools::opt::IRContext> dst = load_module(dst_file.c_str());
 
   if (!src) {
     fprintf(stderr, "error: Loading src file\n");

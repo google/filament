@@ -16,14 +16,12 @@
 
 #include <array>
 #include <functional>
-#include <iterator>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "source/diagnostic.h"
 #include "source/spirv_target_env.h"
 #include "source/val/validate.h"
 #include "test/test_fixture.h"
@@ -2064,6 +2062,106 @@ OpFunctionEnd
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateCFG, OpSwitchTargetCannotBeOuterLoopMergeBlock) {
+  std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+
+%1 = OpTypeVoid
+%2 = OpTypeFunction %1
+%3 = OpTypeBool
+%4 = OpUndef %3
+%5 = OpTypeInt 32 0
+%6 = OpConstant %5 0
+
+%7 = OpFunction %1 None %2
+
+%8 = OpLabel
+OpBranch %9
+
+%9 = OpLabel
+OpLoopMerge %10 %11 None
+OpBranch %12
+
+%12 = OpLabel
+OpSelectionMerge %13 None
+OpSwitch %6 %13 0 %10 1 %14
+
+%14 = OpLabel
+OpBranch %13
+
+%13 = OpLabel
+OpBranch %11
+
+%11 = OpLabel
+OpBranch %9
+
+%10 = OpLabel
+OpReturn
+
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Switch header '12[%12]' does not structurally dominate its case construct '10[%10]'\n"
+          "  %12 = OpLabel"));
+}
+
+TEST_F(ValidateCFG, OpSwitchTargetCannotBeOuterLoopContinueBlock) {
+  std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+
+%1 = OpTypeVoid
+%2 = OpTypeFunction %1
+%3 = OpTypeBool
+%4 = OpUndef %3
+%5 = OpTypeInt 32 0
+%6 = OpConstant %5 0
+
+%7 = OpFunction %1 None %2
+
+%8 = OpLabel
+OpBranch %9
+
+%9 = OpLabel
+OpLoopMerge %10 %11 None
+OpBranch %12
+
+%12 = OpLabel
+OpSelectionMerge %13 None
+OpSwitch %6 %13 0 %11 1 %14
+
+%14 = OpLabel
+OpBranch %13
+
+%13 = OpLabel
+OpBranch %11
+
+%11 = OpLabel
+OpBranch %9
+
+%10 = OpLabel
+OpReturn
+
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Switch header '12[%12]' does not structurally dominate its case construct '11[%11]'\n"
+          "  %12 = OpLabel"));
+}
+
 TEST_F(ValidateCFG, WrongOperandList) {
   std::string text = R"(
 OpCapability Shader
@@ -3446,6 +3544,37 @@ OpFunctionEnd
   EXPECT_THAT(getDiagnosticString(), HasSubstr("Selection must be structured"));
 }
 
+TEST_F(ValidateCFG, LoopConditionalBranchWithoutExitBad) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranch %loop
+%loop = OpLabel
+OpLoopMerge %exit %continue None
+OpBranchConditional %undef %then %else
+%then = OpLabel
+OpBranch %continue
+%else = OpLabel
+OpBranch %exit
+%continue = OpLabel
+OpBranch %loop
+%exit = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Selection must be structured"));
+}
+
 TEST_F(ValidateCFG, MissingMergeSwitchBad) {
   const std::string text = R"(
 OpCapability Shader
@@ -4672,6 +4801,321 @@ TEST_F(ValidateCFG, BadSwitch) {
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("exits the selection headed by <ID> '3[%BAD]', but not "
                         "via a structured exit"));
+}
+
+TEST_F(ValidateCFG,
+       MaximalReconvergenceBranchConditionalSameTargetNotInCallTree) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%func_entry = OpLabel
+OpBranchConditional %cond %func_exit %func_exit
+%func_exit = OpLabel
+OpReturn
+OpFunctionEnd
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceBranchConditionalSameTargetInCallTree) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%func_entry = OpLabel
+OpBranchConditional %cond %func_exit %func_exit
+%func_exit = OpLabel
+OpReturn
+OpFunctionEnd
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+%call = OpFunctionCall %void %func
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In entry points using the MaximallyReconvergesKHR "
+                        "execution mode, True "
+                        "Label and False Label must be different labels"));
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceEarlyReconvergenceNotInCallTree) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%func_entry = OpLabel
+OpSelectionMerge %func_exit None
+OpBranchConditional %cond %then %else
+%then = OpLabel
+OpBranch %merge
+%else = OpLabel
+OpBranch %merge
+%merge = OpLabel
+OpBranch %func_exit
+%func_exit = OpLabel
+OpReturn
+OpFunctionEnd
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceEarlyReconvergenceInCallTree) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%func_entry = OpLabel
+OpSelectionMerge %func_exit None
+OpBranchConditional %cond %then %else
+%then = OpLabel
+OpBranch %merge
+%else = OpLabel
+OpBranch %merge
+%merge = OpLabel
+OpBranch %func_exit
+%func_exit = OpLabel
+OpReturn
+OpFunctionEnd
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+%call = OpFunctionCall %void %func
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "In entry points using the MaximallyReconvergesKHR execution mode, "
+          "this basic block must not have multiple unique predecessors"));
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceLoopMultiplePredsOk) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpBranch %loop
+%loop = OpLabel
+OpLoopMerge %merge %loop None
+OpBranchConditional %cond %loop %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceLoopMultiplePredsOk2) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpBranch %loop
+%loop = OpLabel
+OpLoopMerge %merge %cont None
+OpBranch %body
+%body = OpLabel
+OpBranch %cont
+%cont = OpLabel
+OpBranchConditional %cond %loop %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceSelectionMergeMultiplePredsOk) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpSelectionMerge %merge None
+OpBranchConditional %cond %then %else
+%then = OpLabel
+OpBranch %merge
+%else = OpLabel
+OpBranch %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceSelectionMergeMultiplePredsOk2) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+OpName %merge "merge"
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpSelectionMerge %merge None
+OpBranchConditional %cond %then %else
+%then = OpLabel
+OpBranch %merge
+%else = OpLabel
+OpBranch %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceLoopMergeMultiplePredsOk) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpBranch %loop
+%loop = OpLabel
+OpLoopMerge %merge %continue None
+OpBranchConditional %cond %merge %continue
+%continue = OpLabel
+OpBranchConditional %cond %loop %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, MaximalReconvergenceCaseFallthroughMultiplePredsOk) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_maximal_reconvergence"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main MaximallyReconvergesKHR
+%void = OpTypeVoid
+%bool = OpTypeBool
+%cond = OpUndef %bool
+%int = OpTypeInt 32 0
+%val = OpUndef %int
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%main_entry = OpLabel
+OpSelectionMerge %merge None
+OpSwitch %val %merge 0 %case1 1 %case2
+%case1 = OpLabel
+OpBranch %case2
+%case2 = OpLabel
+OpBranch %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 }  // namespace

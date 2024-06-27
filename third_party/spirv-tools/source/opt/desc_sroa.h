@@ -64,6 +64,11 @@ class DescriptorScalarReplacement : public Pass {
   // otherwise.
   bool ReplaceLoadedValue(Instruction* var, Instruction* value);
 
+  // Replaces the given composite variable |var| in the OpEntryPoint with the
+  // new replacement variables, one for each element of the array |var|. Returns
+  // |true| if successful, and |false| otherwise.
+  bool ReplaceEntryPoint(Instruction* var, Instruction* use);
+
   // Replaces the given OpCompositeExtract |extract| and all of its references
   // with an OpLoad of a replacement variable. |var| is the variable with
   // composite type whose value is being used by |extract|. Assumes that

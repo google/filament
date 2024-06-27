@@ -219,7 +219,7 @@ Pass::Status EliminateDeadOutputStoresPass::DoDeadOutputStoreElimination() {
         var_id, [this, &var, is_builtin](Instruction* user) {
           auto op = user->opcode();
           if (op == spv::Op::OpEntryPoint || op == spv::Op::OpName ||
-              op == spv::Op::OpDecorate)
+              op == spv::Op::OpDecorate || user->IsNonSemanticInstruction())
             return;
           if (is_builtin)
             KillAllDeadStoresOfBuiltinRef(user, &var);

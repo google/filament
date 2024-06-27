@@ -15,7 +15,6 @@
 
 #include <vector>
 
-#include "gmock/gmock.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 

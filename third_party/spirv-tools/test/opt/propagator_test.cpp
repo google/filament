@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/propagator.h"
+
 #include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -22,8 +23,6 @@
 #include "source/opt/build_module.h"
 #include "source/opt/cfg.h"
 #include "source/opt/ir_context.h"
-#include "source/opt/pass.h"
-#include "source/opt/propagator.h"
 
 namespace spvtools {
 namespace opt {

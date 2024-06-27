@@ -18,26 +18,36 @@
 #include <string>
 #include <vector>
 
-#include "spirv/unified1/NonSemanticClspvReflection.h"
-
 #include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
 #include "source/common_debug_info.h"
-#include "source/diagnostic.h"
 #include "source/enum_string_mapping.h"
 #include "source/extensions.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/latest_version_opencl_std_header.h"
-#include "source/opcode.h"
 #include "source/spirv_constant.h"
-#include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
+#include "spirv/unified1/NonSemanticClspvReflection.h"
 
 namespace spvtools {
 namespace val {
 namespace {
+
+std::string ReflectionInstructionName(ValidationState_t& _,
+                                      const Instruction* inst) {
+  spv_ext_inst_desc desc = nullptr;
+  if (_.grammar().lookupExtInst(SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
+                                inst->word(4), &desc) != SPV_SUCCESS ||
+      !desc) {
+    return std::string("Unknown ExtInst");
+  }
+  std::ostringstream ss;
+  ss << desc->name;
+
+  return ss.str();
+}
 
 uint32_t GetSizeTBitWidth(const ValidationState_t& _) {
   if (_.addressing_model() == spv::AddressingModel::Physical32) return 32;
@@ -273,12 +283,14 @@ spv_result_t ValidateOperandDebugType(
 }
 
 spv_result_t ValidateClspvReflectionKernel(ValidationState_t& _,
-                                           const Instruction* inst) {
+                                           const Instruction* inst,
+                                           uint32_t version) {
+  const auto inst_name = ReflectionInstructionName(_, inst);
   const auto kernel_id = inst->GetOperandAs<uint32_t>(4);
   const auto kernel = _.FindDef(kernel_id);
   if (kernel->opcode() != spv::Op::OpFunction) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "Kernel does not reference a function";
+           << inst_name << " does not reference a function";
   }
 
   bool found_kernel = false;
@@ -290,18 +302,18 @@ spv_result_t ValidateClspvReflectionKernel(ValidationState_t& _,
   }
   if (!found_kernel) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "Kernel does not reference an entry-point";
+           << inst_name << " does not reference an entry-point";
   }
 
   const auto* exec_models = _.GetExecutionModels(kernel_id);
   if (!exec_models || exec_models->empty()) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << "Kernel does not reference an entry-point";
+           << inst_name << " does not reference an entry-point";
   }
   for (auto exec_model : *exec_models) {
     if (exec_model != spv::ExecutionModel::GLCompute) {
       return _.diag(SPV_ERROR_INVALID_ID, inst)
-             << "Kernel must refer only to GLCompute entry-points";
+             << inst_name << " must refer only to GLCompute entry-points";
     }
   }
 
@@ -321,6 +333,37 @@ spv_result_t ValidateClspvReflectionKernel(ValidationState_t& _,
   if (!found) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "Name must match an entry-point for Kernel";
+  }
+
+  const auto num_operands = inst->operands().size();
+  if (version < 5 && num_operands > 6) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Version " << version << " of the " << inst_name
+           << " instruction can only have 2 additional operands";
+  }
+
+  if (num_operands > 6) {
+    const auto num_args_id = inst->GetOperandAs<uint32_t>(6);
+    if (!IsUint32Constant(_, num_args_id)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "NumArguments must be a 32-bit unsigned integer OpConstant";
+    }
+  }
+
+  if (num_operands > 7) {
+    const auto flags_id = inst->GetOperandAs<uint32_t>(7);
+    if (!IsUint32Constant(_, flags_id)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "Flags must be a 32-bit unsigned integer OpConstant";
+    }
+  }
+
+  if (num_operands > 8) {
+    const auto atts_id = inst->GetOperandAs<uint32_t>(8);
+    if (_.GetIdOpcode(atts_id) != spv::Op::OpString) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "Attributes must be an OpString";
+    }
   }
 
   return SPV_SUCCESS;
@@ -439,8 +482,8 @@ spv_result_t ValidateClspvReflectionArgumentBuffer(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
-spv_result_t ValidateClspvReflectionArgumentPodBuffer(ValidationState_t& _,
-                                                      const Instruction* inst) {
+spv_result_t ValidateClspvReflectionArgumentOffsetBuffer(
+    ValidationState_t& _, const Instruction* inst) {
   const auto num_operands = inst->operands().size();
   if (auto error = ValidateKernelDecl(_, inst)) {
     return error;
@@ -480,7 +523,7 @@ spv_result_t ValidateClspvReflectionArgumentPodBuffer(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
-spv_result_t ValidateClspvReflectionArgumentPodPushConstant(
+spv_result_t ValidateClspvReflectionArgumentPushConstant(
     ValidationState_t& _, const Instruction* inst) {
   const auto num_operands = inst->operands().size();
   if (auto error = ValidateKernelDecl(_, inst)) {
@@ -587,8 +630,8 @@ spv_result_t ValidateClspvReflectionPushConstant(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
-spv_result_t ValidateClspvReflectionConstantData(ValidationState_t& _,
-                                                 const Instruction* inst) {
+spv_result_t ValidateClspvReflectionInitializedData(ValidationState_t& _,
+                                                    const Instruction* inst) {
   if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(4))) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "DescriptorSet must be a 32-bit unsigned integer OpConstant";
@@ -650,18 +693,250 @@ spv_result_t ValidateClspvReflectionPropertyRequiredWorkgroupSize(
   return SPV_SUCCESS;
 }
 
+spv_result_t ValidateClspvReflectionSubgroupMaxSize(ValidationState_t& _,
+                                                    const Instruction* inst) {
+  const auto size_id = inst->GetOperandAs<uint32_t>(4);
+  if (!IsUint32Constant(_, size_id)) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Size must be a 32-bit unsigned integer OpConstant";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionPointerRelocation(ValidationState_t& _,
+                                                      const Instruction* inst) {
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(4))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "ObjectOffset must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(5))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "PointerOffset must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(6))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "PointerSize must be a 32-bit unsigned integer OpConstant";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionImageMetadataPushConstant(
+    ValidationState_t& _, const Instruction* inst) {
+  if (auto error = ValidateKernelDecl(_, inst)) {
+    return error;
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(5))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Ordinal must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(6))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Offset must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(7))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Size must be a 32-bit unsigned integer OpConstant";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionImageMetadataUniform(
+    ValidationState_t& _, const Instruction* inst) {
+  if (auto error = ValidateKernelDecl(_, inst)) {
+    return error;
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(5))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Ordinal must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(6))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "DescriptorSet must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(7))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Binding must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(8))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Offset must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(9))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Size must be a 32-bit unsigned integer OpConstant";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionPushConstantData(ValidationState_t& _,
+                                                     const Instruction* inst) {
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(4))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Offset must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(5))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Size must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (_.GetIdOpcode(inst->GetOperandAs<uint32_t>(6)) != spv::Op::OpString) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst) << "Data must be an OpString";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionPrintfInfo(ValidationState_t& _,
+                                               const Instruction* inst) {
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(4))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "PrintfID must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (_.GetIdOpcode(inst->GetOperandAs<uint32_t>(5)) != spv::Op::OpString) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "FormatString must be an OpString";
+  }
+
+  for (size_t i = 6; i < inst->operands().size(); ++i) {
+    if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(i))) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "ArgumentSizes must be a 32-bit unsigned integer OpConstant";
+    }
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionPrintfStorageBuffer(
+    ValidationState_t& _, const Instruction* inst) {
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(4))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "DescriptorSet must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(5))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Binding must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(6))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Size must be a 32-bit unsigned integer OpConstant";
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateClspvReflectionPrintfPushConstant(
+    ValidationState_t& _, const Instruction* inst) {
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(4))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Offset must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(5))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Size must be a 32-bit unsigned integer OpConstant";
+  }
+
+  if (!IsUint32Constant(_, inst->GetOperandAs<uint32_t>(6))) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "BufferSize must be a 32-bit unsigned integer OpConstant";
+  }
+
+  return SPV_SUCCESS;
+}
+
 spv_result_t ValidateClspvReflectionInstruction(ValidationState_t& _,
                                                 const Instruction* inst,
-                                                uint32_t /*version*/) {
+                                                uint32_t version) {
   if (!_.IsVoidType(inst->type_id())) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "Return Type must be OpTypeVoid";
   }
 
-  auto ext_inst = inst->GetOperandAs<NonSemanticClspvReflectionInstructions>(3);
+  uint32_t required_version = 0;
+  const auto ext_inst =
+      inst->GetOperandAs<NonSemanticClspvReflectionInstructions>(3);
   switch (ext_inst) {
     case NonSemanticClspvReflectionKernel:
-      return ValidateClspvReflectionKernel(_, inst);
+    case NonSemanticClspvReflectionArgumentInfo:
+    case NonSemanticClspvReflectionArgumentStorageBuffer:
+    case NonSemanticClspvReflectionArgumentUniform:
+    case NonSemanticClspvReflectionArgumentPodStorageBuffer:
+    case NonSemanticClspvReflectionArgumentPodUniform:
+    case NonSemanticClspvReflectionArgumentPodPushConstant:
+    case NonSemanticClspvReflectionArgumentSampledImage:
+    case NonSemanticClspvReflectionArgumentStorageImage:
+    case NonSemanticClspvReflectionArgumentSampler:
+    case NonSemanticClspvReflectionArgumentWorkgroup:
+    case NonSemanticClspvReflectionSpecConstantWorkgroupSize:
+    case NonSemanticClspvReflectionSpecConstantGlobalOffset:
+    case NonSemanticClspvReflectionSpecConstantWorkDim:
+    case NonSemanticClspvReflectionPushConstantGlobalOffset:
+    case NonSemanticClspvReflectionPushConstantEnqueuedLocalSize:
+    case NonSemanticClspvReflectionPushConstantGlobalSize:
+    case NonSemanticClspvReflectionPushConstantRegionOffset:
+    case NonSemanticClspvReflectionPushConstantNumWorkgroups:
+    case NonSemanticClspvReflectionPushConstantRegionGroupOffset:
+    case NonSemanticClspvReflectionConstantDataStorageBuffer:
+    case NonSemanticClspvReflectionConstantDataUniform:
+    case NonSemanticClspvReflectionLiteralSampler:
+    case NonSemanticClspvReflectionPropertyRequiredWorkgroupSize:
+      required_version = 1;
+      break;
+    case NonSemanticClspvReflectionSpecConstantSubgroupMaxSize:
+      required_version = 2;
+      break;
+    case NonSemanticClspvReflectionArgumentPointerPushConstant:
+    case NonSemanticClspvReflectionArgumentPointerUniform:
+    case NonSemanticClspvReflectionProgramScopeVariablesStorageBuffer:
+    case NonSemanticClspvReflectionProgramScopeVariablePointerRelocation:
+    case NonSemanticClspvReflectionImageArgumentInfoChannelOrderPushConstant:
+    case NonSemanticClspvReflectionImageArgumentInfoChannelDataTypePushConstant:
+    case NonSemanticClspvReflectionImageArgumentInfoChannelOrderUniform:
+    case NonSemanticClspvReflectionImageArgumentInfoChannelDataTypeUniform:
+      required_version = 3;
+      break;
+    case NonSemanticClspvReflectionArgumentStorageTexelBuffer:
+    case NonSemanticClspvReflectionArgumentUniformTexelBuffer:
+      required_version = 4;
+      break;
+    case NonSemanticClspvReflectionConstantDataPointerPushConstant:
+    case NonSemanticClspvReflectionProgramScopeVariablePointerPushConstant:
+    case NonSemanticClspvReflectionPrintfInfo:
+    case NonSemanticClspvReflectionPrintfBufferStorageBuffer:
+    case NonSemanticClspvReflectionPrintfBufferPointerPushConstant:
+      required_version = 5;
+      break;
+    default:
+      break;
+  }
+  if (version < required_version) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << ReflectionInstructionName(_, inst) << " requires version "
+           << required_version << ", but parsed version is " << version;
+  }
+
+  switch (ext_inst) {
+    case NonSemanticClspvReflectionKernel:
+      return ValidateClspvReflectionKernel(_, inst, version);
     case NonSemanticClspvReflectionArgumentInfo:
       return ValidateClspvReflectionArgumentInfo(_, inst);
     case NonSemanticClspvReflectionArgumentStorageBuffer:
@@ -669,12 +944,16 @@ spv_result_t ValidateClspvReflectionInstruction(ValidationState_t& _,
     case NonSemanticClspvReflectionArgumentSampledImage:
     case NonSemanticClspvReflectionArgumentStorageImage:
     case NonSemanticClspvReflectionArgumentSampler:
+    case NonSemanticClspvReflectionArgumentStorageTexelBuffer:
+    case NonSemanticClspvReflectionArgumentUniformTexelBuffer:
       return ValidateClspvReflectionArgumentBuffer(_, inst);
     case NonSemanticClspvReflectionArgumentPodStorageBuffer:
     case NonSemanticClspvReflectionArgumentPodUniform:
-      return ValidateClspvReflectionArgumentPodBuffer(_, inst);
+    case NonSemanticClspvReflectionArgumentPointerUniform:
+      return ValidateClspvReflectionArgumentOffsetBuffer(_, inst);
     case NonSemanticClspvReflectionArgumentPodPushConstant:
-      return ValidateClspvReflectionArgumentPodPushConstant(_, inst);
+    case NonSemanticClspvReflectionArgumentPointerPushConstant:
+      return ValidateClspvReflectionArgumentPushConstant(_, inst);
     case NonSemanticClspvReflectionArgumentWorkgroup:
       return ValidateClspvReflectionArgumentWorkgroup(_, inst);
     case NonSemanticClspvReflectionSpecConstantWorkgroupSize:
@@ -691,11 +970,31 @@ spv_result_t ValidateClspvReflectionInstruction(ValidationState_t& _,
       return ValidateClspvReflectionPushConstant(_, inst);
     case NonSemanticClspvReflectionConstantDataStorageBuffer:
     case NonSemanticClspvReflectionConstantDataUniform:
-      return ValidateClspvReflectionConstantData(_, inst);
+    case NonSemanticClspvReflectionProgramScopeVariablesStorageBuffer:
+      return ValidateClspvReflectionInitializedData(_, inst);
     case NonSemanticClspvReflectionLiteralSampler:
       return ValidateClspvReflectionSampler(_, inst);
     case NonSemanticClspvReflectionPropertyRequiredWorkgroupSize:
       return ValidateClspvReflectionPropertyRequiredWorkgroupSize(_, inst);
+    case NonSemanticClspvReflectionSpecConstantSubgroupMaxSize:
+      return ValidateClspvReflectionSubgroupMaxSize(_, inst);
+    case NonSemanticClspvReflectionProgramScopeVariablePointerRelocation:
+      return ValidateClspvReflectionPointerRelocation(_, inst);
+    case NonSemanticClspvReflectionImageArgumentInfoChannelOrderPushConstant:
+    case NonSemanticClspvReflectionImageArgumentInfoChannelDataTypePushConstant:
+      return ValidateClspvReflectionImageMetadataPushConstant(_, inst);
+    case NonSemanticClspvReflectionImageArgumentInfoChannelOrderUniform:
+    case NonSemanticClspvReflectionImageArgumentInfoChannelDataTypeUniform:
+      return ValidateClspvReflectionImageMetadataUniform(_, inst);
+    case NonSemanticClspvReflectionConstantDataPointerPushConstant:
+    case NonSemanticClspvReflectionProgramScopeVariablePointerPushConstant:
+      return ValidateClspvReflectionPushConstantData(_, inst);
+    case NonSemanticClspvReflectionPrintfInfo:
+      return ValidateClspvReflectionPrintfInfo(_, inst);
+    case NonSemanticClspvReflectionPrintfBufferStorageBuffer:
+      return ValidateClspvReflectionPrintfStorageBuffer(_, inst);
+    case NonSemanticClspvReflectionPrintfBufferPointerPushConstant:
+      return ValidateClspvReflectionPrintfPushConstant(_, inst);
     default:
       break;
   }
@@ -2801,7 +3100,7 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
 
           uint32_t vector_count = inst->word(6);
           uint64_t const_val;
-          if (!_.GetConstantValUint64(vector_count, &const_val)) {
+          if (!_.EvalConstantValUint64(vector_count, &const_val)) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << ext_inst_name()
                    << ": Vector Count must be 32-bit integer OpConstant";
@@ -2869,16 +3168,16 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
           break;
         }
         case CommonDebugInfoDebugTypePointer: {
-          auto validate_base_type =
-              ValidateOperandBaseType(_, inst, 5, ext_inst_name);
+          auto validate_base_type = ValidateOperandDebugType(
+              _, "Base Type", inst, 5, ext_inst_name, false);
           if (validate_base_type != SPV_SUCCESS) return validate_base_type;
           CHECK_CONST_UINT_OPERAND("Storage Class", 6);
           CHECK_CONST_UINT_OPERAND("Flags", 7);
           break;
         }
         case CommonDebugInfoDebugTypeQualifier: {
-          auto validate_base_type =
-              ValidateOperandBaseType(_, inst, 5, ext_inst_name);
+          auto validate_base_type = ValidateOperandDebugType(
+              _, "Base Type", inst, 5, ext_inst_name, false);
           if (validate_base_type != SPV_SUCCESS) return validate_base_type;
           CHECK_CONST_UINT_OPERAND("Type Qualifier", 6);
           break;
@@ -2892,7 +3191,7 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
           uint32_t component_count = inst->word(6);
           if (vulkanDebugInfo) {
             uint64_t const_val;
-            if (!_.GetConstantValUint64(component_count, &const_val)) {
+            if (!_.EvalConstantValUint64(component_count, &const_val)) {
               return _.diag(SPV_ERROR_INVALID_DATA, inst)
                      << ext_inst_name()
                      << ": Component Count must be 32-bit integer OpConstant";

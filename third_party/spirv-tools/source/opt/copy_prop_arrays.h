@@ -101,7 +101,8 @@ class CopyPropagateArrays : public MemPass {
     bool IsMember() const { return !access_chain_.empty(); }
 
     // Returns the number of members in the object represented by |this|.  If
-    // |this| does not represent a composite type, the return value will be 0.
+    // |this| does not represent a composite type or the number of components is
+    // not known at compile time, the return value will be 0.
     uint32_t GetNumberOfMembers();
 
     // Returns the owning variable that the memory object is contained in.
@@ -207,7 +208,7 @@ class CopyPropagateArrays : public MemPass {
 
   // Returns the memory object that at some point was equivalent to the result
   // of |insert_inst|.  If a memory object cannot be identified, the return
-  // value is |nullptr\.  The opcode of |insert_inst| must be
+  // value is |nullptr|.  The opcode of |insert_inst| must be
   // |OpCompositeInsert|.  This function looks for a series of
   // |OpCompositeInsert| instructions that insert the elements one at a time in
   // order from beginning to end.

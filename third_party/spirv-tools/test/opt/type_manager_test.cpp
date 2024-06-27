@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/type_manager.h"
+
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -22,7 +23,6 @@
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
 #include "source/opt/instruction.h"
-#include "source/opt/type_manager.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -171,6 +171,7 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new NamedBarrier());
   types.emplace_back(new AccelerationStructureNV());
   types.emplace_back(new CooperativeMatrixNV(f32, 24, 24, 24));
+  types.emplace_back(new CooperativeMatrixKHR(f32, 8, 8, 8, 1002));
   types.emplace_back(new RayQueryKHR());
   types.emplace_back(new HitObjectNV());
 
@@ -237,6 +238,8 @@ TEST(TypeManager, TypeStrings) {
     %arr_long_constant = OpTypeArray %s32 %long_constant
     %arr_spec_const_op = OpTypeArray %s32 %spec_const_op
     %cm   = OpTypeCooperativeMatrixNV %f64 %id4 %id4 %id4
+    %id2    = OpConstant %u32 2
+    %cmkhr  = OpTypeCooperativeMatrixKHR %f64 %id4 %id4 %id4 %id2
   )";
 
   std::vector<std::pair<uint32_t, std::string>> type_id_strs = {
@@ -275,6 +278,7 @@ TEST(TypeManager, TypeStrings) {
       {37, "[sint32, id(33), words(0,705032704,1)]"},
       {38, "[sint32, id(34), words(2,34)]"},
       {39, "<float64, 6, 6, 6>"},
+      {41, "<float64, 6, 6, 6, 40>"},
   };
 
   std::unique_ptr<IRContext> context =
@@ -938,10 +942,11 @@ OpMemoryModel Logical GLSL450
   EXPECT_NE(context, nullptr);
 
   std::vector<std::unique_ptr<Type>> types = GenerateAllTypes();
-  uint32_t id = 1u;
+  uint32_t id = 0u;
   for (auto& t : types) {
-    context->get_type_mgr()->RegisterType(id, *t);
+    context->get_type_mgr()->RegisterType(++id, *t);
     EXPECT_EQ(*t, *context->get_type_mgr()->GetType(id));
+    EXPECT_EQ(id, context->get_type_mgr()->GetId(t.get()));
   }
   types.clear();
 
@@ -1030,6 +1035,8 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: [[uint:%\w+]] = OpTypeInt 32 0
 ; CHECK: [[input_ptr:%\w+]] = OpTypePointer Input [[uint]]
 ; CHECK: [[uniform_ptr:%\w+]] = OpTypePointer Uniform [[uint]]
+; CHECK: [[uint2:%\w+]] = OpConstant [[uint]] 2
+; CHECK: [[uint8:%\w+]] = OpConstant [[uint]] 8
 ; CHECK: [[uint24:%\w+]] = OpConstant [[uint]] 24
 ; CHECK: [[uint42:%\w+]] = OpConstant [[uint]] 42
 ; CHECK: [[uint100:%\w+]] = OpConstant [[uint]] 100
@@ -1085,6 +1092,7 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: OpTypeNamedBarrier
 ; CHECK: OpTypeAccelerationStructureKHR
 ; CHECK: OpTypeCooperativeMatrixNV [[f32]] [[uint24]] [[uint24]] [[uint24]]
+; CHECK: OpTypeCooperativeMatrixKHR [[f32]] [[uint8]] [[uint8]] [[uint8]] [[uint2]]
 ; CHECK: OpTypeRayQueryKHR
 ; CHECK: OpTypeHitObjectNV
 OpCapability Shader
@@ -1094,6 +1102,8 @@ OpMemoryModel Logical GLSL450
 %uint = OpTypeInt 32 0
 %1 = OpTypePointer Input %uint
 %2 = OpTypePointer Uniform %uint
+%1002 = OpConstant %uint 2
+%8 = OpConstant %uint 8
 %24 = OpConstant %uint 24
 %42 = OpConstant %uint 42
 %100 = OpConstant %uint 100
@@ -1188,6 +1198,39 @@ OpMemoryModel Logical GLSL450
 
   context->get_type_mgr()->FindPointerToType(2, spv::StorageClass::Function);
   Match(text, context.get());
+}
+
+// Structures containing circular type references
+// (from https://github.com/KhronosGroup/SPIRV-Tools/issues/5623).
+TEST(TypeManager, CircularPointerToStruct) {
+  const std::string text = R"(
+               OpCapability VariablePointers
+               OpCapability PhysicalStorageBufferAddresses
+               OpCapability Int64
+               OpCapability Shader
+               OpExtension "SPV_KHR_variable_pointers"
+               OpExtension "SPV_KHR_physical_storage_buffer"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint Fragment %1 "main"
+               OpExecutionMode %1 OriginUpperLeft
+               OpExecutionMode %1 DepthReplacing
+               OpDecorate %1200 ArrayStride 24
+               OpMemberDecorate %600 0 Offset 0
+               OpMemberDecorate %800 0 Offset 0
+               OpMemberDecorate %120 0 Offset 16
+               OpTypeForwardPointer %1200 PhysicalStorageBuffer
+                 %600 = OpTypeStruct %1200
+                 %800 = OpTypeStruct %1200
+                 %120 = OpTypeStruct %800
+                %1200 = OpTypePointer PhysicalStorageBuffer %120
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  TypeManager manager(nullptr, context.get());
+  uint32_t id = manager.FindPointerToType(600, spv::StorageClass::Function);
+  EXPECT_EQ(id, 1201);
 }
 
 }  // namespace

@@ -41,12 +41,6 @@ namespace {
 
 enum class FuzzingTarget { kSpirv, kWgsl };
 
-// Check that the std::system function can actually be used.
-bool CheckExecuteCommand() {
-  int res = std::system(nullptr);
-  return res != 0;
-}
-
 // Execute a command using the shell.
 // Returns true if and only if the command's exit status was 0.
 bool ExecuteCommand(const std::string& command) {
@@ -770,11 +764,6 @@ int main(int argc, const char** argv) {
       }
       break;
     case FuzzActions::SHRINK: {
-      if (!CheckExecuteCommand()) {
-        std::cerr << "could not find shell interpreter for executing a command"
-                  << std::endl;
-        return 1;
-      }
       if (!Shrink(target_env, fuzzer_options, validator_options, binary_in,
                   initial_facts, shrink_transformations_file,
                   shrink_temp_file_prefix, interestingness_test, &binary_out,

@@ -14,7 +14,6 @@
 
 #include "source/opt/constants.h"
 
-#include <unordered_map>
 #include <vector>
 
 #include "source/opt/ir_context.h"
@@ -436,6 +435,8 @@ const Constant* ConstantManager::GetNumericVectorConstantWithWords(
     words_per_element = float_type->width() / 32;
   else if (const auto* int_type = element_type->AsInteger())
     words_per_element = int_type->width() / 32;
+  else if (element_type->AsBool() != nullptr)
+    words_per_element = 1;
 
   if (words_per_element != 1 && words_per_element != 2) return nullptr;
 
@@ -486,6 +487,31 @@ uint32_t ConstantManager::GetSIntConstId(int32_t val) {
   Type* sint_type = context()->get_type_mgr()->GetSIntType();
   const Constant* c = GetConstant(sint_type, {static_cast<uint32_t>(val)});
   return GetDefiningInstruction(c)->result_id();
+}
+
+const Constant* ConstantManager::GetIntConst(uint64_t val, int32_t bitWidth,
+                                             bool isSigned) {
+  Type* int_type = context()->get_type_mgr()->GetIntType(bitWidth, isSigned);
+
+  if (isSigned) {
+    // Sign extend the value.
+    int32_t num_of_bit_to_ignore = 64 - bitWidth;
+    val = static_cast<int64_t>(val << num_of_bit_to_ignore) >>
+          num_of_bit_to_ignore;
+  } else if (bitWidth < 64) {
+    // Clear the upper bit that are not used.
+    uint64_t mask = ((1ull << bitWidth) - 1);
+    val &= mask;
+  }
+
+  if (bitWidth <= 32) {
+    return GetConstant(int_type, {static_cast<uint32_t>(val)});
+  }
+
+  // If the value is more than 32-bit, we need to split the operands into two
+  // 32-bit integers.
+  return GetConstant(
+      int_type, {static_cast<uint32_t>(val), static_cast<uint32_t>(val >> 32)});
 }
 
 uint32_t ConstantManager::GetUIntConstId(uint32_t val) {

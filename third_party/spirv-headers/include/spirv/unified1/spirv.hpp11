@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 The Khronos Group Inc.
+// Copyright (c) 2014-2024 The Khronos Group Inc.
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and/or associated documentation files (the "Materials"),
@@ -69,6 +69,11 @@ enum class SourceLanguage : unsigned {
     HLSL = 5,
     CPP_for_OpenCL = 6,
     SYCL = 7,
+    HERO_C = 8,
+    NZSL = 9,
+    WGSL = 10,
+    Slang = 11,
+    Zig = 12,
     Max = 0x7fffffff,
 };
 
@@ -156,6 +161,9 @@ enum class ExecutionMode : unsigned {
     SubgroupsPerWorkgroupId = 37,
     LocalSizeId = 38,
     LocalSizeHintId = 39,
+    NonCoherentColorAttachmentReadEXT = 4169,
+    NonCoherentDepthAttachmentReadEXT = 4170,
+    NonCoherentStencilAttachmentReadEXT = 4171,
     SubgroupUniformControlFlowKHR = 4421,
     PostDepthCoverage = 4446,
     DenormPreserve = 4459,
@@ -165,12 +173,19 @@ enum class ExecutionMode : unsigned {
     RoundingModeRTZ = 4463,
     EarlyAndLateFragmentTestsAMD = 5017,
     StencilRefReplacingEXT = 5027,
+    CoalescingAMDX = 5069,
+    MaxNodeRecursionAMDX = 5071,
+    StaticNumWorkgroupsAMDX = 5072,
+    ShaderIndexAMDX = 5073,
+    MaxNumWorkgroupsAMDX = 5077,
     StencilRefUnchangedFrontAMD = 5079,
     StencilRefGreaterFrontAMD = 5080,
     StencilRefLessFrontAMD = 5081,
     StencilRefUnchangedBackAMD = 5082,
     StencilRefGreaterBackAMD = 5083,
     StencilRefLessBackAMD = 5084,
+    QuadDerivativesKHR = 5088,
+    RequireFullQuadsKHR = 5089,
     OutputLinesEXT = 5269,
     OutputLinesNV = 5269,
     OutputPrimitivesEXT = 5270,
@@ -195,8 +210,14 @@ enum class ExecutionMode : unsigned {
     NoGlobalOffsetINTEL = 5895,
     NumSIMDWorkitemsINTEL = 5896,
     SchedulerTargetFmaxMhzINTEL = 5903,
+    MaximallyReconvergesKHR = 6023,
+    FPFastMathDefault = 6028,
     StreamingInterfaceINTEL = 6154,
+    RegisterMapInterfaceINTEL = 6160,
     NamedBarrierCountINTEL = 6417,
+    MaximumRegistersINTEL = 6461,
+    MaximumRegistersIdINTEL = 6462,
+    NamedMaximumRegistersINTEL = 6463,
     Max = 0x7fffffff,
 };
 
@@ -214,6 +235,9 @@ enum class StorageClass : unsigned {
     AtomicCounter = 10,
     Image = 11,
     StorageBuffer = 12,
+    TileImageEXT = 4172,
+    NodePayloadAMDX = 5068,
+    NodeOutputPayloadAMDX = 5076,
     CallableDataKHR = 5328,
     CallableDataNV = 5328,
     IncomingCallableDataKHR = 5329,
@@ -244,6 +268,7 @@ enum class Dim : unsigned {
     Rect = 4,
     Buffer = 5,
     SubpassData = 6,
+    TileImageDataEXT = 4173,
     Max = 0x7fffffff,
 };
 
@@ -350,6 +375,8 @@ enum class ImageChannelDataType : unsigned {
     Float = 14,
     UnormInt24 = 15,
     UnormInt101010_2 = 16,
+    UnsignedIntRaw10EXT = 19,
+    UnsignedIntRaw12EXT = 20,
     Max = 0x7fffffff,
 };
 
@@ -407,8 +434,11 @@ enum class FPFastMathModeShift : unsigned {
     NSZ = 2,
     AllowRecip = 3,
     Fast = 4,
+    AllowContract = 16,
     AllowContractFastINTEL = 16,
+    AllowReassoc = 17,
     AllowReassocINTEL = 17,
+    AllowTransform = 18,
     Max = 0x7fffffff,
 };
 
@@ -419,8 +449,11 @@ enum class FPFastMathModeMask : unsigned {
     NSZ = 0x00000004,
     AllowRecip = 0x00000008,
     Fast = 0x00000010,
+    AllowContract = 0x00010000,
     AllowContractFastINTEL = 0x00010000,
+    AllowReassoc = 0x00020000,
     AllowReassocINTEL = 0x00020000,
+    AllowTransform = 0x00040000,
 };
 
 enum class FPRoundingMode : unsigned {
@@ -508,7 +541,14 @@ enum class Decoration : unsigned {
     MaxByteOffsetId = 47,
     NoSignedWrap = 4469,
     NoUnsignedWrap = 4470,
+    WeightTextureQCOM = 4487,
+    BlockMatchTextureQCOM = 4488,
+    BlockMatchSamplerQCOM = 4499,
     ExplicitInterpAMD = 4999,
+    NodeSharesPayloadLimitsWithAMDX = 5019,
+    NodeMaxPayloadsAMDX = 5020,
+    TrackFinishWritingAMDX = 5078,
+    PayloadNodeNameAMDX = 5091,
     OverrideCoverageNV = 5248,
     PassthroughNV = 5250,
     ViewportRelativeNV = 5252,
@@ -558,6 +598,9 @@ enum class Decoration : unsigned {
     MergeINTEL = 5834,
     BankBitsINTEL = 5835,
     ForcePow2DepthINTEL = 5836,
+    StridesizeINTEL = 5883,
+    WordsizeINTEL = 5884,
+    TrueDualPortINTEL = 5885,
     BurstCoalesceINTEL = 5899,
     CacheSizeINTEL = 5900,
     DontStaticallyCoalesceINTEL = 5901,
@@ -576,6 +619,24 @@ enum class Decoration : unsigned {
     SingleElementVectorINTEL = 6085,
     VectorComputeCallableFunctionINTEL = 6087,
     MediaBlockIOINTEL = 6140,
+    StallFreeINTEL = 6151,
+    FPMaxErrorDecorationINTEL = 6170,
+    LatencyControlLabelINTEL = 6172,
+    LatencyControlConstraintINTEL = 6173,
+    ConduitKernelArgumentINTEL = 6175,
+    RegisterMapKernelArgumentINTEL = 6176,
+    MMHostInterfaceAddressWidthINTEL = 6177,
+    MMHostInterfaceDataWidthINTEL = 6178,
+    MMHostInterfaceLatencyINTEL = 6179,
+    MMHostInterfaceReadWriteModeINTEL = 6180,
+    MMHostInterfaceMaxBurstINTEL = 6181,
+    MMHostInterfaceWaitRequestINTEL = 6182,
+    StableKernelArgumentINTEL = 6183,
+    HostAccessINTEL = 6188,
+    InitModeINTEL = 6190,
+    ImplementInRegisterMapINTEL = 6191,
+    CacheControlLoadINTEL = 6442,
+    CacheControlStoreINTEL = 6443,
     Max = 0x7fffffff,
 };
 
@@ -651,6 +712,8 @@ enum class BuiltIn : unsigned {
     BaryCoordSmoothSampleAMD = 4997,
     BaryCoordPullModelAMD = 4998,
     FragStencilRefEXT = 5014,
+    CoalescedInputCountAMDX = 5021,
+    ShaderIndexAMDX = 5073,
     ViewportMaskNV = 5253,
     SecondaryPositionNV = 5257,
     SecondaryViewportMaskNV = 5258,
@@ -703,6 +766,9 @@ enum class BuiltIn : unsigned {
     HitKindKHR = 5333,
     HitKindNV = 5333,
     CurrentRayTimeNV = 5334,
+    HitTriangleVertexPositionsKHR = 5335,
+    HitMicroTriangleVertexPositionsNV = 5337,
+    HitMicroTriangleVertexBarycentricsNV = 5344,
     IncomingRayFlagsKHR = 5351,
     IncomingRayFlagsNV = 5351,
     RayGeometryIndexKHR = 5352,
@@ -710,6 +776,8 @@ enum class BuiltIn : unsigned {
     SMCountNV = 5375,
     WarpIDNV = 5376,
     SMIDNV = 5377,
+    HitKindFrontFacingMicroTriangleNV = 5405,
+    HitKindBackFacingMicroTriangleNV = 5406,
     CullMaskKHR = 6021,
     Max = 0x7fffffff,
 };
@@ -974,6 +1042,9 @@ enum class Capability : unsigned {
     ShaderViewportIndex = 70,
     UniformDecoration = 71,
     CoreBuiltinsARM = 4165,
+    TileImageColorReadAccessEXT = 4166,
+    TileImageDepthReadAccessEXT = 4167,
+    TileImageStencilReadAccessEXT = 4168,
     FragmentShadingRateKHR = 4422,
     SubgroupBallotKHR = 4423,
     DrawParameters = 4427,
@@ -1005,6 +1076,10 @@ enum class Capability : unsigned {
     RayQueryKHR = 4472,
     RayTraversalPrimitiveCullingKHR = 4478,
     RayTracingKHR = 4479,
+    TextureSampleWeightedQCOM = 4484,
+    TextureBoxFilterQCOM = 4485,
+    TextureBlockMatchQCOM = 4486,
+    TextureBlockMatch2QCOM = 4498,
     Float16ImageAMD = 5008,
     ImageGatherBiasLodAMD = 5009,
     FragmentMaskAMD = 5010,
@@ -1012,6 +1087,8 @@ enum class Capability : unsigned {
     ImageReadWriteLodAMD = 5015,
     Int64ImageEXT = 5016,
     ShaderClockKHR = 5055,
+    ShaderEnqueueAMDX = 5067,
+    QuadControlKHR = 5087,
     SampleMaskOverrideCoverageNV = 5249,
     GeometryShaderPassthroughNV = 5251,
     ShaderViewportIndexLayerEXT = 5254,
@@ -1053,6 +1130,7 @@ enum class Capability : unsigned {
     UniformTexelBufferArrayNonUniformIndexingEXT = 5311,
     StorageTexelBufferArrayNonUniformIndexing = 5312,
     StorageTexelBufferArrayNonUniformIndexingEXT = 5312,
+    RayTracingPositionFetchKHR = 5336,
     RayTracingNV = 5340,
     RayTracingMotionBlurNV = 5341,
     VulkanMemoryModel = 5345,
@@ -1070,9 +1148,14 @@ enum class Capability : unsigned {
     FragmentShaderPixelInterlockEXT = 5378,
     DemoteToHelperInvocation = 5379,
     DemoteToHelperInvocationEXT = 5379,
+    DisplacementMicromapNV = 5380,
     RayTracingOpacityMicromapEXT = 5381,
     ShaderInvocationReorderNV = 5383,
     BindlessTextureNV = 5390,
+    RayQueryPositionFetchKHR = 5391,
+    AtomicFloat16VectorNV = 5404,
+    RayTracingDisplacementMicromapNV = 5409,
+    RawAccessChainsNV = 5414,
     SubgroupShuffleINTEL = 5568,
     SubgroupBufferBlockIOINTEL = 5569,
     SubgroupImageBlockIOINTEL = 5570,
@@ -1124,16 +1207,29 @@ enum class Capability : unsigned {
     DotProduct = 6019,
     DotProductKHR = 6019,
     RayCullMaskKHR = 6020,
+    CooperativeMatrixKHR = 6022,
     BitInstructions = 6025,
     GroupNonUniformRotateKHR = 6026,
+    FloatControls2 = 6029,
     AtomicFloat32AddEXT = 6033,
     AtomicFloat64AddEXT = 6034,
-    LongConstantCompositeINTEL = 6089,
+    LongCompositesINTEL = 6089,
     OptNoneINTEL = 6094,
     AtomicFloat16AddEXT = 6095,
     DebugInfoModuleINTEL = 6114,
+    BFloat16ConversionINTEL = 6115,
     SplitBarrierINTEL = 6141,
+    FPGAClusterAttributesV2INTEL = 6150,
+    FPGAKernelAttributesv2INTEL = 6161,
+    FPMaxErrorINTEL = 6169,
+    FPGALatencyControlINTEL = 6171,
+    FPGAArgumentInterfacesINTEL = 6174,
+    GlobalVariableHostAccessINTEL = 6187,
+    GlobalVariableFPGADecorationsINTEL = 6189,
     GroupUniformArithmeticKHR = 6400,
+    MaskedGatherScatterINTEL = 6427,
+    CacheControlsINTEL = 6441,
+    RegisterLimitsINTEL = 6460,
     Max = 0x7fffffff,
 };
 
@@ -1238,6 +1334,85 @@ enum class PackedVectorFormat : unsigned {
     PackedVectorFormat4x8Bit = 0,
     PackedVectorFormat4x8BitKHR = 0,
     Max = 0x7fffffff,
+};
+
+enum class CooperativeMatrixOperandsShift : unsigned {
+    MatrixASignedComponentsKHR = 0,
+    MatrixBSignedComponentsKHR = 1,
+    MatrixCSignedComponentsKHR = 2,
+    MatrixResultSignedComponentsKHR = 3,
+    SaturatingAccumulationKHR = 4,
+    Max = 0x7fffffff,
+};
+
+enum class CooperativeMatrixOperandsMask : unsigned {
+    MaskNone = 0,
+    MatrixASignedComponentsKHR = 0x00000001,
+    MatrixBSignedComponentsKHR = 0x00000002,
+    MatrixCSignedComponentsKHR = 0x00000004,
+    MatrixResultSignedComponentsKHR = 0x00000008,
+    SaturatingAccumulationKHR = 0x00000010,
+};
+
+enum class CooperativeMatrixLayout : unsigned {
+    RowMajorKHR = 0,
+    ColumnMajorKHR = 1,
+    Max = 0x7fffffff,
+};
+
+enum class CooperativeMatrixUse : unsigned {
+    MatrixAKHR = 0,
+    MatrixBKHR = 1,
+    MatrixAccumulatorKHR = 2,
+    Max = 0x7fffffff,
+};
+
+enum class InitializationModeQualifier : unsigned {
+    InitOnDeviceReprogramINTEL = 0,
+    InitOnDeviceResetINTEL = 1,
+    Max = 0x7fffffff,
+};
+
+enum class HostAccessQualifier : unsigned {
+    NoneINTEL = 0,
+    ReadINTEL = 1,
+    WriteINTEL = 2,
+    ReadWriteINTEL = 3,
+    Max = 0x7fffffff,
+};
+
+enum class LoadCacheControl : unsigned {
+    UncachedINTEL = 0,
+    CachedINTEL = 1,
+    StreamingINTEL = 2,
+    InvalidateAfterReadINTEL = 3,
+    ConstCachedINTEL = 4,
+    Max = 0x7fffffff,
+};
+
+enum class StoreCacheControl : unsigned {
+    UncachedINTEL = 0,
+    WriteThroughINTEL = 1,
+    WriteBackINTEL = 2,
+    StreamingINTEL = 3,
+    Max = 0x7fffffff,
+};
+
+enum class NamedMaximumNumberOfRegisters : unsigned {
+    AutoINTEL = 0,
+    Max = 0x7fffffff,
+};
+
+enum class RawAccessChainOperandsShift : unsigned {
+    RobustnessPerComponentNV = 0,
+    RobustnessPerElementNV = 1,
+    Max = 0x7fffffff,
+};
+
+enum class RawAccessChainOperandsMask : unsigned {
+    MaskNone = 0,
+    RobustnessPerComponentNV = 0x00000001,
+    RobustnessPerElementNV = 0x00000002,
 };
 
 enum class Op : unsigned {
@@ -1585,6 +1760,9 @@ enum class Op : unsigned {
     OpPtrEqual = 401,
     OpPtrNotEqual = 402,
     OpPtrDiff = 403,
+    OpColorAttachmentReadEXT = 4160,
+    OpDepthAttachmentReadEXT = 4161,
+    OpStencilAttachmentReadEXT = 4162,
     OpTerminateInvocation = 4416,
     OpSubgroupBallotKHR = 4421,
     OpSubgroupFirstInvocationKHR = 4422,
@@ -1610,6 +1788,11 @@ enum class Op : unsigned {
     OpUDotAccSatKHR = 4454,
     OpSUDotAccSat = 4455,
     OpSUDotAccSatKHR = 4455,
+    OpTypeCooperativeMatrixKHR = 4456,
+    OpCooperativeMatrixLoadKHR = 4457,
+    OpCooperativeMatrixStoreKHR = 4458,
+    OpCooperativeMatrixMulAddKHR = 4459,
+    OpCooperativeMatrixLengthKHR = 4460,
     OpTypeRayQueryKHR = 4472,
     OpRayQueryInitializeKHR = 4473,
     OpRayQueryTerminateKHR = 4474,
@@ -1617,6 +1800,14 @@ enum class Op : unsigned {
     OpRayQueryConfirmIntersectionKHR = 4476,
     OpRayQueryProceedKHR = 4477,
     OpRayQueryGetIntersectionTypeKHR = 4479,
+    OpImageSampleWeightedQCOM = 4480,
+    OpImageBoxFilterQCOM = 4481,
+    OpImageBlockMatchSSDQCOM = 4482,
+    OpImageBlockMatchSADQCOM = 4483,
+    OpImageBlockMatchWindowSSDQCOM = 4500,
+    OpImageBlockMatchWindowSADQCOM = 4501,
+    OpImageBlockMatchGatherSSDQCOM = 4502,
+    OpImageBlockMatchGatherSADQCOM = 4503,
     OpGroupIAddNonUniformAMD = 5000,
     OpGroupFAddNonUniformAMD = 5001,
     OpGroupFMinNonUniformAMD = 5002,
@@ -1628,6 +1819,11 @@ enum class Op : unsigned {
     OpFragmentMaskFetchAMD = 5011,
     OpFragmentFetchAMD = 5012,
     OpReadClockKHR = 5056,
+    OpFinalizeNodePayloadsAMDX = 5075,
+    OpFinishWritingNodePayloadAMDX = 5078,
+    OpInitializeNodePayloadsAMDX = 5090,
+    OpGroupNonUniformQuadAllKHR = 5110,
+    OpGroupNonUniformQuadAnyKHR = 5111,
     OpHitObjectRecordHitMotionNV = 5249,
     OpHitObjectRecordHitWithIndexMotionNV = 5250,
     OpHitObjectRecordMissMotionNV = 5251,
@@ -1666,6 +1862,8 @@ enum class Op : unsigned {
     OpSetMeshOutputsEXT = 5295,
     OpGroupNonUniformPartitionNV = 5296,
     OpWritePackedPrimitiveIndices4x8NV = 5299,
+    OpFetchMicroTriangleVertexPositionNV = 5300,
+    OpFetchMicroTriangleVertexBarycentricNV = 5301,
     OpReportIntersectionKHR = 5334,
     OpReportIntersectionNV = 5334,
     OpIgnoreIntersectionNV = 5335,
@@ -1673,6 +1871,7 @@ enum class Op : unsigned {
     OpTraceNV = 5337,
     OpTraceMotionNV = 5338,
     OpTraceRayMotionNV = 5339,
+    OpRayQueryGetIntersectionTriangleVertexPositionsKHR = 5340,
     OpTypeAccelerationStructureKHR = 5341,
     OpTypeAccelerationStructureNV = 5341,
     OpExecuteCallableNV = 5344,
@@ -1693,6 +1892,7 @@ enum class Op : unsigned {
     OpConvertUToSampledImageNV = 5395,
     OpConvertSampledImageToUNV = 5396,
     OpSamplerImageAddressingModeNV = 5397,
+    OpRawAccessChainNV = 5398,
     OpSubgroupShuffleINTEL = 5571,
     OpSubgroupShuffleDownINTEL = 5572,
     OpSubgroupShuffleUpINTEL = 5573,
@@ -1934,6 +2134,9 @@ enum class Op : unsigned {
     OpTypeStructContinuedINTEL = 6090,
     OpConstantCompositeContinuedINTEL = 6091,
     OpSpecConstantCompositeContinuedINTEL = 6092,
+    OpCompositeConstructContinuedINTEL = 6096,
+    OpConvertFToBF16INTEL = 6116,
+    OpConvertBF16ToFINTEL = 6117,
     OpControlBarrierArriveINTEL = 6142,
     OpControlBarrierWaitINTEL = 6143,
     OpGroupIMulKHR = 6401,
@@ -1944,6 +2147,8 @@ enum class Op : unsigned {
     OpGroupLogicalAndKHR = 6406,
     OpGroupLogicalOrKHR = 6407,
     OpGroupLogicalXorKHR = 6408,
+    OpMaskedGatherINTEL = 6428,
+    OpMaskedScatterINTEL = 6429,
     Max = 0x7fffffff,
 };
 
@@ -2299,6 +2504,9 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpPtrEqual: *hasResult = true; *hasResultType = true; break;
     case Op::OpPtrNotEqual: *hasResult = true; *hasResultType = true; break;
     case Op::OpPtrDiff: *hasResult = true; *hasResultType = true; break;
+    case Op::OpColorAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
+    case Op::OpDepthAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
+    case Op::OpStencilAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
     case Op::OpTerminateInvocation: *hasResult = false; *hasResultType = false; break;
     case Op::OpSubgroupBallotKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpSubgroupFirstInvocationKHR: *hasResult = true; *hasResultType = true; break;
@@ -2318,6 +2526,11 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpSDotAccSat: *hasResult = true; *hasResultType = true; break;
     case Op::OpUDotAccSat: *hasResult = true; *hasResultType = true; break;
     case Op::OpSUDotAccSat: *hasResult = true; *hasResultType = true; break;
+    case Op::OpTypeCooperativeMatrixKHR: *hasResult = true; *hasResultType = false; break;
+    case Op::OpCooperativeMatrixLoadKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpCooperativeMatrixStoreKHR: *hasResult = false; *hasResultType = false; break;
+    case Op::OpCooperativeMatrixMulAddKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpCooperativeMatrixLengthKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpTypeRayQueryKHR: *hasResult = true; *hasResultType = false; break;
     case Op::OpRayQueryInitializeKHR: *hasResult = false; *hasResultType = false; break;
     case Op::OpRayQueryTerminateKHR: *hasResult = false; *hasResultType = false; break;
@@ -2325,6 +2538,14 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpRayQueryConfirmIntersectionKHR: *hasResult = false; *hasResultType = false; break;
     case Op::OpRayQueryProceedKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpRayQueryGetIntersectionTypeKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageSampleWeightedQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBoxFilterQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBlockMatchSSDQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBlockMatchSADQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBlockMatchWindowSSDQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBlockMatchWindowSADQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBlockMatchGatherSSDQCOM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpImageBlockMatchGatherSADQCOM: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupIAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupFAddNonUniformAMD: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupFMinNonUniformAMD: *hasResult = true; *hasResultType = true; break;
@@ -2336,6 +2557,11 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpFragmentMaskFetchAMD: *hasResult = true; *hasResultType = true; break;
     case Op::OpFragmentFetchAMD: *hasResult = true; *hasResultType = true; break;
     case Op::OpReadClockKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpFinalizeNodePayloadsAMDX: *hasResult = false; *hasResultType = false; break;
+    case Op::OpFinishWritingNodePayloadAMDX: *hasResult = true; *hasResultType = true; break;
+    case Op::OpInitializeNodePayloadsAMDX: *hasResult = false; *hasResultType = false; break;
+    case Op::OpGroupNonUniformQuadAllKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpGroupNonUniformQuadAnyKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpHitObjectRecordHitMotionNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpHitObjectRecordHitWithIndexMotionNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpHitObjectRecordMissMotionNV: *hasResult = false; *hasResultType = false; break;
@@ -2374,12 +2600,15 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpSetMeshOutputsEXT: *hasResult = false; *hasResultType = false; break;
     case Op::OpGroupNonUniformPartitionNV: *hasResult = true; *hasResultType = true; break;
     case Op::OpWritePackedPrimitiveIndices4x8NV: *hasResult = false; *hasResultType = false; break;
+    case Op::OpFetchMicroTriangleVertexPositionNV: *hasResult = true; *hasResultType = true; break;
+    case Op::OpFetchMicroTriangleVertexBarycentricNV: *hasResult = true; *hasResultType = true; break;
     case Op::OpReportIntersectionNV: *hasResult = true; *hasResultType = true; break;
     case Op::OpIgnoreIntersectionNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTerminateRayNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTraceNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTraceMotionNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTraceRayMotionNV: *hasResult = false; *hasResultType = false; break;
+    case Op::OpRayQueryGetIntersectionTriangleVertexPositionsKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpTypeAccelerationStructureNV: *hasResult = true; *hasResultType = false; break;
     case Op::OpExecuteCallableNV: *hasResult = false; *hasResultType = false; break;
     case Op::OpTypeCooperativeMatrixNV: *hasResult = true; *hasResultType = false; break;
@@ -2398,6 +2627,7 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpConvertUToSampledImageNV: *hasResult = true; *hasResultType = true; break;
     case Op::OpConvertSampledImageToUNV: *hasResult = true; *hasResultType = true; break;
     case Op::OpSamplerImageAddressingModeNV: *hasResult = false; *hasResultType = false; break;
+    case Op::OpRawAccessChainNV: *hasResult = true; *hasResultType = true; break;
     case Op::OpSubgroupShuffleINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpSubgroupShuffleDownINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpSubgroupShuffleUpINTEL: *hasResult = true; *hasResultType = true; break;
@@ -2637,6 +2867,9 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpTypeStructContinuedINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpConstantCompositeContinuedINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpSpecConstantCompositeContinuedINTEL: *hasResult = false; *hasResultType = false; break;
+    case Op::OpCompositeConstructContinuedINTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertFToBF16INTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpConvertBF16ToFINTEL: *hasResult = true; *hasResultType = true; break;
     case Op::OpControlBarrierArriveINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpControlBarrierWaitINTEL: *hasResult = false; *hasResultType = false; break;
     case Op::OpGroupIMulKHR: *hasResult = true; *hasResultType = true; break;
@@ -2647,52 +2880,62 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpGroupLogicalAndKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupLogicalOrKHR: *hasResult = true; *hasResultType = true; break;
     case Op::OpGroupLogicalXorKHR: *hasResult = true; *hasResultType = true; break;
+    case Op::OpMaskedGatherINTEL: *hasResult = true; *hasResultType = true; break;
+    case Op::OpMaskedScatterINTEL: *hasResult = false; *hasResultType = false; break;
     }
 }
 #endif /* SPV_ENABLE_UTILITY_CODE */
 
 // Overload bitwise operators for mask bit combining
 
-inline ImageOperandsMask operator|(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) | unsigned(b)); }
-inline ImageOperandsMask operator&(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) & unsigned(b)); }
-inline ImageOperandsMask operator^(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) ^ unsigned(b)); }
-inline ImageOperandsMask operator~(ImageOperandsMask a) { return ImageOperandsMask(~unsigned(a)); }
-inline FPFastMathModeMask operator|(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) | unsigned(b)); }
-inline FPFastMathModeMask operator&(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) & unsigned(b)); }
-inline FPFastMathModeMask operator^(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) ^ unsigned(b)); }
-inline FPFastMathModeMask operator~(FPFastMathModeMask a) { return FPFastMathModeMask(~unsigned(a)); }
-inline SelectionControlMask operator|(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) | unsigned(b)); }
-inline SelectionControlMask operator&(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) & unsigned(b)); }
-inline SelectionControlMask operator^(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) ^ unsigned(b)); }
-inline SelectionControlMask operator~(SelectionControlMask a) { return SelectionControlMask(~unsigned(a)); }
-inline LoopControlMask operator|(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) | unsigned(b)); }
-inline LoopControlMask operator&(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) & unsigned(b)); }
-inline LoopControlMask operator^(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) ^ unsigned(b)); }
-inline LoopControlMask operator~(LoopControlMask a) { return LoopControlMask(~unsigned(a)); }
-inline FunctionControlMask operator|(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) | unsigned(b)); }
-inline FunctionControlMask operator&(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) & unsigned(b)); }
-inline FunctionControlMask operator^(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) ^ unsigned(b)); }
-inline FunctionControlMask operator~(FunctionControlMask a) { return FunctionControlMask(~unsigned(a)); }
-inline MemorySemanticsMask operator|(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) | unsigned(b)); }
-inline MemorySemanticsMask operator&(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) & unsigned(b)); }
-inline MemorySemanticsMask operator^(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) ^ unsigned(b)); }
-inline MemorySemanticsMask operator~(MemorySemanticsMask a) { return MemorySemanticsMask(~unsigned(a)); }
-inline MemoryAccessMask operator|(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) | unsigned(b)); }
-inline MemoryAccessMask operator&(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) & unsigned(b)); }
-inline MemoryAccessMask operator^(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) ^ unsigned(b)); }
-inline MemoryAccessMask operator~(MemoryAccessMask a) { return MemoryAccessMask(~unsigned(a)); }
-inline KernelProfilingInfoMask operator|(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) | unsigned(b)); }
-inline KernelProfilingInfoMask operator&(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) & unsigned(b)); }
-inline KernelProfilingInfoMask operator^(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) ^ unsigned(b)); }
-inline KernelProfilingInfoMask operator~(KernelProfilingInfoMask a) { return KernelProfilingInfoMask(~unsigned(a)); }
-inline RayFlagsMask operator|(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) | unsigned(b)); }
-inline RayFlagsMask operator&(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) & unsigned(b)); }
-inline RayFlagsMask operator^(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) ^ unsigned(b)); }
-inline RayFlagsMask operator~(RayFlagsMask a) { return RayFlagsMask(~unsigned(a)); }
-inline FragmentShadingRateMask operator|(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) | unsigned(b)); }
-inline FragmentShadingRateMask operator&(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) & unsigned(b)); }
-inline FragmentShadingRateMask operator^(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) ^ unsigned(b)); }
-inline FragmentShadingRateMask operator~(FragmentShadingRateMask a) { return FragmentShadingRateMask(~unsigned(a)); }
+constexpr ImageOperandsMask operator|(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) | unsigned(b)); }
+constexpr ImageOperandsMask operator&(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) & unsigned(b)); }
+constexpr ImageOperandsMask operator^(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) ^ unsigned(b)); }
+constexpr ImageOperandsMask operator~(ImageOperandsMask a) { return ImageOperandsMask(~unsigned(a)); }
+constexpr FPFastMathModeMask operator|(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) | unsigned(b)); }
+constexpr FPFastMathModeMask operator&(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) & unsigned(b)); }
+constexpr FPFastMathModeMask operator^(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) ^ unsigned(b)); }
+constexpr FPFastMathModeMask operator~(FPFastMathModeMask a) { return FPFastMathModeMask(~unsigned(a)); }
+constexpr SelectionControlMask operator|(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) | unsigned(b)); }
+constexpr SelectionControlMask operator&(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) & unsigned(b)); }
+constexpr SelectionControlMask operator^(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) ^ unsigned(b)); }
+constexpr SelectionControlMask operator~(SelectionControlMask a) { return SelectionControlMask(~unsigned(a)); }
+constexpr LoopControlMask operator|(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) | unsigned(b)); }
+constexpr LoopControlMask operator&(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) & unsigned(b)); }
+constexpr LoopControlMask operator^(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) ^ unsigned(b)); }
+constexpr LoopControlMask operator~(LoopControlMask a) { return LoopControlMask(~unsigned(a)); }
+constexpr FunctionControlMask operator|(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) | unsigned(b)); }
+constexpr FunctionControlMask operator&(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) & unsigned(b)); }
+constexpr FunctionControlMask operator^(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) ^ unsigned(b)); }
+constexpr FunctionControlMask operator~(FunctionControlMask a) { return FunctionControlMask(~unsigned(a)); }
+constexpr MemorySemanticsMask operator|(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) | unsigned(b)); }
+constexpr MemorySemanticsMask operator&(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) & unsigned(b)); }
+constexpr MemorySemanticsMask operator^(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) ^ unsigned(b)); }
+constexpr MemorySemanticsMask operator~(MemorySemanticsMask a) { return MemorySemanticsMask(~unsigned(a)); }
+constexpr MemoryAccessMask operator|(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) | unsigned(b)); }
+constexpr MemoryAccessMask operator&(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) & unsigned(b)); }
+constexpr MemoryAccessMask operator^(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) ^ unsigned(b)); }
+constexpr MemoryAccessMask operator~(MemoryAccessMask a) { return MemoryAccessMask(~unsigned(a)); }
+constexpr KernelProfilingInfoMask operator|(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) | unsigned(b)); }
+constexpr KernelProfilingInfoMask operator&(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) & unsigned(b)); }
+constexpr KernelProfilingInfoMask operator^(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) ^ unsigned(b)); }
+constexpr KernelProfilingInfoMask operator~(KernelProfilingInfoMask a) { return KernelProfilingInfoMask(~unsigned(a)); }
+constexpr RayFlagsMask operator|(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) | unsigned(b)); }
+constexpr RayFlagsMask operator&(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) & unsigned(b)); }
+constexpr RayFlagsMask operator^(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) ^ unsigned(b)); }
+constexpr RayFlagsMask operator~(RayFlagsMask a) { return RayFlagsMask(~unsigned(a)); }
+constexpr FragmentShadingRateMask operator|(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) | unsigned(b)); }
+constexpr FragmentShadingRateMask operator&(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) & unsigned(b)); }
+constexpr FragmentShadingRateMask operator^(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) ^ unsigned(b)); }
+constexpr FragmentShadingRateMask operator~(FragmentShadingRateMask a) { return FragmentShadingRateMask(~unsigned(a)); }
+constexpr CooperativeMatrixOperandsMask operator|(CooperativeMatrixOperandsMask a, CooperativeMatrixOperandsMask b) { return CooperativeMatrixOperandsMask(unsigned(a) | unsigned(b)); }
+constexpr CooperativeMatrixOperandsMask operator&(CooperativeMatrixOperandsMask a, CooperativeMatrixOperandsMask b) { return CooperativeMatrixOperandsMask(unsigned(a) & unsigned(b)); }
+constexpr CooperativeMatrixOperandsMask operator^(CooperativeMatrixOperandsMask a, CooperativeMatrixOperandsMask b) { return CooperativeMatrixOperandsMask(unsigned(a) ^ unsigned(b)); }
+constexpr CooperativeMatrixOperandsMask operator~(CooperativeMatrixOperandsMask a) { return CooperativeMatrixOperandsMask(~unsigned(a)); }
+constexpr RawAccessChainOperandsMask operator|(RawAccessChainOperandsMask a, RawAccessChainOperandsMask b) { return RawAccessChainOperandsMask(unsigned(a) | unsigned(b)); }
+constexpr RawAccessChainOperandsMask operator&(RawAccessChainOperandsMask a, RawAccessChainOperandsMask b) { return RawAccessChainOperandsMask(unsigned(a) & unsigned(b)); }
+constexpr RawAccessChainOperandsMask operator^(RawAccessChainOperandsMask a, RawAccessChainOperandsMask b) { return RawAccessChainOperandsMask(unsigned(a) ^ unsigned(b)); }
+constexpr RawAccessChainOperandsMask operator~(RawAccessChainOperandsMask a) { return RawAccessChainOperandsMask(~unsigned(a)); }
 
 }  // end namespace spv
 

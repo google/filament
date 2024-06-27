@@ -1,0 +1,7 @@
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+
+bazel_dep(name = "googletest", dev_dependency = True)
+local_path_override(
+    module_name = "googletest",
+    path = "external/googletest",
+)

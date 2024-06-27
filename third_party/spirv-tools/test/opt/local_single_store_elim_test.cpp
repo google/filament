@@ -1750,6 +1750,58 @@ TEST_F(LocalSingleStoreElimTest, DebugValuesForAllLocalsAndParams) {
   SinglePassRunAndMatch<LocalSingleStoreElimPass>(text, false);
 }
 
+TEST_F(LocalSingleStoreElimTest, VkMemoryModelTest) {
+  const std::string text =
+      R"(
+; CHECK: OpCapability Shader
+; CHECK: OpCapability VulkanMemoryModel
+; CHECK: OpExtension "SPV_KHR_vulkan_memory_model"
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_vulkan_memory_model"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+       %bool = OpTypeBool
+      %false = OpConstantFalse %bool
+; CHECK: OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[a:%\w+]] = OpVariable
+; CHECK-NEXT: [[b:%\w+]] = OpVariable
+; CHECK: OpStore [[a]] [[v:%\w+]]
+; CHECK: OpStore [[b]]
+; Make sure the load was removed.
+; CHECK: OpLabel
+; CHECK-NOT: OpLoad %int [[a]]
+; CHECK: OpStore [[b]] [[v]]
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function_int Function
+          %b = OpVariable %_ptr_Function_int Function
+               OpStore %a %int_0
+               OpStore %b %int_1
+               OpSelectionMerge %15 None
+               OpBranchConditional %false %14 %15
+         %14 = OpLabel
+         %16 = OpLoad %int %a
+               OpStore %b %16
+               OpBranch %15
+         %15 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<LocalSingleStoreElimPass>(text, false);
+}
+
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //
 //    Other types

@@ -14,7 +14,6 @@
 
 #include "source/opt/strip_nonsemantic_info_pass.h"
 
-#include <cstring>
 #include <vector>
 
 #include "source/opt/instruction.h"

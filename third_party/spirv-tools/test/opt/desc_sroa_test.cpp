@@ -14,8 +14,6 @@
 
 #include <string>
 
-#include "gmock/gmock.h"
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 
@@ -918,6 +916,74 @@ TEST_F(DescriptorScalarReplacementTest, DecorateStringForReflect) {
 )";
 
   SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+}
+
+TEST_F(DescriptorScalarReplacementTest, ExpandArrayInOpEntryPoint) {
+  const std::string text = R"(; SPIR-V
+; Version: 1.6
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+
+; CHECK:       OpEntryPoint GLCompute %main "main" %output_0_ %output_1_
+
+               OpEntryPoint GLCompute %main "main" %output
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %type_RWByteAddressBuffer "type.RWByteAddressBuffer"
+               OpName %output "output"
+               OpName %main "main"
+               OpName %src_main "src.main"
+               OpName %bb_entry "bb.entry"
+
+; CHECK:       OpDecorate %output_1_ DescriptorSet 0
+; CHECK:       OpDecorate %output_1_ Binding 1
+; CHECK:       OpDecorate %output_0_ DescriptorSet 0
+; CHECK:       OpDecorate %output_0_ Binding 0
+
+               OpDecorate %output DescriptorSet 0
+               OpDecorate %output Binding 0
+
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %type_RWByteAddressBuffer 0 Offset 0
+               OpDecorate %type_RWByteAddressBuffer Block
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+    %uint_32 = OpConstant %uint 32
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+%type_RWByteAddressBuffer = OpTypeStruct %_runtimearr_uint
+%_arr_type_RWByteAddressBuffer_uint_2 = OpTypeArray %type_RWByteAddressBuffer %uint_2
+%_ptr_StorageBuffer__arr_type_RWByteAddressBuffer_uint_2 = OpTypePointer StorageBuffer %_arr_type_RWByteAddressBuffer_uint_2
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+%_ptr_StorageBuffer_type_RWByteAddressBuffer = OpTypePointer StorageBuffer %type_RWByteAddressBuffer
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+
+; CHECK: %output_1_ = OpVariable %_ptr_StorageBuffer_type_RWByteAddressBuffer StorageBuffer
+; CHECK: %output_0_ = OpVariable %_ptr_StorageBuffer_type_RWByteAddressBuffer StorageBuffer
+
+     %output = OpVariable %_ptr_StorageBuffer__arr_type_RWByteAddressBuffer_uint_2 StorageBuffer
+
+       %main = OpFunction %void None %23
+         %26 = OpLabel
+         %27 = OpFunctionCall %void %src_main
+               OpReturn
+               OpFunctionEnd
+   %src_main = OpFunction %void None %23
+   %bb_entry = OpLabel
+         %28 = OpAccessChain %_ptr_StorageBuffer_type_RWByteAddressBuffer %output %int_1
+         %29 = OpShiftRightLogical %uint %uint_0 %uint_2
+         %30 = OpAccessChain %_ptr_StorageBuffer_uint %28 %uint_0 %29
+               OpStore %30 %uint_32
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, false);
 }
 
 }  // namespace

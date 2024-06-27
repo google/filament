@@ -312,6 +312,17 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
       }
     } break;
 
+    case SPV_OPERAND_TYPE_LITERAL_FLOAT: {
+      // The current operand is a 32-bit float.
+      // That's just how the grammar works.
+      spvtools::IdType expected_type = {
+          32, false, spvtools::IdTypeClass::kScalarFloatType};
+      if (auto error = context->binaryEncodeNumericLiteral(
+              textValue, error_code_for_literals, expected_type, pInst)) {
+        return error;
+      }
+    } break;
+
     case SPV_OPERAND_TYPE_OPTIONAL_LITERAL_NUMBER:
       // This is a context-independent literal number which can be a 32-bit
       // number of floating point value.
@@ -400,9 +411,11 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
     case SPV_OPERAND_TYPE_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS:
+    case SPV_OPERAND_TYPE_OPTIONAL_RAW_ACCESS_CHAIN_OPERANDS:
     case SPV_OPERAND_TYPE_SELECTION_CONTROL:
     case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
-    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS: {
+    case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
+    case SPV_OPERAND_TYPE_OPTIONAL_COOPERATIVE_MATRIX_OPERANDS: {
       uint32_t value;
       if (auto error = grammar.parseMaskOperand(type, textValue, &value)) {
         return context->diagnostic(error)
@@ -544,7 +557,8 @@ spv_result_t spvTextEncodeOpcode(const spvtools::AssemblyGrammar& grammar,
     std::string equal_sign;
     error = context->getWord(&equal_sign, &nextPosition);
     if ("=" != equal_sign)
-      return context->diagnostic() << "'=' expected after result id.";
+      return context->diagnostic() << "'=' expected after result id but found '"
+                                   << equal_sign << "'.";
 
     // The <opcode> after the '=' sign.
     context->setPosition(nextPosition);

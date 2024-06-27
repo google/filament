@@ -14,7 +14,6 @@
 
 // Validation tests for Data Rules.
 
-#include <sstream>
 #include <string>
 #include <utility>
 

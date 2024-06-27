@@ -57,12 +57,6 @@ spv_result_t spvOperandTableValueLookup(spv_target_env,
 // Gets the name string of the non-variable operand type.
 const char* spvOperandTypeStr(spv_operand_type_t type);
 
-// Returns true if the given type is concrete.
-bool spvOperandIsConcrete(spv_operand_type_t type);
-
-// Returns true if the given type is concrete and also a mask.
-bool spvOperandIsConcreteMask(spv_operand_type_t type);
-
 // Returns true if an operand of the given type is optional.
 bool spvOperandIsOptional(spv_operand_type_t type);
 

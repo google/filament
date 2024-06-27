@@ -16,6 +16,8 @@
 
 #include "inst_bindless_check_pass.h"
 
+#include "source/spirv_constant.h"
+
 namespace spvtools {
 namespace opt {
 namespace {
@@ -29,48 +31,88 @@ constexpr int kSpvLoadPtrIdInIdx = 0;
 constexpr int kSpvAccessChainBaseIdInIdx = 0;
 constexpr int kSpvAccessChainIndex0IdInIdx = 1;
 constexpr int kSpvTypeArrayTypeIdInIdx = 0;
-constexpr int kSpvTypeArrayLengthIdInIdx = 1;
-constexpr int kSpvConstantValueInIdx = 0;
 constexpr int kSpvVariableStorageClassInIdx = 0;
 constexpr int kSpvTypePtrTypeIdInIdx = 1;
 constexpr int kSpvTypeImageDim = 1;
 constexpr int kSpvTypeImageDepth = 2;
 constexpr int kSpvTypeImageArrayed = 3;
 constexpr int kSpvTypeImageMS = 4;
-constexpr int kSpvTypeImageSampled = 5;
 }  // namespace
 
-uint32_t InstBindlessCheckPass::GenDebugReadLength(
-    uint32_t var_id, InstructionBuilder* builder) {
-  uint32_t desc_set_idx =
-      var2desc_set_[var_id] + kDebugInputBindlessOffsetLengths;
-  uint32_t desc_set_idx_id = builder->GetUintConstantId(desc_set_idx);
-  uint32_t binding_idx_id = builder->GetUintConstantId(var2binding_[var_id]);
-  return GenDebugDirectRead({desc_set_idx_id, binding_idx_id}, builder);
+// This is a stub function for use with Import linkage
+// clang-format off
+// GLSL:
+//bool inst_bindless_check_desc(const uint shader_id, const uint inst_num, const uvec4 stage_info, const uint desc_set,
+//                              const uint binding, const uint desc_index, const uint byte_offset) {
+//}
+// clang-format on
+uint32_t InstBindlessCheckPass::GenDescCheckFunctionId() {
+  enum {
+    kShaderId = 0,
+    kInstructionIndex = 1,
+    kStageInfo = 2,
+    kDescSet = 3,
+    kDescBinding = 4,
+    kDescIndex = 5,
+    kByteOffset = 6,
+    kNumArgs
+  };
+  if (check_desc_func_id_ != 0) {
+    return check_desc_func_id_;
+  }
+
+  analysis::TypeManager* type_mgr = context()->get_type_mgr();
+  const analysis::Integer* uint_type = GetInteger(32, false);
+  const analysis::Vector v4uint(uint_type, 4);
+  const analysis::Type* v4uint_type = type_mgr->GetRegisteredType(&v4uint);
+  std::vector<const analysis::Type*> param_types(kNumArgs, uint_type);
+  param_types[2] = v4uint_type;
+
+  const uint32_t func_id = TakeNextId();
+  std::unique_ptr<Function> func =
+      StartFunction(func_id, type_mgr->GetBoolType(), param_types);
+
+  func->SetFunctionEnd(EndFunction());
+
+  static const std::string func_name{"inst_bindless_check_desc"};
+  context()->AddFunctionDeclaration(std::move(func));
+  context()->AddDebug2Inst(NewName(func_id, func_name));
+  std::vector<Operand> operands{
+      {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {func_id}},
+      {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
+       {uint32_t(spv::Decoration::LinkageAttributes)}},
+      {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_STRING,
+       utils::MakeVector(func_name.c_str())},
+      {spv_operand_type_t::SPV_OPERAND_TYPE_LINKAGE_TYPE,
+       {uint32_t(spv::LinkageType::Import)}},
+  };
+  get_decoration_mgr()->AddDecoration(spv::Op::OpDecorate, operands);
+
+  check_desc_func_id_ = func_id;
+  // Make sure function doesn't get processed by
+  // InstrumentPass::InstProcessCallTreeFromRoots()
+  param2output_func_id_[3] = func_id;
+  return check_desc_func_id_;
 }
 
-uint32_t InstBindlessCheckPass::GenDebugReadInit(uint32_t var_id,
-                                                 uint32_t desc_idx_id,
-                                                 InstructionBuilder* builder) {
-  uint32_t binding_idx_id = builder->GetUintConstantId(var2binding_[var_id]);
-  uint32_t u_desc_idx_id = GenUintCastCode(desc_idx_id, builder);
-  // If desc index checking is not enabled, we know the offset of initialization
-  // entries is 1, so we can avoid loading this value and just add 1 to the
-  // descriptor set.
-  if (!desc_idx_enabled_) {
-    uint32_t desc_set_idx_id =
-        builder->GetUintConstantId(var2desc_set_[var_id] + 1);
-    return GenDebugDirectRead({desc_set_idx_id, binding_idx_id, u_desc_idx_id},
-                              builder);
-  } else {
-    uint32_t desc_set_base_id =
-        builder->GetUintConstantId(kDebugInputBindlessInitOffset);
-    uint32_t desc_set_idx_id =
-        builder->GetUintConstantId(var2desc_set_[var_id]);
-    return GenDebugDirectRead(
-        {desc_set_base_id, desc_set_idx_id, binding_idx_id, u_desc_idx_id},
-        builder);
-  }
+// clang-format off
+// GLSL:
+// result = inst_bindless_check_desc(shader_id, inst_idx, stage_info, desc_set, binding, desc_idx, offset);
+//
+// clang-format on
+uint32_t InstBindlessCheckPass::GenDescCheckCall(
+    uint32_t inst_idx, uint32_t stage_idx, uint32_t var_id,
+    uint32_t desc_idx_id, uint32_t offset_id, InstructionBuilder* builder) {
+  const uint32_t func_id = GenDescCheckFunctionId();
+  const std::vector<uint32_t> args = {
+      builder->GetUintConstantId(shader_id_),
+      builder->GetUintConstantId(inst_idx),
+      GenStageInfo(stage_idx, builder),
+      builder->GetUintConstantId(var2desc_set_[var_id]),
+      builder->GetUintConstantId(var2binding_[var_id]),
+      GenUintCastCode(desc_idx_id, builder),
+      offset_id};
+  return GenReadFunctionCall(GetBoolId(), func_id, args, builder);
 }
 
 uint32_t InstBindlessCheckPass::CloneOriginalImage(
@@ -248,8 +290,17 @@ bool InstBindlessCheckPass::AnalyzeDescriptorReference(Instruction* ref_inst,
             ptr_inst->GetSingleWordInOperand(kSpvAccessChainIndex0IdInIdx);
         break;
       default:
-        ref->desc_idx_id = 0;
         break;
+    }
+    auto decos =
+        context()->get_decoration_mgr()->GetDecorationsFor(ref->var_id, false);
+    for (const auto& deco : decos) {
+      spv::Decoration d = spv::Decoration(deco->GetSingleWordInOperand(1u));
+      if (d == spv::Decoration::DescriptorSet) {
+        ref->set = deco->GetSingleWordInOperand(2u);
+      } else if (d == spv::Decoration::Binding) {
+        ref->binding = deco->GetSingleWordInOperand(2u);
+      }
     }
     return true;
   }
@@ -299,6 +350,16 @@ bool InstBindlessCheckPass::AnalyzeDescriptorReference(Instruction* ref_inst,
   } else {
     // TODO(greg-lunarg): Handle additional possibilities?
     return false;
+  }
+  auto decos =
+      context()->get_decoration_mgr()->GetDecorationsFor(ref->var_id, false);
+  for (const auto& deco : decos) {
+    spv::Decoration d = spv::Decoration(deco->GetSingleWordInOperand(1u));
+    if (d == spv::Decoration::DescriptorSet) {
+      ref->set = deco->GetSingleWordInOperand(2u);
+    } else if (d == spv::Decoration::Binding) {
+      ref->binding = deco->GetSingleWordInOperand(2u);
+    }
   }
   return true;
 }
@@ -497,8 +558,8 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
     if (sum_id == 0)
       sum_id = curr_offset_id;
     else {
-      Instruction* sum_inst = builder->AddBinaryOp(GetUintId(), spv::Op::OpIAdd,
-                                                   sum_id, curr_offset_id);
+      Instruction* sum_inst =
+          builder->AddIAdd(GetUintId(), sum_id, curr_offset_id);
       sum_id = sum_inst->result_id();
     }
     ++ac_in_idx;
@@ -507,14 +568,12 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
   uint32_t bsize = ByteSize(curr_ty_id, matrix_stride, col_major, in_matrix);
   uint32_t last = bsize - 1;
   uint32_t last_id = builder->GetUintConstantId(last);
-  Instruction* sum_inst =
-      builder->AddBinaryOp(GetUintId(), spv::Op::OpIAdd, sum_id, last_id);
+  Instruction* sum_inst = builder->AddIAdd(GetUintId(), sum_id, last_id);
   return sum_inst->result_id();
 }
 
 void InstBindlessCheckPass::GenCheckCode(
-    uint32_t check_id, uint32_t error_id, uint32_t offset_id,
-    uint32_t length_id, uint32_t stage_idx, RefAnalysis* ref,
+    uint32_t check_id, RefAnalysis* ref,
     std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
   BasicBlock* back_blk_ptr = &*new_blocks->back();
   InstructionBuilder builder(
@@ -536,37 +595,31 @@ void InstBindlessCheckPass::GenCheckCode(
       new BasicBlock(std::move(valid_label)));
   builder.SetInsertPoint(&*new_blk_ptr);
   uint32_t new_ref_id = CloneOriginalReference(ref, &builder);
+  uint32_t null_id = 0;
+  uint32_t ref_type_id = ref->ref_inst->type_id();
   (void)builder.AddBranch(merge_blk_id);
   new_blocks->push_back(std::move(new_blk_ptr));
   // Gen invalid block
   new_blk_ptr.reset(new BasicBlock(std::move(invalid_label)));
   builder.SetInsertPoint(&*new_blk_ptr);
-  uint32_t u_index_id = GenUintCastCode(ref->desc_idx_id, &builder);
-  if (offset_id != 0) {
-    // Buffer OOB
-    uint32_t u_offset_id = GenUintCastCode(offset_id, &builder);
-    uint32_t u_length_id = GenUintCastCode(length_id, &builder);
-    GenDebugStreamWrite(uid2offset_[ref->ref_inst->unique_id()], stage_idx,
-                        {error_id, u_index_id, u_offset_id, u_length_id},
-                        &builder);
-  } else if (buffer_bounds_enabled_ || texel_buffer_enabled_) {
-    // Uninitialized Descriptor - Return additional unused zero so all error
-    // modes will use same debug stream write function
-    uint32_t u_length_id = GenUintCastCode(length_id, &builder);
-    GenDebugStreamWrite(
-        uid2offset_[ref->ref_inst->unique_id()], stage_idx,
-        {error_id, u_index_id, u_length_id, builder.GetUintConstantId(0)},
-        &builder);
-  } else {
-    // Uninitialized Descriptor - Normal error return
-    uint32_t u_length_id = GenUintCastCode(length_id, &builder);
-    GenDebugStreamWrite(uid2offset_[ref->ref_inst->unique_id()], stage_idx,
-                        {error_id, u_index_id, u_length_id}, &builder);
+
+  // Generate a ConstantNull, converting to uint64 if the type cannot be a null.
+  if (new_ref_id != 0) {
+    analysis::TypeManager* type_mgr = context()->get_type_mgr();
+    analysis::Type* ref_type = type_mgr->GetType(ref_type_id);
+    if (ref_type->AsPointer() != nullptr) {
+      context()->AddCapability(spv::Capability::Int64);
+      uint32_t null_u64_id = GetNullId(GetUint64Id());
+      Instruction* null_ptr_inst = builder.AddUnaryOp(
+          ref_type_id, spv::Op::OpConvertUToPtr, null_u64_id);
+      null_id = null_ptr_inst->result_id();
+    } else {
+      null_id = GetNullId(ref_type_id);
+    }
   }
   // Remember last invalid block id
   uint32_t last_invalid_blk_id = new_blk_ptr->GetLabelInst()->result_id();
   // Gen zero for invalid  reference
-  uint32_t ref_type_id = ref->ref_inst->type_id();
   (void)builder.AddBranch(merge_blk_id);
   new_blocks->push_back(std::move(new_blk_ptr));
   // Gen merge block
@@ -577,8 +630,7 @@ void InstBindlessCheckPass::GenCheckCode(
   // reference.
   if (new_ref_id != 0) {
     Instruction* phi_inst = builder.AddPhi(
-        ref_type_id, {new_ref_id, valid_blk_id, GetNullId(ref_type_id),
-                      last_invalid_blk_id});
+        ref_type_id, {new_ref_id, valid_blk_id, null_id, last_invalid_blk_id});
     context()->ReplaceAllUsesWith(ref->ref_inst->result_id(),
                                   phi_inst->result_id());
   }
@@ -586,77 +638,42 @@ void InstBindlessCheckPass::GenCheckCode(
   context()->KillInst(ref->ref_inst);
 }
 
-void InstBindlessCheckPass::GenDescIdxCheckCode(
-    BasicBlock::iterator ref_inst_itr,
-    UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
-    std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
-  // Look for reference through indexed descriptor. If found, analyze and
-  // save components. If not, return.
-  RefAnalysis ref;
-  if (!AnalyzeDescriptorReference(&*ref_inst_itr, &ref)) return;
-  Instruction* ptr_inst = get_def_use_mgr()->GetDef(ref.ptr_id);
-  if (ptr_inst->opcode() != spv::Op::OpAccessChain) return;
-  // If index and bound both compile-time constants and index < bound,
-  // return without changing
-  Instruction* var_inst = get_def_use_mgr()->GetDef(ref.var_id);
-  Instruction* desc_type_inst = GetPointeeTypeInst(var_inst);
-  uint32_t length_id = 0;
-  if (desc_type_inst->opcode() == spv::Op::OpTypeArray) {
-    length_id =
-        desc_type_inst->GetSingleWordInOperand(kSpvTypeArrayLengthIdInIdx);
-    Instruction* index_inst = get_def_use_mgr()->GetDef(ref.desc_idx_id);
-    Instruction* length_inst = get_def_use_mgr()->GetDef(length_id);
-    if (index_inst->opcode() == spv::Op::OpConstant &&
-        length_inst->opcode() == spv::Op::OpConstant &&
-        index_inst->GetSingleWordInOperand(kSpvConstantValueInIdx) <
-            length_inst->GetSingleWordInOperand(kSpvConstantValueInIdx))
-      return;
-  } else if (!desc_idx_enabled_ ||
-             desc_type_inst->opcode() != spv::Op::OpTypeRuntimeArray) {
-    return;
-  }
-  // Move original block's preceding instructions into first new block
-  std::unique_ptr<BasicBlock> new_blk_ptr;
-  MovePreludeCode(ref_inst_itr, ref_block_itr, &new_blk_ptr);
-  InstructionBuilder builder(
-      context(), &*new_blk_ptr,
-      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
-  new_blocks->push_back(std::move(new_blk_ptr));
-  uint32_t error_id = builder.GetUintConstantId(kInstErrorBindlessBounds);
-  // If length id not yet set, descriptor array is runtime size so
-  // generate load of length from stage's debug input buffer.
-  if (length_id == 0) {
-    assert(desc_type_inst->opcode() == spv::Op::OpTypeRuntimeArray &&
-           "unexpected bindless type");
-    length_id = GenDebugReadLength(ref.var_id, &builder);
-  }
-  // Generate full runtime bounds test code with true branch
-  // being full reference and false branch being debug output and zero
-  // for the referenced value.
-  uint32_t desc_idx_32b_id = Gen32BitCvtCode(ref.desc_idx_id, &builder);
-  uint32_t length_32b_id = Gen32BitCvtCode(length_id, &builder);
-  Instruction* ult_inst = builder.AddBinaryOp(GetBoolId(), spv::Op::OpULessThan,
-                                              desc_idx_32b_id, length_32b_id);
-  ref.desc_idx_id = desc_idx_32b_id;
-  GenCheckCode(ult_inst->result_id(), error_id, 0u, length_id, stage_idx, &ref,
-               new_blocks);
-  // Move original block's remaining code into remainder/merge block and add
-  // to new blocks
-  BasicBlock* back_blk_ptr = &*new_blocks->back();
-  MovePostludeCode(ref_block_itr, back_blk_ptr);
-}
-
-void InstBindlessCheckPass::GenDescInitCheckCode(
+void InstBindlessCheckPass::GenDescCheckCode(
     BasicBlock::iterator ref_inst_itr,
     UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
     std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
   // Look for reference through descriptor. If not, return.
   RefAnalysis ref;
   if (!AnalyzeDescriptorReference(&*ref_inst_itr, &ref)) return;
+  std::unique_ptr<BasicBlock> new_blk_ptr;
+  // Move original block's preceding instructions into first new block
+  MovePreludeCode(ref_inst_itr, ref_block_itr, &new_blk_ptr);
+  InstructionBuilder builder(
+      context(), &*new_blk_ptr,
+      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
+  new_blocks->push_back(std::move(new_blk_ptr));
   // Determine if we can only do initialization check
-  bool init_check = false;
-  if (ref.desc_load_id != 0 || !buffer_bounds_enabled_) {
-    init_check = true;
+  uint32_t ref_id = builder.GetUintConstantId(0u);
+  spv::Op op = ref.ref_inst->opcode();
+  if (ref.desc_load_id != 0) {
+    uint32_t num_in_oprnds = ref.ref_inst->NumInOperands();
+    if ((op == spv::Op::OpImageRead && num_in_oprnds == 2) ||
+        (op == spv::Op::OpImageFetch && num_in_oprnds == 2) ||
+        (op == spv::Op::OpImageWrite && num_in_oprnds == 3)) {
+      Instruction* image_inst = get_def_use_mgr()->GetDef(ref.image_id);
+      uint32_t image_ty_id = image_inst->type_id();
+      Instruction* image_ty_inst = get_def_use_mgr()->GetDef(image_ty_id);
+      if (spv::Dim(image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDim)) ==
+          spv::Dim::Buffer) {
+        if ((image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDepth) == 0) &&
+            (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageArrayed) ==
+             0) &&
+            (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageMS) == 0)) {
+          ref_id = GenUintCastCode(ref.ref_inst->GetSingleWordInOperand(1),
+                                   &builder);
+        }
+      }
+    }
   } else {
     // For now, only do bounds check for non-aggregate types. Otherwise
     // just do descriptor initialization check.
@@ -664,114 +681,24 @@ void InstBindlessCheckPass::GenDescInitCheckCode(
     Instruction* ref_ptr_inst = get_def_use_mgr()->GetDef(ref.ptr_id);
     Instruction* pte_type_inst = GetPointeeTypeInst(ref_ptr_inst);
     spv::Op pte_type_op = pte_type_inst->opcode();
-    if (pte_type_op == spv::Op::OpTypeArray ||
-        pte_type_op == spv::Op::OpTypeRuntimeArray ||
-        pte_type_op == spv::Op::OpTypeStruct)
-      init_check = true;
+    if (pte_type_op != spv::Op::OpTypeArray &&
+        pte_type_op != spv::Op::OpTypeRuntimeArray &&
+        pte_type_op != spv::Op::OpTypeStruct) {
+      ref_id = GenLastByteIdx(&ref, &builder);
+    }
   }
-  // If initialization check and not enabled, return
-  if (init_check && !desc_init_enabled_) return;
-  // Move original block's preceding instructions into first new block
-  std::unique_ptr<BasicBlock> new_blk_ptr;
-  MovePreludeCode(ref_inst_itr, ref_block_itr, &new_blk_ptr);
-  InstructionBuilder builder(
-      context(), &*new_blk_ptr,
-      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
-  new_blocks->push_back(std::move(new_blk_ptr));
-  // If initialization check, use reference value of zero.
-  // Else use the index of the last byte referenced.
-  uint32_t ref_id = init_check ? builder.GetUintConstantId(0u)
-                               : GenLastByteIdx(&ref, &builder);
   // Read initialization/bounds from debug input buffer. If index id not yet
   // set, binding is single descriptor, so set index to constant 0.
   if (ref.desc_idx_id == 0) ref.desc_idx_id = builder.GetUintConstantId(0u);
-  uint32_t init_id = GenDebugReadInit(ref.var_id, ref.desc_idx_id, &builder);
-  // Generate runtime initialization/bounds test code with true branch
-  // being full reference and false branch being debug output and zero
-  // for the referenced value.
-  Instruction* ult_inst =
-      builder.AddBinaryOp(GetBoolId(), spv::Op::OpULessThan, ref_id, init_id);
-  uint32_t error =
-      init_check
-          ? kInstErrorBindlessUninit
-          : (spv::StorageClass(ref.strg_class) == spv::StorageClass::Uniform
-                 ? kInstErrorBuffOOBUniform
-                 : kInstErrorBuffOOBStorage);
-  uint32_t error_id = builder.GetUintConstantId(error);
-  GenCheckCode(ult_inst->result_id(), error_id, init_check ? 0 : ref_id,
-               init_check ? builder.GetUintConstantId(0u) : init_id, stage_idx,
-               &ref, new_blocks);
-  // Move original block's remaining code into remainder/merge block and add
-  // to new blocks
-  BasicBlock* back_blk_ptr = &*new_blocks->back();
-  MovePostludeCode(ref_block_itr, back_blk_ptr);
-}
+  uint32_t check_id =
+      GenDescCheckCall(ref.ref_inst->unique_id(), stage_idx, ref.var_id,
+                       ref.desc_idx_id, ref_id, &builder);
 
-void InstBindlessCheckPass::GenTexBuffCheckCode(
-    BasicBlock::iterator ref_inst_itr,
-    UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
-    std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
-  // Only process OpImageRead and OpImageWrite with no optional operands
-  Instruction* ref_inst = &*ref_inst_itr;
-  spv::Op op = ref_inst->opcode();
-  uint32_t num_in_oprnds = ref_inst->NumInOperands();
-  if (!((op == spv::Op::OpImageRead && num_in_oprnds == 2) ||
-        (op == spv::Op::OpImageFetch && num_in_oprnds == 2) ||
-        (op == spv::Op::OpImageWrite && num_in_oprnds == 3)))
-    return;
-  // Pull components from descriptor reference
-  RefAnalysis ref;
-  if (!AnalyzeDescriptorReference(ref_inst, &ref)) return;
-  // Only process if image is texel buffer
-  Instruction* image_inst = get_def_use_mgr()->GetDef(ref.image_id);
-  uint32_t image_ty_id = image_inst->type_id();
-  Instruction* image_ty_inst = get_def_use_mgr()->GetDef(image_ty_id);
-  if (spv::Dim(image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDim)) !=
-      spv::Dim::Buffer) {
-    return;
-  }
-  if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDepth) != 0) return;
-  if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageArrayed) != 0) return;
-  if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageMS) != 0) return;
-  // Enable ImageQuery Capability if not yet enabled
-  if (!get_feature_mgr()->HasCapability(spv::Capability::ImageQuery)) {
-    std::unique_ptr<Instruction> cap_image_query_inst(
-        new Instruction(context(), spv::Op::OpCapability, 0, 0,
-                        std::initializer_list<Operand>{
-                            {SPV_OPERAND_TYPE_CAPABILITY,
-                             {uint32_t(spv::Capability::ImageQuery)}}}));
-    get_def_use_mgr()->AnalyzeInstDefUse(&*cap_image_query_inst);
-    context()->AddCapability(std::move(cap_image_query_inst));
-  }
-  // Move original block's preceding instructions into first new block
-  std::unique_ptr<BasicBlock> new_blk_ptr;
-  MovePreludeCode(ref_inst_itr, ref_block_itr, &new_blk_ptr);
-  InstructionBuilder builder(
-      context(), &*new_blk_ptr,
-      IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
-  new_blocks->push_back(std::move(new_blk_ptr));
-  // Get texel coordinate
-  uint32_t coord_id =
-      GenUintCastCode(ref_inst->GetSingleWordInOperand(1), &builder);
-  // If index id not yet set, binding is single descriptor, so set index to
-  // constant 0.
-  if (ref.desc_idx_id == 0) ref.desc_idx_id = builder.GetUintConstantId(0u);
-  // Get texel buffer size.
-  Instruction* size_inst =
-      builder.AddUnaryOp(GetUintId(), spv::Op::OpImageQuerySize, ref.image_id);
-  uint32_t size_id = size_inst->result_id();
   // Generate runtime initialization/bounds test code with true branch
-  // being full reference and false branch being debug output and zero
+  // being full reference and false branch being zero
   // for the referenced value.
-  Instruction* ult_inst =
-      builder.AddBinaryOp(GetBoolId(), spv::Op::OpULessThan, coord_id, size_id);
-  uint32_t error =
-      (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageSampled) == 2)
-          ? kInstErrorBuffOOBStorageTexel
-          : kInstErrorBuffOOBUniformTexel;
-  uint32_t error_id = builder.GetUintConstantId(error);
-  GenCheckCode(ult_inst->result_id(), error_id, coord_id, size_id, stage_idx,
-               &ref, new_blocks);
+  GenCheckCode(check_id, &ref, new_blocks);
+
   // Move original block's remaining code into remainder/merge block and add
   // to new blocks
   BasicBlock* back_blk_ptr = &*new_blocks->back();
@@ -781,59 +708,48 @@ void InstBindlessCheckPass::GenTexBuffCheckCode(
 void InstBindlessCheckPass::InitializeInstBindlessCheck() {
   // Initialize base class
   InitializeInstrument();
-  // If runtime array length support or buffer bounds checking are enabled,
-  // create variable mappings. Length support is always enabled if descriptor
-  // init check is enabled.
-  if (desc_idx_enabled_ || buffer_bounds_enabled_ || texel_buffer_enabled_)
-    for (auto& anno : get_module()->annotations())
-      if (anno.opcode() == spv::Op::OpDecorate) {
-        if (spv::Decoration(anno.GetSingleWordInOperand(1u)) ==
-            spv::Decoration::DescriptorSet) {
-          var2desc_set_[anno.GetSingleWordInOperand(0u)] =
-              anno.GetSingleWordInOperand(2u);
-        } else if (spv::Decoration(anno.GetSingleWordInOperand(1u)) ==
-                   spv::Decoration::Binding) {
-          var2binding_[anno.GetSingleWordInOperand(0u)] =
-              anno.GetSingleWordInOperand(2u);
-        }
+  for (auto& anno : get_module()->annotations()) {
+    if (anno.opcode() == spv::Op::OpDecorate) {
+      if (spv::Decoration(anno.GetSingleWordInOperand(1u)) ==
+          spv::Decoration::DescriptorSet) {
+        var2desc_set_[anno.GetSingleWordInOperand(0u)] =
+            anno.GetSingleWordInOperand(2u);
+      } else if (spv::Decoration(anno.GetSingleWordInOperand(1u)) ==
+                 spv::Decoration::Binding) {
+        var2binding_[anno.GetSingleWordInOperand(0u)] =
+            anno.GetSingleWordInOperand(2u);
       }
+    }
+  }
 }
 
 Pass::Status InstBindlessCheckPass::ProcessImpl() {
-  // Perform bindless bounds check on each entry point function in module
+  // The memory model and linkage must always be updated for spirv-link to work
+  // correctly.
+  AddStorageBufferExt();
+  if (!get_feature_mgr()->HasExtension(kSPV_KHR_physical_storage_buffer)) {
+    context()->AddExtension("SPV_KHR_physical_storage_buffer");
+  }
+
+  context()->AddCapability(spv::Capability::PhysicalStorageBufferAddresses);
+  Instruction* memory_model = get_module()->GetMemoryModel();
+  memory_model->SetInOperand(
+      0u, {uint32_t(spv::AddressingModel::PhysicalStorageBuffer64)});
+
+  context()->AddCapability(spv::Capability::Linkage);
+
   InstProcessFunction pfn =
       [this](BasicBlock::iterator ref_inst_itr,
              UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
              std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
-        return GenDescIdxCheckCode(ref_inst_itr, ref_block_itr, stage_idx,
-                                   new_blocks);
+        return GenDescCheckCode(ref_inst_itr, ref_block_itr, stage_idx,
+                                new_blocks);
       };
-  bool modified = InstProcessEntryPointCallTree(pfn);
-  if (desc_init_enabled_ || buffer_bounds_enabled_) {
-    // Perform descriptor initialization and/or buffer bounds check on each
-    // entry point function in module
-    pfn = [this](BasicBlock::iterator ref_inst_itr,
-                 UptrVectorIterator<BasicBlock> ref_block_itr,
-                 uint32_t stage_idx,
-                 std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
-      return GenDescInitCheckCode(ref_inst_itr, ref_block_itr, stage_idx,
-                                  new_blocks);
-    };
-    modified |= InstProcessEntryPointCallTree(pfn);
-  }
-  if (texel_buffer_enabled_) {
-    // Perform texel buffer bounds check on each entry point function in
-    // module. Generate after descriptor bounds and initialization checks.
-    pfn = [this](BasicBlock::iterator ref_inst_itr,
-                 UptrVectorIterator<BasicBlock> ref_block_itr,
-                 uint32_t stage_idx,
-                 std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
-      return GenTexBuffCheckCode(ref_inst_itr, ref_block_itr, stage_idx,
-                                 new_blocks);
-    };
-    modified |= InstProcessEntryPointCallTree(pfn);
-  }
-  return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
+
+  InstProcessEntryPointCallTree(pfn);
+  // This pass always changes the memory model, so that linking will work
+  // properly.
+  return Status::SuccessWithChange;
 }
 
 Pass::Status InstBindlessCheckPass::Process() {

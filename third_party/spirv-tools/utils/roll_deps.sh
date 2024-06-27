@@ -20,14 +20,22 @@
 
 set -eo pipefail
 
-effcee_dir="external/effcee/"
-effcee_trunk="origin/main"
-googletest_dir="external/googletest/"
-googletest_trunk="origin/main"
-re2_dir="external/re2/"
-re2_trunk="origin/main"
-spirv_headers_dir="external/spirv-headers/"
-spirv_headers_trunk="origin/master"
+function ExitIfIsInterestingError() {
+  local return_code=$1
+  if [[ ${return_code} -ne 0 && ${return_code} -ne 2 ]]; then
+    exit ${return_code}
+  fi
+  return 0
+}
+
+
+dependencies=("external/effcee/"
+              "external/googletest/"
+              "external/re2/"
+              "external/spirv-headers/")
+
+
+branch="origin/main"
 
 # This script assumes it's parent directory is the repo root.
 repo_path=$(dirname "$0")/..
@@ -44,10 +52,9 @@ echo "*** Ignore messages about running 'git cl upload' ***"
 old_head=$(git rev-parse HEAD)
 
 set +e
-roll-dep --ignore-dirty-tree --roll-to="${effcee_trunk}" "${effcee_dir}"
-roll-dep --ignore-dirty-tree --roll-to="${googletest_trunk}" "${googletest_dir}"
-roll-dep --ignore-dirty-tree --roll-to="${re2_trunk}" "${re2_dir}"
-roll-dep --ignore-dirty-tree --roll-to="${spirv_headers_trunk}" "${spirv_headers_dir}"
 
-git rebase --interactive "${old_head}"
-
+for dep in ${dependencies[@]}; do
+  echo "Rolling $dep"
+  roll-dep --ignore-dirty-tree --roll-to="${branch}" "${dep}"
+  ExitIfIsInterestingError $?
+done

@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -118,6 +119,9 @@ class Module {
 
   // Appends a constant, global variable, or OpUndef instruction to this module.
   inline void AddGlobalValue(std::unique_ptr<Instruction> v);
+
+  // Prepends a function declaration to this module.
+  inline void AddFunctionDeclaration(std::unique_ptr<Function> f);
 
   // Appends a function to this module.
   inline void AddFunction(std::unique_ptr<Function> f);
@@ -377,6 +381,11 @@ inline void Module::AddType(std::unique_ptr<Instruction> t) {
 
 inline void Module::AddGlobalValue(std::unique_ptr<Instruction> v) {
   types_values_.push_back(std::move(v));
+}
+
+inline void Module::AddFunctionDeclaration(std::unique_ptr<Function> f) {
+  // function declarations must come before function definitions.
+  functions_.emplace(functions_.begin(), std::move(f));
 }
 
 inline void Module::AddFunction(std::unique_ptr<Function> f) {

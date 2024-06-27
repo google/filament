@@ -74,7 +74,7 @@ typedef struct spv_ext_inst_desc_t {
   const uint32_t ext_inst;
   const uint32_t numCapabilities;
   const spv::Capability* capabilities;
-  const spv_operand_type_t operandTypes[16];  // TODO: Smaller/larger?
+  const spv_operand_type_t operandTypes[40];  // vksp needs at least 40
 } spv_ext_inst_desc_t;
 
 typedef struct spv_ext_inst_group_t {

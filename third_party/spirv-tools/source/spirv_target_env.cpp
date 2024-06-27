@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstring>
 #include <string>
+#include <utility>
 
 #include "source/spirv_constant.h"
 #include "spirv-tools/libspirv.h"

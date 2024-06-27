@@ -34,7 +34,7 @@ through the project workflow:
   ones.
 * They determine if the work for a card has been completed.
 * Normally they are the person (or persons) who can approve and merge a pull
-  request into the `master` branch.
+  request into the `main` branch.
 
 Our projects organize cards into the following columns:
 * `Ideas`: Work which could be done, captured either as Cards or Notes.
@@ -51,7 +51,7 @@ Our projects organize cards into the following columns:
   claimed by someone.
 * `Done`: Issues which have been resolved, by completing their work.
   * The changes have been applied to the repository, typically by being pushed
-  into the `master` branch.
+  into the `main` branch.
   * Other kinds of work could update repository settings, for example.
 * `Rejected ideas`: Work which has been considered, but which we don't want
   implemented.

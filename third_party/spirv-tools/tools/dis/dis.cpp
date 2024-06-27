@@ -24,10 +24,9 @@
 
 #include "spirv-tools/libspirv.h"
 #include "tools/io.h"
+#include "tools/util/flags.h"
 
-static void print_usage(char* argv0) {
-  printf(
-      R"(%s - Disassemble a SPIR-V binary module
+static const std::string kHelpText = R"(%s - Disassemble a SPIR-V binary module
 
 Usage: %s [options] [<filename>]
 
@@ -58,15 +57,49 @@ Options:
   --offsets       Show byte offsets for each instruction.
 
   --comment       Add comments to make reading easier
-)",
-      argv0, argv0);
-}
+)";
+
+// clang-format off
+FLAG_SHORT_bool  (h,         /* default_value= */ false, /* required= */ false);
+FLAG_SHORT_string(o,         /* default_value= */ "-",   /* required= */ false);
+FLAG_LONG_bool   (help,      /* default_value= */ false, /* required= */false);
+FLAG_LONG_bool   (version,   /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (color,     /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (no_color,  /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (no_indent, /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (no_header, /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (raw_id,    /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (offsets,   /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool   (comment,   /* default_value= */ false, /* required= */ false);
+// clang-format on
 
 static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
 
-int main(int argc, char** argv) {
-  const char* inFile = nullptr;
-  const char* outFile = nullptr;
+int main(int, const char** argv) {
+  if (!flags::Parse(argv)) {
+    return 1;
+  }
+
+  if (flags::h.value() || flags::help.value()) {
+    printf(kHelpText.c_str(), argv[0], argv[0]);
+    return 0;
+  }
+
+  if (flags::version.value()) {
+    printf("%s\n", spvSoftwareVersionDetailsString());
+    printf("Target: %s\n", spvTargetEnvDescription(kDefaultEnvironment));
+    return 0;
+  }
+
+  if (flags::positional_arguments.size() > 1) {
+    fprintf(stderr, "error: more than one input file specified.\n");
+    return 1;
+  }
+
+  const std::string inFile = flags::positional_arguments.size() == 0
+                                 ? "-"
+                                 : flags::positional_arguments[0];
+  const std::string outFile = flags::o.value();
 
   bool color_is_possible =
 #if SPIRV_COLOR_TERMINAL
@@ -74,105 +107,30 @@ int main(int argc, char** argv) {
 #else
       false;
 #endif
-  bool force_color = false;
-  bool force_no_color = false;
-
-  bool allow_indent = true;
-  bool show_byte_offsets = false;
-  bool no_header = false;
-  bool friendly_names = true;
-  bool comments = false;
-
-  for (int argi = 1; argi < argc; ++argi) {
-    if ('-' == argv[argi][0]) {
-      switch (argv[argi][1]) {
-        case 'h':
-          print_usage(argv[0]);
-          return 0;
-        case 'o': {
-          if (!outFile && argi + 1 < argc) {
-            outFile = argv[++argi];
-          } else {
-            print_usage(argv[0]);
-            return 1;
-          }
-        } break;
-        case '-': {
-          // Long options
-          if (0 == strcmp(argv[argi], "--no-color")) {
-            force_no_color = true;
-            force_color = false;
-          } else if (0 == strcmp(argv[argi], "--color")) {
-            force_no_color = false;
-            force_color = true;
-          } else if (0 == strcmp(argv[argi], "--comment")) {
-            comments = true;
-          } else if (0 == strcmp(argv[argi], "--no-indent")) {
-            allow_indent = false;
-          } else if (0 == strcmp(argv[argi], "--offsets")) {
-            show_byte_offsets = true;
-          } else if (0 == strcmp(argv[argi], "--no-header")) {
-            no_header = true;
-          } else if (0 == strcmp(argv[argi], "--raw-id")) {
-            friendly_names = false;
-          } else if (0 == strcmp(argv[argi], "--help")) {
-            print_usage(argv[0]);
-            return 0;
-          } else if (0 == strcmp(argv[argi], "--version")) {
-            printf("%s\n", spvSoftwareVersionDetailsString());
-            printf("Target: %s\n",
-                   spvTargetEnvDescription(kDefaultEnvironment));
-            return 0;
-          } else {
-            print_usage(argv[0]);
-            return 1;
-          }
-        } break;
-        case 0: {
-          // Setting a filename of "-" to indicate stdin.
-          if (!inFile) {
-            inFile = argv[argi];
-          } else {
-            fprintf(stderr, "error: More than one input file specified\n");
-            return 1;
-          }
-        } break;
-        default:
-          print_usage(argv[0]);
-          return 1;
-      }
-    } else {
-      if (!inFile) {
-        inFile = argv[argi];
-      } else {
-        fprintf(stderr, "error: More than one input file specified\n");
-        return 1;
-      }
-    }
-  }
 
   uint32_t options = SPV_BINARY_TO_TEXT_OPTION_NONE;
 
-  if (allow_indent) options |= SPV_BINARY_TO_TEXT_OPTION_INDENT;
+  if (!flags::no_indent.value()) options |= SPV_BINARY_TO_TEXT_OPTION_INDENT;
 
-  if (show_byte_offsets) options |= SPV_BINARY_TO_TEXT_OPTION_SHOW_BYTE_OFFSET;
+  if (flags::offsets.value())
+    options |= SPV_BINARY_TO_TEXT_OPTION_SHOW_BYTE_OFFSET;
 
-  if (no_header) options |= SPV_BINARY_TO_TEXT_OPTION_NO_HEADER;
+  if (flags::no_header.value()) options |= SPV_BINARY_TO_TEXT_OPTION_NO_HEADER;
 
-  if (friendly_names) options |= SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
+  if (!flags::raw_id.value())
+    options |= SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
 
-  if (comments) options |= SPV_BINARY_TO_TEXT_OPTION_COMMENT;
+  if (flags::comment.value()) options |= SPV_BINARY_TO_TEXT_OPTION_COMMENT;
 
-  if (!outFile || (0 == strcmp("-", outFile))) {
+  if (flags::o.value() == "-") {
     // Print to standard output.
     options |= SPV_BINARY_TO_TEXT_OPTION_PRINT;
-
-    if (color_is_possible && !force_no_color) {
+    if (color_is_possible && !flags::no_color.value()) {
       bool output_is_tty = true;
 #if defined(_POSIX_VERSION)
       output_is_tty = isatty(fileno(stdout));
 #endif
-      if (output_is_tty || force_color) {
+      if (output_is_tty || flags::color.value()) {
         options |= SPV_BINARY_TO_TEXT_OPTION_COLOR;
       }
     }
@@ -180,7 +138,7 @@ int main(int argc, char** argv) {
 
   // Read the input binary.
   std::vector<uint32_t> contents;
-  if (!ReadBinaryFile<uint32_t>(inFile, &contents)) return 1;
+  if (!ReadBinaryFile<uint32_t>(inFile.c_str(), &contents)) return 1;
 
   // If printing to standard output, then spvBinaryToText should
   // do the printing.  In particular, colour printing on Windows is
@@ -205,7 +163,7 @@ int main(int argc, char** argv) {
   }
 
   if (!print_to_stdout) {
-    if (!WriteFile<char>(outFile, "w", text->str, text->length)) {
+    if (!WriteFile<char>(outFile.c_str(), "w", text->str, text->length)) {
       spvTextDestroy(text);
       return 1;
     }

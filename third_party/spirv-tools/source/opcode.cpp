@@ -240,6 +240,7 @@ int32_t spvOpcodeIsConstant(const spv::Op opcode) {
     case spv::Op::OpConstantComposite:
     case spv::Op::OpConstantSampler:
     case spv::Op::OpConstantNull:
+    case spv::Op::OpConstantFunctionPointerINTEL:
     case spv::Op::OpSpecConstantTrue:
     case spv::Op::OpSpecConstantFalse:
     case spv::Op::OpSpecConstant:
@@ -273,6 +274,7 @@ int32_t spvOpcodeIsComposite(const spv::Op opcode) {
     case spv::Op::OpTypeArray:
     case spv::Op::OpTypeStruct:
     case spv::Op::OpTypeCooperativeMatrixNV:
+    case spv::Op::OpTypeCooperativeMatrixKHR:
       return true;
     default:
       return false;
@@ -293,6 +295,7 @@ bool spvOpcodeReturnsLogicalVariablePointer(const spv::Op opcode) {
     case spv::Op::OpPtrAccessChain:
     case spv::Op::OpLoad:
     case spv::Op::OpConstantNull:
+    case spv::Op::OpRawAccessChainNV:
       return true;
     default:
       return false;
@@ -307,6 +310,7 @@ int32_t spvOpcodeReturnsLogicalPointer(const spv::Op opcode) {
     case spv::Op::OpFunctionParameter:
     case spv::Op::OpImageTexelPointer:
     case spv::Op::OpCopyObject:
+    case spv::Op::OpRawAccessChainNV:
       return true;
     default:
       return false;
@@ -339,6 +343,7 @@ int32_t spvOpcodeGeneratesType(spv::Op op) {
     case spv::Op::OpTypeNamedBarrier:
     case spv::Op::OpTypeAccelerationStructureNV:
     case spv::Op::OpTypeCooperativeMatrixNV:
+    case spv::Op::OpTypeCooperativeMatrixKHR:
     // case spv::Op::OpTypeAccelerationStructureKHR: covered by
     // spv::Op::OpTypeAccelerationStructureNV
     case spv::Op::OpTypeRayQueryKHR:
@@ -531,6 +536,8 @@ bool spvOpcodeIsNonUniformGroupOperation(spv::Op opcode) {
     case spv::Op::OpGroupNonUniformQuadBroadcast:
     case spv::Op::OpGroupNonUniformQuadSwap:
     case spv::Op::OpGroupNonUniformRotateKHR:
+    case spv::Op::OpGroupNonUniformQuadAllKHR:
+    case spv::Op::OpGroupNonUniformQuadAnyKHR:
       return true;
     default:
       return false;
@@ -749,6 +756,7 @@ bool spvOpcodeIsAccessChain(spv::Op opcode) {
     case spv::Op::OpInBoundsAccessChain:
     case spv::Op::OpPtrAccessChain:
     case spv::Op::OpInBoundsPtrAccessChain:
+    case spv::Op::OpRawAccessChainNV:
       return true;
     default:
       return false;

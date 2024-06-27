@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
+#include "source/opt/loop_peeling.h"
+
 #include <functional>
 #include <memory>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include "source/opt/ir_builder.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/loop_descriptor.h"
-#include "source/opt/loop_peeling.h"
 #include "source/opt/loop_utils.h"
 #include "source/opt/scalar_analysis.h"
 #include "source/opt/scalar_analysis_nodes.h"

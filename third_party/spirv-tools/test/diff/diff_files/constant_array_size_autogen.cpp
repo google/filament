@@ -125,7 +125,7 @@ TEST(DiffTest, ConstantArraySize) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 34
++; Bound: 28
  ; Schema: 0
  OpCapability Shader
  OpMemoryModel Logical GLSL450
@@ -259,7 +259,7 @@ OpFunctionEnd
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 34
++; Bound: 28
  ; Schema: 0
  OpCapability Shader
  OpMemoryModel Logical GLSL450

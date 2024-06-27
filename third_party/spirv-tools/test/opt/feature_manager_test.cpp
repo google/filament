@@ -14,9 +14,7 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
 #include "source/opt/ir_context.h"
@@ -89,6 +87,25 @@ OpExtension "SPV_KHR_storage_buffer_storage_class"
       Extension::kSPV_KHR_storage_buffer_storage_class));
 }
 
+TEST_F(FeatureManagerTest, GetExtensionsReturnsExtensions) {
+  const std::string text = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpExtension "SPV_KHR_variable_pointers"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ASSERT_NE(context, nullptr);
+
+  const auto& extensions = context->get_feature_mgr()->GetExtensions();
+  EXPECT_EQ(extensions.size(), 2);
+  EXPECT_TRUE(extensions.contains(Extension::kSPV_KHR_variable_pointers));
+  EXPECT_TRUE(
+      extensions.contains(Extension::kSPV_KHR_storage_buffer_storage_class));
+}
+
 // Test capability checks.
 TEST_F(FeatureManagerTest, ExplicitlyPresent1) {
   const std::string text = R"(
@@ -142,6 +159,24 @@ OpMemoryModel Logical GLSL450
       context->get_feature_mgr()->HasCapability(spv::Capability::Matrix));
   EXPECT_FALSE(
       context->get_feature_mgr()->HasCapability(spv::Capability::Kernel));
+}
+
+TEST_F(FeatureManagerTest, GetCapabilitiesReturnsImplicitCapabilities) {
+  const std::string text = R"(
+OpCapability Tessellation
+OpMemoryModel Logical GLSL450
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
+  ASSERT_NE(context, nullptr);
+
+  const auto& capabilities = context->get_feature_mgr()->GetCapabilities();
+  // Tesselation implies Shader, which implies Matrix.
+  EXPECT_EQ(capabilities.size(), 3);
+  EXPECT_TRUE(capabilities.contains(spv::Capability::Tessellation));
+  EXPECT_TRUE(capabilities.contains(spv::Capability::Shader));
+  EXPECT_TRUE(capabilities.contains(spv::Capability::Matrix));
 }
 
 }  // namespace

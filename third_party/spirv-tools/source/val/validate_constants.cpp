@@ -76,7 +76,7 @@ spv_result_t ValidateConstantComposite(ValidationState_t& _,
         }
         const auto constituent_result_type = _.FindDef(constituent->type_id());
         if (!constituent_result_type ||
-            component_type->opcode() != constituent_result_type->opcode()) {
+            component_type->id() != constituent_result_type->id()) {
           return _.diag(SPV_ERROR_INVALID_ID, inst)
                  << opcode_name << " Constituent <id> "
                  << _.getIdName(constituent_id)
@@ -243,6 +243,7 @@ spv_result_t ValidateConstantComposite(ValidationState_t& _,
         }
       }
     } break;
+    case spv::Op::OpTypeCooperativeMatrixKHR:
     case spv::Op::OpTypeCooperativeMatrixNV: {
       if (1 != constituent_count) {
         return _.diag(SPV_ERROR_INVALID_ID, inst)
@@ -310,6 +311,7 @@ bool IsTypeNullable(const std::vector<uint32_t>& instruction,
     case spv::Op::OpTypeArray:
     case spv::Op::OpTypeMatrix:
     case spv::Op::OpTypeCooperativeMatrixNV:
+    case spv::Op::OpTypeCooperativeMatrixKHR:
     case spv::Op::OpTypeVector: {
       auto base_type = _.FindDef(instruction[2]);
       return base_type && IsTypeNullable(base_type->words(), _);

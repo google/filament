@@ -161,7 +161,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
     case spv::Decoration::RestrictPointer:
     case spv::Decoration::AliasedPointer:
       if (target->opcode() != spv::Op::OpVariable &&
-          target->opcode() != spv::Op::OpFunctionParameter) {
+          target->opcode() != spv::Op::OpFunctionParameter &&
+          target->opcode() != spv::Op::OpRawAccessChainNV) {
         return fail(0) << "must be a memory object declaration";
       }
       if (_.GetIdOpcode(target->type_id()) != spv::Op::OpTypePointer) {
@@ -193,7 +194,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
     switch (dec) {
       case spv::Decoration::Location:
       case spv::Decoration::Component:
-        // Location is used for input, output and ray tracing stages.
+        // Location is used for input, output, tile image, and ray tracing
+        // stages.
         if (sc != spv::StorageClass::Input && sc != spv::StorageClass::Output &&
             sc != spv::StorageClass::RayPayloadKHR &&
             sc != spv::StorageClass::IncomingRayPayloadKHR &&
@@ -201,7 +203,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
             sc != spv::StorageClass::CallableDataKHR &&
             sc != spv::StorageClass::IncomingCallableDataKHR &&
             sc != spv::StorageClass::ShaderRecordBufferKHR &&
-            sc != spv::StorageClass::HitObjectAttributeNV) {
+            sc != spv::StorageClass::HitObjectAttributeNV &&
+            sc != spv::StorageClass::TileImageEXT) {
           return _.diag(SPV_ERROR_INVALID_ID, target)
                  << _.VkErrorID(6672) << _.SpvDecorationString(dec)
                  << " decoration must not be applied to this storage class";
@@ -262,6 +265,34 @@ spv_result_t ValidateDecorate(ValidationState_t& _, const Instruction* inst) {
              << _.VkErrorID(4669) << "OpDecorate decoration '"
              << _.SpvDecorationString(decoration)
              << "' is not valid for the Vulkan execution environment.";
+    }
+  }
+
+  if (decoration == spv::Decoration::FPFastMathMode) {
+    if (_.HasDecoration(target_id, spv::Decoration::NoContraction)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "FPFastMathMode and NoContraction cannot decorate the same "
+                "target";
+    }
+    auto mask = inst->GetOperandAs<spv::FPFastMathModeMask>(2);
+    if ((mask & spv::FPFastMathModeMask::AllowTransform) !=
+            spv::FPFastMathModeMask::MaskNone &&
+        ((mask & (spv::FPFastMathModeMask::AllowContract |
+                  spv::FPFastMathModeMask::AllowReassoc)) !=
+         (spv::FPFastMathModeMask::AllowContract |
+          spv::FPFastMathModeMask::AllowReassoc))) {
+      return _.diag(SPV_ERROR_INVALID_DATA, inst)
+             << "AllowReassoc and AllowContract must be specified when "
+                "AllowTransform is specified";
+    }
+  }
+
+  // This is checked from both sides since we register decorations as we go.
+  if (decoration == spv::Decoration::NoContraction) {
+    if (_.HasDecoration(target_id, spv::Decoration::FPFastMathMode)) {
+      return _.diag(SPV_ERROR_INVALID_ID, inst)
+             << "FPFastMathMode and NoContraction cannot decorate the same "
+                "target";
     }
   }
 

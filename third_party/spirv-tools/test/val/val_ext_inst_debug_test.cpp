@@ -1012,9 +1012,9 @@ TEST_F(ValidateOpenCL100DebugInfo, DebugTypePointerFail) {
   CompileSuccessfully(GenerateShaderCodeForDebugInfo(
       src, size_const, dbg_inst_header, "", extension, "Vertex"));
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("expected operand Base Type must be a result id of "
-                        "DebugTypeBasic"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("expected operand Base Type is not a valid debug type"));
 }
 
 TEST_F(ValidateOpenCL100DebugInfo, DebugTypeQualifier) {
@@ -1077,9 +1077,9 @@ TEST_F(ValidateOpenCL100DebugInfo, DebugTypeQualifierFail) {
   CompileSuccessfully(GenerateShaderCodeForDebugInfo(
       src, size_const, dbg_inst_header, "", extension, "Vertex"));
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("expected operand Base Type must be a result id of "
-                        "DebugTypeBasic"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("expected operand Base Type is not a valid debug type"));
 }
 TEST_F(ValidateVulkan100DebugInfo, DebugTypeQualifier) {
   const std::string src = R"(
@@ -1147,9 +1147,9 @@ OpExtension "SPV_KHR_non_semantic_info"
   CompileSuccessfully(GenerateShaderCodeForDebugInfo(
       src, constants, dbg_inst_header, "", extension, "Vertex"));
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("expected operand Base Type must be a result id of "
-                        "DebugTypeBasic"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("expected operand Base Type is not a valid debug type"));
 }
 
 TEST_F(ValidateOpenCL100DebugInfo, DebugTypeArray) {

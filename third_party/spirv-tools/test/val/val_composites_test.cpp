@@ -1486,8 +1486,7 @@ OpFunctionEnd
 }
 
 TEST_F(ValidateComposites, CoopMatConstantCompositeMismatchFail) {
-  const std::string body =
-      R"(
+  const std::string body = R"(
 OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeMatrixNV
@@ -1525,8 +1524,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateComposites, CoopMatCompositeConstructMismatchFail) {
-  const std::string body =
-      R"(
+  const std::string body = R"(
 OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeMatrixNV
@@ -1544,6 +1542,86 @@ OpEntryPoint GLCompute %main "main"
 %subgroup = OpConstant %u32 3
 
 %f16mat = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %u32_8
+
+%f32_1 = OpConstant %f32 1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%f16mat_1 = OpCompositeConstruct %f16mat %f32_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected Constituent type to be equal to the component type"));
+}
+
+TEST_F(ValidateComposites, CoopMatKHRConstantCompositeMismatchFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useA
+
+%f32_1 = OpConstant %f32 1
+
+%f16mat_1 = OpConstantComposite %f16mat %f32_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpConstantComposite Constituent <id> '12[%float_1]' type "
+          "does not match the Result Type <id> '11[%11]'s component type."));
+}
+
+TEST_F(ValidateComposites, CoopMatKHRCompositeConstructMismatchFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useA
 
 %f32_1 = OpConstant %f32 1
 

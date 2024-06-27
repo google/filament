@@ -12,25 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "source/val/validate.h"
-
-#include <cassert>
-
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <stack>
-#include <string>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
-#include "source/diagnostic.h"
 #include "source/instruction.h"
 #include "source/opcode.h"
 #include "source/operand.h"
-#include "source/spirv_validator_options.h"
 #include "source/val/function.h"
+#include "source/val/validate.h"
 #include "source/val/validation_state.h"
 #include "spirv-tools/libspirv.h"
 
@@ -174,9 +163,12 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
               !inst->IsDebugInfo() && !inst->IsNonSemantic() &&
               !spvOpcodeIsDecoration(opcode) && opcode != spv::Op::OpFunction &&
               opcode != spv::Op::OpCooperativeMatrixLengthNV &&
+              opcode != spv::Op::OpCooperativeMatrixLengthKHR &&
               !(opcode == spv::Op::OpSpecConstantOp &&
-                spv::Op(inst->word(3)) ==
-                    spv::Op::OpCooperativeMatrixLengthNV)) {
+                (spv::Op(inst->word(3)) ==
+                     spv::Op::OpCooperativeMatrixLengthNV ||
+                 spv::Op(inst->word(3)) ==
+                     spv::Op::OpCooperativeMatrixLengthKHR))) {
             return _.diag(SPV_ERROR_INVALID_ID, inst)
                    << "Operand " << _.getIdName(operand_word)
                    << " cannot be a type";
@@ -190,9 +182,12 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
                      opcode != spv::Op::OpLoopMerge &&
                      opcode != spv::Op::OpFunction &&
                      opcode != spv::Op::OpCooperativeMatrixLengthNV &&
+                     opcode != spv::Op::OpCooperativeMatrixLengthKHR &&
                      !(opcode == spv::Op::OpSpecConstantOp &&
-                       spv::Op(inst->word(3)) ==
-                           spv::Op::OpCooperativeMatrixLengthNV)) {
+                       (spv::Op(inst->word(3)) ==
+                            spv::Op::OpCooperativeMatrixLengthNV ||
+                        spv::Op(inst->word(3)) ==
+                            spv::Op::OpCooperativeMatrixLengthKHR))) {
             return _.diag(SPV_ERROR_INVALID_ID, inst)
                    << "Operand " << _.getIdName(operand_word)
                    << " requires a type";

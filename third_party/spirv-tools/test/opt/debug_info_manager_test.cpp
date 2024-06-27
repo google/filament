@@ -15,11 +15,8 @@
 #include "source/opt/debug_info_manager.h"
 
 #include <memory>
-#include <string>
 #include <vector>
 
-#include "effcee/effcee.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
 #include "source/opt/instruction.h"
