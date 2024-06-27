@@ -116,5 +116,38 @@ void MetalBufferPool::reset() noexcept {
     mFreeStages.clear();
 }
 
+MetalBumpAllocator::MetalBumpAllocator(id<MTLDevice> device, size_t capacity)
+    : mDevice(device), mCapacity(capacity) {
+    if (mCapacity > 0) {
+        mCurrentUploadBuffer = { [device newBufferWithLength:capacity options:MTLStorageModeShared],
+            TrackedMetalBuffer::Type::STAGING };
+    }
+}
+
+std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t size) {
+    if (size == 0) {
+        return { nil, 0 };
+    }
+    if (size > mCapacity) {
+        return { [mDevice newBufferWithLength:size options:MTLStorageModeShared], 0 };
+    }
+    assert_invariant(mCurrentUploadBuffer);
+
+    // Align the head to a 4-byte boundary.
+    mHead = (mHead + 3) & ~3;
+
+    if (UTILS_LIKELY(mHead + size <= mCapacity)) {
+        const size_t oldHead = mHead;
+        mHead += size;
+        return { mCurrentUploadBuffer.get(), oldHead };
+    }
+
+    // We're finished with the current allocation.
+    mCurrentUploadBuffer = { [mDevice newBufferWithLength:mCapacity options:MTLStorageModeShared],
+        TrackedMetalBuffer::Type::STAGING };
+
+    return { mCurrentUploadBuffer.get(), 0 };
+}
+
 } // namespace backend
 } // namespace filament

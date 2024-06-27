@@ -547,10 +547,11 @@ static bool checkAsset(const utils::Path& filename) {
         return false;
     }
 
-    // Parse the glTF file and create Filament entities.
+    // Try parsing the glTF file to check the validity of the file format.
     cgltf_options options{};
-    cgltf_data* sourceAsset;
+    cgltf_data* sourceAsset = nullptr;
     cgltf_result result = cgltf_parse(&options, buffer.data(), contentSize, &sourceAsset);
+    cgltf_free(sourceAsset);
     if (result != cgltf_result_success) {
         slog.e << "Unable to parse glTF file." << io::endl;
         return false;

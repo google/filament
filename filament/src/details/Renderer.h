@@ -29,9 +29,6 @@
 
 #include "backend/DriverApiForward.h"
 
-#include <fg/FrameGraphId.h>
-#include <fg/FrameGraphTexture.h>
-
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
@@ -41,7 +38,17 @@
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 
+#include <math/vec4.h>
+
 #include <tsl/robin_set.h>
+
+#include <algorithm>
+#include <chrono>
+#include <functional>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -77,6 +84,8 @@ public:
 
 
     void setPresentationTime(int64_t monotonic_clock_ns);
+
+    void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
     // start a frame
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
@@ -187,6 +196,7 @@ private:
     backend::TargetBufferFlags mClearFlags{};
     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
+    uint64_t mVsyncSteadyClockTimeNano = 0;
 };
 
 FILAMENT_DOWNCAST(Renderer)

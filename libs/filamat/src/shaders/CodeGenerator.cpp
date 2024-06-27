@@ -332,6 +332,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
             +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, material.stereoscopicEyeCount);
 
+    generateSpecializationConstant(out, "CONFIG_SH_BANDS_COUNT",
+            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT, 3);
+
     // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for
     // example), we'd run into a GPU crash.
@@ -1189,6 +1192,8 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::IOR:                         return "IOR";
         case Property::MICRO_THICKNESS:             return "MICRO_THICKNESS";
         case Property::BENT_NORMAL:                 return "BENT_NORMAL";
+        case Property::SPECULAR_FACTOR:             return "SPECULAR_FACTOR";
+        case Property::SPECULAR_COLOR_FACTOR:       return "SPECULAR_COLOR_FACTOR";
     }
 }
 

@@ -75,6 +75,8 @@ public:
          */
         size_t textureUseAfterFreePoolSize = 0;
 
+        size_t metalUploadBufferSizeBytes = 512 * 1024;
+
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
          * Currently only honored by the GL and Metal backends.
