@@ -117,6 +117,10 @@ using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 //            &config.materialInfo->sib);
 //}
 
+#ifndef DEBUG_LOG_DESCRIPTOR_SETS
+#define DEBUG_LOG_DESCRIPTOR_SETS 0
+#endif
+
 const char* prettyDescriptorType(DescriptorType type) {
     switch (type) {
         case DescriptorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
@@ -697,7 +701,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                     auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
                     DescriptorSets descriptors {};
                     msl::collectDescriptors(config, descriptors);
+#if DEBUG_LOG_DESCRIPTOR_SETS == 1
                     msl::prettyPrintDescriptorSetInfoVector(descriptors);
+#endif
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
                             config.shaderModel, config.hasFramebufferFetch, descriptors,
                             mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
@@ -787,7 +793,9 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     if (internalConfig.mslOutput) {
         DescriptorSets descriptors {};
         msl::collectDescriptors(config, descriptors);
+#if DEBUG_LOG_DESCRIPTOR_SETS == 1
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
+#endif
         spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
                 config.hasFramebufferFetch, descriptors,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
@@ -829,7 +837,9 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
     if (internalConfig.mslOutput) {
         DescriptorSets descriptors {};
         msl::collectDescriptors(config, descriptors);
+#if DEBUG_LOG_DESCRIPTOR_SETS == 1
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
+#endif
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
                 descriptors, mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
