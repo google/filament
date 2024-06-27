@@ -121,7 +121,7 @@ public:
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
     bool canHaveTextureView() const noexcept;
-    void updateLodRange(backend::DriverApi& driver, uint8_t level) const noexcept;
+    void updateLodRange(uint8_t level) noexcept;
 
 private:
     friend class Texture;
@@ -131,20 +131,25 @@ private:
         uint8_t last = 0;   // 1 past last lod
         bool empty() const noexcept { return first == last; }
     };
-    void updateLodRange(backend::DriverApi& driver, uint8_t baseLevel, uint8_t levelCount) const noexcept;
+    void updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept;
 
-    FStream* mStream = nullptr;
     backend::Handle<backend::HwTexture> mHandle;
     mutable backend::Handle<backend::HwTexture> mHandleForSampling;
+    backend::DriverApi* mDriver = nullptr; // this is only needed for getHwHandleForSampling()
+    LodRange mLodRange{};
+    mutable LodRange mActiveLodRange{};
+
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Sampler mTarget = Sampler::SAMPLER_2D;
-    mutable LodRange mLodRange;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
+
     Usage mUsage = Usage::DEFAULT;
+    // there is 7 bytes of padding here
+    FStream* mStream = nullptr; // only needed for streaming textures
 };
 
 FILAMENT_DOWNCAST(Texture)

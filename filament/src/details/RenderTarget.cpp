@@ -132,7 +132,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
         } else {
             info.layer = attachment.layer;
         }
-        t->updateLodRange(driver, info.level);
+        t->updateLodRange(info.level);
     };
 
     UTILS_NOUNROLL

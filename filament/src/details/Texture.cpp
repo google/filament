@@ -222,6 +222,7 @@ Texture* Texture::Builder::build(Engine& engine) {
 
 FTexture::FTexture(FEngine& engine, const Builder& builder) {
     FEngine::DriverApi& driver = engine.getDriverApi();
+    mDriver = &driver; // this is unfortunately needed for getHwHandleForSampling()
     mWidth  = static_cast<uint32_t>(builder->mWidth);
     mHeight = static_cast<uint32_t>(builder->mHeight);
     mDepth  = static_cast<uint32_t>(builder->mDepth);
@@ -355,7 +356,8 @@ void FTexture::setImage(FEngine& engine, size_t level,
     engine.getDriverApi().update3DImage(mHandle,
             uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(p));
 
-    updateLodRange(engine.getDriverApi(), level);
+    // this method shouldn't have been const
+    const_cast<FTexture*>(this)->updateLodRange(level);
 }
 
 // deprecated
@@ -423,7 +425,8 @@ void FTexture::setImage(FEngine& engine, size_t level,
                 make_copyable_function([buffer = std::move(buffer)]() {}));
     }
 
-    updateLodRange(engine.getDriverApi(), level);
+    // this method shouldn't been const
+    const_cast<FTexture*>(this)->updateLodRange(level);
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
@@ -472,9 +475,9 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         return;
     }
 
-    DriverApi& driver = engine.getDriverApi();
-    driver.generateMipmaps(mHandle);
-    updateLodRange(driver, 0, mLevelCount);
+    engine.getDriverApi().generateMipmaps(mHandle);
+    // this method shouldn't have been const
+    const_cast<FTexture*>(this)->updateLodRange(0, mLevelCount);
 }
 
 bool FTexture::canHaveTextureView() const noexcept {
@@ -482,7 +485,7 @@ bool FTexture::canHaveTextureView() const noexcept {
     return any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1;
 }
 
-void FTexture::updateLodRange(DriverApi& driver, uint8_t baseLevel, uint8_t levelCount) const noexcept {
+void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
     if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
         auto& range = mLodRange;
         uint8_t const last = int8_t(baseLevel + levelCount);
@@ -493,27 +496,38 @@ void FTexture::updateLodRange(DriverApi& driver, uint8_t baseLevel, uint8_t leve
                 range.first = std::min(range.first, baseLevel);
                 range.last = std::max(range.last, last);
             }
-            if (mHandleForSampling != mHandle) {
-                driver.destroyTexture(mHandleForSampling);
-            }
             if (range.first == 0 && range.last == mLevelCount) {
                 // the whole range lod range is used, we don't need the view anymore
-                mHandleForSampling = mHandle;
-            } else {
-                mHandleForSampling = driver.createTextureView(mHandle,
-                        range.first,
-                        range.last - range.first);
+                range.first = range.last = 0;
             }
+            // We defer the creation of the texture view to getHwHandleForSampling() because it
+            // is a common case that by then, the view won't be needed. Creating the first view on a
+            // texture has a backend cost.
         }
     }
 }
 
 backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
+    auto const& range = mLodRange;
+    auto& activeRange = mActiveLodRange;
+    if (UTILS_UNLIKELY(activeRange.first != range.first || activeRange.last != range.last)) {
+        activeRange = range;
+        if (mHandleForSampling != mHandle) {
+            mDriver->destroyTexture(mHandleForSampling);
+        }
+        if (range.empty()) {
+            mHandleForSampling = mHandle;
+        } else {
+            mHandleForSampling = mDriver->createTextureView(mHandle,
+                    range.first,
+                    range.last - range.first);
+        }
+    }
     return mHandleForSampling;
 }
 
-void FTexture::updateLodRange(DriverApi& driver, uint8_t level) const noexcept {
-    updateLodRange(driver, level, 1);
+void FTexture::updateLodRange(uint8_t level) noexcept {
+    updateLodRange(level, 1);
 }
 
 bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept {
