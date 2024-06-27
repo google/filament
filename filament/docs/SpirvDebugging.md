@@ -64,14 +64,15 @@ First determine the Filament material and variant that causes the problem.
 What we want is the "raw" GLSL version of the shader, before any optimizations / cross-compilation
 happens.
 
-The easiest way I've found to do this is by adding a `std::cout` statement inside `MaterialBuilder`,
-right after `sg.createFragmentProgram` or `sg.createVertexProgram` is called. For example,
+We can use the `--save-raw-variants` debug flag in matc to export each GLSL
+shader to a file. For example:
 
 ```
-if (v.variant.key == 8u) { std::cout << shader << std::endl; }
+matc --save-raw-variants --optimize-size --variant-filter fog,ssr,vsm,stereo \
+        -a all -p all -o mymaterial.filamat mymaterial.mat
 ```
 
-Then, I invoke `matc` and redirect stdout to a .frag or .vert file.
+Files will be named like `mymaterial_0x05.frag` or `mymaterial_0x05.vert`.
 
 Note that gltfio material "templates" first go through a build step. After building gltfio, the
 gltfio Filament materials are output to:

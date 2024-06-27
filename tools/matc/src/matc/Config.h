@@ -111,6 +111,10 @@ public:
         return mPrintShaders;
     }
 
+    bool saveRawVariants() const noexcept {
+        return mSaveRawVariants;
+    }
+
     bool rawShaderMode() const noexcept {
         return mRawShaderMode;
     }
@@ -149,6 +153,7 @@ protected:
     bool mPrintShaders = false;
     bool mRawShaderMode = false;
     bool mNoSamplerValidation = false;
+    bool mSaveRawVariants = false;
     Optimization mOptimizationLevel = Optimization::PERFORMANCE;
     Metadata mReflectionTarget = Metadata::NONE;
     Platform mPlatform = Platform::ALL;
