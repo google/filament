@@ -253,15 +253,6 @@ public:
     void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
     void generateMipmaps() noexcept;
 
-    // A texture starts out with none of its mip levels (also referred to as LODs) available for
-    // reading. 4 actions update the range of LODs available:
-    // - calling loadImage
-    // - calling generateMipmaps
-    // - using the texture as a render target attachment
-    // A texture's available mips are consistent throughout a render pass.
-    void setLodRange(uint16_t minLevel, uint16_t maxLevel);
-    void extendLodRangeTo(uint16_t level);
-
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
     MetalContext& context;
@@ -308,10 +299,6 @@ private:
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
     // bound as a render target attachment.
     id<MTLTexture> swizzledTextureView = nil;
-    id<MTLTexture> lodTextureView = nil;
-
-    uint16_t minLod = std::numeric_limits<uint16_t>::max();
-    uint16_t maxLod = 0;
 
     bool terminated = false;
 };

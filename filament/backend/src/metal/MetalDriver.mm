@@ -471,7 +471,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         FILAMENT_CHECK_PRECONDITION(colorTexture->getMtlTextureForWrite())
                 << "Color texture passed to render target has no texture allocation";
-        colorTexture->extendLodRangeTo(buffer.level);
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
@@ -482,7 +481,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         FILAMENT_CHECK_PRECONDITION(depthTexture->getMtlTextureForWrite())
                 << "Depth texture passed to render target has no texture allocation.";
-        depthTexture->extendLodRangeTo(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
@@ -493,7 +491,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         FILAMENT_CHECK_PRECONDITION(stencilTexture->getMtlTextureForWrite())
                 << "Stencil texture passed to render target has no texture allocation.";
-        stencilTexture->extendLodRangeTo(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
 
@@ -1614,8 +1611,6 @@ void MetalDriver::blit(
     // TODO: The blit() call below always take the fast path.
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "blit/resolve");
-
-    dstTexture->extendLodRangeTo(dstLevel);
 
     printf("blit(dst = %d, srcLevel = %d, srcLayer = %d, dstOrigin = (%d, %d), src = %d, dstLevel "
            "= %d, dstLayer = %d, srcOrigin = (%d, %d), size = (%d, %d))\n",
