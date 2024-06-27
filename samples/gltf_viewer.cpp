@@ -58,6 +58,7 @@
 
 #include <cgltf.h>
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <iostream>
@@ -520,14 +521,8 @@ static utils::Path getPathForIBLAsset(std::string_view string) {
     }
 
     if (filename.isDirectory()) {
-        bool found = false;
-        for (const auto& file: filename.listContents()) {
-            if (isIBL(file)) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
+        std::vector<Path> files = filename.listContents();
+        if (std::none_of(files.cbegin(), files.cend(), isIBL)) {
             return {};
         }
     } else if (!isIBL(filename)) {
@@ -549,15 +544,12 @@ static utils::Path getPathForGLTFAsset(std::string_view string) {
     }
 
     if (filename.isDirectory()) {
-        for (const auto& file: filename.listContents()) {
-            if (isGLTF(file)) {
-                filename = file;
-                break;
-            }
-        }
-        if (filename.isDirectory()) {
+        std::vector<Path> files = filename.listContents();
+        auto it = std::find_if(files.cbegin(), files.cend(), isGLTF);
+        if (it == files.end()) {
             return {};
         }
+        filename = *it;
     } else if (!isGLTF(filename)) {
         return {};
     }
