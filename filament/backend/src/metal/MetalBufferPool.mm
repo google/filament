@@ -145,6 +145,7 @@ std::pair<id<MTLBuffer>, size_t> MetalBumpAllocator::allocateStagingArea(size_t 
     // We're finished with the current allocation.
     mCurrentUploadBuffer = { [mDevice newBufferWithLength:mCapacity options:MTLStorageModeShared],
         TrackedMetalBuffer::Type::STAGING };
+    mHead = size;
 
     return { mCurrentUploadBuffer.get(), 0 };
 }
