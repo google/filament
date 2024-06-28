@@ -1328,28 +1328,36 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             fbkey.resolve[i] = VK_NULL_HANDLE;
             continue;
         }
-        auto const& range = attachment.getSubresourceRange();
-        attachment.texture->transitionLayout(&commands, range, VulkanLayout::COLOR_ATTACHMENT);
 
-        renderPassAttachments.insert(attachment);
         if (fbkey.samples == 1) {
+            auto const& range = attachment.getSubresourceRange();
+            attachment.texture->transitionLayout(&commands,
+                    range, VulkanLayout::COLOR_ATTACHMENT);
+            renderPassAttachments.insert(attachment);
             fbkey.color[i] = attachment.getImageView();
             fbkey.resolve[i] = VK_NULL_HANDLE;
             assert_invariant(fbkey.color[i]);
         } else {
             auto& msaaColorAttachment = rt->getMsaaColor(i);
             auto const& msaaRange = attachment.getSubresourceRange();
+            msaaColorAttachment.texture->transitionLayout(&commands,
+                    msaaRange, VulkanLayout::COLOR_ATTACHMENT);
             renderPassAttachments.insert(msaaColorAttachment);
-            msaaColorAttachment.texture->transitionLayout(&commands, msaaRange,
-                    VulkanLayout::COLOR_ATTACHMENT);
+
             fbkey.color[i] = msaaColorAttachment.getImageView();
+
+            VulkanTexture* texture = attachment.texture;
+            if (texture->samples == 1) {
+                mRenderPassFboInfo.hasColorResolve = true;
+
+                auto const& range = attachment.getSubresourceRange();
+                attachment.texture->transitionLayout(&commands,
+                        range, VulkanLayout::COLOR_ATTACHMENT);
+                renderPassAttachments.insert(attachment);
+                fbkey.resolve[i] = attachment.getImageView();
+                assert_invariant(fbkey.resolve[i]);
+            }
             assert_invariant(fbkey.color[i]);
-
-            assert_invariant(attachment.texture->samples == 1);
-
-            mRenderPassFboInfo.hasColorResolve = true;
-            fbkey.resolve[i] = attachment.getImageView();
-            assert_invariant(fbkey.resolve[i]);
         }
     }
     if (depth.texture) {
