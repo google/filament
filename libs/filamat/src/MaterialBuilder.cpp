@@ -65,10 +65,10 @@
 #include <utility>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include <stdint.h>
 #include <stddef.h>
-
 
 namespace filamat {
 
@@ -558,6 +558,11 @@ MaterialBuilder& MaterialBuilder::printShaders(bool printShaders) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::saveRawVariants(bool saveRawVariants) noexcept {
+    mSaveRawVariants = saveRawVariants;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::generateDebugInfo(bool generateDebugInfo) noexcept {
     mGenerateDebugInfo = generateDebugInfo;
     return *this;
@@ -929,6 +934,30 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     shader = sg.createComputeProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel,
                             info);
+                }
+
+                // Write the variant to a file.
+                if (mSaveRawVariants) {
+                    int variantKey = v.variant.key;
+                    auto getExtension = [](backend::ShaderStage stage) {
+                        switch (stage) {
+                            case backend::ShaderStage::VERTEX:
+                                return "vert";
+                            case backend::ShaderStage::FRAGMENT:
+                                return "frag";
+                            case backend::ShaderStage::COMPUTE:
+                                return "comp";
+                        }
+                    };
+                    char filename[256];
+                    snprintf(filename, sizeof(filename), "%s_0x%02x.%s", mMaterialName.c_str_safe(),
+                            variantKey, getExtension(v.stage));
+                    printf("Writing variant 0x%02x to %s\n", variantKey, filename);
+                    std::ofstream file(filename);
+                    if (file.is_open()) {
+                        file << shader;
+                        file.close();
+                    }
                 }
 
                 std::string* pGlsl = nullptr;
