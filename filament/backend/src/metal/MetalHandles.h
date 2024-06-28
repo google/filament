@@ -229,8 +229,11 @@ class MetalTexture : public HwTexture {
 public:
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a)
-            noexcept;
+            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept;
+
+    // constructor for creating a texture view
+    MetalTexture(MetalContext& context,
+            MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
@@ -239,27 +242,16 @@ public:
 
     ~MetalTexture();
 
-    // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle and
-    // LOD clamping.
-    id<MTLTexture> getMtlTextureForRead() noexcept;
+    // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle.
+    id<MTLTexture> getMtlTextureForRead() const noexcept;
 
     // Returns the id<MTLTexture> for attaching to a render pass.
-    id<MTLTexture> getMtlTextureForWrite() noexcept {
+    id<MTLTexture> getMtlTextureForWrite() const noexcept {
         return texture;
     }
 
     void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
     void generateMipmaps() noexcept;
-
-    // A texture starts out with none of its mip levels (also referred to as LODs) available for
-    // reading. 4 actions update the range of LODs available:
-    // - calling loadImage
-    // - calling generateMipmaps
-    // - using the texture as a render target attachment
-    // - calling setMinMaxLevels
-    // A texture's available mips are consistent throughout a render pass.
-    void setLodRange(uint16_t minLevel, uint16_t maxLevel);
-    void extendLodRangeTo(uint16_t level);
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
@@ -307,10 +299,6 @@ private:
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
     // bound as a render target attachment.
     id<MTLTexture> swizzledTextureView = nil;
-    id<MTLTexture> lodTextureView = nil;
-
-    uint16_t minLod = std::numeric_limits<uint16_t>::max();
-    uint16_t maxLod = 0;
 
     bool terminated = false;
 };

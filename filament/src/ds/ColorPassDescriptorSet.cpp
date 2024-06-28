@@ -259,7 +259,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
     //       currently they're inferred.
     Handle<HwTexture> fogColorTextureHandle;
     if (options.skyColor) {
-        fogColorTextureHandle = downcast(options.skyColor)->getHwHandle();
+        fogColorTextureHandle = downcast(options.skyColor)->getHwHandleForSampling();
         math::half2 const minMaxMip{ 0.0f, float(options.skyColor->getLevels()) - 1.0f };
         s.fogMinMaxMip = packHalf2x16(minMaxMip);
         s.fogOneOverFarMinusNear = 1.0f / (cameraInfo.zf - cameraInfo.zn);
@@ -282,7 +282,8 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
     }
 
     setSampler(+PerViewBindingPoints::FOG,
-            fogColorTextureHandle ? fogColorTextureHandle : engine.getDummyCubemap()->getHwHandle(), {
+            fogColorTextureHandle ?
+                    fogColorTextureHandle : engine.getDummyCubemap()->getHwHandleForSampling(), {
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
             });

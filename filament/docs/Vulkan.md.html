@@ -182,7 +182,7 @@ updated several times; each time it undergoes these two transitions.
 
 If a shader samples from a texture whose mipmaps are only partially loaded, we might see validation
 warnings about how some subresources are in an UNDEFINED layout.  However if we are properly using
-the `setMinMaxLevels` driver API, then the Vulkan backend will not bind those particular
+the `createTextureView` driver API, then the Vulkan backend will not bind those particular
 subresources, so validation should not complain.
 
 (2) **Writeable Color Textures**

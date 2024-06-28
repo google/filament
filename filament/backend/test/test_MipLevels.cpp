@@ -75,7 +75,7 @@ namespace test {
 using namespace filament;
 using namespace filament::backend;
 
-TEST_F(BackendTest, SetMinMaxLevel) {
+TEST_F(BackendTest, TextureViewLod) {
     auto& api = getDriverApi();
     api.startCapture(0);
 
@@ -116,7 +116,9 @@ TEST_F(BackendTest, SetMinMaxLevel) {
                          DescriptorFlags::NONE, 0
                  }}});
 
-        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+        DescriptorSetHandle descriptorSet[2];
+        descriptorSet[0] = api.createDescriptorSet(descriptorSetLayout);
+        descriptorSet[1] = api.createDescriptorSet(descriptorSetLayout);
 
         // Create a texture that has 4 mip levels. Each level is a different color.
         // Level 0: 128x128 (red)
@@ -161,7 +163,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Level 1:   64x64 (green)             <-- base
         // Level 2:   32x32 (blue)              <--- white triangle rendered
         // Level 3:   16x16 (yellow)            <-- max
-        api.setMinMaxLevels(texture, 1, 3);
+        auto texture13 = api.createTextureView(texture, 1, 3);
 
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
@@ -200,11 +202,11 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         state.rasterState.depthFunc = SamplerCompareFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+        api.updateDescriptorSetTexture(descriptorSet[0], 0, texture13, {
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
-        api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet[0], 0, {});
 
         // Render a triangle to the screen, sampling from mip level 1.
         // Because the min level is 1, the result color should be the white triangle drawn in the
@@ -216,7 +218,13 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         // Adjust the base mip to 2.
         // Note that this is done without another call to updateSamplerGroup.
-        api.setMinMaxLevels(texture, 2, 3);
+        auto texture22 = api.createTextureView(texture, 2, 2);
+
+        api.updateDescriptorSetTexture(descriptorSet[1], 0, texture22, {
+                .filterMag = SamplerMagFilter::NEAREST,
+                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+
+        api.bindDescriptorSet(descriptorSet[1], 0, {});
 
         // Render a second, smaller, triangle, again sampling from mip level 1.
         // This triangle should be yellow striped.
@@ -241,9 +249,12 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Cleanup.
         api.destroySwapChain(swapChain);
         api.destroyRenderTarget(renderTarget);
-        api.destroyDescriptorSet(descriptorSet);
+        api.destroyDescriptorSet(descriptorSet[0]);
+        api.destroyDescriptorSet(descriptorSet[1]);
         api.destroyDescriptorSetLayout(descriptorSetLayout);
         api.destroyTexture(texture);
+        api.destroyTexture(texture13);
+        api.destroyTexture(texture22);
         api.destroyProgram(whiteProgram);
         api.destroyProgram(textureProgram);
     }

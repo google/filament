@@ -438,6 +438,13 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
             th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
 }
 
+void MetalDriver::createTextureViewR(Handle<HwTexture> th,
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+    MetalTexture const* src = handle_cast<MetalTexture>(srch);
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+            src, baseLevel, levelCount));
+}
+
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
@@ -501,7 +508,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         FILAMENT_CHECK_PRECONDITION(colorTexture->getMtlTextureForWrite())
                 << "Color texture passed to render target has no texture allocation";
-        colorTexture->extendLodRangeTo(buffer.level);
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
@@ -512,7 +518,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         FILAMENT_CHECK_PRECONDITION(depthTexture->getMtlTextureForWrite())
                 << "Depth texture passed to render target has no texture allocation.";
-        depthTexture->extendLodRangeTo(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
@@ -523,7 +528,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         FILAMENT_CHECK_PRECONDITION(stencilTexture->getMtlTextureForWrite())
                 << "Stencil texture passed to render target has no texture allocation.";
-        stencilTexture->extendLodRangeTo(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
 
@@ -640,6 +644,10 @@ Handle<HwTexture> MetalDriver::createTextureS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
@@ -1082,14 +1090,6 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     auto* bufferObject = handle_cast<MetalBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
-}
-
-void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    auto tex = handle_cast<MetalTexture>(th);
-    tex->setLodRange(minLevel, maxLevel);
-
-    DEBUG_LOG("setMinMaxLevels(th = %d, minLevel = %d, maxLevel = %d)\n", th.getId(), minLevel,
-            maxLevel);
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
@@ -1662,8 +1662,6 @@ void MetalDriver::blit(
     // TODO: The blit() call below always take the fast path.
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "blit/resolve");
-
-    dstTexture->extendLodRangeTo(dstLevel);
 
     DEBUG_LOG(
             "blit(dst = %d, srcLevel = %d, srcLayer = %d, dstOrigin = (%d, %d), src = %d, dstLevel "

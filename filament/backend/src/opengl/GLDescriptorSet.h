@@ -29,6 +29,8 @@
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <math/half.h>
+
 #include <variant>
 
 #include <stddef.h>
@@ -38,6 +40,7 @@ namespace filament::backend {
 
 struct GLBufferObject;
 struct GLTexture;
+struct GLTextureRef;
 struct GLDescriptorSetLayout;
 class OpenGLProgram;
 class OpenGLContext;
@@ -59,7 +62,10 @@ struct GLDescriptorSet : public HwDescriptorSet {
             descriptor_binding_t binding, GLTexture* t, SamplerParams params) noexcept;
 
     // conceptually bind the set to the command buffer
-    void bind(OpenGLContext& gl, OpenGLProgram const& p,
+    void bind(
+            OpenGLContext& gl,
+            HandleAllocatorGL& handleAllocator,
+            OpenGLProgram const& p,
             descriptor_set_t set, uint32_t const* offsets, bool offsetsOnly) const noexcept;
 
     uint32_t getDynamicBufferCount() const noexcept {
@@ -103,14 +109,19 @@ private:
         GLenum target = 0;                      // 4
         GLuint id = 0;                          // 4
         GLuint sampler = 0;                     // 4
-        float anisotropy = 1.0f;                // 4
+        Handle<GLTextureRef> ref;               // 4
+        int8_t baseLevel = 0x7f;                // 1
+        int8_t maxLevel = -1;                   // 1
     };
 
     struct SamplerWithAnisotropyWorkaround {
         GLenum target = 0;                      // 4
         GLuint id = 0;                          // 4
         GLuint sampler = 0;                     // 4
-        float anisotropy = 1.0f;                // 4
+        Handle<GLTextureRef> ref;               // 4
+        math::half anisotropy = 1.0f;           // 2
+        int8_t baseLevel = 0x7f;                // 1
+        int8_t maxLevel = -1;                   // 1
     };
 
     // A sampler descriptor for ES2
@@ -130,6 +141,10 @@ private:
                 SamplerGLES2> desc;
     };
     static_assert(sizeof(Descriptor) <= 32);
+
+    template<typename T>
+    static void updateTextureLod(OpenGLContext& gl,
+            HandleAllocatorGL& handleAllocator, GLuint unit, T const& desc) noexcept;
 
     utils::FixedCapacityVector<Descriptor> descriptors;     // 16
     utils::bitset64 dynamicBuffers;                         // 8

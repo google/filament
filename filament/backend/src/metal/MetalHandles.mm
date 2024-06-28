@@ -615,19 +615,27 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     }
 }
 
+MetalTexture::MetalTexture(MetalContext& context,
+        MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept
+        : HwTexture(src->target, src->levels, src->samples,
+                src->width, src->height, src->depth, src->format, src->usage),
+          context(context),
+          externalImage(context) {
+    texture = createTextureViewWithLodRange(
+            src->getMtlTextureForRead(), baseLevel, baseLevel + levelCount - 1);
+}
+
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         id<MTLTexture> metalTexture) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context) {
     texture = metalTexture;
-    setLodRange(0, levels - 1);
 }
 
 void MetalTexture::terminate() noexcept {
     texture = nil;
     swizzledTextureView = nil;
-    lodTextureView = nil;
     msaaSidecar = nil;
     externalImage.set(nullptr);
     terminated = true;
@@ -637,29 +645,9 @@ MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }
 
-id<MTLTexture> MetalTexture::getMtlTextureForRead() noexcept {
-    // TODO: get LODs to work correctly
-    id<MTLTexture> tex = swizzledTextureView ? swizzledTextureView : texture;
-    return tex;
-    if (lodTextureView) {
-        return lodTextureView;
-    }
-    // The texture's swizzle remains constant throughout its lifetime, however its LOD range can
-    // change. We'll cache the LOD view, and set lodTextureView to nil if minLod or maxLod is
-    // updated.
-    // TODO: ah, but we can't set it to nil because we need to keep it alive if it has been latched.
-    id<MTLTexture> t = swizzledTextureView ? swizzledTextureView : texture;
-    if (!t) {
-        return nil;
-    }
-    if (UTILS_UNLIKELY(minLod > maxLod)) {
-        // If the texture does not have any available LODs, provide a view of only level 0.
-        // Filament should prevent this from ever occurring.
-        lodTextureView = createTextureViewWithLodRange(t, 0, 0);
-        return lodTextureView;
-    }
-    lodTextureView = createTextureViewWithLodRange(t, minLod, maxLod);
-    return lodTextureView;
+id<MTLTexture> MetalTexture::getMtlTextureForRead() const noexcept {
+    // TODO: get LODs to work correctly with swizzling
+    return swizzledTextureView ? swizzledTextureView : texture;
 }
 
 MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFormat format) {
@@ -778,15 +766,12 @@ void MetalTexture::loadImage(uint32_t level, MTLRegion region, PixelBufferDescri
             assert_invariant(false);
         }
     }
-
-    extendLodRangeTo(level);
 }
 
 void MetalTexture::generateMipmaps() noexcept {
     id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(&context) blitCommandEncoder];
     [blitEncoder generateMipmapsForTexture:texture];
     [blitEncoder endEncoding];
-    setLodRange(0, texture.mipmapLevelCount - 1);
 }
 
 void MetalTexture::loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
@@ -908,21 +893,6 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     args.destination.region = region;
     args.destination.texture = destinationTexture;
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
-}
-
-void MetalTexture::extendLodRangeTo(uint16_t level) {
-    assert_invariant(!isInRenderPass(&context));
-    minLod = std::min(minLod, level);
-    maxLod = std::max(maxLod, level);
-    lodTextureView = nil;
-}
-
-void MetalTexture::setLodRange(uint16_t min, uint16_t max) {
-    assert_invariant(!isInRenderPass(&context));
-    assert_invariant(min <= max);
-    minLod = min;
-    maxLod = max;
-    lodTextureView = nil;
 }
 
 void MetalSamplerGroup::finalize() {

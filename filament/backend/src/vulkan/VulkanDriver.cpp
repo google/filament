@@ -90,9 +90,9 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
 
 VulkanTexture* createEmptyTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanStagePool& stagePool) {
+        VulkanResourceAllocator* handleAllocator, VulkanStagePool& stagePool) {
     VulkanTexture* emptyTexture = new VulkanTexture(device, physicalDevice, context, allocator,
-            commands, SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, 1, 1, 1,
+            commands, handleAllocator, SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, 1, 1, 1,
             TextureUsage::DEFAULT | TextureUsage::COLOR_ATTACHMENT | TextureUsage::SUBPASS_INPUT,
             stagePool, true /* heap allocated */);
     uint32_t black = 0;
@@ -257,7 +257,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
     mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
 
     mEmptyTexture = createEmptyTexture(mPlatform->getDevice(), mPlatform->getPhysicalDevice(),
-            mContext, mAllocator, &mCommands, mStagePool);
+            mContext, mAllocator, &mCommands, &mResourceAllocator, mStagePool);
     mEmptyBufferObject = createEmptyBufferObject(mAllocator, mStagePool, &mCommands);
 
     mDescriptorSetManager.setPlaceHolders(mSamplerCache.getSampler({}), mEmptyTexture,
@@ -553,7 +553,8 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, target, levels,
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
+            target, levels,
             format, samples, w, h, depth, usage, mStagePool);
     mResourceManager.acquire(vktexture);
 }
@@ -565,8 +566,18 @@ void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targ
     TextureSwizzle swizzleArray[] = {r, g, b, a};
     const VkComponentMapping swizzleMap = getSwizzleMap(swizzleArray);
     auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, target, levels,
-            format, samples, w, h, depth, usage, mStagePool, false /*heap allocated */, swizzleMap);
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
+            target, levels, format, samples, w, h, depth, usage, mStagePool,
+            false /*heap allocated */, swizzleMap);
+    mResourceManager.acquire(vktexture);
+}
+
+void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+    VulkanTexture const* src = mResourceAllocator.handle_cast<VulkanTexture const*>(srch);
+    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th,
+            mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands,
+            &mResourceAllocator, src, baseLevel, levelCount, mStagePool);
     mResourceManager.acquire(vktexture);
 }
 
@@ -660,7 +671,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     assert_invariant(tmin.x >= width && tmin.y >= height);
 
     auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, width, height,
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
+            width, height,
             samples, colorTargets, depthStencil, mStagePool);
     mResourceManager.acquire(renderTarget);
 }
@@ -689,7 +701,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
     auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
-            mAllocator, &mCommands, mStagePool, nativeWindow, flags);
+            mAllocator, &mCommands, &mResourceAllocator, mStagePool, nativeWindow, flags);
     mResourceManager.acquire(swapChain);
 }
 
@@ -702,7 +714,8 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
     }
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
     auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
-            mAllocator, &mCommands, mStagePool, nullptr, flags, VkExtent2D{width, height});
+            mAllocator, &mCommands, &mResourceAllocator, mStagePool,
+            nullptr, flags, VkExtent2D{width, height});
     mResourceManager.acquire(swapChain);
 }
 
@@ -747,6 +760,10 @@ Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
     return mResourceAllocator.allocHandle<VulkanTexture>();
 }
 
@@ -1128,11 +1145,6 @@ void VulkanDriver::resetBufferObject(Handle<HwBufferObject> boh) {
     // This is only useful if updateBufferObjectUnsynchronized() is implemented unsynchronizedly.
 }
 
-void VulkanDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    auto texture = mResourceAllocator.handle_cast<VulkanTexture*>(th);
-    texture->setPrimaryRange(minLevel, maxLevel);
-}
-
 void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
         uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
@@ -1218,7 +1230,6 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
         srcw = dstw;
         srch = dsth;
     } while ((srcw > 1 || srch > 1) && level < t->levels);
-    t->setPrimaryRange(0, t->levels - 1);
 }
 
 void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,

@@ -518,9 +518,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
             // So generate the mipmaps for each layer
             if (textureRequirements.levels > 1) {
                 for (size_t level = 0; level < textureRequirements.levels - 1; level++) {
-                    const bool finalize = level == textureRequirements.levels - 2;
-                    ppm.vsmMipmapPass(fg, prepareShadowPass->shadows, layer, level,
-                            vsmClearColor, finalize);
+                    ppm.vsmMipmapPass(fg, prepareShadowPass->shadows, layer, level, vsmClearColor);
                 }
             }
         }
