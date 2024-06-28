@@ -43,6 +43,7 @@ bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
     if (k1.samples != k2.samples) return false;
     if (k1.needsResolveMask != k2.needsResolveMask) return false;
     if (k1.subpassMask != k2.subpassMask) return false;
+    if (k1.viewCount != k2.viewCount) return false;
     return true;
 }
 
@@ -183,8 +184,27 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .subpassCount = hasSubpasses ? 2u : 1u,
         .pSubpasses = subpasses,
         .dependencyCount = hasSubpasses ? 1u : 0u,
-        .pDependencies = dependencies
+        .pDependencies = dependencies,
     };
+
+    VkRenderPassMultiviewCreateInfo multiviewCreateInfo = {};
+    uint32_t subpassViewMask = (1 << config.viewCount) - 1;
+    // Prepare a view mask array for the maximum number of subpasses. All subpasses have all views
+    // activated.
+    uint32_t viewMasks[2] = {subpassViewMask, subpassViewMask};
+    if (config.viewCount > 1) {
+      // Fill the multiview create info.
+      multiviewCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+      multiviewCreateInfo.pNext = nullptr;
+      multiviewCreateInfo.subpassCount = hasSubpasses ? 2u : 1u;
+      multiviewCreateInfo.pViewMasks = viewMasks;
+      multiviewCreateInfo.dependencyCount = 0;
+      multiviewCreateInfo.pViewOffsets = nullptr;
+      multiviewCreateInfo.correlationMaskCount = 1;
+      multiviewCreateInfo.pCorrelationMasks = &subpassViewMask;
+
+      renderPassInfo.pNext = &multiviewCreateInfo;
+    }
 
     int attachmentIndex = 0;
 
@@ -288,16 +308,19 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
         const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
         const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
+        const VkAttachmentLoadOp loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep);
         depthAttachmentRef.layout = imgutil::getVkLayout(VulkanLayout::DEPTH_ATTACHMENT);
         depthAttachmentRef.attachment = attachmentIndex;
+        VkImageLayout initialLayout = imgutil::getVkLayout(config.initialDepthLayout);
+        
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
+            .loadOp = loadOp,
             .storeOp = discardEnd ? kDisableStore : kEnableStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = imgutil::getVkLayout(config.initialDepthLayout),
+            .initialLayout = initialLayout,
             .finalLayout = imgutil::getVkLayout(FINAL_DEPTH_ATTACHMENT_LAYOUT),
         };
     }

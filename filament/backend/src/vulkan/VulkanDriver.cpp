@@ -595,6 +595,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             colorTargets[i] = {
                 .texture = mResourceAllocator.handle_cast<VulkanTexture*>(color[i].handle),
                 .level = color[i].level,
+                .baseViewIndex = color[i].baseViewIndex,
                 .layer = color[i].layer,
             };
             UTILS_UNUSED_IN_RELEASE VkExtent2D extent = colorTargets[i].getExtent2D();
@@ -609,6 +610,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[0] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(depth.handle),
             .level = depth.level,
+            .baseViewIndex = depth.baseViewIndex,
             .layer = depth.layer,
         };
         UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[0].getExtent2D();
@@ -621,6 +623,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[1] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(stencil.handle),
             .level = stencil.level,
+            .baseViewIndex = stencil.baseViewIndex,
             .layer = stencil.layer,
         };
         UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[1].getExtent2D();
@@ -637,7 +640,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, width, height,
-            samples, colorTargets, depthStencil, mStagePool);
+            samples, colorTargets, depthStencil, mStagePool, layerCount);
     mResourceManager.acquire(renderTarget);
 }
 
@@ -1277,10 +1280,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .discardEnd = discardEndVal,
         .samples = rt->getSamples(),
         .subpassMask = uint8_t(params.subpassMask),
+        .viewCount = rt->getLayerCount(),
     };
+
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const VulkanAttachment& info = rt->getColor(i);
+
         if (info.texture) {
+            rpkey.viewCount = info.texture->getLayerCount();
             rpkey.initialColorLayoutMask |= 1 << i;
             rpkey.colorFormat[i] = info.getFormat();
             if (rpkey.samples > 1 && info.texture->samples == 1) {
