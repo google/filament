@@ -44,6 +44,7 @@
 #include <condition_variable>
 #include <memory>
 #include <type_traits>
+#include <vector>
 
 namespace filament {
 namespace backend {
@@ -558,47 +559,30 @@ private:
 
 struct MetalDescriptorSet : public HwDescriptorSet {
     MetalDescriptorSet(MetalDescriptorSetLayout* layout) noexcept;
-    MetalDescriptorSetLayout* layout;
 
     void finalize(MetalDriver* driver) {
         [driver->mContext->currentRenderPassEncoder useResource:driver->mContext->emptyBuffer
                                                           usage:MTLResourceUsageRead];
-        [driver->mContext->currentRenderPassEncoder useResource:getOrCreateEmptyTexture(driver->mContext)
-                                                          usage:MTLResourceUsageRead];
-        auto const& bindings = this->layout->getBindings();
-        for (auto const& binding : bindings) {
-            switch (binding.type) {
-                case DescriptorType::UNIFORM_BUFFER:
-                case DescriptorType::SHADER_STORAGE_BUFFER: {
-                    auto found = buffers.find(binding.binding);
-                    if (found == buffers.end()) {
-                        continue;
-                    }
+        [driver->mContext->currentRenderPassEncoder
+                useResource:getOrCreateEmptyTexture(driver->mContext)
+                      usage:MTLResourceUsageRead];
 
-                    auto const& bufferBinding = buffers[binding.binding];
-                    auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
-                                                ->getBuffer()
-                                                ->getGpuBufferForDraw();
-                    [driver->mContext->currentRenderPassEncoder useResource:metalBuffer
-                                                                      usage:MTLResourceUsageRead];
-                    break;
-                }
-                case DescriptorType::SAMPLER: {
-                    auto found = textures.find(binding.binding);
-                    if (found == textures.end()) {
-                        continue;
-                    }
-
-                    auto const& textureBinding = textures[binding.binding];
-                    auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
-                                            ->getMtlTextureForRead();
-                    [driver->mContext->currentRenderPassEncoder useResource:texture
-                                                                      usage:MTLResourceUsageRead];
-                    break;
-                }
-                case DescriptorType::INPUT_ATTACHMENT:
-                    break;
-            }
+        if (@available(iOS 13.0, *)) {
+            [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                               count:vertexResources.size()
+                                                               usage:MTLResourceUsageRead
+                                                              stages:MTLRenderStageVertex];
+            [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                               count:fragmentResources.size()
+                                                               usage:MTLResourceUsageRead
+                                                              stages:MTLRenderStageFragment];
+        } else {
+            [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                               count:vertexResources.size()
+                                                               usage:MTLResourceUsageRead];
+            [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                               count:fragmentResources.size()
+                                                               usage:MTLResourceUsageRead];
         }
     }
 
@@ -614,9 +598,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
             MTLTextureType textureType = MTLTextureType2D;
             if (auto found = textures.find(binding.binding); found != textures.end()) {
                 auto const& textureBinding = textures[binding.binding];
-                auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
-                                    ->getMtlTextureForRead();
-                textureType = texture.textureType;
+                textureType = textureBinding.texture.textureType;
             }
             textureTypes.push_back(textureType);
         }
@@ -643,10 +625,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     }
 
                     auto const& bufferBinding = buffers[binding.binding];
-                    auto* metalBuffer = driver->handle_cast<MetalBufferObject>(bufferBinding.buffer)
-                                                ->getBuffer()
-                                                ->getGpuBufferForDraw();
-                    [encoder setBuffer:metalBuffer
+                    [encoder setBuffer:bufferBinding.buffer
                                 offset:bufferBinding.offset
                                atIndex:binding.binding * 2];
                     break;
@@ -664,9 +643,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     }
 
                     auto const& textureBinding = textures[binding.binding];
-                    auto* texture = driver->handle_cast<MetalTexture>(textureBinding.texture)
-                                            ->getMtlTextureForRead();
-                    [encoder setTexture:texture atIndex:binding.binding * 2];
+                    [encoder setTexture:textureBinding.texture atIndex:binding.binding * 2];
                     SamplerState samplerState {
                             .samplerParams = textureBinding.sampler
                     };
@@ -684,17 +661,22 @@ struct MetalDescriptorSet : public HwDescriptorSet {
         return buffer;
     }
 
+    MetalDescriptorSetLayout* layout;
+
     struct BufferBinding {
-        BufferObjectHandle buffer;
+        id<MTLBuffer> buffer;
         uint32_t offset;
         uint32_t size;
     };
     struct TextureBinding {
-        TextureHandle texture;
+        id<MTLTexture> texture;
         SamplerParams sampler;
     };
     tsl::robin_map<descriptor_binding_t, BufferBinding> buffers;
     tsl::robin_map<descriptor_binding_t, TextureBinding> textures;
+
+    std::vector<id<MTLResource>> vertexResources;
+    std::vector<id<MTLResource>> fragmentResources;
 
     id<MTLBuffer> buffer = nil;
 };
