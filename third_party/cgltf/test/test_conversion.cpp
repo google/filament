@@ -26,11 +26,13 @@ int main(int argc, char** argv)
 	if (result == cgltf_result_success)
 		result = cgltf_load_buffers(&options, data, argv[1]);
 
-	if (strstr(argv[1], "Draco"))
-	{
-		cgltf_free(data);
-		return 0;
-	}
+	// Skip files that use mesh compression since they require extra code to decompress accessor data
+	for (size_t i = 0; i < data->extensions_used_count; ++i)
+		if (strcmp(data->extensions_used[i], "KHR_draco_mesh_compression") == 0 || strcmp(data->extensions_used[i], "EXT_meshopt_compression") == 0)
+		{
+			cgltf_free(data);
+			return 0;
+		}
 
 	if (result != cgltf_result_success)
 		return result;
