@@ -18,33 +18,38 @@
 #include <utils/EntityManager.h>
 #include <utils/EntityInstance.h>
 #include <utils/NameComponentManager.h>
-#include <utils/Log.h>
+
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
 #include <filameshio/MeshReader.h>
-
-//#include <filamentapp/FilamentApp.h>
-//
-//#include "generated/resources/resources.h"
-//#include "generated/resources/monkey.h"
-
 #include <filamentapp/Config.h>
+#include "../../VisualStudio/samples/generated/resources/resources.h"
+#include "../../VisualStudio/samples/generated/resources/monkey.h"
+
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat3.h>
+#include <math/norm.h>
 
 #include "CustomComponents.h"
 #include "backend/platforms/VulkanPlatform.h" // requires blueVK.h
+
+#if FILAMENT_DISABLE_MATOPT
+#   define OPTIMIZE_MATERIALS false
+#else
+#   define OPTIMIZE_MATERIALS true
+#endif
 
 // name spaces
 using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
 using namespace filament::backend;
-
-static std::unordered_map<std::string, vzm::SCENE_COMPONENT_TYPE> vzcomptypes = {
-    {typeid(vzm::VzSceneComp).name(), vzm::SCENE_COMPONENT_TYPE::SCENEBASE},
-    {typeid(vzm::VzCamera).name(), vzm::SCENE_COMPONENT_TYPE::CAMERA},
-    {typeid(vzm::VzLight).name(), vzm::SCENE_COMPONENT_TYPE::LIGHT},
-    {typeid(vzm::VzActor).name(), vzm::SCENE_COMPONENT_TYPE::ACTOR},
-};
-
+using namespace filament::gltfio;
+using namespace utils;
 
 enum class FCompType
 {
@@ -54,14 +59,6 @@ enum class FCompType
     LightComponent,
     CameraComponent,
     RenderableComponent,
-};
-
-static std::unordered_map<std::string, FCompType> comptypes = {
-    {typeid(vzm::VzNameCompManager::Instance).name(), FCompType::NameComponent},
-    {typeid(filament::TransformManager::Instance).name(), FCompType::TransformComponent},
-    {typeid(filament::RenderableManager::Instance).name(), FCompType::RenderableComponent},
-    {typeid(filament::LightManager::Instance).name(), FCompType::LightComponent},
-    {typeid(filament::Camera).name(), FCompType::CameraComponent},
 };
 
 class FilamentAppVulkanPlatform : public VulkanPlatform {
@@ -375,6 +372,7 @@ namespace vzm
         filament::View* GetView() { return view_; }
     };
 
+
     class VzEngineApp
     {
     private:
@@ -382,6 +380,9 @@ namespace vzm
         using CamVID = VID;
         using RenderableVID = VID;
         using LightVID = VID;
+        using GeometryVID = VID;
+        using MaterialVID = VID;
+        using MaterialInstanceVID = VID;
 
         std::unordered_map<SceneVID, filament::Scene*> scenes_;
         // note a VzRenderPath involves a view that includes
@@ -390,29 +391,14 @@ namespace vzm
         std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_;
         std::unordered_map<LightVID, SceneVID> lightSceneVids_;
 
+        // Resources
+        std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometries_;
+        std::unordered_map<MaterialVID, filament::Material*> materials_;
+        std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> materialInstances_;
+
         std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzComponents_;
 
-    public:
-        // Runtime can create a new entity with this
-        inline SceneVID CreateSceneEntity(const std::string& name)
-        {
-            if (GetFirstSceneByName(name))
-            {
-                vzm::backlog::post("(" + name + ") is already registered as a scene!", backlog::LogLevel::Error);
-                return INVALID_VID;
-            }
-
-            auto& em = utils::EntityManager::get();
-            utils::Entity ett = em.create();
-            VID vid = ett.getId();
-            scenes_[vid] = gEngine->createScene();
-
-            VzNameCompManager& ncm = VzNameCompManager::Get();
-            ncm.CreateNameComp(ett, name);
-
-            return vid;
-        }
-        inline bool RemoveScene(SceneVID sceneVid)
+        inline bool removeScene(SceneVID sceneVid)
         {
             Scene* scene = GetScene(sceneVid);
             if (scene == nullptr)
@@ -445,37 +431,60 @@ namespace vzm
             return true;
         }
 
-        inline VzRenderPath* CreateRendePath(const CamVID camVid, const SceneVID sceneVid)
+        inline VzRenderPath* createRendePath(const CamVID camVid = 0)
         {
-            auto it = renderPaths_.find(camVid);
-            assert(it == renderPaths_.end());
+            utils::EntityManager& em = utils::EntityManager::get();
+            utils::Entity camEtt;
+            camEtt.import(camVid);
+            CamVID cam_vid = camVid;
+            bool is_alive_cam = em.isAlive(camEtt);
+            filament::Camera* camera = nullptr;
+            if (!is_alive_cam)
+            {
+                camEtt = em.create();
+                cam_vid = camEtt.getId();
+                camera = gEngine->createCamera(camEtt);
+            }
+            else
+            {
+                camera = gEngine->getCameraComponent(camEtt);
+                assert(camera && "the alive entity must be assigned to camera!");
+            }
 
             // I organize the renderPath with filament::View that involves
             // 1. Camera (involving the camera component and the transform component)
             // 2. Scene
             VzRenderPath* renderPath = &renderPaths_[camVid];
             filament::View* view = renderPath->GetView();
-
-            auto sit = scenes_.find(sceneVid);
-            if (sit != scenes_.end())
-            {
-                Scene* scene = sit->second;
-                view->setScene(scene);
-            }
-
-            utils::EntityManager& em = utils::EntityManager::get();
-            utils::Entity camEntity;
-            camEntity.import(camVid);
+            view->setCamera(camera); // attached to "view.scene"
 
             // 1. Instance const i = manager.addComponent(entity);
             // 2. tcm.create(entity); where FTransformManager& tcm = engine.getTransformManager();
-            filament::Camera* camera = gEngine->createCamera(camEntity);
             camera->setExposure(16.0f, 1 / 125.0f, 100.0f); // default values used in filamentApp
-
-            view->setCamera(camera); // attached to "view.scene"
 
             return renderPath;
         }
+    public:
+        // Runtime can create a new entity with this
+        inline SceneVID CreateScene(const std::string& name)
+        {
+            if (GetFirstSceneByName(name))
+            {
+                vzm::backlog::post("(" + name + ") is already registered as a scene!", backlog::LogLevel::Error);
+                return INVALID_VID;
+            }
+
+            auto& em = utils::EntityManager::get();
+            utils::Entity ett = em.create();
+            VID vid = ett.getId();
+            scenes_[vid] = gEngine->createScene();
+
+            VzNameCompManager& ncm = VzNameCompManager::Get();
+            ncm.CreateNameComp(ett, name);
+
+            return vid;
+        }
+
         inline void SetSceneToRenderPath(const CamVID camVid, const SceneVID sceneVid)
         {
             Scene* scene = GetScene(sceneVid);
@@ -728,7 +737,7 @@ namespace vzm
                     entities_moving.push_back(ett);
                     });
 
-                RemoveScene(vid_scene_src);
+                removeScene(vid_scene_src);
             }
 
             for (auto& it : entities_moving)
@@ -761,18 +770,23 @@ namespace vzm
             }
         }
 
-        inline VzSceneComp* CreateSceneComponent(SCENE_COMPONENT_TYPE compType, const std::string& name)
+        inline VzSceneComp* CreateSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& name, const VID vidExist = 0)
         {
-            //std::string type_name = typeid(VZCOMP).name();
-            //SCENE_COMPONENT_TYPE comp_type = vzcomptypes[type_name];
             if (compType == SCENE_COMPONENT_TYPE::SCENEBASE)
             {
                 return nullptr;
             }
 
+            VID vid = vidExist;
             auto& em = gEngine->getEntityManager();
-            utils::Entity ett = em.create();
-            VID vid = ett.getId();
+            utils::Entity ett;
+            ett.import(vid);
+            bool is_alive = em.isAlive(ett);
+            if (!is_alive)
+            {
+                ett = em.create();
+                vid = ett.getId();
+            }
             
             VzSceneComp* v_comp = nullptr;
             
@@ -780,8 +794,11 @@ namespace vzm
             {
             case SCENE_COMPONENT_TYPE::ACTOR:
             {
-                RenderableManager::Builder(0)
-                    .build(*gEngine, ett);
+                if (!is_alive)
+                {
+                    RenderableManager::Builder(0)
+                        .build(*gEngine, ett);
+                }
                 renderableSceneVids_[vid] = 0;
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
@@ -790,13 +807,16 @@ namespace vzm
             }
             case SCENE_COMPONENT_TYPE::LIGHT:
             {
-                LightManager::Builder(LightManager::Type::SUN)
-                    .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
-                    .intensity(110000)
-                    .direction({ 0.7, -1, -0.8 })
-                    .sunAngularRadius(1.9f)
-                    .castShadows(false)
-                    .build(*gEngine, ett);
+                if (!is_alive)
+                {
+                    LightManager::Builder(LightManager::Type::SUN)
+                        .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+                        .intensity(110000)
+                        .direction({ 0.7, -1, -0.8 })
+                        .sunAngularRadius(1.9f)
+                        .castShadows(false)
+                        .build(*gEngine, ett);
+                }
                 lightSceneVids_[vid] = 0;
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzLight>());
@@ -805,7 +825,7 @@ namespace vzm
             }
             case SCENE_COMPONENT_TYPE::CAMERA:
             {
-                vzm::VzRenderPath* render_path = CreateRendePath(vid, 0);
+                vzm::VzRenderPath* render_path = createRendePath(is_alive? vid : 0);
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -829,6 +849,146 @@ namespace vzm
 
             return v_comp;
         }
+        
+        inline VzActor* CreateTestActor(const std::string& modelName = "MONKEY_SUZANNE_DATA")
+        {
+            std::string geo_name = modelName + "_GEOMETRY";
+            std::string material_name = modelName + "_MATERIAL";
+            std::string mi_name = modelName + "_MATERIAL_INSTANCE";
+            auto& ncm = VzNameCompManager::Get();
+
+            MaterialInstance* mi = nullptr;
+            for (auto itmi : materialInstances_)
+            {
+                utils::Entity ett;
+                ett.import(itmi.first);
+
+                if (ncm.GetName(ett) == mi_name)
+                {
+                    mi = itmi.second;
+                    break;
+                }
+            }
+            if (mi == nullptr)
+            {
+                VzMaterial* v_m = CreateMaterial(material_name);
+                VzMaterialInstance* v_mi = CreateMaterialInstance(mi_name, v_m->componentVID);
+                auto itmi = materialInstances_.find(v_mi->componentVID);
+                assert(itmi != materialInstances_.end());
+                mi = itmi->second;
+            }
+
+            MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(gEngine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
+            ncm.CreateNameComp(mesh.renderable, modelName);
+            VID vid = mesh.renderable.getId();
+            renderableSceneVids_[vid] = 0;
+
+            CreateGeometry(geo_name, &mesh);
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
+            VzActor* v_actor = (VzActor*)it.first->second.get();
+            v_actor->componentVID = vid;
+            v_actor->compType = SCENE_COMPONENT_TYPE::ACTOR;
+            v_actor->timeStamp = std::chrono::high_resolution_clock::now();
+            return v_actor;
+        }
+
+        inline VzGeometry* CreateGeometry(const std::string& name, const MeshReader::Mesh* mesh = nullptr)
+        {
+            auto& em = utils::EntityManager::get();
+            auto& ncm = VzNameCompManager::Get();
+
+            utils::Entity ett = em.create();
+            ncm.CreateNameComp(ett, name);
+
+            MeshReader::Mesh geo;
+            if (mesh != nullptr)
+            {
+                geo = *mesh;
+            }
+
+            VID vid = ett.getId();
+            geometries_[vid] = geo;
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzGeometry>());
+            VzGeometry* v_m = (VzGeometry*)it.first->second.get();
+            v_m->componentVID = vid;
+            v_m->compType = RES_COMPONENT_TYPE::GEOMATRY;
+            v_m->timeStamp = std::chrono::high_resolution_clock::now();
+
+            return v_m;
+        }
+
+        inline VzMaterial* CreateMaterial(const std::string& name, const Material* material = nullptr)
+        {
+            auto& em = utils::EntityManager::get();
+            auto& ncm = VzNameCompManager::Get();
+
+            utils::Entity ett = em.create();
+            ncm.CreateNameComp(ett, name);
+
+            Material* m = (Material*)material;
+            if (m == nullptr)
+            {
+                m = Material::Builder()
+                    .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                    .build(*gEngine);
+            }
+
+            VID vid = ett.getId();
+            materials_[vid] = m;
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzMaterial>());
+            VzMaterial* v_m = (VzMaterial*)it.first->second.get();
+            v_m->componentVID = vid;
+            v_m->compType = RES_COMPONENT_TYPE::MATERIAL;
+            v_m->timeStamp = std::chrono::high_resolution_clock::now();
+
+            return v_m;
+        }
+
+        inline VzMaterialInstance* CreateMaterialInstance(const std::string& name, const MaterialVID mVid, const MaterialInstance* materialInstance = nullptr)
+        {
+            auto itm = materials_.find(mVid);
+            if (itm == materials_.end())
+            {
+                backlog::post("CreateMaterialInstance >> mVid is invalid", backlog::LogLevel::Error);
+                return nullptr;
+            }
+            Material* m = itm->second;
+
+            auto& em = utils::EntityManager::get();
+            auto& ncm = VzNameCompManager::Get();
+
+            utils::Entity ett = em.create();
+            ncm.CreateNameComp(ett, name);
+
+            MaterialInstance* mi = (MaterialInstance*)materialInstance;
+            if (mi == nullptr)
+            {
+                mi = m->createInstance();
+                mi->setParameter("baseColor", RgbType::LINEAR, float3{ 0.8 });
+                mi->setParameter("metallic", 1.0f);
+                mi->setParameter("roughness", 0.4f);
+                mi->setParameter("reflectance", 0.5f);
+            }
+
+            VID vid = ett.getId();
+            materialInstances_[vid] = mi;
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzMaterialInstance>());
+            VzMaterialInstance* v_m = (VzMaterialInstance*)it.first->second.get();
+            v_m->componentVID = vid;
+            v_m->compType = RES_COMPONENT_TYPE::MATERIALINSTANCE;
+            v_m->timeStamp = std::chrono::high_resolution_clock::now();
+
+            return v_m;
+        }
+
+        inline void SetActorMaterialInstance(const RenderableVID actorVid, const MaterialInstanceVID miVid)
+        {
+
+        }
 
         template <typename VZCOMP>
         inline VZCOMP* GetSceneComponent(const VID vid)
@@ -850,10 +1010,54 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
             ncm.RemoveEntity(ett);
 
-            if (!RemoveScene(vid))
+            if (!removeScene(vid))
             {
                 auto& em = utils::EntityManager::get();
                 // this calls built-in destroy functions in the filament entity managers
+
+                // destroy by engine (refer to the following)
+                // void FEngine::destroy(Entity e) {
+                //     mRenderableManager.destroy(e);
+                //     mLightManager.destroy(e);
+                //     mTransformManager.destroy(e);
+                //     mCameraManager.destroy(*this, e);
+                // }
+#pragma region destroy by engine
+                gEngine->destroy(ett);
+                auto it_m = materials_.find(vid);
+                if (it_m != materials_.end())
+                {
+                    for (auto it = materialInstances_.begin(); it != materialInstances_.end();) 
+                    {
+                        if (it->second->getMaterial() == it_m->second) 
+                        {
+                            it = materialInstances_.erase(it);
+                        }
+                        else 
+                        {
+                            ++it;
+                        }
+                    }
+                    // destroy the associated material instances
+                    gEngine->destroy(it_m->second);
+                
+                    materials_.erase(vid);
+                }
+                auto it_mi = materialInstances_.find(vid);
+                if (it_mi != materialInstances_.end())
+                {
+                    gEngine->destroy(it_mi->second);
+                    materialInstances_.erase(vid);
+                }
+                auto it_geo = geometries_.find(vid);
+                if (it_geo != geometries_.end())
+                {
+                    gEngine->destroy(it_geo->second.vertexBuffer);
+                    gEngine->destroy(it_geo->second.indexBuffer);
+                    geometries_.erase((it_geo));
+                }
+#pragma endregion 
+                // the remaining etts (not engine-destory group)
                 em.destroy(ett);
 
                 vzComponents_.erase(vid);
@@ -892,10 +1096,18 @@ namespace vzm
             std::cout << "Safely finished ^^" << std::endl;
         };
     };
+    struct GltfIO
+    {
+        gltfio::ResourceLoader* resourceLoader = nullptr;
+        gltfio::TextureProvider* stbDecoder = nullptr;
+        gltfio::TextureProvider* ktxDecoder = nullptr;
+    };
     std::unique_ptr<SafeReleaseChecker> safeReleaseChecker;
 
-    VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& argument)
+    VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& arguments)
     {
+        //std::string gg = arguments.GetParam("GG hello~~1", std::string(""));
+        //float gg1 = arguments.GetParam("GG hello~~2", 0.f);
         if (gEngine)
         {
             backlog::post("Already initialized!", backlog::LogLevel::Error);
@@ -998,28 +1210,22 @@ namespace vzm
             return INVALID_VID;
         }
 
-        return gEngineApp.CreateSceneEntity(sceneName);
+        return gEngineApp.CreateScene(sceneName);
     }
 
-    VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, const std::string& compName, const VID parentVid, VzSceneComp** sceneComp)
+    VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid, VzSceneComp** sceneComp)
     {
         VzSceneComp* v_comp = nullptr;
-        Scene* scene = gEngineApp.GetScene(sceneVid);
         v_comp = gEngineApp.CreateSceneComponent(compType, compName);
         if (v_comp == nullptr)
         {
             backlog::post("NewSceneComponent >> failure to gEngineApp.CreateSceneComponent", backlog::LogLevel::Error);
             return 0;
         }
-        if (compType == SCENE_COMPONENT_TYPE::CAMERA)
-        {
-            gEngineApp.SetSceneToRenderPath(v_comp->componentVID, sceneVid);
-        }
 
-        VID appendVid = gEngineApp.IsRenderable(parentVid) ? parentVid : scene ? sceneVid : 0;
-        if (appendVid != 0)
+        if (parentVid != 0)
         {
-            gEngineApp.AppendSceneEntityToParent(v_comp->componentVID, appendVid);
+            gEngineApp.AppendSceneEntityToParent(v_comp->componentVID, parentVid);
         }
 
         if (sceneComp)
@@ -1103,9 +1309,10 @@ namespace vzm
         }
         return vids.size();
     }
-    /*
+    
     void LoadFileIntoNewSceneAsync(const std::string& file, const std::string& rootName, const std::string& sceneName, const std::function<void(VID sceneVid, VID rootVid)>& callback)
     {
+        /*
         struct loadingJob
         {
             wi::Timer timer;
@@ -1155,10 +1362,19 @@ namespace vzm
             wi::jobsystem::Wait(jobInfo.ctx);
             wi::backlog::post("\n[vzm::LoadMeshModelAsync] GLTF Loading (" + std::to_string((int)std::round(jobInfo.timer.elapsed())) + " ms)");
             }).detach();
+            /**/
+    }
+
+    VID LoadTestModel(const std::string& modelName)
+    {
+        VzActor* actor = gEngineApp.CreateTestActor(modelName);
+        return actor? actor->componentVID : INVALID_VID;
     }
 
     VID LoadFileIntoNewScene(const std::string& file, const std::string& rootName, const std::string& sceneName, VID* rootVid)
     {
+
+        /*
         VID sid = gEngineApp.CreateSceneEntity(sceneName);
         VzmScene* scene = gEngineApp.GetScene(sid);
         if (scene == nullptr)
@@ -1192,293 +1408,192 @@ namespace vzm
         if (rootVid) *rootVid = rootEntity;
 
         return sid;
-    }
-
-    VZRESULT MergeScenes(const VID srcSceneVid, const VID dstSceneVid)
-    {
-        Scene* srcScene = gEngineApp.GetScene(srcSceneVid);
-        Scene* dstScene = gEngineApp.GetScene(dstSceneVid);
-        if (srcScene == nullptr || dstScene == nullptr)
-        {
-            wi::backlog::post("Invalid Scene", wi::backlog::LogLevel::Error);
-            return VZ_FAIL;
-        }
-
-        // base
-        wi::vector<Entity> transformEntities = srcScene->transforms.GetEntityArray();
-
-        // camera wirh renderer
-        wi::vector<Entity> camEntities = srcScene->cameras.GetEntityArray();
-        // actors
-        wi::vector<Entity> aniEntities = srcScene->animations.GetEntityArray();
-        wi::vector<Entity> objEntities = srcScene->objects.GetEntityArray();
-        wi::vector<Entity> lightEntities = srcScene->lights.GetEntityArray();
-        wi::vector<Entity> emitterEntities = srcScene->emitters.GetEntityArray();
-
-        // resources
-        wi::vector<Entity> meshEntities = srcScene->meshes.GetEntityArray();
-        wi::vector<Entity> materialEntities = srcScene->materials.GetEntityArray();
-
-        dstScene->Merge(*srcScene);
-
-        for (Entity& ett : camEntities)
-        {
-            VmCamera* vmCam = gEngineApp.CreateVmComp<VmCamera>(ett);
-            CameraComponent* camComponent = dstScene->cameras.GetComponent(ett);
-            VzmRenderer* renderer = gEngineApp.CreateRenderer(ett);
-            renderer->scene = dstScene;
-            assert(renderer->camera == camComponent);
-
-            vmCam->compType = SCENE_COMPONENT_TYPE::CAMERA;
-            vmCam->componentVID = ett;
-            vmCam->renderer = (void*)renderer;
-            renderer->UpdateVmCamera(vmCam);
-            renderer->init(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
-            renderer->Load(); // Calls renderer->Start()
-        }
-
-        // actors
-        {
-            for (Entity& ett : aniEntities)
-            {
-                gEngineApp.CreateVmComp<VmAnimation>(ett);
-            }
-            for (Entity& ett : objEntities)
-            {
-                gEngineApp.CreateVmComp<VmActor>(ett);
-            }
-            for (Entity& ett : lightEntities)
-            {
-                gEngineApp.CreateVmComp<VmLight>(ett);
-            }
-            for (Entity& ett : emitterEntities)
-            {
-                gEngineApp.CreateVmComp<VmEmitter>(ett);
-            }
-        }
-
-        // must be posterior to actors
-        for (Entity& ett : transformEntities)
-        {
-            if (!gEngineApp.GetVmComp<VmBaseComponent>(ett))
-            {
-                gEngineApp.CreateVmComp<VmBaseComponent>(ett);
-            }
-        }
-
-        // resources
-        {
-            for (Entity& ett : meshEntities)
-            {
-                gEngineApp.CreateVmComp<VmMesh>(ett);
-            }
-            for (Entity& ett : materialEntities)
-            {
-                gEngineApp.CreateVmComp<VmMaterial>(ett);
-            }
-        }
-        //static Scene scene_resPool;
-        //scene_resPool.meshes.Merge(dstScene->meshes);
-        //scene_resPool.Update(0);
-        //int gg = 0;
-        return VZ_OK;
+        /**/
+        return 0;
     }
 
     VZRESULT Render(const VID camVid, const bool updateScene)
     {
-        VzmRenderer* renderer = gEngineApp.GetRenderer(camVid);
-        if (renderer == nullptr)
-        {
-            return VZ_FAIL;
-        }
-
-        wi::font::UpdateAtlas(renderer->GetDPIScaling());
-
-        renderer->UpdateVmCamera();
-
-        // DOJO TO DO : CHECK updateScene across cameras belonging to a scene and force to use a oldest one...
-        renderer->setSceneUpdateEnabled(updateScene || renderer->FRAMECOUNT == 0);
-        if (!updateScene)
-        {
-            renderer->scene->camera = *renderer->camera;
-        }
-
-        if (!wi::initializer::IsInitializeFinished())
-        {
-            // Until engine is not loaded, present initialization screen...
-            renderer->WaitRender();
-            return VZ_JOB_WAIT;
-        }
-
-        if (profileFrameFinished)
-        {
-            profileFrameFinished = false;
-            wi::profiler::BeginFrame();
-        }
-
-        VzmScene* scene = (VzmScene*)renderer->scene;
-
-        {
-            // for frame info.
-            renderer->deltaTime = float(std::max(0.0, renderer->timer.record_elapsed_seconds()));
-            const float target_deltaTime = 1.0f / renderer->targetFrameRate;
-            if (renderer->framerate_lock && renderer->deltaTime < target_deltaTime)
-            {
-                wi::helper::QuickSleep((target_deltaTime - renderer->deltaTime) * 1000);
-                renderer->deltaTime += float(std::max(0.0, renderer->timer.record_elapsed_seconds()));
-            }
-
-            scene->deltaTime = float(std::max(0.0, scene->timer.record_elapsed_seconds()));
-        }
-
-
-        //wi::input::Update(nullptr, *renderer);
-        // Wake up the events that need to be executed on the main thread, in thread safe manner:
-        wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
-        renderer->fadeManager.Update(renderer->deltaTime);
-
-        renderer->PreUpdate(); // current to previous
-
-        // Fixed time update:
-        {
-            auto range = wi::profiler::BeginRangeCPU("Fixed Update");
-            if (renderer->frameskip)
-            {
-                renderer->deltaTimeAccumulator += renderer->deltaTime;
-                if (renderer->deltaTimeAccumulator > 10)
-                {
-                    // application probably lost control, fixed update would take too long
-                    renderer->deltaTimeAccumulator = 0;
-                }
-
-                const float targetFrameRateInv = 1.0f / renderer->targetFrameRate;
-                while (renderer->deltaTimeAccumulator >= targetFrameRateInv)
-                {
-                    renderer->FixedUpdate();
-                    renderer->deltaTimeAccumulator -= targetFrameRateInv;
-                }
-            }
-            else
-            {
-                renderer->FixedUpdate();
-            }
-            wi::profiler::EndRange(range); // Fixed Update
-        }
-        {
-            // use scene->deltaTime
-            auto range = wi::profiler::BeginRangeCPU("Update");
-            wi::backlog::Update(*renderer, scene->deltaTime);
-            renderer->Update(scene->deltaTime);
-            renderer->PostUpdate();
-            wi::profiler::EndRange(range); // Update
-
-            // we ill use the separate framecount for each renderer (not global device)
-            //
-            renderer->FRAMECOUNT++;
-            renderer->frameCB.frame_count = (uint)renderer->FRAMECOUNT;
-            //renderer->frameCB.delta_time = renderer->deltaTime;
-            // note here frameCB's time is computed based on the scene timeline
-            //renderer->frameCB.time_previous = renderer->frameCB.time;
-            //renderer->frameCB.time = scene->deltaTimeAccumulator;
-        }
-
-        {
-            auto range = wi::profiler::BeginRangeCPU("Render");
-            scene->dt = renderer->deltaTime;
-            renderer->Render();
-            wi::profiler::EndRange(range); // Render
-        }
-        renderer->RenderFinalize();
+        //VzmRenderer* renderer = gEngineApp.GetRenderer(camVid);
+        //if (renderer == nullptr)
+        //{
+        //    return VZ_FAIL;
+        //}
+        //
+        //wi::font::UpdateAtlas(renderer->GetDPIScaling());
+        //
+        //renderer->UpdateVmCamera();
+        //
+        //// DOJO TO DO : CHECK updateScene across cameras belonging to a scene and force to use a oldest one...
+        //renderer->setSceneUpdateEnabled(updateScene || renderer->FRAMECOUNT == 0);
+        //if (!updateScene)
+        //{
+        //    renderer->scene->camera = *renderer->camera;
+        //}
+        //
+        //if (!wi::initializer::IsInitializeFinished())
+        //{
+        //    // Until engine is not loaded, present initialization screen...
+        //    renderer->WaitRender();
+        //    return VZ_JOB_WAIT;
+        //}
+        //
+        //if (profileFrameFinished)
+        //{
+        //    profileFrameFinished = false;
+        //    wi::profiler::BeginFrame();
+        //}
+        //
+        //VzmScene* scene = (VzmScene*)renderer->scene;
+        //
+        //{
+        //    // for frame info.
+        //    renderer->deltaTime = float(std::max(0.0, renderer->timer.record_elapsed_seconds()));
+        //    const float target_deltaTime = 1.0f / renderer->targetFrameRate;
+        //    if (renderer->framerate_lock && renderer->deltaTime < target_deltaTime)
+        //    {
+        //        wi::helper::QuickSleep((target_deltaTime - renderer->deltaTime) * 1000);
+        //        renderer->deltaTime += float(std::max(0.0, renderer->timer.record_elapsed_seconds()));
+        //    }
+        //
+        //    scene->deltaTime = float(std::max(0.0, scene->timer.record_elapsed_seconds()));
+        //}
+        //
+        //
+        ////wi::input::Update(nullptr, *renderer);
+        //// Wake up the events that need to be executed on the main thread, in thread safe manner:
+        //wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
+        //renderer->fadeManager.Update(renderer->deltaTime);
+        //
+        //renderer->PreUpdate(); // current to previous
+        //
+        //// Fixed time update:
+        //{
+        //    auto range = wi::profiler::BeginRangeCPU("Fixed Update");
+        //    if (renderer->frameskip)
+        //    {
+        //        renderer->deltaTimeAccumulator += renderer->deltaTime;
+        //        if (renderer->deltaTimeAccumulator > 10)
+        //        {
+        //            // application probably lost control, fixed update would take too long
+        //            renderer->deltaTimeAccumulator = 0;
+        //        }
+        //
+        //        const float targetFrameRateInv = 1.0f / renderer->targetFrameRate;
+        //        while (renderer->deltaTimeAccumulator >= targetFrameRateInv)
+        //        {
+        //            renderer->FixedUpdate();
+        //            renderer->deltaTimeAccumulator -= targetFrameRateInv;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        renderer->FixedUpdate();
+        //    }
+        //    wi::profiler::EndRange(range); // Fixed Update
+        //}
+        //{
+        //    // use scene->deltaTime
+        //    auto range = wi::profiler::BeginRangeCPU("Update");
+        //    wi::backlog::Update(*renderer, scene->deltaTime);
+        //    renderer->Update(scene->deltaTime);
+        //    renderer->PostUpdate();
+        //    wi::profiler::EndRange(range); // Update
+        //
+        //    // we ill use the separate framecount for each renderer (not global device)
+        //    //
+        //    renderer->FRAMECOUNT++;
+        //    renderer->frameCB.frame_count = (uint)renderer->FRAMECOUNT;
+        //    //renderer->frameCB.delta_time = renderer->deltaTime;
+        //    // note here frameCB's time is computed based on the scene timeline
+        //    //renderer->frameCB.time_previous = renderer->frameCB.time;
+        //    //renderer->frameCB.time = scene->deltaTimeAccumulator;
+        //}
+        //
+        //{
+        //    auto range = wi::profiler::BeginRangeCPU("Render");
+        //    scene->dt = renderer->deltaTime;
+        //    renderer->Render();
+        //    wi::profiler::EndRange(range); // Render
+        //}
+        //renderer->RenderFinalize();
 
         return VZ_OK;
     }
 
     void ReloadShader()
     {
-        wi::renderer::ReloadShaders();
+        //wi::renderer::ReloadShaders();
     }
 
     VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile, const bool displayEngineStates)
     {
-        static bool isFirstCall = true;
-        static VID sceneVid = gEngineApp.CreateSceneEntity("__VZM_ENGINE_INTERNAL__");
-        VzmScene* sceneInternalState = gEngineApp.GetScene(sceneVid);
-        static Entity canvasEtt = sceneInternalState->Entity_CreateCamera("INFO_CANVAS", w, h);
-        static VzmRenderer* sysInfoRenderer = gEngineApp.CreateRenderer(canvasEtt);
-
-        if (isFirstCall)
-        {
-            sysInfoRenderer->init(w, h, CANVAS_INIT_DPI);
-
-            sysInfoRenderer->infoDisplay.active = true;
-            sysInfoRenderer->infoDisplay.watermark = true;
-            //sysInfoRenderer->infoDisplay.fpsinfo = true;
-            //sysInfoRenderer->infoDisplay.resolution = true;
-            //sysInfoRenderer->infoDisplay.colorspace = true;
-            sysInfoRenderer->infoDisplay.device_name = true;
-            sysInfoRenderer->infoDisplay.vram_usage = true;
-            sysInfoRenderer->infoDisplay.heap_allocation_counter = true;
-
-            sysInfoRenderer->DisplayProfile = true;
-            wi::profiler::SetEnabled(true);
-
-            {
-                const float fadeSeconds = 0.f;
-                wi::Color fadeColor = wi::Color(0, 0, 0, 255);
-                // Fade manager will activate on fadeout
-                sysInfoRenderer->fadeManager.Clear();
-                sysInfoRenderer->fadeManager.Start(fadeSeconds, fadeColor, []() {
-                    sysInfoRenderer->Start();
-                    });
-
-                sysInfoRenderer->fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
-            }
-            isFirstCall = false;
-        }
-
-        sysInfoRenderer->camEntity = canvasEtt;
-        sysInfoRenderer->width = w;
-        sysInfoRenderer->height = h;
-        sysInfoRenderer->UpdateVmCamera();
-
-        sysInfoRenderer->setSceneUpdateEnabled(false);
-        sysInfoRenderer->scene->camera = *sysInfoRenderer->camera;
-
-        wi::font::UpdateAtlas(sysInfoRenderer->GetDPIScaling());
-
-        if (!wi::initializer::IsInitializeFinished())
-        {
-            // Until engine is not loaded, present initialization screen...
-            //sysInfoRenderer->WaitRender();
-            return VZ_JOB_WAIT;
-        }
-
-        if (profileFrameFinished)
-        {
-            profileFrameFinished = false;
-            wi::profiler::BeginFrame();
-        }
-        sysInfoRenderer->RenderFinalize(); // set profileFrameFinished to true inside
-
-        return (VID)canvasEtt;
+        //static bool isFirstCall = true;
+        //static VID sceneVid = gEngineApp.CreateSceneEntity("__VZM_ENGINE_INTERNAL__");
+        //VzmScene* sceneInternalState = gEngineApp.GetScene(sceneVid);
+        //static Entity canvasEtt = sceneInternalState->Entity_CreateCamera("INFO_CANVAS", w, h);
+        //static VzmRenderer* sysInfoRenderer = gEngineApp.CreateRenderer(canvasEtt);
+        //
+        //if (isFirstCall)
+        //{
+        //    sysInfoRenderer->init(w, h, CANVAS_INIT_DPI);
+        //
+        //    sysInfoRenderer->infoDisplay.active = true;
+        //    sysInfoRenderer->infoDisplay.watermark = true;
+        //    //sysInfoRenderer->infoDisplay.fpsinfo = true;
+        //    //sysInfoRenderer->infoDisplay.resolution = true;
+        //    //sysInfoRenderer->infoDisplay.colorspace = true;
+        //    sysInfoRenderer->infoDisplay.device_name = true;
+        //    sysInfoRenderer->infoDisplay.vram_usage = true;
+        //    sysInfoRenderer->infoDisplay.heap_allocation_counter = true;
+        //
+        //    sysInfoRenderer->DisplayProfile = true;
+        //    wi::profiler::SetEnabled(true);
+        //
+        //    {
+        //        const float fadeSeconds = 0.f;
+        //        wi::Color fadeColor = wi::Color(0, 0, 0, 255);
+        //        // Fade manager will activate on fadeout
+        //        sysInfoRenderer->fadeManager.Clear();
+        //        sysInfoRenderer->fadeManager.Start(fadeSeconds, fadeColor, []() {
+        //            sysInfoRenderer->Start();
+        //            });
+        //
+        //        sysInfoRenderer->fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
+        //    }
+        //    isFirstCall = false;
+        //}
+        //
+        //sysInfoRenderer->camEntity = canvasEtt;
+        //sysInfoRenderer->width = w;
+        //sysInfoRenderer->height = h;
+        //sysInfoRenderer->UpdateVmCamera();
+        //
+        //sysInfoRenderer->setSceneUpdateEnabled(false);
+        //sysInfoRenderer->scene->camera = *sysInfoRenderer->camera;
+        //
+        //wi::font::UpdateAtlas(sysInfoRenderer->GetDPIScaling());
+        //
+        //if (!wi::initializer::IsInitializeFinished())
+        //{
+        //    // Until engine is not loaded, present initialization screen...
+        //    //sysInfoRenderer->WaitRender();
+        //    return VZ_JOB_WAIT;
+        //}
+        //
+        //if (profileFrameFinished)
+        //{
+        //    profileFrameFinished = false;
+        //    wi::profiler::BeginFrame();
+        //}
+        //sysInfoRenderer->RenderFinalize(); // set profileFrameFinished to true inside
+        //
+        //return (VID)canvasEtt;
+        return 0;
     }
 
     void* GetGraphicsSharedRenderTarget(const int camVid, const void* graphicsDev2, const void* srv_desc_heap2, const int descriptor_index, uint32_t* w, uint32_t* h)
     {
-        VzmRenderer* renderer = gEngineApp.GetRenderer(camVid);
-        if (renderer == nullptr)
-        {
-            return nullptr;
-        }
-
-        if (w) *w = renderer->width;
-        if (h) *h = renderer->height;
-
-        wi::graphics::GraphicsDevice* graphicsDevice = wi::graphics::GetDevice();
-        if (graphicsDevice == nullptr) return nullptr;
-        //return graphicsDevice->OpenSharedResource(graphicsDev2, const_cast<wi::graphics::Texture*>(&renderer->GetRenderResult()));
-        //return graphicsDevice->OpenSharedResource(graphicsDev2, &renderer->rtPostprocess);
-        return graphicsDevice->OpenSharedResource(graphicsDev2, srv_desc_heap2, descriptor_index, const_cast<wi::graphics::Texture*>(&renderer->renderResult));
+        return nullptr;
     }
-    /**/
 }

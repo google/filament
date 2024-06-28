@@ -395,7 +395,20 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 // Main code
 int main(int, char**)
 {
-    vzm::InitEngineLib();
+    vzm::ParamMap<std::string> arguments;
+    //arguments.SetParam("GG hello~~1", std::string("OHOHO"));
+    //arguments.SetParam("GG hello~~2", 1234.5678f);
+    vzm::InitEngineLib(arguments);
+    VID sid = vzm::NewScene("my scene");
+    VID aid = vzm::LoadTestModel("my test model");
+    vzm::VzCamera* cam;
+    VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
+    //cam->
+    vzm::VzLight* light;
+    VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(cam));
+    vzm::AppendSceneComponentTo(aid, sid);
+    vzm::AppendSceneComponentTo(lid, sid);
+    //vzm::AppendSceneComponentTo(cid, sid); // optional
     vzm::DeinitEngineLib();
 
     glfwSetErrorCallback(glfw_error_callback);

@@ -1,13 +1,13 @@
 #pragma once
 #include "VizComponentAPIs.h"
 
-#define CMPP(P) (vzm::VmBaseComponent**)&P
+#define SCPP(P) (vzm::VzSceneComp**)&P
 
 namespace vzm
 {
     // This must be called before using engine APIs
     //  - paired with DeinitEngineLib()
-    __dojostatic VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& argument = vzm::ParamMap<std::string>());
+    __dojostatic VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& arguments = vzm::ParamMap<std::string>());
     __dojostatic VZRESULT DeinitEngineLib();
     // Get Entity ID 
     //  - return zero in case of failure 
@@ -27,7 +27,7 @@ namespace vzm
     //  - Must belong to a scene
     //  - parentVid cannot be a scene (renderable or 0)
     //  - return zero in case of failure (invalid sceneID, the name is already registered, or overflow VID)
-    __dojostatic VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, const std::string& compName, const VID parentVid = 0u, VzSceneComp** sceneComp = nullptr);
+    __dojostatic VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid = 0u, VzSceneComp** sceneComp = nullptr);
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
     __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
@@ -37,16 +37,13 @@ namespace vzm
     // Get Component IDs in a scene
     //  - return # of scene Components 
     __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids);	// Get CameraParams and return its pointer registered in renderer
-    /*
     // Load scene components into a new scene and return the scene ID
     //  - Must belong to the internal scene
     //  - return zero in case of failure
     __dojostatic VID LoadFileIntoNewScene(const std::string& file, const std::string& rootName, const std::string& sceneName = "", VID* rootVid = nullptr);
     // Async version of LoadFileIntoNewScene
     __dojostatic void LoadFileIntoNewSceneAsync(const std::string& file, const std::string& rootName, const std::string& sceneName = "", const std::function<void(VID sceneVid, VID rootVid)>& callback = nullptr);
-    // Merge src scene to dest scene 
-    //  - This is not THREAD-SAFE 
-    __dojostatic VZRESULT MergeScenes(const VID srcSceneVid, const VID dstSceneVid);
+    __dojostatic VID LoadTestModel(const std::string& modelName);
     // Render a scene on camera (camVid)
     //  - Must belong to the internal scene
     //  - if updateScene is true, uses the camera for camera-dependent scene updates
@@ -61,5 +58,5 @@ namespace vzm
     // Display Engine's states and profiling information
     //  - return canvas VID (use this as a camVid)
     __dojostatic VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile = true, const bool displayEngineStates = true);
-    /**/
+    
 }

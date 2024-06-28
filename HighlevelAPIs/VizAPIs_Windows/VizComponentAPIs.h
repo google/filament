@@ -113,7 +113,7 @@ namespace vzm
         const_iterator end() const { return __params.end(); }
     };
 
-    enum class SCENE_COMPONENT_TYPE
+    enum class SCENE_COMPONENT_TYPE // every component involves a transform
     {
         SCENEBASE = 0,
         CAMERA,
@@ -125,6 +125,7 @@ namespace vzm
     {
         GEOMATRY = 0,
         MATERIAL,
+        MATERIALINSTANCE,
     };
 
     __dojostruct VzBaseComp
@@ -211,6 +212,24 @@ namespace vzm
         LightType GetType();
     };
     __dojostruct VzActor : VzSceneComp
+    {
+        // 
+    };
+
+
+    __dojostruct VzResource : VzBaseComp
+    {
+        RES_COMPONENT_TYPE compType = RES_COMPONENT_TYPE::GEOMATRY;
+    };
+    __dojostruct VzGeometry : VzResource
+    {
+        // 
+    };
+    __dojostruct VzMaterial : VzResource
+    {
+        // 
+    };
+    __dojostruct VzMaterialInstance : VzMaterial
     {
         // 
     };

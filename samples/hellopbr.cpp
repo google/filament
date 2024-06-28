@@ -160,6 +160,8 @@ int main(int argc, char** argv) {
         engine->destroy(app.materialInstance);
         engine->destroy(app.mesh.renderable);
         engine->destroy(app.material);
+        //auto& em = utils::EntityManager::get();
+        //em.destroy(app.light);
     };
 
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
