@@ -556,8 +556,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
             texture = [context.device newTextureWithDescriptor:descriptor];
-            FILAMENT_CHECK_POSTCONDITION(texture != nil)
-                    << "Could not create Metal texture. Out of memory?";
             break;
         case SamplerType::SAMPLER_CUBEMAP:
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
@@ -572,8 +570,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
             texture = [context.device newTextureWithDescriptor:descriptor];
-            FILAMENT_CHECK_POSTCONDITION(texture != nil)
-                    << "Could not create Metal texture. Out of memory?";
             break;
         case SamplerType::SAMPLER_3D:
             descriptor = [MTLTextureDescriptor new];
@@ -586,8 +582,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             descriptor.usage = getMetalTextureUsage(usage);
             descriptor.storageMode = MTLStorageModePrivate;
             texture = [context.device newTextureWithDescriptor:descriptor];
-            FILAMENT_CHECK_POSTCONDITION(texture != nil)
-                    << "Could not create Metal texture. Out of memory?";
             break;
         case SamplerType::SAMPLER_EXTERNAL:
             // If we're using external textures (CVPixelBufferRefs), we don't need to make any
@@ -595,6 +589,12 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             texture = nil;
             break;
     }
+
+    FILAMENT_CHECK_POSTCONDITION(target == SamplerType::SAMPLER_EXTERNAL || texture != nil)
+            << "Could not create Metal texture (SamplerType = " << int(target)
+            << ", levels = " << int(levels) << ", MTLPixelFormat = " << int(devicePixelFormat)
+            << ", width = " << width << ", height = " << height << ", depth = " << depth
+            << "). Out of memory?";
 
     // If swizzling is set, set up a swizzled texture view that we'll use when sampling this texture.
     const bool isDefaultSwizzle =
