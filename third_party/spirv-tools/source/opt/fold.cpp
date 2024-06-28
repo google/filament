@@ -21,7 +21,6 @@
 #include "source/opt/const_folding_rules.h"
 #include "source/opt/def_use_manager.h"
 #include "source/opt/folding_rules.h"
-#include "source/opt/ir_builder.h"
 #include "source/opt/ir_context.h"
 
 namespace spvtools {
@@ -71,58 +70,6 @@ uint32_t InstructionFolder::UnaryOperate(spv::Op opcode,
 uint32_t InstructionFolder::BinaryOperate(spv::Op opcode, uint32_t a,
                                           uint32_t b) const {
   switch (opcode) {
-    // Arthimetics
-    case spv::Op::OpIAdd:
-      return a + b;
-    case spv::Op::OpISub:
-      return a - b;
-    case spv::Op::OpIMul:
-      return a * b;
-    case spv::Op::OpUDiv:
-      if (b != 0) {
-        return a / b;
-      } else {
-        // Dividing by 0 is undefined, so we will just pick 0.
-        return 0;
-      }
-    case spv::Op::OpSDiv:
-      if (b != 0u) {
-        return (static_cast<int32_t>(a)) / (static_cast<int32_t>(b));
-      } else {
-        // Dividing by 0 is undefined, so we will just pick 0.
-        return 0;
-      }
-    case spv::Op::OpSRem: {
-      // The sign of non-zero result comes from the first operand: a. This is
-      // guaranteed by C++11 rules for integer division operator. The division
-      // result is rounded toward zero, so the result of '%' has the sign of
-      // the first operand.
-      if (b != 0u) {
-        return static_cast<int32_t>(a) % static_cast<int32_t>(b);
-      } else {
-        // Remainder when dividing with 0 is undefined, so we will just pick 0.
-        return 0;
-      }
-    }
-    case spv::Op::OpSMod: {
-      // The sign of non-zero result comes from the second operand: b
-      if (b != 0u) {
-        int32_t rem = BinaryOperate(spv::Op::OpSRem, a, b);
-        int32_t b_prim = static_cast<int32_t>(b);
-        return (rem + b_prim) % b_prim;
-      } else {
-        // Mod with 0 is undefined, so we will just pick 0.
-        return 0;
-      }
-    }
-    case spv::Op::OpUMod:
-      if (b != 0u) {
-        return (a % b);
-      } else {
-        // Mod with 0 is undefined, so we will just pick 0.
-        return 0;
-      }
-
     // Shifting
     case spv::Op::OpShiftRightLogical:
       if (b >= 32) {
@@ -628,7 +575,8 @@ Instruction* InstructionFolder::FoldInstructionToConstant(
     Instruction* inst, std::function<uint32_t(uint32_t)> id_map) const {
   analysis::ConstantManager* const_mgr = context_->get_constant_mgr();
 
-  if (!inst->IsFoldableByFoldScalar() && !HasConstFoldingRule(inst)) {
+  if (!inst->IsFoldableByFoldScalar() && !inst->IsFoldableByFoldVector() &&
+      !GetConstantFoldingRules().HasFoldingRule(inst)) {
     return nullptr;
   }
   // Collect the values of the constant parameters.
@@ -662,29 +610,58 @@ Instruction* InstructionFolder::FoldInstructionToConstant(
     }
   }
 
-  uint32_t result_val = 0;
   bool successful = false;
+
   // If all parameters are constant, fold the instruction to a constant.
-  if (!missing_constants && inst->IsFoldableByFoldScalar()) {
-    result_val = FoldScalars(inst->opcode(), constants);
-    successful = true;
+  if (inst->IsFoldableByFoldScalar()) {
+    uint32_t result_val = 0;
+
+    if (!missing_constants) {
+      result_val = FoldScalars(inst->opcode(), constants);
+      successful = true;
+    }
+
+    if (!successful) {
+      successful = FoldIntegerOpToConstant(inst, id_map, &result_val);
+    }
+
+    if (successful) {
+      const analysis::Constant* result_const =
+          const_mgr->GetConstant(const_mgr->GetType(inst), {result_val});
+      Instruction* folded_inst =
+          const_mgr->GetDefiningInstruction(result_const, inst->type_id());
+      return folded_inst;
+    }
+  } else if (inst->IsFoldableByFoldVector()) {
+    std::vector<uint32_t> result_val;
+
+    if (!missing_constants) {
+      if (Instruction* inst_type =
+              context_->get_def_use_mgr()->GetDef(inst->type_id())) {
+        result_val = FoldVectors(
+            inst->opcode(), inst_type->GetSingleWordInOperand(1), constants);
+        successful = true;
+      }
+    }
+
+    if (successful) {
+      const analysis::Constant* result_const =
+          const_mgr->GetNumericVectorConstantWithWords(
+              const_mgr->GetType(inst)->AsVector(), result_val);
+      Instruction* folded_inst =
+          const_mgr->GetDefiningInstruction(result_const, inst->type_id());
+      return folded_inst;
+    }
   }
 
-  if (!successful && inst->IsFoldableByFoldScalar()) {
-    successful = FoldIntegerOpToConstant(inst, id_map, &result_val);
-  }
-
-  if (successful) {
-    const analysis::Constant* result_const =
-        const_mgr->GetConstant(const_mgr->GetType(inst), {result_val});
-    Instruction* folded_inst =
-        const_mgr->GetDefiningInstruction(result_const, inst->type_id());
-    return folded_inst;
-  }
   return nullptr;
 }
 
 bool InstructionFolder::IsFoldableType(Instruction* type_inst) const {
+  return IsFoldableScalarType(type_inst) || IsFoldableVectorType(type_inst);
+}
+
+bool InstructionFolder::IsFoldableScalarType(Instruction* type_inst) const {
   // Support 32-bit integers.
   if (type_inst->opcode() == spv::Op::OpTypeInt) {
     return type_inst->GetSingleWordInOperand(0) == 32;
@@ -692,6 +669,19 @@ bool InstructionFolder::IsFoldableType(Instruction* type_inst) const {
   // Support booleans.
   if (type_inst->opcode() == spv::Op::OpTypeBool) {
     return true;
+  }
+  // Nothing else yet.
+  return false;
+}
+
+bool InstructionFolder::IsFoldableVectorType(Instruction* type_inst) const {
+  // Support vectors with foldable components
+  if (type_inst->opcode() == spv::Op::OpTypeVector) {
+    uint32_t component_type_id = type_inst->GetSingleWordInOperand(0);
+    Instruction* def_component_type =
+        context_->get_def_use_mgr()->GetDef(component_type_id);
+    return def_component_type != nullptr &&
+           IsFoldableScalarType(def_component_type);
   }
   // Nothing else yet.
   return false;

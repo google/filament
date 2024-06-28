@@ -15,8 +15,6 @@
 #include "source/opt/remove_duplicates_pass.h"
 
 #include <algorithm>
-#include <cstring>
-#include <limits>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -25,7 +23,6 @@
 #include "source/opcode.h"
 #include "source/opt/decoration_manager.h"
 #include "source/opt/ir_context.h"
-#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {

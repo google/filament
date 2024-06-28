@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
 #include <string>
 
 #include "gmock/gmock.h"
@@ -1938,6 +1937,41 @@ OpStore %24 %27
 %28 = OpLoad %uint %22
 %29 = OpAccessChain %_ptr_Function_v4float %24 %28
 OpReturnValue %19
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<CopyPropagateArrays>(text, text, false);
+}
+
+// If the size of an array used in an OpCompositeInsert is not known at compile
+// time, then we should not propagate the array, because we do not have a single
+// array that represents the final value.
+TEST_F(CopyPropArrayPassTest, SpecConstSizedArray) {
+  const std::string text = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%uint = OpTypeInt 32 0
+%7 = OpSpecConstant %uint 32
+%_arr_int_7 = OpTypeArray %int %7
+%int_63 = OpConstant %int 63
+%uint_0 = OpConstant %uint 0
+%bool = OpTypeBool
+%int_0 = OpConstant %int 0
+%int_587202566 = OpConstant %int 587202566
+%false = OpConstantFalse %bool
+%_ptr_Function__arr_int_7 = OpTypePointer Function %_arr_int_7
+%16 = OpUndef %_arr_int_7
+%2 = OpFunction %void None %4
+%17 = OpLabel
+%18 = OpVariable %_ptr_Function__arr_int_7 Function
+%19 = OpCompositeInsert %_arr_int_7 %int_0 %16 0
+OpStore %18 %19
+OpReturn
 OpFunctionEnd
 )";
 
