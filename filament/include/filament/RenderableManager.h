@@ -500,10 +500,9 @@ public:
          * @param level the level of detail (lod), only 0 can be specified
          * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
          * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
-         * @param count number of vertices in the morph target buffer to read, must equal the geometry's count (for triangles, this should be a multiple of 3)
          */
-        Builder& morphing(uint8_t level, size_t primitiveIndex,
-                size_t offset, size_t count) noexcept;
+        RenderableManager::Builder& morphing(uint8_t level,
+                size_t primitiveIndex, size_t offset) noexcept;
 
 
         /**
@@ -749,8 +748,8 @@ public:
     /**
      * Associates a MorphTargetBuffer to the given primitive.
      */
-    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            size_t offset, size_t count);
+    void setMorphTargetBufferOffsetAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            size_t offset);
 
     /**
      * Get a MorphTargetBuffer to the given renderable or null if it doesn't exist.

@@ -738,7 +738,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
         if (numMorphTargets) {
             outputPrim->morphTargetOffset = morphingVertexCount;    // FIXME: can I do that here?
-            builder.morphing(0, index, morphingVertexCount, outputPrim->vertices->getVertexCount());
+            builder.morphing(0, index, morphingVertexCount);
             morphingVertexCount += outputPrim->vertices->getVertexCount();
         }
     }
@@ -752,9 +752,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         fAsset->mMorphTargetBuffers.push_back(morphTargetBuffer);
 
         builder.morphing(morphTargetBuffer);
-
-        using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
-        auto slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
 
         outputPrim = prims.data();
         inputPrim = &mesh->primitives[0];
@@ -773,16 +770,40 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
                         assert_invariant(!previous || previous->type == accessor->type);
                         previous = accessor;
 
-                        BufferSlot& slot = (*slots)[outputPrim->slotIndices[tindex]];
-
-                        assert_invariant(!slot.vertexBuffer);
-                        assert_invariant(!slot.indexBuffer);
                         assert_invariant(outputPrim->morphTargetBuffer);
 
-                        slot.morphTargetBuffer = outputPrim->morphTargetBuffer;
-                        slot.morphTargetOffset = outputPrim->morphTargetOffset;
-                        slot.morphTargetCount = outputPrim->vertices->getVertexCount();
-                        slot.bufferIndex = tindex;
+                        if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
+                                fAsset->mResourceInfo)) {
+                            using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+                            auto& slots = std::get<FFilamentAsset::ResourceInfo>(
+                                    fAsset->mResourceInfo).mBufferSlots;
+                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                            assert_invariant(!slot.vertexBuffer);
+                            assert_invariant(!slot.indexBuffer);
+
+                            slot.morphTargetBuffer = outputPrim->morphTargetBuffer;
+                            slot.morphTargetOffset = outputPrim->morphTargetOffset;
+                            slot.morphTargetCount = outputPrim->vertices->getVertexCount();
+                            slot.bufferIndex = tindex;
+                        }
+                        else if (std::holds_alternative<FFilamentAsset::ResourceInfoExtended>(
+                                fAsset->mResourceInfo))
+                        {
+                            using BufferSlot = FFilamentAsset::ResourceInfoExtended::BufferSlot;
+                            auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(
+                                    fAsset->mResourceInfo).slots;
+
+                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                            assert_invariant(slot.slot == tindex);
+                            assert_invariant(!slot.vertices);
+                            assert_invariant(!slot.indices);
+
+                            slot.target = outputPrim->morphTargetBuffer;
+                            slot.offset = outputPrim->morphTargetOffset;
+                            slot.count = outputPrim->vertices->getVertexCount();
+                        }
 
                         break;
                     }

@@ -347,6 +347,8 @@ struct FFilamentAsset : public FilamentAsset {
             VertexBuffer* vertices = nullptr;
             IndexBuffer* indices = nullptr;
             MorphTargetBuffer* target = nullptr;
+            uint32_t offset = 0;
+            uint32_t count = 0;
             int slot = -1;
             size_t sizeInBytes = 0;
 

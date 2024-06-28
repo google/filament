@@ -203,8 +203,8 @@ int main(int argc, char** argv) {
                 .receiveShadows(false)
                 .castShadows(false)
                 .morphing(app.mt1)
-                .morphing(0, 0, 0, 9)
-                .morphing(0, 1, 9, 9)
+                .morphing(0, 0, 0)
+                .morphing(0, 1, 9)
                 .build(*engine, app.renderable);
 
         scene->addEntity(app.renderable);

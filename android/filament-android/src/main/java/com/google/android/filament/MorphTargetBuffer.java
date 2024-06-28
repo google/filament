@@ -74,7 +74,7 @@ public class MorphTargetBuffer {
          *
          * @exception IllegalStateException if the MorphTargetBuffer could not be created
          *
-         * @see #setMorphTargetBufferAt
+         * @see #setMorphTargetBufferOffsetAt
          */
         @NonNull
         public MorphTargetBuffer build(@NonNull Engine engine) {

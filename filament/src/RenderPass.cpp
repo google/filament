@@ -714,6 +714,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.indexCount = primitive.getIndexCount();
             cmd.info.type = primitive.getPrimitiveType();
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
+// FIXME: morphtarget buffer
+//            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
+//                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
                 RenderPass::setupColorCommand(cmd, renderableVariant, mi, inverseFrontFaces);

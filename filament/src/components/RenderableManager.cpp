@@ -283,8 +283,8 @@ RenderableManager::Builder& RenderableManager::Builder::morphing(
     return *this;
 }
 
-RenderableManager::Builder& RenderableManager::Builder::morphing(
-        uint8_t level, size_t primitiveIndex, size_t offset, size_t) noexcept {
+RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level,
+        size_t primitiveIndex, size_t offset) noexcept {
     // the last parameter "count" is unused, because it must be equal to the primitive's vertex count
     std::vector<BuilderDetails::Entry>& entries = mImpl->mEntries;
     if (primitiveIndex < entries.size()) {
@@ -955,16 +955,11 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
     }
 }
 
-void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex, size_t offset, size_t count) {
+void FRenderableManager::setMorphTargetBufferOffsetAt(Instance instance, uint8_t level,
+        size_t primitiveIndex,
+        size_t offset) {
     if (instance) {
         assert_invariant(mManager[instance].morphTargetBuffer);
-
-        MorphWeights const& morphWeights = mManager[instance].morphWeights;
-        FILAMENT_CHECK_PRECONDITION(morphWeights.count == count)
-                << "Only " << morphWeights.count << " morph targets can be set (count=" << count
-                << ")";
-
         Slice<FRenderPrimitive>& primitives = mManager[instance].primitives;
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setMorphingBufferOffset(offset);
