@@ -418,11 +418,15 @@ using ArgumentEncoderCache = StateCache<ArgumentEncoderState, id<MTLArgumentEnco
 template <NSUInteger N>
 class MetalBufferBindings {
 public:
-    MetalBufferBindings() {}
+    MetalBufferBindings() { invalidate(); }
 
     void invalidate() {
-        mDirtyBuffers.allOn();
-        mDirtyOffsets.allOn();
+        mDirtyBuffers.reset();
+        mDirtyOffsets.reset();
+        for (int i = 0; i < int(N); i++) {
+            mDirtyBuffers.set(i, true);
+            mDirtyOffsets.set(i, true);
+        }
     }
     void setBuffer(const id<MTLBuffer> buffer, NSUInteger offset, NSUInteger index);
     void bindBuffers(id<MTLCommandEncoder> encoder, NSUInteger startIndex);
@@ -431,8 +435,8 @@ private:
     static_assert(N <= 8);
     std::array<__unsafe_unretained id<MTLBuffer>, N> mBuffers = { nil };
     std::array<NSUInteger, N> mOffsets = { 0 };
-    utils::bitset8 mDirtyBuffers { 0xFF };
-    utils::bitset8 mDirtyOffsets { 0xFF };
+    utils::bitset8 mDirtyBuffers;
+    utils::bitset8 mDirtyOffsets;
 };
 
 } // namespace backend

@@ -128,10 +128,6 @@ public:
         std::fill(std::begin(storage), std::end(storage), 0);
     }
 
-    void allOn() noexcept {
-        std::fill(std::begin(storage), std::end(storage), ~T(0));
-    }
-
     void clear() noexcept {
         reset();
     }

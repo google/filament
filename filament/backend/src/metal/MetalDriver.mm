@@ -1295,6 +1295,19 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->descriptorBindings.invalidate();
     mContext->dynamicOffsets.setDirty(true);
 
+    // Finalize any descriptor sets that were bound before the render pass.
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        auto* descriptorSet = mContext->currentDescriptorSets[i];
+        if (!descriptorSet) {
+            continue;
+        }
+        descriptorSet->finalize(this);
+        mContext->finalizedDescriptorSets.insert(descriptorSet);
+    }
+
+    // Bind descriptor sets.
+    mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+
     for (auto& pc : mContext->currentPushConstants) {
         pc.clear();
     }
@@ -2037,28 +2050,23 @@ void MetalDriver::bindDescriptorSet(
     mContext->currentDescriptorSets[set] = descriptorSet;
     mContext->descriptorBindings.setBuffer(descriptorSet->finalizeAndGetBuffer(this), 0, set);
     mContext->dynamicOffsets.setOffsets(set, offsets.data(), dynamicBindings);
+
+    // If we're inside a render pass, we should also finalize the descriptor set and update the
+    // argument buffers. Otherwise, we'll do this the next time we enter a render pass.
+    if (isInRenderPass(mContext)) {
+        auto found = mContext->finalizedDescriptorSets.find(descriptorSet);
+        if (found == mContext->finalizedDescriptorSets.end()) {
+            descriptorSet->finalize(this);
+            mContext->finalizedDescriptorSets.insert(descriptorSet);
+        }
+        mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+    }
 }
 
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
     DEBUG_LOG("[DS] draw2(...)\n");
-
-    // Finalize any descriptor sets that have been bound.
-    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
-        auto* descriptorSet = mContext->currentDescriptorSets[i];
-        if (!descriptorSet) {
-            continue;
-        }
-        auto found = mContext->finalizedDescriptorSets.find(descriptorSet);
-        if (found == mContext->finalizedDescriptorSets.end()) {
-            descriptorSet->finalize(this);
-            mContext->finalizedDescriptorSets.insert(descriptorSet);
-        }
-    }
-
-    // Bind descriptor sets.
-    mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
 
     // Bind the offset data.
     if (mContext->dynamicOffsets.isDirty()) {
