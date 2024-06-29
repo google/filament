@@ -3,6 +3,8 @@
 
 #define SCPP(P) (vzm::VzSceneComp**)&P
 
+// user32.lib;gdi32.lib;opengl32.lib;backend.lib;basis_transcoder.lib;bluegl.lib;bluevk.lib;camutils.lib;civetweb.lib;dracodec.lib;filabridge.lib;filaflat.lib;filamat.lib;filament-iblprefilter.lib;filament.lib;filameshio.lib;geometry.lib;gltfio.lib;gltfio_core.lib;ibl-lite.lib;ibl.lib;image.lib;ktxreader.lib;matdbg.lib;meshoptimizer.lib;mikktspace.lib;shaders.lib;smol-v.lib;stb.lib;uberarchive.lib;uberzlib.lib;utils.lib;viewer.lib;vkshaders.lib;zstd.lib;../../VisualStudio/samples/Debug/suzanne-resources.lib;../../VisualStudio/samples/Debug/sample-resources.lib;%(AdditionalDependencies)
+
 namespace vzm
 {
     // This must be called before using engine APIs

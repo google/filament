@@ -264,6 +264,8 @@ namespace vzm
         }
     };
 
+    // note that renderPath involves 
+    // 1. canvas (render targets), 2. camera, 3. scene
     class VzRenderPath : public VzCanvas
     {
     private:
@@ -274,7 +276,7 @@ namespace vzm
         bool prevColorspaceConversionRequired_ = false;
 
         VzCamera* vzCam_ = nullptr;
-        TimeStamp timeStampUpdate_;
+        TimeStamp timeStampUpdate_ = {};
 
 
         bool colorspaceConversionRequired_ = false;
@@ -321,7 +323,10 @@ namespace vzm
 
         ~VzRenderPath()
         {
-            gEngine->destroy(view_);
+            if (gEngine)
+            {
+                gEngine->destroy(view_);
+            }
         }
 
         uint64_t FRAMECOUNT = 0;
@@ -347,6 +352,7 @@ namespace vzm
             if (_vzCam != nullptr)
             {
                 vzCam_ = (VzCamera*)_vzCam;
+                VID id = camera->getEntity().getId();
                 assert(vzCam_->componentVID == camera->getEntity().getId());
             }
             if (vzCam_)
@@ -434,8 +440,7 @@ namespace vzm
         inline VzRenderPath* createRendePath(const CamVID camVid = 0)
         {
             utils::EntityManager& em = utils::EntityManager::get();
-            utils::Entity camEtt;
-            camEtt.import(camVid);
+            utils::Entity camEtt = utils::Entity::import(camVid);
             CamVID cam_vid = camVid;
             bool is_alive_cam = em.isAlive(camEtt);
             filament::Camera* camera = nullptr;
@@ -443,12 +448,16 @@ namespace vzm
             {
                 camEtt = em.create();
                 cam_vid = camEtt.getId();
-                camera = gEngine->createCamera(camEtt);
             }
             else
             {
+                // if the entity has the camera, then re-use it
+                // elsewhere create new camera
                 camera = gEngine->getCameraComponent(camEtt);
-                assert(camera && "the alive entity must be assigned to camera!");
+            }
+            if (camera == nullptr)
+            {
+                camera = gEngine->createCamera(camEtt);
             }
 
             // I organize the renderPath with filament::View that involves
@@ -533,25 +542,19 @@ namespace vzm
         inline std::string GetNameByVid(const VID vid)
         {
             VzNameCompManager& ncm = VzNameCompManager::Get();
-            utils::Entity ett;
-            ett.import(vid);
-            return ncm.GetName(ett);
+            return ncm.GetName(utils::Entity::import(vid));
         }
         inline bool HasComponent(const VID vid)
         {
             VzNameCompManager& ncm = VzNameCompManager::Get();
-            utils::Entity ett;
-            ett.import(vid);
-            return ncm.hasComponent(ett);
+            return ncm.hasComponent(utils::Entity::import(vid));
         }
         inline bool IsRenderable(const RenderableVID vid)
         {
             auto it = renderableSceneVids_.find(vid);
             bool ret = it != renderableSceneVids_.end();
 #ifdef _DEBUG
-            utils::Entity ett;
-            ett.import(vid);
-            assert(ret == gEngine->getRenderableManager().hasComponent(ett));
+            assert(ret == gEngine->getRenderableManager().hasComponent(utils::Entity::import(vid)));
 #endif
             return ret;
         }
@@ -560,9 +563,7 @@ namespace vzm
             auto it = lightSceneVids_.find(vid);
             bool ret = it != lightSceneVids_.end();
 #ifdef _DEBUG
-            utils::Entity ett;
-            ett.import(vid);
-            assert(ret == gEngine->getRenderableManager().hasComponent(ett));
+            assert(ret == gEngine->getRenderableManager().hasComponent(utils::Entity::import(vid)));
 #endif
             return ret;
         }
@@ -644,7 +645,7 @@ namespace vzm
                 {
                     SceneVID vid_scene = vid;
                     *scene = GetScene(vid_scene);
-                    if (scene == nullptr)
+                    if (*scene == nullptr)
                     {
                         auto itr = renderableSceneVids_.find(vid_scene);
                         auto itl = lightSceneVids_.find(vid_scene);
@@ -666,9 +667,8 @@ namespace vzm
             SceneVID vid_scene_src = getSceneAndVid(&scene_src, vidSrc);
             SceneVID vid_scene_dst = getSceneAndVid(&scene_dst, vidDst);
 
-            utils::Entity ett_src, ett_dst;
-            ett_src.import(vidSrc);
-            ett_dst.import(vidDst);
+            utils::Entity ett_src = utils::Entity::import(vidSrc);
+            utils::Entity ett_dst = utils::Entity::import(vidDst);
             //auto& em = gEngine->getEntityManager();
             auto& tcm = gEngine->getTransformManager();
 
@@ -779,8 +779,7 @@ namespace vzm
 
             VID vid = vidExist;
             auto& em = gEngine->getEntityManager();
-            utils::Entity ett;
-            ett.import(vid);
+            utils::Entity ett = utils::Entity::import(vid);
             bool is_alive = em.isAlive(ett);
             if (!is_alive)
             {
@@ -825,14 +824,8 @@ namespace vzm
             }
             case SCENE_COMPONENT_TYPE::CAMERA:
             {
-                vzm::VzRenderPath* render_path = createRendePath(is_alive? vid : 0);
-
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
                 v_comp = (VzSceneComp*)it.first->second.get();
-                vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
-                v_cam->renderPath = render_path;
-                render_path->Init(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
-                render_path->UpdateVzCamera(v_cam);
                 break;
             }
             default:
@@ -841,6 +834,15 @@ namespace vzm
             v_comp->componentVID = vid;
             v_comp->compType = compType;
             v_comp->timeStamp = std::chrono::high_resolution_clock::now();
+
+            if (compType == SCENE_COMPONENT_TYPE::CAMERA)
+            {
+                vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
+                vzm::VzRenderPath* render_path = createRendePath(vid);
+                v_cam->renderPath = render_path;
+                render_path->Init(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
+                render_path->UpdateVzCamera(v_cam);
+            }
 
             auto& ncm = VzNameCompManager::Get();
             auto& tcm = gEngine->getTransformManager();
@@ -858,14 +860,13 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
 
             MaterialInstance* mi = nullptr;
-            for (auto itmi : materialInstances_)
+            for (auto it_mi : materialInstances_)
             {
-                utils::Entity ett;
-                ett.import(itmi.first);
+                utils::Entity ett = utils::Entity::import(it_mi.first);
 
                 if (ncm.GetName(ett) == mi_name)
                 {
-                    mi = itmi.second;
+                    mi = it_mi.second;
                     break;
                 }
             }
@@ -1004,8 +1005,7 @@ namespace vzm
         // SceneVID, CamVID, RenderableVID (light and actor), 
         inline void RemoveEntity(const VID vid)
         {
-            utils::Entity ett;
-            ett.import(vid);
+            utils::Entity ett = utils::Entity::import(vid);
             
             auto& ncm = VzNameCompManager::Get();
             ncm.RemoveEntity(ett);
@@ -1072,6 +1072,8 @@ namespace vzm
                 }
             }
         }
+
+
     };
 #pragma endregion
 
@@ -1164,6 +1166,9 @@ namespace vzm
         //gEngine->destroy(gRenderer);
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
+
+        //destroy all views belonging to renderPaths before destroy the engine 
+        //To do???
         Engine::destroy(&gEngine); // calls FEngine::shutdown()
         // note 
         // gEngine involves mJobSystem

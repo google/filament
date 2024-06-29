@@ -13,6 +13,9 @@
 //   the backend itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
 // Read comments in imgui_impl_vulkan.h.
 
+// Filament highlevel APIs
+#include "VizEngineAPIs.h"
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
@@ -39,9 +42,6 @@
 #ifdef _DEBUG
 #define APP_USE_VULKAN_DEBUG_REPORT
 #endif
-
-// Filament highlevel APIs
-#include "VizEngineAPIs.h"
 
 // Data
 static VkAllocationCallbacks* g_Allocator = nullptr;
@@ -396,19 +396,16 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 int main(int, char**)
 {
     vzm::ParamMap<std::string> arguments;
-    //arguments.SetParam("GG hello~~1", std::string("OHOHO"));
-    //arguments.SetParam("GG hello~~2", 1234.5678f);
     vzm::InitEngineLib(arguments);
     VID sid = vzm::NewScene("my scene");
     VID aid = vzm::LoadTestModel("my test model");
     vzm::VzCamera* cam;
     VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
-    //cam->
     vzm::VzLight* light;
-    VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(cam));
+    VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
     vzm::AppendSceneComponentTo(aid, sid);
     vzm::AppendSceneComponentTo(lid, sid);
-    //vzm::AppendSceneComponentTo(cid, sid); // optional
+    vzm::AppendSceneComponentTo(cid, sid); // optional
     vzm::DeinitEngineLib();
 
     glfwSetErrorCallback(glfw_error_callback);

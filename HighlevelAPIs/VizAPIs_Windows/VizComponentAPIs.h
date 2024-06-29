@@ -1,4 +1,6 @@
 #pragma once
+#define _ITERATOR_DEBUG_LEVEL 0 // this is for using STL containers as our standard parameters
+
 #define __dojostatic extern "C" __declspec(dllexport)
 #define __dojoclass class __declspec(dllexport)
 #define __dojostruct struct __declspec(dllexport)
