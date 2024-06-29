@@ -97,6 +97,14 @@ public:
     // For internal use only.
     void addInstance(FFilamentInstance* instance);
 
+    /** Creates an Animator that will use the corresponding asset and instance, 
+     * can be used to animate an instance with animation from another asset.
+     * When used, the caller is responsible for deleting it.
+     * The normal way of getting an Animator is to call FilamentInstance::getAnimator().
+     */
+    Animator(FilamentAsset *asset, FilamentInstance *instance);
+    ~Animator();
+
 private:
 
     /*! \cond PRIVATE */
@@ -112,11 +120,6 @@ private:
     Animator& operator=(const Animator&) = delete;
 
     AnimatorImpl* mImpl;
-public:
-    Animator(FilamentAsset *asset, FilamentInstance *instance) : Animator(reinterpret_cast<FFilamentAsset*>(asset), reinterpret_cast<FFilamentInstance*>(instance))
-    {
-    }
-    ~Animator();
 };
 
 } // namespace filament::gltfio
