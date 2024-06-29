@@ -254,6 +254,9 @@ void Animator::addInstance(FFilamentInstance* instance) {
     }
 }
 
+Animator::Animator(FilamentAsset *asset, FilamentInstance *instance) : Animator(reinterpret_cast<FFilamentAsset*>(asset), reinterpret_cast<FFilamentInstance*>(instance)) {
+}
+
 Animator::~Animator() {
     delete mImpl;
 }
