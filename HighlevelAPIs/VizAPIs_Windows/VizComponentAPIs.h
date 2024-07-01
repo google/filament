@@ -230,6 +230,7 @@ namespace vzm
     __dojostruct VzMaterial : VzResource
     {
         // 
+        
     };
     __dojostruct VzMaterialInstance : VzMaterial
     {

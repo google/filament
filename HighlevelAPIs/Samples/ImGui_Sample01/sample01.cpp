@@ -401,6 +401,7 @@ int main(int, char**)
     VID aid = vzm::LoadTestModel("my test model");
     vzm::VzCamera* cam;
     VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
+    cam->SetCanvas();
     vzm::VzLight* light;
     VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
     vzm::AppendSceneComponentTo(aid, sid);

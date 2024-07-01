@@ -8,6 +8,7 @@
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Camera.h>
+#include <filament/Viewport.h>
 #include <filament/Material.h>
 #include <filament/Renderer.h>
 #include <filament/SwapChain.h>
@@ -299,6 +300,7 @@ namespace vzm
             }
             else
             {
+                //swapChain_ = gEngine->createSwapChain(width_, height_);
                 swapChain_ = gEngine->createSwapChain(
                     nativeWindow_, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
             }
@@ -358,7 +360,7 @@ namespace vzm
             if (dpi) *dpi = dpi_;
             if (window) *window = nativeWindow_;
         }
-        inline void SetCanvas(const uint32_t w, const uint32_t h, const uint32_t dpi, void* window = nullptr)
+        inline void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr)
         {
             // the resize is called during the rendering (pre-processing)
             width_ = w;
@@ -1236,8 +1238,8 @@ namespace vzm
     // Pose parameters are defined in WS (not local space)
     void VzCamera::SetWorldPose(const float pos[3], const float view[3], const float up[3])
     {
-        COMP_TRANSFORM(tc, ett, ins);
-        COMP_RENDERPATH(render_path);
+        COMP_TRANSFORM(tc, ett, ins, );
+        COMP_RENDERPATH(render_path, );
         renderPath = render_path;
 
         // up vector correction
@@ -1283,7 +1285,7 @@ namespace vzm
     }
     void VzCamera::GetWorldPose(float pos[3], float view[3], float up[3])
     {
-        COMP_RENDERPATH(render_path);
+        COMP_RENDERPATH(render_path, );
         renderPath = render_path;
         Camera* camera = &render_path->GetView()->getCamera();
 #if _DEBUG
@@ -1300,19 +1302,21 @@ namespace vzm
     }
     void VzCamera::GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovInDegree, float* aspectRatio, bool isVertical)
     {
-        COMP_RENDERPATH(render_path);
+        COMP_RENDERPATH(render_path, );
         renderPath = render_path;
         Camera* camera = &render_path->GetView()->getCamera();
 #if _DEBUG
         Entity ett = Entity::import(componentVID);
         assert(camera == gEngine->getCameraComponent(ett) && "camera pointer is mismatching!!");
 #endif
-        if (zNearP) *zNearP = camera->getNear();
-        if (zFarP) *zFarP = camera->getCullingFar();
-        //camera->g
-        if (fovInDegree) *fovInDegree = camera->getFieldOfViewInDegrees(isVertical ? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
-        if (zNearP) *zNearP = camera->getNear();
-        if (zNearP) *zNearP = camera->getNear();
+        if (zNearP) *zNearP = (float)camera->getNear();
+        if (zFarP) *zFarP = (float)camera->getCullingFar();
+        if (fovInDegree) *fovInDegree = (float)camera->getFieldOfViewInDegrees(isVertical ? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
+        if (aspectRatio)
+        {
+            const filament::Viewport& vp = render_path->GetView()->getViewport();
+            *aspectRatio = vp.width / vp.height;
+        }
     }
 #pragma endregion
 }
@@ -1361,12 +1365,13 @@ namespace vzm
         // using vzm::ParamMap<std::string>& argument
         gConfig.backend = filament::Engine::Backend::VULKAN;
         gConfig.vulkanGPUHint = "0";
-        gConfig.headless = true;
+        //gConfig.backend = filament::Engine::Backend::OPENGL;
+        //gConfig.headless = true;
                 
         gVulkanPlatform = new FilamentAppVulkanPlatform(gConfig.vulkanGPUHint.c_str());
         gEngine = Engine::Builder()
             .backend(gConfig.backend)
-            .platform(gVulkanPlatform)
+            //.platform(gVulkanPlatform)
             .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
             .config(&gEngineConfig)
             .build();
@@ -1408,6 +1413,11 @@ namespace vzm
         // gEngine involves mJobSystem
         // when releasing gEngine, mJobSystem will be released!!
         // this calls JobSystem::requestExit() that including JobSystem::wakeAll()
+        while (gEngine) {
+            // 잠시 대기
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        int gg = 0;
         gEngine = nullptr;
 
         if (gVulkanPlatform) {
@@ -1653,12 +1663,15 @@ namespace vzm
 
     VZRESULT Render(const VID camVid, const bool updateScene)
     {
-        VzRenderPath* renderPath = gEngineApp.GetRenderPath(camVid);
-        if (renderPath == nullptr)
+        VzRenderPath* render_path = gEngineApp.GetRenderPath(camVid);
+        render_path->UpdateVzCamera();
+        if (render_path == nullptr)
         {
             return VZ_FAIL;
         }
-        View* view = renderPath->GetView();
+        return VZ_OK;
+
+        View* view = render_path->GetView();
         Scene* scene = view->getScene();
         Camera* camera = &view->getCamera();
         if (view == nullptr || scene == nullptr)
@@ -1671,22 +1684,22 @@ namespace vzm
             gEngine->execute();
         }
 
-        renderPath->deltaTime = float(std::max(0.0, vTimer.RecordElapsedSeconds())); // timeStep
+        render_path->deltaTime = float(std::max(0.0, vTimer.RecordElapsedSeconds())); // timeStep
 
         // fixed time update
         {
-            renderPath->deltaTimeAccumulator += renderPath->deltaTime;
-            if (renderPath->deltaTimeAccumulator > 10)
+            render_path->deltaTimeAccumulator += render_path->deltaTime;
+            if (render_path->deltaTimeAccumulator > 10)
             {
                 // application probably lost control, fixed update would take too long
-                renderPath->deltaTimeAccumulator = 0;
+                render_path->deltaTimeAccumulator = 0;
             }
 
-            const float targetFrameRateInv = 1.0f / renderPath->GetFixedTimeUpdate();
-            while (renderPath->deltaTimeAccumulator >= targetFrameRateInv)
+            const float targetFrameRateInv = 1.0f / render_path->GetFixedTimeUpdate();
+            while (render_path->deltaTimeAccumulator >= targetFrameRateInv)
             {
                 //renderer->FixedUpdate();
-                renderPath->deltaTimeAccumulator -= targetFrameRateInv;
+                render_path->deltaTimeAccumulator -= targetFrameRateInv;
             }
         }
 
@@ -1705,7 +1718,7 @@ namespace vzm
         //    Mode.refresh_rate != 0) ? round(1000.0 / Mode.refresh_rate) : 16;
         //SDL_Delay(refreshIntervalMS);
 
-        Renderer* renderer = renderPath->GetRenderer();
+        Renderer* renderer = render_path->GetRenderer();
         
         // setup
         //if (preRender) {
