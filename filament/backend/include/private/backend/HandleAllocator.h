@@ -181,6 +181,18 @@ public:
         return static_cast<Dp>(p);
     }
 
+    template<typename B>
+    bool is_valid(Handle<B>& handle) {
+        if (handle && isPoolHandle(handle.getId())) {
+            auto [p, tag] = handleToPointer(handle.getId());
+            uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+            auto const pNode = static_cast<typename Allocator::Node*>(p);
+            uint8_t const expectedAge = pNode[-1].age;
+            return expectedAge == age;
+        }
+        return true;
+    }
+
     template<typename Dp, typename B>
     inline typename std::enable_if_t<
             std::is_pointer_v<Dp> &&

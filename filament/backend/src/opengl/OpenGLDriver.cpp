@@ -2336,9 +2336,9 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     auto const* const pSamplers = (SamplerDescriptor const*)data.buffer;
     for (size_t i = 0, c = sb->textureUnitEntries.size(); i < c; i++) {
         GLuint samplerId = 0u;
-        const GLTexture* t = nullptr;
-        if (UTILS_LIKELY(pSamplers[i].t)) {
-            t = handle_cast<const GLTexture*>(pSamplers[i].t);
+        Handle<HwTexture> th = pSamplers[i].t;
+        if (UTILS_LIKELY(th)) {
+            GLTexture const* const t = handle_cast<const GLTexture*>(th);
             assert_invariant(t);
 
             SamplerParams params = pSamplers[i].s;
@@ -2394,7 +2394,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
             // which is not an error.
         }
 
-        sb->textureUnitEntries[i] = { t, samplerId };
+        sb->textureUnitEntries[i] = { th, samplerId };
     }
     scheduleDestroy(std::move(data));
 }

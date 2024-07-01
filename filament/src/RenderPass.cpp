@@ -671,7 +671,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
          */
         for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
             auto const& primitive = primitives[pi];
-            auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
 
@@ -684,8 +683,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.indexOffset = primitive.getIndexOffset();
             cmd.info.indexCount = primitive.getIndexCount();
             cmd.info.type = primitive.getPrimitiveType();
-            cmd.info.morphTargetBuffer = morphTargets.buffer->getHwHandle();
-            cmd.info.morphingOffset = morphTargets.offset;
+            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
+                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
+            cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 
             if constexpr (isColorPass) {
                 RenderPass::setupColorCommand(cmd, renderableVariant, mi, inverseFrontFaces);
