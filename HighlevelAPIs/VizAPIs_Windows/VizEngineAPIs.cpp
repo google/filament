@@ -188,7 +188,6 @@ auto failRet = [](const std::string& err_str, const bool _warn = false)
         return false;
     };
 
-#define MathSet(Type, Name, Src, Num) Type Name; memcpy(&Name, Src, sizeof(Type)); 
 inline float3 transformCoord(const mat4f& m, const float3& p)
 {
     float4 _p(p, 1.f);
@@ -214,9 +213,7 @@ namespace vzm
 
     void TransformPoint(const float posSrc[3], const float mat[16], float posDst[3])
     {
-        MathSet(float3, p, posSrc);
-        MathSet(mat4f, m, mat);
-        float3 _p = transformCoord(m, p);
+        float3 _p = transformCoord(*(mat4f*)mat, *(float3*)posSrc);
         memcpy(posDst, &_p, sizeof(float3));
     }
     void TransformVector(const float vecSrc[3], const float mat[16], float vecDst[3])
@@ -875,7 +872,7 @@ namespace vzm
                 vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
                 vzm::VzRenderPath* render_path = createRendePath(vid);
                 v_cam->renderPath = render_path;
-                render_path->Init(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
+                render_path->SetCanvas(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
                 render_path->UpdateVzCamera(v_cam);
             }
 
@@ -1107,29 +1104,27 @@ namespace vzm
                 }
             }
         }
-
-
     };
 #pragma endregion
 
     VzEngineApp gEngineApp;
 }
 
-#define COMP_NAME(COMP, ENTITY) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return;
-#define COMP_TRANSFORM(COMP, ENTITY, INS)  auto & COMP = gEngine->getTransformManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return; auto INS = COMP.getInstance(ENTITY);
-#define COMP_RENDERPATH(RENDERPATH)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(componentVID); if (RENDERPATH == nullptr) return; 
+#define COMP_NAME(COMP, ENTITY, FAILRET) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET;
+#define COMP_TRANSFORM(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getTransformManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
+#define COMP_RENDERPATH(RENDERPATH, FAILRET)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(componentVID); if (RENDERPATH == nullptr) return FAILRET;
 namespace vzm
 {
 #pragma region // VzBaseComp
     using namespace utils;
     std::string VzBaseComp::GetName()
     {
-        COMP_NAME(ncm, ett);
+        COMP_NAME(ncm, ett, "");
         return ncm.GetName(ett);
     }
     void VzBaseComp::SetName(const std::string& name)
     {
-        COMP_NAME(ncm, ett);
+        COMP_NAME(ncm, ett, );
         ncm.SetName(ett, name);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
@@ -1138,25 +1133,25 @@ namespace vzm
 #pragma region // VzSceneComp
     void VzSceneComp::GetWorldPosition(float v[3])
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& mat = tc.getWorldTransform(ins);
         *(float3*)v = mat[3].xyz;
     }
     void VzSceneComp::GetWorldForward(float v[3])
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& mat = tc.getWorldTransform(ins);
         *(float3*)v = mat[2].xyz; // view
     }
     void VzSceneComp::GetWorldRight(float v[3])
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& mat = tc.getWorldTransform(ins);
         *(float3*)v = mat[0].xyz;
     }
     void VzSceneComp::GetWorldUp(float v[3])
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& mat = tc.getWorldTransform(ins);
         *(float3*)v = mat[1].xyz;
     }
@@ -1166,31 +1161,31 @@ namespace vzm
         // filament math stores the column major matrix
         // logically it also uses column major matrix computation
         // c.f., glm:: uses column major matrix computation but it stores a matrix according to column major convention
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& _mat = tc.getWorldTransform(ins);
         *(mat4f*)mat = _mat;
     }
     void VzSceneComp::GetLocalTransform(float mat[16], const bool rowMajor)
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& _mat = tc.getTransform(ins);
         *(mat4f*)mat = _mat;
     }
     void VzSceneComp::GetWorldInvTransform(float mat[16], const bool rowMajor)
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& _mat = tc.getWorldTransform(ins);
         *(mat4f*)mat = inverse(_mat);
     }
     void VzSceneComp::GetLocalInvTransform(float mat[16], const bool rowMajor)
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         const math::mat4f& _mat = tc.getTransform(ins);
         *(mat4f*)mat = inverse(_mat);
     }
     void VzSceneComp::SetTransform(const float s[3], const float q[4], const float t[3], const bool additiveTransform)
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         mat4f mat_s = mat4f(), mat_r = mat4f(), mat_t = mat4f(); //c.f. mat4f(no_init)
         if (s)
         {
@@ -1210,14 +1205,14 @@ namespace vzm
     }
     void VzSceneComp::SetMatrix(const float value[16], const bool additiveTransform, const bool rowMajor)
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, );
         mat4f mat = rowMajor ? transpose(*(mat4f*)value) : *(mat4f*)value;
         tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
     VID VzSceneComp::GetParentVid()
     {
-        COMP_TRANSFORM(tc, ett, ins);
+        COMP_TRANSFORM(tc, ett, ins, INVALID_VID);
         Entity ett_parent = tc.getParent(ins);
         return ett_parent.getId();
     }
@@ -1226,14 +1221,14 @@ namespace vzm
 #pragma region // VzCamera
     void VzCamera::SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window)
     {
-        COMP_RENDERPATH(render_path);
+        COMP_RENDERPATH(render_path, );
         renderPath = render_path;
         render_path->SetCanvas(w, h, dpi, window);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
     void VzCamera::GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window)
     {
-        COMP_RENDERPATH(render_path);
+        COMP_RENDERPATH(render_path, );
         renderPath = render_path;
         render_path->GetCanvas(w, h, dpi, window);
     }
@@ -1272,7 +1267,20 @@ namespace vzm
         mat4f local = mat4f(inverse(parent2ws_d) * cs2ws_d);
         SetMatrix((float*)&local[0][0], false, false);
     }
-    void VzCamera::SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovY, const float aspectRatio);
+    void VzCamera::SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovInDegree, const float aspectRatio, const bool isVertical)
+    {
+        COMP_RENDERPATH(render_path, );
+        renderPath = render_path;
+        Camera* camera = &render_path->GetView()->getCamera();
+#if _DEBUG
+        Entity ett = Entity::import(componentVID);
+        assert(camera == gEngine->getCameraComponent(ett) && "camera pointer is mismatching!!");
+#endif
+        // aspectRatio is W / H
+        camera->setProjection(fovInDegree, aspectRatio, zNearP, zFarP, 
+            isVertical? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
     void VzCamera::GetWorldPose(float pos[3], float view[3], float up[3])
     {
         COMP_RENDERPATH(render_path);
@@ -1290,10 +1298,24 @@ namespace vzm
         if (view) *(float3*)view = float3(v);
         if (up) *(float3*)up = float3(u);
     }
-    void VzCamera::GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovY, float* aspectRatio);
+    void VzCamera::GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovInDegree, float* aspectRatio, bool isVertical)
+    {
+        COMP_RENDERPATH(render_path);
+        renderPath = render_path;
+        Camera* camera = &render_path->GetView()->getCamera();
+#if _DEBUG
+        Entity ett = Entity::import(componentVID);
+        assert(camera == gEngine->getCameraComponent(ett) && "camera pointer is mismatching!!");
+#endif
+        if (zNearP) *zNearP = camera->getNear();
+        if (zFarP) *zFarP = camera->getCullingFar();
+        //camera->g
+        if (fovInDegree) *fovInDegree = camera->getFieldOfViewInDegrees(isVertical ? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
+        if (zNearP) *zNearP = camera->getNear();
+        if (zNearP) *zNearP = camera->getNear();
+    }
 #pragma endregion
 }
-
 
 namespace vzm
 {
@@ -1706,18 +1728,18 @@ namespace vzm
         //    }
         //}
 
-        if (renderer->beginFrame(window->getSwapChain())) {
-            for (filament::View* offscreenView : mOffscreenViews) {
-                renderer->render(offscreenView);
-            }
-            for (auto const& view : window->mViews) {
-                renderer->render(view->getView());
-            }
-            renderer->endFrame();
-        }
-        else {
-            ++mSkippedFrames;
-        }
+        //if (renderer->beginFrame(window->getSwapChain())) {
+        //    for (filament::View* offscreenView : mOffscreenViews) {
+        //        renderer->render(offscreenView);
+        //    }
+        //    for (auto const& view : window->mViews) {
+        //        renderer->render(view->getView());
+        //    }
+        //    renderer->endFrame();
+        //}
+        //else {
+        //    ++mSkippedFrames;
+        //}
 
         return VZ_OK;
     }

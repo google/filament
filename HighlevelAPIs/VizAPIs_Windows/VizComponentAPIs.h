@@ -174,9 +174,9 @@ namespace vzm
 
         // Pose parameters are defined in WS (not local space)
         void SetWorldPose(const float pos[3], const float view[3], const float up[3]);
-        void SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovY, const float aspectRatio);
+        void SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovInDegree, const float aspectRatio, const bool isVertical = true);
         void GetWorldPose(float pos[3], float view[3], float up[3]);
-        void GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovY, float* aspectRatio);
+        void GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovInDegree, float* aspectRatio, bool isVertical = true);
     };
     __dojostruct VzLight : VzSceneComp
     {
