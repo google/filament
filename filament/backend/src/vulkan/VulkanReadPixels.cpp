@@ -232,7 +232,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
 
     VulkanAttachment const srcAttachment = srcTarget->getColor(0);
     VkImageSubresourceRange const srcRange = srcAttachment.getSubresourceRange();
-    srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
+    srcTexture->transitionLayout(cmdbuffer, {}, srcRange, VulkanLayout::TRANSFER_SRC);
 
     VkImageCopy const imageCopyRegion = {
         .srcSubresource = {
@@ -268,7 +268,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
             imgutil::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
 
     // Restore the source image layout.
-    srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::COLOR_ATTACHMENT);
+    srcTexture->transitionLayout(cmdbuffer, {}, srcRange, VulkanLayout::COLOR_ATTACHMENT);
 
     vkEndCommandBuffer(cmdbuffer);
 

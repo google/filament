@@ -88,6 +88,47 @@ TEST(ArgBufferFixup, TextureAndSampler) {
     MetalArgumentBuffer::destroy(&argBuffer);
 }
 
+TEST(ArgBufferFixup, Buffer) {
+    auto argBuffer =
+            MetalArgumentBuffer::Builder()
+                    .name("myArgumentBuffer")
+                    .buffer(0, "FrameUniforms", "frameUniforms")
+                    .build();
+    auto argBufferStr = argBuffer->getMsl();
+
+    const std::string expected =
+            "struct FrameUniforms;\n"
+            "struct myArgumentBuffer {\n"
+            "constant FrameUniforms* frameUniforms [[id(0)]];\n"
+            "}";
+
+    EXPECT_EQ(argBuffer->getMsl(), expected);
+
+    MetalArgumentBuffer::destroy(&argBuffer);
+}
+
+TEST(ArgBufferFixup, MultipleBuffers) {
+    auto argBuffer =
+            MetalArgumentBuffer::Builder()
+                    .name("myArgumentBuffer")
+                    .buffer(0, "FrameUniforms", "frameUniforms")
+                    .buffer(1, "ObjectUniforms", "objectUniforms")
+                    .build();
+    auto argBufferStr = argBuffer->getMsl();
+
+    const std::string expected =
+            "struct FrameUniforms;\n"
+            "struct ObjectUniforms;\n"
+            "struct myArgumentBuffer {\n"
+            "constant FrameUniforms* frameUniforms [[id(0)]];\n"
+            "constant ObjectUniforms* objectUniforms [[id(1)]];\n"
+            "}";
+
+    EXPECT_EQ(argBuffer->getMsl(), expected);
+
+    MetalArgumentBuffer::destroy(&argBuffer);
+}
+
 TEST(ArgBufferFixup, TextureAndSamplerMS) {
     auto argBuffer =
             MetalArgumentBuffer::Builder()
@@ -114,17 +155,20 @@ TEST(ArgBufferFixup, Sorted) {
                     .name("myArgumentBuffer")
                     .sampler(3, "samplerB")
                     .texture(0, "textureA", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, false)
+                    .buffer(4, "FrameUniforms", "frameUniforms")
                     .texture(2, "textureB", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, false)
                     .sampler(1, "samplerA")
                     .build();
     auto argBufferStr = argBuffer->getMsl();
 
     const std::string expected =
+            "struct FrameUniforms;\n"
             "struct myArgumentBuffer {\n"
             "texture2d<float> textureA [[id(0)]];\n"
             "sampler samplerA [[id(1)]];\n"
             "texture2d<float> textureB [[id(2)]];\n"
             "sampler samplerB [[id(3)]];\n"
+            "constant FrameUniforms* frameUniforms [[id(4)]];\n"
             "}";
 
     EXPECT_EQ(argBuffer->getMsl(), expected);

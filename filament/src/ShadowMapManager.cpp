@@ -353,7 +353,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     ShadowMap::prepareTime(transaction, engine, userTime);
                     ShadowMap::prepareShadowMapping(transaction,
                             vsmShadowOptions.highPrecision);
-                    shadowMap.commit(transaction, driver);
+                    shadowMap.commit(transaction, engine, driver);
 
                     // updatePrimitivesLod must be run before RenderPass::appendCommands.
                     view.updatePrimitivesLod(engine,
@@ -364,9 +364,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     RenderPass const pass = passBuilder
                             .camera(cameraInfo)
                             .visibilityMask(entry.visibilityMask)
-                            .geometry(scene->getRenderableData(),
-                                    entry.range,
-                                    view.getRenderableUBO())
+                            .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
                             .build(engine);
 
@@ -520,9 +518,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
             // So generate the mipmaps for each layer
             if (textureRequirements.levels > 1) {
                 for (size_t level = 0; level < textureRequirements.levels - 1; level++) {
-                    const bool finalize = level == textureRequirements.levels - 2;
-                    ppm.vsmMipmapPass(fg, prepareShadowPass->shadows, layer, level,
-                            vsmClearColor, finalize);
+                    ppm.vsmMipmapPass(fg, prepareShadowPass->shadows, layer, level, vsmClearColor);
                 }
             }
         }

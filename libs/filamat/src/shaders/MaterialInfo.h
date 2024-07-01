@@ -19,8 +19,6 @@
 
 #include <backend/DriverEnums.h>
 
-#include "../SamplerBindingMap.h"
-
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/BufferInterfaceBlock.h>
@@ -66,7 +64,6 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::BufferInterfaceBlock uib;
     filament::SamplerInterfaceBlock sib;
     filament::SubpassInfo subpass;
-    filament::SamplerBindingMap samplerBindings;
     filament::ShaderQuality quality;
     filament::backend::FeatureLevel featureLevel;
     filament::backend::StereoscopicType stereoscopicType;

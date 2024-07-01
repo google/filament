@@ -21,12 +21,18 @@
 
 #include <private/filament/EngineEnums.h>
 
+#include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <tuple>
+#include <utility>
+
+#include <stdint.h>
+
 namespace filament {
-class SamplerBindingMap;
 class SamplerInterfaceBlock;
 class BufferInterfaceBlock;
 struct SubpassInfo;
@@ -104,37 +110,9 @@ private:
 
 // ------------------------------------------------------------------------------------------------
 
-class MaterialUniformBlockBindingsChunk final : public Chunk {
-    using Container = utils::FixedCapacityVector<
-            std::pair<std::string_view, filament::UniformBindingPoints>>;
-public:
-    explicit MaterialUniformBlockBindingsChunk(Container list);
-    ~MaterialUniformBlockBindingsChunk() final = default;
-
-private:
-    void flatten(Flattener&) final;
-
-    Container mBindingList;
-};
-
-// ------------------------------------------------------------------------------------------------
-
-class MaterialSamplerBlockBindingChunk final : public Chunk {
-public:
-    explicit MaterialSamplerBlockBindingChunk(filament::SamplerBindingMap const& samplerBindings);
-    ~MaterialSamplerBlockBindingChunk() final = default;
-
-private:
-    void flatten(Flattener &) final;
-
-    filament::SamplerBindingMap const& mSamplerBindings;
-};
-
-// ------------------------------------------------------------------------------------------------
-
 class MaterialBindingUniformInfoChunk final : public Chunk {
-    using Container = FixedCapacityVector<
-            std::pair<filament::UniformBindingPoints, filament::backend::Program::UniformInfo>>;
+    using Container = FixedCapacityVector<std::tuple<
+            uint8_t, utils::CString, filament::backend::Program::UniformInfo>>;
 public:
     explicit MaterialBindingUniformInfoChunk(Container list) noexcept;
     ~MaterialBindingUniformInfoChunk() final = default;
@@ -157,6 +135,38 @@ private:
     void flatten(Flattener &) final;
 
     Container mAttributeInfo;
+};
+
+// ------------------------------------------------------------------------------------------------
+
+class MaterialDescriptorBindingsChuck final : public Chunk {
+    using Container = filament::SamplerInterfaceBlock;
+public:
+    explicit MaterialDescriptorBindingsChuck(Container const& sib,
+            filament::backend::DescriptorSetLayout const& perViewLayout) noexcept;
+    ~MaterialDescriptorBindingsChuck() final = default;
+
+private:
+    void flatten(Flattener&) final;
+
+    Container const& mSamplerInterfaceBlock;
+    filament::backend::DescriptorSetLayout mPerViewLayout;
+};
+
+// ------------------------------------------------------------------------------------------------
+
+class MaterialDescriptorSetLayoutChunk final : public Chunk {
+    using Container = filament::SamplerInterfaceBlock;
+public:
+    explicit MaterialDescriptorSetLayoutChunk(Container const& sib,
+            filament::backend::DescriptorSetLayout const& perViewLayout) noexcept;
+    ~MaterialDescriptorSetLayoutChunk() final = default;
+
+private:
+    void flatten(Flattener&) final;
+
+    Container const& mSamplerInterfaceBlock;
+    filament::backend::DescriptorSetLayout mPerViewLayout;
 };
 
 } // namespace filamat

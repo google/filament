@@ -84,7 +84,7 @@ public:
     FixedCapacityVector() = default;
 
     explicit FixedCapacityVector(const allocator_type& allocator) noexcept
-            : mCapacityAllocator({}, allocator) {
+            : mCapacityAllocator(0, allocator) {
     }
 
     explicit FixedCapacityVector(size_type size, const allocator_type& allocator = allocator_type())

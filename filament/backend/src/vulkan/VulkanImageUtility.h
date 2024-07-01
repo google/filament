@@ -135,7 +135,9 @@ constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
     }
 }
 
-void transitionLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
+// Returns true if a transition has been added to the command buffer, false otherwis (where there is
+// no transition necessary).
+bool transitionLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
 
 } // namespace imgutil
 

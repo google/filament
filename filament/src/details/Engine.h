@@ -30,6 +30,8 @@
 #include "components/TransformManager.h"
 #include "components/RenderableManager.h"
 
+#include "ds/DescriptorSetLayout.h"
+
 #include "details/BufferObject.h"
 #include "details/Camera.h"
 #include "details/ColorGrading.h"
@@ -423,6 +425,18 @@ public:
         return mHwVertexBufferInfoFactory;
     }
 
+    DescriptorSetLayout const& getPerViewDescriptorSetLayoutDepthVariant() const noexcept {
+        return mPerViewDescriptorSetLayoutDepthVariant;
+    }
+
+    DescriptorSetLayout const& getPerViewDescriptorSetLayoutSsrVariant() const noexcept {
+        return mPerViewDescriptorSetLayoutSsrVariant;
+    }
+
+    DescriptorSetLayout const& getPerRenderableDescriptorSetLayout() const noexcept {
+        return mPerRenderableDescriptorSetLayout;
+    }
+
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
@@ -492,6 +506,9 @@ private:
     FCameraManager mCameraManager;
     ResourceAllocator* mResourceAllocator = nullptr;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
+    DescriptorSetLayout mPerViewDescriptorSetLayoutDepthVariant;
+    DescriptorSetLayout mPerViewDescriptorSetLayoutSsrVariant;
+    DescriptorSetLayout mPerRenderableDescriptorSetLayout;
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
     ResourceList<FRenderer> mRenderers{ "Renderer" };

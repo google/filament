@@ -50,7 +50,7 @@ vec4 fog(vec4 color, highp vec3 view) {
         // a rigid transform, so we can take the transpose instead of the inverse, and for the
         // same reason we can use it directly instead of taking the cof() to transform a vector.
         highp mat3 worldFromUserWorldMatrix = transpose(mat3(frameUniforms.userWorldFromWorldMatrix));
-        fogColor *= textureLod(light_fog, worldFromUserWorldMatrix * view, lod).rgb;
+        fogColor *= textureLod(sampler0_fog, worldFromUserWorldMatrix * view, lod).rgb;
     }
 #endif
 

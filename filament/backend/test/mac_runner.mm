@@ -53,8 +53,7 @@ test::NativeView getNativeView() {
     nativeView.width = static_cast<size_t>(drawableSize.width);
     nativeView.height = static_cast<size_t>(drawableSize.height);
 
-    test::runTests();
-    // exit(runTests());
+    exit(test::runTests());
 }
 
 - (NSView*)createView {

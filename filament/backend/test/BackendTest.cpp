@@ -112,9 +112,10 @@ void BackendTest::fullViewport(Viewport& viewport) {
 }
 
 void BackendTest::renderTriangle(
-        filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
-        filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
-        filament::backend::Handle<filament::backend::HwProgram> program) {
+        PipelineLayout const& pipelineLayout,
+        Handle<filament::backend::HwRenderTarget> renderTarget,
+        Handle<filament::backend::HwSwapChain> swapChain,
+        Handle<filament::backend::HwProgram> program) {
     RenderPassParams params = {};
     fullViewport(params);
     params.flags.clear = TargetBufferFlags::COLOR;
@@ -123,11 +124,15 @@ void BackendTest::renderTriangle(
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
     params.viewport.width = 512;
-    renderTriangle(renderTarget, swapChain, program, params);
+    renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);
 }
 
-void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
-        Handle<HwSwapChain> swapChain, Handle<HwProgram> program, const RenderPassParams& params) {
+void BackendTest::renderTriangle(
+        PipelineLayout const& pipelineLayout,
+        Handle<HwRenderTarget> renderTarget,
+        Handle<HwSwapChain> swapChain,
+        Handle<HwProgram> program,
+        const RenderPassParams& params) {
     auto& api = getDriverApi();
 
     TrianglePrimitive triangle(api);
@@ -138,6 +143,7 @@ void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
 
     PipelineState state;
     state.program = program;
+    state.pipelineLayout = pipelineLayout;
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;

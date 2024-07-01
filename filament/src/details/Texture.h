@@ -19,11 +19,16 @@
 
 #include "downcast.h"
 
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <filament/Texture.h>
 
 #include <utils/compiler.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -38,6 +43,7 @@ public:
     void terminate(FEngine& engine);
 
     backend::Handle<backend::HwTexture> getHwHandle() const noexcept { return mHandle; }
+    backend::Handle<backend::HwTexture> getHwHandleForSampling() const noexcept;
 
     size_t getWidth(size_t level = 0) const noexcept;
     size_t getHeight(size_t level = 0) const noexcept;
@@ -114,10 +120,25 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
+    bool canHaveTextureView() const noexcept;
+    void updateLodRange(uint8_t level) noexcept;
+
 private:
     friend class Texture;
-    FStream* mStream = nullptr;
+    struct LodRange {
+        // 0,0 means lod-range unset (all levels are available)
+        uint8_t first = 0;  // first lod
+        uint8_t last = 0;   // 1 past last lod
+        bool empty() const noexcept { return first == last; }
+    };
+    void updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept;
+
     backend::Handle<backend::HwTexture> mHandle;
+    mutable backend::Handle<backend::HwTexture> mHandleForSampling;
+    backend::DriverApi* mDriver = nullptr; // this is only needed for getHwHandleForSampling()
+    LodRange mLodRange{};
+    mutable LodRange mActiveLodRange{};
+
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
@@ -125,9 +146,11 @@ private:
     Sampler mTarget = Sampler::SAMPLER_2D;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
-    Usage mUsage = Usage::DEFAULT;
-};
 
+    Usage mUsage = Usage::DEFAULT;
+    // there is 7 bytes of padding here
+    FStream* mStream = nullptr; // only needed for streaming textures
+};
 
 FILAMENT_DOWNCAST(Texture)
 

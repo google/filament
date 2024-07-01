@@ -40,12 +40,15 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
     // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
     // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
     // This won't work for SSBOs, since they are read/write.
+
+    /*
     if (size <= 4 * 1024 && bindingType != BufferObjectBinding::SHADER_STORAGE &&
             usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
         mBuffer = nil;
         mCpuBuffer = malloc(size);
         return;
     }
+    */
 
     // Otherwise, we allocate a private GPU buffer.
     {
@@ -94,7 +97,7 @@ void MetalBuffer::copyIntoBufferUnsynchronized(void* src, size_t size, size_t by
     copyIntoBuffer(src, size, byteOffset);
 }
 
-id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
+id<MTLBuffer> MetalBuffer::getGpuBufferForDraw() noexcept {
     // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
     // separately.
     if (mCpuBuffer) {
@@ -137,7 +140,7 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncod
         }
         // getGpuBufferForDraw() might return nil, which means there isn't a device allocation for
         // this buffer. In this case, we'll bind the buffer below with the CPU-side memory.
-        id<MTLBuffer> gpuBuffer = buffer->getGpuBufferForDraw(cmdBuffer);
+        id<MTLBuffer> gpuBuffer = buffer->getGpuBufferForDraw();
         if (!gpuBuffer) {
             continue;
         }

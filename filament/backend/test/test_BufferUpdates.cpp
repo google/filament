@@ -31,7 +31,7 @@ layout(location = 0) in vec4 mesh_position;
 
 layout(location = 0) out uvec4 indices;
 
-uniform Params {
+layout(binding = 0, set = 1) uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
     highp vec4 color;
@@ -51,7 +51,7 @@ std::string fragment (R"(#version 450 core
 
 layout(location = 0) out vec4 fragColor;
 
-uniform Params {
+layout(binding = 0, set = 1) uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
     highp vec4 color;
@@ -89,20 +89,36 @@ TEST_F(BackendTest, VertexBufferUpdate) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        auto& api = getDriverApi();
+
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = createSwapChain();
-        getDriverApi().makeCurrent(swapChain, swapChain);
+        api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(getDriverApi());
-        auto program = getDriverApi().createProgram(std::move(p));
+        filamat::DescriptorSets descriptors;
+        descriptors[1] = { { "Params",
+                { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0 }, {} } };
+        ShaderGenerator shaderGen(
+                vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
+        Program p = shaderGen.getProgram(api);
+        p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
+        auto program = api.createProgram(std::move(p));
 
-        auto defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+                {{
+                         DescriptorType::UNIFORM_BUFFER,
+                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                         DescriptorFlags::NONE, 0
+                 }}});
+
+        DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+
+        auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
         // To test large buffers (which exercise a different code path) create an extra large
         // buffer. Only the first 3 vertices will be used.
-        TrianglePrimitive triangle(getDriverApi(), largeBuffers);
+        TrianglePrimitive triangle(api, largeBuffers);
 
         RenderPassParams params = {};
         fullViewport(params);
@@ -113,6 +129,7 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 
         PipelineState state;
         state.program = program;
+        state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -121,11 +138,13 @@ TEST_F(BackendTest, VertexBufferUpdate) {
         // Create a uniform buffer.
         // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
         // GPU buffer, which is more interesting to test.
-        auto ubuffer = getDriverApi().createBufferObject(sizeof(MaterialParams) + 64,
+        auto ubuffer = api.createBufferObject(sizeof(MaterialParams) + 64,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-        getDriverApi().bindUniformBuffer(0, ubuffer);
 
-        getDriverApi().startCapture(0);
+        api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
+        api.bindDescriptorSet(descriptorSet, 1, {});
+
+        api.startCapture(0);
 
         // Upload uniforms.
         {
@@ -139,11 +158,11 @@ TEST_F(BackendTest, VertexBufferUpdate) {
                 delete sp;
             };
             BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-            getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
+            api.updateBufferObject(ubuffer, std::move(bd), 64);
         }
 
-        getDriverApi().makeCurrent(swapChain, swapChain);
-        getDriverApi().beginFrame(0, 0, 0);
+        api.makeCurrent(swapChain, swapChain);
+        api.beginFrame(0, 0, 0);
 
         // Draw 10 triangles, updating the vertex buffer / index buffer each time.
         size_t triangleIndex = 0;
@@ -171,22 +190,25 @@ TEST_F(BackendTest, VertexBufferUpdate) {
                 params.flags.discardStart = TargetBufferFlags::NONE;
             }
 
-            getDriverApi().beginRenderPass(defaultRenderTarget, params);
-            getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-            getDriverApi().endRenderPass();
+            api.beginRenderPass(defaultRenderTarget, params);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.endRenderPass();
 
             triangleIndex++;
         }
 
-        getDriverApi().flush();
-        getDriverApi().commit(swapChain);
-        getDriverApi().endFrame(0);
+        api.flush();
+        api.commit(swapChain);
+        api.endFrame(0);
 
-        getDriverApi().stopCapture(0);
+        api.stopCapture(0);
 
-        getDriverApi().destroyProgram(program);
-        getDriverApi().destroySwapChain(swapChain);
-        getDriverApi().destroyRenderTarget(defaultRenderTarget);
+        api.destroyProgram(program);
+        api.destroySwapChain(swapChain);
+        api.destroyDescriptorSet(descriptorSet);
+        api.destroyDescriptorSetLayout(descriptorSetLayout);
+        api.destroyBufferObject(ubuffer);
+        api.destroyRenderTarget(defaultRenderTarget);
     }
 
     executeCommands();
@@ -195,27 +217,45 @@ TEST_F(BackendTest, VertexBufferUpdate) {
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
 TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
+    auto& api = getDriverApi();
+
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = createSwapChain();
-    getDriverApi().makeCurrent(swapChain, swapChain);
+    api.makeCurrent(swapChain, swapChain);
 
     // Create a program.
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program p = shaderGen.getProgram(getDriverApi());
-    p.uniformBlockBindings({{"params", 1}});
-    auto program = getDriverApi().createProgram(std::move(p));
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "Params",
+            { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::FRAGMENT, 0 }, {} } };
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
+    Program p = shaderGen.getProgram(api);
+    p.descriptorBindings(1, {{ "Params", DescriptorType::UNIFORM_BUFFER, 0 }});
+    auto program = api.createProgram(std::move(p));
+
+    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+            {{
+                     DescriptorType::UNIFORM_BUFFER,
+                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                     DescriptorFlags::NONE, 0
+             }}});
+
+    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+
 
     // Create a uniform buffer.
     // We use STATIC here, even though the buffer is updated, to force the Metal backend to use a
     // GPU buffer, which is more interesting to test.
-    auto ubuffer = getDriverApi().createBufferObject(sizeof(MaterialParams) + 64,
+    auto ubuffer = api.createBufferObject(sizeof(MaterialParams) + 64,
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    getDriverApi().bindUniformBuffer(0, ubuffer);
+
+    api.updateDescriptorSetBuffer(descriptorSet, 0, ubuffer, 0, sizeof(MaterialParams) + 64);
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Create a render target.
-    auto colorTexture = getDriverApi().createTexture(SamplerType::SAMPLER_2D, 1,
+    auto colorTexture = api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT);
-    auto renderTarget = getDriverApi().createRenderTarget(
+    auto renderTarget = api.createRenderTarget(
             TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{colorTexture}}, {}, {});
 
     // Upload uniforms for the first triangle.
@@ -230,7 +270,7 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
             delete sp;
         };
         BufferDescriptor bd(tmp, sizeof(MaterialParams), cb);
-        getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64);
+        api.updateBufferObject(ubuffer, std::move(bd), 64);
     }
 
     RenderPassParams params = {};
@@ -240,7 +280,8 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
     params.viewport.width = 512;
-    renderTriangle(renderTarget, swapChain, program, params);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
+            renderTarget, swapChain, program, params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
     // color.b, color.a, offset.x, and offset.y.
@@ -255,29 +296,32 @@ TEST_F(BackendTest, BufferObjectUpdateWithOffset) {
             delete sp;
         };
         BufferDescriptor bd((char*)tmp + offsetof(MaterialParams, color.b), sizeof(float) * 4, cb);
-        getDriverApi().updateBufferObject(ubuffer, std::move(bd), 64 + offsetof(MaterialParams, color.b));
+        api.updateBufferObject(ubuffer, std::move(bd), 64 + offsetof(MaterialParams, color.b));
     }
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;
-    renderTriangle(renderTarget, swapChain, program, params);
+    renderTriangle({{ DescriptorSetLayoutHandle{}, descriptorSetLayout }},
+            renderTarget, swapChain, program, params);
 
     static const uint32_t expectedHash = 91322442;
     readPixelsAndAssertHash(
             "BufferObjectUpdateWithOffset", 512, 512, renderTarget, expectedHash, true);
 
-    getDriverApi().flush();
-    getDriverApi().commit(swapChain);
-    getDriverApi().endFrame(0);
+    api.flush();
+    api.commit(swapChain);
+    api.endFrame(0);
 
-    getDriverApi().destroyProgram(program);
-    getDriverApi().destroySwapChain(swapChain);
-    getDriverApi().destroyBufferObject(ubuffer);
-    getDriverApi().destroyRenderTarget(renderTarget);
-    getDriverApi().destroyTexture(colorTexture);
+    api.destroyProgram(program);
+    api.destroySwapChain(swapChain);
+    api.destroyDescriptorSet(descriptorSet);
+    api.destroyDescriptorSetLayout(descriptorSetLayout);
+    api.destroyBufferObject(ubuffer);
+    api.destroyRenderTarget(renderTarget);
+    api.destroyTexture(colorTexture);
 
     // This ensures all driver commands have finished before exiting the test.
-    getDriverApi().finish();
+    api.finish();
 
     executeCommands();
 

@@ -17,21 +17,24 @@
 #ifndef TNT_FILAMENT_DETAILS_VIEW_H
 #define TNT_FILAMENT_DETAILS_VIEW_H
 
-#include <filament/View.h>
-
-#include <filament/Renderer.h>
-
 #include "downcast.h"
 
 #include "Allocators.h"
+#include "Culler.h"
 #include "FrameHistory.h"
 #include "FrameInfo.h"
 #include "Froxelizer.h"
-#include "PerViewUniforms.h"
 #include "PIDController.h"
-#include "ShadowMap.h"
 #include "ShadowMapManager.h"
-#include "TypedUniformBuffer.h"
+
+#include "ds/ColorPassDescriptorSet.h"
+#include "ds/DescriptorSet.h"
+#include "ds/PostProcessDescriptorSet.h"
+#include "ds/SsrPassDescriptorSet.h"
+#include "ds/TypedUniformBuffer.h"
+
+#include "components/LightManager.h"
+#include "components/RenderableManager.h"
 
 #include "details/Camera.h"
 #include "details/ColorGrading.h"
@@ -39,13 +42,20 @@
 #include "details/Scene.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 
-#include "private/backend/DriverApi.h"
+#include <private/backend/DriverApi.h>
 
+#include <filament/Frustum.h>
+#include <filament/Renderer.h>
+#include <filament/View.h>
+
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
+#include <utils/Entity.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -55,6 +65,10 @@
 
 #include <array>
 #include <memory>
+#include <new>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 class JobSystem;
@@ -94,8 +108,6 @@ public:
     void prepare(FEngine& engine, backend::DriverApi& driver, RootArenaScope& rootArenaScope,
             filament::Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
-
-    void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
@@ -157,9 +169,8 @@ public:
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadowMapping(bool highPrecision) const noexcept;
 
-    void cleanupRenderPasses() const noexcept;
-    void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
+    void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
@@ -394,7 +405,7 @@ public:
     }
 
     backend::Handle<backend::HwRenderTarget> getRenderTargetHandle() const noexcept {
-        backend::Handle<backend::HwRenderTarget> kEmptyHandle;
+        backend::Handle<backend::HwRenderTarget> const kEmptyHandle;
         return mRenderTarget == nullptr ? kEmptyHandle : mRenderTarget->getHwHandle();
     }
 
@@ -409,8 +420,7 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    PerViewUniforms const& getPerViewUniforms() const noexcept { return mPerViewUniforms; }
-    PerViewUniforms& getPerViewUniforms() noexcept { return mPerViewUniforms; }
+    ColorPassDescriptorSet& getColorPassDescriptorSet() noexcept { return mColorPassDescriptorSet; }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -437,8 +447,8 @@ public:
         return mFogEntity;
     }
 
-    backend::Handle<backend::HwBufferObject> getRenderableUBO() const noexcept {
-        return mRenderableUbh;
+    TypedUniformBuffer<PerViewUib>& getFrameUniforms() noexcept {
+        return mUniforms;
     }
 
 private:
@@ -453,7 +463,7 @@ private:
         // TODO: use a small pool
         static FPickingQuery* get(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
                 View::PickingQueryResultCallback callback) noexcept {
-            return new FPickingQuery(x, y, handler, callback);
+            return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
         static void put(FPickingQuery* pQuery) noexcept {
             delete pQuery;
@@ -499,10 +509,11 @@ private:
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
+    filament::DescriptorSet mCommonRenderableDescriptorSet;
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
-    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should alaways be non-null
+    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should always be non-null
     // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
 
@@ -548,7 +559,8 @@ private:
 
     RenderQuality mRenderQuality;
 
-    mutable PerViewUniforms mPerViewUniforms;
+    mutable TypedUniformBuffer<PerViewUib> mUniforms;
+    mutable ColorPassDescriptorSet mColorPassDescriptorSet;
 
     mutable FrameHistory mFrameHistory{};
 

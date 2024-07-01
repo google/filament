@@ -101,6 +101,14 @@ struct HwProgram : public HwBase {
     HwProgram() noexcept = default;
 };
 
+struct HwDescriptorSetLayout : public HwBase {
+    HwDescriptorSetLayout() noexcept = default;
+};
+
+struct HwDescriptorSet : public HwBase {
+    HwDescriptorSet() noexcept = default;
+};
+
 struct HwSamplerGroup : public HwBase {
     HwSamplerGroup() noexcept = default;
 };

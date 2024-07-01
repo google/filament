@@ -21,11 +21,19 @@
 
 #include "gl_headers.h"
 
+#include <backend/Handle.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
 #include <stdint.h>
 
 namespace filament::backend {
+
+struct GLTextureRef {
+    GLTextureRef() = default;
+    uint16_t count = 1;
+    int8_t baseLevel = 127;
+    int8_t maxLevel = -1;
+};
 
 struct GLTexture : public HwTexture {
     using HwTexture::HwTexture;
@@ -45,7 +53,7 @@ struct GLTexture : public HwTexture {
         uint8_t sidecarSamples  : 4;
         uint8_t reserved1       : 3;
     } gl;
-
+    mutable Handle<GLTextureRef> ref;
     OpenGLPlatform::ExternalTexture* externalTexture = nullptr;
 };
 

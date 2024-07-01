@@ -223,12 +223,17 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
 
     for (uint64_t i = 0; i < sibCount; i++) {
         CString fieldName;
+        uint8_t fieldBinding;
         uint8_t fieldType;
         uint8_t fieldFormat;
         uint8_t fieldPrecision;
         bool fieldMultisample;
 
         if (!sib.read(&fieldName)) {
+            return false;
+        }
+
+        if (!sib.read(&fieldBinding)) {
             return false;
         }
 
@@ -249,6 +254,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
 
         text << "    "
                 << setw(alignment) << fieldName.c_str()
+                << setw(shortAlignment) << +fieldBinding
                 << setw(shortAlignment) << toString(SamplerType(fieldType))
                 << setw(shortAlignment) << toString(Precision(fieldPrecision))
                 << toString(SamplerFormat(fieldFormat))
