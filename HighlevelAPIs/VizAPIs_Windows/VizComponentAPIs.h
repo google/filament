@@ -136,8 +136,8 @@ namespace vzm
         TimeStamp timeStamp = {}; // will be automatically set 
         ParamMap<std::string> attributes;
 
-        VID GetName();
-        VID SetName(const std::string& name);
+        std::string GetName();
+        void SetName(const std::string& name);
     };
     __dojostruct VzSceneComp : VzBaseComp
     {
@@ -147,15 +147,14 @@ namespace vzm
         void GetWorldForward(float v[3]);
         void GetWorldRight(float v[3]);
         void GetWorldUp(float v[3]);
-
-        void GetLocalTransform(float mat[16], const bool rowMajor = false);
         void GetWorldTransform(float mat[16], const bool rowMajor = false);
-        void GetLocalInvTransform(float mat[16], const bool rowMajor = false);
         void GetWorldInvTransform(float mat[16], const bool rowMajor = false);
 
-        void SetTranslate(const float value[3]);
-        void SetScale(const float value[3]);
-        void SetQuaternion(const float value[4]);
+        void GetLocalTransform(float mat[16], const bool rowMajor = false);
+        void GetLocalInvTransform(float mat[16], const bool rowMajor = false);
+
+        // local transforms
+        void SetTransform(const float s[3] = nullptr, const float q[4] = nullptr, const float t[3] = nullptr, const bool additiveTransform = false);
         void SetMatrix(const float value[16], const bool additiveTransform = false, const bool rowMajor = false);
 
         VID GetParentVid();
@@ -170,13 +169,14 @@ namespace vzm
     };
     __dojostruct VzCamera : VzSceneComp, VzRenderer
     {
+        void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
+        void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
+
         // Pose parameters are defined in WS (not local space)
-        void SetPose(const float pos[3], const float view[3], const float up[3]);
+        void SetWorldPose(const float pos[3], const float view[3], const float up[3]);
         void SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovY, const float aspectRatio);
-        void SetCanvasSize(const float w, const float h, const float dpi);
-        void GetPose(float pos[3], float view[3], float up[3]);
+        void GetWorldPose(float pos[3], float view[3], float up[3]);
         void GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovY, float* aspectRatio);
-        void GetCanvasSize(float* w, float* h, float* dpi);
     };
     __dojostruct VzLight : VzSceneComp
     {

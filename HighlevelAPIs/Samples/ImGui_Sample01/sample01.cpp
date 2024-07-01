@@ -405,7 +405,7 @@ int main(int, char**)
     VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
     vzm::AppendSceneComponentTo(aid, sid);
     vzm::AppendSceneComponentTo(lid, sid);
-    vzm::AppendSceneComponentTo(cid, sid); // optional
+    vzm::AppendSceneComponentTo(cid, sid);
     vzm::DeinitEngineLib();
 
     glfwSetErrorCallback(glfw_error_callback);

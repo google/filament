@@ -75,6 +75,15 @@ namespace vzm
             }
             return std::string(getName(ins));
         }
+        void SetName(utils::Entity ett, const std::string& name)
+        {
+            auto ins = getInstance(ett);
+            if (ins.asValue() == 0)
+            {
+                return;
+            }
+            setName(ins, name.c_str());
+        }
         static VzNameCompManager& Get() noexcept
         {
             static VzNameCompManager* ncm = new (std::nothrow) VzNameCompManager(utils::EntityManager::get());

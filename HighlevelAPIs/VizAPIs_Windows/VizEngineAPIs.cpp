@@ -9,6 +9,8 @@
 #include <filament/LightManager.h>
 #include <filament/Camera.h>
 #include <filament/Material.h>
+#include <filament/Renderer.h>
+#include <filament/SwapChain.h>
 #include <filament/RenderableManager.h>
 #include <filament/MaterialInstance.h>
 #include <filament/TransformManager.h>
@@ -29,10 +31,13 @@
 #include "../../VisualStudio/samples/generated/resources/resources.h"
 #include "../../VisualStudio/samples/generated/resources/monkey.h"
 
+#include <math/mathfwd.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 #include <math/mat3.h>
+#include <math/mat4.h>
 #include <math/norm.h>
+#include <math/quat.h>
 
 #include "CustomComponents.h"
 #include "backend/platforms/VulkanPlatform.h" // requires blueVK.h
@@ -191,10 +196,10 @@ inline float3 transformCoord(const mat4f& m, const float3& p)
     return float3(_p.x / _p.w, _p.y / _p.w, _p.z / _p.w);
 }
 
-//inline float3 transformVec(const mat3f& m, const float3& v)
-//{
-//    return m * v;
-//}
+inline float3 transformVec(const mat3f& m, const float3& v)
+{
+    return m * v;
+}
 
 static Config gConfig;
 static Engine::Config gEngineConfig = {};
@@ -204,7 +209,7 @@ static filament::SwapChain* gDummySwapChain = nullptr;
 
 namespace vzm
 {
-
+    vzm::Timer vTimer;
     std::atomic_bool profileFrameFinished = { true };
 
     void TransformPoint(const float posSrc[3], const float mat[16], float posDst[3])
@@ -245,23 +250,12 @@ namespace vzm
 #pragma region // VZM DATA STRUCTURES
     struct VzCanvas
     {
-        uint32_t width = 0;
-        uint32_t height = 0;
-        float dpi = 96;
+    protected:
+        uint32_t width_ = CANVAS_INIT_W;
+        uint32_t height_ = CANVAS_INIT_H;
+        float dpi_ = CANVAS_INIT_DPI;
         float scaling = 1; // custom DPI scaling factor (optional)
-
-        // Create a canvas from physical measurements
-        inline void Init(uint32_t width, uint32_t height, float dpi = 96)
-        {
-            this->width = width;
-            this->height = height;
-            this->dpi = dpi;
-        }
-        // Copy canvas from other canvas
-        inline void Init(const VzCanvas& other)
-        {
-            *this = other;
-        }
+        void* nativeWindow_ = nullptr;
     };
 
     // note that renderPath involves 
@@ -272,25 +266,45 @@ namespace vzm
 
         uint32_t prevWidth_ = 0;
         uint32_t prevHeight_ = 0;
-        float prevDpi_ = 96;
+        float prevDpi_ = 0;
+        void* prevNativeWindow_ = nullptr;
         bool prevColorspaceConversionRequired_ = false;
 
         VzCamera* vzCam_ = nullptr;
         TimeStamp timeStampUpdate_ = {};
 
+        float targetFrameRate_ = 60.f;
 
         bool colorspaceConversionRequired_ = false;
         uint64_t colorSpace_ = SWAP_CHAIN_CONFIG_SRGB_COLORSPACE; // swapchain color space
-
+        
         // note "view" involves
         // 1. camera
         // 2. scene
         filament::View* view_ = nullptr;
         filament::SwapChain* swapChain_ = nullptr;
+        filament::Renderer* renderer_ = nullptr;
 
         void resize()
         {
-            // refer to configureCamerasForWindow();
+            bool resize = width_ != prevWidth_ || height_ != prevHeight_ || dpi_ != prevDpi_;
+            if (nativeWindow_ == prevNativeWindow_ && !resize)
+            {
+                return;
+            }
+
+            // filament will handle this resizing process internally !?
+            // ??? // 만약 그렇다면, ... window 에 따라 offscreen 이냐 아니냐로 재생성 처리.
+            gEngine->destroy(swapChain_);
+            if (nativeWindow_ == nullptr)
+            {
+                swapChain_ = gEngine->createSwapChain(width_, height_);
+            }
+            else
+            {
+                swapChain_ = gEngine->createSwapChain(
+                    nativeWindow_, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+            }
         }
 
         void tryResizeRenderTargets()
@@ -300,18 +314,16 @@ namespace vzm
 
             colorspaceConversionRequired_ = colorSpace_ != SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
 
-            bool requireUpdateRenderTarget = prevWidth_ != width || prevHeight_ != height || prevDpi_ != dpi
+            bool requireUpdateRenderTarget = prevWidth_ != width_ || prevHeight_ != height_ || prevDpi_ != dpi_
                 || prevColorspaceConversionRequired_ != colorspaceConversionRequired_;
             if (!requireUpdateRenderTarget)
                 return;
 
-            Init(width, height, dpi);
-
             resize(); // how to handle rendertarget textures??
 
-            prevWidth_ = width;
-            prevHeight_ = height;
-            prevDpi_ = dpi;
+            prevWidth_ = width_;
+            prevHeight_ = height_;
+            prevDpi_ = dpi_;
             prevColorspaceConversionRequired_ = colorspaceConversionRequired_;
         }
 
@@ -319,6 +331,8 @@ namespace vzm
         VzRenderPath()
         {
             view_ = gEngine->createView();
+            renderer_ = gEngine->createRenderer();
+            swapChain_ = gEngine->createSwapChain(width_, height_);
         }
 
         ~VzRenderPath()
@@ -326,24 +340,44 @@ namespace vzm
             if (gEngine)
             {
                 gEngine->destroy(view_);
+                gEngine->destroy(renderer_);
+                gEngine->destroy(swapChain_);
             }
         }
 
-        uint64_t FRAMECOUNT = 0;
+        inline void SetFixedTimeUpdate(const float targetFPS)
+        {
+            targetFrameRate_ = targetFPS;
+        }
+        inline float GetFixedTimeUpdate() const
+        {
+            return targetFrameRate_;
+        }
 
+        inline void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window)
+        {
+            if (w) *w = width_;
+            if (h) *h = height_;
+            if (dpi) *dpi = dpi_;
+            if (window) *window = nativeWindow_;
+        }
+        inline void SetCanvas(const uint32_t w, const uint32_t h, const uint32_t dpi, void* window = nullptr)
+        {
+            // the resize is called during the rendering (pre-processing)
+            width_ = w;
+            height_ = h;
+            this->dpi_ = dpi;
+            nativeWindow_ = window;
+        }
+        inline filament::SwapChain* GetSwapChain()
+        {
+            return swapChain_;
+        }
+
+        uint64_t FRAMECOUNT = 0;
+        vzm::Timer timer;
         float deltaTime = 0;
         float deltaTimeAccumulator = 0;
-        float targetFrameRate = 60;
-        bool frameSkip = true;
-        vzm::Timer timer;
-
-        int fpsAvgCounter = 0;
-        float time;
-        float timePrevious;
-
-
-        // display all-time engine information text
-        float deltatimes[20] = {};
 
         bool UpdateVzCamera(const VzCamera* _vzCam = nullptr)
         {            
@@ -370,14 +404,15 @@ namespace vzm
             return true;
         }
 
-        VzCamera* GetVzCamera()
+        inline VzCamera* GetVzCamera()
         {
             return vzCam_;
         }
 
-        filament::View* GetView() { return view_; }
-    };
+        inline filament::View* GetView() { return view_; }
 
+        inline filament::Renderer* GetRenderer() { return renderer_; }
+    };
 
     class VzEngineApp
     {
@@ -1080,7 +1115,185 @@ namespace vzm
     VzEngineApp gEngineApp;
 }
 
-#define COMP_GET(COMP, PARAM, RET) COMP* PARAM = gEngineApp.GetEngineComp<COMP>(componentVID); if (!PARAM) return RET;
+#define COMP_NAME(COMP, ENTITY) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return;
+#define COMP_TRANSFORM(COMP, ENTITY, INS)  auto & COMP = gEngine->getTransformManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return; auto INS = COMP.getInstance(ENTITY);
+#define COMP_RENDERPATH(RENDERPATH)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(componentVID); if (RENDERPATH == nullptr) return; 
+namespace vzm
+{
+#pragma region // VzBaseComp
+    using namespace utils;
+    std::string VzBaseComp::GetName()
+    {
+        COMP_NAME(ncm, ett);
+        return ncm.GetName(ett);
+    }
+    void VzBaseComp::SetName(const std::string& name)
+    {
+        COMP_NAME(ncm, ett);
+        ncm.SetName(ett, name);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+#pragma endregion
+
+#pragma region // VzSceneComp
+    void VzSceneComp::GetWorldPosition(float v[3])
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& mat = tc.getWorldTransform(ins);
+        *(float3*)v = mat[3].xyz;
+    }
+    void VzSceneComp::GetWorldForward(float v[3])
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& mat = tc.getWorldTransform(ins);
+        *(float3*)v = mat[2].xyz; // view
+    }
+    void VzSceneComp::GetWorldRight(float v[3])
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& mat = tc.getWorldTransform(ins);
+        *(float3*)v = mat[0].xyz;
+    }
+    void VzSceneComp::GetWorldUp(float v[3])
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& mat = tc.getWorldTransform(ins);
+        *(float3*)v = mat[1].xyz;
+    }
+    void VzSceneComp::GetWorldTransform(float mat[16], const bool rowMajor)
+    {
+        // note that
+        // filament math stores the column major matrix
+        // logically it also uses column major matrix computation
+        // c.f., glm:: uses column major matrix computation but it stores a matrix according to column major convention
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& _mat = tc.getWorldTransform(ins);
+        *(mat4f*)mat = _mat;
+    }
+    void VzSceneComp::GetLocalTransform(float mat[16], const bool rowMajor)
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& _mat = tc.getTransform(ins);
+        *(mat4f*)mat = _mat;
+    }
+    void VzSceneComp::GetWorldInvTransform(float mat[16], const bool rowMajor)
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& _mat = tc.getWorldTransform(ins);
+        *(mat4f*)mat = inverse(_mat);
+    }
+    void VzSceneComp::GetLocalInvTransform(float mat[16], const bool rowMajor)
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        const math::mat4f& _mat = tc.getTransform(ins);
+        *(mat4f*)mat = inverse(_mat);
+    }
+    void VzSceneComp::SetTransform(const float s[3], const float q[4], const float t[3], const bool additiveTransform)
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        mat4f mat_s = mat4f(), mat_r = mat4f(), mat_t = mat4f(); //c.f. mat4f(no_init)
+        if (s)
+        {
+            mat_s = math::mat4f::scaling(float3(s[0], s[1], s[2]));
+        }
+        if (t)
+        {
+            mat_t = math::mat4f::translation(float3(t[0], t[1], t[2]));
+        }
+        if (q)
+        {
+            mat_r = math::mat4f(*(math::quatf*)q);
+        }
+        mat4f mat = mat_t * mat_r * mat_s;
+        tc.setTransform(ins, additiveTransform? mat * tc.getTransform(ins) : mat);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+    void VzSceneComp::SetMatrix(const float value[16], const bool additiveTransform, const bool rowMajor)
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        mat4f mat = rowMajor ? transpose(*(mat4f*)value) : *(mat4f*)value;
+        tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+    VID VzSceneComp::GetParentVid()
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        Entity ett_parent = tc.getParent(ins);
+        return ett_parent.getId();
+    }
+#pragma endregion 
+
+#pragma region // VzCamera
+    void VzCamera::SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window)
+    {
+        COMP_RENDERPATH(render_path);
+        renderPath = render_path;
+        render_path->SetCanvas(w, h, dpi, window);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+    void VzCamera::GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window)
+    {
+        COMP_RENDERPATH(render_path);
+        renderPath = render_path;
+        render_path->GetCanvas(w, h, dpi, window);
+    }
+
+    // Pose parameters are defined in WS (not local space)
+    void VzCamera::SetWorldPose(const float pos[3], const float view[3], const float up[3])
+    {
+        COMP_TRANSFORM(tc, ett, ins);
+        COMP_RENDERPATH(render_path);
+        renderPath = render_path;
+
+        // up vector correction
+        double3 _eye = *(float3*)pos;
+        double3 _view = normalize((double3)*(float3*)view);
+        double3 _up = *(float3*)up;
+        double3 _right = cross(_view, _up);
+        _up = normalize(cross(_right, _view));
+
+        // note the pose info is defined in WS
+        //mat4f ws2cs = mat4f::lookTo(_view, _eye, _up);
+        //mat4f cs2ws = inverse(ws2cs);
+        Camera* camera = gEngine->getCameraComponent(ett);
+        camera->lookAt(_eye, _eye + _view, _up);
+        mat4 ws2cs_d = camera->getViewMatrix();
+        mat4 cs2ws_d = inverse(ws2cs_d);
+
+        Entity ett_parent = tc.getParent(ins);
+        mat4 parent2ws_d = mat4();
+        while (!ett_parent.isNull())
+        {
+            auto ins_parent = tc.getInstance(ett_parent);
+            parent2ws_d = mat4(tc.getTransform(ins_parent)) * parent2ws_d;
+            ett_parent = tc.getParent(ins_parent);
+        }
+
+        mat4f local = mat4f(inverse(parent2ws_d) * cs2ws_d);
+        SetMatrix((float*)&local[0][0], false, false);
+    }
+    void VzCamera::SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovY, const float aspectRatio);
+    void VzCamera::GetWorldPose(float pos[3], float view[3], float up[3])
+    {
+        COMP_RENDERPATH(render_path);
+        renderPath = render_path;
+        Camera* camera = &render_path->GetView()->getCamera();
+#if _DEBUG
+        Entity ett = Entity::import(componentVID);
+        assert(camera == gEngine->getCameraComponent(ett) && "camera pointer is mismatching!!");
+#endif
+
+        double3 p = camera->getPosition();
+        double3 v = camera->getForwardVector();
+        double3 u = camera->getUpVector();
+        if (pos) *(float3*)pos = float3(p);
+        if (view) *(float3*)view = float3(v);
+        if (up) *(float3*)up = float3(u);
+    }
+    void VzCamera::GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovY, float* aspectRatio);
+#pragma endregion
+}
+
 
 namespace vzm
 {
@@ -1163,7 +1376,6 @@ namespace vzm
         VzNameCompManager& ncm = VzNameCompManager::Get();
         delete &ncm;
 
-        //gEngine->destroy(gRenderer);
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
 
@@ -1419,109 +1631,93 @@ namespace vzm
 
     VZRESULT Render(const VID camVid, const bool updateScene)
     {
-        //VzmRenderer* renderer = gEngineApp.GetRenderer(camVid);
-        //if (renderer == nullptr)
-        //{
-        //    return VZ_FAIL;
+        VzRenderPath* renderPath = gEngineApp.GetRenderPath(camVid);
+        if (renderPath == nullptr)
+        {
+            return VZ_FAIL;
+        }
+        View* view = renderPath->GetView();
+        Scene* scene = view->getScene();
+        Camera* camera = &view->getCamera();
+        if (view == nullptr || scene == nullptr)
+        {
+            return VZ_FAIL;
+        }
+
+        if (!UTILS_HAS_THREADING) 
+        {
+            gEngine->execute();
+        }
+
+        renderPath->deltaTime = float(std::max(0.0, vTimer.RecordElapsedSeconds())); // timeStep
+
+        // fixed time update
+        {
+            renderPath->deltaTimeAccumulator += renderPath->deltaTime;
+            if (renderPath->deltaTimeAccumulator > 10)
+            {
+                // application probably lost control, fixed update would take too long
+                renderPath->deltaTimeAccumulator = 0;
+            }
+
+            const float targetFrameRateInv = 1.0f / renderPath->GetFixedTimeUpdate();
+            while (renderPath->deltaTimeAccumulator >= targetFrameRateInv)
+            {
+                //renderer->FixedUpdate();
+                renderPath->deltaTimeAccumulator -= targetFrameRateInv;
+            }
+        }
+
+        // Update the cube distortion matrix used for frustum visualization.
+        //const Camera* lightmapCamera = view->getDirectionalShadowCamera();
+        //if (lightmapCamera) {
+        //    lightmapCube->mapFrustum(*gEngine, lightmapCamera);
         //}
-        //
-        //wi::font::UpdateAtlas(renderer->GetDPIScaling());
-        //
-        //renderer->UpdateVmCamera();
-        //
-        //// DOJO TO DO : CHECK updateScene across cameras belonging to a scene and force to use a oldest one...
-        //renderer->setSceneUpdateEnabled(updateScene || renderer->FRAMECOUNT == 0);
-        //if (!updateScene)
-        //{
-        //    renderer->scene->camera = *renderer->camera;
+        //cameraCube->mapFrustum(*gEngine, camera);
+
+        // Delay rendering for roughly one monitor refresh interval
+        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
+        //SDL_DisplayMode Mode;
+        //int refreshIntervalMS = (SDL_GetDesktopDisplayMode(
+        //    SDL_GetWindowDisplayIndex(window->mWindow), &Mode) == 0 &&
+        //    Mode.refresh_rate != 0) ? round(1000.0 / Mode.refresh_rate) : 16;
+        //SDL_Delay(refreshIntervalMS);
+
+        Renderer* renderer = renderPath->GetRenderer();
+        
+        // setup
+        //if (preRender) {
+        //    preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
         //}
-        //
-        //if (!wi::initializer::IsInitializeFinished())
-        //{
-        //    // Until engine is not loaded, present initialization screen...
-        //    renderer->WaitRender();
-        //    return VZ_JOB_WAIT;
+
+        //if (mReconfigureCameras) {
+        //    window->configureCamerasForWindow();
+        //    mReconfigureCameras = false;
         //}
-        //
-        //if (profileFrameFinished)
-        //{
-        //    profileFrameFinished = false;
-        //    wi::profiler::BeginFrame();
-        //}
-        //
-        //VzmScene* scene = (VzmScene*)renderer->scene;
-        //
-        //{
-        //    // for frame info.
-        //    renderer->deltaTime = float(std::max(0.0, renderer->timer.record_elapsed_seconds()));
-        //    const float target_deltaTime = 1.0f / renderer->targetFrameRate;
-        //    if (renderer->framerate_lock && renderer->deltaTime < target_deltaTime)
-        //    {
-        //        wi::helper::QuickSleep((target_deltaTime - renderer->deltaTime) * 1000);
-        //        renderer->deltaTime += float(std::max(0.0, renderer->timer.record_elapsed_seconds()));
-        //    }
-        //
-        //    scene->deltaTime = float(std::max(0.0, scene->timer.record_elapsed_seconds()));
-        //}
-        //
-        //
-        ////wi::input::Update(nullptr, *renderer);
-        //// Wake up the events that need to be executed on the main thread, in thread safe manner:
-        //wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
-        //renderer->fadeManager.Update(renderer->deltaTime);
-        //
-        //renderer->PreUpdate(); // current to previous
-        //
-        //// Fixed time update:
-        //{
-        //    auto range = wi::profiler::BeginRangeCPU("Fixed Update");
-        //    if (renderer->frameskip)
-        //    {
-        //        renderer->deltaTimeAccumulator += renderer->deltaTime;
-        //        if (renderer->deltaTimeAccumulator > 10)
-        //        {
-        //            // application probably lost control, fixed update would take too long
-        //            renderer->deltaTimeAccumulator = 0;
+
+        //if (config.splitView) {
+        //    if (!window->mOrthoView->getView()->hasCamera()) {
+        //        Camera const* debugDirectionalShadowCamera =
+        //            window->mMainView->getView()->getDirectionalShadowCamera();
+        //        if (debugDirectionalShadowCamera) {
+        //            window->mOrthoView->setCamera(
+        //                const_cast<Camera*>(debugDirectionalShadowCamera));
         //        }
-        //
-        //        const float targetFrameRateInv = 1.0f / renderer->targetFrameRate;
-        //        while (renderer->deltaTimeAccumulator >= targetFrameRateInv)
-        //        {
-        //            renderer->FixedUpdate();
-        //            renderer->deltaTimeAccumulator -= targetFrameRateInv;
-        //        }
         //    }
-        //    else
-        //    {
-        //        renderer->FixedUpdate();
-        //    }
-        //    wi::profiler::EndRange(range); // Fixed Update
         //}
-        //{
-        //    // use scene->deltaTime
-        //    auto range = wi::profiler::BeginRangeCPU("Update");
-        //    wi::backlog::Update(*renderer, scene->deltaTime);
-        //    renderer->Update(scene->deltaTime);
-        //    renderer->PostUpdate();
-        //    wi::profiler::EndRange(range); // Update
-        //
-        //    // we ill use the separate framecount for each renderer (not global device)
-        //    //
-        //    renderer->FRAMECOUNT++;
-        //    renderer->frameCB.frame_count = (uint)renderer->FRAMECOUNT;
-        //    //renderer->frameCB.delta_time = renderer->deltaTime;
-        //    // note here frameCB's time is computed based on the scene timeline
-        //    //renderer->frameCB.time_previous = renderer->frameCB.time;
-        //    //renderer->frameCB.time = scene->deltaTimeAccumulator;
-        //}
-        //
-        //{
-        //    auto range = wi::profiler::BeginRangeCPU("Render");
-        //    scene->dt = renderer->deltaTime;
-        //    renderer->Render();
-        //    wi::profiler::EndRange(range); // Render
-        //}
-        //renderer->RenderFinalize();
+
+        if (renderer->beginFrame(window->getSwapChain())) {
+            for (filament::View* offscreenView : mOffscreenViews) {
+                renderer->render(offscreenView);
+            }
+            for (auto const& view : window->mViews) {
+                renderer->render(view->getView());
+            }
+            renderer->endFrame();
+        }
+        else {
+            ++mSkippedFrames;
+        }
 
         return VZ_OK;
     }
