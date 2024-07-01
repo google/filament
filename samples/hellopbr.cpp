@@ -108,7 +108,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 int main(int argc, char** argv) {
     App app;
     app.config.title = "hellopbr";
-    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+    //app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
     app.config.vulkanGPUHint = "0";
     app.config.backend = filament::Engine::Backend::OPENGL;
     handleCommandLineArguments(argc, argv, &app);

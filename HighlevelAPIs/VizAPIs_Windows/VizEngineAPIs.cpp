@@ -303,6 +303,13 @@ namespace vzm
                 //swapChain_ = gEngine->createSwapChain(width_, height_);
                 swapChain_ = gEngine->createSwapChain(
                     nativeWindow_, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+
+                // dummy calls?
+                //for (int i = 0; i < 1; i++) {
+                    renderer_->beginFrame(swapChain_);
+                    //renderer_->render(view_);
+                    renderer_->endFrame();
+                //}
             }
         }
 
@@ -338,9 +345,12 @@ namespace vzm
         {
             if (gEngine)
             {
-                gEngine->destroy(view_);
-                gEngine->destroy(renderer_);
-                gEngine->destroy(swapChain_);
+                if (view_)
+                    gEngine->destroy(view_);
+                if (renderer_) 
+                    gEngine->destroy(renderer_);
+                if (swapChain_)
+                    gEngine->destroy(swapChain_);
             }
         }
 
@@ -1065,6 +1075,7 @@ namespace vzm
                     {
                         if (it->second->getMaterial() == it_m->second) 
                         {
+                            gEngine->destroy(it->second);
                             it = materialInstances_.erase(it);
                         }
                         else 
@@ -1072,6 +1083,8 @@ namespace vzm
                             ++it;
                         }
                     }
+                    // caution: 
+                    // before destroying the material,
                     // destroy the associated material instances
                     gEngine->destroy(it_m->second);
                 
@@ -1090,6 +1103,17 @@ namespace vzm
                     gEngine->destroy(it_geo->second.indexBuffer);
                     geometries_.erase((it_geo));
                 }
+                auto it_render_path = renderPaths_.find(vid);
+                if (it_render_path != renderPaths_.end())
+                {
+                    VzRenderPath& render_path = it_render_path->second;
+                    //View* view = render_path.GetView();
+                    //gEngine->destroy(view);
+                    //Camera* cam = &view->getCamera(); // this is an filament entity
+                    //filament::SwapChain* sc = render_path.GetSwapChain();
+                    //gEngine->destroy(sc);
+                    renderPaths_.erase(it_render_path); // call destructor
+                }
 #pragma endregion 
                 // the remaining etts (not engine-destory group)
                 em.destroy(ett);
@@ -1105,6 +1129,42 @@ namespace vzm
                     scene->remove(ett);
                 }
             }
+        }
+
+        template <typename UM> void destroyTarget(UM& umap)
+        {
+            std::vector<VID> vids;
+            vids.reserve(umap.size());
+            for (auto it = umap.begin(); it != umap.end(); it++)
+            {
+                vids.push_back(it->first);
+            }
+            for (VID vid : vids)
+            {
+                RemoveEntity(vid);
+            }
+        }
+
+        inline void Destroy()
+        {
+            //std::unordered_map<SceneVID, filament::Scene*> scenes_;
+            //// note a VzRenderPath involves a view that includes
+            //// 1. camera and 2. scene
+            //std::unordered_map<CamVID, VzRenderPath> renderPaths_;
+            //std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_;
+            //std::unordered_map<LightVID, SceneVID> lightSceneVids_;
+            //
+            //// Resources
+            //std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometries_;
+            //std::unordered_map<MaterialVID, filament::Material*> materials_;
+            //std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> materialInstances_;
+            destroyTarget(scenes_);
+            destroyTarget(renderPaths_);
+            destroyTarget(renderableSceneVids_);
+            destroyTarget(lightSceneVids_);
+            destroyTarget(geometries_);
+            destroyTarget(materials_);
+            destroyTarget(materialInstances_);
         }
     };
 #pragma endregion
@@ -1361,12 +1421,20 @@ namespace vzm
 
         std::string vulkanGPUHint = "0";
 
+        gEngineConfig.stereoscopicEyeCount = gConfig.stereoscopicEyeCount;
+        gEngineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
         // to do : gConfig and gEngineConfig
         // using vzm::ParamMap<std::string>& argument
-        gConfig.backend = filament::Engine::Backend::VULKAN;
+        //gConfig.backend = filament::Engine::Backend::VULKAN;
         gConfig.vulkanGPUHint = "0";
-        //gConfig.backend = filament::Engine::Backend::OPENGL;
+        gConfig.backend = filament::Engine::Backend::OPENGL;
         //gConfig.headless = true;
+
+        gConfig.title = "hellopbr";
+        //gConfig.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+        gConfig.vulkanGPUHint = "0";
+        gConfig.backend = filament::Engine::Backend::OPENGL;
+
                 
         gVulkanPlatform = new FilamentAppVulkanPlatform(gConfig.vulkanGPUHint.c_str());
         gEngine = Engine::Builder()
@@ -1400,12 +1468,13 @@ namespace vzm
             return VZ_WARNNING;
         }
 
-        VzNameCompManager& ncm = VzNameCompManager::Get();
-        delete &ncm;
-
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
 
+        gEngineApp.Destroy();
+
+        VzNameCompManager& ncm = VzNameCompManager::Get();
+        delete& ncm;
         //destroy all views belonging to renderPaths before destroy the engine 
         //To do???
         Engine::destroy(&gEngine); // calls FEngine::shutdown()
