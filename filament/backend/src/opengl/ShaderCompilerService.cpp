@@ -785,25 +785,24 @@ mediump vec4 unpackSnorm4x8(highp uint v) {
 // - extensions
 // - everything else
 std::array<std::string_view, 3> ShaderCompilerService::splitShaderSource(std::string_view source) noexcept {
-    auto start = source.find("#version");
-    assert_invariant(start != std::string_view::npos);
+    auto version_start = source.find("#version");
+    assert_invariant(version_start != std::string_view::npos);
 
-    auto version_eol = source.find('\n', start) + 1;
+    auto version_eol = source.find('\n', version_start) + 1;
     assert_invariant(version_eol != std::string_view::npos);
 
-    auto pos = source.rfind("\n#extension");
-    if (pos == std::string_view::npos) {
-        pos = version_eol;
+    auto prolog_start = version_eol;
+    auto prolog_eol = source.rfind("\n#extension"); // last #extension line
+    if (prolog_eol == std::string_view::npos) {
+        prolog_eol = prolog_start;
     } else {
-        ++pos;
+        prolog_eol = source.find('\n', prolog_eol + 1) + 1;
     }
+    auto body_start = prolog_eol;
 
-    auto eol = source.find('\n', pos) + 1;
-    assert_invariant(eol != std::string_view::npos);
-
-    std::string_view const version = source.substr(start, version_eol - start);
-    std::string_view const prolog = source.substr(version_eol, eol - version_eol);
-    std::string_view const body = source.substr(eol, source.length() - eol);
+    std::string_view const version = source.substr(version_start, version_eol - version_start);
+    std::string_view const prolog = source.substr(prolog_start, prolog_eol - prolog_start);
+    std::string_view const body = source.substr(body_start, source.length() - body_start);
     return { version, prolog, body };
 }
 
