@@ -521,7 +521,18 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                 //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
                 //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
                 // - timer queries sometime crash with an NPE (see b/273759031)
+                //   (see b/273759031)
+                //          - possibly not present in: "OpenGL ES 3.2 v1.r46p0"
                 bugs->dont_use_timer_query = true;
+                int maj, min, driverVersion, driverRelease;
+                int const c = sscanf(version, "OpenGL ES %d.%d v%d.r%d",
+                        &maj, &min, &driverVersion, &driverRelease);
+                if (UTILS_LIKELY(c == 4)) {
+                    // we were able to parse the version string
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 46)) {
+                        bugs->dont_use_timer_query = false;
+                    }
+                }
             }
             // Mali seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
