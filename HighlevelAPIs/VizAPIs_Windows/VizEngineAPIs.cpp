@@ -207,6 +207,37 @@ static Engine::Config gEngineConfig = {};
 static filament::backend::VulkanPlatform* gVulkanPlatform = nullptr;
 static Engine* gEngine = nullptr;
 static filament::SwapChain* gDummySwapChain = nullptr;
+static std::vector<std::string> gMProp = {
+            "baseColor",              //!< float4, all shading models
+            "roughness",               //!< float,  lit shading models only
+            "metallic",                //!< float,  all shading models, except unlit and cloth
+            "reflectance",             //!< float,  all shading models, except unlit and cloth
+            "ambientOcclusion",       //!< float,  lit shading models only, except subsurface and cloth
+            "clearCoat",              //!< float,  lit shading models only, except subsurface and cloth
+            "clearCoatRoughness",    //!< float,  lit shading models only, except subsurface and cloth
+            "clearCoatNormal",       //!< float,  lit shading models only, except subsurface and cloth
+            "anisotropy",              //!< float,  lit shading models only, except subsurface and cloth
+            "anisotropyDirection",    //!< float3, lit shading models only, except subsurface and cloth
+            "thickness",               //!< float,  subsurface shading model only
+            "subsurfacePower",        //!< float,  subsurface shading model only
+            "subsurfaceColor",        //!< float3, subsurface and cloth shading models only
+            "sheenColor",             //!< float3, lit shading models only, except subsurface
+            "sheenRoughness",         //!< float3, lit shading models only, except subsurface and cloth
+            "specularColor",          //!< float3, specular-glossiness shading model only
+            "glossiness",              //!< float,  specular-glossiness shading model only
+            "emissive",                //!< float4, all shading models
+            "normal",                  //!< float3, all shading models only, except unlit
+            "postLightingColor",     //!< float4, all shading models
+            "postLightingMixFactor",//!< float, all shading models
+            "clipSpaceTransform",    //!< mat4,   vertex shader only
+            "absorption",              //!< float3, how much light is absorbed by the material
+            "transmission",            //!< float,  how much light is refracted through the material
+            "ior",                     //!< float,  material's index of refraction
+            "microThickness",         //!< float, thickness of the thin layer
+            "bentNormal",             //!< float3, all shading models only, except unlit
+            "specularFactor",         //!< float, lit shading models only, except subsurface and cloth
+            "specularColorFactor",   //!< float3, lit shading models only, except subsurface and cloth
+};
 
 namespace vzm
 {
@@ -343,12 +374,17 @@ namespace vzm
         {
             if (gEngine)
             {
-                if (view_)
-                    gEngine->destroy(view_);
-                if (renderer_)
-                    gEngine->destroy(renderer_);
-                if (swapChain_)
-                    gEngine->destroy(swapChain_);
+                try {
+                    if (renderer_)
+                        gEngine->destroy(renderer_);
+                    if (view_)
+                        gEngine->destroy(view_);
+                    if (swapChain_)
+                        gEngine->destroy(swapChain_);
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "Error destroying renderer: " << e.what() << std::endl;
+                }
             }
         }
 
@@ -377,6 +413,7 @@ namespace vzm
             nativeWindow_ = window;
 
             view_->setViewport(filament::Viewport(0, 0, w, h));
+            view_->getCamera().setScaling(double2(1., 1.));
         }
         inline filament::SwapChain* GetSwapChain()
         {
@@ -423,22 +460,28 @@ namespace vzm
         inline filament::Renderer* GetRenderer() { return renderer_; }
     };
 
+    using SceneVID = VID;
+    using CamVID = VID;
+    using RenderableVID = VID;
+    using LightVID = VID;
+    using GeometryVID = VID;
+    using MaterialVID = VID;
+    using MaterialInstanceVID = VID;
+
     class VzEngineApp
     {
     private:
-        using SceneVID = VID;
-        using CamVID = VID;
-        using RenderableVID = VID;
-        using LightVID = VID;
-        using GeometryVID = VID;
-        using MaterialVID = VID;
-        using MaterialInstanceVID = VID;
-
+        struct VzResMap
+        {
+            GeometryVID vidGeo = INVALID_VID;
+            MaterialInstanceVID vidMI = INVALID_VID;
+        };
         std::unordered_map<SceneVID, filament::Scene*> scenes_;
         // note a VzRenderPath involves a view that includes
         // 1. camera and 2. scene
         std::unordered_map<CamVID, VzRenderPath> renderPaths_;
         std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_;
+        std::unordered_map<RenderableVID, VzResMap> renderableResMaps_; // consider when removing resources...
         std::unordered_map<LightVID, SceneVID> lightSceneVids_;
 
         // Resources
@@ -850,6 +893,7 @@ namespace vzm
                         .build(*gEngine, ett);
                 }
                 renderableSceneVids_[vid] = 0;
+                renderableResMaps_[vid];
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -911,6 +955,7 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
 
             MaterialInstance* mi = nullptr;
+            MaterialInstanceVID vid_mi = INVALID_VID;
             for (auto it_mi : materialInstances_)
             {
                 utils::Entity ett = utils::Entity::import(it_mi.first);
@@ -918,24 +963,30 @@ namespace vzm
                 if (ncm.GetName(ett) == mi_name)
                 {
                     mi = it_mi.second;
+                    vid_mi = it_mi.first;
                     break;
                 }
             }
             if (mi == nullptr)
             {
                 VzMaterial* v_m = CreateMaterial(material_name);
-                VzMaterialInstance* v_mi = CreateMaterialInstance(mi_name, v_m->componentVID);
-                auto itmi = materialInstances_.find(v_mi->componentVID);
-                assert(itmi != materialInstances_.end());
-                mi = itmi->second;
+                VzMI* v_mi = CreateMaterialInstance(mi_name, v_m->componentVID);
+                auto it_mi = materialInstances_.find(v_mi->componentVID);
+                assert(it_mi != materialInstances_.end());
+                mi = it_mi->second;
+                vid_mi = it_mi->first;
             }
+            assert(vid_mi != INVALID_VID);
 
             MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(gEngine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
             ncm.CreateNameComp(mesh.renderable, modelName);
             VID vid = mesh.renderable.getId();
             renderableSceneVids_[vid] = 0;
 
-            CreateGeometry(geo_name, &mesh);
+            VzGeometry* geo = CreateGeometry(geo_name, &mesh);
+            VzResMap& rmap = renderableResMaps_[vid];
+            rmap.vidGeo = geo->componentVID;
+            rmap.vidMI = vid_mi;
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
             VzActor* v_actor = (VzActor*)it.first->second.get();
@@ -999,7 +1050,7 @@ namespace vzm
             return v_m;
         }
 
-        inline VzMaterialInstance* CreateMaterialInstance(const std::string& name, const MaterialVID mVid, const MaterialInstance* materialInstance = nullptr)
+        inline VzMI* CreateMaterialInstance(const std::string& name, const MaterialVID mVid, const MaterialInstance* materialInstance = nullptr)
         {
             auto itm = materials_.find(mVid);
             if (itm == materials_.end())
@@ -1028,8 +1079,8 @@ namespace vzm
             VID vid = ett.getId();
             materialInstances_[vid] = mi;
 
-            auto it = vzComponents_.emplace(vid, std::make_unique<VzMaterialInstance>());
-            VzMaterialInstance* v_m = (VzMaterialInstance*)it.first->second.get();
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzMI>());
+            VzMI* v_m = (VzMI*)it.first->second.get();
             v_m->componentVID = vid;
             v_m->compType = RES_COMPONENT_TYPE::MATERIALINSTANCE;
             v_m->timeStamp = std::chrono::high_resolution_clock::now();
@@ -1037,13 +1088,94 @@ namespace vzm
             return v_m;
         }
 
-        inline void SetActorMaterialInstance(const RenderableVID actorVid, const MaterialInstanceVID miVid)
+        inline VID GetRenderableResourceVid(const RenderableVID vidRenderable, const RES_COMPONENT_TYPE resType)
         {
+            auto it = renderableResMaps_.find(vidRenderable);
+            if (it == renderableResMaps_.end())
+            {
+                return INVALID_VID;
+            }
+            VID ret = INVALID_VID;
+            switch (resType)
+            {
+            case RES_COMPONENT_TYPE::GEOMATRY:
+                ret = it->second.vidGeo;
+                break;
+            case RES_COMPONENT_TYPE::MATERIALINSTANCE:
+                ret = it->second.vidMI;
+                break;
+            case RES_COMPONENT_TYPE::MATERIAL:
+                if (it->second.vidMI != INVALID_VID)
+                {
+                    auto it_mi = materialInstances_.find(it->second.vidMI);
+                    assert(it_mi != materialInstances_.end());
+                    MaterialInstance* mi = it_mi->second;
+                    const Material* mat = mi->getMaterial();
+                    assert(mat != nullptr);
+                    for (auto& it_m : materials_)
+                    {
+                        if (it_m.second == mat)
+                        {
+                            ret = it_m.first;
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            return ret;
+        }
 
+        inline filament::Material* GetMaterial(const MaterialVID vidMaterial)
+        {
+            auto it = materials_.find(vidMaterial);
+            if (it == materials_.end())
+            {
+                return nullptr;
+            }
+            return it->second;
+        }
+
+        inline filament::MaterialInstance* GetMaterialInstance(const MaterialInstanceVID vidMI)
+        {
+            auto it = materialInstances_.find(vidMI);
+            if (it == materialInstances_.end())
+            {
+                return nullptr;
+            }
+            return it->second;
+        }
+
+        inline void SetActorResources(const RenderableVID vidRenderable, const GeometryVID vidGeo, const MaterialInstanceVID vidMI)
+        {
+            auto& rcm = gEngine->getRenderableManager();
+            utils::Entity ett = utils::Entity::import(vidRenderable);
+            auto ins = rcm.getInstance(ett);
+            if (ins.asValue() == 0)
+            {
+                backlog::post("not renderable vid!", backlog::LogLevel::Error);
+                return;
+            }
+
+            // to do... complex scenario...
+
+            auto it_geo = geometries_.find(vidGeo);
+            //if (it_geo != geometries_.end())
+            //{
+            //    MeshReader::Mesh* mesh = &it_geo->second;
+            //    mesh->vertexBuffer->
+            //
+            //}
+            //
+            //
+            //RenderableManager::Builder builder(1);
+            //
+            //rcm.
+            //rcm.geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertBuffer, indBuffer, 0, 3)
         }
 
         template <typename VZCOMP>
-        inline VZCOMP* GetSceneComponent(const VID vid)
+        inline VZCOMP* GetVzComponent(const VID vid)
         {
             auto it = vzComponents_.find(vid);
             if (it == vzComponents_.end())
@@ -1075,6 +1207,7 @@ namespace vzm
                 // }
 #pragma region destroy by engine
                 gEngine->destroy(ett);
+                bool isRenderableRes = false;
                 auto it_m = materials_.find(vid);
                 if (it_m != materials_.end())
                 {
@@ -1084,6 +1217,7 @@ namespace vzm
                         {
                             gEngine->destroy(it->second);
                             it = materialInstances_.erase(it);
+                            isRenderableRes = true;
                         }
                         else 
                         {
@@ -1102,6 +1236,7 @@ namespace vzm
                 {
                     gEngine->destroy(it_mi->second);
                     materialInstances_.erase(vid);
+                    isRenderableRes = true;
                 }
                 auto it_geo = geometries_.find(vid);
                 if (it_geo != geometries_.end())
@@ -1109,7 +1244,25 @@ namespace vzm
                     gEngine->destroy(it_geo->second.vertexBuffer);
                     gEngine->destroy(it_geo->second.indexBuffer);
                     geometries_.erase((it_geo));
+                    isRenderableRes = true;
                 }
+
+                if (isRenderableRes)
+                {
+                    for (auto& it_res : renderableResMaps_)
+                    {
+                        VzResMap& r_map = it_res.second;
+                        if (geometries_.find(r_map.vidGeo) == geometries_.end())
+                        {
+                            r_map.vidGeo = INVALID_VID;
+                        }
+                        if (materialInstances_.find(r_map.vidMI) == materialInstances_.end())
+                        {
+                            r_map.vidMI = INVALID_VID;
+                        }
+                    }
+                }
+
                 auto it_render_path = renderPaths_.find(vid);
                 if (it_render_path != renderPaths_.end())
                 {
@@ -1127,6 +1280,7 @@ namespace vzm
 
                 vzComponents_.erase(vid);
                 renderableSceneVids_.erase(vid);
+                renderableResMaps_.erase(vid);
                 lightSceneVids_.erase(vid);
                 renderPaths_.erase(vid);
 
@@ -1166,13 +1320,13 @@ namespace vzm
             //std::unordered_map<MaterialVID, filament::Material*> materials_;
             //std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> materialInstances_;
             
-            //destroyTarget(scenes_);
-            //destroyTarget(renderPaths_);
-            //destroyTarget(renderableSceneVids_);
-            //destroyTarget(lightSceneVids_);
-            //destroyTarget(geometries_);
-            //destroyTarget(materials_);
-            //destroyTarget(materialInstances_);
+            destroyTarget(renderPaths_);
+            destroyTarget(scenes_);
+            destroyTarget(renderableSceneVids_);
+            destroyTarget(lightSceneVids_);
+            destroyTarget(geometries_);
+            destroyTarget(materials_);
+            destroyTarget(materialInstances_);
         }
     };
 #pragma endregion
@@ -1183,6 +1337,9 @@ namespace vzm
 #define COMP_NAME(COMP, ENTITY, FAILRET) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET;
 #define COMP_TRANSFORM(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getTransformManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
 #define COMP_RENDERPATH(RENDERPATH, FAILRET)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(componentVID); if (RENDERPATH == nullptr) return FAILRET;
+#define COMP_LIGHT(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getLightManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
+#define COMP_RENDERABLE(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getRenderableManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
+#define COMP_MI(COMP, FAILRET) MaterialInstance* COMP = gEngineApp.GetMaterialInstance(componentVID); if (mi == nullptr) return FAILRET;
 namespace vzm
 {
 #pragma region // VzBaseComp
@@ -1388,6 +1545,66 @@ namespace vzm
         }
     }
 #pragma endregion
+
+#pragma region // VzLight
+    void VzLight::SetIntensity(const float intensity)
+    {
+        COMP_LIGHT(lcm, ett, ins, );
+        lcm.setIntensity(ins, intensity);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+    float VzLight::GetIntensity() const
+    {
+        COMP_LIGHT(lcm, ett, ins, -1.f);
+        return lcm.getIntensity(ins);
+    }
+#pragma endregion 
+
+#pragma region // VzActor
+    //void VzActor::SetMaterialInstanceVid(VID vidMI)
+    //{
+    //    // to do
+    //}
+    //void VzActor::SetMaterialVid(VID vidMaterial)
+    //{
+    //    // to do
+    //}
+    //void VzActor::SetGeometryVid(VID vidGeometry)
+    //{
+    //    // to do
+    //}
+
+    VID VzActor::GetMaterialInstanceVid()
+    {
+        return gEngineApp.GetRenderableResourceVid(componentVID, RES_COMPONENT_TYPE::MATERIALINSTANCE);
+    }
+    VID VzActor::GetMaterialVid()
+    {
+        return gEngineApp.GetRenderableResourceVid(componentVID, RES_COMPONENT_TYPE::MATERIAL);
+    }
+    VID VzActor::GetGeometryVid()
+    {
+        return gEngineApp.GetRenderableResourceVid(componentVID, RES_COMPONENT_TYPE::GEOMATRY);
+    }
+#pragma endregion
+
+#pragma region // VzMI
+    void VzMI::SetTransparencyMode(const TransparencyMode tMode)
+    {
+        COMP_MI(mi, );
+        mi->setTransparencyMode((filament::TransparencyMode)tMode);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+    void VzMI::SetMaterialProperty(const MProp mProp, const std::vector<float>& v)
+    {
+        COMP_MI(mi, );
+        if (mProp == MProp::BASE_COLOR)
+        {
+            mi->setParameter(gMProp[(uint32_t)mProp].c_str(), (filament::RgbaType)rgbType, *(filament::math::float4*)&v[0]);
+        }
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+#pragma endregion
 }
 
 namespace vzm
@@ -1476,13 +1693,6 @@ namespace vzm
             vzm::backlog::post("MUST CALL vzm::InitEngineLib before calling vzm::DeinitEngineLib()", backlog::LogLevel::Error);
             return VZ_WARNNING;
         }
-        //utils::JobSystem& job_system = gEngine->getJobSystem();
-        //job_system.runAndWait(job_system.createJob(nullptr, [&]() {
-        //    // 이 작업은 다른 모든 작업이 완료된 후에 실행됩니다.
-        //    }));
-        //while (job_system.getThreadCount() > 0) {
-        //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        //}
 
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
@@ -1491,17 +1701,14 @@ namespace vzm
 
         VzNameCompManager& ncm = VzNameCompManager::Get();
         delete& ncm;
+
         //destroy all views belonging to renderPaths before destroy the engine 
-        //To do???
-        Engine::destroy(&gEngine); // calls FEngine::shutdown()
         // note 
         // gEngine involves mJobSystem
         // when releasing gEngine, mJobSystem will be released!!
         // this calls JobSystem::requestExit() that includes JobSystem::wakeAll()
-        while (gEngine) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
+        Engine::destroy(&gEngine); // calls FEngine::shutdown()
+        
         if (gVulkanPlatform) {
             delete gVulkanPlatform;
             gVulkanPlatform = nullptr;
@@ -1577,9 +1784,9 @@ namespace vzm
         return gEngineApp.GetSceneVidBelongTo(parentVid);
     }
     
-    VzSceneComp* GetSceneComponent(const VID vid)
+    VzBaseComp* GetVzComponent(const VID vid)
     {
-        return gEngineApp.GetSceneComponent<VzSceneComp>(vid);;
+        return gEngineApp.GetVzComponent<VzBaseComp>(vid);
     }
 
     size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids)
@@ -1738,11 +1945,11 @@ namespace vzm
     VZRESULT Render(const VID camVid)
     {
         VzRenderPath* render_path = gEngineApp.GetRenderPath(camVid);
-        render_path->UpdateVzCamera();
         if (render_path == nullptr)
         {
             return VZ_FAIL;
         }
+        render_path->UpdateVzCamera();
 
         View* view = render_path->GetView();
         Scene* scene = view->getScene();

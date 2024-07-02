@@ -16,6 +16,7 @@
 #include "imgui_impl_dx11.h"
 #include <d3d11.h>
 #include <tchar.h>
+#include <shellscalingapi.h>
 
 
 #include "glm/gtc/matrix_transform.hpp"
@@ -26,6 +27,36 @@
 #include "glm/gtx/vector_angle.hpp"
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Windows 8.1 및 Windows 10에서 DPI 인식을 설정하는 코드
+void EnableDpiAwareness() {
+    // Windows 10에서 사용할 수 있는 DPI 인식 설정
+    HMODULE hUser32 = LoadLibrary(TEXT("user32.dll"));
+    if (hUser32) {
+        typedef BOOL(WINAPI* SetProcessDpiAwarenessContextProc)(DPI_AWARENESS_CONTEXT);
+        SetProcessDpiAwarenessContextProc SetProcessDpiAwarenessContextFunc =
+            (SetProcessDpiAwarenessContextProc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+
+        if (SetProcessDpiAwarenessContextFunc) {
+            SetProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        else {
+            // Windows 8.1에서 사용할 수 있는 DPI 인식 설정
+            HMODULE hShcore = LoadLibrary(TEXT("shcore.dll"));
+            if (hShcore) {
+                typedef HRESULT(WINAPI* SetProcessDpiAwarenessProc)(PROCESS_DPI_AWARENESS);
+                SetProcessDpiAwarenessProc SetProcessDpiAwarenessFunc =
+                    (SetProcessDpiAwarenessProc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
+
+                if (SetProcessDpiAwarenessFunc) {
+                    SetProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
+                }
+                FreeLibrary(hShcore);
+            }
+        }
+        FreeLibrary(hUser32);
+    }
+}
 
 HWND createNativeWindow(HINSTANCE hInstance, int nCmdShow, int width, int height) {
     const wchar_t CLASS_NAME[] = L"Sample Window Class";
@@ -66,14 +97,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-    // Create application window
-    //ImGui_ImplWin32_EnableDpiAwareness();
-    //WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
-    //::RegisterClassExW(&wc);
-    //HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Windows Test", WS_OVERLAPPEDWINDOW, 100, 100, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
-    //// Show the window
-    //::ShowWindow(hwnd, SW_SHOWDEFAULT);
-    //::UpdateWindow(hwnd);
+
+    // DPI 인식을 활성화
+    EnableDpiAwareness();
 
     HWND hwnd = createNativeWindow(hInstance, nCmdShow, 800, 600);
     if (!hwnd) {
@@ -99,15 +125,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzCamera* cam;
     VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
     cam->SetCanvas(w, h, dpi, hwnd);
-    glm::fvec3 p(0, 0, 100);
+    glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-    cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)h / (float)w);
-    //vzm::VzLight* light;
-    //VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
+    cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
+    vzm::VzLight* light;
+    VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
     vzm::AppendSceneComponentTo(aid, sid);
-    //vzm::AppendSceneComponentTo(lid, sid);
+    vzm::AppendSceneComponentTo(lid, sid);
     vzm::AppendSceneComponentTo(cid, sid);
 
     // Main loop
@@ -122,19 +148,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT) {
-                vzm::DeinitEngineLib();
                 done = true;
-            }
-            else if (msg.message == WM_CLOSE)
-            {
-                VID cid = vzm::GetFirstVidByName("my camera");
-                vzm::RemoveComponent(cid);
             }
             else
             {
+                VID cid = vzm::GetFirstVidByName("my camera");
                 vzm::Render(cid);
             }
-
         }
         if (done)
             break;
@@ -161,13 +181,39 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
     {
+    case WM_CLOSE:
+    {
+        VID cid = vzm::GetFirstVidByName("my camera");
+        vzm::RemoveComponent(cid);
+        break;
+    }
     case WM_KEYDOWN:
         switch (wParam) {
-        case 'A': {
-            VID cid = vzm::GetFirstVidByName("my camera");
-            vzm::RemoveComponent(cid);
+        case 'C': {
+            VID lid = vzm::GetFirstVidByName("my light");
+            vzm::VzLight* light = (vzm::VzLight*)vzm::GetVzComponent(lid);
+            light->SetIntensity(210000);
             break;
         }
+        case 'V': {
+            VID lid = vzm::GetFirstVidByName("my light");
+            vzm::VzLight* light = (vzm::VzLight*)vzm::GetVzComponent(lid);
+            light->SetIntensity(10000);
+            break;
+        }
+        case 'J': {
+            VID aid = vzm::GetFirstVidByName("my test model");
+            vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
+            VID miid =  actor->GetMaterialInstanceVid();
+            vzm::VzMaterialInstance* mi = (vzm::VzMaterialInstance*)vzm::GetVzComponent(miid);
+            glm::fvec4 b_color(1.f);
+            mi->SetMaterialProperty(vzm::VzMaterialInstance::MaterialProperty::BASE_COLOR,
+                (float*)&b_color);
+            mi->SetMaterialProperty(vzm::VzMaterialInstance::MaterialProperty::BASE_COLOR,
+                {1});
+            break;
+        }
+        default:
         }
         return 0;
     case WM_DESTROY:

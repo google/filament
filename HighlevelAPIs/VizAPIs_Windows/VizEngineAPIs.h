@@ -35,7 +35,7 @@ namespace vzm
     __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
-    __dojostatic VzSceneComp* GetSceneComponent(const VID vid);
+    __dojostatic VzBaseComp* GetVzComponent(const VID vid);
     // Get Component IDs in a scene
     //  - return # of scene Components 
     __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids);	// Get CameraParams and return its pointer registered in renderer

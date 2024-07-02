@@ -180,43 +180,26 @@ namespace vzm
     };
     __dojostruct VzLight : VzSceneComp
     {
-        void SetColor(const float value[3]);
-        void SetIntensity(const float value);
-        void SetRange(const float value);
-        void SetConeOuterRange(const float value);
-        void SetConeInnerRange(const float value);
-        void SetRadius(const float value);
-        void SetLength(const float value);
-
-        void SetCastShadow(const bool value);
-        void SetVolumetricsEnabled(const bool value);
-        void SetVisualizerEnabled(const bool value);
-        void SetStatic(const bool value);
-        void SetVolumetricCloudsEnabled(const bool value);
-
-        bool IsCastingShadow();
-        bool IsVolumetricsEnabled();
-        bool IsVisualizerEnabled();
-        bool IsStatic();
-        bool IsVolumetricCloudsEnabled();
-
-        float GetRange();
-
-        enum LightType
-        {
-            DIRECTIONAL = 0,
-            POINT,
-            SPOT,
-            ENUM_FORCE_UINT32 = 0xFFFFFFFF,
+        enum class Type : uint8_t {
+            SUN,            //!< Directional light that also draws a sun's disk in the sky.
+            DIRECTIONAL,    //!< Directional light, emits light in a given direction.
+            POINT,          //!< Point light, emits light from a position, in all directions.
+            FOCUSED_SPOT,   //!< Physically correct spot light.
+            SPOT,           //!< Spot light with coupling of outer cone and illumination disabled.
         };
-        void SetType(const LightType val);
-        LightType GetType();
+        void SetIntensity(const float intensity = 110000);
+        float GetIntensity() const;
     };
     __dojostruct VzActor : VzSceneComp
     {
-        // 
-    };
+        //void SetMaterialInstanceVid(VID vidMI);
+        //void SetMaterialVid(VID vidMaterial);
+        //void SetGeometryVid(VID vidGeometry);
 
+        VID GetMaterialInstanceVid();
+        VID GetMaterialVid();
+        VID GetGeometryVid();
+    };
 
     __dojostruct VzResource : VzBaseComp
     {
@@ -226,13 +209,104 @@ namespace vzm
     {
         // 
     };
+
+    
     __dojostruct VzMaterial : VzResource
     {
-        // 
-        
+        enum class MaterialType : uint8_t {
+            STANDARD = 0,
+            CUSTOM
+        };
+        enum class LightingModel : uint8_t {
+            UNLIT,                  //!< no lighting applied, emissive possible
+            LIT,                    //!< default, standard lighting
+            SUBSURFACE,             //!< subsurface lighting model
+            CLOTH,                  //!< cloth lighting model
+            SPECULAR_GLOSSINESS,    //!< legacy lighting model
+        };
+        void SetMaterialType(const MaterialType type);
+        MaterialType GetMaterialType() const;
+
+        void SetLightingModel(const LightingModel model);
+        LightingModel GetLightingModel() const;
+
+
+
     };
-    __dojostruct VzMaterialInstance : VzMaterial
+    __dojostruct VzMI : VzMaterial
     {
-        // 
+        static constexpr size_t MATERIAL_PROPERTIES_COUNT = 29;
+        enum class MProp : uint8_t {
+            BASE_COLOR = 0,              //!< float4, all shading models
+            ROUGHNESS,               //!< float,  lit shading models only
+            METALLIC,                //!< float,  all shading models, except unlit and cloth
+            REFLECTANCE,             //!< float,  all shading models, except unlit and cloth
+            AMBIENT_OCCLUSION,       //!< float,  lit shading models only, except subsurface and cloth
+            CLEAR_COAT,              //!< float,  lit shading models only, except subsurface and cloth
+            CLEAR_COAT_ROUGHNESS,    //!< float,  lit shading models only, except subsurface and cloth
+            CLEAR_COAT_NORMAL,       //!< float,  lit shading models only, except subsurface and cloth
+            ANISOTROPY,              //!< float,  lit shading models only, except subsurface and cloth
+            ANISOTROPY_DIRECTION,    //!< float3, lit shading models only, except subsurface and cloth
+            THICKNESS,               //!< float,  subsurface shading model only
+            SUBSURFACE_POWER,        //!< float,  subsurface shading model only
+            SUBSURFACE_COLOR,        //!< float3, subsurface and cloth shading models only
+            SHEEN_COLOR,             //!< float3, lit shading models only, except subsurface
+            SHEEN_ROUGHNESS,         //!< float3, lit shading models only, except subsurface and cloth
+            SPECULAR_COLOR,          //!< float3, specular-glossiness shading model only
+            GLOSSINESS,              //!< float,  specular-glossiness shading model only
+            EMISSIVE,                //!< float4, all shading models
+            NORMAL,                  //!< float3, all shading models only, except unlit
+            POST_LIGHTING_COLOR,     //!< float4, all shading models
+            POST_LIGHTING_MIX_FACTOR,//!< float, all shading models
+            CLIP_SPACE_TRANSFORM,    //!< mat4,   vertex shader only
+            ABSORPTION,              //!< float3, how much light is absorbed by the material
+            TRANSMISSION,            //!< float,  how much light is refracted through the material
+            IOR,                     //!< float,  material's index of refraction
+            MICRO_THICKNESS,         //!< float, thickness of the thin layer
+            BENT_NORMAL,             //!< float3, all shading models only, except unlit
+            SPECULAR_FACTOR,         //!< float, lit shading models only, except subsurface and cloth
+            SPECULAR_COLOR_FACTOR,   //!< float3, lit shading models only, except subsurface and cloth
+
+            // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
+        };
+
+        enum class RgbType : uint8_t {
+            /**
+             * the color is defined in Rec.709-sRGB-D65 (sRGB) space and the RGB values
+             * have not been pre-multiplied by the alpha (for instance, a 50%
+             * transparent red is <1,0,0,0.5>)
+             */
+            sRGB,
+            /**
+             * the color is defined in Rec.709-Linear-D65 ("linear sRGB") space and the
+             * RGB values have not been pre-multiplied by the alpha (for instance, a 50%
+             * transparent red is <1,0,0,0.5>)
+             */
+            LINEAR,
+            /**
+             * the color is defined in Rec.709-sRGB-D65 (sRGB) space and the RGB values
+             * have been pre-multiplied by the alpha (for instance, a 50%
+             * transparent red is <0.5,0,0,0.5>)
+             */
+            PREMULTIPLIED_sRGB,
+            /**
+             * the color is defined in Rec.709-Linear-D65 ("linear sRGB") space and the
+             * RGB values have been pre-multiplied by the alpha (for instance, a 50%
+             * transparent red is <0.5,0,0,0.5>)
+             */
+            PREMULTIPLIED_LINEAR
+        } rgbType = RgbType::LINEAR;
+
+        enum class TransparencyMode : uint8_t {
+            DEFAULT = 0, // following the rasterizer state
+            TWO_PASSES_ONE_SIDE,
+            TWO_PASSES_TWO_SIDES
+        };
+
+        void SetTransparencyMode(const TransparencyMode tMode);
+        void SetMaterialProperty(const MProp mProp, const std::vector<float>& v);
+
+        // use attributes
+        //void Update();
     };
 }
