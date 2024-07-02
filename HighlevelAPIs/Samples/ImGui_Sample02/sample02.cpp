@@ -116,10 +116,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
+            if (msg.message == WM_QUIT) {
+                vzm::RemoveComponent(cid);
                 done = true;
+            }
+            else
+            {
+                vzm::Render(cid);
+            }
 
-            vzm::Render(cid);
         }
         if (done)
             break;
@@ -145,6 +150,15 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
     {
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case 'A': {
+            VID cid = vzm::GetFirstVidByName("my camera");
+            vzm::RemoveComponent(cid);
+            break;
+        }
+        }
+        return 0;
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;

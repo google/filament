@@ -344,7 +344,7 @@ namespace vzm
             {
                 if (view_)
                     gEngine->destroy(view_);
-                if (renderer_) 
+                if (renderer_)
                     gEngine->destroy(renderer_);
                 if (swapChain_)
                     gEngine->destroy(swapChain_);
@@ -810,6 +810,13 @@ namespace vzm
                     else if (itl != lightSceneVids_.end())
                         itl->second = vid_scene_dst;
                 }
+
+                auto it_render_path = renderPaths_.find(vidSrc);
+                if (it_render_path != renderPaths_.end())
+                {
+                    VzRenderPath* render_path = &it_render_path->second;
+                    render_path->GetView()->setScene(scene_dst);
+                }
             }
         }
 
@@ -1157,13 +1164,14 @@ namespace vzm
             //std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometries_;
             //std::unordered_map<MaterialVID, filament::Material*> materials_;
             //std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> materialInstances_;
-            destroyTarget(scenes_);
-            destroyTarget(renderPaths_);
-            destroyTarget(renderableSceneVids_);
-            destroyTarget(lightSceneVids_);
-            destroyTarget(geometries_);
-            destroyTarget(materials_);
-            destroyTarget(materialInstances_);
+            
+            //destroyTarget(scenes_);
+            //destroyTarget(renderPaths_);
+            //destroyTarget(renderableSceneVids_);
+            //destroyTarget(lightSceneVids_);
+            //destroyTarget(geometries_);
+            //destroyTarget(materials_);
+            //destroyTarget(materialInstances_);
         }
     };
 #pragma endregion
@@ -1561,17 +1569,9 @@ namespace vzm
         return gEngineApp.GetSceneVidBelongTo(parentVid);
     }
     
-    VzSceneComp* GetComponent(const SCENE_COMPONENT_TYPE compType, const VID vid)
+    VzSceneComp* GetSceneComponent(const VID vid)
     {
-        switch (compType)
-        {
-        case SCENE_COMPONENT_TYPE::SCENEBASE: return gEngineApp.GetSceneComponent<VzSceneComp>(vid);
-        case SCENE_COMPONENT_TYPE::CAMERA: return gEngineApp.GetSceneComponent<VzCamera>(vid);
-        case SCENE_COMPONENT_TYPE::ACTOR: return gEngineApp.GetSceneComponent<VzActor>(vid);
-        case SCENE_COMPONENT_TYPE::LIGHT: return gEngineApp.GetSceneComponent<VzLight>(vid);
-        default: break;
-        }
-        return nullptr;
+        return gEngineApp.GetSceneComponent<VzSceneComp>(vid);;
     }
 
     size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids)
@@ -1808,7 +1808,7 @@ namespace vzm
 
         filament::SwapChain* sc = render_path->GetSwapChain();
         if (renderer->beginFrame(sc)) {
-            renderer->render(view);
+            //renderer->render(view);
             renderer->endFrame();
         }
         render_path->FRAMECOUNT++;

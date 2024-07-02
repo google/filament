@@ -98,10 +98,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
         if (!shouldClose) {
             // Filament 렌더링
-            //if (renderer->beginFrame(swapChain)) {
-            //    renderer->render(view);
-            //    renderer->endFrame();
-            //}
+            if (renderer->beginFrame(swapChain)) {
+                renderer->render(view);
+                renderer->endFrame();
+            }
         }
     }
     // 정리
