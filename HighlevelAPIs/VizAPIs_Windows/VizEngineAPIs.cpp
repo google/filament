@@ -21,6 +21,7 @@
 #include <utils/EntityManager.h>
 #include <utils/EntityInstance.h>
 #include <utils/NameComponentManager.h>
+#include <utils/JobSystem.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -1475,6 +1476,13 @@ namespace vzm
             vzm::backlog::post("MUST CALL vzm::InitEngineLib before calling vzm::DeinitEngineLib()", backlog::LogLevel::Error);
             return VZ_WARNNING;
         }
+        //utils::JobSystem& job_system = gEngine->getJobSystem();
+        //job_system.runAndWait(job_system.createJob(nullptr, [&]() {
+        //    // 이 작업은 다른 모든 작업이 완료된 후에 실행됩니다.
+        //    }));
+        //while (job_system.getThreadCount() > 0) {
+        //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //}
 
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
@@ -1808,7 +1816,7 @@ namespace vzm
 
         filament::SwapChain* sc = render_path->GetSwapChain();
         if (renderer->beginFrame(sc)) {
-            //renderer->render(view);
+            renderer->render(view);
             renderer->endFrame();
         }
         render_path->FRAMECOUNT++;

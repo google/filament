@@ -80,6 +80,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return -1;
     }
 
+    HDC hdc = GetDC(hwnd);
+    if (!hdc) {
+        std::cerr << "Failed to get device context." << std::endl;
+        return -1;
+    }
+
     RECT rc;
     GetClientRect(hwnd, &rc);
     uint32_t w = rc.right - rc.left;
@@ -93,12 +99,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzCamera* cam;
     VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
     cam->SetCanvas(w, h, dpi, hwnd);
-    glm::fvec3 p(0, 0, 1);
-    glm::fvec3 v(0, 0, -4);
-    glm::fvec3 at = p + v;
+    glm::fvec3 p(0, 0, 100);
+    glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-    cam->SetPerspectiveProjection(0.1f, 100.f, 45.f, (float)h / (float)w);
+    cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)h / (float)w);
     //vzm::VzLight* light;
     //VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
     vzm::AppendSceneComponentTo(aid, sid);
@@ -117,8 +122,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT) {
-                vzm::RemoveComponent(cid);
+                vzm::DeinitEngineLib();
                 done = true;
+            }
+            else if (msg.message == WM_CLOSE)
+            {
+                VID cid = vzm::GetFirstVidByName("my camera");
+                vzm::RemoveComponent(cid);
             }
             else
             {
@@ -129,8 +139,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         if (done)
             break;
     }
-
     vzm::DeinitEngineLib();
+
+    ReleaseDC(hwnd, hdc);
 
     return 0;
 }
