@@ -207,7 +207,6 @@ namespace vzm
             DIRECTIONAL = 0,
             POINT,
             SPOT,
-            LIGHTTYPE_COUNT,
             ENUM_FORCE_UINT32 = 0xFFFFFFFF,
         };
         void SetType(const LightType val);

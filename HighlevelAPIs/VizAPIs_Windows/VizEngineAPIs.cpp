@@ -300,16 +300,13 @@ namespace vzm
             }
             else
             {
-                //swapChain_ = gEngine->createSwapChain(width_, height_);
                 swapChain_ = gEngine->createSwapChain(
                     nativeWindow_, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
 
                 // dummy calls?
-                //for (int i = 0; i < 1; i++) {
-                    renderer_->beginFrame(swapChain_);
-                    //renderer_->render(view_);
-                    renderer_->endFrame();
-                //}
+                renderer_->beginFrame(swapChain_);
+                //renderer_->render(view_);
+                renderer_->endFrame();
             }
         }
 
@@ -377,6 +374,8 @@ namespace vzm
             height_ = h;
             this->dpi_ = dpi;
             nativeWindow_ = window;
+
+            view_->setViewport(filament::Viewport(0, 0, w, h));
         }
         inline filament::SwapChain* GetSwapChain()
         {
@@ -1333,7 +1332,8 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         renderPath = render_path;
-        Camera* camera = &render_path->GetView()->getCamera();
+        View* view = render_path->GetView();
+        Camera* camera = &view->getCamera();
 #if _DEBUG
         Entity ett = Entity::import(componentVID);
         assert(camera == gEngine->getCameraComponent(ett) && "camera pointer is mismatching!!");
@@ -1481,13 +1481,10 @@ namespace vzm
         // note 
         // gEngine involves mJobSystem
         // when releasing gEngine, mJobSystem will be released!!
-        // this calls JobSystem::requestExit() that including JobSystem::wakeAll()
+        // this calls JobSystem::requestExit() that includes JobSystem::wakeAll()
         while (gEngine) {
-            // 잠시 대기
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-        int gg = 0;
-        gEngine = nullptr;
 
         if (gVulkanPlatform) {
             delete gVulkanPlatform;
@@ -1730,7 +1727,7 @@ namespace vzm
         return 0;
     }
 
-    VZRESULT Render(const VID camVid, const bool updateScene)
+    VZRESULT Render(const VID camVid)
     {
         VzRenderPath* render_path = gEngineApp.GetRenderPath(camVid);
         render_path->UpdateVzCamera();
@@ -1738,7 +1735,6 @@ namespace vzm
         {
             return VZ_FAIL;
         }
-        return VZ_OK;
 
         View* view = render_path->GetView();
         Scene* scene = view->getScene();
@@ -1810,18 +1806,12 @@ namespace vzm
         //    }
         //}
 
-        //if (renderer->beginFrame(window->getSwapChain())) {
-        //    for (filament::View* offscreenView : mOffscreenViews) {
-        //        renderer->render(offscreenView);
-        //    }
-        //    for (auto const& view : window->mViews) {
-        //        renderer->render(view->getView());
-        //    }
-        //    renderer->endFrame();
-        //}
-        //else {
-        //    ++mSkippedFrames;
-        //}
+        filament::SwapChain* sc = render_path->GetSwapChain();
+        if (renderer->beginFrame(sc)) {
+            renderer->render(view);
+            renderer->endFrame();
+        }
+        render_path->FRAMECOUNT++;
 
         return VZ_OK;
     }

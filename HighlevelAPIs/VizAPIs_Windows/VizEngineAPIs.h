@@ -50,7 +50,7 @@ namespace vzm
     //  - Must belong to the internal scene
     //  - if updateScene is true, uses the camera for camera-dependent scene updates
     //  - strongly recommend a single camera-dependent update per a scene 
-    __dojostatic VZRESULT Render(const VID camVid, const bool updateScene = true);
+    __dojostatic VZRESULT Render(const VID camVid);
     // Get a graphics render target view 
     //  - Must belong to the internal scene
     __dojostatic void* GetGraphicsSharedRenderTarget(const int camVid, const void* device2, const void* srv_desc_heap2, const int descriptor_index, uint32_t* w = nullptr, uint32_t* h = nullptr);

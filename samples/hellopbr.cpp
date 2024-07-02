@@ -136,23 +136,23 @@ int main(int argc, char** argv) {
 
 
         //app.mesh.renderable = em.create();
-        RenderableManager::Builder(0)
-            .build(*engine, app.mesh.renderable);
+        //RenderableManager::Builder(0)
+        //    .build(*engine, app.mesh.renderable);
 
 
 
 
 
         // Add light sources into the scene.
-        app.light = em.create();
-        LightManager::Builder(LightManager::Type::SUN)
-                .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
-                .intensity(110000)
-                .direction({ 0.7, -1, -0.8 })
-                .sunAngularRadius(1.9f)
-                .castShadows(false)
-                .build(*engine, app.light);
-        scene->addEntity(app.light);
+        //app.light = em.create();
+        //LightManager::Builder(LightManager::Type::SUN)
+        //        .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+        //        .intensity(110000)
+        //        .direction({ 0.7, -1, -0.8 })
+        //        .sunAngularRadius(1.9f)
+        //        .castShadows(false)
+        //        .build(*engine, app.light);
+        //scene->addEntity(app.light);
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {

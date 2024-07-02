@@ -120,7 +120,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../../VizAPIs_Windows;../imgui_common;../../VizAPIs_Windows;\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../libs;../../VizAPIs_Windows;../imgui_common;../../VizAPIs_Windows;\include;</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>

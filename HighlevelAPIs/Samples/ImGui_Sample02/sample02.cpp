@@ -17,6 +17,14 @@
 #include <d3d11.h>
 #include <tchar.h>
 
+
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/transform.hpp"
+#include "glm/gtc/constants.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
+#include "glm/gtx/vector_angle.hpp"
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 HWND createNativeWindow(HINSTANCE hInstance, int nCmdShow, int width, int height) {
@@ -85,12 +93,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzCamera* cam;
     VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
     cam->SetCanvas(w, h, dpi, hwnd);
-    vzm::VzLight* light;
-    VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
+    glm::fvec3 p(0, 0, 1);
+    glm::fvec3 v(0, 0, -4);
+    glm::fvec3 at = p + v;
+    glm::fvec3 u(0, 1, 0);
+    cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
+    cam->SetPerspectiveProjection(0.1f, 100.f, 45.f, (float)h / (float)w);
+    //vzm::VzLight* light;
+    //VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
     vzm::AppendSceneComponentTo(aid, sid);
-    vzm::AppendSceneComponentTo(lid, sid);
+    //vzm::AppendSceneComponentTo(lid, sid);
     vzm::AppendSceneComponentTo(cid, sid);
-    vzm::Render(cid);
 
     // Main loop
     bool done = false;
@@ -105,6 +118,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT)
                 done = true;
+
+            vzm::Render(cid);
         }
         if (done)
             break;
@@ -134,7 +149,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         return 0;
     default:
-        return DefWindowProc(hWnd, msg, wParam, lParam);
+        break;
     }
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
 }
