@@ -974,7 +974,7 @@ void RenderPass::Executor::execute(FEngine& engine,
 
                 driver.bindBufferRange(BufferObjectBinding::UNIFORM,
                         +UniformBindingPoints::PER_RENDERABLE,
-                        info.boh, offset, sizeof(PerRenderableUib));
+                        info.boh, offset, sizeof(PerRenderableData));
 
                 if (UTILS_UNLIKELY(info.hasSkinning)) {
 
