@@ -14,10 +14,19 @@
  * limitations under the License.
  */
 
+#include <filament/Renderer.h>
+
 #include "details/Renderer.h"
 
 #include "details/Engine.h"
 #include "details/View.h"
+
+#include <utils/FixedCapacityVector.h>
+
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -91,6 +100,14 @@ void Renderer::renderStandaloneView(View const* view) {
 
 void Renderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
     downcast(this)->setVsyncTime(steadyClockTimeNano);
+}
+
+utils::FixedCapacityVector<Renderer::FrameInfo> Renderer::getFrameInfoHistory(size_t historySize) const noexcept {
+    return downcast(this)->getFrameInfoHistory(historySize);
+}
+
+size_t Renderer::getMaxFrameHistorySize() const noexcept {
+    return downcast(this)->getMaxFrameHistorySize();
 }
 
 } // namespace filament
