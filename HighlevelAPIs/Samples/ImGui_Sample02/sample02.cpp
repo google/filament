@@ -204,18 +204,50 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'J': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid =  actor->GetMaterialInstanceVid();
-            vzm::VzMaterialInstance* mi = (vzm::VzMaterialInstance*)vzm::GetVzComponent(miid);
+            VID miid = actor->GetMaterialInstanceVid();
+            vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMaterialInstance::MaterialProperty::BASE_COLOR,
-                (float*)&b_color);
-            mi->SetMaterialProperty(vzm::VzMaterialInstance::MaterialProperty::BASE_COLOR,
-                {1});
+            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
+            break;
+        }
+        case 'K': {
+            VID aid = vzm::GetFirstVidByName("my test model");
+            vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
+            VID miid = actor->GetMaterialInstanceVid();
+            vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
+            glm::fvec4 b_color(1.f);
+            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
+            break;
+        }
+        case 'L': {
+            VID aid = vzm::GetFirstVidByName("my test model");
+            vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
+            VID miid = actor->GetMaterialInstanceVid();
+            vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
+            glm::fvec4 b_color(1.f);
+            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
             break;
         }
         default:
+            break;
         }
         return 0;
+
+    case WM_SIZE:
+    {
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        UINT width = rc.right - rc.left;
+        UINT height = rc.bottom - rc.top;
+
+        VID cid = vzm::GetFirstVidByName("my camera");
+        if (cid != INVALID_VID)
+        {
+            vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(cid);
+            camera->SetCanvas(width, height, 96.f, hWnd);
+        }
+        break;
+    }
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;

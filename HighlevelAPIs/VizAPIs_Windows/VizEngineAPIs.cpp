@@ -1,10 +1,10 @@
-//#pragma warning(disable:4819)
 #include "VizEngineAPIs.h" 
-#include "VizComponentAPIs.h"
 
 #include <iostream>
 #include <memory>
 
+//////////////////////////////
+// filament intrinsics
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Camera.h>
@@ -29,10 +29,19 @@
 #include <gltfio/TextureProvider.h>
 
 #include <filameshio/MeshReader.h>
+
 #include <filamentapp/Config.h>
+#include <filamentapp/Cube.h>
+
+#include "backend/platforms/VulkanPlatform.h" // requires blueVK.h
+
 #include "../../VisualStudio/samples/generated/resources/resources.h"
 #include "../../VisualStudio/samples/generated/resources/monkey.h"
+#include "../../VisualStudio/libs/filamentapp/generated/resources/filamentapp.h"
+//////////////////////////////
 
+//////////////////////////////
+// filament math
 #include <math/mathfwd.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -40,9 +49,9 @@
 #include <math/mat4.h>
 #include <math/norm.h>
 #include <math/quat.h>
+//////////////////////////////
 
 #include "CustomComponents.h"
-#include "backend/platforms/VulkanPlatform.h" // requires blueVK.h
 
 #if FILAMENT_DISABLE_MATOPT
 #   define OPTIMIZE_MATERIALS false
@@ -57,16 +66,6 @@ using namespace filament::math;
 using namespace filament::backend;
 using namespace filament::gltfio;
 using namespace utils;
-
-enum class FCompType
-{
-    INVALID,
-    NameComponent,
-    TransformComponent,
-    LightComponent,
-    CameraComponent,
-    RenderableComponent,
-};
 
 class FilamentAppVulkanPlatform : public VulkanPlatform {
 public:
@@ -239,45 +238,21 @@ static std::vector<std::string> gMProp = {
             "specularColorFactor",   //!< float3, lit shading models only, except subsurface and cloth
 };
 
+using SceneVID = VID;
+using CamVID = VID;
+using RenderableVID = VID;
+using LightVID = VID;
+using GeometryVID = VID;
+using MaterialVID = VID;
+using MaterialInstanceVID = VID;
+
 namespace vzm
 {
     vzm::Timer vTimer;
     std::atomic_bool profileFrameFinished = { true };
 
-    void TransformPoint(const float posSrc[3], const float mat[16], float posDst[3])
-    {
-        float3 _p = transformCoord(*(mat4f*)mat, *(float3*)posSrc);
-        memcpy(posDst, &_p, sizeof(float3));
-    }
-    void TransformVector(const float vecSrc[3], const float mat[16], float vecDst[3])
-    {
-        //MathSet(float3, v, vecSrc);
-        //MathSet(mat4f, m, mat);
-        //mat3f _m(m);
-        //float3 _v = transformVec(_m, v);
-        //memcpy(vecDst, &_v, sizeof(float3));
-    }
-    void ComputeBoxTransformMatrix(const float cubeScale[3], const float posCenter[3],
-        const float yAxis[3], const float zAxis[3], float mat[16], float matInv[16])
-    {
-        //XMVECTOR vec_scale = XMLoadFloat3((XMFLOAT3*)cubeScale);
-        //XMVECTOR pos_eye = XMLoadFloat3((XMFLOAT3*)posCenter);
-        //XMVECTOR vec_up = XMLoadFloat3((XMFLOAT3*)yAxis);
-        //XMVECTOR vec_view = -XMLoadFloat3((XMFLOAT3*)zAxis);
-        //XMMATRIX ws2cs = VZMatrixLookTo(pos_eye, vec_view, vec_up);
-        //vec_scale = XMVectorReciprocal(vec_scale);
-        //XMMATRIX scale = XMMatrixScaling(XMVectorGetX(vec_scale), XMVectorGetY(vec_scale), XMVectorGetZ(vec_scale));
-        ////glm::fmat4x4 translate = glm::translate(glm::fvec3(0.5f));
-        //
-        //XMMATRIX ws2cs_unit = ws2cs * scale; // row major
-        //*(XMMATRIX*)mat = rowMajor ? ws2cs_unit : XMMatrixTranspose(ws2cs_unit); // note that our renderer uses row-major
-        //*(XMMATRIX*)matInv = XMMatrixInverse(NULL, ws2cs_unit);
-    }
-}
-
-namespace vzm
-{
 #pragma region // VZM DATA STRUCTURES
+
     struct VzCanvas
     {
     protected:
@@ -315,6 +290,9 @@ namespace vzm
         filament::SwapChain* swapChain_ = nullptr;
         filament::Renderer* renderer_ = nullptr;
 
+        Cube* cameraCube_ = nullptr;
+        //std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, { 1,0,0 }));
+
         void resize()
         {
             bool resize = width_ != prevWidth_ || height_ != prevHeight_ || dpi_ != prevDpi_;
@@ -337,9 +315,13 @@ namespace vzm
 
                 // dummy calls?
                 renderer_->beginFrame(swapChain_);
-                //renderer_->render(view_);
                 renderer_->endFrame();
             }
+
+            Camera* camera = &view_->getCamera();
+            float fovY = camera->getFieldOfViewInDegrees(Camera::Fov::VERTICAL);
+            camera->setProjection((double)fovY, (double)width_ / (double)height_,
+                camera->getNear(), camera->getCullingFar());
         }
 
         void tryResizeRenderTargets()
@@ -365,6 +347,7 @@ namespace vzm
     public:
         VzRenderPath()
         {
+            assert(gEngine && "native engine is not initialized!");
             view_ = gEngine->createView();
             renderer_ = gEngine->createRenderer();
             swapChain_ = gEngine->createSwapChain(width_, height_);
@@ -381,11 +364,25 @@ namespace vzm
                         gEngine->destroy(view_);
                     if (swapChain_)
                         gEngine->destroy(swapChain_);
+                    if (cameraCube_)
+                        delete cameraCube_;
+                    cameraCube_ = nullptr;
                 }
                 catch (const std::exception& e) {
                     std::cerr << "Error destroying renderer: " << e.what() << std::endl;
                 }
             }
+        }
+
+        inline void CreateCameraCube(const Material* materialTransparent, const float3& linearColor)
+        {
+            if (cameraCube_)
+                return;
+            cameraCube_ = new Cube(*gEngine, materialTransparent, linearColor);
+        }
+        inline Cube* GetCameraCube()
+        {
+            return cameraCube_;
         }
 
         inline void SetFixedTimeUpdate(const float targetFPS)
@@ -460,14 +457,6 @@ namespace vzm
         inline filament::Renderer* GetRenderer() { return renderer_; }
     };
 
-    using SceneVID = VID;
-    using CamVID = VID;
-    using RenderableVID = VID;
-    using LightVID = VID;
-    using GeometryVID = VID;
-    using MaterialVID = VID;
-    using MaterialInstanceVID = VID;
-
     class VzEngineApp
     {
     private:
@@ -476,6 +465,23 @@ namespace vzm
             GeometryVID vidGeo = INVALID_VID;
             MaterialInstanceVID vidMI = INVALID_VID;
         };
+        struct VzLightMap
+        {
+        private:
+            Cube* lightCube_ = nullptr;
+        public:
+            VzLightMap() {};
+            ~VzLightMap() { if (lightCube_) delete lightCube_; };
+            void CreateLightCube(const Material* materialTransparent, const float3& linearColor)
+            {
+                if (lightCube_)
+                {
+                    return;
+                }
+                lightCube_ = new Cube(*gEngine, materialTransparent, linearColor, false);
+            }
+            Cube* GetLightCube() { return lightCube_; }
+        };
         std::unordered_map<SceneVID, filament::Scene*> scenes_;
         // note a VzRenderPath involves a view that includes
         // 1. camera and 2. scene
@@ -483,6 +489,7 @@ namespace vzm
         std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_;
         std::unordered_map<RenderableVID, VzResMap> renderableResMaps_; // consider when removing resources...
         std::unordered_map<LightVID, SceneVID> lightSceneVids_;
+        std::unordered_map<LightVID, VzLightMap> lightResMaps_;
 
         // Resources
         std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometries_;
@@ -581,22 +588,22 @@ namespace vzm
             return vid;
         }
 
-        inline void SetSceneToRenderPath(const CamVID camVid, const SceneVID sceneVid)
-        {
-            Scene* scene = GetScene(sceneVid);
-            if (scene == nullptr)
-            {
-                backlog::post("SetSceneToRenderPath >> no Scene", backlog::LogLevel::Error);
-                return;
-            }
-            VzRenderPath* renderPath = GetRenderPath(camVid);
-            if (renderPath == nullptr)
-            {
-                backlog::post("SetSceneToRenderPath >> no RenderPath", backlog::LogLevel::Error);
-                return;
-            }
-            renderPath->GetView()->setScene(scene);
-        }
+        //inline void SetSceneToRenderPath(const CamVID camVid, const SceneVID sceneVid)
+        //{
+        //    Scene* scene = GetScene(sceneVid);
+        //    if (scene == nullptr)
+        //    {
+        //        backlog::post("SetSceneToRenderPath >> no Scene", backlog::LogLevel::Error);
+        //        return;
+        //    }
+        //    VzRenderPath* renderPath = GetRenderPath(camVid);
+        //    if (renderPath == nullptr)
+        //    {
+        //        backlog::post("SetSceneToRenderPath >> no RenderPath", backlog::LogLevel::Error);
+        //        return;
+        //    }
+        //    renderPath->GetView()->setScene(scene);
+        //}
 
         inline size_t GetVidsByName(const std::string& name, std::vector<VID>& vids)
         {
@@ -892,7 +899,7 @@ namespace vzm
                     RenderableManager::Builder(0)
                         .build(*gEngine, ett);
                 }
-                renderableSceneVids_[vid] = 0;
+                renderableSceneVids_[vid] = 0; // first creation
                 renderableResMaps_[vid];
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
@@ -911,7 +918,8 @@ namespace vzm
                         .castShadows(false)
                         .build(*gEngine, ett);
                 }
-                lightSceneVids_[vid] = 0;
+                lightSceneVids_[vid] = 0; // first creation
+                lightResMaps_[vid];
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzLight>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -950,8 +958,8 @@ namespace vzm
         inline VzActor* CreateTestActor(const std::string& modelName = "MONKEY_SUZANNE_DATA")
         {
             std::string geo_name = modelName + "_GEOMETRY";
-            std::string material_name = modelName + "_MATERIAL";
-            std::string mi_name = modelName + "_MATERIAL_INSTANCE";
+            const std::string material_name = "_DEFAULT_STANDARD_MATERIAL";
+            const std::string mi_name = "_DEFAULT_STANDARD_MATERIAL_INSTANCE";
             auto& ncm = VzNameCompManager::Get();
 
             MaterialInstance* mi = nullptr;
@@ -969,7 +977,12 @@ namespace vzm
             }
             if (mi == nullptr)
             {
-                VzMaterial* v_m = CreateMaterial(material_name);
+                MaterialVID vid_m = GetFirstVidByName(material_name);
+                VzMaterial* v_m = GetVzComponent<VzMaterial>(vid_m);
+                if (v_m == nullptr)
+                {
+                    v_m = CreateMaterial(material_name);
+                }
                 VzMI* v_mi = CreateMaterialInstance(mi_name, v_m->componentVID);
                 auto it_mi = materialInstances_.find(v_mi->componentVID);
                 assert(it_mi != materialInstances_.end());
@@ -1007,6 +1020,19 @@ namespace vzm
             MeshReader::Mesh geo;
             if (mesh != nullptr)
             {
+                for (auto it : geometries_)
+                {
+                    if (it.second.vertexBuffer == mesh->vertexBuffer)
+                    {
+                        backlog::post("The vertexBuffer has already been registered!", backlog::LogLevel::Warning);
+                        return nullptr;
+                    }
+                    if (it.second.indexBuffer == mesh->indexBuffer)
+                    {
+                        backlog::post("The indexBuffer has already been registered!", backlog::LogLevel::Warning);
+                        return nullptr;
+                    }
+                }
                 geo = *mesh;
             }
 
@@ -1027,9 +1053,6 @@ namespace vzm
             auto& em = utils::EntityManager::get();
             auto& ncm = VzNameCompManager::Get();
 
-            utils::Entity ett = em.create();
-            ncm.CreateNameComp(ett, name);
-
             Material* m = (Material*)material;
             if (m == nullptr)
             {
@@ -1037,6 +1060,21 @@ namespace vzm
                     .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                     .build(*gEngine);
             }
+            else
+            {
+                //check if the material exists 
+                for (auto it : materials_)
+                {
+                    if (it.second == material)
+                    {
+                        backlog::post("The material has already been registered!", backlog::LogLevel::Warning);
+                        return nullptr;
+                    }
+                }
+            }
+
+            utils::Entity ett = em.create();
+            ncm.CreateNameComp(ett, name);
 
             VID vid = ett.getId();
             materials_[vid] = m;
@@ -1050,9 +1088,9 @@ namespace vzm
             return v_m;
         }
 
-        inline VzMI* CreateMaterialInstance(const std::string& name, const MaterialVID mVid, const MaterialInstance* materialInstance = nullptr)
+        inline VzMI* CreateMaterialInstance(const std::string& name, const MaterialVID vidMaterial, const MaterialInstance* materialInstance = nullptr)
         {
-            auto itm = materials_.find(mVid);
+            auto itm = materials_.find(vidMaterial);
             if (itm == materials_.end())
             {
                 backlog::post("CreateMaterialInstance >> mVid is invalid", backlog::LogLevel::Error);
@@ -1063,9 +1101,6 @@ namespace vzm
             auto& em = utils::EntityManager::get();
             auto& ncm = VzNameCompManager::Get();
 
-            utils::Entity ett = em.create();
-            ncm.CreateNameComp(ett, name);
-
             MaterialInstance* mi = (MaterialInstance*)materialInstance;
             if (mi == nullptr)
             {
@@ -1075,6 +1110,20 @@ namespace vzm
                 mi->setParameter("roughness", 0.4f);
                 mi->setParameter("reflectance", 0.5f);
             }
+            else
+            {
+                for (auto it : materialInstances_)
+                {
+                    if (it.second == mi)
+                    {
+                        backlog::post("The material instance has already been registered!", backlog::LogLevel::Warning);
+                        return nullptr;
+                    }
+                }
+            }
+
+            utils::Entity ett = em.create();
+            ncm.CreateNameComp(ett, name);
 
             VID vid = ett.getId();
             materialInstances_[vid] = mi;
@@ -1125,6 +1174,30 @@ namespace vzm
             }
             return ret;
         }
+
+        inline Cube* CreateLightCube(const LightVID vidLight, const float3& linearColor)
+        {
+            auto it = lightResMaps_.find(vidLight);
+            if (it == lightResMaps_.end())
+            {
+                return nullptr;
+            }
+            MaterialVID vid_m = GetFirstVidByName("_DEFAULT_TRANSPARENT_MATERIAL");
+            Material* material_transparent = GetMaterial(vid_m);
+            assert(material_transparent && "default material must be assigned!");
+            it->second.CreateLightCube(material_transparent, { 0, 1, 0 }); // create once
+            return it->second.GetLightCube();
+        }
+
+        //inline Cube* GetLightCube(const LightVID vidLight)
+        //{
+        //    auto it = lightResMaps_.find(vidLight);
+        //    if (it == lightResMaps_.end())
+        //    {
+        //        return nullptr;
+        //    }
+        //    return it->second.GetLightCube();
+        //}
 
         inline filament::Material* GetMaterial(const MaterialVID vidMaterial)
         {
@@ -1282,6 +1355,7 @@ namespace vzm
                 renderableSceneVids_.erase(vid);
                 renderableResMaps_.erase(vid);
                 lightSceneVids_.erase(vid);
+                lightResMaps_.erase(vid);
                 renderPaths_.erase(vid);
 
                 for (auto& it : scenes_)
@@ -1322,16 +1396,16 @@ namespace vzm
             
             destroyTarget(renderPaths_);
             destroyTarget(scenes_);
-            destroyTarget(renderableSceneVids_);
-            destroyTarget(lightSceneVids_);
+            destroyTarget(renderableSceneVids_); // including renderableResMaps_
+            destroyTarget(lightSceneVids_); // including lightResMaps_
             destroyTarget(geometries_);
             destroyTarget(materials_);
             destroyTarget(materialInstances_);
         }
     };
-#pragma endregion
 
     VzEngineApp gEngineApp;
+#pragma endregion
 }
 
 #define COMP_NAME(COMP, ENTITY, FAILRET) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET;
@@ -1443,6 +1517,27 @@ namespace vzm
         Entity ett_parent = tc.getParent(ins);
         return ett_parent.getId();
     }
+    void VzSceneComp::SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
+    {
+        switch (compType)
+        {
+        case SCENE_COMPONENT_TYPE::ACTOR:
+        case SCENE_COMPONENT_TYPE::LIGHT:
+        {
+            COMP_RENDERABLE(rcm, ett, ins, );
+            rcm.setLayerMask(ins, layerBits, maskBits);
+            break;
+        }
+        case SCENE_COMPONENT_TYPE::CAMERA:
+        {
+            COMP_RENDERPATH(render_path, );
+            View* view = render_path->GetView();
+            view->setVisibleLayers(layerBits, maskBits);
+            break;
+        }
+        default: assert(0 && "invalid component!");
+        }
+    }
 #pragma endregion 
 
 #pragma region // VzCamera
@@ -1509,6 +1604,24 @@ namespace vzm
             isVertical? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
+
+    void VzCamera::SetCameraCubeVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
+    {
+        COMP_RENDERPATH(render_path, );
+        renderPath = render_path;
+
+        MaterialVID vid_m = gEngineApp.GetFirstVidByName("_DEFAULT_TRANSPARENT_MATERIAL");
+        Material* material_transparent = gEngineApp.GetMaterial(vid_m);
+        assert(material_transparent && "default material must be assigned!");
+
+        // create once
+        render_path->CreateCameraCube(material_transparent, { 1.f, 0, 0 });
+        Cube* camera_cube = render_path->GetCameraCube();
+        auto& rcm = gEngine->getRenderableManager();
+        rcm.setLayerMask(rcm.getInstance(camera_cube->getSolidRenderable()), layerBits, maskBits);
+        rcm.setLayerMask(rcm.getInstance(camera_cube->getWireFrameRenderable()), layerBits, maskBits);
+    }
+
     void VzCamera::GetWorldPose(float pos[3], float view[3], float up[3])
     {
         COMP_RENDERPATH(render_path, );
@@ -1541,7 +1654,7 @@ namespace vzm
         if (aspectRatio)
         {
             const filament::Viewport& vp = render_path->GetView()->getViewport();
-            *aspectRatio = vp.width / vp.height;
+            *aspectRatio = (float)vp.width / (float)vp.height;
         }
     }
 #pragma endregion
@@ -1557,6 +1670,18 @@ namespace vzm
     {
         COMP_LIGHT(lcm, ett, ins, -1.f);
         return lcm.getIntensity(ins);
+    }
+    void VzLight::SetLightCubeVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
+    {
+        MaterialVID vid_m = gEngineApp.GetFirstVidByName("_DEFAULT_TRANSPARENT_MATERIAL");
+        Material* material_transparent = gEngineApp.GetMaterial(vid_m);
+        assert(material_transparent && "default material must be assigned!");
+
+        // create once
+        Cube* light_cube = gEngineApp.CreateLightCube(componentVID, { 0, 1.f, 0 });
+        auto& rcm = gEngine->getRenderableManager();
+        rcm.setLayerMask(rcm.getInstance(light_cube->getSolidRenderable()), layerBits, maskBits);
+        rcm.setLayerMask(rcm.getInstance(light_cube->getWireFrameRenderable()), layerBits, maskBits);
     }
 #pragma endregion 
 
@@ -1681,6 +1806,22 @@ namespace vzm
         else
         {
             safeReleaseChecker->destroyed = false;
+        }
+
+        // default resources
+        {
+            Material* material_depth = Material::Builder()
+                .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
+                .build(*gEngine);
+            gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material_depth);
+            Material* material_default = Material::Builder()
+                .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
+                .build(*gEngine);
+            gEngineApp.CreateMaterial("_DEFAULT_STANDARD_MATERIAL", material_default);
+            Material* material_transparent = Material::Builder()
+                .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
+                .build(*gEngine);
+            gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material_transparent);
         }
 
         return VZ_OK;

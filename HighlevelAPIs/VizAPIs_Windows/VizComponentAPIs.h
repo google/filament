@@ -1,4 +1,6 @@
 #pragma once
+#pragma warning (disable : 4251)
+#pragma warning (disable : 4819)
 #define _ITERATOR_DEBUG_LEVEL 0 // this is for using STL containers as our standard parameters
 
 #define __dojostatic extern "C" __declspec(dllexport)
@@ -25,7 +27,6 @@
 #include <chrono>
 #include <functional>
 
-
 using VID = uint32_t;
 inline constexpr VID INVALID_VID = 0;
 using TimeStamp = std::chrono::high_resolution_clock::time_point;
@@ -39,16 +40,17 @@ constexpr float VZ_PIDIV4 = 0.785398163f;
 
 using uint = uint32_t;
 
-// DOJO TO DO (or suggestion)
-// 1. separate mesh and material (mesh to geometry... and material is an option for objectcomponent)
-// 2. set up a resource pool (or a scene for this?! for the geometry anbd material, animations,....)
+//TO DO
+//1. RenderPath 마다 cameraCube, lightmapCube 생성 (V)
+//1. resize test (V)
+//2. Scene 에 IBL 설정 ... Scene Create 때마다 VzScene 등록..., IBL 관리...
+//3. Camera Manipulator... VzCamera 에 넣기... or ... vzm::API
+//4. gltfio
+//5. Shared Source 정리
 
 namespace vzm
 {
-    __dojostatic inline void TransformPoint(const float posSrc[3], const float mat[16], float posDst[3]);
-    __dojostatic inline void TransformVector(const float vecSrc[3], const float mat[16], float vecDst[3]);
-    __dojostatic inline void ComputeBoxTransformMatrix(const float cubeScale[3], const float posCenter[3],
-        const float yAxis[3], const float zAxis[3], float mat[16], float matInv[16]);
+    class VzRenderPath;
 
     template <typename ID> struct ParamMap {
     private:
@@ -125,19 +127,32 @@ namespace vzm
 
     enum class RES_COMPONENT_TYPE
     {
-        GEOMATRY = 0,
+        RESOURCE = 0,
+        GEOMATRY,
         MATERIAL,
         MATERIALINSTANCE,
     };
 
     __dojostruct VzBaseComp
     {
+        // DO NOT SET
         VID componentVID = INVALID_VID;
         TimeStamp timeStamp = {}; // will be automatically set 
+        std::string originFrom;
+
+        // User data
         ParamMap<std::string> attributes;
 
         std::string GetName();
         void SetName(const std::string& name);
+    };
+    __dojostruct VzScene : VzBaseComp
+    {
+        //
+
+        //mIBL->getSkybox()->setLayerMask(0x7, 0x4);
+        //mScene->setSkybox(mIBL->getSkybox());
+        //mScene->setIndirectLight(mIBL->getIndirectLight());
     };
     __dojostruct VzSceneComp : VzBaseComp
     {
@@ -158,9 +173,10 @@ namespace vzm
         void SetMatrix(const float value[16], const bool additiveTransform = false, const bool rowMajor = false);
 
         VID GetParentVid();
+
+        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
     };
 
-    class VzRenderPath;
     __dojostruct VzRenderer
     {
         VzRenderPath* renderPath = nullptr;
@@ -177,6 +193,8 @@ namespace vzm
         void SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovInDegree, const float aspectRatio, const bool isVertical = true);
         void GetWorldPose(float pos[3], float view[3], float up[3]);
         void GetPerspectiveProjection(float* zNearP, float* zFarP, float* fovInDegree, float* aspectRatio, bool isVertical = true);
+
+        void SetCameraCubeVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // helper object
     };
     __dojostruct VzLight : VzSceneComp
     {
@@ -189,6 +207,8 @@ namespace vzm
         };
         void SetIntensity(const float intensity = 110000);
         float GetIntensity() const;
+
+        void SetLightCubeVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // helper object
     };
     __dojostruct VzActor : VzSceneComp
     {
@@ -203,13 +223,12 @@ namespace vzm
 
     __dojostruct VzResource : VzBaseComp
     {
-        RES_COMPONENT_TYPE compType = RES_COMPONENT_TYPE::GEOMATRY;
+        RES_COMPONENT_TYPE compType = RES_COMPONENT_TYPE::RESOURCE;
     };
     __dojostruct VzGeometry : VzResource
     {
         // 
     };
-
     
     __dojostruct VzMaterial : VzResource
     {
@@ -229,9 +248,6 @@ namespace vzm
 
         void SetLightingModel(const LightingModel model);
         LightingModel GetLightingModel() const;
-
-
-
     };
     __dojostruct VzMI : VzMaterial
     {
