@@ -37,6 +37,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/vec4.h>
 
@@ -138,6 +139,14 @@ public:
 
     ClearOptions const& getClearOptions() const noexcept {
         return mClearOptions;
+    }
+
+    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept {
+        return mFrameInfoManager.getFrameInfoHistory(historySize);
+    }
+
+    size_t getMaxFrameHistorySize() const noexcept {
+        return MAX_FRAMETIME_HISTORY;
     }
 
 private:
