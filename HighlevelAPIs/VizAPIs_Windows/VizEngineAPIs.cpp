@@ -1604,7 +1604,11 @@ namespace vzm
     {
         return gEngineApp.UpdateSceneIBL(componentVID, path);
     }
-
+    void VzScene::SetSkyboxVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
+    {
+        IBL* ibl = gEngineApp.GetSceneIBL(componentVID);
+        ibl->getSkybox()->setLayerMask(layerBits, maskBits);
+    }
     void VzScene::SetLightmapVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
     {
         // create once
@@ -1715,10 +1719,15 @@ namespace vzm
         switch (compType)
         {
         case SCENE_COMPONENT_TYPE::ACTOR:
-        case SCENE_COMPONENT_TYPE::LIGHT:
         {
             COMP_RENDERABLE(rcm, ett, ins, );
             rcm.setLayerMask(ins, layerBits, maskBits);
+            break;
+        }
+        case SCENE_COMPONENT_TYPE::LIGHT:
+        {
+            //COMP_LIGHT(lcm, ett, ins, );
+            //lcm.setLayerMask(ins, layerBits, maskBits);
             break;
         }
         case SCENE_COMPONENT_TYPE::CAMERA:
@@ -2280,7 +2289,7 @@ namespace vzm
         {
             return VZ_FAIL;
         }
-        view->setVisibleLayers(0x4, 0x4);
+        //view->setVisibleLayers(0x4, 0x4);
         SceneVID vid_scene = gEngineApp.GetSceneVidBelongTo(camVid);
         assert(vid_scene != INVALID_VID);
 

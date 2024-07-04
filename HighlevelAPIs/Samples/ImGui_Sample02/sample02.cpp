@@ -138,7 +138,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(sid);
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-
+    cam->SetVisibleLayerMask(0x4, 0x4);
     // Main loop
     bool done = false;
     while (!done)
