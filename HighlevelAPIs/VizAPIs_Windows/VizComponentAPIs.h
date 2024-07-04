@@ -45,6 +45,7 @@ using uint = uint32_t;
 //1. resize test (V)
 //2. Scene 에 IBL 설정 ... Scene Create 때마다 VzScene 등록..., IBL 관리...
 //3. Camera Manipulator... VzCamera 에 넣기... or ... vzm::API
+//3. Light Cube 확인...
 //4. gltfio
 //5. Shared Source 정리
 
@@ -148,11 +149,8 @@ namespace vzm
     };
     __dojostruct VzScene : VzBaseComp
     {
-        //
-
-        //mIBL->getSkybox()->setLayerMask(0x7, 0x4);
-        //mScene->setSkybox(mIBL->getSkybox());
-        //mScene->setIndirectLight(mIBL->getIndirectLight());
+        bool LoadIBL(const std::string& iblPath);
+        void SetLightmapVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // check where to set
     };
     __dojostruct VzSceneComp : VzBaseComp
     {
@@ -173,6 +171,7 @@ namespace vzm
         void SetMatrix(const float value[16], const bool additiveTransform = false, const bool rowMajor = false);
 
         VID GetParentVid();
+        VID GetSceneVid();
 
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
     };
@@ -207,8 +206,6 @@ namespace vzm
         };
         void SetIntensity(const float intensity = 110000);
         float GetIntensity() const;
-
-        void SetLightCubeVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // helper object
     };
     __dojostruct VzActor : VzSceneComp
     {

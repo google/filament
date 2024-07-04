@@ -108,7 +108,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 int main(int argc, char** argv) {
     App app;
     app.config.title = "hellopbr";
-    //app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
     app.config.vulkanGPUHint = "0";
     app.config.backend = filament::Engine::Backend::OPENGL;
     handleCommandLineArguments(argc, argv, &app);
@@ -146,12 +146,12 @@ int main(int argc, char** argv) {
         // Add light sources into the scene.
         //app.light = em.create();
         //LightManager::Builder(LightManager::Type::SUN)
-        //        .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
-        //        .intensity(110000)
-        //        .direction({ 0.7, -1, -0.8 })
-        //        .sunAngularRadius(1.9f)
-        //        .castShadows(false)
-        //        .build(*engine, app.light);
+        //    .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
+        //    .intensity(110000)
+        //    .direction({ 0.7, -1, -0.8 })
+        //    .sunAngularRadius(1.9f)
+        //    .castShadows(false)
+        //    .build(*engine, app.light);
         //scene->addEntity(app.light);
     };
 

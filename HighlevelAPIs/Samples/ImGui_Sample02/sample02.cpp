@@ -136,6 +136,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::AppendSceneComponentTo(lid, sid);
     vzm::AppendSceneComponentTo(cid, sid);
 
+    vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(sid);
+    scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+
     // Main loop
     bool done = false;
     while (!done)
@@ -152,8 +155,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
             else
             {
-                VID cid = vzm::GetFirstVidByName("my camera");
-                vzm::Render(cid);
+                VID vid_cam = vzm::GetFirstVidByName("my camera");
+                vzm::Render(vid_cam);
             }
         }
         if (done)
@@ -241,7 +244,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         UINT height = rc.bottom - rc.top;
 
         VID cid = vzm::GetFirstVidByName("my camera");
-        if (cid != INVALID_VID)
+        if (cid != INVALID_VID && width > 0)
         {
             vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(cid);
             camera->SetCanvas(width, height, 96.f, hWnd);

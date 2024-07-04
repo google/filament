@@ -1,5 +1,10 @@
 #include "VizEngineAPIs.h" 
 
+#ifdef WIN32
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "Shlwapi.lib")
+#endif
+
 #include <iostream>
 #include <memory>
 
@@ -17,11 +22,13 @@
 #include <filament/TransformManager.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
+#include <filament/Skybox.h>
 
 #include <utils/EntityManager.h>
 #include <utils/EntityInstance.h>
 #include <utils/NameComponentManager.h>
 #include <utils/JobSystem.h>
+#include <utils/Path.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
@@ -32,6 +39,7 @@
 
 #include <filamentapp/Config.h>
 #include <filamentapp/Cube.h>
+#include <filamentapp/IBL.h>
 
 #include "backend/platforms/VulkanPlatform.h" // requires blueVK.h
 
@@ -123,11 +131,21 @@ namespace vzm::backlog
     {
         switch (level)
         {
-        case LogLevel::Default: utils::slog.i << input;
-        case LogLevel::Warning: utils::slog.w << input;
-        case LogLevel::Error: utils::slog.e << input;
+        case LogLevel::Default: 
+            std::cout << "[INFO] ";
+            utils::slog.i << input;
+            break;
+        case LogLevel::Warning:
+            std::cout << "[WARNING] ";
+            utils::slog.w << input;
+            break; 
+        case LogLevel::Error:
+            std::cout << "[ERROR] ";
+            utils::slog.e << input;
+            break;
         default: return;
         }
+        std::cout << input << std::endl;
     }
 }
 
@@ -206,6 +224,8 @@ static Engine::Config gEngineConfig = {};
 static filament::backend::VulkanPlatform* gVulkanPlatform = nullptr;
 static Engine* gEngine = nullptr;
 static filament::SwapChain* gDummySwapChain = nullptr;
+static filament::Material* gMaterialTransparent = nullptr; // do not release
+
 static std::vector<std::string> gMProp = {
             "baseColor",              //!< float4, all shading models
             "roughness",               //!< float,  lit shading models only
@@ -251,8 +271,7 @@ namespace vzm
     vzm::Timer vTimer;
     std::atomic_bool profileFrameFinished = { true };
 
-#pragma region // VZM DATA STRUCTURES
-
+#pragma region // VzRenderPath
     struct VzCanvas
     {
     protected:
@@ -291,7 +310,6 @@ namespace vzm
         filament::Renderer* renderer_ = nullptr;
 
         Cube* cameraCube_ = nullptr;
-        //std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, { 1,0,0 }));
 
         void resize()
         {
@@ -364,9 +382,10 @@ namespace vzm
                         gEngine->destroy(view_);
                     if (swapChain_)
                         gEngine->destroy(swapChain_);
-                    if (cameraCube_)
+                    if (cameraCube_) {
                         delete cameraCube_;
-                    cameraCube_ = nullptr;
+                        cameraCube_ = nullptr;
+                    }
                 }
                 catch (const std::exception& e) {
                     std::cerr << "Error destroying renderer: " << e.what() << std::endl;
@@ -374,14 +393,13 @@ namespace vzm
             }
         }
 
-        inline void CreateCameraCube(const Material* materialTransparent, const float3& linearColor)
-        {
-            if (cameraCube_)
-                return;
-            cameraCube_ = new Cube(*gEngine, materialTransparent, linearColor);
-        }
         inline Cube* GetCameraCube()
         {
+            if (cameraCube_)
+            {
+                return cameraCube_;
+            }
+            cameraCube_ = new Cube(*gEngine, gMaterialTransparent, {1, 0, 0});
             return cameraCube_;
         }
 
@@ -456,40 +474,72 @@ namespace vzm
 
         inline filament::Renderer* GetRenderer() { return renderer_; }
     };
+#pragma endregion
 
+#pragma region // VzEngineApp
     class VzEngineApp
     {
     private:
+        struct VzSceneResMap
+        {
+        private:
+            IBL* ibl_ = nullptr;
+            Cube* lightmapCube_ = nullptr; // note current filament supports only one directional light's shadowmap
+        public:
+            VzSceneResMap() { NewIBL(); };
+            ~VzSceneResMap() { Destory(); };
+            void Destory()
+            {
+                if (ibl_) {
+                    delete ibl_;
+                    ibl_ = nullptr;
+                }
+                if (lightmapCube_) {
+                    delete lightmapCube_;
+                    lightmapCube_ = nullptr;
+                }
+            }
+            IBL* GetIBL() { return ibl_; }
+            IBL* NewIBL()
+            {
+                if (ibl_) {
+                    delete ibl_;
+                }
+                ibl_ = new IBL(*gEngine);
+                return ibl_;
+            }
+            Cube* GetLightmapCube()
+            {
+                if (lightmapCube_)
+                {
+                    return lightmapCube_;
+                }
+                lightmapCube_ = new Cube(*gEngine, gMaterialTransparent, {0, 1, 0}, false);
+                return lightmapCube_;
+            }
+        };
         struct VzResMap
         {
             GeometryVID vidGeo = INVALID_VID;
             MaterialInstanceVID vidMI = INVALID_VID;
         };
-        struct VzLightMap
+        struct VzLightRes
         {
         private:
-            Cube* lightCube_ = nullptr;
         public:
-            VzLightMap() {};
-            ~VzLightMap() { if (lightCube_) delete lightCube_; };
-            void CreateLightCube(const Material* materialTransparent, const float3& linearColor)
-            {
-                if (lightCube_)
-                {
-                    return;
-                }
-                lightCube_ = new Cube(*gEngine, materialTransparent, linearColor, false);
-            }
-            Cube* GetLightCube() { return lightCube_; }
+            VzLightRes() {};
+            ~VzLightRes() {};
         };
         std::unordered_map<SceneVID, filament::Scene*> scenes_;
-        // note a VzRenderPath involves a view that includes
-        // 1. camera and 2. scene
-        std::unordered_map<CamVID, VzRenderPath> renderPaths_;
+        std::unordered_map<SceneVID, VzSceneResMap> sceneResMaps_;
+        // note a VzRenderPath involves a filament::view that includes
+        // 1. filament::camera and 2. filament::scene
+        std::unordered_map<CamVID, SceneVID> camSceneVids_;
+        std::unordered_map<CamVID, VzRenderPath> camRenderPaths_;
         std::unordered_map<RenderableVID, SceneVID> renderableSceneVids_;
         std::unordered_map<RenderableVID, VzResMap> renderableResMaps_; // consider when removing resources...
         std::unordered_map<LightVID, SceneVID> lightSceneVids_;
-        std::unordered_map<LightVID, VzLightMap> lightResMaps_;
+        std::unordered_map<LightVID, VzLightRes> lightResMaps_;
 
         // Resources
         std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometries_;
@@ -498,9 +548,9 @@ namespace vzm
 
         std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzComponents_;
 
-        inline bool removeScene(SceneVID sceneVid)
+        inline bool removeScene(SceneVID vidScene)
         {
-            Scene* scene = GetScene(sceneVid);
+            Scene* scene = GetScene(vidScene);
             if (scene == nullptr)
             {
                 return false;
@@ -508,13 +558,20 @@ namespace vzm
             auto& rcm = gEngine->getRenderableManager();
             auto& lcm = gEngine->getLightManager();
             scene->forEach([&](utils::Entity ett) {
+                VID vid = ett.getId();
                 if (rcm.hasComponent(ett))
                 {
-                    renderableSceneVids_[ett.getId()] = 0;
+                    // note that
+                    // there can be intrinsic entities in the scene
+                    auto it = renderableSceneVids_.find(vid);
+                    if (it != renderableSceneVids_.end())
+                        it->second = 0;
                 }
                 else if (lcm.hasComponent(ett))
                 {
-                    lightSceneVids_[ett.getId()] = 0;
+                    auto it = lightSceneVids_.find(vid);
+                    if (it != lightSceneVids_.end())
+                        it->second = 0;
                 }
                 else
                 {
@@ -522,20 +579,34 @@ namespace vzm
                 }
                 });
             gEngine->destroy(scene);
-            scenes_.erase(sceneVid);
-            for (auto& it : renderPaths_)
+            scenes_.erase(vidScene);
+            for (auto& it : camRenderPaths_)
             {
-                VzRenderPath* render_path = &it.second;
-                render_path->GetView()->setScene(nullptr);
+                auto it_c = camSceneVids_.find(it.first);
+                assert(it_c != camSceneVids_.end());
+                if (it_c->second == vidScene)
+                {
+                    it_c->second = 0;
+                    VzRenderPath* render_path = &it.second;
+                    render_path->GetView()->setScene(nullptr);
+                }
             }
+
+            auto it_srm = sceneResMaps_.find(vidScene);
+            assert(it_srm != sceneResMaps_.end());
+            //scene->remove(it_srm->second.GetLightmapCube()->getSolidRenderable());
+            //scene->remove(it_srm->second.GetLightmapCube()->getWireFrameRenderable());
+            sceneResMaps_.erase(it_srm); // calls destructor
+
+            vzComponents_.erase(vidScene);
             return true;
         }
 
-        inline VzRenderPath* createRendePath(const CamVID camVid = 0)
+        inline VzRenderPath* createRendePath(const CamVID vidCam = 0)
         {
             utils::EntityManager& em = utils::EntityManager::get();
-            utils::Entity camEtt = utils::Entity::import(camVid);
-            CamVID cam_vid = camVid;
+            utils::Entity camEtt = utils::Entity::import(vidCam);
+            CamVID cam_vid = vidCam;
             bool is_alive_cam = em.isAlive(camEtt);
             filament::Camera* camera = nullptr;
             if (!is_alive_cam)
@@ -557,7 +628,7 @@ namespace vzm
             // I organize the renderPath with filament::View that involves
             // 1. Camera (involving the camera component and the transform component)
             // 2. Scene
-            VzRenderPath* renderPath = &renderPaths_[camVid];
+            VzRenderPath* renderPath = &camRenderPaths_[vidCam];
             filament::View* view = renderPath->GetView();
             view->setCamera(camera); // attached to "view.scene"
 
@@ -581,6 +652,13 @@ namespace vzm
             utils::Entity ett = em.create();
             VID vid = ett.getId();
             scenes_[vid] = gEngine->createScene();
+            sceneResMaps_[vid];
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzScene>());
+            VzScene* v_scene = (VzScene*)it.first->second.get();
+            v_scene->componentVID = vid;
+            v_scene->originFrom = "CreateScene";
+            v_scene->timeStamp = std::chrono::high_resolution_clock::now();
 
             VzNameCompManager& ncm = VzNameCompManager::Get();
             ncm.CreateNameComp(ett, name);
@@ -661,9 +739,9 @@ namespace vzm
 #endif
             return ret;
         }
-        inline Scene* GetScene(const SceneVID sid)
+        inline Scene* GetScene(const SceneVID vid)
         {
-            auto it = scenes_.find(sid);
+            auto it = scenes_.find(vid);
             if (it == scenes_.end())
             {
                 return nullptr;
@@ -694,10 +772,61 @@ namespace vzm
         {
             return &scenes_;
         }
+        inline IBL* GetSceneIBL(const SceneVID vid)
+        {
+            auto it = sceneResMaps_.find(vid);
+            if (it == sceneResMaps_.end())
+            {
+                return nullptr;
+            }
+            return it->second.GetIBL();
+        }
+        inline Cube* GetLightmapCube(const SceneVID vid)
+        {
+            auto it = sceneResMaps_.find(vid);
+            if (it == sceneResMaps_.end())
+            {
+                return nullptr;
+            }
+            return it->second.GetLightmapCube();
+        }
+        inline bool UpdateSceneIBL(const SceneVID vid, const std::string& path)
+        {
+            auto it = sceneResMaps_.find(vid);
+            if (it == sceneResMaps_.end())
+            {
+                return false;
+            }
+            IBL* ibl = it->second.NewIBL();
+
+            Path iblPath(path);
+            if (!iblPath.exists()) {
+                backlog::post("The specified IBL path does not exist: " + path, backlog::LogLevel::Error);
+                return false;
+            }
+            if (!iblPath.isDirectory()) {
+                if (!ibl->loadFromEquirect(iblPath)) {
+                    backlog::post("Could not load the specified IBL: " + path, backlog::LogLevel::Error);
+                    return false;
+                }
+            }
+            else {
+                if (!ibl->loadFromDirectory(iblPath)) {
+                    backlog::post("Could not load the specified IBL: " + path, backlog::LogLevel::Error);
+                    return false;
+                }
+            }
+            ibl->getSkybox()->setLayerMask(0x7, 0x4);
+            Scene* scene = GetScene(vid);
+            assert(scene);
+            scene->setSkybox(ibl->getSkybox());
+            scene->setIndirectLight(ibl->getIndirectLight());
+            return true;
+        }
         inline VzRenderPath* GetRenderPath(const CamVID camVid)
         {
-            auto it = renderPaths_.find(camVid);
-            if (it == renderPaths_.end())
+            auto it = camRenderPaths_.find(camVid);
+            if (it == camRenderPaths_.end())
             {
                 return nullptr;
             }
@@ -706,8 +835,8 @@ namespace vzm
         inline size_t GetCameraVids(std::vector<CamVID>& camVids)
         {
             camVids.clear();
-            camVids.reserve(renderPaths_.size());
-            for (auto& it : renderPaths_)
+            camVids.reserve(camRenderPaths_.size());
+            for (auto& it : camRenderPaths_)
             {
                 camVids.push_back(it.first);
             }
@@ -729,6 +858,11 @@ namespace vzm
             {
                 return itl->second;
             }
+            auto itc = camSceneVids_.find(vid);
+            if (itc != camSceneVids_.end())
+            {
+                return itc->second;
+            }
             return INVALID_VID;
         }
 
@@ -743,13 +877,17 @@ namespace vzm
                     {
                         auto itr = renderableSceneVids_.find(vid_scene);
                         auto itl = lightSceneVids_.find(vid_scene);
-                        if (itr == renderableSceneVids_.end() && itl == renderableSceneVids_.end())
+                        auto itc = camSceneVids_.find(vid_scene);
+                        if (itr == renderableSceneVids_.end() 
+                            && itl == lightSceneVids_.end()
+                            && itc == camSceneVids_.end())
                         {
                             vid_scene = INVALID_VID;
                         }
                         else 
                         {
-                            vid_scene = itr == renderableSceneVids_.end() ? itl->second : itr->second;
+                            vid_scene = max(max(itl->second, itr->second), itc->second);
+                            assert(vid_scene != INVALID_VID);
                             *scene = GetScene(vid_scene);
                         }
                     }
@@ -838,10 +976,13 @@ namespace vzm
             {
                 auto itr = renderableSceneVids_.find(it.getId());
                 auto itl = lightSceneVids_.find(it.getId());
+                auto itc = camSceneVids_.find(it.getId());
                 if (itr != renderableSceneVids_.end())
                     itr->second = 0;
                 else if (itl != lightSceneVids_.end())
                     itl->second = 0;
+                else if (itc != camSceneVids_.end())
+                    itc->second = 0;
                 if (scene_src)
                 {
                     scene_src->remove(ett_src);
@@ -856,14 +997,17 @@ namespace vzm
 
                     auto itr = renderableSceneVids_.find(it.getId());
                     auto itl = lightSceneVids_.find(it.getId());
+                    auto itc = camSceneVids_.find(it.getId());
                     if (itr != renderableSceneVids_.end())
                         itr->second = vid_scene_dst;
-                    else if (itl != lightSceneVids_.end())
+                    if (itl != lightSceneVids_.end())
                         itl->second = vid_scene_dst;
+                    if (itc != camSceneVids_.end())
+                        itc->second = vid_scene_dst;
                 }
 
-                auto it_render_path = renderPaths_.find(vidSrc);
-                if (it_render_path != renderPaths_.end())
+                auto it_render_path = camRenderPaths_.find(vidSrc);
+                if (it_render_path != camRenderPaths_.end())
                 {
                     VzRenderPath* render_path = &it_render_path->second;
                     render_path->GetView()->setScene(scene_dst);
@@ -929,6 +1073,14 @@ namespace vzm
             {
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
                 v_comp = (VzSceneComp*)it.first->second.get();
+
+                camSceneVids_[vid] = 0;
+                // add camRenderPaths_
+                vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
+                vzm::VzRenderPath* render_path = createRendePath(vid); 
+                v_cam->renderPath = render_path;
+                render_path->SetCanvas(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
+                //render_path->UpdateVzCamera(v_cam);
                 break;
             }
             default:
@@ -936,16 +1088,17 @@ namespace vzm
             }
             v_comp->componentVID = vid;
             v_comp->compType = compType;
+            v_comp->originFrom = "CreateSceneComponent";
             v_comp->timeStamp = std::chrono::high_resolution_clock::now();
 
-            if (compType == SCENE_COMPONENT_TYPE::CAMERA)
-            {
-                vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
-                vzm::VzRenderPath* render_path = createRendePath(vid);
-                v_cam->renderPath = render_path;
-                render_path->SetCanvas(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
-                render_path->UpdateVzCamera(v_cam);
-            }
+            //if (compType == SCENE_COMPONENT_TYPE::CAMERA)
+            //{
+            //    vzm::VzCamera* v_cam = (vzm::VzCamera*)v_comp;
+            //    vzm::VzRenderPath* render_path = createRendePath(vid);
+            //    v_cam->renderPath = render_path;
+            //    render_path->SetCanvas(CANVAS_INIT_W, CANVAS_INIT_H, CANVAS_INIT_DPI);
+            //    render_path->UpdateVzCamera(v_cam);
+            //}
 
             auto& ncm = VzNameCompManager::Get();
             auto& tcm = gEngine->getTransformManager();
@@ -1004,6 +1157,7 @@ namespace vzm
             auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
             VzActor* v_actor = (VzActor*)it.first->second.get();
             v_actor->componentVID = vid;
+            v_actor->originFrom = "CreateTestActor";
             v_actor->compType = SCENE_COMPONENT_TYPE::ACTOR;
             v_actor->timeStamp = std::chrono::high_resolution_clock::now();
             return v_actor;
@@ -1043,6 +1197,7 @@ namespace vzm
             VzGeometry* v_m = (VzGeometry*)it.first->second.get();
             v_m->componentVID = vid;
             v_m->compType = RES_COMPONENT_TYPE::GEOMATRY;
+            v_m->originFrom = "CreateGeometry";
             v_m->timeStamp = std::chrono::high_resolution_clock::now();
 
             return v_m;
@@ -1082,6 +1237,7 @@ namespace vzm
             auto it = vzComponents_.emplace(vid, std::make_unique<VzMaterial>());
             VzMaterial* v_m = (VzMaterial*)it.first->second.get();
             v_m->componentVID = vid;
+            v_m->originFrom = "CreateMaterial";
             v_m->compType = RES_COMPONENT_TYPE::MATERIAL;
             v_m->timeStamp = std::chrono::high_resolution_clock::now();
 
@@ -1131,6 +1287,7 @@ namespace vzm
             auto it = vzComponents_.emplace(vid, std::make_unique<VzMI>());
             VzMI* v_m = (VzMI*)it.first->second.get();
             v_m->componentVID = vid;
+            v_m->originFrom = "CreateMaterialInstance";
             v_m->compType = RES_COMPONENT_TYPE::MATERIALINSTANCE;
             v_m->timeStamp = std::chrono::high_resolution_clock::now();
 
@@ -1174,30 +1331,6 @@ namespace vzm
             }
             return ret;
         }
-
-        inline Cube* CreateLightCube(const LightVID vidLight, const float3& linearColor)
-        {
-            auto it = lightResMaps_.find(vidLight);
-            if (it == lightResMaps_.end())
-            {
-                return nullptr;
-            }
-            MaterialVID vid_m = GetFirstVidByName("_DEFAULT_TRANSPARENT_MATERIAL");
-            Material* material_transparent = GetMaterial(vid_m);
-            assert(material_transparent && "default material must be assigned!");
-            it->second.CreateLightCube(material_transparent, { 0, 1, 0 }); // create once
-            return it->second.GetLightCube();
-        }
-
-        //inline Cube* GetLightCube(const LightVID vidLight)
-        //{
-        //    auto it = lightResMaps_.find(vidLight);
-        //    if (it == lightResMaps_.end())
-        //    {
-        //        return nullptr;
-        //    }
-        //    return it->second.GetLightCube();
-        //}
 
         inline filament::Material* GetMaterial(const MaterialVID vidMaterial)
         {
@@ -1262,6 +1395,8 @@ namespace vzm
         inline void RemoveEntity(const VID vid)
         {
             utils::Entity ett = utils::Entity::import(vid);
+
+            VzBaseComp* b = GetVzComponent<VzBaseComp>(vid);
             
             auto& ncm = VzNameCompManager::Get();
             ncm.RemoveEntity(ett);
@@ -1336,16 +1471,28 @@ namespace vzm
                     }
                 }
 
-                auto it_render_path = renderPaths_.find(vid);
-                if (it_render_path != renderPaths_.end())
+                auto it_render_path = camRenderPaths_.find(vid);
+                if (it_render_path != camRenderPaths_.end())
                 {
                     VzRenderPath& render_path = it_render_path->second;
-                    //View* view = render_path.GetView();
-                    //gEngine->destroy(view);
-                    //Camera* cam = &view->getCamera(); // this is an filament entity
-                    //filament::SwapChain* sc = render_path.GetSwapChain();
-                    //gEngine->destroy(sc);
-                    renderPaths_.erase(it_render_path); // call destructor
+                    Cube* cam_cube = render_path.GetCameraCube();
+                    if (cam_cube)
+                    {
+                        View* view = render_path.GetView();
+                        Scene* scene = view->getScene();
+                        SceneVID vid_scene = GetSceneVidBelongTo(vid);
+                        auto it_scene = scenes_.find(vid_scene);
+                        assert(scene == it_scene->second);
+                        scene->remove(cam_cube->getSolidRenderable());
+                        scene->remove(cam_cube->getWireFrameRenderable());
+                    }
+                    camRenderPaths_.erase(it_render_path); // call destructor
+                }
+
+                auto it_light = lightResMaps_.find(vid);
+                if (it_light != lightResMaps_.end())
+                {
+                    lightResMaps_.erase(it_light); // call destructor
                 }
 #pragma endregion 
                 // the remaining etts (not engine-destory group)
@@ -1356,7 +1503,7 @@ namespace vzm
                 renderableResMaps_.erase(vid);
                 lightSceneVids_.erase(vid);
                 lightResMaps_.erase(vid);
-                renderPaths_.erase(vid);
+                camRenderPaths_.erase(vid);
 
                 for (auto& it : scenes_)
                 {
@@ -1394,7 +1541,8 @@ namespace vzm
             //std::unordered_map<MaterialVID, filament::Material*> materials_;
             //std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> materialInstances_;
             
-            destroyTarget(renderPaths_);
+            // iteratively calling RemoveEntity of the following keys 
+            destroyTarget(camRenderPaths_);
             destroyTarget(scenes_);
             destroyTarget(renderableSceneVids_); // including renderableResMaps_
             destroyTarget(lightSceneVids_); // including lightResMaps_
@@ -1416,6 +1564,26 @@ namespace vzm
 #define COMP_MI(COMP, FAILRET) MaterialInstance* COMP = gEngineApp.GetMaterialInstance(componentVID); if (mi == nullptr) return FAILRET;
 namespace vzm
 {
+    auto cubeToScene = [](const utils::Entity ettCubeRenderable, const VID vidCube)
+        {
+            SceneVID vid_scene = gEngineApp.GetSceneVidBelongTo(vidCube);
+            if (vid_scene != INVALID_VID)
+            {
+                Scene* scene = gEngineApp.GetScene(vid_scene);
+                assert(scene);
+                if (!scene->hasEntity(ettCubeRenderable))
+                {
+                    // safely rearrangement
+                    auto& scenes = *gEngineApp.GetScenes();
+                    for (auto it : scenes)
+                    {
+                        it.second->remove(ettCubeRenderable);
+                    }
+                    scene->addEntity(ettCubeRenderable);
+                }
+            }
+        };
+
 #pragma region // VzBaseComp
     using namespace utils;
     std::string VzBaseComp::GetName()
@@ -1427,6 +1595,27 @@ namespace vzm
     {
         COMP_NAME(ncm, ett, );
         ncm.SetName(ett, name);
+        timeStamp = std::chrono::high_resolution_clock::now();
+    }
+#pragma endregion
+
+#pragma region // VzScene
+    bool VzScene::LoadIBL(const std::string& path)
+    {
+        return gEngineApp.UpdateSceneIBL(componentVID, path);
+    }
+
+    void VzScene::SetLightmapVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
+    {
+        // create once
+        Cube* light_cube = gEngineApp.GetLightmapCube(componentVID);
+
+        auto& rcm = gEngine->getRenderableManager();
+        rcm.setLayerMask(rcm.getInstance(light_cube->getSolidRenderable()), layerBits, maskBits);
+        rcm.setLayerMask(rcm.getInstance(light_cube->getWireFrameRenderable()), layerBits, maskBits);
+
+        cubeToScene(light_cube->getSolidRenderable(), componentVID);
+        cubeToScene(light_cube->getWireFrameRenderable(), componentVID);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
 #pragma endregion
@@ -1517,6 +1706,10 @@ namespace vzm
         Entity ett_parent = tc.getParent(ins);
         return ett_parent.getId();
     }
+    VID VzSceneComp::GetSceneVid()
+    {
+        return gEngineApp.GetSceneVidBelongTo(componentVID);
+    }
     void VzSceneComp::SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
     {
         switch (compType)
@@ -1537,6 +1730,7 @@ namespace vzm
         }
         default: assert(0 && "invalid component!");
         }
+        timeStamp = std::chrono::high_resolution_clock::now();
     }
 #pragma endregion 
 
@@ -1610,16 +1804,14 @@ namespace vzm
         COMP_RENDERPATH(render_path, );
         renderPath = render_path;
 
-        MaterialVID vid_m = gEngineApp.GetFirstVidByName("_DEFAULT_TRANSPARENT_MATERIAL");
-        Material* material_transparent = gEngineApp.GetMaterial(vid_m);
-        assert(material_transparent && "default material must be assigned!");
-
-        // create once
-        render_path->CreateCameraCube(material_transparent, { 1.f, 0, 0 });
         Cube* camera_cube = render_path->GetCameraCube();
         auto& rcm = gEngine->getRenderableManager();
         rcm.setLayerMask(rcm.getInstance(camera_cube->getSolidRenderable()), layerBits, maskBits);
         rcm.setLayerMask(rcm.getInstance(camera_cube->getWireFrameRenderable()), layerBits, maskBits);
+
+        cubeToScene(camera_cube->getSolidRenderable(), componentVID);
+        cubeToScene(camera_cube->getWireFrameRenderable(), componentVID);
+        timeStamp = std::chrono::high_resolution_clock::now();
     }
 
     void VzCamera::GetWorldPose(float pos[3], float view[3], float up[3])
@@ -1670,18 +1862,6 @@ namespace vzm
     {
         COMP_LIGHT(lcm, ett, ins, -1.f);
         return lcm.getIntensity(ins);
-    }
-    void VzLight::SetLightCubeVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
-    {
-        MaterialVID vid_m = gEngineApp.GetFirstVidByName("_DEFAULT_TRANSPARENT_MATERIAL");
-        Material* material_transparent = gEngineApp.GetMaterial(vid_m);
-        assert(material_transparent && "default material must be assigned!");
-
-        // create once
-        Cube* light_cube = gEngineApp.CreateLightCube(componentVID, { 0, 1.f, 0 });
-        auto& rcm = gEngine->getRenderableManager();
-        rcm.setLayerMask(rcm.getInstance(light_cube->getSolidRenderable()), layerBits, maskBits);
-        rcm.setLayerMask(rcm.getInstance(light_cube->getWireFrameRenderable()), layerBits, maskBits);
     }
 #pragma endregion 
 
@@ -1821,6 +2001,7 @@ namespace vzm
             Material* material_transparent = Material::Builder()
                 .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
                 .build(*gEngine);
+            gMaterialTransparent = material_transparent;
             gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material_transparent);
         }
 
@@ -2099,6 +2280,9 @@ namespace vzm
         {
             return VZ_FAIL;
         }
+        view->setVisibleLayers(0x4, 0x4);
+        SceneVID vid_scene = gEngineApp.GetSceneVidBelongTo(camVid);
+        assert(vid_scene != INVALID_VID);
 
         if (!UTILS_HAS_THREADING) 
         {
@@ -2125,11 +2309,15 @@ namespace vzm
         }
 
         // Update the cube distortion matrix used for frustum visualization.
-        //const Camera* lightmapCamera = view->getDirectionalShadowCamera();
-        //if (lightmapCamera) {
-        //    lightmapCube->mapFrustum(*gEngine, lightmapCamera);
-        //}
-        //cameraCube->mapFrustum(*gEngine, camera);
+        const Camera* lightmapCamera = view->getDirectionalShadowCamera();
+        if (lightmapCamera) {
+            Cube* lightmapCube = gEngineApp.GetLightmapCube(vid_scene);
+            lightmapCube->mapFrustum(*gEngine, lightmapCamera);
+        }
+        Cube* cameraCube = render_path->GetCameraCube();
+        if (cameraCube) {
+            cameraCube->mapFrustum(*gEngine, camera);
+        }
 
         // Delay rendering for roughly one monitor refresh interval
         // TODO: Use SDL_GL_SetSwapInterval for proper vsync
