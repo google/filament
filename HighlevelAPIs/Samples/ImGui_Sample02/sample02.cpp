@@ -189,10 +189,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     VID cid = vzm::GetFirstVidByName("my camera");
     vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(cid);
     vzm::VzCamera::Controller* cc = nullptr;
+    uint32_t w, h;
     if (camera)
     {
-        uint32_t w;
-        camera->GetCanvas(&w, nullptr, nullptr);
+        camera->GetCanvas(&w, &h, nullptr);
         if (w > 0)
         {
             cc = camera->GetController();
@@ -254,7 +254,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
         if (cc) {
             int x = GET_X_LPARAM(lParam);
-            int y = GET_Y_LPARAM(lParam);
+            int y = h - GET_Y_LPARAM(lParam);
             //glm::fvec3 p, v, u;
             //camera->GetWorldPose((float*)&p, (float*)&v, (float*)&u);
             //*(glm::fvec3*)cc->orbitHomePosition = p;
@@ -265,22 +265,28 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     case WM_MOUSEMOVE:
     {
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
-        cc->GrabDrag(x, y);
+        if (cc) {
+            int x = GET_X_LPARAM(lParam);
+            int y = h - GET_Y_LPARAM(lParam);
+            cc->GrabDrag(x, y);
+        }
         break;
     }
     case WM_LBUTTONUP:
     {
-        cc->GrabEnd();
+        if (cc) {
+            cc->GrabEnd();
+        }
         break;
     }
     case WM_MOUSEHWHEEL:
     {
-        int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
-        cc->Scroll(x, y, zDelta);
+        if (cc) {
+            int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+            int x = GET_X_LPARAM(lParam);
+            int y = h - GET_Y_LPARAM(lParam);
+            cc->Scroll(x, y, zDelta);
+        }
         break;
     }
     case WM_SIZE:
