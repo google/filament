@@ -10,6 +10,7 @@
 #include "VizEngineAPIs.h"
 
 #include <iostream>
+#include <windowsx.h>
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -139,6 +140,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(sid);
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     cam->SetVisibleLayerMask(0x4, 0x4);
+    vzm::VzCamera::Controller* cc = cam->GetController();
+    *(glm::fvec3*)cc->orbitHomePosition = p;
+    cc->UpdateControllerSettings();
     // Main loop
     bool done = false;
     while (!done)
@@ -182,11 +186,22 @@ int main(int, char**)
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    VID cid = vzm::GetFirstVidByName("my camera");
+    vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(cid);
+    vzm::VzCamera::Controller* cc = nullptr;
+    if (camera)
+    {
+        uint32_t w;
+        camera->GetCanvas(&w, nullptr, nullptr);
+        if (w > 0)
+        {
+            cc = camera->GetController();
+        }
+    }
     switch (msg)
     {
     case WM_CLOSE:
     {
-        VID cid = vzm::GetFirstVidByName("my camera");
         vzm::RemoveComponent(cid);
         break;
     }
@@ -235,18 +250,47 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         }
         return 0;
-
+    case WM_LBUTTONDOWN:
+    {
+        if (cc) {
+            int x = GET_X_LPARAM(lParam);
+            int y = GET_Y_LPARAM(lParam);
+            //glm::fvec3 p, v, u;
+            //camera->GetWorldPose((float*)&p, (float*)&v, (float*)&u);
+            //*(glm::fvec3*)cc->orbitHomePosition = p;
+            //cc->UpdateControllerSettings();
+            cc->GrabBegin(x, y, false);
+        }
+        break;
+    }
+    case WM_MOUSEMOVE:
+    {
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+        cc->GrabDrag(x, y);
+        break;
+    }
+    case WM_LBUTTONUP:
+    {
+        cc->GrabEnd();
+        break;
+    }
+    case WM_MOUSEHWHEEL:
+    {
+        int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+        cc->Scroll(x, y, zDelta);
+        break;
+    }
     case WM_SIZE:
     {
         RECT rc;
         GetClientRect(hWnd, &rc);
         UINT width = rc.right - rc.left;
         UINT height = rc.bottom - rc.top;
-
-        VID cid = vzm::GetFirstVidByName("my camera");
-        if (cid != INVALID_VID && width > 0)
+        if (camera && width > 0)
         {
-            vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(cid);
             camera->SetCanvas(width, height, 96.f, hWnd);
         }
         break;

@@ -258,6 +258,7 @@ static std::vector<std::string> gMProp = {
             "specularColorFactor",   //!< float3, lit shading models only, except subsurface and cloth
 };
 
+using CameraManipulator = filament::camutils::Manipulator<float>;
 using SceneVID = VID;
 using CamVID = VID;
 using RenderableVID = VID;
@@ -310,6 +311,8 @@ namespace vzm
         filament::Renderer* renderer_ = nullptr;
 
         Cube* cameraCube_ = nullptr;
+        VzCamera::Controller camController_;
+        std::unique_ptr<CameraManipulator> cameraManipulator_;
 
         void resize()
         {
@@ -363,6 +366,7 @@ namespace vzm
         }
 
     public:
+        CamVID vidCam = INVALID_VID;
         VzRenderPath()
         {
             assert(gEngine && "native engine is not initialized!");
@@ -386,6 +390,7 @@ namespace vzm
                         delete cameraCube_;
                         cameraCube_ = nullptr;
                     }
+                    cameraManipulator_.reset();
                 }
                 catch (const std::exception& e) {
                     std::cerr << "Error destroying renderer: " << e.what() << std::endl;
@@ -401,6 +406,53 @@ namespace vzm
             }
             cameraCube_ = new Cube(*gEngine, gMaterialTransparent, {1, 0, 0});
             return cameraCube_;
+        }
+        inline void NewCameraManipulator(const VzCamera::Controller& camController)
+        {
+            camController_ = camController;
+            cameraManipulator_.reset(CameraManipulator::Builder()
+                .targetPosition(camController_.targetPosition[0], camController_.targetPosition[1], camController_.targetPosition[2])
+                .upVector(camController_.upVector[0], camController_.upVector[1], camController_.upVector[2])
+                .zoomSpeed(camController_.zoomSpeed)
+
+                .orbitHomePosition(camController_.orbitHomePosition[0], camController_.orbitHomePosition[1], camController_.orbitHomePosition[2])
+                .orbitSpeed(camController_.orbitSpeed[0], camController_.orbitSpeed[1])
+
+                .fovDirection(camController_.isVerticalFov ? camutils::Fov::VERTICAL : camutils::Fov::HORIZONTAL)
+                .fovDegrees(camController_.fovDegrees)
+                .farPlane(camController_.farPlane)
+                .mapExtent(camController_.mapExtent[0], camController_.mapExtent[1])
+                .mapMinDistance(camController_.mapMinDistance)
+
+                .flightStartPosition(camController_.flightStartPosition[0], camController_.flightStartPosition[1], camController_.flightStartPosition[2])
+                .flightStartOrientation(camController_.flightStartPitch, camController_.flightStartYaw)
+                .flightMaxMoveSpeed(camController_.flightMaxSpeed)
+                .flightSpeedSteps(camController_.flightSpeedSteps)
+                .flightPanSpeed(camController_.flightPanSpeed[0], camController_.flightPanSpeed[1])
+                .flightMoveDamping(camController_.flightMoveDamping)
+
+                .groundPlane(camController_.groundPlane[0], camController_.groundPlane[1], camController_.groundPlane[2], camController_.groundPlane[3])
+                .panning(camController_.panning)
+                .build((camutils::Mode)camController_.mode));
+            camController_.vidCam = vidCam;
+        }
+        inline VzCamera::Controller* GetCameraController()
+        {
+            return &camController_;
+        }
+        inline CameraManipulator* GetCameraManipulator()
+        {
+            return cameraManipulator_.get();
+        }
+        inline void UpdateCameraWithCM()
+        {
+            if (cameraManipulator_.get() != nullptr)
+            {
+                cameraManipulator_->update(deltaTime);
+                filament::math::float3 eye, center, up;
+                cameraManipulator_->getLookAt(&eye, &center, &up);
+                view_->getCamera().lookAt(eye, center, up);
+            }
         }
 
         inline void SetFixedTimeUpdate(const float targetFPS)
@@ -429,6 +481,12 @@ namespace vzm
 
             view_->setViewport(filament::Viewport(0, 0, w, h));
             view_->getCamera().setScaling(double2(1., 1.));
+
+            if (cameraManipulator_ 
+                && prevWidth_ != width_ && prevHeight_ != height_ && prevDpi_ != dpi)
+            {
+                NewCameraManipulator(camController_);
+            }
         }
         inline filament::SwapChain* GetSwapChain()
         {
@@ -629,6 +687,7 @@ namespace vzm
             // 1. Camera (involving the camera component and the transform component)
             // 2. Scene
             VzRenderPath* renderPath = &camRenderPaths_[vidCam];
+            renderPath->vidCam = vidCam;
             filament::View* view = renderPath->GetView();
             view->setCamera(camera); // attached to "view.scene"
 
@@ -823,9 +882,9 @@ namespace vzm
             scene->setIndirectLight(ibl->getIndirectLight());
             return true;
         }
-        inline VzRenderPath* GetRenderPath(const CamVID camVid)
+        inline VzRenderPath* GetRenderPath(const CamVID vidCam)
         {
-            auto it = camRenderPaths_.find(camVid);
+            auto it = camRenderPaths_.find(vidCam);
             if (it == camRenderPaths_.end())
             {
                 return nullptr;
@@ -1858,6 +1917,62 @@ namespace vzm
             *aspectRatio = (float)vp.width / (float)vp.height;
         }
     }
+
+    VzCamera::Controller* VzCamera::GetController()
+    {
+        COMP_RENDERPATH(render_path, nullptr);
+        renderPath = render_path;
+        CameraManipulator* cm = render_path->GetCameraManipulator();
+        Controller* cc = render_path->GetCameraController();
+        if (cm == nullptr)
+        {
+            render_path->NewCameraManipulator(*render_path->GetCameraController());
+            cc = render_path->GetCameraController();
+        }
+        return cc;
+    }
+#define GET_CM(CM, RP) if (vidCam == INVALID_VID) return; VzRenderPath * RP = gEngineApp.GetRenderPath(vidCam); if (RP == nullptr) return; CameraManipulator * CM = RP->GetCameraManipulator();
+#define GET_CM_WARN(CM, RP) GET_CM(CM, RP) if (CM == nullptr) { backlog::post("camera manipulator is not set!", backlog::LogLevel::Warning); return; }
+    void VzCamera::Controller::UpdateControllerSettings()
+    {
+        GET_CM(cm, render_path);
+        render_path->NewCameraManipulator(*this);
+    }
+    void VzCamera::Controller::KeyDown(const Key key)
+    {
+        GET_CM_WARN(cm, render_path);
+        cm->keyDown((CameraManipulator::Key)key);
+    }
+    void VzCamera::Controller::KeyUp(const Key key)
+    {
+        GET_CM_WARN(cm, render_path);
+        cm->keyUp((CameraManipulator::Key)key);
+    }
+    void VzCamera::Controller::Scroll(const int x, const int y, const float scrollDelta)
+    {
+        GET_CM(cm, render_path);
+        cm->scroll(x, y, scrollDelta);
+    }
+    void VzCamera::Controller::GrabBegin(const int x, const int y, const bool strafe)
+    {
+        GET_CM_WARN(cm, render_path);
+        cm->grabBegin(x, y, strafe);
+    }
+    void VzCamera::Controller::GrabDrag(const int x, const int y)
+    {
+        GET_CM_WARN(cm, render_path);
+        cm->grabUpdate(x, y);
+    }
+    void VzCamera::Controller::GrabEnd()
+    {
+        GET_CM_WARN(cm, render_path);
+        cm->grabEnd();
+    }
+    void VzCamera::Controller::UpdateCamera(const float deltaTime)
+    {
+        GET_CM_WARN(cm, render_path);
+        render_path->UpdateCameraWithCM();
+    }
 #pragma endregion
 
 #pragma region // VzLight
@@ -2300,6 +2415,8 @@ namespace vzm
 
         render_path->deltaTime = float(std::max(0.0, vTimer.RecordElapsedSeconds())); // timeStep
 
+        // preupdate..
+        render_path->UpdateCameraWithCM();
         // fixed time update
         {
             render_path->deltaTimeAccumulator += render_path->deltaTime;
