@@ -1,61 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="imgui">
-      <UniqueIdentifier>{9900fb21-ec28-440e-ae92-e7edfc1439b6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="imgui_backend">
-      <UniqueIdentifier>{5ad2d456-652d-4815-848a-017a9906df0d}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\imgui_common\imconfig.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imgui.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imgui_internal.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imstb_rectpack.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imstb_textedit.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imstb_truetype.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imgui_impl_dx11.h">
-      <Filter>imgui_backend</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui_common\imgui_impl_win32.h">
-      <Filter>imgui_backend</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\imgui_common\imgui.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui_common\imgui_demo.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui_common\imgui_draw.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui_common\imgui_tables.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui_common\imgui_widgets.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
     <ClCompile Include="sample02.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_impl_dx11.cpp">
-      <Filter>imgui_backend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui_common\imgui_impl_win32.cpp">
-      <Filter>imgui_backend</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

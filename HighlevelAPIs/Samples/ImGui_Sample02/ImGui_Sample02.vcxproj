@@ -19,23 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\imgui_common\imconfig.h" />
-    <ClInclude Include="..\imgui_common\imgui.h" />
-    <ClInclude Include="..\imgui_common\imgui_impl_dx11.h" />
-    <ClInclude Include="..\imgui_common\imgui_impl_win32.h" />
-    <ClInclude Include="..\imgui_common\imgui_internal.h" />
-    <ClInclude Include="..\imgui_common\imstb_rectpack.h" />
-    <ClInclude Include="..\imgui_common\imstb_textedit.h" />
-    <ClInclude Include="..\imgui_common\imstb_truetype.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\imgui_common\imgui.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_demo.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_draw.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_impl_dx11.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_impl_win32.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_tables.cpp" />
-    <ClCompile Include="..\imgui_common\imgui_widgets.cpp" />
     <ClCompile Include="sample02.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -127,7 +110,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>VizAPIs_Windows.lib;d3d11.lib;d3dcompiler.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../bin/$(Configuration);$(DXSDK_DIR)/Lib/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../../bin/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>

@@ -1,24 +1,11 @@
-// Dear ImGui: standalone example application for DirectX 11
-
-// Learn about Dear ImGui:
-// - FAQ                  https://dearimgui.com/faq
-// - Getting Started      https://dearimgui.com/getting-started
-// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
-// - Introduction, links and more at the top of imgui.cpp
-
 // Filament highlevel APIs
 #include "VizEngineAPIs.h"
 
 #include <iostream>
 #include <windowsx.h>
 
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx11.h"
-#include <d3d11.h>
 #include <tchar.h>
 #include <shellscalingapi.h>
-
 
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/transform.hpp"
@@ -279,7 +266,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
         break;
     }
-    case WM_MOUSEHWHEEL:
+    case WM_MOUSEWHEEL:
     {
         if (cc) {
             int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
