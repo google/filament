@@ -329,27 +329,42 @@ namespace vzm
                 return;
             }
 
+            utils::JobSystem& js = gEngine->getJobSystem();
+
+            auto resizeJob = [&]()
+                {
+                    gEngine->destroy(swapChain_);
+                    if (nativeWindow_ == nullptr)
+                    {
+                        swapChain_ = gEngine->createSwapChain(width_, height_);
+                    }
+                    else
+                    {
+                        swapChain_ = gEngine->createSwapChain(
+                            nativeWindow_, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+
+                        // dummy calls?
+                        // this code causes async error 
+                        // "state->elapsed.store(int64_t(TimerQueryResult::ERROR), std::memory_order_relaxed);"
+                        //renderer_->beginFrame(swapChain_);
+                        //renderer_->endFrame();
+                    }
+
+                    Camera* camera = &view_->getCamera();
+                    float fovY = camera->getFieldOfViewInDegrees(Camera::Fov::VERTICAL);
+                    camera->setProjection((double)fovY, (double)width_ / (double)height_,
+                        camera->getNear(), camera->getCullingFar());
+                };
+
+            //utils::JobSystem::Job* parent = js.createJob();
+            //js.run(jobs::createJob(js, parent, resizeJob));
+            //js.runAndWait(parent);
+            resizeJob();
+
+
             // filament will handle this resizing process internally !?
             // ??? // 만약 그렇다면, ... window 에 따라 offscreen 이냐 아니냐로 재생성 처리.
-            gEngine->destroy(swapChain_);
-            if (nativeWindow_ == nullptr)
-            {
-                swapChain_ = gEngine->createSwapChain(width_, height_);
-            }
-            else
-            {
-                swapChain_ = gEngine->createSwapChain(
-                    nativeWindow_, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
-
-                // dummy calls?
-                renderer_->beginFrame(swapChain_);
-                renderer_->endFrame();
-            }
-
-            Camera* camera = &view_->getCamera();
-            float fovY = camera->getFieldOfViewInDegrees(Camera::Fov::VERTICAL);
-            camera->setProjection((double)fovY, (double)width_ / (double)height_,
-                camera->getNear(), camera->getCullingFar());
+            
         }
 
         void tryResizeRenderTargets()
@@ -941,9 +956,9 @@ namespace vzm
                     *scene = GetScene(vid_scene);
                     if (*scene == nullptr)
                     {
-                        auto itr = renderableSceneVids_.find(vid_scene);
-                        auto itl = lightSceneVids_.find(vid_scene);
-                        auto itc = camSceneVids_.find(vid_scene);
+                        auto itr = renderableSceneVids_.find(vid);
+                        auto itl = lightSceneVids_.find(vid);
+                        auto itc = camSceneVids_.find(vid);
                         if (itr == renderableSceneVids_.end() 
                             && itl == lightSceneVids_.end()
                             && itc == camSceneVids_.end())
@@ -952,8 +967,10 @@ namespace vzm
                         }
                         else 
                         {
-                            vid_scene = max(max(itl->second, itr->second), itc->second);
-                            assert(vid_scene != INVALID_VID);
+                            vid_scene = max(max(itl != lightSceneVids_.end()? itl->second : INVALID_VID,
+                                itr != renderableSceneVids_.end() ? itr->second : INVALID_VID),
+                                itc != camSceneVids_.end() ? itc->second : INVALID_VID);
+                            //assert(vid_scene != INVALID_VID); can be INVALID_VID
                             *scene = GetScene(vid_scene);
                         }
                     }
@@ -1040,6 +1057,7 @@ namespace vzm
                     });
 
                 removeScene(vid_scene_src);
+                scene_src = nullptr;
             }
 
             for (auto& it : entities_moving)
@@ -1173,8 +1191,15 @@ namespace vzm
 
             auto& ncm = VzNameCompManager::Get();
             auto& tcm = gEngine->getTransformManager();
-            ncm.CreateNameComp(ett, name);
-            tcm.create(ett);
+
+            if (!ncm.getInstance(ett).isValid())
+            {
+                ncm.CreateNameComp(ett, name);
+            }
+            if (!tcm.getInstance(ett).isValid())
+            {
+                tcm.create(ett);
+            }
 
             return v_comp;
         }
@@ -2078,7 +2103,7 @@ namespace vzm
 
         void Destory()
         {
-            if (asset) {
+            if (resourceLoader) {
                 resourceLoader->asyncCancelLoad();
                 resourceLoader = nullptr;
             }
@@ -2213,6 +2238,30 @@ namespace vzm
         }
 
         safeReleaseChecker->destroyed = true;
+        return VZ_OK;
+    }
+
+    VZRESULT ReleaseWindowHandlerTasks(void* window)
+    {
+        if (window == nullptr)
+        {
+            return VZ_OK;
+        }
+        gltfIO.resourceLoader->asyncCancelLoad();
+
+        std::vector<CamVID> cam_vids;
+        gEngineApp.GetCameraVids(cam_vids);
+        for (CamVID vid_cam : cam_vids)
+        {
+            VzRenderPath* render_path = gEngineApp.GetRenderPath(vid_cam);
+            void* window_render_path = nullptr;
+            render_path->GetCanvas(nullptr, nullptr, nullptr, &window_render_path);
+            if (window == window_render_path)
+            {
+                gEngineApp.RemoveEntity(vid_cam);
+            }
+        }
+
         return VZ_OK;
     }
 
@@ -2416,8 +2465,6 @@ namespace vzm
                 GLTF_DEMO_DAMAGEDHELMET_SIZE);
             gltfIO.instance = gltfIO.asset->getInstance();
 
-
-
             ResourceConfiguration configuration = {};
             configuration.engine = gEngine;
             configuration.gltfPath = ""; // gltfPath.c_str();
@@ -2434,18 +2481,16 @@ namespace vzm
                 std::cerr << "Unable to start loading resources for " << filename << std::endl;
                 exit(1);
             }
-            //float const progress = gltfIO.resourceLoader->asyncGetLoadProgress();
-            //
             //gltfIO.asset->getInstance()->recomputeBoundingBoxes(); // ??
             gltfIO.asset->releaseSourceData();
-            //
-            //// Enable stencil writes on all material instances.
-            //const size_t matInstanceCount = gltfIO.instance->getMaterialInstanceCount();
-            //MaterialInstance* const* const instances = gltfIO.instance->getMaterialInstances();
-            //for (int mi = 0; mi < matInstanceCount; mi++) {
-            //    instances[mi]->setStencilWrite(true);
-            //    instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
-            //}
+            
+            // Enable stencil writes on all material instances.
+            const size_t matInstanceCount = gltfIO.instance->getMaterialInstanceCount();
+            MaterialInstance* const* const instances = gltfIO.instance->getMaterialInstances();
+            for (int mi = 0; mi < matInstanceCount; mi++) {
+                instances[mi]->setStencilWrite(true);
+                instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
+            }
 
             SceneVID vid_new_scene = gEngineApp.CreateScene(nameScene);
             Scene* scene_new = gEngineApp.GetScene(vid_new_scene);
@@ -2453,12 +2498,35 @@ namespace vzm
             //mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
             //mAsset = nullptr;
 
-            scene_new->addEntities(gltfIO.asset->getLightEntities(), gltfIO.asset->getLightEntityCount());
+            //scene_new->addEntities(gltfIO.asset->getLightEntities(), gltfIO.asset->getLightEntityCount());
             auto& rcm = gEngine->getRenderableManager();
+            auto& lcm = gEngine->getLightManager();
+            auto& tcm = gEngine->getTransformManager();
+            std::set<utils::Entity> transform_entities;
             for (size_t i = 0, n = gltfIO.asset->getRenderableEntityCount(); i < n; i++) {
-                auto ri = rcm.getInstance(gltfIO.asset->getRenderableEntities()[i]);
+                utils::Entity ett = gltfIO.asset->getRenderableEntities()[i];
+                auto ri = rcm.getInstance(ett);
                 rcm.setScreenSpaceContactShadows(ri, true);
+                gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, ncm.GetName(ett), ett.getId());
+                gEngineApp.AppendSceneEntityToParent(ett.getId(), vid_new_scene);
+                transform_entities.insert(ett);
             }
+
+            for (size_t i = 0, n = gltfIO.asset->getLightEntityCount(); i < n; i++) {
+                utils::Entity ett = gltfIO.asset->getLightEntities()[i];
+                auto li = lcm.getInstance(ett);
+                gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::LIGHT, ncm.GetName(ett), ett.getId());
+                gEngineApp.AppendSceneEntityToParent(ett.getId(), vid_new_scene);
+                transform_entities.insert(ett);
+            }
+
+            for (size_t i = 0, n = gltfIO.asset->getCameraEntityCount(); i < n; i++) {
+                utils::Entity ett = gltfIO.asset->getCameraEntities()[i];
+                gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::CAMERA, ncm.GetName(ett), ett.getId());
+                gEngineApp.AppendSceneEntityToParent(ett.getId(), vid_new_scene);
+                transform_entities.insert(ett);
+            }
+
             gltfIO.asset->detachFilamentComponents();
             return vid_new_scene;
         }
@@ -2504,6 +2572,16 @@ namespace vzm
         return sid;
         /**/
         return 0;
+    }
+
+    float GetAsyncLoadProgress()
+    {
+        if (gltfIO.resourceLoader == nullptr)
+        {
+            backlog::post("resource loader is not activated!", backlog::LogLevel::Error);
+            return -1.f;
+        }
+        return gltfIO.resourceLoader->asyncGetLoadProgress();
     }
 
     VZRESULT Render(const VID camVid)

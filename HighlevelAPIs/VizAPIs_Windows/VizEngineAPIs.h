@@ -11,6 +11,7 @@ namespace vzm
     //  - paired with DeinitEngineLib()
     __dojostatic VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& arguments = vzm::ParamMap<std::string>());
     __dojostatic VZRESULT DeinitEngineLib();
+    __dojostatic VZRESULT ReleaseWindowHandlerTasks(void* window);
     // Get Entity ID 
     //  - return zero in case of failure 
     __dojostatic VID GetFirstVidByName(const std::string& name);
@@ -46,6 +47,7 @@ namespace vzm
     // Async version of LoadFileIntoNewScene
     __dojostatic void LoadFileIntoNewSceneAsync(const std::string& filename, const std::string& rootName, const std::string& sceneName = "", const std::function<void(VID sceneVid, VID rootVid)>& callback = nullptr);
     __dojostatic VID LoadTestModel(const std::string& modelName);
+    __dojostatic float GetAsyncLoadProgress();
     // Render a scene on camera (camVid)
     //  - Must belong to the internal scene
     //  - if updateScene is true, uses the camera for camera-dependent scene updates

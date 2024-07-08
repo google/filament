@@ -118,10 +118,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
-    //vzm::VzLight* light;
-    //VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
-    //vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
-    //vzm::AppendSceneComponentTo(vid_light, vid_scene);
+    vzm::VzLight* light;
+    VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
+    vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
+    vzm::AppendSceneComponentTo(vid_light, vid_scene);
     vzm::AppendSceneComponentTo(vid_camera, vid_scene);
 
     vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(vid_scene);
@@ -189,7 +189,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_CLOSE:
     {
-        vzm::RemoveComponent(vid_camera);
+        vzm::ReleaseWindowHandlerTasks(hWnd);
         break;
     }
     case WM_KEYDOWN:
