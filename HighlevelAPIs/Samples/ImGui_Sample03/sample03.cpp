@@ -108,23 +108,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::ParamMap<std::string> arguments;
     vzm::InitEngineLib(arguments);
-    VID sid = vzm::NewScene("my scene");
-    VID aid = vzm::LoadTestModel("my test model");
+    VID vid_scene = vzm::NewScene("my scene");
+    VID vid_scene_loaded = vzm::LoadFileIntoNewScene("", "my gltf root", "my gltf scene");
     vzm::VzCamera* cam;
-    VID cid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
+    VID vid_camera = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
     cam->SetCanvas(w, h, dpi, hwnd);
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
-    vzm::VzLight* light;
-    VID lid = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
-    vzm::AppendSceneComponentTo(aid, sid);
-    vzm::AppendSceneComponentTo(lid, sid);
-    vzm::AppendSceneComponentTo(cid, sid);
+    //vzm::VzLight* light;
+    //VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
+    //vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
+    //vzm::AppendSceneComponentTo(vid_light, vid_scene);
+    vzm::AppendSceneComponentTo(vid_camera, vid_scene);
 
-    vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(sid);
+    vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(vid_scene);
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     cam->SetVisibleLayerMask(0x4, 0x4);
     vzm::VzCamera::Controller* cc = cam->GetController();
@@ -173,8 +173,8 @@ int main(int, char**)
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    VID cid = vzm::GetFirstVidByName("my camera");
-    vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(cid);
+    VID vid_camera = vzm::GetFirstVidByName("my camera");
+    vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(vid_camera);
     vzm::VzCamera::Controller* cc = nullptr;
     uint32_t w, h;
     if (camera)
@@ -189,7 +189,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_CLOSE:
     {
-        vzm::RemoveComponent(cid);
+        vzm::RemoveComponent(vid_camera);
         break;
     }
     case WM_KEYDOWN:

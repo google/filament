@@ -45,7 +45,9 @@
 
 #include "../../VisualStudio/samples/generated/resources/resources.h"
 #include "../../VisualStudio/samples/generated/resources/monkey.h"
+#include "../../VisualStudio/samples/generated/resources/gltf_demo.h"
 #include "../../VisualStudio/libs/filamentapp/generated/resources/filamentapp.h"
+#include "../../VisualStudio/libs/gltfio/materials/uberarchive.h"
 //////////////////////////////
 
 //////////////////////////////
@@ -225,6 +227,11 @@ static filament::backend::VulkanPlatform* gVulkanPlatform = nullptr;
 static Engine* gEngine = nullptr;
 static filament::SwapChain* gDummySwapChain = nullptr;
 static filament::Material* gMaterialTransparent = nullptr; // do not release
+enum MaterialSource {
+    JITSHADER,
+    UBERSHADER,
+};
+gltfio::MaterialProvider* gMaterialProvider = nullptr;
 
 static std::vector<std::string> gMProp = {
             "baseColor",              //!< float4, all shading models
@@ -925,7 +932,7 @@ namespace vzm
             return INVALID_VID;
         }
 
-        inline void AppendSceneEntityToParent(const VID vidSrc, const VID vidDst)
+        inline bool AppendSceneEntityToParent(const VID vidSrc, const VID vidDst)
         {
             assert(vidSrc != vidDst);
             auto getSceneAndVid = [this](Scene** scene, const VID vid)
@@ -1023,6 +1030,10 @@ namespace vzm
             {
                 assert(vidSrc == vid_scene_src && vidDst == vid_scene_dst);
                 assert(scene_src != scene_dst);
+                if (scene_src == nullptr)
+                {
+                    return false;
+                }
                 // case 4. both entities are scenes
                 scene_src->forEach([&](utils::Entity ett) {
                     entities_moving.push_back(ett);
@@ -1072,6 +1083,7 @@ namespace vzm
                     render_path->GetView()->setScene(scene_dst);
                 }
             }
+            return true;
         }
 
         inline VzSceneComp* CreateSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& name, const VID vidExist = 0)
@@ -2052,12 +2064,39 @@ namespace vzm
             std::cout << "Safely finished ^^" << std::endl;
         };
     };
+
     struct GltfIO
     {
+        gltfio::FilamentAsset* asset = nullptr;
+        gltfio::FilamentInstance* instance = nullptr;
+
+        gltfio::AssetLoader* assetLoader = nullptr;
+
         gltfio::ResourceLoader* resourceLoader = nullptr;
         gltfio::TextureProvider* stbDecoder = nullptr;
         gltfio::TextureProvider* ktxDecoder = nullptr;
-    };
+
+        void Destory()
+        {
+            if (asset) {
+                resourceLoader->asyncCancelLoad();
+                resourceLoader = nullptr;
+            }
+            if (asset) {
+                assetLoader->destroyAsset(asset);
+                asset = nullptr;
+            }
+            delete resourceLoader;
+            resourceLoader = nullptr;
+            delete stbDecoder;
+            stbDecoder = nullptr;
+            delete ktxDecoder;
+            ktxDecoder = nullptr;
+
+            AssetLoader::destroy(&assetLoader);
+            assetLoader = nullptr;
+        }
+    } gltfIO;
     std::unique_ptr<SafeReleaseChecker> safeReleaseChecker;
 
     VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& arguments)
@@ -2128,6 +2167,13 @@ namespace vzm
             gMaterialTransparent = material_transparent;
             gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material_transparent);
         }
+        
+        // optional... test later
+        gMaterialProvider = createJitShaderProvider(gEngine, OPTIMIZE_MATERIALS);
+        // createUbershaderProvider(gEngine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+
+        {
+        }
 
         return VZ_OK;
     }
@@ -2139,6 +2185,12 @@ namespace vzm
             vzm::backlog::post("MUST CALL vzm::InitEngineLib before calling vzm::DeinitEngineLib()", backlog::LogLevel::Error);
             return VZ_WARNNING;
         }
+
+        gltfIO.Destory();
+
+        gMaterialProvider->destroyMaterials();
+        delete gMaterialProvider;
+        gMaterialProvider = nullptr;
 
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
@@ -2221,7 +2273,10 @@ namespace vzm
 
     VID AppendSceneComponentTo(const VID vid, const VID parentVid)
     {
-        gEngineApp.AppendSceneEntityToParent(vid, parentVid);
+        if (!gEngineApp.AppendSceneEntityToParent(vid, parentVid))
+        {
+            return INVALID_VID;
+        }
         Scene* scene = gEngineApp.GetScene(parentVid);
         if (scene)
         {
@@ -2286,7 +2341,7 @@ namespace vzm
         return vids.size();
     }
     
-    void LoadFileIntoNewSceneAsync(const std::string& file, const std::string& rootName, const std::string& sceneName, const std::function<void(VID sceneVid, VID rootVid)>& callback)
+    void LoadFileIntoNewSceneAsync(const std::string& filename, const std::string& rootName, const std::string& sceneName, const std::function<void(VID sceneVid, VID rootVid)>& callback)
     {
         /*
         struct loadingJob
@@ -2347,8 +2402,71 @@ namespace vzm
         return actor? actor->componentVID : INVALID_VID;
     }
 
-    VID LoadFileIntoNewScene(const std::string& file, const std::string& rootName, const std::string& sceneName, VID* rootVid)
+    VID LoadFileIntoNewScene(const std::string& filename, const std::string& nameRoot, const std::string& nameScene, VID* vidRoot)
     {
+        utils::Path path = filename;
+        if (path.isEmpty()) {
+
+            auto& ncm = VzNameCompManager::Get();
+            gltfIO.assetLoader = AssetLoader::create({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
+
+
+            gltfIO.asset = gltfIO.assetLoader->createAsset(
+                GLTF_DEMO_DAMAGEDHELMET_DATA,
+                GLTF_DEMO_DAMAGEDHELMET_SIZE);
+            gltfIO.instance = gltfIO.asset->getInstance();
+
+
+
+            ResourceConfiguration configuration = {};
+            configuration.engine = gEngine;
+            configuration.gltfPath = ""; // gltfPath.c_str();
+            configuration.normalizeSkinningWeights = true;
+
+            gltfIO.resourceLoader = new gltfio::ResourceLoader(configuration);
+            gltfIO.stbDecoder = createStbProvider(gEngine);
+            gltfIO.ktxDecoder = createKtx2Provider(gEngine);
+            gltfIO.resourceLoader->addTextureProvider("image/png", gltfIO.stbDecoder);
+            gltfIO.resourceLoader->addTextureProvider("image/jpeg", gltfIO.stbDecoder);
+            gltfIO.resourceLoader->addTextureProvider("image/ktx2", gltfIO.ktxDecoder);
+
+            if (!gltfIO.resourceLoader->asyncBeginLoad(gltfIO.asset)) {
+                std::cerr << "Unable to start loading resources for " << filename << std::endl;
+                exit(1);
+            }
+            //float const progress = gltfIO.resourceLoader->asyncGetLoadProgress();
+            //
+            //gltfIO.asset->getInstance()->recomputeBoundingBoxes(); // ??
+            gltfIO.asset->releaseSourceData();
+            //
+            //// Enable stencil writes on all material instances.
+            //const size_t matInstanceCount = gltfIO.instance->getMaterialInstanceCount();
+            //MaterialInstance* const* const instances = gltfIO.instance->getMaterialInstances();
+            //for (int mi = 0; mi < matInstanceCount; mi++) {
+            //    instances[mi]->setStencilWrite(true);
+            //    instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
+            //}
+
+            SceneVID vid_new_scene = gEngineApp.CreateScene(nameScene);
+            Scene* scene_new = gEngineApp.GetScene(vid_new_scene);
+
+            //mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
+            //mAsset = nullptr;
+
+            scene_new->addEntities(gltfIO.asset->getLightEntities(), gltfIO.asset->getLightEntityCount());
+            auto& rcm = gEngine->getRenderableManager();
+            for (size_t i = 0, n = gltfIO.asset->getRenderableEntityCount(); i < n; i++) {
+                auto ri = rcm.getInstance(gltfIO.asset->getRenderableEntities()[i]);
+                rcm.setScreenSpaceContactShadows(ri, true);
+            }
+            gltfIO.asset->detachFilamentComponents();
+            return vid_new_scene;
+        }
+        else {
+            //loadAsset(filename);
+        }
+
+
 
         /*
         VID sid = gEngineApp.CreateSceneEntity(sceneName);

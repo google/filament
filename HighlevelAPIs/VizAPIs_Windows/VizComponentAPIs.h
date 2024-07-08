@@ -41,10 +41,6 @@ constexpr float VZ_PIDIV4 = 0.785398163f;
 using uint = uint32_t;
 
 //TO DO
-//1. RenderPath 마다 cameraCube, lightmapCube 생성 (V)
-//1. resize test (V)
-//2. Scene 에 IBL 설정 ... Scene Create 때마다 VzScene 등록..., IBL 관리...
-//3. Camera Manipulator... VzCamera 에 넣기... or ... vzm::API
 //3. Light Cube 확인...
 //4. gltfio
 //5. Shared Source 정리

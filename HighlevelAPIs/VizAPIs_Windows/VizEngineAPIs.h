@@ -42,9 +42,9 @@ namespace vzm
     // Load scene components into a new scene and return the scene ID
     //  - Must belong to the internal scene
     //  - return zero in case of failure
-    __dojostatic VID LoadFileIntoNewScene(const std::string& file, const std::string& rootName, const std::string& sceneName = "", VID* rootVid = nullptr);
+    __dojostatic VID LoadFileIntoNewScene(const std::string& filename, const std::string& nameRoot, const std::string& nameScene = "", VID* vidRoot = nullptr);
     // Async version of LoadFileIntoNewScene
-    __dojostatic void LoadFileIntoNewSceneAsync(const std::string& file, const std::string& rootName, const std::string& sceneName = "", const std::function<void(VID sceneVid, VID rootVid)>& callback = nullptr);
+    __dojostatic void LoadFileIntoNewSceneAsync(const std::string& filename, const std::string& rootName, const std::string& sceneName = "", const std::function<void(VID sceneVid, VID rootVid)>& callback = nullptr);
     __dojostatic VID LoadTestModel(const std::string& modelName);
     // Render a scene on camera (camVid)
     //  - Must belong to the internal scene
