@@ -234,6 +234,7 @@ namespace vzm
             void GrabBegin(const int x, const int y, const bool strafe);
             void GrabDrag(const int x, const int y);
             void GrabEnd();
+            void SetViewport(const int w, const int h);
             void UpdateCamera(const float deltaTime); // this is for final sync to the camera
 
             VID vidCam = INVALID_VID;   // DO NOT SET

@@ -339,7 +339,7 @@ namespace vzm
         bool prevColorspaceConversionRequired_ = false;
 
         VzCamera* vzCam_ = nullptr;
-        TimeStamp timeStampUpdate_ = {};
+        TimeStamp timeStamp_ = {};
 
         float targetFrameRate_ = 60.f;
 
@@ -355,15 +355,6 @@ namespace vzm
 
         void resize()
         {
-            bool isResize = width_ != prevWidth_ || height_ != prevHeight_ 
-                || dpi_ != prevDpi_ || nativeWindow_ != prevNativeWindow_;
-            if (nativeWindow_ == prevNativeWindow_ && !isResize)
-            {
-                return;
-            }
-
-            //utils::JobSystem& js = gEngine->getJobSystem();
-
             auto resizeJob = [&]()
                 {
                     gEngine->destroy(swapChain_);
@@ -382,22 +373,12 @@ namespace vzm
                         //renderer_->beginFrame(swapChain_);
                         //renderer_->endFrame();
                     }
-
-                    Camera* camera = &view_->getCamera();
-                    float fovY = camera->getFieldOfViewInDegrees(Camera::Fov::VERTICAL);
-                    camera->setProjection((double)fovY, (double)width_ / (double)height_,
-                        camera->getNear(), camera->getCullingFar());
                 };
 
             //utils::JobSystem::Job* parent = js.createJob();
             //js.run(jobs::createJob(js, parent, resizeJob));
             //js.runAndWait(parent);
             resizeJob();
-
-
-            // filament will handle this resizing process internally !?
-            // ??? // 만약 그렇다면, ... window 에 따라 offscreen 이냐 아니냐로 재생성 처리.
-            
         }
 
     public:
@@ -427,17 +408,17 @@ namespace vzm
             }
         }
 
-        void TryResizeRenderTargets()
+        bool TryResizeRenderTargets()
         {
             if (gEngine == nullptr)
-                return;
+                return false;
 
             colorspaceConversionRequired_ = colorSpace_ != SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
 
             bool requireUpdateRenderTarget = prevWidth_ != width_ || prevHeight_ != height_ || prevDpi_ != dpi_
                 || prevColorspaceConversionRequired_ != colorspaceConversionRequired_;
             if (!requireUpdateRenderTarget)
-                return;
+                return false;
 
             resize(); // how to handle rendertarget textures??
 
@@ -446,11 +427,13 @@ namespace vzm
             prevDpi_ = dpi_;
             prevNativeWindow_ = nativeWindow_;
             prevColorspaceConversionRequired_ = colorspaceConversionRequired_;
+            return true;
         }
 
         inline void SetFixedTimeUpdate(const float targetFPS)
         {
             targetFrameRate_ = targetFPS;
+            timeStamp_ = std::chrono::high_resolution_clock::now();
         }
         inline float GetFixedTimeUpdate() const
         {
@@ -473,6 +456,7 @@ namespace vzm
             nativeWindow_ = window;
 
             view_->setViewport(filament::Viewport(0, 0, w, h));
+            timeStamp_ = std::chrono::high_resolution_clock::now();
         }
         inline filament::SwapChain* GetSwapChain()
         {
@@ -859,6 +843,16 @@ namespace vzm
                 camVids.push_back(it.first);
             }
             return camVids.size();
+        }
+        inline size_t GetRenderPathVids(std::vector<RendererVID>& renderPathVids)
+        {
+            renderPathVids.clear();
+            renderPathVids.reserve(renderPaths_.size());
+            for (auto& it : renderPaths_)
+            {
+                renderPathVids.push_back(it.first);
+            }
+            return renderPathVids.size();
         }
         inline VzRenderPath* GetFirstRenderPathByName(const std::string& name)
         {
@@ -1875,6 +1869,11 @@ namespace vzm
         GET_CM_WARN(cam_res, cm);
         cm->grabEnd();
     }
+    void VzCamera::Controller::SetViewport(const int w, const int h)
+    {
+        GET_CM_WARN(cam_res, cm);
+        cm->setViewport(w, h);
+    }
     void VzCamera::Controller::UpdateCamera(const float deltaTime)
     {
         GET_CM_WARN(cam_res, cm);
@@ -1983,7 +1982,6 @@ namespace vzm
             backlog::post("invalid render path", backlog::LogLevel::Error);
             return VZ_FAIL;
         }
-        render_path->TryResizeRenderTargets();
 
         View* view = render_path->GetView();
         Scene* scene = gEngineApp.GetScene(vidScene);
@@ -1993,6 +1991,7 @@ namespace vzm
             backlog::post("renderer has nullptr view/scene/camera", backlog::LogLevel::Error);
             return VZ_FAIL;
         }
+        render_path->TryResizeRenderTargets();
         view->setScene(scene);
         view->setCamera(camera);
         //view->setVisibleLayers(0x4, 0x4);
@@ -2038,7 +2037,8 @@ namespace vzm
             cameraCube->mapFrustum(*gEngine, camera);
         }
 
-        gltfIO.resourceLoader->asyncUpdateLoad();
+        if (gltfIO.resourceLoader)
+            gltfIO.resourceLoader->asyncUpdateLoad();
 
         Renderer* renderer = render_path->GetRenderer();
 
@@ -2213,18 +2213,21 @@ namespace vzm
         {
             return VZ_OK;
         }
-        gltfIO.resourceLoader->asyncCancelLoad();
-
-        std::vector<CamVID> cam_vids;
-        gEngineApp.GetCameraVids(cam_vids);
-        for (CamVID vid_cam : cam_vids)
+        if (gltfIO.resourceLoader)
         {
-            VzRenderPath* render_path = gEngineApp.GetRenderPath(vid_cam);
+            gltfIO.resourceLoader->asyncCancelLoad();
+        }
+
+        std::vector<RendererVID> renderpath_vids;
+        gEngineApp.GetRenderPathVids(renderpath_vids);
+        for (RendererVID vid_renderpath : renderpath_vids)
+        {
+            VzRenderPath* render_path = gEngineApp.GetRenderPath(vid_renderpath);
             void* window_render_path = nullptr;
             render_path->GetCanvas(nullptr, nullptr, nullptr, &window_render_path);
             if (window == window_render_path)
             {
-                gEngineApp.RemoveEntity(vid_cam);
+                gEngineApp.RemoveEntity(vid_renderpath);
             }
         }
 

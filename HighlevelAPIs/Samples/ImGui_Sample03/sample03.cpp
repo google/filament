@@ -108,28 +108,37 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::ParamMap<std::string> arguments;
     vzm::InitEngineLib(arguments);
-    VID vid_scene = vzm::NewScene("my scene");
+
+    vzm::VzScene* scene;
+    VID vid_scene = vzm::NewScene("my scene", &scene);
+    scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+
     VID vid_scene_loaded = vzm::LoadFileIntoNewScene("", "my gltf root", "my gltf scene");
+
+    vzm::VzRenderer* renderer;
+    VID vid_renderer = vzm::NewRenderer("my renderer", &renderer);
+    renderer->SetCanvas(w, h, dpi, hwnd);
+    renderer->SetVisibleLayerMask(0x4, 0x4);
+
     vzm::VzCamera* cam;
     VID vid_camera = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
-    cam->SetCanvas(w, h, dpi, hwnd);
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
+    vzm::VzCamera::Controller* cc = cam->GetController();
+    *(glm::fvec3*)cc->orbitHomePosition = p;
+    cc->UpdateControllerSettings();
+    cc->SetViewport(w, h);
+
     vzm::VzLight* light;
     VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
+
     vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
     vzm::AppendSceneComponentTo(vid_light, vid_scene);
     vzm::AppendSceneComponentTo(vid_camera, vid_scene);
 
-    vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(vid_scene);
-    scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-    cam->SetVisibleLayerMask(0x4, 0x4);
-    vzm::VzCamera::Controller* cc = cam->GetController();
-    *(glm::fvec3*)cc->orbitHomePosition = p;
-    cc->UpdateControllerSettings();
     // Main loop
     bool done = false;
     while (!done)
@@ -146,8 +155,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
             else
             {
-                VID vid_cam = vzm::GetFirstVidByName("my camera");
-                vzm::Render(vid_cam);
+                renderer->Render(vid_scene, vid_camera);
             }
         }
         if (done)
@@ -173,18 +181,22 @@ int main(int, char**)
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    //VID vid_scene = vzm::GetFirstVidByName("my scene");
+    VID vid_renderer = vzm::GetFirstVidByName("my renderer");
     VID vid_camera = vzm::GetFirstVidByName("my camera");
+    //vzm::VzScene* scene = (vzm::VzScene*)vzm::GetVzComponent(vid_scene);
+    vzm::VzRenderer* renderer = (vzm::VzRenderer*)vzm::GetVzComponent(vid_renderer);
     vzm::VzCamera* camera = (vzm::VzCamera*)vzm::GetVzComponent(vid_camera);
     vzm::VzCamera::Controller* cc = nullptr;
-    uint32_t w, h;
-    if (camera)
+    bool is_valid = false;
+    uint32_t w = 0, h = 0;
+    if (camera && renderer)
     {
-        camera->GetCanvas(&w, &h, nullptr);
-        if (w > 0)
-        {
-            cc = camera->GetController();
-        }
+        cc = camera->GetController();
+        renderer->GetCanvas(&w, &h, nullptr);
+        is_valid = w > 0 && h > 0;
     }
+
     switch (msg)
     {
     case WM_CLOSE:
@@ -239,7 +251,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
     case WM_LBUTTONDOWN:
     {
-        if (cc) {
+        if (is_valid) {
             int x = GET_X_LPARAM(lParam);
             int y = h - GET_Y_LPARAM(lParam);
             //glm::fvec3 p, v, u;
@@ -252,7 +264,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     case WM_MOUSEMOVE:
     {
-        if (cc) {
+        if (is_valid) {
             int x = GET_X_LPARAM(lParam);
             int y = h - GET_Y_LPARAM(lParam);
             cc->GrabDrag(x, y);
@@ -261,18 +273,18 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     case WM_LBUTTONUP:
     {
-        if (cc) {
+        if (is_valid) {
             cc->GrabEnd();
         }
         break;
     }
     case WM_MOUSEWHEEL:
     {
-        if (cc) {
+        if (is_valid) {
             int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
             int x = GET_X_LPARAM(lParam);
             int y = h - GET_Y_LPARAM(lParam);
-            cc->Scroll(x, y, zDelta);
+            cc->Scroll(x, y, (float)zDelta);
         }
         break;
     }
@@ -282,9 +294,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         GetClientRect(hWnd, &rc);
         UINT width = rc.right - rc.left;
         UINT height = rc.bottom - rc.top;
-        if (camera && width > 0)
+        if (is_valid)
         {
-            camera->SetCanvas(width, height, 96.f, hWnd);
+            cc->SetViewport(w, h);
+            renderer->SetCanvas(width, height, 96.f, hWnd);
+            float zNearP, zFarP, fovInDegree;
+            camera->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
+            camera->SetPerspectiveProjection(zNearP, zFarP, fovInDegree, (float)w / (float)h);
         }
         break;
     }
