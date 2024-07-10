@@ -89,6 +89,15 @@ struct MaterialInputs {
 #endif
 #endif
 #endif
+
+#if defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    float specularFactor;
+#endif
+
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
+    vec3 specularColorFactor;
+#endif
+
 };
 
 void initMaterial(out MaterialInputs material) {
@@ -177,6 +186,15 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #endif
 #endif
+
+#if defined(MATERIAL_HAS_SPECULAR_FACTOR)
+    material.specularFactor = 1.0;
+#endif
+
+#if defined(MATERIAL_HAS_SPECULAR_COLOR_FACTOR)
+    material.specularColorFactor = vec3(1.0);
+#endif
+
 }
 
 #if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)

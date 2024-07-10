@@ -29,6 +29,10 @@
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 
+#include <getopt/getopt.h>
+
+#include <iostream>
+
 #include "generated/resources/resources.h"
 #include "generated/resources/monkey.h"
 
@@ -39,6 +43,7 @@ using namespace filament::math;
 using Backend = Engine::Backend;
 
 struct App {
+    Config config;
     utils::Entity light;
     Material* material;
     MaterialInstance* materialInstance;
@@ -48,13 +53,65 @@ struct App {
 
 static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
-int main(int argc, char** argv) {
-    Config config;
-    config.title = "hellopbr";
-    config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+static void printUsage(char* name) {
+    std::string exec_name(utils::Path(name).getName());
+    std::string usage(
+            "EXEC renders a simple PBR example\n"
+            "Usage:\n"
+            "    EXEC [options]\n"
+            "Options:\n"
+            "   --help, -h\n"
+            "       Prints this message\n\n"
+            "   --api, -a\n"
+            "       Specify the backend API: opengl, vulkan, or metal\n"
+    );
+    const std::string from("EXEC");
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+        usage.replace(pos, from.length(), exec_name);
+    }
+    std::cout << usage;
+}
 
+static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+    static constexpr const char* OPTSTR = "ha:";
+    static const struct option OPTIONS[] = {
+            { "help", no_argument,       nullptr, 'h' },
+            { "api",  required_argument, nullptr, 'a' },
+            { nullptr, 0,                nullptr, 0 }
+    };
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(optarg ? optarg : "");
+        switch (opt) {
+            default:
+            case 'h':
+                printUsage(argv[0]);
+                exit(0);
+            case 'a':
+                if (arg == "opengl") {
+                    app->config.backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    app->config.backend = Engine::Backend::VULKAN;
+                } else if (arg == "metal") {
+                    app->config.backend = Engine::Backend::METAL;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                    exit(1);
+                }
+                break;
+        }
+    }
+    return optind;
+}
+
+int main(int argc, char** argv) {
     App app;
-    auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
+    app.config.title = "hellopbr";
+    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
+    handleCommandLineArguments(argc, argv, &app);
+
+    auto setup = [config=app.config, &app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();
         auto& rcm = engine->getRenderableManager();
         auto& em = utils::EntityManager::get();
@@ -100,7 +157,7 @@ int main(int argc, char** argv) {
         tcm.setTransform(ti, app.transform * mat4f::rotation(now, float3{ 0, 1, 0 }));
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    FilamentApp::get().run(app.config, setup, cleanup);
 
     return 0;
 }

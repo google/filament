@@ -58,6 +58,7 @@
 
 #include <cgltf.h>
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <iostream>
@@ -508,30 +509,55 @@ static void onClick(App& app, View* view, ImVec2 pos) {
     });
 }
 
-static utils::Path getPathForAsset(std::string_view string) {
+static utils::Path getPathForIBLAsset(std::string_view string) {
+    auto isIBL = [] (utils::Path file) -> bool {
+        return file.getExtension() == "ktx" || file.getExtension() == "hdr";
+    };
+
     utils::Path filename{ string };
     if (!filename.exists()) {
         std::cerr << "file " << filename << " not found!" << std::endl;
         return {};
     }
+
     if (filename.isDirectory()) {
-        auto files = filename.listContents();
-        for (const auto& file: files) {
-            if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
-                filename = file;
-                break;
-            }
-        }
-        if (filename.isDirectory()) {
-            std::cerr << "no glTF file found in " << filename << std::endl;
+        std::vector<Path> files = filename.listContents();
+        if (std::none_of(files.cbegin(), files.cend(), isIBL)) {
             return {};
         }
+    } else if (!isIBL(filename)) {
+        return {};
     }
+
     return filename;
 }
 
+static utils::Path getPathForGLTFAsset(std::string_view string) {
+    auto isGLTF = [] (utils::Path file) -> bool {
+        return file.getExtension() == "gltf" || file.getExtension() == "glb";
+    };
 
-static bool checkAsset(const utils::Path& filename) {
+    utils::Path filename{ string };
+    if (!filename.exists()) {
+        std::cerr << "file " << filename << " not found!" << std::endl;
+        return {};
+    }
+
+    if (filename.isDirectory()) {
+        std::vector<Path> files = filename.listContents();
+        auto it = std::find_if(files.cbegin(), files.cend(), isGLTF);
+        if (it == files.end()) {
+            return {};
+        }
+        filename = *it;
+    } else if (!isGLTF(filename)) {
+        return {};
+    }
+
+    return filename;
+}
+
+static bool checkGLTFAsset(const utils::Path& filename) {
     // Peek at the file size to allow pre-allocation.
     long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
     if (contentSize <= 0) {
@@ -547,10 +573,11 @@ static bool checkAsset(const utils::Path& filename) {
         return false;
     }
 
-    // Parse the glTF file and create Filament entities.
+    // Try parsing the glTF file to check the validity of the file format.
     cgltf_options options{};
-    cgltf_data* sourceAsset;
+    cgltf_data* sourceAsset = nullptr;
     cgltf_result result = cgltf_parse(&options, buffer.data(), contentSize, &sourceAsset);
+    cgltf_free(sourceAsset);
     if (result != cgltf_result_success) {
         slog.e << "Unable to parse glTF file." << io::endl;
         return false;
@@ -570,8 +597,9 @@ int main(int argc, char** argv) {
     utils::Path filename;
     int const num_args = argc - optionIndex;
     if (num_args >= 1) {
-        filename = getPathForAsset(argv[optionIndex]);
+        filename = getPathForGLTFAsset(argv[optionIndex]);
         if (filename.isEmpty()) {
+            std::cerr << "no glTF file found in " << filename << std::endl;
             return 1;
         }
     }
@@ -856,6 +884,8 @@ int main(int argc, char** argv) {
                 }
                 ImGui::Checkbox("Disable buffer padding",
                         debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
+                ImGui::Checkbox("Disable sub-passes",
+                        debug.getPropertyAddress<bool>("d.renderer.disable_subpasses"));
                 ImGui::Checkbox("Camera at origin",
                         debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
@@ -1122,9 +1152,9 @@ int main(int argc, char** argv) {
     filamentApp.resize(resize);
 
     filamentApp.setDropHandler([&](std::string_view path) {
-        utils::Path const filename = getPathForAsset(path);
+        utils::Path filename = getPathForGLTFAsset(path);
         if (!filename.isEmpty()) {
-            if (checkAsset(filename)) {
+            if (checkGLTFAsset(filename)) {
                 app.resourceLoader->asyncCancelLoad();
                 app.resourceLoader->evictResourceData();
                 app.viewer->removeAsset();
@@ -1133,6 +1163,13 @@ int main(int argc, char** argv) {
                 loadResources(filename);
                 app.viewer->setAsset(app.asset, app.instance);
             }
+            return;
+        }
+
+        filename = getPathForIBLAsset(path);
+        if (!filename.isEmpty()) {
+            FilamentApp::get().loadIBL(path);
+            return;
         }
     });
 

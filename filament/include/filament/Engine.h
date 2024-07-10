@@ -299,6 +299,24 @@ public:
         size_t textureUseAfterFreePoolSize = 0;
 
         /**
+         * When uploading vertex or index data, the Filament Metal backend copies data
+         * into a shared staging area before transferring it to the GPU. This setting controls
+         * the total size of the buffer used to perform these allocations.
+         *
+         * Higher values can improve performance when performing many uploads across a small
+         * number of frames.
+         *
+         * This buffer remains alive throughout the lifetime of the Engine, so this size adds to the
+         * memory footprint of the app and should be set as conservative as possible.
+         *
+         * A value of 0 disables the shared staging buffer entirely; uploads will acquire an
+         * individual buffer from a pool of shared buffers.
+         *
+         * Only respected by the Metal backend.
+         */
+        size_t metalUploadBufferSizeBytes = 512 * 1024;
+
+        /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
          * Currently only honored by the GL and Metal backends.
          */
@@ -931,6 +949,14 @@ public:
     void pumpMessageQueues();
 
     /**
+     * Switch the command queue to unprotected mode. Protected mode can be activated via
+     * Renderer::beginFrame() using a protected SwapChain.
+     * @see Renderer
+     * @see SwapChain
+     */
+    void unprotected() noexcept;
+
+    /**
      * Returns the default Material.
      *
      * The default material is 80% white and uses the Material.Shading.LIT shading.
@@ -1012,6 +1038,21 @@ public:
       */
     void resetBackendState() noexcept;
 #endif
+
+    /**
+     * Get the current time. This is a convenience function that simply returns the
+     * time in nanosecond since epoch of std::chrono::steady_clock.
+     * A possible implementation is:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *     return std::chrono::steady_clock::now().time_since_epoch().count();
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * @return current time in nanosecond since epoch of std::chrono::steady_clock.
+     * @see Renderer::beginFrame()
+     */
+    static uint64_t getSteadyClockTimeNano() noexcept;
+
 
     DebugRegistry& getDebugRegistry() noexcept;
 

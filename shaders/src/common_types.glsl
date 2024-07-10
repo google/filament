@@ -19,7 +19,8 @@ struct ShadowData {
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 struct BoneData {
     highp mat3x4 transform;    // bone transform is mat4x3 stored in row-major (last row [0,0,0,1])
-    highp uvec4 cof;           // 8 first cofactor matrix of transform's upper left
+    highp float3 cof0;         // 3 first cofactor matrix of transform's upper left
+    highp float cof1x;         // 4th cofactor
 };
 #endif
 

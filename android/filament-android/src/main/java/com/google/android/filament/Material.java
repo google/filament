@@ -346,6 +346,7 @@ public class Material {
     public static class Builder {
         private Buffer mBuffer;
         private int mSize;
+        private int mShBandCount = 0;
 
         /**
          * Specifies the material data. The material data is a binary blob produced by
@@ -362,6 +363,22 @@ public class Material {
         }
 
         /**
+         * Sets the quality of the indirect lights computations. This is only taken into account
+         * if this material is lit and in the surface domain. This setting will affect the
+         * IndirectLight computation if one is specified on the Scene and Spherical Harmonics
+         * are used for the irradiance.
+         *
+         * @param shBandCount Number of spherical harmonic bands. Must be 1, 2 or 3 (default).
+         * @return Reference to this Builder for chaining calls.
+         * @see IndirectLight
+         */
+        @NonNull
+        public Builder sphericalHarmonicsBandCount(@IntRange(from = 0) int shBandCount) {
+            mShBandCount = shBandCount;
+            return this;
+        }
+
+        /**
          * Creates and returns the Material object.
          *
          * @param engine reference to the Engine instance to associate this Material with
@@ -372,7 +389,8 @@ public class Material {
          */
         @NonNull
         public Material build(@NonNull Engine engine) {
-            long nativeMaterial = nBuilderBuild(engine.getNativeObject(), mBuffer, mSize);
+            long nativeMaterial = nBuilderBuild(engine.getNativeObject(),
+                mBuffer, mSize, mShBandCount);
             if (nativeMaterial == 0) throw new IllegalStateException("Couldn't create Material");
             return new Material(nativeMaterial);
         }
@@ -1023,7 +1041,7 @@ public class Material {
         mNativeObject = 0;
     }
 
-    private static native long nBuilderBuild(long nativeEngine, @NonNull Buffer buffer, int size);
+    private static native long nBuilderBuild(long nativeEngine, @NonNull Buffer buffer, int size, int shBandCount);
     private static native long nCreateInstance(long nativeMaterial);
     private static native long nCreateInstanceWithName(long nativeMaterial, @NonNull String name);
     private static native long nGetDefaultInstance(long nativeMaterial);

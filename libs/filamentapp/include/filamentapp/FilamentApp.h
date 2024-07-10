@@ -104,6 +104,8 @@ public:
 
     size_t getSkippedFrameCount() const { return mSkippedFrames; }
 
+    void loadIBL(std::string_view path);
+
     FilamentApp(const FilamentApp& rhs) = delete;
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;

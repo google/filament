@@ -90,8 +90,13 @@ protected:
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
 
 private:
+    struct InitializeJvmForPerformanceManagerIfNeeded {
+        InitializeJvmForPerformanceManagerIfNeeded();
+    };
+
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
+    InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
 

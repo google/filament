@@ -111,11 +111,11 @@ private:
 #if DEBUG_RESOURCE_LEAKS
 public:
     void print() {
-        utils::slog.d << "Resource Allocator state (debug only)" << utils::io::endl;
+        FVK_LOGD << "Resource Allocator state (debug only)" << utils::io::endl;
         for (size_t i = 0; i < RESOURCE_TYPE_COUNT; i++) {
-            utils::slog.d << "[" << i << "]=" << mDebugOnlyResourceCount[i] << utils::io::endl;
+            FVK_LOGD << "[" << i << "]=" << mDebugOnlyResourceCount[i] << utils::io::endl;
         }
-        utils::slog.d << "+++++++++++++++++++++++++++++++++++++" << utils::io::endl;
+        FVK_LOGD << "+++++++++++++++++++++++++++++++++++++" << utils::io::endl;
     }
 private:
     utils::FixedCapacityVector<size_t> mDebugOnlyResourceCount;

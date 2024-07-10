@@ -187,3 +187,10 @@ Java_com_google_android_filament_Renderer_nSetPresentationTime(JNIEnv *, jclass 
     Renderer *renderer = (Renderer *) nativeRenderer;
     renderer->setPresentationTime(monotonicClockNanos);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSetVsyncTime(JNIEnv *, jclass,
+    jlong nativeRenderer, jlong steadyClockTimeNano) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->setVsyncTime(steadyClockTimeNano);
+}

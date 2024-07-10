@@ -95,6 +95,8 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.renderer.doFrameCapture);
     debugRegistry.registerProperty("d.renderer.disable_buffer_padding",
             &engine.debug.renderer.disable_buffer_padding);
+    debugRegistry.registerProperty("d.renderer.disable_subpasses",
+            &engine.debug.renderer.disable_subpasses);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture",
             &engine.debug.shadowmap.display_shadow_texture);
     debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_scale",
@@ -230,6 +232,10 @@ void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
     driver.setPresentationTime(monotonic_clock_ns);
 }
 
+void FRenderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
+    mVsyncSteadyClockTimeNano = steadyClockTimeNano;
+}
+
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
@@ -249,6 +255,11 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         swapChain->recreateWithNewFlags(mEngine, flags);
     }
 #endif
+
+    if (!vsyncSteadyClockTimeNano) {
+        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
+        mVsyncSteadyClockTimeNano = 0;
+    }
 
     // get the timestamp as soon as possible
     using namespace std::chrono;
@@ -596,12 +607,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     hasColorGrading &&
                     msaaSampleCount <= 1 &&
                     !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
-                    driver.isFrameBufferFetchSupported(),
+                    driver.isFrameBufferFetchSupported() &&
+                    !engine.debug.renderer.disable_subpasses,
             .customResolve =
                     msaaOptions.customResolve &&
                     msaaSampleCount > 1 &&
                     hasColorGrading &&
-                    driver.isFrameBufferFetchMultiSampleSupported(),
+                    driver.isFrameBufferFetchMultiSampleSupported() &&
+                    !engine.debug.renderer.disable_subpasses,
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
             .dithering = hasDithering,

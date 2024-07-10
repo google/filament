@@ -20,21 +20,24 @@
 #include "OpenGLDriver.h"
 #include "ShaderCompilerService.h"
 
+#include <backend/DriverEnums.h>
 #include <backend/Program.h>
+#include <backend/Handle.h>
 
-#include <private/backend/BackendUtils.h>
-
-#include <utils/debug.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/Systrace.h>
 
+#include <algorithm>
 #include <array>
 #include <string_view>
 #include <utility>
 #include <new>
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -241,8 +244,9 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
         assert_invariant(sb);
         if (!sb) continue; // should never happen, this would be a user error.
         for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here
-            const GLTexture* const t = sb->textureUnitEntries[j].texture;
-            if (t) { // program may not use all samplers of sampler group
+            Handle<HwTexture> th = sb->textureUnitEntries[j].th;
+            if (th) { // program may not use all samplers of sampler group
+                GLTexture const* const t = gld->handle_cast<GLTexture const*>(th);
                 gld->bindTexture(tmu, t);
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
                 if (UTILS_LIKELY(!es2)) {
