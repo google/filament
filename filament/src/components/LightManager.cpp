@@ -20,12 +20,13 @@
 
 #include "details/Engine.h"
 
-#include <math/fast.h>
-#include <math/scalar.h>
-
-#include <utils/debug.h>
 #include <filament/LightManager.h>
 
+#include <utils/debug.h>
+#include <utils/Log.h>
+
+#include <math/fast.h>
+#include <math/scalar.h>
 
 using namespace filament::math;
 using namespace utils;

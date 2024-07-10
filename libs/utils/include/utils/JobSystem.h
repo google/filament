@@ -21,7 +21,7 @@
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/Condition.h>
-#include <utils/Log.h>
+#include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
@@ -47,11 +47,17 @@ class JobSystem {
     static constexpr size_t MAX_JOB_COUNT = 16384;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
+    using Mutex = utils::Mutex;
+    using Condition = utils::Condition;
 
 public:
     class Job;
 
+    using ThreadId = uint8_t;
+
     using JobFunc = void(*)(void*, JobSystem&, Job*);
+
+    static constexpr ThreadId invalidThreadId = 0xff;
 
     class alignas(CACHELINE_SIZE) Job {
     public:
@@ -77,7 +83,9 @@ public:
         uint16_t parent;                                        //  2 |  2
         std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
         mutable std::atomic<uint16_t> refCount = { 1 };         //  2 |  2
-                                                                //  6 |  2 (padding)
+        mutable ThreadId id = invalidThreadId;                  //  1 |  1
+                                                                //  1 |  1 (padding)
+                                                                //  4 |  0 (padding)
                                                                 // 64 | 64
     };
 
@@ -244,7 +252,7 @@ public:
     }
 
     /*
-     * Add job to this thread's execution queue. It's reference will drop automatically.
+     * Add job to this thread's execution queue. Its reference will drop automatically.
      * The current thread must be owned by JobSystem's thread pool. See adopt().
      *
      * The job can't be used after this call.
@@ -255,7 +263,19 @@ public:
         run(p);
     }
 
-    void signal() noexcept;
+    /*
+     * Add job to this thread's execution queue. Its reference will drop automatically.
+     * The current thread must be owned by JobSystem's thread pool. See adopt().
+     * id must be the current thread id obtained with JobSystem::getThreadId(Job*). This
+     * API is more efficient than the methods above.
+     *
+     * The job can't be used after this call.
+     */
+    void run(Job*& job, ThreadId id) noexcept;
+    void run(Job*&& job, ThreadId id) noexcept { // allows run(createJob(...));
+        Job* p = job;
+        run(p, id);
+    }
 
     /*
      * Add job to this thread's execution queue and keep a reference to it.
@@ -312,6 +332,13 @@ public:
 
     size_t getThreadCount() const { return mThreadCount; }
 
+    // returns the current ThreadId, which can be used with run(). This method can only be
+    // called from a job's function.
+    static ThreadId getThreadId(Job const* job) noexcept {
+        assert_invariant(job->id != invalidThreadId);
+        return job->id;
+    }
+
 private:
     // this is just to avoid using std::default_random_engine, since we're in a public header.
     class default_random_engine {
@@ -363,12 +390,12 @@ private:
     Job* steal(WorkQueue& workQueue) noexcept;
 
     void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
-    void wake(size_t hint) noexcept;
     void wakeAll() noexcept;
+    void wakeOne() noexcept;
 
     // these have thread contention, keep them together
-    utils::Mutex mWaiterLock;
-    utils::Condition mWaiterCondition;
+    Mutex mWaiterLock;
+    Condition mWaiterCondition;
 
     std::atomic<int32_t> mActiveJobs = { 0 };
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
@@ -468,7 +495,7 @@ right_side:
 
             // start the left side before attempting the right side, so we parallelize in case
             // of job creation failure -- rare, but still.
-            js.run(l);
+            js.run(l, JobSystem::getThreadId(parent));
 
             // don't spawn a job for the right side, just reuse us -- spawning jobs is more
             // costly than we'd like.
@@ -524,7 +551,7 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
 }
 
 
-template <size_t COUNT, size_t MAX_SPLITS = 12>
+template<size_t COUNT, size_t MAX_SPLITS = 12>
 class CountSplitter {
 public:
     bool split(size_t splits, size_t count) const noexcept {
