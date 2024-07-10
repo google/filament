@@ -83,7 +83,7 @@ private:
     std::string mGltfPath;
     MaterialProvider& mMaterials;
     UriDataCacheHandle mUriDataCache;
-    bool cgltfBuffersLoaded;
+    bool mCgltfBuffersLoaded;
 };
 
 } // namespace filament::gltfio
