@@ -114,12 +114,13 @@ namespace vzm
         const_iterator end() const { return __params.end(); }
     };
 
-    enum class SCENE_COMPONENT_TYPE // every component involves a transform
+    enum class SCENE_COMPONENT_TYPE // every component involves a transform and a name
     {
-        SCENEBASE = 0,
+        // camera, light, actor component can have renderable resources technically
+        SCENEBASE = 0,  // empty (only transform and name)
         CAMERA,
         LIGHT,
-        ACTOR, // kind of renderable component
+        ACTOR,
     };
 
     enum class RES_COMPONENT_TYPE
@@ -169,21 +170,22 @@ namespace vzm
 
         VID GetParentVid();
         VID GetSceneVid();
-
-        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
     };
 
-    __dojostruct VzRenderer
-    {
-        VzRenderPath* renderPath = nullptr;
-
-        // setters and getters of rendering options
-    };
-    __dojostruct VzCamera : VzSceneComp, VzRenderer
+    __dojostruct VzRenderer : VzBaseComp
     {
         void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
         void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
 
+        void SetViewport(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h);
+        void GetViewport(uint32_t* x, uint32_t* y, uint32_t* w, uint32_t* h);
+
+        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
+        // setters and getters of rendering options
+        VZRESULT Render(const VID vidScene, const VID vidCam);
+    };
+    __dojostruct VzCamera : VzSceneComp
+    {
         // Pose parameters are defined in WS (not local space)
         void SetWorldPose(const float pos[3], const float view[3], const float up[3]);
         void SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovInDegree, const float aspectRatio, const bool isVertical = true);
@@ -252,6 +254,7 @@ namespace vzm
     };
     __dojostruct VzActor : VzSceneComp
     {
+        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
         //void SetMaterialInstanceVid(VID vidMI);
         //void SetMaterialVid(VID vidMaterial);
         //void SetGeometryVid(VID vidGeometry);

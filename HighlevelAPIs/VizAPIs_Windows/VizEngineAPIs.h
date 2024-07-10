@@ -25,7 +25,8 @@ namespace vzm
     __dojostatic void RemoveComponent(const VID vid);
     // Create new scene and return scene (NOT a scene item) ID, a scene 
     //  - return zero in case of failure (the name is already registered or overflow VID)
-    __dojostatic VID NewScene(const std::string& sceneName);
+    __dojostatic VID NewScene(const std::string& sceneName, VzScene** scene = nullptr);
+    __dojostatic VID NewRenderer(const std::string& sceneName, VzRenderer** renderer = nullptr);
     // Create new scene component (SCENE_COMPONENT_TYPE::CAMERA, ACTOR, LIGHT) NOT SCENE_COMPONENT_TYPE::SCENEBASE
     //  - Must belong to a scene
     //  - parentVid cannot be a scene (renderable or 0)
@@ -39,23 +40,16 @@ namespace vzm
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
     // Get Component IDs in a scene
     //  - return # of scene Components 
-    __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids);	// Get CameraParams and return its pointer registered in renderer
+    __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly = false);	// Get CameraParams and return its pointer registered in renderer
     // Load scene components into a new scene and return the scene ID
     //  - Must belong to the internal scene
     //  - return zero in case of failure
     __dojostatic VID LoadFileIntoNewScene(const std::string& filename, const std::string& nameRoot, const std::string& nameScene = "", VID* vidRoot = nullptr);
-    // Async version of LoadFileIntoNewScene
-    __dojostatic void LoadFileIntoNewSceneAsync(const std::string& filename, const std::string& rootName, const std::string& sceneName = "", const std::function<void(VID sceneVid, VID rootVid)>& callback = nullptr);
     __dojostatic VID LoadTestModel(const std::string& modelName);
     __dojostatic float GetAsyncLoadProgress();
-    // Render a scene on camera (camVid)
-    //  - Must belong to the internal scene
-    //  - if updateScene is true, uses the camera for camera-dependent scene updates
-    //  - strongly recommend a single camera-dependent update per a scene 
-    __dojostatic VZRESULT Render(const VID camVid);
     // Get a graphics render target view 
     //  - Must belong to the internal scene
-    __dojostatic void* GetGraphicsSharedRenderTarget(const int camVid, const void* device2, const void* srv_desc_heap2, const int descriptor_index, uint32_t* w = nullptr, uint32_t* h = nullptr);
+    __dojostatic void* GetGraphicsSharedRenderTarget(const int vidCam, const void* device2, const void* srv_desc_heap2, const int descriptor_index, uint32_t* w = nullptr, uint32_t* h = nullptr);
     // Reload shaders
     __dojostatic void ReloadShader();
 

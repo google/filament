@@ -67,13 +67,6 @@ bin/*.txt
 bin/Distribution
 bin/Release
 bin/Debug
-EngineCores/
-CoreAPIs/
-backups/
-VmNativeModules/
-VmPlatform/
-VmProjects/
-VmModuleProjects/
 bin/X64_Release/*.lib
 bin/X64_Debug/*.lib
 bin/X64_Release/*.ini
