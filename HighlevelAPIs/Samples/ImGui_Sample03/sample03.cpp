@@ -113,7 +113,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     VID vid_scene = vzm::NewScene("my scene", &scene);
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-    VID vid_scene_loaded = vzm::LoadFileIntoNewScene("", "my gltf root", "my gltf scene");
+    //std::vector<VID> resComponents;
+    VID vid_asset = vzm::LoadFileIntoAsset("", "my gltf asset");
 
     vzm::VzRenderer* renderer;
     VID vid_renderer = vzm::NewRenderer("my renderer", &renderer);
@@ -135,7 +136,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzLight* light;
     VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
 
-    vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
+    //vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
     vzm::AppendSceneComponentTo(vid_light, vid_scene);
     vzm::AppendSceneComponentTo(vid_camera, vid_scene);
 
@@ -221,7 +222,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'J': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstanceVid();
+            VID miid = actor->GetMaterialInstance();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
@@ -230,7 +231,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'K': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstanceVid();
+            VID miid = actor->GetMaterialInstance();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
@@ -239,7 +240,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'L': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstanceVid();
+            VID miid = actor->GetMaterialInstance();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
