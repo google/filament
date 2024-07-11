@@ -1,6 +1,12 @@
 #pragma once
 #pragma warning (disable : 4251)
 #pragma warning (disable : 4819)
+// FEngine Warnings
+#pragma warning (disable : 4146)
+#pragma warning (disable : 4068)
+#pragma warning (disable : 4267)
+#pragma warning (disable : 4244)
+
 #define _ITERATOR_DEBUG_LEVEL 0 // this is for using STL containers as our standard parameters
 
 #define __dojostatic extern "C" __declspec(dllexport)
@@ -137,6 +143,7 @@ namespace vzm
         VID componentVID = INVALID_VID;
         TimeStamp timeStamp = {}; // will be automatically set 
         std::string originFrom;
+        std::string type;
 
         // User data
         ParamMap<std::string> attributes;
@@ -171,6 +178,12 @@ namespace vzm
         VID GetParentVid();
         VID GetSceneVid();
     };
+
+    __dojostruct VzAsset : VzBaseComp
+    {
+        // To Do..
+    };
+
 
     __dojostruct VzRenderer : VzBaseComp
     {
@@ -256,13 +269,14 @@ namespace vzm
     __dojostruct VzActor : VzSceneComp
     {
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
-        //void SetMaterialInstanceVid(VID vidMI);
-        //void SetMaterialVid(VID vidMaterial);
-        //void SetGeometryVid(VID vidGeometry);
 
-        VID GetMaterialInstanceVid();
-        VID GetMaterialVid();
-        VID GetGeometryVid();
+        void SetMaterialInstance(const VID vidMI, const int slot = 0);
+        void SetMaterialInstances(const std::vector<VID>& mis);
+        void SetGeometry(const VID vidGeometry);
+
+        VID GetMaterialInstance(const int slot = 0);
+        VID GetMaterial(const int slot = 0);
+        VID GetGeometry();
     };
 
     __dojostruct VzResource : VzBaseComp
