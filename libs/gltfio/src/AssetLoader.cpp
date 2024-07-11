@@ -680,6 +680,11 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     const cgltf_mesh* mesh = node->mesh;
     const cgltf_size primitiveCount = mesh->primitives_count;
 
+#ifdef VZM_CUSTOM_CODE
+    std::vector<Primitive>& primitives = fAsset->renderablePritmitives[entity.getId()];
+    std::vector<MaterialInstance*>& mis = fAsset->renderableMIs[entity.getId()];
+#endif
+
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive).
     FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
@@ -741,6 +746,11 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
             builder.morphing(0, index, morphingVertexCount);
             morphingVertexCount += outputPrim->vertices->getVertexCount();
         }
+
+#ifdef VZM_CUSTOM_CODE
+        primitives.push_back(*outputPrim);
+        mis.push_back(mi);
+#endif
     }
 
     if (numMorphTargets) {
