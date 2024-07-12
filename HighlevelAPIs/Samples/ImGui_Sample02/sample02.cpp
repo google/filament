@@ -107,7 +107,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    vzm::InitEngineLib(arguments);
+    arguments.SetParam("api", std::string("vulkan"));
+    arguments.SetParam("vulkan-gpu-hint", std::string("0"));
+    if (vzm::InitEngineLib(arguments) != VZ_OK) {
+        std::cerr << "Failed to initialize engine library." << std::endl;
+        return -1;
+    }
     
     vzm::VzScene* scene;
     VID vid_scene = vzm::NewScene("my scene", &scene);
