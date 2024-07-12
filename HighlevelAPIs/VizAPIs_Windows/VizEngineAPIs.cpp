@@ -305,6 +305,7 @@ namespace vzm
     struct GltfIO
     {
         std::unordered_map<AssetVID, gltfio::FilamentAsset*> assets;
+        std::unordered_map<AssetVID, std::vector<VID>> assetComponents;
         std::unordered_map<VID, AssetVID> vzCompAssociatedAssets;   // used for ownership of filament/vz components
 
         gltfio::AssetLoader* assetLoader = nullptr;
@@ -2643,17 +2644,18 @@ namespace vzm
         auto& tcm = gEngine->getTransformManager();
         auto& ncm = VzNameCompManager::Get();
 
-        std::set<utils::Entity> transform_entities;
         for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; i++) {
             utils::Entity ett = asset->getRenderableEntities()[i];
             auto ri = rcm.getInstance(ett);
             rcm.setScreenSpaceContactShadows(ri, true);
-
+            
             VzActor* actor = (VzActor*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, ncm.GetName(ett), 0);// ett.getId());
+
+
+
             // TO DO : SET resources
             VID vid_actor = actor->componentVID;
             gEngineApp.AppendSceneEntityToParent(vid_actor, parentVid);
-            transform_entities.insert(ett);
         }
 
         for (size_t i = 0, n = asset->getLightEntityCount(); i < n; i++) {
@@ -2662,7 +2664,6 @@ namespace vzm
             
             VzLight* light = (VzLight*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::LIGHT, ncm.GetName(ett), 0);// ett.getId());
             gEngineApp.AppendSceneEntityToParent(light->componentVID, parentVid);
-            transform_entities.insert(ett);
         }
 
         for (size_t i = 0, n = asset->getCameraEntityCount(); i < n; i++) {
@@ -2670,7 +2671,6 @@ namespace vzm
             VzCamera* camera = (VzCamera*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::CAMERA, ncm.GetName(ett), 0);// ett.getId());
             // TO DO : render path
             gEngineApp.AppendSceneEntityToParent(camera->componentVID, parentVid);
-            transform_entities.insert(ett);
         }
 
         return gEngineApp.GetSceneVidBelongTo(parentVid);
@@ -2801,9 +2801,11 @@ namespace vzm
         auto& tcm = gEngine->getTransformManager();
         auto& ncm = VzNameCompManager::Get();
 
-        utils::Entity ett = em.create();
-        vzGltfIO.assets[ett.getId()] = asset;
-        ncm.CreateNameComp(ett, assetName);
+        utils::Entity ett_asset = em.create();
+        AssetVID vid_asset = ett_asset.getId();
+        vzGltfIO.assets[vid_asset] = asset;
+        std::vector<VID>& resComp = vzGltfIO.assetComponents[vid_asset];
+        ncm.CreateNameComp(ett_asset, assetName);
 
         asset->releaseSourceData();
 
@@ -2815,27 +2817,6 @@ namespace vzm
             instances[mi]->setStencilWrite(true);
             instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
         } 
-
-        //for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; i++) {
-        //    utils::Entity ett = asset->getRenderableEntities()[i];
-        //    auto ri = rcm.getInstance(ett);
-        //    rcm.setScreenSpaceContactShadows(ri, true);
-        //}
-        //
-        //for (size_t i = 0, n = asset->getLightEntityCount(); i < n; i++) {
-        //    utils::Entity ett = asset->getLightEntities()[i];
-        //    auto li = lcm.getInstance(ett);
-        //    //VzLight* light = (VzLight*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::LIGHT, ncm.GetName(ett), 0);// ett.getId());
-        //    //transform_entities.insert(ett);
-        //}
-        //
-        //for (size_t i = 0, n = asset->getCameraEntityCount(); i < n; i++) {
-        //    utils::Entity ett = asset->getCameraEntities()[i];
-        //    VzCamera* camera = (VzCamera*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::CAMERA, ncm.GetName(ett), 0);// ett.getId());
-            // TO DO : render path
-        //}
-
-        std::vector<VID> resComp;
 
         std::unordered_map<ActorVID, GeometryVID> actorGeoMap;
         for (auto& it : downcast(asset)->renderablePritmitives)
@@ -2876,10 +2857,15 @@ namespace vzm
             actorMIsMap[it.first] = actor_mis;
         }
 
-        if (resComponents) *resComponents = resComp;
-        //gEngineApp.CreateMaterialInstance(assetName + ":MI #" + std::to_string(++count), it.second, asset);
+        for (auto it : resComp)
+        {
+            assert(!vzGltfIO.vzCompAssociatedAssets.contains(it));
+            vzGltfIO.vzCompAssociatedAssets[it] = vid_asset;
+        }
 
-        return ett.getId();
+        if (resComponents) *resComponents = resComp;
+
+        return ett_asset.getId();
     }
 
     float GetAsyncLoadProgress()

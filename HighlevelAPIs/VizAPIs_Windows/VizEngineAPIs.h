@@ -37,7 +37,7 @@ namespace vzm
     __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
     // Reveal asset's Components by appending the parent component
     //  - return sceneId containing the parent component 
-    __dojostatic VID AppendAssetTo(const VID vidAsset, const VID parentVid, std::vector<VID>& resComponents);
+    __dojostatic VID AppendAssetTo(const VID vidAsset, const VID parentVid);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
