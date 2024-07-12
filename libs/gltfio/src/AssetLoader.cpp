@@ -573,7 +573,11 @@ void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Ent
     instance->mEntities.push_back(entity);
     instance->mNodeMap[node - srcAsset->nodes] = entity;
 
-    const char* name = getNodeName(node, mDefaultNodeName);
+    const char* parentName = nullptr;
+    if (mNameManager->hasComponent(parent)) {
+        parentName = mNameManager->getName(mNameManager->getInstance(parent));
+    }
+    const char* name = getNodeName(node, parentName ? parentName : mDefaultNodeName);
 
     if (name) {
         fAsset->mNameToEntity[name].push_back(entity);
