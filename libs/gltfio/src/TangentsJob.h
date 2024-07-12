@@ -47,6 +47,7 @@ struct TangentsJob {
     struct Context {
         VertexBuffer* const vb;
         MorphTargetBuffer* const tb;
+        uint32_t const offset;
         const uint8_t slot;
     };
 

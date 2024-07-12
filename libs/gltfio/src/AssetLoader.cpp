@@ -650,9 +650,6 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
                     if (outputPrim.indices) {
                         fAsset->mIndexBuffers.push_back(outputPrim.indices);
                     }
-                    if (outputPrim.targets) {
-                        fAsset->mMorphTargetBuffers.push_back(outputPrim.targets);
-                    }
                 }
             } else {
                 // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't
@@ -695,11 +692,11 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     // glTF spec says that all primitives must have the same number of morph targets.
     const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
     RenderableManager::Builder builder(primitiveCount);
-    builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
     // The VertexBuffer and IndexBuffer objects are cached for possible re-use, but MaterialInstance
     // is not.
+    size_t morphingVertexCount = 0;
     for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
         RenderableManager::PrimitiveType primType;
         if (!getPrimitiveType(inputPrim->type, &primType)) {
@@ -740,8 +737,78 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         builder.geometry(index, primType, outputPrim->vertices, outputPrim->indices);
 
         if (numMorphTargets) {
-            assert_invariant(outputPrim->targets);
-            builder.morphing(0, index, outputPrim->targets);
+            outputPrim->morphTargetOffset = morphingVertexCount;    // FIXME: can I do that here?
+            builder.morphing(0, index, morphingVertexCount);
+            morphingVertexCount += outputPrim->vertices->getVertexCount();
+        }
+    }
+
+    if (numMorphTargets) {
+        MorphTargetBuffer* morphTargetBuffer = MorphTargetBuffer::Builder()
+                .count(numMorphTargets)
+                .vertexCount(morphingVertexCount)
+                .build(mEngine);
+
+        fAsset->mMorphTargetBuffers.push_back(morphTargetBuffer);
+
+        builder.morphing(morphTargetBuffer);
+
+        outputPrim = prims.data();
+        inputPrim = &mesh->primitives[0];
+        for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+            outputPrim->morphTargetBuffer = morphTargetBuffer;
+
+            UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
+            for (int tindex = 0; tindex < numMorphTargets; ++tindex) {
+                const cgltf_morph_target& inTarget = inputPrim->targets[tindex];
+                for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
+                    const cgltf_attribute& attribute = inTarget.attributes[aindex];
+                    const cgltf_accessor* accessor = attribute.data;
+                    const cgltf_attribute_type atype = attribute.type;
+                    if (atype == cgltf_attribute_type_position) {
+                        // All position attributes must have the same number of components.
+                        assert_invariant(!previous || previous->type == accessor->type);
+                        previous = accessor;
+
+                        assert_invariant(outputPrim->morphTargetBuffer);
+
+                        if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
+                                fAsset->mResourceInfo)) {
+                            using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+                            auto& slots = std::get<FFilamentAsset::ResourceInfo>(
+                                    fAsset->mResourceInfo).mBufferSlots;
+                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                            assert_invariant(!slot.vertexBuffer);
+                            assert_invariant(!slot.indexBuffer);
+
+                            slot.morphTargetBuffer = outputPrim->morphTargetBuffer;
+                            slot.morphTargetOffset = outputPrim->morphTargetOffset;
+                            slot.morphTargetCount = outputPrim->vertices->getVertexCount();
+                            slot.bufferIndex = tindex;
+                        }
+                        else if (std::holds_alternative<FFilamentAsset::ResourceInfoExtended>(
+                                fAsset->mResourceInfo))
+                        {
+                            using BufferSlot = FFilamentAsset::ResourceInfoExtended::BufferSlot;
+                            auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(
+                                    fAsset->mResourceInfo).slots;
+
+                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                            assert_invariant(slot.slot == tindex);
+                            assert_invariant(!slot.vertices);
+                            assert_invariant(!slot.indices);
+
+                            slot.target = outputPrim->morphTargetBuffer;
+                            slot.offset = outputPrim->morphTargetOffset;
+                            slot.count = outputPrim->vertices->getVertexCount();
+                        }
+
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -753,7 +820,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     nm.setMorphTargetNames(nm.getInstance(entity), std::move(morphTargetNames));
 
     if (node->skin) {
-       builder.skinning(node->skin->joints_count);
+        builder.skinning(node->skin->joints_count);
     }
 
     // Per the spec, glTF models must have valid mix / max annotations for position attributes.
@@ -825,7 +892,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     // request from Google.
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
-    auto slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
+    auto* const slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
     auto addBufferSlot = [slots](FFilamentAsset::ResourceInfo::BufferSlot entry) {
         slots->push_back(entry);
     };
@@ -1096,13 +1163,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     }
 
     if (targetsCount > 0) {
-        MorphTargetBuffer* targets = MorphTargetBuffer::Builder()
-                .vertexCount(vertexCount)
-                .count(targetsCount)
-                .build(mEngine);
-        outPrim->targets = targets;
-        fAsset->mMorphTargetBuffers.push_back(targets);
         UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
+        outPrim->slotIndices.resize(targetsCount);
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
             for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
@@ -1114,8 +1176,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                     assert_invariant(!previous || previous->type == accessor->type);
                     previous = accessor;
                     BufferSlot slot = { accessor };
-                    slot.morphTargetBuffer = targets;
-                    slot.bufferIndex = tindex;
+                    outPrim->slotIndices[tindex] = slots->size();
                     addBufferSlot(slot);
                     break;
                 }
@@ -1222,6 +1283,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
     auto trConfig = inputMat->transmission;
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
+    auto spConfig = inputMat->specular;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
@@ -1238,7 +1300,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
         ccConfig.clearcoat_normal_texture.has_transform ||
         shConfig.sheen_color_texture.has_transform ||
         shConfig.sheen_roughness_texture.has_transform ||
-        trConfig.transmission_texture.has_transform;
+        trConfig.transmission_texture.has_transform ||
+        spConfig.specular_color_texture.has_transform ||
+        spConfig.specular_texture.has_transform;
 
     MaterialKey matkey {
         .doubleSided = !!inputMat->double_sided,
@@ -1273,6 +1337,11 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
         .hasSheen = !!inputMat->has_sheen,
         .hasIOR = !!inputMat->has_ior,
         .hasVolume = !!inputMat->has_volume,
+        .hasSpecular = !!inputMat->has_specular,
+        .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
+        .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
+        .specularTextureUV = (uint8_t) spConfig.specular_texture.texcoord,
+        .specularColorTextureUV = (uint8_t) spConfig.specular_color_texture.texcoord,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1361,6 +1430,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto trConfig = inputMat->transmission;
     auto shConfig = inputMat->sheen;
     auto vlConfig = inputMat->volume;
+    auto spConfig = inputMat->specular;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -1558,6 +1628,30 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     if (mi->getMaterial()->hasParameter("emissiveStrength")) {
         mi->setParameter("emissiveStrength", inputMat->has_emissive_strength ?
                 inputMat->emissive_strength.emissive_strength : 1.0f);
+    }
+
+    if (matkey.hasSpecular) {
+        const float* s = spConfig.specular_color_factor;
+        mi->setParameter("specularColorFactor", float3{s[0], s[1], s[2]});
+        mi->setParameter("specularStrength", spConfig.specular_factor);
+
+        if (matkey.hasSpecularColorTexture) {
+            fAsset->addTextureBinding(mi, "specularColorMap", spConfig.specular_color_texture.texture, sRGB);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform uvt = spConfig.specular_color_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("specularColorUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasSpecularTexture) {
+            bool sameTexture = spConfig.specular_color_texture.texture == spConfig.specular_texture.texture;
+            fAsset->addTextureBinding(mi, "specularMap", spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform uvt = spConfig.specular_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("specularUvMatrix", uvmat);
+            }
+        }
     }
 
     *cacheEntry = { mi, *uvmap };

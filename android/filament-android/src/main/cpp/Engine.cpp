@@ -420,6 +420,13 @@ Java_com_google_android_filament_Engine_nSetPaused(JNIEnv*, jclass,
     engine->setPaused(paused);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nUnprotected(JNIEnv*, jclass,
+        jlong nativeEngine, jboolean paused) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->unprotected();
+}
+
 // Managers...
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -563,4 +570,10 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nBuilderBuild(JNIEnv*, jclass, jlong nativeBuilder) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     return (jlong) builder->build();
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_getSteadyClockTimeNano(JNIEnv *env, jclass clazz) {
+    return (jlong)Engine::getSteadyClockTimeNano();
 }

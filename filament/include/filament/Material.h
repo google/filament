@@ -141,6 +141,18 @@ public:
         }
 
         /**
+         * Sets the quality of the indirect lights computations. This is only taken into account
+         * if this material is lit and in the surface domain. This setting will affect the
+         * IndirectLight computation if one is specified on the Scene and Spherical Harmonics
+         * are used for the irradiance.
+         *
+         * @param shBandCount Number of spherical harmonic bands. Must be 1, 2 or 3 (default).
+         * @return Reference to this Builder for chaining calls.
+         * @see IndirectLight
+         */
+        Builder& sphericalHarmonicsBandCount(size_t shBandCount) noexcept;
+
+        /**
          * Creates the Material object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Material with.

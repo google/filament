@@ -145,6 +145,14 @@ Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::raycastCallback(RayCal
     return *this;
 }
 
+
+
+template <typename FLOAT> typename
+Manipulator<FLOAT>::Builder& Manipulator<FLOAT>::Builder::panning(bool enabled) {
+    details.panning = enabled;
+    return *this;
+}
+
 template <typename FLOAT>
 Manipulator<FLOAT>* Manipulator<FLOAT>::Builder::build(Mode mode) {
     switch (mode) {

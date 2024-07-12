@@ -102,6 +102,7 @@ Engine* FEngine::create(Engine::Builder const& builder) {
         DriverConfig const driverConfig{
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
+                .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
                 .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
@@ -476,6 +477,8 @@ void FEngine::shutdown() {
 
     destroy(mDefaultMaterial);
 
+    destroy(mUnprotectedDummySwapchain);
+
     /*
      * clean-up after the user -- we call terminate on each "leaked" object and clear each list.
      *
@@ -676,6 +679,7 @@ int FEngine::loop() {
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
+            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
             .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
             .forceGLES2Context = mConfig.forceGLES2Context,
@@ -1252,6 +1256,13 @@ void FEngine::resetBackendState() noexcept {
     getDriverApi().resetState();
 }
 #endif
+
+void FEngine::unprotected() noexcept {
+    if (UTILS_UNLIKELY(!mUnprotectedDummySwapchain)) {
+        mUnprotectedDummySwapchain = createSwapChain(1, 1, 0);
+    }
+    mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
+}
 
 // ------------------------------------------------------------------------------------------------
 

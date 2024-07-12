@@ -90,6 +90,20 @@ public:
         VkExtent2D extent = {0, 0};
     };
 
+    struct ImageSyncData {
+        static constexpr uint32_t INVALID_IMAGE_INDEX = UINT32_MAX;
+
+        // The index of the next image as returned by vkAcquireNextImage or equivalent.
+        uint32_t imageIndex = INVALID_IMAGE_INDEX;
+
+        // Semaphore to be signaled once the image is available.
+        VkSemaphore imageReadySemaphore = VK_NULL_HANDLE;
+
+        // A function called right before vkQueueSubmit. After this call, the image must be 
+        // available. This pointer can be null if imageReadySemaphore is not VK_NULL_HANDLE.
+        std::function<void(SwapChainPtr handle)> explicitImageReadyWait = nullptr;
+    };
+
     VulkanPlatform();
 
     ~VulkanPlatform() override;
@@ -127,6 +141,12 @@ public:
          * before recreating the swapchain. Default is true.
          */
         bool flushAndWaitOnWindowResize = true;
+
+        /**
+         * Whether the swapchain image should be transitioned to a layout suitable for
+         * presentation. Default is true.
+         */
+        bool transitionSwapChainImageLayoutForPresent = true;
     };
 
     /**
@@ -155,13 +175,10 @@ public:
      * corresponding VkImage will be used as the output color attachment. The client should signal
      * the `clientSignal` semaphore when the image is ready to be used by the backend.
      * @param handle         The handle returned by createSwapChain()
-     * @param clientSignal   The semaphore that the client will signal to indicate that the backend
-     *                       may render into the image.
-     * @param index          Pointer to memory that will be filled with the index that corresponding
-     *                       to an image in the `SwapChainBundle.colors` array.
+     * @param outImageSyncData The synchronization data used for image readiness
      * @return               Result of acquire
      */
-    virtual VkResult acquire(SwapChainPtr handle, VkSemaphore clientSignal, uint32_t* index);
+    virtual VkResult acquire(SwapChainPtr handle, ImageSyncData* outImageSyncData);
 
     /**
      * Present the image corresponding to `index` to the display. The client should wait on

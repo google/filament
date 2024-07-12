@@ -207,7 +207,17 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
 
                     size_t const requiredSize = byteCount * vertexCount;
                     auto gendata = (uint8_t*) malloc(requiredSize);
-                    memset(gendata, 0xff, requiredSize);
+
+                    if (vattr == filament::VertexAttribute::COLOR) {
+                        // Assume white as the default if colors need to be generated.
+                        float4* dataf = (float4*) gendata;
+                        for (size_t i = 0; i < vertexCount; ++i) {
+                            dataf[i] = float4(1.0, 1.0, 1.0, 1.0f);
+                        }
+                    } else {
+                        memset(gendata, 0xff, requiredSize);
+                    }
+
                     vslots.push_back({
                         .slot = slot,
                         .sizeInBytes = requiredSize,
@@ -278,14 +288,12 @@ std::vector<BufferSlot> computeGeometries(cgltf_primitive const* prim, uint8_t c
     }
 
     if (!morphTargets.empty()) {
+        UTILS_UNUSED_IN_RELEASE
         auto const vertexCount = morphTargetOuts[0].vertexCount;
-        MorphTargetBuffer* buffer = MorphTargetBuffer::Builder()
-                                            .count(morphTargets.size())
-                                            .vertexCount(vertexCount)
-                                            .build(*engine);
         for (auto target: morphTargetOuts) {
             assert_invariant(target.vertexCount == vertexCount);
-            slots.push_back({.target = buffer,
+            slots.push_back({
+                    .offset = 0xdeadbeef,
                     .slot = target.morphTarget,
                     .targetData = {
                             .tbn = target.tbn,
@@ -526,7 +534,10 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, mEngine);
 
-    for (auto slot: slots) {
+    out->slotIndices.resize(morphTargets.size());
+
+    for (size_t i = 0; i < slots.size(); i++) {
+        auto& slot = slots[i];
         if (slot.vertices) {
             assert_invariant(!out->vertices || out->vertices == slot.vertices);
             out->vertices = slot.vertices;
@@ -535,9 +546,10 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
             assert_invariant(!out->indices || out->indices == slot.indices);
             out->indices = slot.indices;
         }
-        if (slot.target) {
-            assert_invariant(!out->targets || out->targets == slot.target);
-            out->targets = slot.target;
+        if (slot.offset == 0xdeadbeef) {
+            // we can't fill this here, unfortunately, so this is done in
+            // FAssetLoader::createRenderable
+            out->slotIndices[slot.slot] = outSlots.size() + i;
         }
     }
 

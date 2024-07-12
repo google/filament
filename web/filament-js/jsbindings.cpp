@@ -388,6 +388,10 @@ class_<Engine>("Engine")
         return Engine::create();
     }, allow_raw_pointers())
 
+    .class_function("getSteadyClockTimeNano", &Engine::getSteadyClockTimeNano)
+
+    .function("unprotected", &Engine::unprotected)
+
     .function("enableAccurateTranslations", &Engine::enableAccurateTranslations)
 
     .function("setAutomaticInstancingEnabled", &Engine::setAutomaticInstancingEnabled)
@@ -621,6 +625,8 @@ class_<Renderer>("Renderer")
     }), allow_raw_pointers())
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
+    .function("setPresentationTime", &Renderer::setPresentationTime)
+    .function("setVsyncTime", &Renderer::setVsyncTime)
     .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
         return self->beginFrame(swapChain);
     }), allow_raw_pointers())

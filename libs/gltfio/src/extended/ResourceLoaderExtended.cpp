@@ -48,9 +48,10 @@ void ResourceLoaderExtended::loadResources(std::vector<BufferSlot> const& slots,
         if (slot.target) {
             assert_invariant(slot.targetData.positions && slot.targetData.tbn);
             slot.target->setPositionsAt(*engine, slot.slot,
-                    (float3 const*) slot.targetData.positions, slot.target->getVertexCount());
+                    (float3 const*) slot.targetData.positions,
+                    slot.count, slot.offset);
             slot.target->setTangentsAt(*engine, slot.slot, (short4 const*) slot.targetData.tbn,
-                    slot.target->getVertexCount());
+                    slot.count, slot.offset);
 
             free(slot.targetData.positions);
             free(slot.targetData.tbn);

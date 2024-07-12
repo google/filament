@@ -120,7 +120,6 @@ set(GLTFIO_INCLUDE_DIRS
         ../../third_party/cgltf
         ../../third_party/meshoptimizer/src
         ../../third_party/robin-map
-        ../../third_party/hat-trie
         ../../third_party/stb
         ../../libs/utils/include
         ../../libs/ktxreader/include

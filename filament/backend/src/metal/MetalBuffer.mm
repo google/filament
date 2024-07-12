@@ -27,7 +27,16 @@ MetalPlatform* TrackedMetalBuffer::platform = nullptr;
 MetalPlatform* ScopedAllocationTimer::platform = nullptr;
 
 MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
-        size_t size, bool forceGpuBuffer) : mBufferSize(size), mContext(context) {
+        size_t size, bool forceGpuBuffer)
+    : mBufferSize(size), mContext(context) {
+    const MetalBumpAllocator& allocator = *mContext.bumpAllocator;
+    // VERTEX is also used for index buffers
+    if (allocator.getCapacity() > 0 && bindingType == BufferObjectBinding::VERTEX) {
+        mUploadStrategy = UploadStrategy::BUMP_ALLOCATOR;
+    } else {
+        mUploadStrategy = UploadStrategy::POOL;
+    }
+
     // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
     // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
     // This won't work for SSBOs, since they are read/write.
@@ -61,34 +70,23 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     FILAMENT_CHECK_PRECONDITION(size + byteOffset <= mBufferSize)
             << "Attempting to copy " << size << " bytes into a buffer of size " << mBufferSize
             << " at offset " << byteOffset;
+    // The copy blit requires that byteOffset be a multiple of 4.
+    FILAMENT_CHECK_PRECONDITION(!(byteOffset & 0x3)) << "byteOffset must be a multiple of 4";
 
-    // Either copy into the Metal buffer or into our cpu buffer.
+    // If we have a cpu buffer, we can directly copy into it.
     if (mCpuBuffer) {
         memcpy(static_cast<uint8_t*>(mCpuBuffer) + byteOffset, src, size);
         return;
     }
 
-    // Acquire a staging buffer to hold the contents of this update.
-    MetalBufferPool* bufferPool = mContext.bufferPool;
-    const MetalBufferPoolEntry* const staging = bufferPool->acquireBuffer(size);
-    memcpy(staging->buffer.get().contents, src, size);
-
-    // The blit below requires that byteOffset be a multiple of 4.
-    FILAMENT_CHECK_PRECONDITION(!(byteOffset & 0x3u)) << "byteOffset must be a multiple of 4";
-
-    // Encode a blit from the staging buffer into the private GPU buffer.
-    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
-    id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
-    blitEncoder.label = @"Buffer upload blit";
-    [blitEncoder copyFromBuffer:staging->buffer.get()
-                   sourceOffset:0
-                       toBuffer:mBuffer.get()
-              destinationOffset:byteOffset
-                           size:size];
-    [blitEncoder endEncoding];
-    [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        bufferPool->releaseBuffer(staging);
-    }];
+    switch (mUploadStrategy) {
+        case UploadStrategy::BUMP_ALLOCATOR:
+            uploadWithBumpAllocator(src, size, byteOffset);
+            break;
+        case UploadStrategy::POOL:
+            uploadWithPoolBuffer(src, size, byteOffset);
+            break;
+    }
 }
 
 void MetalBuffer::copyIntoBufferUnsynchronized(void* src, size_t size, size_t byteOffset) {
@@ -197,6 +195,43 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncod
                                                      atIndex:bufferIndex];
         }
     }
+}
+
+void MetalBuffer::uploadWithPoolBuffer(void* src, size_t size, size_t byteOffset) const {
+    MetalBufferPool* bufferPool = mContext.bufferPool;
+    const MetalBufferPoolEntry* const staging = bufferPool->acquireBuffer(size);
+    memcpy(staging->buffer.get().contents, src, size);
+
+    // Encode a blit from the staging buffer into the private GPU buffer.
+    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
+    id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+    blitEncoder.label = @"Buffer upload blit - pool buffer";
+    [blitEncoder copyFromBuffer:staging->buffer.get()
+                   sourceOffset:0
+                       toBuffer:mBuffer.get()
+              destinationOffset:byteOffset
+                           size:size];
+    [blitEncoder endEncoding];
+    [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+        bufferPool->releaseBuffer(staging);
+    }];
+}
+
+void MetalBuffer::uploadWithBumpAllocator(void* src, size_t size, size_t byteOffset) const {
+    MetalBumpAllocator& allocator = *mContext.bumpAllocator;
+    auto [buffer, offset] = allocator.allocateStagingArea(size);
+    memcpy(static_cast<char*>(buffer.contents) + offset, src, size);
+
+    // Encode a blit from the staging buffer into the private GPU buffer.
+    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
+    id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+    blitEncoder.label = @"Buffer upload blit - bump allocator";
+    [blitEncoder copyFromBuffer:buffer
+                   sourceOffset:offset
+                       toBuffer:mBuffer.get()
+              destinationOffset:byteOffset
+                           size:size];
+    [blitEncoder endEncoding];
 }
 
 } // namespace backend

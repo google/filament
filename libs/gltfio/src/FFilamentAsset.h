@@ -47,8 +47,8 @@
 #include "FFilamentInstance.h"
 #include "Utility.h"
 
-#include <tsl/htrie_map.h>
-
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -96,7 +96,9 @@ struct Primitive {
     IndexBuffer* indices = nullptr;
     Aabb aabb; // object-space bounding box
     UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
-    MorphTargetBuffer* targets = nullptr;
+    MorphTargetBuffer* morphTargetBuffer = nullptr;
+    uint32_t morphTargetOffset;
+    std::vector<int> slotIndices;
 };
 using MeshCache = utils::FixedCapacityVector<utils::FixedCapacityVector<Primitive>>;
 
@@ -273,7 +275,7 @@ struct FFilamentAsset : public FilamentAsset {
     bool mResourcesLoaded = false;
 
     DependencyGraph mDependencyGraph;
-    tsl::htrie_map<char, std::vector<utils::Entity>> mNameToEntity;
+    std::unordered_map<std::string, std::vector<utils::Entity>> mNameToEntity;
     utils::CString mAssetExtras;
     bool mDetachedFilamentComponents = false;
 
@@ -329,6 +331,8 @@ struct FFilamentAsset : public FilamentAsset {
             VertexBuffer* vertexBuffer;
             IndexBuffer* indexBuffer;
             MorphTargetBuffer* morphTargetBuffer;
+            uint32_t morphTargetOffset;
+            uint32_t morphTargetCount;
         };
 
         std::vector<BufferSlot> mBufferSlots;
@@ -343,6 +347,8 @@ struct FFilamentAsset : public FilamentAsset {
             VertexBuffer* vertices = nullptr;
             IndexBuffer* indices = nullptr;
             MorphTargetBuffer* target = nullptr;
+            uint32_t offset = 0;
+            uint32_t count = 0;
             int slot = -1;
             size_t sizeInBytes = 0;
 

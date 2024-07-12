@@ -17,11 +17,14 @@
 #ifndef TNT_UTILS_SSTREAM_H
 #define TNT_UTILS_SSTREAM_H
 
+#include <utils/compiler.h>
 #include <utils/ostream.h>
+
+#include <stddef.h>
 
 namespace utils::io {
 
-class sstream : public ostream {
+class UTILS_PUBLIC sstream : public ostream {
 public:
     ostream& flush() noexcept override;
     const char* c_str() const noexcept;

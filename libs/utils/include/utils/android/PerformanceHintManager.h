@@ -55,9 +55,15 @@ public:
         int reportActualWorkDuration(int64_t actualDurationNanos) noexcept;
     };
 
+    // caveat: This must be called on a Java thread
     PerformanceHintManager() noexcept;
     ~PerformanceHintManager() noexcept;
 
+    // Whether PerformanceHintManager APIs are supported (which doesn't mean PerformanceHintManager
+    // itself is, use isValid()).
+    static bool isSupported() noexcept;
+
+    // Whether PerformanceHintManager can be used.
     bool isValid() const;
 
     int64_t getPreferredUpdateRateNanos() const noexcept;

@@ -133,6 +133,7 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
 VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
     vkDestroySwapchainKHR(mDevice, mSwapchain, VKALLOC);
     vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
+    destroy();
 }
 
 VkResult VulkanPlatformSurfaceSwapChain::create() {
@@ -153,7 +154,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // the number of images, though there may be limits related to the total amount of memory used
     // by presentable images."
     if (maxImageCount != 0 && desiredImageCount > maxImageCount) {
-        utils::slog.e << "Swap chain does not support " << desiredImageCount << " images."
+        FVK_LOGE << "Swap chain does not support " << desiredImageCount << " images."
                       << utils::io::endl;
         desiredImageCount = caps.minImageCount;
     }
@@ -246,7 +247,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
 
-    slog.i << "vkCreateSwapchain"
+    FVK_LOGI << "vkCreateSwapchain"
            << ": " << mSwapChainBundle.extent.width << "x" << mSwapChainBundle.extent.height << ", "
            << surfaceFormat.format << ", " << surfaceFormat.colorSpace << ", "
            << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
@@ -254,19 +255,29 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
            << "depth=" << mSwapChainBundle.depthFormat
            << io::endl;
 
+    VkSemaphoreCreateInfo const semaphoreCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+
+    for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
+        VkResult result = vkCreateSemaphore(mDevice, &semaphoreCreateInfo, nullptr,
+                mImageReady + i);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Failed to create semaphore";
+    }
+
     return result;
 }
 
-VkResult VulkanPlatformSurfaceSwapChain::acquire(VkSemaphore clientSignal, uint32_t* index) {
-    // This immediately retrieves the index of the next available presentable image, and
-    // asynchronously requests the GPU to trigger the "imageAvailable" semaphore.
-    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapchain, UINT64_MAX, clientSignal,
-            VK_NULL_HANDLE, index);
+VkResult VulkanPlatformSurfaceSwapChain::acquire(VulkanPlatform::ImageSyncData* outImageSyncData) {
+    mCurrentImageReadyIndex = (mCurrentImageReadyIndex + 1) % IMAGE_READY_SEMAPHORE_COUNT;
+    outImageSyncData->imageReadySemaphore = mImageReady[mCurrentImageReadyIndex];
+    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapchain, UINT64_MAX,
+            outImageSyncData->imageReadySemaphore, VK_NULL_HANDLE, &outImageSyncData->imageIndex);
 
     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
     // log messages or a loop of re-creations.
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        slog.w << "Vulkan Driver: Suboptimal swap chain." << io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << io::endl;
         mSuboptimal = true;
     }
     return result;
@@ -288,7 +299,7 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
     // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
     if (result == VK_SUBOPTIMAL_KHR && !mSuboptimal) {
-        utils::slog.w << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
+        FVK_LOGW << "Vulkan Driver: Suboptimal swap chain." << utils::io::endl;
         mSuboptimal = true;
     }
     return result;
@@ -310,6 +321,17 @@ bool VulkanPlatformSurfaceSwapChain::hasResized() {
 VkResult VulkanPlatformSurfaceSwapChain::recreate() {
     destroy();
     return create();
+}
+
+void VulkanPlatformSurfaceSwapChain::destroy() {
+    VulkanPlatformSwapChainImpl::destroy();
+
+    for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
+        if (mImageReady[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
+            mImageReady[i] = VK_NULL_HANDLE;
+        }
+    }
 }
 
 VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext const& context,
@@ -343,8 +365,8 @@ VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index, VkSemaphore fi
     return VK_SUCCESS;
 }
 
-VkResult VulkanPlatformHeadlessSwapChain::acquire(VkSemaphore clientSignal, uint32_t* index) {
-    *index = mCurrentIndex;
+VkResult VulkanPlatformHeadlessSwapChain::acquire(VulkanPlatform::ImageSyncData* outImageSyncData) {
+    outImageSyncData->imageIndex = mCurrentIndex;
     mCurrentIndex = (mCurrentIndex + 1) % HEADLESS_SWAPCHAIN_SIZE;
     return VK_SUCCESS;
 }

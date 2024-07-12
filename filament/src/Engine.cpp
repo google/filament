@@ -39,6 +39,8 @@
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
+#include <chrono>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -329,6 +331,10 @@ void Engine::pumpMessageQueues() {
     downcast(this)->pumpMessageQueues();
 }
 
+void Engine::unprotected() noexcept {
+    downcast(this)->unprotected();
+}
+
 void Engine::setAutomaticInstancingEnabled(bool enable) noexcept {
     downcast(this)->setAutomaticInstancingEnabled(enable);
 }
@@ -357,12 +363,16 @@ const Engine::Config& Engine::getConfig() const noexcept {
     return downcast(this)->getConfig();
 }
 
-bool Engine::isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
+bool Engine::isStereoSupported(StereoscopicType) const noexcept {
     return downcast(this)->isStereoSupported();
 }
 
 size_t Engine::getMaxStereoscopicEyes() noexcept {
     return FEngine::getMaxStereoscopicEyes();
+}
+
+uint64_t Engine::getSteadyClockTimeNano() noexcept {
+    return std::chrono::steady_clock::now().time_since_epoch().count();
 }
 
 #if defined(__EMSCRIPTEN__)
