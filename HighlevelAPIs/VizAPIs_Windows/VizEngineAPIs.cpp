@@ -2949,8 +2949,7 @@ namespace vzm
         return 0;
     }
 
-    void* GetGraphicsSharedRenderTarget(const int vidCam, const void* graphicsDev2, const void* srv_desc_heap2, const int descriptor_index, uint32_t* w, uint32_t* h)
-    {
-        return nullptr;
+    uint64_t GetGraphicsSharedRenderTarget() {
+      return gEngine->getSwapHandle();
     }
 }
