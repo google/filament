@@ -138,6 +138,8 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 int main(int argc, char** argv) {
     Config config;
     config.title = "skinning buffer common for two renderables";
+    config.vulkanGPUHint = "0";
+    config.backend = filament::Engine::Backend::OPENGL;
 
     handleCommandLineArgments(argc, argv, &config);
 

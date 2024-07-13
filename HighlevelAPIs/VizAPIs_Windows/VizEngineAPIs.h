@@ -50,7 +50,7 @@ namespace vzm
     // Load gltf components into a new scene and return the asset ID
     //  - the lifespan of resComponents follows that of the associated asset (vidAsset) and cannot be deleted by the client
     //  - return zero in case of failure
-    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, std::vector<VID>* resComponents = nullptr);
+    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, std::vector<VID>& gltfRootVids);
     __dojostatic float GetAsyncLoadProgress();
     // Get a graphics render target view 
     //  - Must belong to the internal scene

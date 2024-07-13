@@ -221,7 +221,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'J': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstance();
+            VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
@@ -230,7 +230,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'K': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstance();
+            VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
@@ -239,7 +239,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'L': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstance();
+            VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
@@ -284,7 +284,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
             int x = GET_X_LPARAM(lParam);
             int y = h - GET_Y_LPARAM(lParam);
-            cc->Scroll(x, y, (float)zDelta);
+            cc->Scroll(x, y, -(float)zDelta);
         }
         break;
     }
