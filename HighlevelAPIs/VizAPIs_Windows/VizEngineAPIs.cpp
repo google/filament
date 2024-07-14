@@ -304,7 +304,8 @@ using MaterialVID = VID;
 using MaterialInstanceVID = VID;
 using MaterialVID = VID;
 using AssetVID = VID;
-namespace vzm::gltf {
+namespace filament::gltfio {
+    using namespace vzm;
     using Entity = utils::Entity;
     using FFilamentAsset = filament::gltfio::FFilamentAsset;
     using SceneMask = NodeManager::SceneMask;
@@ -518,7 +519,8 @@ namespace vzm
         std::unordered_map<AssetVID, std::vector<VID>> assetComponents;
         std::unordered_map<VID, AssetVID> vzCompAssociatedAssets;   // used for ownership of filament/vz components
 
-        vzm::gltf::VzAssetLoader* assetLoader = nullptr;
+        //gltfio::AssetLoader* assetLoader = nullptr;
+        gltfio::VzAssetLoader* assetLoader = nullptr;
 
         gltfio::ResourceLoader* resourceLoader = nullptr;
         gltfio::TextureProvider* stbDecoder = nullptr;
@@ -548,11 +550,11 @@ namespace vzm
                     filament::gltfio::FFilamentAsset* fasset = downcast(it.second);
                     {
                         // Destroy gltfio node components.
-                        for (auto entity : fasset->mEntities) {
+                        for (auto& entity : fasset->mEntities) {
                             fasset->mNodeManager->destroy(entity);
                         }
                         // Destroy gltfio trs transform components.
-                        for (auto entity : fasset->mEntities) {
+                        for (auto& entity : fasset->mEntities) {
                             fasset->mTrsTransformManager->destroy(entity);
                         }
                     }
@@ -584,9 +586,12 @@ namespace vzm
 
 
             //FAssetLoader* temp(downcast(*loader));
-            //FAssetLoader::destroy(&temp);
+            //VzAssetLoader::destroy(&temp);
             //*loader = temp;
-            gltf::VzAssetLoader::destroy(&assetLoader);
+            
+            //AssetLoader::destroy(&assetLoader);
+            gltfio::VzAssetLoader::destroy(&assetLoader);
+            
             assetLoader = nullptr;
         }
 
@@ -605,7 +610,7 @@ namespace vzm
             vzGltfIO.resourceLoader->addTextureProvider("image/ktx2", vzGltfIO.ktxDecoder);
 
             auto& ncm = VzNameCompManager::Get();
-            //vzGltfIO.assetLoader = VzAssetLoader::::create({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
+            //vzGltfIO.assetLoader = AssetLoader::create({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
             //vzGltfIO.assetLoader = new vzm::gltf::VzAssetLoader({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
         }
     } vzGltfIO;
@@ -1082,10 +1087,24 @@ namespace vzm
                     auto it = camSceneVids_.find(vid);
                     if (it != camSceneVids_.end()) {
                         backlog::post("cam VID : " + std::to_string(ett.getId()), backlog::LogLevel::Default);
+                        it->second = 0;
+                        ++retired_ett_count;
                     }
                     else
                     {
-                        backlog::post("entity VID : " + std::to_string(ett.getId()), backlog::LogLevel::Warning);
+                        auto& ncm = VzNameCompManager::Get();
+
+                        auto it = actorSceneVids_.find(vid);
+                        if (it == actorSceneVids_.end())
+                        {
+                            backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") ==> not a scene component..", backlog::LogLevel::Error);
+                        }
+                        else
+                        {
+                            backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") is a hierarchy actor (kind of node)", backlog::LogLevel::Default);
+                            it->second = 0;
+                            ++retired_ett_count;
+                        }
                     }
                 }
                 });
@@ -1322,6 +1341,8 @@ namespace vzm
         inline bool AppendSceneEntityToParent(const VID vidSrc, const VID vidDst)
         {
             assert(vidSrc != vidDst);
+            auto& tcm = gEngine->getTransformManager();
+
             auto getSceneAndVid = [this](Scene** scene, const VID vid)
                 {
                     SceneVID vid_scene = vid;
@@ -1348,6 +1369,16 @@ namespace vzm
                     }
                     return vid_scene;
                 };
+            auto getDescendants = [&](auto& self, const utils::Entity ett, std::vector<utils::Entity>& decendants) -> void
+                {
+                    auto ins = tcm.getInstance(ett);
+                    for (auto it = tcm.getChildrenBegin(ins); it != tcm.getChildrenEnd(ins); it++)
+                    {
+                        utils::Entity ett_child = tcm.getEntity(*it);
+                        decendants.push_back(ett_child);
+                        self(self, ett_child, decendants);
+                    }
+                };
 
             Scene* scene_src = nullptr;
             Scene* scene_dst = nullptr;
@@ -1357,7 +1388,6 @@ namespace vzm
             utils::Entity ett_src = utils::Entity::import(vidSrc);
             utils::Entity ett_dst = utils::Entity::import(vidDst);
             //auto& em = gEngine->getEntityManager();
-            auto& tcm = gEngine->getTransformManager();
 
             // case 1. both entities are actor
             // case 2. src is scene and dst is actor
@@ -1375,11 +1405,12 @@ namespace vzm
                 tcm.setParent(ins_src, ins_dst);
 
                 entities_moving.push_back(ett_src); 
-                for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
-                {
-                    utils::Entity ett = tcm.getEntity(*it);
-                    entities_moving.push_back(ett);
-                }
+                getDescendants(getDescendants, ett_src, entities_moving);
+                //for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
+                //{
+                //    utils::Entity ett = tcm.getEntity(*it);
+                //    entities_moving.push_back(ett);
+                //}
             }
             else if (vidSrc == vid_scene_src && vidDst != vid_scene_dst)
             {
@@ -1409,11 +1440,12 @@ namespace vzm
                 assert(ins_src.asValue() != 0 && "vidSrc is invalid");
 
                 entities_moving.push_back(ett_src);
-                for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
-                {
-                    utils::Entity ett = tcm.getEntity(*it);
-                    entities_moving.push_back(ett);
-                }
+                getDescendants(getDescendants, ett_src, entities_moving);
+                //for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
+                //{
+                //    utils::Entity ett = tcm.getEntity(*it);
+                //    entities_moving.push_back(ett);
+                //}
             }
             else 
             {
@@ -1578,7 +1610,7 @@ namespace vzm
 
             MaterialInstance* mi = nullptr;
             MaterialInstanceVID vid_mi = INVALID_VID;
-            for (auto it_mi : materialInstances_)
+            for (auto& it_mi : materialInstances_)
             {
                 utils::Entity ett = utils::Entity::import(it_mi.first);
 
@@ -1678,7 +1710,7 @@ namespace vzm
 
             if (material != nullptr)
             {
-                for (auto it : materials_)
+                for (auto& it : materials_)
                 {
                     if (it.second.material == material)
                     {
@@ -1716,7 +1748,7 @@ namespace vzm
 
             if (mi != nullptr)
             {
-                for (auto it : materialInstances_)
+                for (auto& it : materialInstances_)
                 {
                     if (it.second.mi == mi)
                     {
@@ -2133,7 +2165,7 @@ namespace vzm
                 {
                     // safely rearrangement
                     auto& scenes = *gEngineApp.GetScenes();
-                    for (auto it : scenes)
+                    for (auto& it : scenes)
                     {
                         it.second->remove(ettCubeRenderable);
                     }
@@ -2665,8 +2697,8 @@ namespace vzm
 #pragma endregion
 }
 
-namespace vzm::gltf {
-    using namespace backlog;
+namespace filament::gltfio {
+    using namespace vzm::backlog;
     static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
     static LightManager::Type getLightType(const cgltf_light_type light) {
@@ -2703,6 +2735,24 @@ namespace vzm::gltf {
         }
         return false;
     }
+
+    void AddMaterialComponentsToVzEngine(const MaterialInstance* mi,
+        std::vector<MaterialInstanceVID>& mi_vids,
+        std::unordered_map<const MaterialInstance*, MaterialInstanceVID>& mMIMap,
+        std::unordered_map<const Material*, MaterialVID>& mMaterialMap
+    )
+    {
+        MaterialInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
+        mi_vids.push_back(mi_vid);
+        assert(!mMIMap.contains(mi));
+        mMIMap[mi] = mi_vid;
+        const Material* m = mi->getMaterial();
+        if (!mMaterialMap.contains(m))
+        {
+            mMaterialMap[m] = gEngineApp.CreateMaterial(m->getName(), m, nullptr, true)->componentVID;
+        }
+    }
+
     // MaterialInstanceCache
     // ---------------------
     // Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
@@ -2714,6 +2764,8 @@ namespace vzm::gltf {
     // Notes:
     // - The Material objects (used to create instances) are cached in MaterialProvider, not here.
     // - The cache is not responsible for destroying material instances.
+
+    
     FFilamentAsset* VzAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
         FilamentInstance* instances;
         return createInstancedAsset(bytes, byteCount, &instances, 1);
@@ -2872,6 +2924,7 @@ namespace vzm::gltf {
         //mTransformManager.create(instanceRoot, rootTransform);
         ActorVID vid_ins_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "instance root")->componentVID;
         Entity instanceRoot = Entity::import(vid_ins_root);
+        mTransformManager.create(instanceRoot, rootTransform);
 
         mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
@@ -2992,24 +3045,31 @@ namespace vzm::gltf {
             }
         }
 
+        // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
+        name = name ? name : "node";
+
         // If the node has a mesh, then create a renderable component.
+        if (node->mesh) {
+            gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, name, entity.getId());
+            createRenderable(node, entity, name, fAsset);
+            if (srcAsset->variants_count > 0) {
+                createMaterialVariants(node->mesh, entity, fAsset, instance);
+            }
+        }
         if (node->light) {
             createLight(node->light, entity, fAsset);
         }
-        else if (node->camera) {
+        if (node->camera) {
             createCamera(node->camera, entity, fAsset);
         }
-        else {
-            gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, name, entity.getId());
-            if (node->mesh) {
-                createRenderable(node, entity, name, fAsset);
-                if (srcAsset->variants_count > 0) {
-                    createMaterialVariants(node->mesh, entity, fAsset, instance);
-                }
-            }
+        if (node->camera == nullptr && node->light == nullptr && node->mesh == nullptr)
+        {
+            srcAsset->
         }
-        mSceneCompMap[entity.getId()] = name;
-
+        else
+        {
+            mSceneCompMap[entity.getId()] = name;
+        }
 
         for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
             recurseEntities(node->children[i], scenes, entity, fAsset, instance);
@@ -3088,23 +3148,6 @@ namespace vzm::gltf {
         fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
     }
 
-    void AddMaterialComponentsToVzEngine(const MaterialInstance* mi, 
-        std::vector<MaterialInstanceVID>& mi_vids,
-        std::unordered_map<const MaterialInstance*, MaterialInstanceVID>& mMIMap,
-        std::unordered_map<const Material*, MaterialVID>& mMaterialMap
-        )
-    {
-        MaterialInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
-        mi_vids.push_back(mi_vid);
-        assert(!mMIMap.contains(mi));
-        mMIMap[mi] = mi_vid;
-        const Material* m = mi->getMaterial();
-        if (!mMaterialMap.contains(m))
-        {
-            mMaterialMap[m] = gEngineApp.CreateMaterial(m->getName(), m, nullptr, true)->componentVID;
-        }
-    }
-
     void VzAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const char* name,
         FFilamentAsset* fAsset) {
         const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
@@ -3149,14 +3192,13 @@ namespace vzm::gltf {
             bool hasVertexColor = primitiveHasVertexColor(*inputPrim);
             MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor,
                 fAsset);
-
-            AddMaterialComponentsToVzEngine(mi, mi_vids, mMIMap, mMaterialMap);
-            
             assert_invariant(mi);
             if (!mi) {
                 mError = true;
                 continue;
             }
+
+            AddMaterialComponentsToVzEngine(mi, mi_vids, mMIMap, mMaterialMap);
 
             fAsset->mDependencyGraph.addEdge(entity, mi);
             builder.material(index, mi);
@@ -3891,7 +3933,7 @@ namespace vzm::gltf {
         MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, inputMat->name,
             extras.c_str());
         if (!mi) {
-            slog.e << "No material with the specified requirements exists." << io::endl;
+            post("No material with the specified requirements exists.", LogLevel::Error);
             return nullptr;
         }
 
@@ -4212,6 +4254,8 @@ namespace vzm
             .config(&gEngineConfig)
             .build();
 
+        gEngine->enableAccurateTranslations();
+
         // this is to avoid the issue of filament safe-resource logic for Vulkan,
         // which assumes that there is at least one swapchain.
         gDummySwapChain = gEngine->createSwapChain((uint32_t)1, (uint32_t)1);
@@ -4231,8 +4275,8 @@ namespace vzm
                 .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
                 .build(*gEngine);
             vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material, nullptr, true)->componentVID);
-            
-            material = Material::Builder() 
+
+            material = Material::Builder()
                 .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
                 //.package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                 .build(*gEngine);
@@ -4251,8 +4295,8 @@ namespace vzm
         // createUbershaderProvider(gEngine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
 
         auto& ncm = VzNameCompManager::Get();
-        vzGltfIO.Initialize(); 
-        vzGltfIO.assetLoader = new vzm::gltf::VzAssetLoader({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
+        vzGltfIO.Initialize();
+        vzGltfIO.assetLoader = new gltfio::VzAssetLoader({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
 
         return VZ_OK;
     }
@@ -4538,7 +4582,7 @@ namespace vzm
 
             std::vector<VID> cam_vids;
             size_t num_cameras = gEngineApp.GetCameraVids(cam_vids);
-            for (auto cid : cam_vids)
+            for (auto& cid : cam_vids)
             {
                 if (gEngineApp.GetRenderPath(cid)->GetView()->getScene() == scene)
                 {
@@ -4626,7 +4670,6 @@ namespace vzm
 
         buffer.clear();
         buffer.shrink_to_fit();
-
         return asset;
     };
 
@@ -4649,7 +4692,7 @@ namespace vzm
         }
 
         filament::gltfio::FFilamentAsset* fasset = downcast(asset);
-
+        
         size_t num_m = vzGltfIO.assetLoader->mMaterialMap.size();
         size_t num_mi = vzGltfIO.assetLoader->mMIMap.size();
         size_t num_geo = vzGltfIO.assetLoader->mGeometryMap.size();
@@ -4657,7 +4700,7 @@ namespace vzm
         size_t num_ins = fasset->mInstances.size();
         backlog::post(std::to_string(num_m) + " system-owned material" + (num_m > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_mi) + " material instance" + (num_mi > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
-        backlog::post(std::to_string(num_geo) + (num_geo > 1 ? " geometries are" : "geometry is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_geo) + (num_geo > 1 ? " geometries are" : " geometry is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_scenecomp) + " scene component" + (num_scenecomp > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_ins) + " gltf instance" + (num_ins > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
 
