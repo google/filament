@@ -65,6 +65,8 @@ static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 int main(int argc, char** argv) {
     Config config;
     config.title = "animation";
+    config.vulkanGPUHint = "0";
+    config.backend = filament::Engine::Backend::OPENGL;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {

@@ -113,9 +113,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     VID vid_scene = vzm::NewScene("my scene", &scene);
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-    std::vector<VID> gltfRootVids;
-    //VID vid_asset = vzm::LoadFileIntoAsset("", "my gltf asset", gltfRootVids);
-    VID vid_asset = vzm::LoadFileIntoAsset("../../../VisualStudio/samples/assets/models/Soldier.glb", "my gltf asset", gltfRootVids);
+    vzm::VzAsset* asset;
+    //VID vid_asset = vzm::LoadFileIntoAsset("", "my gltf asset", &asset);
+    VID vid_asset = vzm::LoadFileIntoAsset("../../../VisualStudio/samples/assets/models/Soldier.glb", "my gltf asset", &asset);
 
     vzm::VzRenderer* renderer;
     VID vid_renderer = vzm::NewRenderer("my renderer", &renderer);
@@ -137,7 +137,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzLight* light;
     VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
 
-    vzm::AppendSceneComponentTo(gltfRootVids[0], vid_scene);
+    std::vector<VID> root_vids = asset->GetGLTFRootVIDs();
+    if (root_vids.size() > 0)
+    {
+        vzm::AppendSceneComponentTo(root_vids[0], vid_scene);
+    }
     vzm::AppendSceneComponentTo(vid_light, vid_scene);
     vzm::AppendSceneComponentTo(vid_camera, vid_scene);
 

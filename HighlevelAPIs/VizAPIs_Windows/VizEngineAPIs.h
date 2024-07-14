@@ -35,9 +35,6 @@ namespace vzm
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
     __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
-    // Reveal asset's Components by appending the parent component
-    //  - return sceneId containing the parent component 
-    __dojostatic VID AppendAssetTo(const VID vidAsset, const VID parentVid);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
@@ -50,7 +47,7 @@ namespace vzm
     // Load gltf components into a new scene and return the asset ID
     //  - the lifespan of resComponents follows that of the associated asset (vidAsset) and cannot be deleted by the client
     //  - return zero in case of failure
-    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, std::vector<VID>& gltfRootVids);
+    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, vzm::VzAsset** assetComp = nullptr);
     __dojostatic float GetAsyncLoadProgress();
     // Get a graphics render target view 
     //  - Must belong to the internal scene

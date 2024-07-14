@@ -178,25 +178,6 @@ namespace vzm
         VID GetParentVid();
         VID GetSceneVid();
     };
-
-    __dojostruct VzAsset : VzBaseComp
-    {
-        // To Do..
-    };
-
-
-    __dojostruct VzRenderer : VzBaseComp
-    {
-        void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
-        void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
-
-        void SetViewport(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h);
-        void GetViewport(uint32_t* x, uint32_t* y, uint32_t* w, uint32_t* h);
-
-        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
-        // setters and getters of rendering options
-        VZRESULT Render(const VID vidScene, const VID vidCam);
-    };
     __dojostruct VzCamera : VzSceneComp
     {
         // Pose parameters are defined in WS (not local space)
@@ -287,7 +268,6 @@ namespace vzm
     {
         // 
     };
-    
     __dojostruct VzMaterial : VzResource
     {
         enum class MaterialType : uint8_t {
@@ -382,5 +362,51 @@ namespace vzm
 
         // use attributes
         //void Update();
+    };
+
+    __dojostruct VzAsset : VzBaseComp
+    {
+        std::vector<VID> GetGLTFRootVIDs();
+        VID GetSkeleton();
+
+        // Animator //
+        __dojostruct Animator{
+            void GrabBegin(const int x, const int y, const bool strafe);
+            void GrabDrag(const int x, const int y);
+            void GrabEnd();
+            void SetViewport(const int w, const int h);
+            void UpdateCamera(const float deltaTime); // this is for final sync to the camera
+
+            VID vidCam = INVALID_VID;   // DO NOT SET
+        };
+        Animator* GetAnimator();              // this activates the camera manipulator
+    };
+
+    __dojostruct VzSkeleton : VzBaseComp
+    {
+        using BoneVID = VID;
+
+        // componentVID refers to the root bone
+        std::vector<BoneVID> GetBones(); // including this
+        std::vector<BoneVID> GetBoneChildren(const BoneVID vidBone);
+        std::string GetBoneName();
+
+        void SetTransformTRS(const BoneVID vidBone, const float t[3], const float r[4], const float s[3]);
+        void UpdateBoneMatrices();
+
+        // future work... skinning...
+    };
+
+    __dojostruct VzRenderer : VzBaseComp
+    {
+        void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
+        void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
+
+        void SetViewport(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h);
+        void GetViewport(uint32_t* x, uint32_t* y, uint32_t* w, uint32_t* h);
+
+        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
+        // setters and getters of rendering options
+        VZRESULT Render(const VID vidScene, const VID vidCam);
     };
 }

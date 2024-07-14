@@ -196,6 +196,8 @@ int main(int argc, char** argv) {
 
     Config config;
     config.title = "skinning test with more than 4 bones per vertex";
+    config.vulkanGPUHint = "0";
+    config.backend = filament::Engine::Backend::OPENGL;
 
     handleCommandLineArgments(argc, argv, &config);
 
