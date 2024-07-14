@@ -4229,30 +4229,48 @@ namespace vzm
         backlog::post("Entity Manager is activated (# of entities : " + std::to_string(em.getEntityCount()) + ")", 
             backlog::LogLevel::Default);
 
-        std::string vulkanGPUHint = "0";
-
         gEngineConfig.stereoscopicEyeCount = gConfig.stereoscopicEyeCount;
         gEngineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
         // to do : gConfig and gEngineConfig
         // using vzm::ParamMap<std::string>& argument
-        //gConfig.backend = filament::Engine::Backend::VULKAN;
-        gConfig.vulkanGPUHint = "0";
-        gConfig.backend = filament::Engine::Backend::OPENGL;
         //gConfig.headless = true;
 
         gConfig.title = "hellopbr";
         //gConfig.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
-        gConfig.vulkanGPUHint = "0";
-        gConfig.backend = filament::Engine::Backend::OPENGL;
+        auto api = arguments.GetParam("api", std::string("vulkan"));
+        if (api == "opengl")
+        {
+            gConfig.backend = filament::Engine::Backend::OPENGL;
+        }
+        else if (api == "vulkan")
+        {
+            gConfig.backend = filament::Engine::Backend::VULKAN;
+            gConfig.vulkanGPUHint = arguments.GetParam("vulkan-gpu-hint", std::string("0"));
+        }
+        else
+        {
+            backlog::post("Unrecognized backend. Must be 'opengl'|'vulkan'.", backlog::LogLevel::Error);
+            return VZ_FAIL;
+        }
 
-                
-        gVulkanPlatform = new FilamentAppVulkanPlatform(gConfig.vulkanGPUHint.c_str());
-        gEngine = Engine::Builder()
-            .backend(gConfig.backend)
-            //.platform(gVulkanPlatform)
-            .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
-            .config(&gEngineConfig)
-            .build();
+        if (gConfig.backend == filament::Engine::Backend::VULKAN)
+        {
+            gVulkanPlatform = new FilamentAppVulkanPlatform(gConfig.vulkanGPUHint.c_str());
+            gEngine = Engine::Builder()
+                .backend(gConfig.backend)
+                .platform(gVulkanPlatform)
+                .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
+                .config(&gEngineConfig)
+                .build();
+        }
+        else
+        {
+            gEngine = Engine::Builder()
+                .backend(gConfig.backend)
+                .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
+                .config(&gEngineConfig)
+                .build();
+        }
 
         gEngine->enableAccurateTranslations();
 
