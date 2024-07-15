@@ -263,6 +263,48 @@ Java_com_google_android_filament_gltfio_AssetLoader_nCreateAsset(JNIEnv* env, jc
             buffer.getSize());
 }
 
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetLoaderExtended(JNIEnv* env, jclass,
+                                                                               jlong nativeEngine, jobject provider, jlong nativeEntities, jstring filePath) {
+    Engine* engine = (Engine*) nativeEngine;
+    MaterialProvider* materialProvider = nullptr;
+
+    // First check for a fast path that passes a native MaterialProvider into the loader.
+    // This drastically reduces the number of JNI calls while the asset is being loaded.
+    jclass klass = env->GetObjectClass(provider);
+    jmethodID getNativeObject = env->GetMethodID(klass, "getNativeObject", "()J");
+    if (getNativeObject) {
+        materialProvider = (MaterialProvider*) env->CallLongMethod(provider, getNativeObject);
+    } else {
+        env->ExceptionClear();
+    }
+
+    if (materialProvider == nullptr) {
+        materialProvider = new JavaMaterialProvider(env, provider);
+    }
+
+    EntityManager* entities = (EntityManager*) nativeEntities;
+    NameComponentManager* names = new NameComponentManager(*entities);
+
+    const char *nativeFilePath = env->GetStringUTFChars(filePath, nullptr);
+
+    AssetConfigurationExtended ext = {
+            .gltfPath = nativeFilePath
+    };
+
+    AssetConfiguration config = {
+            .engine = engine,
+            .materials = materialProvider,
+            .names = names,
+            .ext = &ext,
+    };
+
+    env->ReleaseStringUTFChars(filePath, nativeFilePath);
+
+    return (jlong) AssetLoader::create(config);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nCreateInstancedAsset(JNIEnv* env, jclass,
         jlong nativeLoader, jobject javaBuffer, jint remaining, jlongArray instances) {
