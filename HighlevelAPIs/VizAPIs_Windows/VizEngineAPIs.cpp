@@ -159,19 +159,19 @@ namespace vzm::backlog
             setConsoleColor(10);
             std::cout << "[INFO] ";
             setConsoleColor(7);
-            utils::slog.i << input;
+            utils::slog.i << input + "\n";
             break;
         case LogLevel::Warning:
             setConsoleColor(14);
             std::cout << "[WARNING] ";
             setConsoleColor(7);
-            utils::slog.w << input;
+            utils::slog.w << input + "\n";
             break; 
         case LogLevel::Error:
             setConsoleColor(12);
             std::cout << "[ERROR] ";
             setConsoleColor(7);
-            utils::slog.e << input;
+            utils::slog.e << input + "\n";
             break;
         default: return;
         }
@@ -301,7 +301,7 @@ using ActorVID = VID;
 using LightVID = VID;
 using GeometryVID = VID;
 using MaterialVID = VID;
-using MaterialInstanceVID = VID;
+using MInstanceVID = VID;
 using MaterialVID = VID;
 using AssetVID = VID;
 using SkeletonVID = VID;
@@ -504,7 +504,7 @@ namespace filament::gltfio {
 
         std::unordered_map<const cgltf_mesh*, GeometryVID> mGeometryMap;
         std::unordered_map<const Material*, MaterialVID> mMaterialMap;
-        std::unordered_map<const MaterialInstance*, MaterialInstanceVID> mMIMap;
+        std::unordered_map<const MaterialInstance*, MInstanceVID> mMIMap;
         std::unordered_map<VID, std::string> mSceneCompMap;
         std::unordered_map<VID, cgltf_node*> mSkeltonRootMap;
 
@@ -525,7 +525,7 @@ namespace vzm
     };
     struct GltfIO
     {
-        std::unordered_map<AssetVID, VzAssetRes> assets;
+        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assets;
 
         //gltfio::AssetLoader* assetLoader = nullptr;
         gltfio::VzAssetLoader* assetLoader = nullptr;
@@ -538,7 +538,7 @@ namespace vzm
         {
             for (auto& it : assets)
             {
-                VzAssetRes& asset_res = it.second;
+                VzAssetRes& asset_res = *it.second.get();
                 if (asset_res.assetOwnershipComponents.contains(vid))
                 {
                     return it.first;
@@ -554,7 +554,7 @@ namespace vzm
             {
                 return false;
             }
-            VzAssetRes& asset_res = it->second;
+            VzAssetRes& asset_res = *it->second.get();
             assetLoader->destroyAsset((gltfio::FFilamentAsset*)asset_res.asset);
             assets.erase(it);
             return true;
@@ -569,7 +569,7 @@ namespace vzm
             if (assets.size() > 0) {
                 for (auto& it : assets)
                 {
-                    VzAssetRes& asset_res = it.second;
+                    VzAssetRes& asset_res = *it.second.get();;
                     // For membership of each gltf component belongs to VZM
                     filament::gltfio::FFilamentAsset* fasset = downcast(asset_res.asset);
                     {
@@ -841,7 +841,7 @@ namespace vzm
     private:
         filament::Camera* camera_ = nullptr;
         Cube* cameraCube_ = nullptr;
-        VzCamera::Controller camController_;
+        VzCamera::Controller camController_ = VzCamera::Controller(0);
         std::unique_ptr<CameraManipulator> cameraManipulator_;
     public:
         VzCameraRes() = default;
@@ -892,7 +892,6 @@ namespace vzm
                 .groundPlane(camController_.groundPlane[0], camController_.groundPlane[1], camController_.groundPlane[2], camController_.groundPlane[3])
                 .panning(camController_.panning)
                 .build((camutils::Mode)camController_.mode));
-            camController_.vidCam = camera_->getEntity().getId();
         }
         inline VzCamera::Controller* GetCameraController()
         {
@@ -917,15 +916,15 @@ namespace vzm
     {
     private:
         GeometryVID vidGeo_ = INVALID_VID;
-        std::vector<MaterialInstanceVID> vidMIs_;
-        std::vector<std::vector<MaterialInstanceVID>> vidMIVariants_;
+        std::vector<MInstanceVID> vidMIs_;
+        std::vector<std::vector<MInstanceVID>> vidMIVariants_;
     public:
         inline void SetGeometry(const GeometryVID vid) { vidGeo_ = vid; }
-        inline void SetMIs(const std::vector<MaterialInstanceVID>& vidMIs)
+        inline void SetMIs(const std::vector<MInstanceVID>& vidMIs)
         {
             vidMIs_ = vidMIs;
         }
-        inline bool SetMI(const MaterialInstanceVID vid, const int slot)
+        inline bool SetMI(const MInstanceVID vid, const int slot)
         {
             if ((size_t)slot >= vidMIs_.size())
             {
@@ -935,12 +934,12 @@ namespace vzm
             vidMIs_[slot] = vid;
             return true;
         }
-        inline void SetMIVariants(const std::vector<std::vector<MaterialInstanceVID>>& vidMIVariants)
+        inline void SetMIVariants(const std::vector<std::vector<MInstanceVID>>& vidMIVariants)
         {
             vidMIVariants_ = vidMIVariants;
         }
         inline GeometryVID GetGeometryVid() { return vidGeo_; }
-        inline MaterialInstanceVID GetMIVid(const int slot)
+        inline MInstanceVID GetMIVid(const int slot)
         {
             if ((size_t)slot >= vidMIs_.size())
             {
@@ -948,11 +947,11 @@ namespace vzm
             }
             return vidMIs_[slot];
         }
-        inline std::vector<MaterialInstanceVID>& GetMIVids()
+        inline std::vector<MInstanceVID>& GetMIVids()
         {
             return vidMIs_;
         }
-        inline std::vector<std::vector<MaterialInstanceVID>>& GetMIVariants() { return vidMIVariants_; }
+        inline std::vector<std::vector<MInstanceVID>>& GetMIVariants() { return vidMIVariants_; }
     };
     struct VzLightRes
     {
@@ -1055,22 +1054,22 @@ namespace vzm
     {
     private:
         std::unordered_map<SceneVID, filament::Scene*> scenes_;
-        std::unordered_map<SceneVID, VzSceneRes> sceneResMaps_;
+        std::unordered_map<SceneVID, std::unique_ptr<VzSceneRes>> sceneResMaps_;
         // note a VzRenderPath involves a filament::view that includes
         // 1. filament::camera and 2. filament::scene
         std::unordered_map<CamVID, SceneVID> camSceneVids_;
-        std::unordered_map<CamVID, VzCameraRes> camResMaps_;
+        std::unordered_map<CamVID, std::unique_ptr<VzCameraRes>> camResMaps_;
         std::unordered_map<ActorVID, SceneVID> actorSceneVids_;
-        std::unordered_map<ActorVID, VzActorRes> actorResMaps_; // consider when removing resources...
+        std::unordered_map<ActorVID, std::unique_ptr<VzActorRes>> actorResMaps_; // consider when removing resources...
         std::unordered_map<LightVID, SceneVID> lightSceneVids_;
-        std::unordered_map<LightVID, VzLightRes> lightResMaps_;
+        std::unordered_map<LightVID, std::unique_ptr<VzLightRes>> lightResMaps_;
 
-        std::unordered_map<RendererVID, VzRenderPath> renderPaths_;
+        std::unordered_map<RendererVID, std::unique_ptr<VzRenderPath>> renderPaths_;
 
         // Resources (ownership check!)
-        std::unordered_map<GeometryVID, VzGeometryRes> geometries_;
-        std::unordered_map<MaterialVID, VzMaterialRes> materials_;
-        std::unordered_map<MaterialInstanceVID, VzMIRes> materialInstances_;
+        std::unordered_map<GeometryVID, std::unique_ptr<VzGeometryRes>> geometries_;
+        std::unordered_map<MaterialVID, std::unique_ptr<VzMaterialRes>> materials_;
+        std::unordered_map<MInstanceVID, std::unique_ptr<VzMIRes>> materialInstances_;
 
         std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzComponents_;
 
@@ -1167,7 +1166,7 @@ namespace vzm
             utils::Entity ett = em.create();
             VID vid = ett.getId();
             scenes_[vid] = gEngine->createScene();
-            sceneResMaps_[vid];
+            sceneResMaps_[vid] = std::make_unique<VzSceneRes>();
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzScene>());
             VzScene* v_scene = (VzScene*)it.first->second.get();
@@ -1187,7 +1186,8 @@ namespace vzm
             auto& em = utils::EntityManager::get();
             utils::Entity ett = em.create();
             VID vid = ett.getId();
-            VzRenderPath* renderPath = &renderPaths_[vid];
+            renderPaths_[vid] = std::make_unique<VzRenderPath>();
+            VzRenderPath* renderPath = renderPaths_[vid].get();
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzRenderer>());
             VzRenderer* v_renderer = (VzRenderer*)it.first->second.get();
@@ -1207,7 +1207,7 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
             utils::Entity ett = em.create();
             AssetVID vid = ett.getId();
-            VzAssetRes& asset_res = vzGltfIO.assets[vid];
+            vzGltfIO.assets[vid] = std::make_unique<VzAssetRes>();
             ncm.CreateNameComp(ett, name);
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
@@ -1313,7 +1313,7 @@ namespace vzm
             return &scenes_;
         }
 
-#define GET_RES_PTR(RES_MAP) auto it = RES_MAP.find(vid); if (it == RES_MAP.end()) return nullptr; return &it->second;
+#define GET_RES_PTR(RES_MAP) auto it = RES_MAP.find(vid); if (it == RES_MAP.end()) return nullptr; return it->second.get();
         inline VzSceneRes* GetSceneRes(const SceneVID vid)
         {
             GET_RES_PTR(sceneResMaps_);
@@ -1572,7 +1572,7 @@ namespace vzm
             {
                 // RenderableManager::Builder... with entity registers the entity in the renderableEntities
                 actorSceneVids_[vid] = 0; // first creation
-                actorResMaps_[vid];
+                actorResMaps_[vid] = std::make_unique<VzActorRes>();
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -1592,7 +1592,7 @@ namespace vzm
                         .build(*gEngine, ett);
                 }
                 lightSceneVids_[vid] = 0; // first creation
-                lightResMaps_[vid];
+                lightResMaps_[vid] = std::make_unique<VzLightRes>();
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzLight>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -1612,7 +1612,8 @@ namespace vzm
                     camera = gEngine->getCameraComponent(ett);
                 }
                 camSceneVids_[vid] = 0;
-                VzCameraRes* cam_res = &camResMaps_[vid];
+                camResMaps_[vid] = std::make_unique<VzCameraRes>();
+                VzCameraRes* cam_res = camResMaps_[vid].get();
                 cam_res->SetCamera(camera);
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
@@ -1650,14 +1651,14 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
 
             MaterialInstance* mi = nullptr;
-            MaterialInstanceVID vid_mi = INVALID_VID;
+            MInstanceVID vid_mi = INVALID_VID;
             for (auto& it_mi : materialInstances_)
             {
                 utils::Entity ett = utils::Entity::import(it_mi.first);
 
                 if (ncm.GetName(ett) == mi_name)
                 {
-                    mi = it_mi.second.mi;
+                    mi = it_mi.second->mi;
                     vid_mi = it_mi.first;
                     break;
                 }
@@ -1667,7 +1668,7 @@ namespace vzm
                 MaterialVID vid_m = GetFirstVidByName(material_name);
                 VzMaterial* v_m = GetVzComponent<VzMaterial>(vid_m);
                 assert(v_m != nullptr);
-                Material* m = materials_[v_m->componentVID].material;
+                Material* m = materials_[v_m->componentVID]->material;
                 mi = m->createInstance(mi_name.c_str());
                 mi->setParameter("baseColor", RgbType::LINEAR, float3{ 0.8, 0.1, 0.1 });
                 mi->setParameter("metallic", 1.0f);
@@ -1676,7 +1677,7 @@ namespace vzm
                 VzMI* v_mi = CreateMaterialInstance(mi_name, mi);
                 auto it_mi = materialInstances_.find(v_mi->componentVID);
                 assert(it_mi != materialInstances_.end());
-                assert(mi == it_mi->second.mi);
+                assert(mi == it_mi->second->mi);
                 vid_mi = v_mi->componentVID;
             }
             assert(vid_mi != INVALID_VID);
@@ -1685,6 +1686,7 @@ namespace vzm
             ncm.CreateNameComp(mesh.renderable, modelName);
             VID vid = mesh.renderable.getId();
             actorSceneVids_[vid] = 0;
+            actorResMaps_[vid] = std::make_unique<VzActorRes>();
 
             auto& rcm = gEngine->getRenderableManager();
             auto ins = rcm.getInstance(mesh.renderable);
@@ -1695,7 +1697,7 @@ namespace vzm
                 .indices = mesh.indexBuffer,
                 .aabb = Aabb(box.getMin(), box.getMax())
                 }});
-            VzActorRes& actor_res = actorResMaps_[vid];
+            VzActorRes& actor_res = *actorResMaps_[vid].get();
             actor_res.SetGeometry(geo->componentVID);
             actor_res.SetMIs({ vid_mi });
 
@@ -1721,7 +1723,8 @@ namespace vzm
 
             VID vid = ett.getId();
             
-            VzGeometryRes& geo_res = geometries_[vid];
+            geometries_[vid] = std::make_unique<VzGeometryRes>();
+            VzGeometryRes& geo_res = *geometries_[vid].get();
             geo_res.Set(primitives);
             geo_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
             geo_res.isSystem = isSystem;
@@ -1753,7 +1756,7 @@ namespace vzm
             {
                 for (auto& it : materials_)
                 {
-                    if (it.second.material == material)
+                    if (it.second->material == material)
                     {
                         backlog::post("The material has already been registered!", backlog::LogLevel::Warning);
                     }
@@ -1764,7 +1767,8 @@ namespace vzm
             ncm.CreateNameComp(ett, name);
 
             VID vid = ett.getId();
-            VzMaterialRes& m_res = materials_[vid];
+            materials_[vid] = std::make_unique<VzMaterialRes>();
+            VzMaterialRes& m_res = *materials_[vid].get();
             m_res.material = (Material*)material;
             m_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
             m_res.isSystem = isSystem;
@@ -1791,7 +1795,7 @@ namespace vzm
             {
                 for (auto& it : materialInstances_)
                 {
-                    if (it.second.mi == mi)
+                    if (it.second->mi == mi)
                     {
                         backlog::post("The material instance has already been registered!", backlog::LogLevel::Warning);
                     }
@@ -1802,7 +1806,8 @@ namespace vzm
             ncm.CreateNameComp(ett, name);
 
             VID vid = ett.getId();
-            VzMIRes& mi_res = materialInstances_[vid];
+            materialInstances_[vid] = std::make_unique<VzMIRes>();
+            VzMIRes& mi_res = *materialInstances_[vid].get();
             mi_res.mi = (MaterialInstance*)mi;
             mi_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
             mi_res.isSystem = isSystem;
@@ -1884,7 +1889,7 @@ namespace vzm
             {
                 return nullptr;
             }
-            return &it->second;
+            return it->second.get();
         }
         inline VzMaterialRes* GetMaterialRes(const MaterialVID vidMaterial)
         {
@@ -1893,13 +1898,13 @@ namespace vzm
             {
                 return nullptr;
             }
-            return &it->second;
+            return it->second.get();
         }
         inline MaterialVID FindMaterialVID(const filament::Material* mat)
         {
             for (auto& it : materials_)
             {
-                if (it.second.material == mat)
+                if (it.second->material == mat)
                 {
                     return it.first;
                 }
@@ -1907,20 +1912,20 @@ namespace vzm
             return INVALID_VID;
         }
 
-        inline VzMIRes* GetMIRes(const MaterialInstanceVID vidMI)
+        inline VzMIRes* GetMIRes(const MInstanceVID vidMI)
         {
             auto it = materialInstances_.find(vidMI);
             if (it == materialInstances_.end())
             {
                 return nullptr;
             }
-            return &it->second;
+            return it->second.get();
         }
-        inline MaterialInstanceVID FindMaterialInstanceVID(const filament::MaterialInstance* mi)
+        inline MInstanceVID FindMaterialInstanceVID(const filament::MaterialInstance* mi)
         {
             for (auto& it : materialInstances_)
             {
-                if (it.second.mi == mi)
+                if (it.second->mi == mi)
                 {
                     return it.first;
                 }
@@ -1969,7 +1974,7 @@ namespace vzm
                 auto it_m = materials_.find(vid);
                 if (it_m != materials_.end())
                 {
-                    VzMaterialRes& m_res = it_m->second;
+                    VzMaterialRes& m_res = *it_m->second.get();
                     if (m_res.isSystem)
                     {
                         backlog::post("Material (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
@@ -1986,15 +1991,15 @@ namespace vzm
                     {
                         for (auto it = materialInstances_.begin(); it != materialInstances_.end();)
                         {
-                            if (it->second.mi->getMaterial() == m_res.material)
+                            if (it->second->mi->getMaterial() == m_res.material)
                             {
                                 utils::Entity ett_mi = utils::Entity::import(it->first);
                                 std::string name_mi = ncm.GetName(ett_mi);
-                                if (it->second.isSystem)
+                                if (it->second->isSystem)
                                 {
                                     backlog::post("(" + name + ")-associated-MI (" + name_mi + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
                                 }
-                                else if (it->second.assetOwner != nullptr)
+                                else if (it->second->assetOwner != nullptr)
                                 {
                                     AssetVID vid_asset = vzGltfIO.GetAssetOwner(it->first);
                                     assert(vid_asset);
@@ -2027,7 +2032,7 @@ namespace vzm
                 auto it_mi = materialInstances_.find(vid);
                 if (it_mi != materialInstances_.end())
                 {
-                    VzMIRes& mi_res = it_mi->second;
+                    VzMIRes& mi_res = *it_mi->second.get();
                     if (mi_res.isSystem)
                     {
                         backlog::post("MI (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
@@ -2050,7 +2055,7 @@ namespace vzm
                 auto it_geo = geometries_.find(vid);
                 if (it_geo != geometries_.end())
                 {
-                    VzGeometryRes& geo_res = it_geo->second;
+                    VzGeometryRes& geo_res = *it_geo->second.get();
                     if (geo_res.isSystem)
                     {
                         backlog::post("Geometry (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
@@ -2075,13 +2080,13 @@ namespace vzm
                 {
                     for (auto& it_res : actorResMaps_)
                     {
-                        VzActorRes& actor_res = it_res.second;
+                        VzActorRes& actor_res = *it_res.second.get();
                         if (geometries_.find(actor_res.GetGeometryVid()) == geometries_.end())
                         {
                             actor_res.SetGeometry(INVALID_VID);
                         }
 
-                        std::vector<MaterialInstanceVID> mis = actor_res.GetMIVids();
+                        std::vector<MInstanceVID> mis = actor_res.GetMIVids();
                         for (int i = 0, n = (int)mis.size(); i < n; ++i)
                         {
                             if (materialInstances_.find(mis[i]) == materialInstances_.end())
@@ -2095,7 +2100,7 @@ namespace vzm
                 auto it_camres = camResMaps_.find(vid);
                 if (it_camres != camResMaps_.end())
                 {
-                    VzCameraRes& cam_res = it_camres->second;
+                    VzCameraRes& cam_res = *it_camres->second.get();
                     Cube* cam_cube = cam_res.GetCameraCube();
                     if (cam_cube)
                     {
@@ -2463,12 +2468,13 @@ namespace vzm
         Controller* cc = cam_res->GetCameraController();
         if (cm == nullptr)
         {
-            cam_res->NewCameraManipulator(*cam_res->GetCameraController());
+            Controller controller(componentVID);
+            cam_res->NewCameraManipulator(controller);
             cc = cam_res->GetCameraController();
         }
         return cc;
     }
-#define GET_CM(CAMRES, CM) VzCameraRes* CAMRES = gEngineApp.GetCameraRes(vidCam); if (CAMRES == nullptr) return;  CameraManipulator* CM = CAMRES->GetCameraManipulator();
+#define GET_CM(CAMRES, CM) VzCameraRes* CAMRES = gEngineApp.GetCameraRes(GetCameraVID()); if (CAMRES == nullptr) return;  CameraManipulator* CM = CAMRES->GetCameraManipulator();
 #define GET_CM_WARN(CAMRES, CM) GET_CM(CAMRES, CM) if (CM == nullptr) { backlog::post("camera manipulator is not set!", backlog::LogLevel::Warning); return; }
     void VzCamera::Controller::UpdateControllerSettings()
     {
@@ -2578,7 +2584,7 @@ namespace vzm
     VID VzActor::GetMaterial(const int slot)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
-        MaterialInstanceVID vid_mi = actor_res->GetMIVid(slot);
+        MInstanceVID vid_mi = actor_res->GetMIVid(slot);
         VzMIRes* mi_res = gEngineApp.GetMIRes(vid_mi);
         if (mi_res == nullptr)
         {
@@ -2746,9 +2752,9 @@ namespace vzm
         {
             return std::vector<VID>();
         }
-        VzAssetRes& asset_res = it->second;
+        VzAssetRes* asset_res = it->second.get();
         std::vector<VID> root_vids;
-        std::copy(asset_res.rootVIDs.begin(), asset_res.rootVIDs.end(), std::back_inserter(root_vids));
+        std::copy(asset_res->rootVIDs.begin(), asset_res->rootVIDs.end(), std::back_inserter(root_vids));
         return root_vids;
     }
 #pragma endregion
@@ -2794,12 +2800,12 @@ namespace filament::gltfio {
     }
 
     void AddMaterialComponentsToVzEngine(const MaterialInstance* mi,
-        std::vector<MaterialInstanceVID>& mi_vids,
-        std::unordered_map<const MaterialInstance*, MaterialInstanceVID>& mMIMap,
+        std::vector<MInstanceVID>& mi_vids,
+        std::unordered_map<const MaterialInstance*, MInstanceVID>& mMIMap,
         std::unordered_map<const Material*, MaterialVID>& mMaterialMap
     )
     {
-        MaterialInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
+        MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
         mi_vids.push_back(mi_vid);
         assert(!mMIMap.contains(mi));
         mMIMap[mi] = mi_vid;
@@ -3247,7 +3253,7 @@ namespace filament::gltfio {
         // that were already generated (one for each primitive).
         FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
 
-        std::vector<MaterialInstanceVID> mi_vids;
+        std::vector<MInstanceVID> mi_vids;
         mi_vids.reserve(prims.size());
 
         assert_invariant(prims.size() == primitiveCount);
@@ -3445,12 +3451,12 @@ namespace filament::gltfio {
         UvMap uvmap{};
 
         VzActorRes* actor_res = gEngineApp.GetActorRes(entity.getId());
-        std::vector<std::vector<MaterialInstanceVID>>& vid_mi_variants = actor_res->GetMIVariants();
+        std::vector<std::vector<MInstanceVID>>& vid_mi_variants = actor_res->GetMIVariants();
         vid_mi_variants.clear();
 
         for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
             const cgltf_primitive& srcPrim = mesh->primitives[prim];
-            std::vector<MaterialInstanceVID> mi_vids;
+            std::vector<MInstanceVID> mi_vids;
 
             for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
                 const size_t variantIndex = srcPrim.mappings[i].variant;
@@ -4739,7 +4745,8 @@ namespace vzm
         }
 #endif
         AssetVID vid_asset = gEngineApp.CreateAsset(assetName);
-        VzAssetRes& asset_res = vzGltfIO.assets[vid_asset];
+        vzGltfIO.assets[vid_asset] = std::make_unique<VzAssetRes>();
+        VzAssetRes& asset_res = *vzGltfIO.assets[vid_asset].get();
         asset_res.asset = asset;
         if (assetComp) *assetComp = gEngineApp.GetVzComponent<VzAsset>(vid_asset);
 

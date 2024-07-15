@@ -188,7 +188,13 @@ namespace vzm
 
         void SetCameraCubeVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // helper object
 
-        __dojostruct Controller {
+        __dojostruct Controller{
+        private:
+            VID vidCam_ = INVALID_VID;
+        public:
+            Controller(VID vidCam) { vidCam_ = vidCam; }
+            VID GetCameraVID() { return vidCam_; }
+
             // Configuration parameters //
             // Common properties
             float targetPosition[3] = {0, 0, 0};        //! World-space position of interest, defaults to (0,0,0)
@@ -230,8 +236,6 @@ namespace vzm
             void GrabEnd();
             void SetViewport(const int w, const int h);
             void UpdateCamera(const float deltaTime); // this is for final sync to the camera
-
-            VID vidCam = INVALID_VID;   // DO NOT SET
         };
         Controller* GetController();              // this activates the camera manipulator
     };
@@ -371,13 +375,27 @@ namespace vzm
 
         // Animator //
         __dojostruct Animator{
-            void GrabBegin(const int x, const int y, const bool strafe);
-            void GrabDrag(const int x, const int y);
-            void GrabEnd();
-            void SetViewport(const int w, const int h);
-            void UpdateCamera(const float deltaTime); // this is for final sync to the camera
+        private:
+            VID vidAsset_ = INVALID_VID;
+        public:
+            Animator(VID vidAsset) { vidAsset_ = vidAsset; }
+            VID GetAssetVID() { return vidAsset_; }
+            size_t GetAnimationCount();
+            std::string GetAnimationLabel(const int index);
+            std::vector<std::string> GetAnimationLabels();
+            void SetAnimation(const int index); // set -1 to apply all animations
+            void SetAnimationByLabel(const std::string& label);
+            void SetCrossFadeDuration(const float timeSec = 1.f);
+            void GetAnimationPlayTime(const int index);
+            void GetAnimationPlayTimeByLabel(const std::string& label);
 
-            VID vidCam = INVALID_VID;   // DO NOT SET
+            void ShowResetPose();
+            void Play();
+            void SetPlayAt(const float timeSec);
+            void Pause();
+            void Reset();
+
+            void ManualUpdate();
         };
         Animator* GetAnimator();              // this activates the camera manipulator
     };
