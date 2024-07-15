@@ -38,6 +38,7 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
 #include <gltfio/NodeManager.h>
+#include <gltfio/Animator.h>
 
 #include <filameshio/MeshReader.h>
 
@@ -306,7 +307,6 @@ using MaterialVID = VID;
 using AssetVID = VID;
 using SkeletonVID = VID;
 using BoneVID = VID;
-using AnimationVID = VID;
 namespace filament::gltfio {
     using namespace vzm;
     using Entity = utils::Entity;
@@ -506,7 +506,7 @@ namespace filament::gltfio {
         std::unordered_map<const Material*, MaterialVID> mMaterialMap;
         std::unordered_map<const MaterialInstance*, MInstanceVID> mMIMap;
         std::unordered_map<VID, std::string> mSceneCompMap;
-        std::unordered_map<VID, cgltf_node*> mSkeltonRootMap;
+        std::unordered_map<VID, std::string> mSkeltonRootMap;
 
     public:
         std::unique_ptr<AssetLoaderExtended> mLoaderExtended;
@@ -517,15 +517,35 @@ namespace vzm
     vzm::Timer vTimer;
     std::atomic_bool profileFrameFinished = { true };
 
+    void getDescendants(const utils::Entity ett, std::vector<utils::Entity>& decendants)
+    {
+        auto& tcm = gEngine->getTransformManager();
+        auto ins = tcm.getInstance(ett);
+        for (auto it = tcm.getChildrenBegin(ins); it != tcm.getChildrenEnd(ins); it++)
+        {
+            utils::Entity ett_child = tcm.getEntity(*it);
+            decendants.push_back(ett_child);
+            getDescendants(ett_child, decendants);
+        }
+    };
+
     struct VzAssetRes
     {
         gltfio::FilamentAsset* asset = nullptr;
         std::vector<VID> rootVIDs;
         std::set<VID> assetOwnershipComponents;
+        std::vector<SkeletonVID> skeletons;
+
+        VzAsset::Animator animator = VzAsset::Animator(0);
+    };
+    struct VzSkeletonRes
+    {
+        std::unordered_map<BoneVID, std::string> bones;
     };
     struct GltfIO
     {
-        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assets;
+        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assetResMaps;
+        std::unordered_map<SkeletonVID, std::unique_ptr<VzSkeletonRes>> skeletonResMaps;
 
         //gltfio::AssetLoader* assetLoader = nullptr;
         gltfio::VzAssetLoader* assetLoader = nullptr;
@@ -536,7 +556,7 @@ namespace vzm
 
         AssetVID GetAssetOwner(VID vid)
         {
-            for (auto& it : assets)
+            for (auto& it : assetResMaps)
             {
                 VzAssetRes& asset_res = *it.second.get();
                 if (asset_res.assetOwnershipComponents.contains(vid))
@@ -549,14 +569,14 @@ namespace vzm
 
         bool DestroyAsset(AssetVID vidAsset)
         {
-            auto it = assets.find(vidAsset);
-            if (it == assets.end())
+            auto it = assetResMaps.find(vidAsset);
+            if (it == assetResMaps.end())
             {
                 return false;
             }
             VzAssetRes& asset_res = *it->second.get();
             assetLoader->destroyAsset((gltfio::FFilamentAsset*)asset_res.asset);
-            assets.erase(it);
+            assetResMaps.erase(it);
             return true;
         }
 
@@ -566,8 +586,8 @@ namespace vzm
                 resourceLoader->asyncCancelLoad();
                 resourceLoader = nullptr;
             }
-            if (assets.size() > 0) {
-                for (auto& it : assets)
+            if (assetResMaps.size() > 0) {
+                for (auto& it : assetResMaps)
                 {
                     VzAssetRes& asset_res = *it.second.get();;
                     // For membership of each gltf component belongs to VZM
@@ -598,7 +618,7 @@ namespace vzm
 
                     assetLoader->destroyAsset(fasset);
                 }
-                assets.clear();
+                assetResMaps.clear();
             }
 
             delete resourceLoader;
@@ -1119,7 +1139,7 @@ namespace vzm
                         auto it = actorSceneVids_.find(vid);
                         if (it == actorSceneVids_.end())
                         {
-                            backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") ==> not a scene component..", backlog::LogLevel::Error);
+                            backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") ==> not a scene component.. (maybe a bone)", backlog::LogLevel::Warning);
                         }
                         else
                         {
@@ -1207,7 +1227,7 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
             utils::Entity ett = em.create();
             AssetVID vid = ett.getId();
-            vzGltfIO.assets[vid] = std::make_unique<VzAssetRes>();
+            vzGltfIO.assetResMaps[vid] = std::make_unique<VzAssetRes>();
             ncm.CreateNameComp(ett, name);
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
@@ -1215,6 +1235,28 @@ namespace vzm
             v_asset->componentVID = vid;
             v_asset->originFrom = "CreateAsset";
             v_asset->type = "VzAsset";
+            v_asset->timeStamp = std::chrono::high_resolution_clock::now();
+
+            return vid;
+        }
+        inline SkeletonVID CreateSkeleton(const std::string& name, const SkeletonVID vidExist = 0)
+        {
+            auto& em = gEngine->getEntityManager();
+            auto& ncm = VzNameCompManager::Get();
+            utils::Entity ett = utils::Entity::import(vidExist);
+            if (ett.isNull()) {
+                ett = em.create();
+            }
+                
+            AssetVID vid = ett.getId();
+            vzGltfIO.skeletonResMaps[vid] = std::make_unique<VzSkeletonRes>();
+            ncm.CreateNameComp(ett, name);
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
+            VzAsset* v_asset = (VzAsset*)it.first->second.get();
+            v_asset->componentVID = vid;
+            v_asset->originFrom = "CreateSkeleton";
+            v_asset->type = "VzSkeleton";
             v_asset->timeStamp = std::chrono::high_resolution_clock::now();
 
             return vid;
@@ -1410,16 +1452,6 @@ namespace vzm
                     }
                     return vid_scene;
                 };
-            auto getDescendants = [&](auto& self, const utils::Entity ett, std::vector<utils::Entity>& decendants) -> void
-                {
-                    auto ins = tcm.getInstance(ett);
-                    for (auto it = tcm.getChildrenBegin(ins); it != tcm.getChildrenEnd(ins); it++)
-                    {
-                        utils::Entity ett_child = tcm.getEntity(*it);
-                        decendants.push_back(ett_child);
-                        self(self, ett_child, decendants);
-                    }
-                };
 
             Scene* scene_src = nullptr;
             Scene* scene_dst = nullptr;
@@ -1446,7 +1478,7 @@ namespace vzm
                 tcm.setParent(ins_src, ins_dst);
 
                 entities_moving.push_back(ett_src); 
-                getDescendants(getDescendants, ett_src, entities_moving);
+                getDescendants(ett_src, entities_moving);
                 //for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
                 //{
                 //    utils::Entity ett = tcm.getEntity(*it);
@@ -1481,7 +1513,7 @@ namespace vzm
                 assert(ins_src.asValue() != 0 && "vidSrc is invalid");
 
                 entities_moving.push_back(ett_src);
-                getDescendants(getDescendants, ett_src, entities_moving);
+                getDescendants(ett_src, entities_moving);
                 //for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
                 //{
                 //    utils::Entity ett = tcm.getEntity(*it);
@@ -1983,8 +2015,10 @@ namespace vzm
                     else if (m_res.assetOwner)
                     {
                         AssetVID vid_asset = vzGltfIO.GetAssetOwner(it_m->first);
+                        utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                        std::string name_asset = ncm.GetName(ett_asset);
                         assert(vid_asset);
-                        backlog::post("Material (" + name + ") is asset(" + std::to_string(vid_asset) + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                        backlog::post("Material (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                         return false;
                     }
                     else
@@ -2002,9 +2036,10 @@ namespace vzm
                                 else if (it->second->assetOwner != nullptr)
                                 {
                                     AssetVID vid_asset = vzGltfIO.GetAssetOwner(it->first);
-                                    assert(vid_asset);
-                                    
-                                    backlog::post("(" + name + ")-associated-MI (" + name_mi + ") is asset(" + std::to_string(vid_asset) + ")- owned component, thereby preserved.", backlog::LogLevel::Warning);
+                                    utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                                    std::string name_asset = ncm.GetName(ett_asset);
+                                    assert(vid_asset);                                    
+                                    backlog::post("(" + name + ")-associated-MI (" + name_mi + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                                 }
                                 else
                                 {
@@ -2041,8 +2076,10 @@ namespace vzm
                     else if (mi_res.assetOwner)
                     {
                         AssetVID vid_asset = vzGltfIO.GetAssetOwner(it_mi->first);
+                        utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                        std::string name_asset = ncm.GetName(ett_asset);
                         assert(vid_asset);
-                        backlog::post("MI (" + name + ") is asset(" + std::to_string(vid_asset) + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                        backlog::post("MI (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                         return false;
                     }
                     else
@@ -2064,8 +2101,10 @@ namespace vzm
                     else if (geo_res.assetOwner)
                     {
                         AssetVID vid_asset = vzGltfIO.GetAssetOwner(it_geo->first);
+                        utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                        std::string name_asset = ncm.GetName(ett_asset);
                         assert(vid_asset);
-                        backlog::post("Geometry (" + name + ") is asset(" + std::to_string(vid_asset) + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                        backlog::post("Geometry (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                         return false;
                     }
                     else
@@ -2119,6 +2158,14 @@ namespace vzm
                 if (it_light != lightResMaps_.end())
                 {
                     lightResMaps_.erase(it_light); // call destructor
+                }
+
+                if (int vid_assetowner = vzGltfIO.GetAssetOwner(vid))
+                {
+                    utils::Entity ett_assetowner = utils::Entity::import(vid_assetowner);
+                    std::string name_assetowner = ncm.GetName(ett_assetowner);
+                    backlog::post("Component (" + name + ") is asset(" + name_assetowner + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
                 }
 #pragma endregion 
                 // the remaining etts (not engine-destory group)
@@ -2368,13 +2415,24 @@ namespace vzm
         tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
-    VID VzSceneComp::GetParentVid()
+    VID VzSceneComp::GetParent()
     {
         COMP_TRANSFORM(tc, ett, ins, INVALID_VID);
         Entity ett_parent = tc.getParent(ins);
         return ett_parent.getId();
     }
-    VID VzSceneComp::GetSceneVid()
+    std::vector<VID> VzSceneComp::GetChildren()
+    {
+        std::vector<VID> children;
+        COMP_TRANSFORM(tc, ett, ins, children);
+        for (auto it = tc.getChildrenBegin(ins); it != tc.getChildrenEnd(ins); it++)
+        {
+            utils::Entity ett_child = tc.getEntity(*it);
+            children.push_back(ett_child.getId());
+        }
+        return children;
+    }
+    VID VzSceneComp::GetScene()
     {
         return gEngineApp.GetSceneVidBelongTo(componentVID);
     }
@@ -2709,6 +2767,18 @@ namespace vzm
         if (vzGltfIO.resourceLoader)
             vzGltfIO.resourceLoader->asyncUpdateLoad();
 
+        for (auto& it : vzGltfIO.assetResMaps)
+        {
+            VzAssetRes* asset_res = it.second.get();
+            VzAsset* v_asset = gEngineApp.GetVzComponent<VzAsset>(it.first);
+            assert(v_asset);
+            vzm::VzAsset::Animator* animator = v_asset->GetAnimator();
+            if (animator->IsPlayScene(vidScene))
+            {
+                animator->UpdateAnimation();
+            }
+        }
+
         Renderer* renderer = render_path->GetRenderer();
 
         // setup
@@ -2745,17 +2815,212 @@ namespace vzm
 
 
 #pragma region // VzAsset
-    std::vector<VID> VzAsset::GetGLTFRootVIDs()
+#define COMP_ASSET(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(componentVID); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get(); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
+#define COMP_ASSET_ANI(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(vidAsset_); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get(); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
+#define COMP_ASSET_ANI_INST(COMP, RESMAP, INST, FAILRET)  COMP_ASSET_ANI(COMP, RESMAP, FAILRET); FilamentInstance* INST = COMP->asset->getInstance(); if (INST == nullptr) return FAILRET; 
+#define COMP_ASSET_ANI_INST_FANI(COMP, RESMAP, INST, FANI, FAILRET)  COMP_ASSET_ANI_INST(COMP, RESMAP, INST, FAILRET); filament::gltfio::Animator* FANI = INST->getAnimator(); if (FANI == nullptr) return FAILRET; 
+    std::vector<VID> VzAsset::GetGLTFRoots()
     {
-        auto it = vzGltfIO.assets.find(componentVID);
-        if (it == vzGltfIO.assets.end())
-        {
-            return std::vector<VID>();
-        }
-        VzAssetRes* asset_res = it->second.get();
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, std::vector<VID>());
         std::vector<VID> root_vids;
         std::copy(asset_res->rootVIDs.begin(), asset_res->rootVIDs.end(), std::back_inserter(root_vids));
         return root_vids;
+    }
+
+    std::vector<VID> VzAsset::GetSkeletons()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, std::vector<VID>());
+        return asset_res->skeletons;
+    }
+
+    VzAsset::Animator* VzAsset::GetAnimator()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, nullptr);
+        return &asset_res->animator;
+    }
+
+    size_t VzAsset::Animator::GetAnimationCount()
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, 0);
+        return fani->getAnimationCount();
+    }
+    std::string VzAsset::Animator::GetAnimationLabel(const int index)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, "");
+        if ((size_t)index >= fani->getAnimationCount()) return "";
+        return fani->getAnimationName((size_t)index);
+    }
+    std::vector<std::string> VzAsset::Animator::GetAnimationLabels()
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, { {""} });
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            labels.push_back(fani->getAnimationName(i));
+        }
+        return labels;
+    }
+    int VzAsset::Animator::SetAnimationByLabel(const std::string& label)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, -1);
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            if (label == fani->getAnimationName(i))
+            {
+                SetAnimation(i);
+                return i;
+            }
+        }
+        return -1;
+    }
+    float VzAsset::Animator::GetAnimationPlayTime(const size_t index)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, 0.f);
+        if ((size_t)index >= fani->getAnimationCount()) return 0.f;
+        return fani->getAnimationDuration(index);
+    }
+    float VzAsset::Animator::GetAnimationPlayTimeByLabel(const std::string& label)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, 0.f);
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            if (label == fani->getAnimationName(i))
+            {
+                return GetAnimationPlayTime(i);
+            }
+        }
+        return 0.f;
+    }
+
+    //void VzAsset::Animator::Play()
+    //{
+    //    const size_t animationCount = animator.getAnimationCount();
+    //    if (mResetAnimation) {
+    //        mPreviousStartTime = mCurrentStartTime;
+    //        mCurrentStartTime = currentTime;
+    //        mResetAnimation = false;
+    //    }
+    //    const double elapsedSeconds = currentTime - mCurrentStartTime;
+    //    if (animationCount > 0 && mCurrentAnimation >= 0) {
+    //        if (mCurrentAnimation == animationCount) {
+    //            for (size_t i = 0; i < animationCount; i++) {
+    //                animator.applyAnimation(i, elapsedSeconds);
+    //            }
+    //        }
+    //        else {
+    //            animator.applyAnimation(mCurrentAnimation, elapsedSeconds);
+    //        }
+    //        if (elapsedSeconds < mCrossFadeDuration && mPreviousAnimation >= 0 && mPreviousAnimation != animationCount) {
+    //            const double previousSeconds = currentTime - mPreviousStartTime;
+    //            const float lerpFactor = elapsedSeconds / mCrossFadeDuration;
+    //            animator.applyCrossFade(mPreviousAnimation, previousSeconds, lerpFactor);
+    //        }
+    //    }
+    //    if (mShowingRestPose) {
+    //        animator.resetBoneMatrices();
+    //    }
+    //    else {
+    //        animator.updateBoneMatrices();
+    //    }
+    //}
+
+    void VzAsset::Animator::UpdateAnimation()
+    {
+        //COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, );
+        COMP_ASSET_ANI(asset_res, vzGltfIO.assetResMaps, ); 
+        FilamentInstance* finst = asset_res->asset->getInstance(); 
+        if (finst == nullptr) return;  
+        filament::gltfio::Animator* fani = finst->getAnimator(); 
+        if (fani == nullptr) return ;
+
+        switch (playMode_)
+        {
+        case PlayMode::INIT_POSE:
+            fani->resetBoneMatrices();
+            resetAnimation_ = true;
+            return;
+        case PlayMode::PAUSE:
+            timer_ = std::chrono::high_resolution_clock::now();
+            return;
+        case PlayMode::PLAY:
+        default: break;
+        }
+
+        if (resetAnimation_) {
+            timer_ = std::chrono::high_resolution_clock::now();
+            prevElapsedTimeSec_ = elapsedTimeSec_;
+            elapsedTimeSec_ = 0;
+            resetAnimation_ = false;
+        }
+
+        auto timestamp = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timestamp - timer_);
+        double delta_time = time_span.count(); // in sec.
+
+        if (delta_time < fixedUpdateTime_)
+        {
+            return;
+        }
+        timer_ = timestamp;
+        elapsedTimeSec_ += delta_time;
+
+        const size_t animation_count = fani->getAnimationCount();
+        if (animationIndex_ == animation_count) {
+            for (size_t i = 0; i < animation_count; i++) {
+                fani->applyAnimation(i, elapsedTimeSec_);
+            }
+        }
+        else
+        {
+            fani->applyAnimation(animationIndex_, elapsedTimeSec_);
+        }
+        if (elapsedTimeSec_ < crossFadeDurationSec_ && prevAnimationIndex_ >= 0 && prevAnimationIndex_ != animation_count) {
+            const double previousSeconds = prevElapsedTimeSec_ + delta_time;
+            const float lerpFactor = elapsedTimeSec_ / crossFadeDurationSec_;
+            fani->applyCrossFade(prevAnimationIndex_, previousSeconds, lerpFactor);
+        }
+        fani->updateBoneMatrices();
+    }
+#pragma endregion
+
+#pragma region // VzSkeleton
+#define COMP_SKELETON(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(componentVID); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get();
+    std::vector<VID> VzSkeleton::GetBones()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, std::vector<VID>());
+        std::vector<VID> root_vids;
+        std::copy(asset_res->rootVIDs.begin(), asset_res->rootVIDs.end(), std::back_inserter(root_vids));
+        return root_vids;
+    }
+    VID VzSkeleton::GetParent()
+    {
+        COMP_TRANSFORM(tc, ett, ins, INVALID_VID);
+        Entity ett_parent = tc.getParent(ins);
+        return ett_parent.getId();
+    }
+    std::vector<VID> VzSkeleton::GetChildren()
+    {
+        std::vector<VID> children;
+        COMP_TRANSFORM(tc, ett, ins, children);
+        for (auto it = tc.getChildrenBegin(ins); it != tc.getChildrenEnd(ins); it++)
+        {
+            utils::Entity ett_child = tc.getEntity(*it);
+            children.push_back(ett_child.getId());
+        }
+        return children;
+    }
+    void VzSkeleton::SetTransformTRS(const BoneVID vidBone, const float t[3], const float r[4], const float s[3])
+    {
+        assert(0 && "to do");
+    }
+    void VzSkeleton::UpdateBoneMatrices()
+    {
+        assert(0 && "to do");
     }
 #pragma endregion
 }
@@ -3154,7 +3419,11 @@ namespace filament::gltfio {
         {
             if (isNodeSkeleton(srcAsset, node))
             {
-                backlog::post(name, LogLevel::Default);
+                //backlog::post(name, LogLevel::Default);
+                if (!isNodeSkeleton(srcAsset, node->parent))
+                {
+                    mSkeltonRootMap[entity.getId()] = name;
+                }
             }
             else
             {
@@ -4695,6 +4964,7 @@ namespace vzm
     {
         utils::Path path = filename;
         filament::gltfio::FilamentAsset* asset = nullptr;
+        // assume one instance per each asset (possibly multi-instance)
         if (path.isEmpty()) {
             asset = vzGltfIO.assetLoader->createAsset(
                 GLTF_DEMO_DAMAGEDHELMET_DATA,
@@ -4715,11 +4985,13 @@ namespace vzm
         size_t num_mi = vzGltfIO.assetLoader->mMIMap.size();
         size_t num_geo = vzGltfIO.assetLoader->mGeometryMap.size();
         size_t num_scenecomp = vzGltfIO.assetLoader->mSceneCompMap.size();
+        size_t num_skeleton = vzGltfIO.assetLoader->mSkeltonRootMap.size();
         size_t num_ins = fasset->mInstances.size();
         backlog::post(std::to_string(num_m) + " system-owned material" + (num_m > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_mi) + " material instance" + (num_mi > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_geo) + (num_geo > 1 ? " geometries are" : " geometry is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_scenecomp) + " scene component" + (num_scenecomp > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_skeleton) + " skeleton" + (num_skeleton > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_ins) + " gltf instance" + (num_ins > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
 
 #if !defined(__EMSCRIPTEN__)
@@ -4745,14 +5017,38 @@ namespace vzm
         }
 #endif
         AssetVID vid_asset = gEngineApp.CreateAsset(assetName);
-        vzGltfIO.assets[vid_asset] = std::make_unique<VzAssetRes>();
-        VzAssetRes& asset_res = *vzGltfIO.assets[vid_asset].get();
+        vzGltfIO.assetResMaps[vid_asset] = std::make_unique<VzAssetRes>();
+        VzAssetRes& asset_res = *vzGltfIO.assetResMaps[vid_asset].get();
+        asset_res.animator = VzAsset::Animator(vid_asset);
         asset_res.asset = asset;
         if (assetComp) *assetComp = gEngineApp.GetVzComponent<VzAsset>(vid_asset);
 
         for (auto& instance : fasset->mInstances)
         {
             asset_res.rootVIDs.push_back(instance->mRoot.getId());
+        }
+
+        for (auto& it : vzGltfIO.assetLoader->mSkeltonRootMap)
+        {
+            asset_res.skeletons.push_back(it.first);
+            std::vector<Entity> bone_entities;
+            Entity ett = Entity::import(it.first);
+            bone_entities.push_back(ett);
+            getDescendants(ett, bone_entities);
+
+            gEngineApp.CreateSkeleton(it.second, it.first);
+            VzSkeletonRes* skeleton_res = vzGltfIO.skeletonResMaps[it.first].get();
+            
+            skeleton_res->bones.clear();
+            size_t num_bones = bone_entities.size();
+            skeleton_res->bones.reserve(num_bones);
+            for (size_t i = 0; i < num_bones; ++i)
+            {
+                BoneVID vid_bone = bone_entities[i].getId();
+                skeleton_res->bones[i] = vid_bone;
+                asset_res.assetOwnershipComponents.insert(vid_bone);
+            }
+            //asset_res.assetOwnershipComponents.insert(it.first); // already involved
         }
 
         if (!vzGltfIO.resourceLoader->asyncBeginLoad(asset)) {
@@ -4796,67 +5092,6 @@ namespace vzm
 
     VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile, const bool displayEngineStates)
     {
-        //static bool isFirstCall = true;
-        //static VID sceneVid = gEngineApp.CreateSceneEntity("__VZM_ENGINE_INTERNAL__");
-        //VzmScene* sceneInternalState = gEngineApp.GetScene(sceneVid);
-        //static Entity canvasEtt = sceneInternalState->Entity_CreateCamera("INFO_CANVAS", w, h);
-        //static VzmRenderer* sysInfoRenderer = gEngineApp.CreateRenderer(canvasEtt);
-        //
-        //if (isFirstCall)
-        //{
-        //    sysInfoRenderer->init(w, h, CANVAS_INIT_DPI);
-        //
-        //    sysInfoRenderer->infoDisplay.active = true;
-        //    sysInfoRenderer->infoDisplay.watermark = true;
-        //    //sysInfoRenderer->infoDisplay.fpsinfo = true;
-        //    //sysInfoRenderer->infoDisplay.resolution = true;
-        //    //sysInfoRenderer->infoDisplay.colorspace = true;
-        //    sysInfoRenderer->infoDisplay.device_name = true;
-        //    sysInfoRenderer->infoDisplay.vram_usage = true;
-        //    sysInfoRenderer->infoDisplay.heap_allocation_counter = true;
-        //
-        //    sysInfoRenderer->DisplayProfile = true;
-        //    wi::profiler::SetEnabled(true);
-        //
-        //    {
-        //        const float fadeSeconds = 0.f;
-        //        wi::Color fadeColor = wi::Color(0, 0, 0, 255);
-        //        // Fade manager will activate on fadeout
-        //        sysInfoRenderer->fadeManager.Clear();
-        //        sysInfoRenderer->fadeManager.Start(fadeSeconds, fadeColor, []() {
-        //            sysInfoRenderer->Start();
-        //            });
-        //
-        //        sysInfoRenderer->fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
-        //    }
-        //    isFirstCall = false;
-        //}
-        //
-        //sysInfoRenderer->camEntity = canvasEtt;
-        //sysInfoRenderer->width = w;
-        //sysInfoRenderer->height = h;
-        //sysInfoRenderer->UpdateVmCamera();
-        //
-        //sysInfoRenderer->setSceneUpdateEnabled(false);
-        //sysInfoRenderer->scene->camera = *sysInfoRenderer->camera;
-        //
-        //wi::font::UpdateAtlas(sysInfoRenderer->GetDPIScaling());
-        //
-        //if (!wi::initializer::IsInitializeFinished())
-        //{
-        //    // Until engine is not loaded, present initialization screen...
-        //    //sysInfoRenderer->WaitRender();
-        //    return VZ_JOB_WAIT;
-        //}
-        //
-        //if (profileFrameFinished)
-        //{
-        //    profileFrameFinished = false;
-        //    wi::profiler::BeginFrame();
-        //}
-        //sysInfoRenderer->RenderFinalize(); // set profileFrameFinished to true inside
-        //
-        //return (VID)canvasEtt;
         return 0;
     }
 
