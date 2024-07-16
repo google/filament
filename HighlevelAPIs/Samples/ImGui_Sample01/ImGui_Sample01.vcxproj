@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../../VizAPIs_Windows;../imgui_common;../imgui_common/glfw_vulkan;%VULKAN_SDK%\include;..\libs\glfw\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../API_SOURCE;../imgui_common;../imgui_common/glfw_vulkan;%VULKAN_SDK%\include;..\libs\glfw\include;</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>

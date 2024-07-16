@@ -19,7 +19,4 @@ results
 /compile_commands.json
 /.cache
 
-**/CMakeFiles/
-**/generated/
-**/install/
 **/VisualStudio/

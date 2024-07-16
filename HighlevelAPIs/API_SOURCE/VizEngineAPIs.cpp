@@ -1390,6 +1390,26 @@ namespace vzm
             }
             return camVids.size();
         }
+        inline size_t GetActorVids(std::vector<ActorVID>& actorVids)
+        {
+            actorVids.clear();
+            actorVids.reserve(actorSceneVids_.size());
+            for (auto& it : actorSceneVids_)
+            {
+                actorVids.push_back(it.first);
+            }
+            return actorVids.size();
+        }
+        inline size_t GetLightVids(std::vector<LightVID>& lightVids)
+        {
+            lightVids.clear();
+            lightVids.reserve(lightSceneVids_.size());
+            for (auto& it : lightSceneVids_)
+            {
+                lightVids.push_back(it.first);
+            }
+            return lightVids.size();
+        }
         inline size_t GetRenderPathVids(std::vector<RendererVID>& renderPathVids)
         {
             renderPathVids.clear();
@@ -4867,63 +4887,66 @@ namespace vzm
 
     size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly)
     {
-        Scene* scene = gEngineApp.GetScene(sceneVid);
-        if (scene == nullptr)
+        Scene* scene = nullptr;
+        if (sceneVid != 0)
         {
-            return 0;
+            scene = gEngineApp.GetScene(sceneVid);
+            if (scene == nullptr)
+            {
+                return 0;
+            }
         }
+
+        auto& rcm = gEngine->getRenderableManager();
 
         switch (compType)
         {
         case SCENE_COMPONENT_TYPE::CAMERA:
         {
-            if (isRenderableOnly) return 0;
-
-            std::vector<VID> cam_vids;
-            size_t num_cameras = gEngineApp.GetCameraVids(cam_vids);
-            for (auto& cid : cam_vids)
+            std::vector<VID> engine_vids;
+            gEngineApp.GetCameraVids(engine_vids);
+            for (auto& vid : engine_vids)
             {
-                if (gEngineApp.GetRenderPath(cid)->GetView()->getScene() == scene)
+                if (sceneVid == 0 || gEngineApp.GetSceneVidBelongTo(vid) == sceneVid)
                 {
-                    vids.push_back(cid);
+                    vids.push_back(vid);
                 }
             }
             break;
         }
         case SCENE_COMPONENT_TYPE::ACTOR:
         {
-            scene->forEach([&](utils::Entity ett) {
-                VID vid = ett.getId();
-                if (isRenderableOnly)
+            std::vector<VID> engine_vids;
+            gEngineApp.GetActorVids(engine_vids);
+            for (auto& vid : engine_vids)
+            {
+                if (sceneVid == 0 || gEngineApp.GetSceneVidBelongTo(vid) == sceneVid)
                 {
-                    if (gEngineApp.IsRenderable(vid))
+                    if (isRenderableOnly)
+                    {
+                        Entity ett = Entity::import(vid);
+                        if (rcm.hasComponent(ett))
+                            vids.push_back(vid);
+                    }
+                    else
                     {
                         vids.push_back(vid);
                     }
                 }
-                else
-                {
-                    VzSceneComp* v_comp = gEngineApp.GetVzComponent<VzSceneComp>(vid);
-                    if (v_comp->compType == SCENE_COMPONENT_TYPE::ACTOR)
-                    {
-                        vids.push_back(vid);
-                    }
-                }
-                });
+            }
             break;
         }
         case SCENE_COMPONENT_TYPE::LIGHT:
         {
-            if (isRenderableOnly) return 0;
-
-            auto& lcm = gEngine->getLightManager();
-            scene->forEach([&](utils::Entity ett) {
-                VID vid = ett.getId();
-                if (gEngineApp.IsLight(vid))
+            std::vector<VID> engine_vids;
+            gEngineApp.GetLightVids(engine_vids);
+            for (auto& vid : engine_vids)
+            {
+                if (sceneVid == 0 || gEngineApp.GetSceneVidBelongTo(vid) == sceneVid)
                 {
                     vids.push_back(vid);
                 }
-                });
+            }
             break;
         }
         default: break;
@@ -5008,7 +5031,6 @@ namespace vzm
         backlog::post(std::to_string(num_renderable) + " renderable actor" + (num_renderable > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_node) + " node actor" + (num_node > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_camera) + " camera" + (num_camera > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
-        backlog::post(std::to_string(num_node) + " node actor" + (num_node > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_light) + " light" + (num_light > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_skeleton) + " skeleton" + (num_skeleton > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_ins) + " gltf instance" + (num_ins > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
@@ -5120,6 +5142,6 @@ namespace vzm
     }
 
     uint64_t GetGraphicsSharedRenderTarget() {
-        return 0;// gEngine->getSwapHandle();
+        return gEngine->getSwapHandle();
     }
 }
