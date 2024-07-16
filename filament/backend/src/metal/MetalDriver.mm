@@ -2074,6 +2074,10 @@ void MetalDriver::executeTickOps() noexcept {
     }
 }
 
+uint64_t MetalDriver::getSwapHandle() {
+    return 0;
+}
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<MetalDriver>;
 

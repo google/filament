@@ -1023,6 +1023,8 @@ public:
       */
     utils::JobSystem& getJobSystem() noexcept;
 
+    uint64_t getSwapHandle() noexcept;
+
 #if defined(__EMSCRIPTEN__)
     /**
       * WebGL only: Tells the driver to reset any internal state tracking if necessary.

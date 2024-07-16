@@ -505,7 +505,10 @@ namespace filament::gltfio {
         std::unordered_map<const cgltf_mesh*, GeometryVID> mGeometryMap;
         std::unordered_map<const Material*, MaterialVID> mMaterialMap;
         std::unordered_map<const MaterialInstance*, MInstanceVID> mMIMap;
-        std::unordered_map<VID, std::string> mSceneCompMap;
+        std::unordered_map<VID, std::string> mLightMap;
+        std::unordered_map<VID, std::string> mCameraMap;
+        std::unordered_map<VID, std::string> mRenderableActorMap;
+        std::unordered_map<VID, std::string> mNodeActorMap;
         std::unordered_map<VID, std::string> mSkeltonRootMap;
 
     public:
@@ -3070,9 +3073,17 @@ namespace filament::gltfio {
         std::unordered_map<const Material*, MaterialVID>& mMaterialMap
     )
     {
+        auto it = mMIMap.find(mi);
+        if (it != mMIMap.end())
+        {
+            mi_vids.push_back(it->second);
+            return;
+        }
+        // note:
+        // gltf support the same material instance
         MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
         mi_vids.push_back(mi_vid);
-        assert(!mMIMap.contains(mi));
+        //assert(!mMIMap.contains(mi));
         mMIMap[mi] = mi_vid;
         const Material* m = mi->getMaterial();
         if (!mMaterialMap.contains(m))
@@ -3093,7 +3104,6 @@ namespace filament::gltfio {
     // - The Material objects (used to create instances) are cached in MaterialProvider, not here.
     // - The cache is not responsible for destroying material instances.
 
-    
     FFilamentAsset* VzAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
         FilamentInstance* instances;
         return createInstancedAsset(bytes, byteCount, &instances, 1);
@@ -3408,12 +3418,17 @@ namespace filament::gltfio {
             if (srcAsset->variants_count > 0) {
                 createMaterialVariants(node->mesh, entity, fAsset, instance);
             }
+            mRenderableActorMap[entity.getId()] = name;
         }
         if (node->light) {
             createLight(node->light, entity, fAsset);
+            gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::LIGHT, name, entity.getId());
+            mLightMap[entity.getId()] = name;
         }
         if (node->camera) {
             createCamera(node->camera, entity, fAsset);
+            gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::CAMERA, name, entity.getId());
+            mCameraMap[entity.getId()] = name;
         }
         if (node->camera == nullptr && node->light == nullptr && node->mesh == nullptr)
         {
@@ -3428,11 +3443,8 @@ namespace filament::gltfio {
             else
             {
                 gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, name, entity.getId());
+                mNodeActorMap[entity.getId()] = name;
             }
-        }
-        else
-        {
-            mSceneCompMap[entity.getId()] = name;
         }
 
         for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
@@ -4984,13 +4996,20 @@ namespace vzm
         size_t num_m = vzGltfIO.assetLoader->mMaterialMap.size();
         size_t num_mi = vzGltfIO.assetLoader->mMIMap.size();
         size_t num_geo = vzGltfIO.assetLoader->mGeometryMap.size();
-        size_t num_scenecomp = vzGltfIO.assetLoader->mSceneCompMap.size();
+        size_t num_renderable = vzGltfIO.assetLoader->mRenderableActorMap.size();
+        size_t num_node = vzGltfIO.assetLoader->mNodeActorMap.size();
+        size_t num_camera = vzGltfIO.assetLoader->mCameraMap.size();
+        size_t num_light = vzGltfIO.assetLoader->mLightMap.size();
         size_t num_skeleton = vzGltfIO.assetLoader->mSkeltonRootMap.size();
         size_t num_ins = fasset->mInstances.size();
         backlog::post(std::to_string(num_m) + " system-owned material" + (num_m > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_mi) + " material instance" + (num_mi > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_geo) + (num_geo > 1 ? " geometries are" : " geometry is") + " created", backlog::LogLevel::Default);
-        backlog::post(std::to_string(num_scenecomp) + " scene component" + (num_scenecomp > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_renderable) + " renderable actor" + (num_renderable > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_node) + " node actor" + (num_node > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_camera) + " camera" + (num_camera > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_node) + " node actor" + (num_node > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_light) + " light" + (num_light > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_skeleton) + " skeleton" + (num_skeleton > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_ins) + " gltf instance" + (num_ins > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
 
@@ -5051,6 +5070,11 @@ namespace vzm
             //asset_res.assetOwnershipComponents.insert(it.first); // already involved
         }
 
+        ResourceConfiguration configuration = {};
+        configuration.engine = gEngine;
+        configuration.gltfPath = path.c_str();
+        configuration.normalizeSkinningWeights = true;
+        vzGltfIO.resourceLoader->setConfiguration(configuration);
         if (!vzGltfIO.resourceLoader->asyncBeginLoad(asset)) {
             vzGltfIO.assetLoader->destroyAsset((filament::gltfio::FFilamentAsset*)asset);
             backlog::post("Unable to start loading resources for " + filename, backlog::LogLevel::Error);

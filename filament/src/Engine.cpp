@@ -371,6 +371,10 @@ size_t Engine::getMaxStereoscopicEyes() noexcept {
     return FEngine::getMaxStereoscopicEyes();
 }
 
+uint64_t Engine::getSwapHandle() noexcept {
+  return downcast(this)->getSwapHandle();
+}
+
 uint64_t Engine::getSteadyClockTimeNano() noexcept {
     return std::chrono::steady_clock::now().time_since_epoch().count();
 }

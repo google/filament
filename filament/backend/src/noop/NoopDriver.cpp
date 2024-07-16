@@ -388,4 +388,6 @@ void NoopDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 void NoopDriver::resetState(int) {
 }
 
+uint64_t NoopDriver::getSwapHandle() { return 0; }
+
 } // namespace filament

@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)VizEngineAPIs.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)VizCoreUtils.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzActor.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzAsset.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzCamera.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzGeometry.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzLight.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMaterial.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMI.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzScene.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VizComponentAPIs.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VizEngineAPIs.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VizCoreUtils.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)CustomComponents.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzAsset.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzCamera.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzGeometry.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzLight.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMaterial.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMI.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzScene.h">
+      <Filter>components</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="components">
+      <UniqueIdentifier>{7e277e79-fe88-4cd1-aba4-92c6a388358f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{0fe9e37f-f909-49a0-958c-2a151b056641}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend">
+      <UniqueIdentifier>{ec000082-87ae-4f2f-995a-ae59cb734cb8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

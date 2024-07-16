@@ -122,6 +122,8 @@ public:
     using duration = clock::duration;
 
 public:
+    uint64_t getSwapHandle();
+
     static Engine* create(Builder const& builder);
 
 #if UTILS_HAS_THREADING

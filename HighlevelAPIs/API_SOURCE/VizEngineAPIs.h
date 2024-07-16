@@ -1,5 +1,6 @@
 #pragma once
 #include "VizComponentAPIs.h"
+#include "components/VzScene.h"
 
 #define SCPP(P) (vzm::VzSceneComp**)&P
 

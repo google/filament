@@ -115,7 +115,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzAsset* asset;
     //VID vid_asset = vzm::LoadFileIntoAsset("", "my gltf asset", &asset);
-    VID vid_asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset", &asset);
+    //VID vid_asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset", &asset);
+    VID vid_asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset", &asset);
 
     asset->GetAnimator()->AddPlayScene(vid_scene);
     asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);

@@ -56,6 +56,8 @@
 
 #include "generated/resources/materials.h"
 
+#include <backend/platforms/VulkanPlatform.h>
+
 using namespace filament::math;
 using namespace utils;
 
@@ -134,6 +136,8 @@ Engine* FEngine::create(Engine::Builder const& builder) {
 
     return instance;
 }
+
+uint64_t FEngine::getSwapHandle() { return getDriverApi().getSwapHandle(); }
 
 #if UTILS_HAS_THREADING
 

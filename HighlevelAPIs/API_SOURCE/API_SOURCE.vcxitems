@@ -14,12 +14,28 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzAsset.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzCamera.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzGeometry.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzLight.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMaterial.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMI.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzScene.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CustomComponents.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizComponentAPIs.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizCoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizEngineAPIs.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzActor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzAsset.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzCamera.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzGeometry.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzLight.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMaterial.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMI.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzScene.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VizCoreUtils.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VizEngineAPIs.cpp" />
   </ItemGroup>
