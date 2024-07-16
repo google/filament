@@ -56,6 +56,7 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
+    <Import Project="..\API_SOURCE\API_SOURCE.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -145,16 +146,6 @@
       <AdditionalLibraryDirectories>../../VisualStudio/install/lib/x86_64;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="VizEngineAPIs.cpp" />
-    <ClCompile Include="VizCoreUtils.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="CustomComponents.h" />
-    <ClInclude Include="VizComponentAPIs.h" />
-    <ClInclude Include="VizCoreUtils.h" />
-    <ClInclude Include="VizEngineAPIs.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

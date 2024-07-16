@@ -1,13 +1,2 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup>
-    <ClCompile Include="VizEngineAPIs.cpp" />
-    <ClCompile Include="VizCoreUtils.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="VizEngineAPIs.h" />
-    <ClInclude Include="VizComponentAPIs.h" />
-    <ClInclude Include="VizCoreUtils.h" />
-    <ClInclude Include="CustomComponents.h" />
-  </ItemGroup>
-</Project>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" />
