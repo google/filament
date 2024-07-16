@@ -16,7 +16,6 @@
 
 #ifndef GLTFIO_FFILAMENTASSET_H
 #define GLTFIO_FFILAMENTASSET_H
-#define VZM_CUSTOM_CODE
 
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/NodeManager.h>
@@ -271,12 +270,6 @@ struct FFilamentAsset : public FilamentAsset {
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
     Wireframe* mWireframe = nullptr;
-
-#ifdef VZM_CUSTOM_CODE
-    // key is VID (or, Entity value)
-    std::unordered_map<uint32_t, std::vector<Primitive>> renderablePritmitives;
-    std::unordered_map<uint32_t, std::vector<MaterialInstance*>> renderableMIs;
-#endif
 
     // Indicates if resource decoding has started (not necessarily finished)
     bool mResourcesLoaded = false;

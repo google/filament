@@ -6,6 +6,7 @@
 #endif
 
 #include <iostream>
+#include <fstream>
 #include <memory>
 
 //////////////////////////////
@@ -30,11 +31,14 @@
 #include <utils/NameComponentManager.h>
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
+#include <utils/Systrace.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
+#include <gltfio/NodeManager.h>
+#include <gltfio/Animator.h>
 
 #include <filameshio/MeshReader.h>
 
@@ -52,6 +56,11 @@
 
 // FEngine
 #include "../../libs/gltfio/src/FFilamentAsset.h"
+#include "../../libs/gltfio/src/FNodeManager.h""
+#include "../../libs/gltfio/src/extended/AssetLoaderExtended.h"
+#include "../../libs/gltfio/src/FTrsTransformManager.h"
+#include "../../libs/gltfio/src/GltfEnums.h"
+
 #include "../../filament/src/details/engine.h"
 #include "../../filament/src/ResourceAllocator.h"
 #include "../../filament/src/components/RenderableManager.h"
@@ -151,19 +160,19 @@ namespace vzm::backlog
             setConsoleColor(10);
             std::cout << "[INFO] ";
             setConsoleColor(7);
-            utils::slog.i << input;
+            utils::slog.i << input + "\n";
             break;
         case LogLevel::Warning:
             setConsoleColor(14);
             std::cout << "[WARNING] ";
             setConsoleColor(7);
-            utils::slog.w << input;
+            utils::slog.w << input + "\n";
             break; 
         case LogLevel::Error:
             setConsoleColor(12);
             std::cout << "[ERROR] ";
             setConsoleColor(7);
-            utils::slog.e << input;
+            utils::slog.e << input + "\n";
             break;
         default: return;
         }
@@ -293,36 +302,281 @@ using ActorVID = VID;
 using LightVID = VID;
 using GeometryVID = VID;
 using MaterialVID = VID;
-using MaterialInstanceVID = VID;
+using MInstanceVID = VID;
 using MaterialVID = VID;
 using AssetVID = VID;
+using SkeletonVID = VID;
+using BoneVID = VID;
+namespace filament::gltfio {
+    using namespace vzm;
+    using Entity = utils::Entity;
+    using FFilamentAsset = filament::gltfio::FFilamentAsset;
+    using SceneMask = NodeManager::SceneMask;
 
+    // The default glTF material.
+    static constexpr cgltf_material kDefaultMat = {
+        .name = (char*)"Default GLTF material",
+        .has_pbr_metallic_roughness = true,
+        .has_pbr_specular_glossiness = false,
+        .has_clearcoat = false,
+        .has_transmission = false,
+        .has_volume = false,
+        .has_ior = false,
+        .has_specular = false,
+        .has_sheen = false,
+        .pbr_metallic_roughness = {
+            .base_color_factor = {1.0, 1.0, 1.0, 1.0},
+            .metallic_factor = 1.0,
+            .roughness_factor = 1.0,
+        },
+    };
+
+    class MaterialInstanceCache {
+    public:
+        struct Entry {
+            MaterialInstance* instance;
+            UvMap uvmap;
+        };
+
+        MaterialInstanceCache() {}
+
+        MaterialInstanceCache(const cgltf_data* hierarchy) :
+            mHierarchy(hierarchy),
+            mMaterialInstances(hierarchy->materials_count, Entry{}),
+            mMaterialInstancesWithVertexColor(hierarchy->materials_count, Entry{}) {}
+
+        void flush(utils::FixedCapacityVector<MaterialInstance*>* dest) {
+            size_t count = 0;
+            for (const Entry& entry : mMaterialInstances) {
+                if (entry.instance) {
+                    ++count;
+                }
+            }
+            for (const Entry& entry : mMaterialInstancesWithVertexColor) {
+                if (entry.instance) {
+                    ++count;
+                }
+            }
+            if (mDefaultMaterialInstance.instance) {
+                ++count;
+            }
+            if (mDefaultMaterialInstanceWithVertexColor.instance) {
+                ++count;
+            }
+            assert_invariant(dest->size() == 0);
+            dest->reserve(count);
+            for (const Entry& entry : mMaterialInstances) {
+                if (entry.instance) {
+                    dest->push_back(entry.instance);
+                }
+            }
+            for (const Entry& entry : mMaterialInstancesWithVertexColor) {
+                if (entry.instance) {
+                    dest->push_back(entry.instance);
+                }
+            }
+            if (mDefaultMaterialInstance.instance) {
+                dest->push_back(mDefaultMaterialInstance.instance);
+            }
+            if (mDefaultMaterialInstanceWithVertexColor.instance) {
+                dest->push_back(mDefaultMaterialInstanceWithVertexColor.instance);
+            }
+        }
+
+        Entry* getEntry(const cgltf_material** mat, bool vertexColor) {
+            if (*mat) {
+                EntryVector& entries = vertexColor ?
+                    mMaterialInstancesWithVertexColor : mMaterialInstances;
+                const cgltf_material* basePointer = mHierarchy->materials;
+                return &entries[*mat - basePointer];
+            }
+            *mat = &kDefaultMat;
+            return vertexColor ? &mDefaultMaterialInstanceWithVertexColor : &mDefaultMaterialInstance;
+        }
+
+    private:
+        using EntryVector = utils::FixedCapacityVector<Entry>;
+        const cgltf_data* mHierarchy = {};
+        EntryVector mMaterialInstances;
+        EntryVector mMaterialInstancesWithVertexColor;
+        Entry mDefaultMaterialInstance = {};
+        Entry mDefaultMaterialInstanceWithVertexColor = {};
+    };
+
+    struct VzAssetLoader : public AssetLoader {
+        VzAssetLoader(AssetConfiguration const& config) :
+            mEntityManager(config.entities ? *config.entities : EntityManager::get()),
+            mRenderableManager(config.engine->getRenderableManager()),
+            mNameManager(config.names),
+            mTransformManager(config.engine->getTransformManager()),
+            mMaterials(*config.materials),
+            mEngine(*config.engine),
+            mDefaultNodeName(config.defaultNodeName) {
+            if (config.ext) {
+                FILAMENT_CHECK_PRECONDITION(AssetConfigurationExtended::isSupported())
+                    << "Extend asset loading is not supported on this platform";
+                mLoaderExtended = std::make_unique<AssetLoaderExtended>(
+                    *config.ext, config.engine, mMaterials);
+            }
+        }
+
+        FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
+        FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
+            FilamentInstance** instances, size_t numInstances);
+        FilamentInstance* createInstance(FFilamentAsset* fAsset);
+
+        static void destroy(VzAssetLoader** loader) noexcept {
+            delete* loader;
+            *loader = nullptr;
+        }
+
+        void destroyAsset(const FFilamentAsset* asset) {
+            delete asset;
+        }
+
+        size_t getMaterialsCount() const noexcept {
+            return mMaterials.getMaterialsCount();
+        }
+
+        NameComponentManager* getNames() const noexcept {
+            return mNameManager;
+        }
+
+        NodeManager& getNodeManager() noexcept {
+            return mNodeManager;
+        }
+
+        const Material* const* getMaterials() const noexcept {
+            return mMaterials.getMaterials();
+        }
+
+    private:
+        void importSkins(FFilamentInstance* instance, const cgltf_data* srcAsset);
+
+        // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
+        FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
+        void recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
+        void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
+        bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
+            FFilamentAsset* fAsset);
+
+        // Methods used during subsequent traverals (creation of entities, renderables, etc)
+        void createInstances(size_t numInstances, FFilamentAsset* fAsset);
+        void recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
+            FFilamentAsset* fAsset, FFilamentInstance* instance);
+        void createRenderable(const cgltf_node* node, Entity entity, const char* name,
+            FFilamentAsset* fAsset);
+        void createLight(const cgltf_light* light, Entity entity, FFilamentAsset* fAsset);
+        void createCamera(const cgltf_camera* camera, Entity entity, FFilamentAsset* fAsset);
+        void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
+            const cgltf_texture* srcTexture, bool srgb);
+        void createMaterialVariants(const cgltf_mesh* mesh, Entity entity, FFilamentAsset* fAsset,
+            FFilamentInstance* instance);
+
+        // Utility methods that work with MaterialProvider.
+        Material* getMaterial(const cgltf_data* srcAsset, const cgltf_material* inputMat, UvMap* uvmap,
+            bool vertexColor);
+        MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
+            bool vertexColor, FFilamentAsset* fAsset);
+        MaterialKey getMaterialKey(const cgltf_data* srcAsset,
+            const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor,
+            cgltf_texture_view* baseColorTexture,
+            cgltf_texture_view* metallicRoughnessTexture) const;
+
+    public:
+        EntityManager& mEntityManager;
+        RenderableManager& mRenderableManager;
+        NameComponentManager* const mNameManager;
+        TransformManager& mTransformManager;
+        MaterialProvider& mMaterials;
+        Engine& mEngine;
+        FNodeManager mNodeManager;
+        FTrsTransformManager mTrsTransformManager;
+
+        // Transient state used only for the asset currently being loaded:
+        const char* mDefaultNodeName;
+        bool mError = false;
+        bool mDiagnosticsEnabled = false;
+        MaterialInstanceCache mMaterialInstanceCache;
+
+        // Weak reference to the largest dummy buffer so far in the current loading phase.
+        BufferObject* mDummyBufferObject = nullptr;
+
+        std::unordered_map<const cgltf_mesh*, GeometryVID> mGeometryMap;
+        std::unordered_map<const Material*, MaterialVID> mMaterialMap;
+        std::unordered_map<const MaterialInstance*, MInstanceVID> mMIMap;
+        std::unordered_map<VID, std::string> mSceneCompMap;
+        std::unordered_map<VID, std::string> mSkeltonRootMap;
+
+    public:
+        std::unique_ptr<AssetLoaderExtended> mLoaderExtended;
+    };
+}
 namespace vzm
 {
     vzm::Timer vTimer;
     std::atomic_bool profileFrameFinished = { true };
 
+    void getDescendants(const utils::Entity ett, std::vector<utils::Entity>& decendants)
+    {
+        auto& tcm = gEngine->getTransformManager();
+        auto ins = tcm.getInstance(ett);
+        for (auto it = tcm.getChildrenBegin(ins); it != tcm.getChildrenEnd(ins); it++)
+        {
+            utils::Entity ett_child = tcm.getEntity(*it);
+            decendants.push_back(ett_child);
+            getDescendants(ett_child, decendants);
+        }
+    };
+
+    struct VzAssetRes
+    {
+        gltfio::FilamentAsset* asset = nullptr;
+        std::vector<VID> rootVIDs;
+        std::set<VID> assetOwnershipComponents;
+        std::vector<SkeletonVID> skeletons;
+
+        VzAsset::Animator animator = VzAsset::Animator(0);
+    };
+    struct VzSkeletonRes
+    {
+        std::unordered_map<BoneVID, std::string> bones;
+    };
     struct GltfIO
     {
-        std::unordered_map<AssetVID, gltfio::FilamentAsset*> assets;
-        std::unordered_map<AssetVID, std::vector<VID>> assetComponents;
-        std::unordered_map<VID, AssetVID> vzCompAssociatedAssets;   // used for ownership of filament/vz components
+        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assetResMaps;
+        std::unordered_map<SkeletonVID, std::unique_ptr<VzSkeletonRes>> skeletonResMaps;
 
-        gltfio::AssetLoader* assetLoader = nullptr;
+        //gltfio::AssetLoader* assetLoader = nullptr;
+        gltfio::VzAssetLoader* assetLoader = nullptr;
 
         gltfio::ResourceLoader* resourceLoader = nullptr;
         gltfio::TextureProvider* stbDecoder = nullptr;
         gltfio::TextureProvider* ktxDecoder = nullptr;
 
+        AssetVID GetAssetOwner(VID vid)
+        {
+            for (auto& it : assetResMaps)
+            {
+                VzAssetRes& asset_res = *it.second.get();
+                if (asset_res.assetOwnershipComponents.contains(vid))
+                {
+                    return it.first;
+                }
+            }
+            return INVALID_VID;
+        }
+
         bool DestroyAsset(AssetVID vidAsset)
         {
-            auto it = assets.find(vidAsset);
-            if (it == assets.end())
+            auto it = assetResMaps.find(vidAsset);
+            if (it == assetResMaps.end())
             {
                 return false;
             }
-            assetLoader->destroyAsset(it->second);
-            assets.erase(it);
+            VzAssetRes& asset_res = *it->second.get();
+            assetLoader->destroyAsset((gltfio::FFilamentAsset*)asset_res.asset);
+            assetResMaps.erase(it);
             return true;
         }
 
@@ -332,12 +586,39 @@ namespace vzm
                 resourceLoader->asyncCancelLoad();
                 resourceLoader = nullptr;
             }
-            if (assets.size() > 0) {
-                for (auto& it : assets)
+            if (assetResMaps.size() > 0) {
+                for (auto& it : assetResMaps)
                 {
-                    assetLoader->destroyAsset(it.second);
+                    VzAssetRes& asset_res = *it.second.get();;
+                    // For membership of each gltf component belongs to VZM
+                    filament::gltfio::FFilamentAsset* fasset = downcast(asset_res.asset);
+                    {
+                        // Destroy gltfio node components.
+                        for (auto& entity : fasset->mEntities) {
+                            fasset->mNodeManager->destroy(entity);
+                        }
+                        // Destroy gltfio trs transform components.
+                        for (auto& entity : fasset->mEntities) {
+                            fasset->mTrsTransformManager->destroy(entity);
+                        }
+                    }
+                    fasset->mEntities.clear(); // including... animation skeleton bones
+                    fasset->detachFilamentComponents();
+                    fasset->mVertexBuffers.clear();
+                    fasset->mIndexBuffers.clear();
+                    //fasset->mBufferObjects.clear();
+                    //fasset->mTextures.clear(); 
+                    fasset->mMorphTargetBuffers.clear();
+
+                    for (FFilamentInstance* instance : fasset->mInstances) {
+                        instance->mMaterialInstances.clear(); // do not 
+                        delete instance;
+                    }
+                    fasset->mInstances.clear();
+
+                    assetLoader->destroyAsset(fasset);
                 }
-                assets.clear();
+                assetResMaps.clear();
             }
 
             delete resourceLoader;
@@ -347,7 +628,14 @@ namespace vzm
             delete ktxDecoder;
             ktxDecoder = nullptr;
 
-            AssetLoader::destroy(&assetLoader);
+
+            //FAssetLoader* temp(downcast(*loader));
+            //VzAssetLoader::destroy(&temp);
+            //*loader = temp;
+            
+            //AssetLoader::destroy(&assetLoader);
+            gltfio::VzAssetLoader::destroy(&assetLoader);
+            
             assetLoader = nullptr;
         }
 
@@ -366,7 +654,7 @@ namespace vzm
             vzGltfIO.resourceLoader->addTextureProvider("image/ktx2", vzGltfIO.ktxDecoder);
 
             auto& ncm = VzNameCompManager::Get();
-            vzGltfIO.assetLoader = AssetLoader::create({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
+            vzGltfIO.assetLoader = new gltfio::VzAssetLoader({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
         }
     } vzGltfIO;
 
@@ -573,7 +861,7 @@ namespace vzm
     private:
         filament::Camera* camera_ = nullptr;
         Cube* cameraCube_ = nullptr;
-        VzCamera::Controller camController_;
+        VzCamera::Controller camController_ = VzCamera::Controller(0);
         std::unique_ptr<CameraManipulator> cameraManipulator_;
     public:
         VzCameraRes() = default;
@@ -624,7 +912,6 @@ namespace vzm
                 .groundPlane(camController_.groundPlane[0], camController_.groundPlane[1], camController_.groundPlane[2], camController_.groundPlane[3])
                 .panning(camController_.panning)
                 .build((camutils::Mode)camController_.mode));
-            camController_.vidCam = camera_->getEntity().getId();
         }
         inline VzCamera::Controller* GetCameraController()
         {
@@ -649,23 +936,30 @@ namespace vzm
     {
     private:
         GeometryVID vidGeo_ = INVALID_VID;
-        std::vector<MaterialInstanceVID> vidMIs_;
+        std::vector<MInstanceVID> vidMIs_;
+        std::vector<std::vector<MInstanceVID>> vidMIVariants_;
     public:
         inline void SetGeometry(const GeometryVID vid) { vidGeo_ = vid; }
-        inline void SetMIs(std::vector<MaterialInstanceVID> vidMIs)
+        inline void SetMIs(const std::vector<MInstanceVID>& vidMIs)
         {
             vidMIs_ = vidMIs;
         }
-        inline void SetMI(const MaterialInstanceVID vid, const int slot)
+        inline bool SetMI(const MInstanceVID vid, const int slot)
         {
             if ((size_t)slot >= vidMIs_.size())
             {
                 backlog::post("a slot cannot exceed the number of elements in the MI array", backlog::LogLevel::Error);
+                return false;
             }
             vidMIs_[slot] = vid;
+            return true;
+        }
+        inline void SetMIVariants(const std::vector<std::vector<MInstanceVID>>& vidMIVariants)
+        {
+            vidMIVariants_ = vidMIVariants;
         }
         inline GeometryVID GetGeometryVid() { return vidGeo_; }
-        inline MaterialInstanceVID GetMIVid(const int slot)
+        inline MInstanceVID GetMIVid(const int slot)
         {
             if ((size_t)slot >= vidMIs_.size())
             {
@@ -673,10 +967,11 @@ namespace vzm
             }
             return vidMIs_[slot];
         }
-        inline std::vector<MaterialInstanceVID> GetAllMIVids()
+        inline std::vector<MInstanceVID>& GetMIVids()
         {
             return vidMIs_;
         }
+        inline std::vector<std::vector<MInstanceVID>>& GetMIVariants() { return vidMIVariants_; }
     };
     struct VzLightRes
     {
@@ -693,6 +988,7 @@ namespace vzm
         static std::set<MorphTargetBuffer*> currentMTBs_;
 
         std::vector<filament::gltfio::Primitive> primitives_;
+        std::vector<RenderableManager::PrimitiveType> primitiveTypes_;
     public:
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
@@ -708,6 +1004,12 @@ namespace vzm
                 currentMTBs_.insert(prim.morphTargetBuffer);
             }
         }
+        void SetTypes(const std::vector<RenderableManager::PrimitiveType>& primitiveTypes)
+        {
+            primitiveTypes_ = primitiveTypes;
+        }
+        std::vector<filament::gltfio::Primitive>* Get() { return &primitives_; }
+        std::vector<RenderableManager::PrimitiveType>* GetTypes() { return &primitiveTypes_; }
 
         ~VzGeometryRes()
         {
@@ -772,22 +1074,22 @@ namespace vzm
     {
     private:
         std::unordered_map<SceneVID, filament::Scene*> scenes_;
-        std::unordered_map<SceneVID, VzSceneRes> sceneResMaps_;
+        std::unordered_map<SceneVID, std::unique_ptr<VzSceneRes>> sceneResMaps_;
         // note a VzRenderPath involves a filament::view that includes
         // 1. filament::camera and 2. filament::scene
         std::unordered_map<CamVID, SceneVID> camSceneVids_;
-        std::unordered_map<CamVID, VzCameraRes> camResMaps_;
+        std::unordered_map<CamVID, std::unique_ptr<VzCameraRes>> camResMaps_;
         std::unordered_map<ActorVID, SceneVID> actorSceneVids_;
-        std::unordered_map<ActorVID, VzActorRes> actorResMaps_; // consider when removing resources...
+        std::unordered_map<ActorVID, std::unique_ptr<VzActorRes>> actorResMaps_; // consider when removing resources...
         std::unordered_map<LightVID, SceneVID> lightSceneVids_;
-        std::unordered_map<LightVID, VzLightRes> lightResMaps_;
+        std::unordered_map<LightVID, std::unique_ptr<VzLightRes>> lightResMaps_;
 
-        std::unordered_map<RendererVID, VzRenderPath> renderPaths_;
+        std::unordered_map<RendererVID, std::unique_ptr<VzRenderPath>> renderPaths_;
 
         // Resources (ownership check!)
-        std::unordered_map<GeometryVID, VzGeometryRes> geometries_;
-        std::unordered_map<MaterialVID, VzMaterialRes> materials_;
-        std::unordered_map<MaterialInstanceVID, VzMIRes> materialInstances_;
+        std::unordered_map<GeometryVID, std::unique_ptr<VzGeometryRes>> geometries_;
+        std::unordered_map<MaterialVID, std::unique_ptr<VzMaterialRes>> materials_;
+        std::unordered_map<MInstanceVID, std::unique_ptr<VzMIRes>> materialInstances_;
 
         std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzComponents_;
 
@@ -827,10 +1129,24 @@ namespace vzm
                     auto it = camSceneVids_.find(vid);
                     if (it != camSceneVids_.end()) {
                         backlog::post("cam VID : " + std::to_string(ett.getId()), backlog::LogLevel::Default);
+                        it->second = 0;
+                        ++retired_ett_count;
                     }
                     else
                     {
-                        backlog::post("entity VID : " + std::to_string(ett.getId()), backlog::LogLevel::Warning);
+                        auto& ncm = VzNameCompManager::Get();
+
+                        auto it = actorSceneVids_.find(vid);
+                        if (it == actorSceneVids_.end())
+                        {
+                            backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") ==> not a scene component.. (maybe a bone)", backlog::LogLevel::Warning);
+                        }
+                        else
+                        {
+                            backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") is a hierarchy actor (kind of node)", backlog::LogLevel::Default);
+                            it->second = 0;
+                            ++retired_ett_count;
+                        }
                     }
                 }
                 });
@@ -870,7 +1186,7 @@ namespace vzm
             utils::Entity ett = em.create();
             VID vid = ett.getId();
             scenes_[vid] = gEngine->createScene();
-            sceneResMaps_[vid];
+            sceneResMaps_[vid] = std::make_unique<VzSceneRes>();
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzScene>());
             VzScene* v_scene = (VzScene*)it.first->second.get();
@@ -890,7 +1206,8 @@ namespace vzm
             auto& em = utils::EntityManager::get();
             utils::Entity ett = em.create();
             VID vid = ett.getId();
-            VzRenderPath* renderPath = &renderPaths_[vid];
+            renderPaths_[vid] = std::make_unique<VzRenderPath>();
+            VzRenderPath* renderPath = renderPaths_[vid].get();
 
             auto it = vzComponents_.emplace(vid, std::make_unique<VzRenderer>());
             VzRenderer* v_renderer = (VzRenderer*)it.first->second.get();
@@ -901,6 +1218,46 @@ namespace vzm
 
             VzNameCompManager& ncm = VzNameCompManager::Get();
             ncm.CreateNameComp(ett, name);
+
+            return vid;
+        }
+        inline AssetVID CreateAsset(const std::string& name)
+        {
+            auto& em = gEngine->getEntityManager();
+            auto& ncm = VzNameCompManager::Get();
+            utils::Entity ett = em.create();
+            AssetVID vid = ett.getId();
+            vzGltfIO.assetResMaps[vid] = std::make_unique<VzAssetRes>();
+            ncm.CreateNameComp(ett, name);
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
+            VzAsset* v_asset = (VzAsset*)it.first->second.get();
+            v_asset->componentVID = vid;
+            v_asset->originFrom = "CreateAsset";
+            v_asset->type = "VzAsset";
+            v_asset->timeStamp = std::chrono::high_resolution_clock::now();
+
+            return vid;
+        }
+        inline SkeletonVID CreateSkeleton(const std::string& name, const SkeletonVID vidExist = 0)
+        {
+            auto& em = gEngine->getEntityManager();
+            auto& ncm = VzNameCompManager::Get();
+            utils::Entity ett = utils::Entity::import(vidExist);
+            if (ett.isNull()) {
+                ett = em.create();
+            }
+                
+            AssetVID vid = ett.getId();
+            vzGltfIO.skeletonResMaps[vid] = std::make_unique<VzSkeletonRes>();
+            ncm.CreateNameComp(ett, name);
+
+            auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
+            VzAsset* v_asset = (VzAsset*)it.first->second.get();
+            v_asset->componentVID = vid;
+            v_asset->originFrom = "CreateSkeleton";
+            v_asset->type = "VzSkeleton";
+            v_asset->timeStamp = std::chrono::high_resolution_clock::now();
 
             return vid;
         }
@@ -998,7 +1355,7 @@ namespace vzm
             return &scenes_;
         }
 
-#define GET_RES_PTR(RES_MAP) auto it = RES_MAP.find(vid); if (it == RES_MAP.end()) return nullptr; return &it->second;
+#define GET_RES_PTR(RES_MAP) auto it = RES_MAP.find(vid); if (it == RES_MAP.end()) return nullptr; return it->second.get();
         inline VzSceneRes* GetSceneRes(const SceneVID vid)
         {
             GET_RES_PTR(sceneResMaps_);
@@ -1067,6 +1424,8 @@ namespace vzm
         inline bool AppendSceneEntityToParent(const VID vidSrc, const VID vidDst)
         {
             assert(vidSrc != vidDst);
+            auto& tcm = gEngine->getTransformManager();
+
             auto getSceneAndVid = [this](Scene** scene, const VID vid)
                 {
                     SceneVID vid_scene = vid;
@@ -1102,7 +1461,6 @@ namespace vzm
             utils::Entity ett_src = utils::Entity::import(vidSrc);
             utils::Entity ett_dst = utils::Entity::import(vidDst);
             //auto& em = gEngine->getEntityManager();
-            auto& tcm = gEngine->getTransformManager();
 
             // case 1. both entities are actor
             // case 2. src is scene and dst is actor
@@ -1120,11 +1478,12 @@ namespace vzm
                 tcm.setParent(ins_src, ins_dst);
 
                 entities_moving.push_back(ett_src); 
-                for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
-                {
-                    utils::Entity ett = tcm.getEntity(*it);
-                    entities_moving.push_back(ett);
-                }
+                getDescendants(ett_src, entities_moving);
+                //for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
+                //{
+                //    utils::Entity ett = tcm.getEntity(*it);
+                //    entities_moving.push_back(ett);
+                //}
             }
             else if (vidSrc == vid_scene_src && vidDst != vid_scene_dst)
             {
@@ -1154,11 +1513,12 @@ namespace vzm
                 assert(ins_src.asValue() != 0 && "vidSrc is invalid");
 
                 entities_moving.push_back(ett_src);
-                for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
-                {
-                    utils::Entity ett = tcm.getEntity(*it);
-                    entities_moving.push_back(ett);
-                }
+                getDescendants(ett_src, entities_moving);
+                //for (auto it = tcm.getChildrenBegin(ins_src); it != tcm.getChildrenEnd(ins_src); it++)
+                //{
+                //    utils::Entity ett = tcm.getEntity(*it);
+                //    entities_moving.push_back(ett);
+                //}
             }
             else 
             {
@@ -1244,7 +1604,7 @@ namespace vzm
             {
                 // RenderableManager::Builder... with entity registers the entity in the renderableEntities
                 actorSceneVids_[vid] = 0; // first creation
-                actorResMaps_[vid];
+                actorResMaps_[vid] = std::make_unique<VzActorRes>();
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -1264,7 +1624,7 @@ namespace vzm
                         .build(*gEngine, ett);
                 }
                 lightSceneVids_[vid] = 0; // first creation
-                lightResMaps_[vid];
+                lightResMaps_[vid] = std::make_unique<VzLightRes>();
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzLight>());
                 v_comp = (VzSceneComp*)it.first->second.get();
@@ -1284,7 +1644,8 @@ namespace vzm
                     camera = gEngine->getCameraComponent(ett);
                 }
                 camSceneVids_[vid] = 0;
-                VzCameraRes* cam_res = &camResMaps_[vid];
+                camResMaps_[vid] = std::make_unique<VzCameraRes>();
+                VzCameraRes* cam_res = camResMaps_[vid].get();
                 cam_res->SetCamera(camera);
 
                 auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
@@ -1322,14 +1683,14 @@ namespace vzm
             auto& ncm = VzNameCompManager::Get();
 
             MaterialInstance* mi = nullptr;
-            MaterialInstanceVID vid_mi = INVALID_VID;
-            for (auto it_mi : materialInstances_)
+            MInstanceVID vid_mi = INVALID_VID;
+            for (auto& it_mi : materialInstances_)
             {
                 utils::Entity ett = utils::Entity::import(it_mi.first);
 
                 if (ncm.GetName(ett) == mi_name)
                 {
-                    mi = it_mi.second.mi;
+                    mi = it_mi.second->mi;
                     vid_mi = it_mi.first;
                     break;
                 }
@@ -1339,7 +1700,7 @@ namespace vzm
                 MaterialVID vid_m = GetFirstVidByName(material_name);
                 VzMaterial* v_m = GetVzComponent<VzMaterial>(vid_m);
                 assert(v_m != nullptr);
-                Material* m = materials_[v_m->componentVID].material;
+                Material* m = materials_[v_m->componentVID]->material;
                 mi = m->createInstance(mi_name.c_str());
                 mi->setParameter("baseColor", RgbType::LINEAR, float3{ 0.8, 0.1, 0.1 });
                 mi->setParameter("metallic", 1.0f);
@@ -1348,7 +1709,7 @@ namespace vzm
                 VzMI* v_mi = CreateMaterialInstance(mi_name, mi);
                 auto it_mi = materialInstances_.find(v_mi->componentVID);
                 assert(it_mi != materialInstances_.end());
-                assert(mi == it_mi->second.mi);
+                assert(mi == it_mi->second->mi);
                 vid_mi = v_mi->componentVID;
             }
             assert(vid_mi != INVALID_VID);
@@ -1357,6 +1718,7 @@ namespace vzm
             ncm.CreateNameComp(mesh.renderable, modelName);
             VID vid = mesh.renderable.getId();
             actorSceneVids_[vid] = 0;
+            actorResMaps_[vid] = std::make_unique<VzActorRes>();
 
             auto& rcm = gEngine->getRenderableManager();
             auto ins = rcm.getInstance(mesh.renderable);
@@ -1367,7 +1729,7 @@ namespace vzm
                 .indices = mesh.indexBuffer,
                 .aabb = Aabb(box.getMin(), box.getMax())
                 }});
-            VzActorRes& actor_res = actorResMaps_[vid];
+            VzActorRes& actor_res = *actorResMaps_[vid].get();
             actor_res.SetGeometry(geo->componentVID);
             actor_res.SetMIs({ vid_mi });
 
@@ -1393,7 +1755,8 @@ namespace vzm
 
             VID vid = ett.getId();
             
-            VzGeometryRes& geo_res = geometries_[vid];
+            geometries_[vid] = std::make_unique<VzGeometryRes>();
+            VzGeometryRes& geo_res = *geometries_[vid].get();
             geo_res.Set(primitives);
             geo_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
             geo_res.isSystem = isSystem;
@@ -1423,9 +1786,9 @@ namespace vzm
 
             if (material != nullptr)
             {
-                for (auto it : materials_)
+                for (auto& it : materials_)
                 {
-                    if (it.second.material == material)
+                    if (it.second->material == material)
                     {
                         backlog::post("The material has already been registered!", backlog::LogLevel::Warning);
                     }
@@ -1436,7 +1799,8 @@ namespace vzm
             ncm.CreateNameComp(ett, name);
 
             VID vid = ett.getId();
-            VzMaterialRes& m_res = materials_[vid];
+            materials_[vid] = std::make_unique<VzMaterialRes>();
+            VzMaterialRes& m_res = *materials_[vid].get();
             m_res.material = (Material*)material;
             m_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
             m_res.isSystem = isSystem;
@@ -1461,9 +1825,9 @@ namespace vzm
 
             if (mi != nullptr)
             {
-                for (auto it : materialInstances_)
+                for (auto& it : materialInstances_)
                 {
-                    if (it.second.mi == mi)
+                    if (it.second->mi == mi)
                     {
                         backlog::post("The material instance has already been registered!", backlog::LogLevel::Warning);
                     }
@@ -1474,7 +1838,8 @@ namespace vzm
             ncm.CreateNameComp(ett, name);
 
             VID vid = ett.getId();
-            VzMIRes& mi_res = materialInstances_[vid];
+            materialInstances_[vid] = std::make_unique<VzMIRes>();
+            VzMIRes& mi_res = *materialInstances_[vid].get();
             mi_res.mi = (MaterialInstance*)mi;
             mi_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
             mi_res.isSystem = isSystem;
@@ -1490,6 +1855,65 @@ namespace vzm
             return v_m;
         }
 
+        inline void BuildRenderable(const ActorVID vid)
+        {
+            VzActorRes* actor_res = GetActorRes(vid);
+            if (actor_res == nullptr)
+            {
+                backlog::post("invalid ActorVID", backlog::LogLevel::Error);
+                return;
+            }
+            VzGeometryRes* geo_res = GetGeometryRes(actor_res->GetGeometryVid());
+            if (geo_res == nullptr)
+            {
+                backlog::post("invalid GetGeometryVid", backlog::LogLevel::Error);
+                return;
+            }
+
+            auto& rcm = gEngine->getRenderableManager();
+            utils::Entity ett_actor = utils::Entity::import(vid);
+            auto ins = rcm.getInstance(ett_actor);
+            assert(ins.isValid());
+
+            std::vector<Primitive>& primitives = *geo_res->Get();
+            std::vector<RenderableManager::PrimitiveType>& primitive_types = *geo_res->GetTypes();
+            std::vector<MaterialInstance*> mis;
+            for (auto& it_mi : actor_res->GetMIVids())
+            {
+                mis.push_back(GetMIRes(it_mi)->mi);
+            }
+
+            RenderableManager::Builder builder(primitives.size());
+
+            for (size_t index = 0, n = primitives.size(); index < n; ++index)
+            {
+                Primitive* primitive = &primitives[index];
+                MaterialInstance* mi = mis.size() > index ? mis[index] : nullptr;
+                RenderableManager::PrimitiveType prim_type = primitive_types.size() > index ? 
+                    primitive_types[index] : RenderableManager::PrimitiveType::TRIANGLES;
+                builder.material(index, mi);
+                builder.geometry(index, prim_type, primitive->vertices, primitive->indices);
+                if (primitive->morphTargetBuffer)
+                {
+                    builder.morphing(primitive->morphTargetBuffer);
+                }
+            }
+
+            std::string name = VzNameCompManager::Get().GetName(ett_actor);
+            Box box = Box().set(geo_res->aabb.min, geo_res->aabb.max);
+            if (box.isEmpty()) {
+                backlog::post("Missing bounding box in " + name, backlog::LogLevel::Warning);
+                box = Box().set(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max());
+            }
+
+            builder
+                .boundingBox(box)
+                .culling(true)
+                .castShadows(true)
+                .receiveShadows(true)
+                .build(*gEngine, ett_actor);
+        }
+
         inline VzGeometryRes* GetGeometryRes(const GeometryVID vidGeo)
         {
             auto it = geometries_.find(vidGeo);
@@ -1497,7 +1921,7 @@ namespace vzm
             {
                 return nullptr;
             }
-            return &it->second;
+            return it->second.get();
         }
         inline VzMaterialRes* GetMaterialRes(const MaterialVID vidMaterial)
         {
@@ -1506,13 +1930,13 @@ namespace vzm
             {
                 return nullptr;
             }
-            return &it->second;
+            return it->second.get();
         }
         inline MaterialVID FindMaterialVID(const filament::Material* mat)
         {
             for (auto& it : materials_)
             {
-                if (it.second.material == mat)
+                if (it.second->material == mat)
                 {
                     return it.first;
                 }
@@ -1520,42 +1944,25 @@ namespace vzm
             return INVALID_VID;
         }
 
-        inline VzMIRes* GetMIRes(const MaterialInstanceVID vidMI)
+        inline VzMIRes* GetMIRes(const MInstanceVID vidMI)
         {
             auto it = materialInstances_.find(vidMI);
             if (it == materialInstances_.end())
             {
                 return nullptr;
             }
-            return &it->second;
+            return it->second.get();
         }
-        inline MaterialInstanceVID FindMaterialInstanceVID(const filament::MaterialInstance* mi)
+        inline MInstanceVID FindMaterialInstanceVID(const filament::MaterialInstance* mi)
         {
             for (auto& it : materialInstances_)
             {
-                if (it.second.mi == mi)
+                if (it.second->mi == mi)
                 {
                     return it.first;
                 }
             }
             return INVALID_VID;
-        }
-
-        inline void SetActorResources(const ActorVID vidActor, const GeometryVID vidGeo, const MaterialInstanceVID vidMI)
-        {
-            auto it = actorResMaps_.find(vidActor);
-            if (it == actorResMaps_.end())
-            {
-                backlog::post("invalid actor VID", backlog::LogLevel::Error);
-                return;
-            }
-
-            // to do... complex scenario...
-            assert(0 && "TO DO");
-
-            auto it_geo = geometries_.find(vidGeo);
-            auto it_mi = materialInstances_.find(vidMI);
-            // to do.... test with gltf asset...
         }
 
         template <typename VZCOMP>
@@ -1599,7 +2006,7 @@ namespace vzm
                 auto it_m = materials_.find(vid);
                 if (it_m != materials_.end())
                 {
-                    VzMaterialRes& m_res = it_m->second;
+                    VzMaterialRes& m_res = *it_m->second.get();
                     if (m_res.isSystem)
                     {
                         backlog::post("Material (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
@@ -1607,29 +2014,32 @@ namespace vzm
                     }
                     else if (m_res.assetOwner)
                     {
-                        auto it_asset = vzGltfIO.vzCompAssociatedAssets.find(it_m->first);
-                        assert(it_asset != vzGltfIO.vzCompAssociatedAssets.end());
-                        backlog::post("Material (" + name + ") is asset(" + std::to_string(it_asset->second) + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                        AssetVID vid_asset = vzGltfIO.GetAssetOwner(it_m->first);
+                        utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                        std::string name_asset = ncm.GetName(ett_asset);
+                        assert(vid_asset);
+                        backlog::post("Material (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                         return false;
                     }
                     else
                     {
                         for (auto it = materialInstances_.begin(); it != materialInstances_.end();)
                         {
-                            if (it->second.mi->getMaterial() == m_res.material)
+                            if (it->second->mi->getMaterial() == m_res.material)
                             {
                                 utils::Entity ett_mi = utils::Entity::import(it->first);
                                 std::string name_mi = ncm.GetName(ett_mi);
-                                if (it->second.isSystem)
+                                if (it->second->isSystem)
                                 {
                                     backlog::post("(" + name + ")-associated-MI (" + name_mi + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
                                 }
-                                else if (it->second.assetOwner != nullptr)
+                                else if (it->second->assetOwner != nullptr)
                                 {
-                                    auto it_asset = vzGltfIO.vzCompAssociatedAssets.find(it->first);
-                                    assert(it_asset != vzGltfIO.vzCompAssociatedAssets.end());
-                                    
-                                    backlog::post("(" + name + ")-associated-MI (" + name_mi + ") is asset(" + std::to_string(it_asset->second) + ")- owned component, thereby preserved.", backlog::LogLevel::Warning);
+                                    AssetVID vid_asset = vzGltfIO.GetAssetOwner(it->first);
+                                    utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                                    std::string name_asset = ncm.GetName(ett_asset);
+                                    assert(vid_asset);                                    
+                                    backlog::post("(" + name + ")-associated-MI (" + name_mi + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                                 }
                                 else
                                 {
@@ -1657,7 +2067,7 @@ namespace vzm
                 auto it_mi = materialInstances_.find(vid);
                 if (it_mi != materialInstances_.end())
                 {
-                    VzMIRes& mi_res = it_mi->second;
+                    VzMIRes& mi_res = *it_mi->second.get();
                     if (mi_res.isSystem)
                     {
                         backlog::post("MI (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
@@ -1665,9 +2075,11 @@ namespace vzm
                     }
                     else if (mi_res.assetOwner)
                     {
-                        auto it_asset = vzGltfIO.vzCompAssociatedAssets.find(it_mi->first);
-                        assert(it_asset != vzGltfIO.vzCompAssociatedAssets.end());
-                        backlog::post("MI (" + name + ") is asset(" + std::to_string(it_asset->second) + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                        AssetVID vid_asset = vzGltfIO.GetAssetOwner(it_mi->first);
+                        utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                        std::string name_asset = ncm.GetName(ett_asset);
+                        assert(vid_asset);
+                        backlog::post("MI (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                         return false;
                     }
                     else
@@ -1680,7 +2092,7 @@ namespace vzm
                 auto it_geo = geometries_.find(vid);
                 if (it_geo != geometries_.end())
                 {
-                    VzGeometryRes& geo_res = it_geo->second;
+                    VzGeometryRes& geo_res = *it_geo->second.get();
                     if (geo_res.isSystem)
                     {
                         backlog::post("Geometry (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
@@ -1688,9 +2100,11 @@ namespace vzm
                     }
                     else if (geo_res.assetOwner)
                     {
-                        auto it_asset = vzGltfIO.vzCompAssociatedAssets.find(it_geo->first);
-                        assert(it_asset != vzGltfIO.vzCompAssociatedAssets.end());
-                        backlog::post("Geometry (" + name + ") is asset(" + std::to_string(it_asset->second) + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                        AssetVID vid_asset = vzGltfIO.GetAssetOwner(it_geo->first);
+                        utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                        std::string name_asset = ncm.GetName(ett_asset);
+                        assert(vid_asset);
+                        backlog::post("Geometry (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                         return false;
                     }
                     else
@@ -1705,13 +2119,13 @@ namespace vzm
                 {
                     for (auto& it_res : actorResMaps_)
                     {
-                        VzActorRes& actor_res = it_res.second;
+                        VzActorRes& actor_res = *it_res.second.get();
                         if (geometries_.find(actor_res.GetGeometryVid()) == geometries_.end())
                         {
                             actor_res.SetGeometry(INVALID_VID);
                         }
 
-                        std::vector<MaterialInstanceVID> mis = actor_res.GetAllMIVids();
+                        std::vector<MInstanceVID> mis = actor_res.GetMIVids();
                         for (int i = 0, n = (int)mis.size(); i < n; ++i)
                         {
                             if (materialInstances_.find(mis[i]) == materialInstances_.end())
@@ -1725,7 +2139,7 @@ namespace vzm
                 auto it_camres = camResMaps_.find(vid);
                 if (it_camres != camResMaps_.end())
                 {
-                    VzCameraRes& cam_res = it_camres->second;
+                    VzCameraRes& cam_res = *it_camres->second.get();
                     Cube* cam_cube = cam_res.GetCameraCube();
                     if (cam_cube)
                     {
@@ -1744,6 +2158,14 @@ namespace vzm
                 if (it_light != lightResMaps_.end())
                 {
                     lightResMaps_.erase(it_light); // call destructor
+                }
+
+                if (int vid_assetowner = vzGltfIO.GetAssetOwner(vid))
+                {
+                    utils::Entity ett_assetowner = utils::Entity::import(vid_assetowner);
+                    std::string name_assetowner = ncm.GetName(ett_assetowner);
+                    backlog::post("Component (" + name + ") is asset(" + name_assetowner + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
                 }
 #pragma endregion 
                 // the remaining etts (not engine-destory group)
@@ -1836,7 +2258,7 @@ namespace vzm
                 {
                     // safely rearrangement
                     auto& scenes = *gEngineApp.GetScenes();
-                    for (auto it : scenes)
+                    for (auto& it : scenes)
                     {
                         it.second->remove(ettCubeRenderable);
                     }
@@ -1993,13 +2415,24 @@ namespace vzm
         tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
-    VID VzSceneComp::GetParentVid()
+    VID VzSceneComp::GetParent()
     {
         COMP_TRANSFORM(tc, ett, ins, INVALID_VID);
         Entity ett_parent = tc.getParent(ins);
         return ett_parent.getId();
     }
-    VID VzSceneComp::GetSceneVid()
+    std::vector<VID> VzSceneComp::GetChildren()
+    {
+        std::vector<VID> children;
+        COMP_TRANSFORM(tc, ett, ins, children);
+        for (auto it = tc.getChildrenBegin(ins); it != tc.getChildrenEnd(ins); it++)
+        {
+            utils::Entity ett_child = tc.getEntity(*it);
+            children.push_back(ett_child.getId());
+        }
+        return children;
+    }
+    VID VzSceneComp::GetScene()
     {
         return gEngineApp.GetSceneVidBelongTo(componentVID);
     }
@@ -2093,12 +2526,13 @@ namespace vzm
         Controller* cc = cam_res->GetCameraController();
         if (cm == nullptr)
         {
-            cam_res->NewCameraManipulator(*cam_res->GetCameraController());
+            Controller controller(componentVID);
+            cam_res->NewCameraManipulator(controller);
             cc = cam_res->GetCameraController();
         }
         return cc;
     }
-#define GET_CM(CAMRES, CM) VzCameraRes* CAMRES = gEngineApp.GetCameraRes(vidCam); if (CAMRES == nullptr) return;  CameraManipulator* CM = CAMRES->GetCameraManipulator();
+#define GET_CM(CAMRES, CM) VzCameraRes* CAMRES = gEngineApp.GetCameraRes(GetCameraVID()); if (CAMRES == nullptr) return;  CameraManipulator* CM = CAMRES->GetCameraManipulator();
 #define GET_CM_WARN(CAMRES, CM) GET_CM(CAMRES, CM) if (CM == nullptr) { backlog::post("camera manipulator is not set!", backlog::LogLevel::Warning); return; }
     void VzCamera::Controller::UpdateControllerSettings()
     {
@@ -2162,43 +2596,45 @@ namespace vzm
 #pragma endregion 
 
 #pragma region // VzActor
-    //void VzActor::SetMaterialInstanceVid(VID vidMI)
-    //{
-    //    // to do
-    //}
-    //void VzActor::SetMaterialVid(VID vidMaterial)
-    //{
-    //    // to do
-    //}
-    //void VzActor::SetGeometryVid(VID vidGeometry)
-    //{
-    //    // to do
-    //}
     void VzActor::SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
     {
         COMP_ACTOR(rcm, ett, ins, );
         rcm.setLayerMask(ins, layerBits, maskBits);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
-    void VzActor::SetMaterialInstance(const VID vidMI, const int slot)
+    void VzActor::SetMI(const VID vidMI, const int slot)
     {
+        VzMIRes* mi_res = gEngineApp.GetMIRes(vidMI);
+        if (mi_res == nullptr)
+        {
+            backlog::post("invalid material instance!", backlog::LogLevel::Error);
+            return;
+        }
         VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
-        actor_res->SetMI(vidMI, slot);
+        if (!actor_res->SetMI(vidMI, slot))
+        {
+            return;
+        }
+        auto& rcm = gEngine->getRenderableManager();
+        utils::Entity ett_actor = utils::Entity::import(componentVID);
+        auto ins = rcm.getInstance(ett_actor);
+        rcm.setMaterialInstanceAt(ins, slot, mi_res->mi);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
-    void VzActor::SetMaterialInstances(const std::vector<VID>& mis)
+    void VzActor::SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
-        actor_res->SetMIs(mis);
+        actor_res->SetGeometry(vidGeo);
+        actor_res->SetMIs(vidMIs);
+        gEngineApp.BuildRenderable(componentVID);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
-    void VzActor::SetGeometry(const VID vidGeometry)
+    std::vector<VID> VzActor::GetMIs()
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
-        actor_res->SetGeometry(vidGeometry);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        return actor_res->GetMIVids();
     }
-    VID VzActor::GetMaterialInstance(const int slot)
+    VID VzActor::GetMI(const int slot)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
         return actor_res->GetMIVid(slot);
@@ -2206,8 +2642,13 @@ namespace vzm
     VID VzActor::GetMaterial(const int slot)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
-        MaterialInstanceVID vid_mi = actor_res->GetMIVid(slot);
-        MaterialInstance* mi = gEngineApp.GetMIRes(vid_mi)->mi;
+        MInstanceVID vid_mi = actor_res->GetMIVid(slot);
+        VzMIRes* mi_res = gEngineApp.GetMIRes(vid_mi);
+        if (mi_res == nullptr)
+        {
+            return INVALID_VID;
+        }
+        MaterialInstance* mi = mi_res->mi;
         assert(mi);
         const Material* mat = mi->getMaterial();
         assert(mat != nullptr);
@@ -2326,6 +2767,18 @@ namespace vzm
         if (vzGltfIO.resourceLoader)
             vzGltfIO.resourceLoader->asyncUpdateLoad();
 
+        for (auto& it : vzGltfIO.assetResMaps)
+        {
+            VzAssetRes* asset_res = it.second.get();
+            VzAsset* v_asset = gEngineApp.GetVzComponent<VzAsset>(it.first);
+            assert(v_asset);
+            vzm::VzAsset::Animator* animator = v_asset->GetAnimator();
+            if (animator->IsPlayScene(vidScene))
+            {
+                animator->UpdateAnimation();
+            }
+        }
+
         Renderer* renderer = render_path->GetRenderer();
 
         // setup
@@ -2359,6 +2812,1754 @@ namespace vzm
         return VZ_OK;
     }
 #pragma endregion
+
+
+#pragma region // VzAsset
+#define COMP_ASSET(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(componentVID); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get(); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
+#define COMP_ASSET_ANI(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(vidAsset_); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get(); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
+#define COMP_ASSET_ANI_INST(COMP, RESMAP, INST, FAILRET)  COMP_ASSET_ANI(COMP, RESMAP, FAILRET); FilamentInstance* INST = COMP->asset->getInstance(); if (INST == nullptr) return FAILRET; 
+#define COMP_ASSET_ANI_INST_FANI(COMP, RESMAP, INST, FANI, FAILRET)  COMP_ASSET_ANI_INST(COMP, RESMAP, INST, FAILRET); filament::gltfio::Animator* FANI = INST->getAnimator(); if (FANI == nullptr) return FAILRET; 
+    std::vector<VID> VzAsset::GetGLTFRoots()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, std::vector<VID>());
+        std::vector<VID> root_vids;
+        std::copy(asset_res->rootVIDs.begin(), asset_res->rootVIDs.end(), std::back_inserter(root_vids));
+        return root_vids;
+    }
+
+    std::vector<VID> VzAsset::GetSkeletons()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, std::vector<VID>());
+        return asset_res->skeletons;
+    }
+
+    VzAsset::Animator* VzAsset::GetAnimator()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, nullptr);
+        return &asset_res->animator;
+    }
+
+    size_t VzAsset::Animator::GetAnimationCount()
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, 0);
+        return fani->getAnimationCount();
+    }
+    std::string VzAsset::Animator::GetAnimationLabel(const int index)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, "");
+        if ((size_t)index >= fani->getAnimationCount()) return "";
+        return fani->getAnimationName((size_t)index);
+    }
+    std::vector<std::string> VzAsset::Animator::GetAnimationLabels()
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, { {""} });
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            labels.push_back(fani->getAnimationName(i));
+        }
+        return labels;
+    }
+    int VzAsset::Animator::SetAnimationByLabel(const std::string& label)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, -1);
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            if (label == fani->getAnimationName(i))
+            {
+                SetAnimation(i);
+                return i;
+            }
+        }
+        return -1;
+    }
+    float VzAsset::Animator::GetAnimationPlayTime(const size_t index)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, 0.f);
+        if ((size_t)index >= fani->getAnimationCount()) return 0.f;
+        return fani->getAnimationDuration(index);
+    }
+    float VzAsset::Animator::GetAnimationPlayTimeByLabel(const std::string& label)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, 0.f);
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            if (label == fani->getAnimationName(i))
+            {
+                return GetAnimationPlayTime(i);
+            }
+        }
+        return 0.f;
+    }
+
+    //void VzAsset::Animator::Play()
+    //{
+    //    const size_t animationCount = animator.getAnimationCount();
+    //    if (mResetAnimation) {
+    //        mPreviousStartTime = mCurrentStartTime;
+    //        mCurrentStartTime = currentTime;
+    //        mResetAnimation = false;
+    //    }
+    //    const double elapsedSeconds = currentTime - mCurrentStartTime;
+    //    if (animationCount > 0 && mCurrentAnimation >= 0) {
+    //        if (mCurrentAnimation == animationCount) {
+    //            for (size_t i = 0; i < animationCount; i++) {
+    //                animator.applyAnimation(i, elapsedSeconds);
+    //            }
+    //        }
+    //        else {
+    //            animator.applyAnimation(mCurrentAnimation, elapsedSeconds);
+    //        }
+    //        if (elapsedSeconds < mCrossFadeDuration && mPreviousAnimation >= 0 && mPreviousAnimation != animationCount) {
+    //            const double previousSeconds = currentTime - mPreviousStartTime;
+    //            const float lerpFactor = elapsedSeconds / mCrossFadeDuration;
+    //            animator.applyCrossFade(mPreviousAnimation, previousSeconds, lerpFactor);
+    //        }
+    //    }
+    //    if (mShowingRestPose) {
+    //        animator.resetBoneMatrices();
+    //    }
+    //    else {
+    //        animator.updateBoneMatrices();
+    //    }
+    //}
+
+    void VzAsset::Animator::UpdateAnimation()
+    {
+        //COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, );
+        COMP_ASSET_ANI(asset_res, vzGltfIO.assetResMaps, ); 
+        FilamentInstance* finst = asset_res->asset->getInstance(); 
+        if (finst == nullptr) return;  
+        filament::gltfio::Animator* fani = finst->getAnimator(); 
+        if (fani == nullptr) return ;
+
+        switch (playMode_)
+        {
+        case PlayMode::INIT_POSE:
+            fani->resetBoneMatrices();
+            resetAnimation_ = true;
+            return;
+        case PlayMode::PAUSE:
+            timer_ = std::chrono::high_resolution_clock::now();
+            return;
+        case PlayMode::PLAY:
+        default: break;
+        }
+
+        if (resetAnimation_) {
+            timer_ = std::chrono::high_resolution_clock::now();
+            prevElapsedTimeSec_ = elapsedTimeSec_;
+            elapsedTimeSec_ = 0;
+            resetAnimation_ = false;
+        }
+
+        auto timestamp = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timestamp - timer_);
+        double delta_time = time_span.count(); // in sec.
+
+        if (delta_time < fixedUpdateTime_)
+        {
+            return;
+        }
+        timer_ = timestamp;
+        elapsedTimeSec_ += delta_time;
+
+        const size_t animation_count = fani->getAnimationCount();
+        if (animationIndex_ == animation_count) {
+            for (size_t i = 0; i < animation_count; i++) {
+                fani->applyAnimation(i, elapsedTimeSec_);
+            }
+        }
+        else
+        {
+            fani->applyAnimation(animationIndex_, elapsedTimeSec_);
+        }
+        if (elapsedTimeSec_ < crossFadeDurationSec_ && prevAnimationIndex_ >= 0 && prevAnimationIndex_ != animation_count) {
+            const double previousSeconds = prevElapsedTimeSec_ + delta_time;
+            const float lerpFactor = elapsedTimeSec_ / crossFadeDurationSec_;
+            fani->applyCrossFade(prevAnimationIndex_, previousSeconds, lerpFactor);
+        }
+        fani->updateBoneMatrices();
+    }
+#pragma endregion
+
+#pragma region // VzSkeleton
+#define COMP_SKELETON(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(componentVID); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get();
+    std::vector<VID> VzSkeleton::GetBones()
+    {
+        COMP_ASSET(asset_res, vzGltfIO.assetResMaps, std::vector<VID>());
+        std::vector<VID> root_vids;
+        std::copy(asset_res->rootVIDs.begin(), asset_res->rootVIDs.end(), std::back_inserter(root_vids));
+        return root_vids;
+    }
+    VID VzSkeleton::GetParent()
+    {
+        COMP_TRANSFORM(tc, ett, ins, INVALID_VID);
+        Entity ett_parent = tc.getParent(ins);
+        return ett_parent.getId();
+    }
+    std::vector<VID> VzSkeleton::GetChildren()
+    {
+        std::vector<VID> children;
+        COMP_TRANSFORM(tc, ett, ins, children);
+        for (auto it = tc.getChildrenBegin(ins); it != tc.getChildrenEnd(ins); it++)
+        {
+            utils::Entity ett_child = tc.getEntity(*it);
+            children.push_back(ett_child.getId());
+        }
+        return children;
+    }
+    void VzSkeleton::SetTransformTRS(const BoneVID vidBone, const float t[3], const float r[4], const float s[3])
+    {
+        assert(0 && "to do");
+    }
+    void VzSkeleton::UpdateBoneMatrices()
+    {
+        assert(0 && "to do");
+    }
+#pragma endregion
+}
+
+namespace filament::gltfio {
+    using namespace vzm::backlog;
+    static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
+
+    static LightManager::Type getLightType(const cgltf_light_type light) {
+        switch (light) {
+        case cgltf_light_type_directional:
+            return LightManager::Type::DIRECTIONAL;
+        case cgltf_light_type_point:
+            return LightManager::Type::POINT;
+        case cgltf_light_type_spot:
+            return LightManager::Type::FOCUSED_SPOT;
+        case cgltf_light_type_max_enum:
+        case cgltf_light_type_invalid:
+        default: break;
+        }
+        assert_invariant(false && "Invalid light type");
+        return LightManager::Type::DIRECTIONAL;
+    }
+
+    static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName)
+    {
+        if (node->name) return node->name;
+        if (node->mesh && node->mesh->name) return node->mesh->name;
+        if (node->light && node->light->name) return node->light->name;
+        if (node->camera && node->camera->name) return node->camera->name;
+        return defaultNodeName;
+    }
+
+    static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
+        for (int slot = 0; slot < inPrim.attributes_count; slot++) {
+            const cgltf_attribute& inputAttribute = inPrim.attributes[slot];
+            if (inputAttribute.type == cgltf_attribute_type_color) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void AddMaterialComponentsToVzEngine(const MaterialInstance* mi,
+        std::vector<MInstanceVID>& mi_vids,
+        std::unordered_map<const MaterialInstance*, MInstanceVID>& mMIMap,
+        std::unordered_map<const Material*, MaterialVID>& mMaterialMap
+    )
+    {
+        MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
+        mi_vids.push_back(mi_vid);
+        assert(!mMIMap.contains(mi));
+        mMIMap[mi] = mi_vid;
+        const Material* m = mi->getMaterial();
+        if (!mMaterialMap.contains(m))
+        {
+            mMaterialMap[m] = gEngineApp.CreateMaterial(m->getName(), m, nullptr, true)->componentVID;
+        }
+    }
+
+    // MaterialInstanceCache
+    // ---------------------
+    // Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
+    // cached when loading a FilamentInstance. If a given glTF material is referenced by multiple
+    // glTF meshes, then their corresponding Filament primitives will share the same Filament
+    // MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
+    // Filament's 2 texcoord sets.
+    //
+    // Notes:
+    // - The Material objects (used to create instances) are cached in MaterialProvider, not here.
+    // - The cache is not responsible for destroying material instances.
+
+    
+    FFilamentAsset* VzAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
+        FilamentInstance* instances;
+        return createInstancedAsset(bytes, byteCount, &instances, 1);
+    }
+
+    FFilamentAsset* VzAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t byteCount,
+        FilamentInstance** instances, size_t numInstances) {
+        // This method can be used to load JSON or GLB. By using a default options struct, we are asking
+        // cgltf to examine the magic identifier to determine which type of file is being loaded.
+        cgltf_options options{};
+
+        if constexpr (!GLTFIO_USE_FILESYSTEM) {
+
+            // Provide a custom free callback for each buffer that was loaded from a "file", as opposed
+            // to a data:// URL.
+            //
+            // Since GLTFIO_USE_FILESYSTEM is false, ResourceLoader requires the app provide the file
+            // content from outside, so we need to do nothing here, as opposed to the default, which is
+            // to call "free".
+            //
+            // This callback also gets called for the root-level file_data, but since we use
+            // `cgltf_parse`, the file_data field is always null.
+            options.file.release = [](const cgltf_memory_options*, const cgltf_file_options*, void*) {};
+        }
+
+        // Clients can free up their source blob immediately, but cgltf has pointers into the data that
+        // need to stay valid. Therefore we create a copy of the source blob and stash it inside the
+        // asset.
+        utils::FixedCapacityVector<uint8_t> glbdata(byteCount);
+        std::copy_n(bytes, byteCount, glbdata.data());
+
+        // The ownership of an allocated `sourceAsset` will be moved to FFilamentAsset::mSourceAsset.
+        cgltf_data* sourceAsset;
+        cgltf_result result = cgltf_parse(&options, glbdata.data(), byteCount, &sourceAsset);
+        if (result != cgltf_result_success) {
+            backlog::post("Unable to parse glTF file.", LogLevel::Error);
+            return nullptr;
+        }
+
+        FFilamentAsset* fAsset = createRootAsset(sourceAsset);
+        if (mError) {
+            delete fAsset;
+            fAsset = nullptr;
+            mError = false;
+            return nullptr;
+        }
+        glbdata.swap(fAsset->mSourceAsset->glbData);
+
+        createInstances(numInstances, fAsset);
+        if (mError) {
+            delete fAsset;
+            fAsset = nullptr;
+            mError = false;
+            return nullptr;
+        }
+
+        std::copy_n(fAsset->mInstances.data(), numInstances, instances);
+        return fAsset;
+    }
+
+    FFilamentAsset* VzAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
+        SYSTRACE_CALL();
+#if !GLTFIO_DRACO_SUPPORTED
+        for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
+            if (!strcmp(srcAsset->extensions_required[i], "KHR_draco_mesh_compression")) {
+                backlog::post("KHR_draco_mesh_compression is not supported.", LogLevel::Error);
+                return nullptr;
+            }
+        }
+#endif
+
+        mDummyBufferObject = nullptr;
+        FFilamentAsset* fAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager,
+            &mNodeManager, &mTrsTransformManager, srcAsset, (bool)mLoaderExtended);
+
+        // It is not an error for a glTF file to have zero scenes.
+        fAsset->mScenes.clear();
+        if (srcAsset->scenes == nullptr) {
+            return fAsset;
+        }
+
+        // Create a single root node with an identity transform as a convenience to the client.
+        VID vid_gltf_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "gltf root")->componentVID;
+        fAsset->mRoot = Entity::import(vid_gltf_root); // mEntityManager
+
+        // Check if the asset has an extras string.
+        const cgltf_asset& asset = srcAsset->asset;
+        const cgltf_size extras_size = asset.extras.end_offset - asset.extras.start_offset;
+        if (extras_size > 1) {
+            fAsset->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
+        }
+
+        // Build a mapping of root nodes to scene membership sets.
+        assert_invariant(srcAsset->scenes_count <= NodeManager::MAX_SCENE_COUNT);
+        fAsset->mRootNodes.clear();
+        const size_t sic = std::min(srcAsset->scenes_count, NodeManager::MAX_SCENE_COUNT);
+        fAsset->mScenes.reserve(sic);
+        for (size_t si = 0; si < sic; ++si) {
+            const cgltf_scene& scene = srcAsset->scenes[si];
+            fAsset->mScenes.emplace_back(scene.name);
+            for (size_t ni = 0, nic = scene.nodes_count; ni < nic; ++ni) {
+                fAsset->mRootNodes[scene.nodes[ni]].set(si);
+            }
+        }
+
+        // Some exporters (e.g. Cinema4D) produce assets with a separate animation hierarchy and
+        // modeling hierarchy, where nodes in the former have no associated scene. We need to create
+        // transformable entities for "un-scened" nodes in case they have bones.
+        for (size_t i = 0, n = srcAsset->nodes_count; i < n; ++i) {
+            cgltf_node* node = &srcAsset->nodes[i];
+            if (node->parent == nullptr && fAsset->mRootNodes.find(node) == fAsset->mRootNodes.end()) {
+                fAsset->mRootNodes.insert({ node, {} });
+            }
+        }
+
+        for (const auto& [node, sceneMask] : fAsset->mRootNodes) {
+            recursePrimitives(node, fAsset);
+        }
+
+        // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
+        // that match the URI. These strings get freed during releaseSourceData().
+        tsl::robin_set<std::string_view> resourceUris;
+        auto addResourceUri = [&resourceUris](const char* uri) {
+            if (uri) {
+                resourceUris.insert(uri);
+            }
+            };
+        for (cgltf_size i = 0, len = srcAsset->buffers_count; i < len; ++i) {
+            addResourceUri(srcAsset->buffers[i].uri);
+        }
+        for (cgltf_size i = 0, len = srcAsset->images_count; i < len; ++i) {
+            addResourceUri(srcAsset->images[i].uri);
+        }
+        fAsset->mResourceUris.reserve(resourceUris.size());
+        for (std::string_view uri : resourceUris) {
+            fAsset->mResourceUris.push_back(uri.data());
+        }
+
+        return fAsset;
+    }
+
+
+    FilamentInstance* VzAssetLoader::createInstance(FFilamentAsset* fAsset) {
+        if (!fAsset->mSourceAsset) {
+            post("Source data has been released; asset is frozen.", LogLevel::Error);
+            return nullptr;
+        }
+        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+        if (srcAsset->scenes == nullptr) {
+            post("There is no scene in the asset.", LogLevel::Error);
+            return nullptr;
+        }
+
+        auto rootTransform = mTransformManager.getInstance(fAsset->mRoot);
+        //Entity instanceRoot = mEntityManager.create();
+        //mTransformManager.create(instanceRoot, rootTransform);
+        ActorVID vid_ins_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "instance root")->componentVID;
+        Entity instanceRoot = Entity::import(vid_ins_root);
+        mTransformManager.create(instanceRoot, rootTransform);
+
+        mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
+
+        // Create an instance object, which is a just a lightweight wrapper around a vector of
+        // entities and an animator. The creation of animator is triggered from ResourceLoader
+        // because it could require external bin data.
+        FFilamentInstance* instance = new FFilamentInstance(instanceRoot, fAsset);
+
+        // Check if the asset has variants.
+        instance->mVariants.reserve(srcAsset->variants_count);
+        for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
+            instance->mVariants.push_back({ CString(srcAsset->variants[i].name) });
+        }
+
+        // For each scene root, recursively create all entities.
+        for (const auto& pair : fAsset->mRootNodes) {
+            recurseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
+        }
+
+        importSkins(instance, srcAsset);
+
+        // Now that all entities have been created, the instance can create the animator component.
+        // Note that it may need to defer actual creation until external buffers are fully loaded.
+        instance->createAnimator();
+
+        fAsset->mInstances.push_back(instance);
+
+        // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
+        // be affected by entity transforms. However, upon instance creation we can safely copy over
+        // the asset's bounding box.
+        instance->mBoundingBox = fAsset->mBoundingBox;
+
+        mMaterialInstanceCache.flush(&instance->mMaterialInstances);
+
+        fAsset->mDependencyGraph.commitEdges();
+
+        return instance;
+    }
+    
+    void VzAssetLoader::recursePrimitives(const cgltf_node* node, FFilamentAsset* fAsset) {
+        const char* name = getNodeName(node, mDefaultNodeName);
+        name = name ? name : "node";
+
+        if (node->mesh) {
+            createPrimitives(node, name, fAsset);
+            fAsset->mRenderableCount++;
+        }
+
+        for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
+            recursePrimitives(node->children[i], fAsset);
+        }
+    }
+
+    void VzAssetLoader::createInstances(size_t numInstances, FFilamentAsset* fAsset) {
+        // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
+        // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
+        // needless duplication of resources.
+        for (size_t index = 0; index < numInstances; ++index) {
+            if (createInstance(fAsset) == nullptr) {
+                mError = true;
+                break;
+            }
+        }
+
+        // Sort the entities so that the renderable ones come first. This allows us to expose
+        // a "renderables only" pointer without storing a separate list.
+        const auto& rm = mEngine.getRenderableManager();
+        std::partition(fAsset->mEntities.begin(), fAsset->mEntities.end(), [&rm](Entity a) {
+            return rm.hasComponent(a);
+            });
+    }
+
+    bool isNodeSkeleton(const cgltf_data* data, const cgltf_node* node) {
+        // check the node in skins
+        for (size_t i = 0; i < data->skins_count; ++i) {
+            const cgltf_skin& skin = data->skins[i];
+            for (size_t j = 0; j < skin.joints_count; ++j) {
+                if (skin.joints[j] == node) {
+                    return true;
+                }
+            }
+        }
+
+        // check the node in animations
+        for (size_t i = 0; i < data->animations_count; ++i) {
+            const cgltf_animation& animation = data->animations[i];
+            for (size_t j = 0; j < animation.channels_count; ++j) {
+                const cgltf_animation_channel& channel = animation.channels[j];
+                if (channel.target_node == node) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void VzAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
+        FFilamentAsset* fAsset, FFilamentInstance* instance) {
+        NodeManager& nm = mNodeManager;
+        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+        const Entity entity = mEntityManager.create();
+        nm.create(entity);
+        const auto nodeInstance = nm.getInstance(entity);
+        nm.setSceneMembership(nodeInstance, scenes);
+
+        // Always create a transform component to reflect the original hierarchy.
+        mat4f localTransform;
+        if (node->has_matrix) {
+            memcpy(&localTransform[0][0], &node->matrix[0], 16 * sizeof(float));
+        }
+        else {
+            quatf* rotation = (quatf*)&node->rotation[0];
+            float3* scale = (float3*)&node->scale[0];
+            float3* translation = (float3*)&node->translation[0];
+            mTrsTransformManager.create(entity, *translation, *rotation, *scale);
+            localTransform = mTrsTransformManager.getTransform(
+                mTrsTransformManager.getInstance(entity));
+        }
+
+        auto parentTransform = mTransformManager.getInstance(parent);
+        mTransformManager.create(entity, parentTransform, localTransform);
+
+        // Check if this node has an extras string.
+        const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;
+        if (extras_size > 0) {
+            mNodeManager.setExtras(mNodeManager.getInstance(entity),
+                { srcAsset->json + node->extras.start_offset, extras_size });
+        }
+
+        // Update the asset's entity list and private node mapping.
+        fAsset->mEntities.push_back(entity);
+        instance->mEntities.push_back(entity);
+        instance->mNodeMap[node - srcAsset->nodes] = entity;
+
+        const char* name = getNodeName(node, mDefaultNodeName);
+
+        if (name) {
+            fAsset->mNameToEntity[name].push_back(entity);
+            if (mNameManager) {
+                mNameManager->addComponent(entity);
+                mNameManager->setName(mNameManager->getInstance(entity), name);
+            }
+        }
+
+        // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
+        name = name ? name : "node";
+
+        // If the node has a mesh, then create a renderable component.
+        if (node->mesh) {
+            gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, name, entity.getId());
+            createRenderable(node, entity, name, fAsset);
+            if (srcAsset->variants_count > 0) {
+                createMaterialVariants(node->mesh, entity, fAsset, instance);
+            }
+        }
+        if (node->light) {
+            createLight(node->light, entity, fAsset);
+        }
+        if (node->camera) {
+            createCamera(node->camera, entity, fAsset);
+        }
+        if (node->camera == nullptr && node->light == nullptr && node->mesh == nullptr)
+        {
+            if (isNodeSkeleton(srcAsset, node))
+            {
+                //backlog::post(name, LogLevel::Default);
+                if (!isNodeSkeleton(srcAsset, node->parent))
+                {
+                    mSkeltonRootMap[entity.getId()] = name;
+                }
+            }
+            else
+            {
+                gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, name, entity.getId());
+            }
+        }
+        else
+        {
+            mSceneCompMap[entity.getId()] = name;
+        }
+
+        for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
+            recurseEntities(node->children[i], scenes, entity, fAsset, instance);
+        }
+    }
+
+    void VzAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
+        FFilamentAsset* fAsset) {
+        cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
+        const cgltf_mesh* mesh = node->mesh;
+        assert_invariant(gltf != nullptr);
+        assert_invariant(mesh != nullptr);
+
+        // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
+        // that were already generated (one for each primitive), otherwise allocate a new list of
+        // pointers for the primitives.
+        FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - gltf->meshes];
+        if (prims.empty()) {
+            prims.reserve(mesh->primitives_count);
+            prims.resize(mesh->primitives_count);
+        }
+
+        Aabb aabb;
+
+        std::vector<Primitive> v_prims;
+        for (cgltf_size index = 0, n = mesh->primitives_count; index < n; ++index) {
+            Primitive& outputPrim = prims[index];
+            cgltf_primitive& inputPrim = mesh->primitives[index];
+
+            if (!outputPrim.vertices) {
+                if (mLoaderExtended) {
+                    auto& resourceInfo = std::get<FFilamentAsset::ResourceInfoExtended>(fAsset->mResourceInfo);
+                    resourceInfo.uriDataCache = mLoaderExtended->getUriDataCache();
+                    AssetLoaderExtended::Input input{
+                            .gltf = gltf,
+                            .prim = &inputPrim,
+                            .name = name,
+                            .dracoCache = &fAsset->mSourceAsset->dracoCache,
+                            .material = getMaterial(gltf, inputPrim.material, &outputPrim.uvmap,
+                                    utility::primitiveHasVertexColor(&inputPrim)),
+                    };
+
+                    mError = !mLoaderExtended->createPrimitive(&input, &outputPrim, resourceInfo.slots);
+                    if (!mError) {
+                        if (outputPrim.vertices) {
+                            fAsset->mVertexBuffers.push_back(outputPrim.vertices);
+                        }
+                        if (outputPrim.indices) {
+                            fAsset->mIndexBuffers.push_back(outputPrim.indices);
+                        }
+                    }
+                }
+                else {
+                    // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't
+                    // already.
+                    mError = !createPrimitive(inputPrim, name, &outputPrim, fAsset);
+                }
+                if (mError) {
+                    return;
+                }
+            }
+
+            // Expand the object-space bounding box.
+            aabb.min = min(outputPrim.aabb.min, aabb.min);
+            aabb.max = max(outputPrim.aabb.max, aabb.max);
+            v_prims.push_back(outputPrim);
+        }
+
+        mGeometryMap[(cgltf_mesh*)(mesh - gltf->meshes)] = gEngineApp.CreateGeometry(name, v_prims)->componentVID;
+
+        mat4f worldTransform;
+        cgltf_node_transform_world(node, &worldTransform[0][0]);
+
+        const Aabb transformed = aabb.transform(worldTransform);
+        fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
+        fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
+    }
+
+    void VzAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const char* name,
+        FFilamentAsset* fAsset) {
+        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+        const cgltf_mesh* mesh = node->mesh;
+        const cgltf_size primitiveCount = mesh->primitives_count;
+
+        // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
+        // that were already generated (one for each primitive).
+        FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
+
+        std::vector<MInstanceVID> mi_vids;
+        mi_vids.reserve(prims.size());
+
+        assert_invariant(prims.size() == primitiveCount);
+        Primitive* outputPrim = prims.data();
+        const cgltf_primitive* inputPrim = &mesh->primitives[0];
+
+        Aabb aabb;
+
+        // glTF spec says that all primitives must have the same number of morph targets.
+        const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
+        RenderableManager::Builder builder(primitiveCount);
+
+        // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
+        // The VertexBuffer and IndexBuffer objects are cached for possible re-use, but MaterialInstance
+        // is not.
+        size_t morphingVertexCount = 0;
+        for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+            RenderableManager::PrimitiveType primType;
+            if (!getPrimitiveType(inputPrim->type, &primType)) {
+                post("Unsupported primitive type in " + std::string(name), LogLevel::Warning);
+            }
+
+            if (numMorphTargets != inputPrim->targets_count) {
+                post("Sister primitives must all have the same number of morph targets.", LogLevel::Warning);
+                mError = true;
+                continue;
+            }
+
+            // Create a material instance for this primitive or fetch one from the cache.
+            UvMap uvmap{};
+            bool hasVertexColor = primitiveHasVertexColor(*inputPrim);
+            MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor,
+                fAsset);
+            assert_invariant(mi);
+            if (!mi) {
+                mError = true;
+                continue;
+            }
+
+            AddMaterialComponentsToVzEngine(mi, mi_vids, mMIMap, mMaterialMap);
+
+            fAsset->mDependencyGraph.addEdge(entity, mi);
+            builder.material(index, mi);
+
+            assert_invariant(outputPrim->vertices);
+
+            // Expand the object-space bounding box.
+            aabb.min = min(outputPrim->aabb.min, aabb.min);
+            aabb.max = max(outputPrim->aabb.max, aabb.max);
+
+            // We are not using the optional offset, minIndex, maxIndex, and count arguments when
+            // calling geometry() on the builder. It appears that the glTF spec does not have
+            // facilities for these parameters, which is not a huge loss since some of the buffer
+            // view and accessor features already have this functionality.
+            builder.geometry(index, primType, outputPrim->vertices, outputPrim->indices);
+
+            if (numMorphTargets) {
+                outputPrim->morphTargetOffset = morphingVertexCount;    // FIXME: can I do that here?
+                builder.morphing(0, index, morphingVertexCount);
+                morphingVertexCount += outputPrim->vertices->getVertexCount();
+            }
+        }
+
+        if (numMorphTargets) {
+            MorphTargetBuffer* morphTargetBuffer = MorphTargetBuffer::Builder()
+                .count(numMorphTargets)
+                .vertexCount(morphingVertexCount)
+                .build(mEngine);
+
+            fAsset->mMorphTargetBuffers.push_back(morphTargetBuffer);
+
+            builder.morphing(morphTargetBuffer);
+
+            outputPrim = prims.data();
+            inputPrim = &mesh->primitives[0];
+            for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+                outputPrim->morphTargetBuffer = morphTargetBuffer;
+
+                UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
+                for (int tindex = 0; tindex < numMorphTargets; ++tindex) {
+                    const cgltf_morph_target& inTarget = inputPrim->targets[tindex];
+                    for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
+                        const cgltf_attribute& attribute = inTarget.attributes[aindex];
+                        const cgltf_accessor* accessor = attribute.data;
+                        const cgltf_attribute_type atype = attribute.type;
+                        if (atype == cgltf_attribute_type_position) {
+                            // All position attributes must have the same number of components.
+                            assert_invariant(!previous || previous->type == accessor->type);
+                            previous = accessor;
+
+                            assert_invariant(outputPrim->morphTargetBuffer);
+
+                            if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
+                                fAsset->mResourceInfo)) {
+                                using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+                                auto& slots = std::get<FFilamentAsset::ResourceInfo>(
+                                    fAsset->mResourceInfo).mBufferSlots;
+                                BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                                assert_invariant(!slot.vertexBuffer);
+                                assert_invariant(!slot.indexBuffer);
+
+                                slot.morphTargetBuffer = outputPrim->morphTargetBuffer;
+                                slot.morphTargetOffset = outputPrim->morphTargetOffset;
+                                slot.morphTargetCount = outputPrim->vertices->getVertexCount();
+                                slot.bufferIndex = tindex;
+                            }
+                            else if (std::holds_alternative<FFilamentAsset::ResourceInfoExtended>(
+                                fAsset->mResourceInfo))
+                            {
+                                using BufferSlot = FFilamentAsset::ResourceInfoExtended::BufferSlot;
+                                auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(
+                                    fAsset->mResourceInfo).slots;
+
+                                BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                                assert_invariant(slot.slot == tindex);
+                                assert_invariant(!slot.vertices);
+                                assert_invariant(!slot.indices);
+
+                                slot.target = outputPrim->morphTargetBuffer;
+                                slot.offset = outputPrim->morphTargetOffset;
+                                slot.count = outputPrim->vertices->getVertexCount();
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        FixedCapacityVector<CString> morphTargetNames(numMorphTargets);
+        for (cgltf_size i = 0, c = mesh->target_names_count; i < c; ++i) {
+            morphTargetNames[i] = CString(mesh->target_names[i]);
+        }
+        auto& nm = mNodeManager;
+        nm.setMorphTargetNames(nm.getInstance(entity), std::move(morphTargetNames));
+
+        if (node->skin) {
+            builder.skinning(node->skin->joints_count);
+        }
+
+        // Per the spec, glTF models must have valid mix / max annotations for position attributes.
+        // If desired, clients can call "recomputeBoundingBoxes()" in FilamentInstance.
+        Box box = Box().set(aabb.min, aabb.max);
+        if (box.isEmpty()) {
+            post("Missing bounding box in " + std::string(name), LogLevel::Warning);
+            box = Box().set(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max());
+        }
+
+
+        auto it = mGeometryMap.find((cgltf_mesh*)(mesh - srcAsset->meshes));
+        assert(it != mGeometryMap.end());
+        GeometryVID vid_geo = it->second;
+        VzGeometryRes* geo_res = gEngineApp.GetGeometryRes(vid_geo);
+        assert(geo_res);
+        std::vector<Primitive>& v_primitives = *geo_res->Get();
+        outputPrim = prims.data();
+        inputPrim = &mesh->primitives[0];
+        for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+            v_primitives[index] = *outputPrim;
+        }
+        assert(mi_vids.size() == primitiveCount);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(entity.getId());
+        actor_res->SetGeometry(vid_geo);
+        actor_res->SetMIs(mi_vids);
+
+        builder
+            .boundingBox(box)
+            .culling(true)
+            .castShadows(true)
+            .receiveShadows(true)
+            .build(mEngine, entity);
+
+        // According to the spec, the mesh may or may not specify default weights, regardless of whether
+        // it actually has morph targets. If it has morphing enabled then the default weights are 0. If
+        // node weights are provided, they override the ones specified on the mesh.
+        if (numMorphTargets > 0) {
+            RenderableManager::Instance renderable = mRenderableManager.getInstance(entity);
+            const auto size = std::min(MAX_MORPH_TARGETS, numMorphTargets);
+            FixedCapacityVector<float> weights(size, 0.0f);
+            for (cgltf_size i = 0, c = std::min(size, mesh->weights_count); i < c; ++i) {
+                weights[i] = mesh->weights[i];
+            }
+            for (cgltf_size i = 0, c = std::min(size, node->weights_count); i < c; ++i) {
+                weights[i] = node->weights[i];
+            }
+            mRenderableManager.setMorphWeights(renderable, weights.data(), size);
+        }
+    }
+
+    void VzAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
+        FFilamentAsset* fAsset, FFilamentInstance* instance) {
+        UvMap uvmap{};
+
+        VzActorRes* actor_res = gEngineApp.GetActorRes(entity.getId());
+        std::vector<std::vector<MInstanceVID>>& vid_mi_variants = actor_res->GetMIVariants();
+        vid_mi_variants.clear();
+
+        for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
+            const cgltf_primitive& srcPrim = mesh->primitives[prim];
+            std::vector<MInstanceVID> mi_vids;
+
+            for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
+                const size_t variantIndex = srcPrim.mappings[i].variant;
+                const cgltf_material* material = srcPrim.mappings[i].material;
+                bool hasVertexColor = primitiveHasVertexColor(srcPrim);
+                MaterialInstance* mi =
+                    createMaterialInstance(material, &uvmap, hasVertexColor, fAsset);
+
+                AddMaterialComponentsToVzEngine(mi, mi_vids, mMIMap, mMaterialMap);
+                
+                assert_invariant(mi);
+                if (!mi) {
+                    mError = true;
+                    break;
+                }
+                fAsset->mDependencyGraph.addEdge(entity, mi);
+                instance->mVariants[variantIndex].mappings.push_back({ entity, prim, mi });
+            }
+
+            vid_mi_variants.push_back(mi_vids);
+        }
+    }
+
+    bool VzAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* name,
+        Primitive* outPrim, FFilamentAsset* fAsset) {
+
+        using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+
+        Material* material = getMaterial(fAsset->mSourceAsset->hierarchy,
+            inPrim.material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
+        AttributeBitset requiredAttributes = material->getRequiredAttributes();
+
+        // TODO: populate a mapping of Texture Index => [MaterialInstance, const char*] slots.
+        // By creating this mapping during the "recursePrimitives" phase, we will can allow
+        // zero-instance assets to exist. This will be useful for "preloading", which is a feature
+        // request from Google.
+
+        // Create a little lambda that appends to the asset's vertex buffer slots.
+        auto* const slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
+        auto addBufferSlot = [slots](FFilamentAsset::ResourceInfo::BufferSlot entry) {
+            slots->push_back(entry);
+            };
+
+        // In glTF, each primitive may or may not have an index buffer.
+        IndexBuffer* indices = nullptr;
+        const cgltf_accessor* accessor = inPrim.indices;
+        if (accessor) {
+            IndexBuffer::IndexType indexType;
+            if (!getIndexType(accessor->component_type, &indexType)) {
+                utils::slog.e << "Unrecognized index type in " << name << utils::io::endl;
+                return false;
+            }
+
+            indices = IndexBuffer::Builder()
+                .indexCount(accessor->count)
+                .bufferType(indexType)
+                .build(mEngine);
+
+            FFilamentAsset::ResourceInfo::BufferSlot slot = { accessor };
+            slot.indexBuffer = indices;
+            addBufferSlot(slot);
+        }
+        else if (inPrim.attributes_count > 0) {
+            // If a primitive does not have an index buffer, generate a trivial one now.
+            const uint32_t vertexCount = inPrim.attributes[0].data->count;
+
+            indices = IndexBuffer::Builder()
+                .indexCount(vertexCount)
+                .bufferType(IndexBuffer::IndexType::UINT)
+                .build(mEngine);
+
+            const size_t indexDataSize = vertexCount * sizeof(uint32_t);
+            uint32_t* indexData = (uint32_t*)malloc(indexDataSize);
+            for (size_t i = 0; i < vertexCount; ++i) {
+                indexData[i] = i;
+            }
+            IndexBuffer::BufferDescriptor bd(indexData, indexDataSize, FREE_CALLBACK);
+            indices->setBuffer(mEngine, std::move(bd));
+        }
+        fAsset->mIndexBuffers.push_back(indices);
+
+        VertexBuffer::Builder vbb;
+        vbb.enableBufferObjects();
+
+        bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
+        uint32_t vertexCount = 0;
+
+        const size_t firstSlot = slots->size();
+        int slot = 0;
+
+        for (cgltf_size aindex = 0; aindex < inPrim.attributes_count; aindex++) {
+            const cgltf_attribute& attribute = inPrim.attributes[aindex];
+            const int index = attribute.index;
+            const cgltf_attribute_type atype = attribute.type;
+            const cgltf_accessor* accessor = attribute.data;
+
+            // The glTF tangent data is ignored here, but honored in ResourceLoader.
+            if (atype == cgltf_attribute_type_tangent) {
+                continue;
+            }
+
+            // At a minimum, surface orientation requires normals to be present in the source data.
+            // Here we re-purpose the normals slot to point to the quats that get computed later.
+            if (atype == cgltf_attribute_type_normal) {
+                vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
+                vbb.normalized(VertexAttribute::TANGENTS);
+                hasNormals = true;
+                addBufferSlot({ &fAsset->mGenerateTangents, atype, slot++ });
+                continue;
+            }
+
+            if (atype == cgltf_attribute_type_color) {
+                hasVertexColor = true;
+            }
+
+            // Translate the cgltf attribute enum into a Filament enum.
+            VertexAttribute semantic;
+            if (!getVertexAttrType(atype, &semantic)) {
+                utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
+                return false;
+            }
+            if (atype == cgltf_attribute_type_weights && index > 0) {
+                utils::slog.e << "Too many bone weights in " << name << utils::io::endl;
+                continue;
+            }
+            if (atype == cgltf_attribute_type_joints && index > 0) {
+                utils::slog.e << "Too many joints in " << name << utils::io::endl;
+                continue;
+            }
+
+            if (atype == cgltf_attribute_type_texcoord) {
+                if (index >= UvMapSize) {
+                    utils::slog.e << "Too many texture coordinate sets in " << name << utils::io::endl;
+                    continue;
+                }
+                UvSet uvset = outPrim->uvmap[index];
+                switch (uvset) {
+                case UvSet::UV0:
+                    semantic = VertexAttribute::UV0;
+                    hasUv0 = true;
+                    break;
+                case UvSet::UV1:
+                    semantic = VertexAttribute::UV1;
+                    hasUv1 = true;
+                    break;
+                case UvSet::UNUSED:
+                    // If we have a free slot, then include this unused UV set in the VertexBuffer.
+                    // This allows clients to swap the glTF material with a custom material.
+                    if (!hasUv0 && getNumUvSets(outPrim->uvmap) == 0) {
+                        semantic = VertexAttribute::UV0;
+                        hasUv0 = true;
+                        break;
+                    }
+
+                    // If there are no free slots then drop this unused texture coordinate set.
+                    // This should not print an error or warning because the glTF spec stipulates an
+                    // order of degradation for gracefully dropping UV sets. We implement this in
+                    // constrainMaterial in MaterialProvider.
+                    continue;
+                }
+            }
+
+            vertexCount = accessor->count;
+
+            // The positions accessor is required to have min/max properties, use them to expand
+            // the bounding box for this primitive.
+            if (atype == cgltf_attribute_type_position) {
+                const float* minp = &accessor->min[0];
+                const float* maxp = &accessor->max[0];
+                outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
+                outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
+            }
+
+            VertexBuffer::AttributeType fatype;
+            VertexBuffer::AttributeType actualType;
+            if (!getElementType(accessor->type, accessor->component_type, &fatype, &actualType)) {
+                slog.e << "Unsupported accessor type in " << name << io::endl;
+                return false;
+            }
+            const int stride = (fatype == actualType) ? accessor->stride : 0;
+
+            // The cgltf library provides a stride value for all accessors, even though they do not
+            // exist in the glTF file. It is computed from the type and the stride of the buffer view.
+            // As a convenience, cgltf also replaces zero (default) stride with the actual stride.
+            vbb.attribute(semantic, slot, fatype, 0, stride);
+            vbb.normalized(semantic, accessor->normalized);
+            addBufferSlot({ accessor, atype, slot++ });
+        }
+
+        // If the model is lit but does not have normals, we'll need to generate flat normals.
+        if (requiredAttributes.test(VertexAttribute::TANGENTS) && !hasNormals) {
+            vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
+            vbb.normalized(VertexAttribute::TANGENTS);
+            cgltf_attribute_type atype = cgltf_attribute_type_normal;
+            addBufferSlot({ &fAsset->mGenerateNormals, atype, slot++ });
+        }
+
+        cgltf_size targetsCount = inPrim.targets_count;
+
+        if (targetsCount > MAX_MORPH_TARGETS) {
+            utils::slog.w << "WARNING: Exceeded max morph target count of "
+                << MAX_MORPH_TARGETS << utils::io::endl;
+            targetsCount = MAX_MORPH_TARGETS;
+        }
+
+        const Aabb baseAabb(outPrim->aabb);
+        for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
+            const cgltf_morph_target& morphTarget = inPrim.targets[targetIndex];
+            for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
+                const cgltf_attribute& attribute = morphTarget.attributes[aindex];
+                const cgltf_accessor* accessor = attribute.data;
+                const cgltf_attribute_type atype = attribute.type;
+
+                // The glTF normal and tangent data are ignored here, but honored in ResourceLoader.
+                if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
+                    continue;
+                }
+
+                if (atype != cgltf_attribute_type_position) {
+                    utils::slog.e << "Only positions, normals, and tangents can be morphed."
+                        << utils::io::endl;
+                    return false;
+                }
+
+                if (!accessor->has_min || !accessor->has_max) {
+                    continue;
+                }
+
+                Aabb targetAabb(baseAabb);
+                const float* minp = &accessor->min[0];
+                const float* maxp = &accessor->max[0];
+
+                // We assume that the range of morph target weight is [0, 1].
+                targetAabb.min += float3(minp[0], minp[1], minp[2]);
+                targetAabb.max += float3(maxp[0], maxp[1], maxp[2]);
+
+                outPrim->aabb.min = min(outPrim->aabb.min, targetAabb.min);
+                outPrim->aabb.max = max(outPrim->aabb.max, targetAabb.max);
+
+                VertexBuffer::AttributeType fatype;
+                VertexBuffer::AttributeType actualType;
+                if (!getElementType(accessor->type, accessor->component_type, &fatype, &actualType)) {
+                    slog.e << "Unsupported accessor type in " << name << io::endl;
+                    return false;
+                }
+            }
+        }
+
+        if (vertexCount == 0) {
+            slog.e << "Empty vertex buffer in " << name << io::endl;
+            return false;
+        }
+
+        vbb.vertexCount(vertexCount);
+
+        // We provide a single dummy buffer (filled with 0xff) for all unfulfilled vertex requirements.
+        // The color data should be a sequence of normalized UBYTE4, so dummy UVs are USHORT2 to make
+        // the sizes match.
+        bool needsDummyData = false;
+
+        if (mMaterials.needsDummyData(VertexAttribute::UV0) && !hasUv0) {
+            needsDummyData = true;
+            hasUv0 = true;
+            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV0);
+        }
+
+        if (mMaterials.needsDummyData(VertexAttribute::UV1) && !hasUv1) {
+            hasUv1 = true;
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV1);
+        }
+
+        if (mMaterials.needsDummyData(VertexAttribute::COLOR) && !hasVertexColor) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
+            vbb.normalized(VertexAttribute::COLOR);
+        }
+
+        int numUvSets = getNumUvSets(outPrim->uvmap);
+        if (!hasUv0 && numUvSets > 0) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV0);
+            slog.w << "Missing UV0 data in " << name << io::endl;
+        }
+
+        if (!hasUv1 && numUvSets > 1) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.normalized(VertexAttribute::UV1);
+            slog.w << "Missing UV1 data in " << name << io::endl;
+        }
+
+        vbb.bufferCount(needsDummyData ? slot + 1 : slot);
+
+        VertexBuffer* vertices = vbb.build(mEngine);
+
+        outPrim->indices = indices;
+        outPrim->vertices = vertices;
+        auto& primitives = std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mPrimitives;
+        primitives.push_back({ &inPrim, vertices });
+        fAsset->mVertexBuffers.push_back(vertices);
+
+        for (size_t i = firstSlot; i < slots->size(); ++i) {
+            (*slots)[i].vertexBuffer = vertices;
+        }
+
+        if (targetsCount > 0) {
+            UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
+            outPrim->slotIndices.resize(targetsCount);
+            for (int tindex = 0; tindex < targetsCount; ++tindex) {
+                const cgltf_morph_target& inTarget = inPrim.targets[tindex];
+                for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
+                    const cgltf_attribute& attribute = inTarget.attributes[aindex];
+                    const cgltf_accessor* accessor = attribute.data;
+                    const cgltf_attribute_type atype = attribute.type;
+                    if (atype == cgltf_attribute_type_position) {
+                        // All position attributes must have the same number of components.
+                        assert_invariant(!previous || previous->type == accessor->type);
+                        previous = accessor;
+                        BufferSlot slot = { accessor };
+                        outPrim->slotIndices[tindex] = slots->size();
+                        addBufferSlot(slot);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (needsDummyData) {
+            const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
+            if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
+                mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
+                fAsset->mBufferObjects.push_back(mDummyBufferObject);
+                uint32_t* dummyData = (uint32_t*)malloc(requiredSize);
+                memset(dummyData, 0xff, requiredSize);
+                VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
+                mDummyBufferObject->setBuffer(mEngine, std::move(bd));
+            }
+            vertices->setBufferObjectAt(mEngine, slot, mDummyBufferObject);
+        }
+
+        return true;
+    }
+
+    void VzAssetLoader::createLight(const cgltf_light* light, Entity entity, FFilamentAsset* fAsset) {
+        LightManager::Type type = getLightType(light->type);
+        LightManager::Builder builder(type);
+
+        builder.direction({ 0.0f, 0.0f, -1.0f });
+        builder.color({ light->color[0], light->color[1], light->color[2] });
+
+        switch (type) {
+        case LightManager::Type::SUN:
+        case LightManager::Type::DIRECTIONAL:
+            builder.intensity(light->intensity);
+            break;
+        case LightManager::Type::POINT:
+            builder.intensityCandela(light->intensity);
+            break;
+        case LightManager::Type::FOCUSED_SPOT:
+        case LightManager::Type::SPOT:
+            // glTF specifies half angles, so does Filament
+            builder.spotLightCone(
+                light->spot_inner_cone_angle,
+                light->spot_outer_cone_angle);
+            builder.intensityCandela(light->intensity);
+            break;
+        }
+
+        if (light->range == 0.0f) {
+            // Use 10.0f units as a resonable default falloff value.
+            builder.falloff(10.0f);
+        }
+        else {
+            builder.falloff(light->range);
+        }
+
+        builder.build(mEngine, entity);
+        fAsset->mLightEntities.push_back(entity);
+    }
+
+    void VzAssetLoader::createCamera(const cgltf_camera* camera, Entity entity, FFilamentAsset* fAsset) {
+        Camera* filamentCamera = mEngine.createCamera(entity);
+
+        if (camera->type == cgltf_camera_type_perspective) {
+            auto& projection = camera->data.perspective;
+
+            const cgltf_float yfovDegrees = 180.0 / F_PI * projection.yfov;
+
+            // Use an "infinite" zfar plane if the provided one is missing (set to 0.0).
+            const double far = projection.zfar > 0.0 ? projection.zfar : 100000000;
+
+            filamentCamera->setProjection(yfovDegrees, 1.0,
+                projection.znear, far,
+                filament::Camera::Fov::VERTICAL);
+
+            // Use a default aspect ratio of 1.0 if the provided one is missing.
+            const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
+
+            // Use the scaling matrix to set the aspect ratio, so clients can easily change it.
+            filamentCamera->setScaling({ 1.0 / aspect, 1.0 });
+        }
+        else if (camera->type == cgltf_camera_type_orthographic) {
+            auto& projection = camera->data.orthographic;
+
+            const double left = -projection.xmag * 0.5;
+            const double right = projection.xmag * 0.5;
+            const double bottom = -projection.ymag * 0.5;
+            const double top = projection.ymag * 0.5;
+
+            filamentCamera->setProjection(Camera::Projection::ORTHO,
+                left, right, bottom, top, projection.znear, projection.zfar);
+        }
+        else {
+            slog.e << "Invalid GLTF camera type." << io::endl;
+            return;
+        }
+
+        fAsset->mCameraEntities.push_back(entity);
+    }
+
+    MaterialKey VzAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
+        const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor,
+        cgltf_texture_view* baseColorTexture, cgltf_texture_view* metallicRoughnessTexture) const {
+        auto mrConfig = inputMat->pbr_metallic_roughness;
+        auto sgConfig = inputMat->pbr_specular_glossiness;
+        auto ccConfig = inputMat->clearcoat;
+        auto trConfig = inputMat->transmission;
+        auto shConfig = inputMat->sheen;
+        auto vlConfig = inputMat->volume;
+        auto spConfig = inputMat->specular;
+        *baseColorTexture = mrConfig.base_color_texture;
+        *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
+
+        bool hasTextureTransforms =
+            sgConfig.diffuse_texture.has_transform ||
+            sgConfig.specular_glossiness_texture.has_transform ||
+            mrConfig.base_color_texture.has_transform ||
+            mrConfig.metallic_roughness_texture.has_transform ||
+            inputMat->normal_texture.has_transform ||
+            inputMat->occlusion_texture.has_transform ||
+            inputMat->emissive_texture.has_transform ||
+            ccConfig.clearcoat_texture.has_transform ||
+            ccConfig.clearcoat_roughness_texture.has_transform ||
+            ccConfig.clearcoat_normal_texture.has_transform ||
+            shConfig.sheen_color_texture.has_transform ||
+            shConfig.sheen_roughness_texture.has_transform ||
+            trConfig.transmission_texture.has_transform ||
+            spConfig.specular_color_texture.has_transform ||
+            spConfig.specular_texture.has_transform;
+
+        MaterialKey matkey{
+            .doubleSided = !!inputMat->double_sided,
+            .unlit = !!inputMat->unlit,
+            .hasVertexColors = vertexColor,
+            .hasBaseColorTexture = baseColorTexture->texture != nullptr,
+            .hasNormalTexture = inputMat->normal_texture.texture != nullptr,
+            .hasOcclusionTexture = inputMat->occlusion_texture.texture != nullptr,
+            .hasEmissiveTexture = inputMat->emissive_texture.texture != nullptr,
+            .enableDiagnostics = mDiagnosticsEnabled,
+            .baseColorUV = (uint8_t)baseColorTexture->texcoord,
+            .hasClearCoatTexture = ccConfig.clearcoat_texture.texture != nullptr,
+            .clearCoatUV = (uint8_t)ccConfig.clearcoat_texture.texcoord,
+            .hasClearCoatRoughnessTexture = ccConfig.clearcoat_roughness_texture.texture != nullptr,
+            .clearCoatRoughnessUV = (uint8_t)ccConfig.clearcoat_roughness_texture.texcoord,
+            .hasClearCoatNormalTexture = ccConfig.clearcoat_normal_texture.texture != nullptr,
+            .clearCoatNormalUV = (uint8_t)ccConfig.clearcoat_normal_texture.texcoord,
+            .hasClearCoat = !!inputMat->has_clearcoat,
+            .hasTransmission = !!inputMat->has_transmission,
+            .hasTextureTransforms = hasTextureTransforms,
+            .emissiveUV = (uint8_t)inputMat->emissive_texture.texcoord,
+            .aoUV = (uint8_t)inputMat->occlusion_texture.texcoord,
+            .normalUV = (uint8_t)inputMat->normal_texture.texcoord,
+            .hasTransmissionTexture = trConfig.transmission_texture.texture != nullptr,
+            .transmissionUV = (uint8_t)trConfig.transmission_texture.texcoord,
+            .hasSheenColorTexture = shConfig.sheen_color_texture.texture != nullptr,
+            .sheenColorUV = (uint8_t)shConfig.sheen_color_texture.texcoord,
+            .hasSheenRoughnessTexture = shConfig.sheen_roughness_texture.texture != nullptr,
+            .sheenRoughnessUV = (uint8_t)shConfig.sheen_roughness_texture.texcoord,
+            .hasVolumeThicknessTexture = vlConfig.thickness_texture.texture != nullptr,
+            .volumeThicknessUV = (uint8_t)vlConfig.thickness_texture.texcoord,
+            .hasSheen = !!inputMat->has_sheen,
+            .hasIOR = !!inputMat->has_ior,
+            .hasVolume = !!inputMat->has_volume,
+            .hasSpecular = !!inputMat->has_specular,
+            .hasSpecularTexture = spConfig.specular_texture.texture != nullptr,
+            .hasSpecularColorTexture = spConfig.specular_color_texture.texture != nullptr,
+            .specularTextureUV = (uint8_t)spConfig.specular_texture.texcoord,
+            .specularColorTextureUV = (uint8_t)spConfig.specular_color_texture.texcoord,
+        };
+
+        if (inputMat->has_pbr_specular_glossiness) {
+            matkey.useSpecularGlossiness = true;
+            if (sgConfig.diffuse_texture.texture) {
+                *baseColorTexture = sgConfig.diffuse_texture;
+                matkey.hasBaseColorTexture = true;
+                matkey.baseColorUV = (uint8_t)baseColorTexture->texcoord;
+            }
+            if (sgConfig.specular_glossiness_texture.texture) {
+                *metallicRoughnessTexture = sgConfig.specular_glossiness_texture;
+                matkey.hasSpecularGlossinessTexture = true;
+                matkey.specularGlossinessUV = (uint8_t)metallicRoughnessTexture->texcoord;
+            }
+        }
+        else {
+            matkey.hasMetallicRoughnessTexture = metallicRoughnessTexture->texture != nullptr;
+            matkey.metallicRoughnessUV = (uint8_t)metallicRoughnessTexture->texcoord;
+        }
+
+        switch (inputMat->alpha_mode) {
+        case cgltf_alpha_mode_opaque:
+            matkey.alphaMode = AlphaMode::OPAQUE;
+            break;
+        case cgltf_alpha_mode_mask:
+            matkey.alphaMode = AlphaMode::MASK;
+            break;
+        case cgltf_alpha_mode_blend:
+            matkey.alphaMode = AlphaMode::BLEND;
+            break;
+        case cgltf_alpha_mode_max_enum:
+            break;
+        }
+
+        return matkey;
+    }
+
+    Material* VzAssetLoader::getMaterial(const cgltf_data* srcAsset,
+        const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
+        cgltf_texture_view baseColorTexture;
+        cgltf_texture_view metallicRoughnessTexture;
+        if (UTILS_UNLIKELY(inputMat == nullptr)) {
+            inputMat = &kDefaultMat;
+        }
+        MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor,
+            &baseColorTexture, &metallicRoughnessTexture);
+        const char* label = inputMat->name ? inputMat->name : "material";
+        Material* material = mMaterials.getMaterial(&matkey, uvmap, label);
+        assert_invariant(material);
+        return material;
+    }
+
+    MaterialInstance* VzAssetLoader::createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
+        bool vertexColor, FFilamentAsset* fAsset) {
+        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+        MaterialInstanceCache::Entry* const cacheEntry =
+            mMaterialInstanceCache.getEntry(&inputMat, vertexColor);
+        if (cacheEntry->instance) {
+            *uvmap = cacheEntry->uvmap;
+            return cacheEntry->instance;
+        }
+
+        cgltf_texture_view baseColorTexture;
+        cgltf_texture_view metallicRoughnessTexture;
+        MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor, &baseColorTexture,
+            &metallicRoughnessTexture);
+
+        // Check if this material has an extras string.
+        CString extras;
+        const cgltf_size extras_size = inputMat->extras.end_offset - inputMat->extras.start_offset;
+        if (extras_size > 0) {
+            extras = CString(srcAsset->json + inputMat->extras.start_offset, extras_size);
+        }
+
+        // This not only creates a material instance, it modifies the material key according to our
+        // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
+        MaterialInstance* mi = mMaterials.createMaterialInstance(&matkey, uvmap, inputMat->name,
+            extras.c_str());
+        if (!mi) {
+            post("No material with the specified requirements exists.", LogLevel::Error);
+            return nullptr;
+        }
+
+        auto mrConfig = inputMat->pbr_metallic_roughness;
+        auto sgConfig = inputMat->pbr_specular_glossiness;
+        auto ccConfig = inputMat->clearcoat;
+        auto trConfig = inputMat->transmission;
+        auto shConfig = inputMat->sheen;
+        auto vlConfig = inputMat->volume;
+        auto spConfig = inputMat->specular;
+
+        // Check the material blending mode, not the cgltf blending mode, because the provider
+        // might have selected an alternative blend mode (e.g. to support transmission).
+        if (mi->getMaterial()->getBlendingMode() == filament::BlendingMode::MASKED) {
+            mi->setMaskThreshold(inputMat->alpha_cutoff);
+        }
+
+        const float* emissive = &inputMat->emissive_factor[0];
+        float3 emissiveFactor(emissive[0], emissive[1], emissive[2]);
+        if (inputMat->has_emissive_strength) {
+            emissiveFactor *= inputMat->emissive_strength.emissive_strength;
+        }
+        mi->setParameter("emissiveFactor", emissiveFactor);
+
+        const float* c = mrConfig.base_color_factor;
+        mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));
+        mi->setParameter("metallicFactor", mrConfig.metallic_factor);
+        mi->setParameter("roughnessFactor", mrConfig.roughness_factor);
+
+        if (matkey.useSpecularGlossiness) {
+            const float* df = sgConfig.diffuse_factor;
+            const float* sf = sgConfig.specular_factor;
+            mi->setParameter("baseColorFactor", float4(df[0], df[1], df[2], df[3]));
+            mi->setParameter("specularFactor", float3(sf[0], sf[1], sf[2]));
+            mi->setParameter("glossinessFactor", sgConfig.glossiness_factor);
+        }
+
+        const TextureProvider::TextureFlags sRGB = TextureProvider::TextureFlags::sRGB;
+        const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;
+
+        if (matkey.hasBaseColorTexture) {
+            fAsset->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, sRGB);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = baseColorTexture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("baseColorUvMatrix", uvmat);
+            }
+        }
+
+        if (matkey.hasMetallicRoughnessTexture) {
+            // The "metallicRoughnessMap" is actually a specular-glossiness map when the extension is
+            // enabled. Note that KHR_materials_pbrSpecularGlossiness specifies that diffuseTexture and
+            // specularGlossinessTexture are both sRGB, whereas the core glTF spec stipulates that
+            // metallicRoughness is not sRGB.
+            TextureProvider::TextureFlags srgb = inputMat->has_pbr_specular_glossiness ? sRGB : LINEAR;
+            fAsset->addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("metallicRoughnessUvMatrix", uvmat);
+            }
+        }
+
+        if (matkey.hasNormalTexture) {
+            fAsset->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = inputMat->normal_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("normalUvMatrix", uvmat);
+            }
+            mi->setParameter("normalScale", inputMat->normal_texture.scale);
+        }
+        else {
+            mi->setParameter("normalScale", 1.0f);
+        }
+
+        if (matkey.hasOcclusionTexture) {
+            fAsset->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = inputMat->occlusion_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("occlusionUvMatrix", uvmat);
+            }
+            mi->setParameter("aoStrength", inputMat->occlusion_texture.scale);
+        }
+        else {
+            mi->setParameter("aoStrength", 1.0f);
+        }
+
+        if (matkey.hasEmissiveTexture) {
+            fAsset->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, sRGB);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = inputMat->emissive_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("emissiveUvMatrix", uvmat);
+            }
+        }
+
+        if (matkey.hasClearCoat) {
+            mi->setParameter("clearCoatFactor", ccConfig.clearcoat_factor);
+            mi->setParameter("clearCoatRoughnessFactor", ccConfig.clearcoat_roughness_factor);
+
+            if (matkey.hasClearCoatTexture) {
+                fAsset->addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture,
+                    LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = ccConfig.clearcoat_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("clearCoatUvMatrix", uvmat);
+                }
+            }
+            if (matkey.hasClearCoatRoughnessTexture) {
+                fAsset->addTextureBinding(mi, "clearCoatRoughnessMap",
+                    ccConfig.clearcoat_roughness_texture.texture, LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("clearCoatRoughnessUvMatrix", uvmat);
+                }
+            }
+            if (matkey.hasClearCoatNormalTexture) {
+                fAsset->addTextureBinding(mi, "clearCoatNormalMap",
+                    ccConfig.clearcoat_normal_texture.texture, LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("clearCoatNormalUvMatrix", uvmat);
+                }
+                mi->setParameter("clearCoatNormalScale", ccConfig.clearcoat_normal_texture.scale);
+            }
+        }
+
+        if (matkey.hasSheen) {
+            const float* s = shConfig.sheen_color_factor;
+            mi->setParameter("sheenColorFactor", float3{ s[0], s[1], s[2] });
+            mi->setParameter("sheenRoughnessFactor", shConfig.sheen_roughness_factor);
+
+            if (matkey.hasSheenColorTexture) {
+                fAsset->addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture,
+                    sRGB);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = shConfig.sheen_color_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("sheenColorUvMatrix", uvmat);
+                }
+            }
+            if (matkey.hasSheenRoughnessTexture) {
+                bool sameTexture = shConfig.sheen_color_texture.texture == shConfig.sheen_roughness_texture.texture;
+                fAsset->addTextureBinding(mi, "sheenRoughnessMap",
+                    shConfig.sheen_roughness_texture.texture, sameTexture ? sRGB : LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("sheenRoughnessUvMatrix", uvmat);
+                }
+            }
+        }
+
+        if (matkey.hasVolume) {
+            mi->setParameter("volumeThicknessFactor", vlConfig.thickness_factor);
+
+            float attenuationDistance = vlConfig.attenuation_distance;
+            // TODO: We assume a color in linear sRGB, is this correct? The spec doesn't say anything
+            const float* attenuationColor = vlConfig.attenuation_color;
+            LinearColor absorption = Color::absorptionAtDistance(
+                *reinterpret_cast<const LinearColor*>(attenuationColor), attenuationDistance);
+            mi->setParameter("volumeAbsorption", RgbType::LINEAR, absorption);
+
+            if (matkey.hasVolumeThicknessTexture) {
+                fAsset->addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture,
+                    LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("volumeThicknessUvMatrix", uvmat);
+                }
+            }
+        }
+
+        if (matkey.hasTransmission) {
+            mi->setParameter("transmissionFactor", trConfig.transmission_factor);
+            if (matkey.hasTransmissionTexture) {
+                fAsset->addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture,
+                    LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform& uvt = trConfig.transmission_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("transmissionUvMatrix", uvmat);
+                }
+            }
+        }
+
+        // IOR can be implemented as either IOR or reflectance because of ubershaders
+        if (matkey.hasIOR) {
+            if (mi->getMaterial()->hasParameter("ior")) {
+                mi->setParameter("ior", inputMat->ior.ior);
+            }
+            if (mi->getMaterial()->hasParameter("reflectance")) {
+                float ior = inputMat->ior.ior;
+                float f0 = (ior - 1.0f) / (ior + 1.0f);
+                f0 *= f0;
+                float reflectance = std::sqrt(f0 / 0.16f);
+                mi->setParameter("reflectance", reflectance);
+            }
+        }
+
+        if (mi->getMaterial()->hasParameter("emissiveStrength")) {
+            mi->setParameter("emissiveStrength", inputMat->has_emissive_strength ?
+                inputMat->emissive_strength.emissive_strength : 1.0f);
+        }
+
+        if (matkey.hasSpecular) {
+            const float* s = spConfig.specular_color_factor;
+            mi->setParameter("specularColorFactor", float3{ s[0], s[1], s[2] });
+            mi->setParameter("specularStrength", spConfig.specular_factor);
+
+            if (matkey.hasSpecularColorTexture) {
+                fAsset->addTextureBinding(mi, "specularColorMap", spConfig.specular_color_texture.texture, sRGB);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform uvt = spConfig.specular_color_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("specularColorUvMatrix", uvmat);
+                }
+            }
+            if (matkey.hasSpecularTexture) {
+                bool sameTexture = spConfig.specular_color_texture.texture == spConfig.specular_texture.texture;
+                fAsset->addTextureBinding(mi, "specularMap", spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
+                if (matkey.hasTextureTransforms) {
+                    const cgltf_texture_transform uvt = spConfig.specular_texture.transform;
+                    auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                    mi->setParameter("specularUvMatrix", uvmat);
+                }
+            }
+        }
+
+        *cacheEntry = { mi, *uvmap };
+        return mi;
+    }
+
+    void VzAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* gltf) {
+        instance->mSkins.reserve(gltf->skins_count);
+        instance->mSkins.resize(gltf->skins_count);
+        const auto& nodeMap = instance->mNodeMap;
+        for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
+            const cgltf_node& node = gltf->nodes[i];
+            Entity entity = nodeMap[i];
+            if (node.skin && entity) {
+                int skinIndex = node.skin - &gltf->skins[0];
+                instance->mSkins[skinIndex].targets.insert(entity);
+            }
+        }
+        for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
+            FFilamentInstance::Skin& dstSkin = instance->mSkins[i];
+            const cgltf_skin& srcSkin = gltf->skins[i];
+
+            // Build a list of transformables for this skin, one for each joint.
+            dstSkin.joints = FixedCapacityVector<Entity>(srcSkin.joints_count);
+            for (cgltf_size i = 0, len = srcSkin.joints_count; i < len; ++i) {
+                dstSkin.joints[i] = nodeMap[srcSkin.joints[i] - gltf->nodes];
+            }
+        }
+    }
 }
 
 namespace vzm
@@ -2371,19 +4572,17 @@ namespace vzm
         {
             if (!destroyed)
             {
-                std::cout << "MUST CALL DeinitEngineLib before finishing the application!" << std::endl;
+                backlog::post("MUST CALL DeinitEngineLib before finishing the application!", backlog::LogLevel::Error);
                 DeinitEngineLib();
             }
-            std::cout << "Safely finished ^^" << std::endl;
+            backlog::post("Safely finished ^^", backlog::LogLevel::Default);
         };
     };
     std::unique_ptr<SafeReleaseChecker> safeReleaseChecker;
-    std::vector<MaterialVID> systemMaterials;
+    std::vector<MaterialVID> vzmMaterials;
 
     VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& arguments)
     {
-        //std::string gg = arguments.GetParam("GG hello~~1", std::string(""));
-        //float gg1 = arguments.GetParam("GG hello~~2", 0.f);
         if (gEngine)
         {
             backlog::post("Already initialized!", backlog::LogLevel::Error);
@@ -2394,30 +4593,50 @@ namespace vzm
         backlog::post("Entity Manager is activated (# of entities : " + std::to_string(em.getEntityCount()) + ")", 
             backlog::LogLevel::Default);
 
-        std::string vulkanGPUHint = "0";
-
         gEngineConfig.stereoscopicEyeCount = gConfig.stereoscopicEyeCount;
         gEngineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
         // to do : gConfig and gEngineConfig
         // using vzm::ParamMap<std::string>& argument
-        //gConfig.backend = filament::Engine::Backend::VULKAN;
-        gConfig.vulkanGPUHint = "0";
-        gConfig.backend = filament::Engine::Backend::OPENGL;
         //gConfig.headless = true;
 
         gConfig.title = "hellopbr";
         //gConfig.iblDirectory = FilamentApp::getRootAssetsPath() + IBL_FOLDER;
-        gConfig.vulkanGPUHint = "0";
-        gConfig.backend = filament::Engine::Backend::OPENGL;
+        auto api = arguments.GetParam("api", std::string("vulkan"));
+        if (api == "opengl")
+        {
+            gConfig.backend = filament::Engine::Backend::OPENGL;
+        }
+        else if (api == "vulkan")
+        {
+            gConfig.backend = filament::Engine::Backend::VULKAN;
+            gConfig.vulkanGPUHint = arguments.GetParam("vulkan-gpu-hint", std::string("0"));
+        }
+        else
+        {
+            backlog::post("Unrecognized backend. Must be 'opengl'|'vulkan'.", backlog::LogLevel::Error);
+            return VZ_FAIL;
+        }
 
-                
-        gVulkanPlatform = new FilamentAppVulkanPlatform(gConfig.vulkanGPUHint.c_str());
-        gEngine = Engine::Builder()
-            .backend(gConfig.backend)
-            //.platform(gVulkanPlatform)
-            .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
-            .config(&gEngineConfig)
-            .build();
+        if (gConfig.backend == filament::Engine::Backend::VULKAN)
+        {
+            gVulkanPlatform = new FilamentAppVulkanPlatform(gConfig.vulkanGPUHint.c_str());
+            gEngine = Engine::Builder()
+                .backend(gConfig.backend)
+                .platform(gVulkanPlatform)
+                .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
+                .config(&gEngineConfig)
+                .build();
+        }
+        else
+        {
+            gEngine = Engine::Builder()
+                .backend(gConfig.backend)
+                .featureLevel(filament::backend::FeatureLevel::FEATURE_LEVEL_3)
+                .config(&gEngineConfig)
+                .build();
+        }
+
+        gEngine->enableAccurateTranslations();
 
         // this is to avoid the issue of filament safe-resource logic for Vulkan,
         // which assumes that there is at least one swapchain.
@@ -2437,18 +4656,18 @@ namespace vzm
             Material* material = Material::Builder()
                 .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
                 .build(*gEngine);
-            systemMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material, nullptr, true)->componentVID);
-            
-            material = Material::Builder() 
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material, nullptr, true)->componentVID);
+
+            material = Material::Builder()
                 .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
                 //.package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                 .build(*gEngine);
-            systemMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_STANDARD_MATERIAL", material, nullptr, true)->componentVID);
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_STANDARD_MATERIAL", material, nullptr, true)->componentVID);
 
             material = Material::Builder()
                 .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
                 .build(*gEngine);
-            systemMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material, nullptr, true)->componentVID);
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material, nullptr, true)->componentVID);
 
             gMaterialTransparent = material;
         }
@@ -2456,7 +4675,8 @@ namespace vzm
         // optional... test later
         gMaterialProvider = createJitShaderProvider(gEngine, OPTIMIZE_MATERIALS);
         // createUbershaderProvider(gEngine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
-        
+
+        auto& ncm = VzNameCompManager::Get();
         vzGltfIO.Initialize();
 
         return VZ_OK;
@@ -2472,7 +4692,7 @@ namespace vzm
 
         auto& ncm = VzNameCompManager::Get();
         // system unlock
-        for (auto& it : systemMaterials)
+        for (auto& it : vzmMaterials)
         {
             std::string name = ncm.GetName(utils::Entity::import(it));
             vzm::backlog::post("material (" + name + ") has been system-unlocked.", backlog::LogLevel::Default);
@@ -2483,14 +4703,14 @@ namespace vzm
 
         vzGltfIO.Destory();
 
-        gMaterialProvider->destroyMaterials();
-        delete gMaterialProvider;
-        gMaterialProvider = nullptr;
-
         gEngine->destroy(gDummySwapChain);
         gDummySwapChain = nullptr;
 
         gEngineApp.Destroy();
+
+        gMaterialProvider->destroyMaterials();
+        delete gMaterialProvider;
+        gMaterialProvider = nullptr;
 
         delete& ncm;
 
@@ -2628,54 +4848,6 @@ namespace vzm
         return gEngineApp.GetSceneVidBelongTo(parentVid);
     }
 
-    VID AppendAssetTo(const VID vidAsset, const VID parentVid)
-    {
-        auto it = vzGltfIO.assets.find(vidAsset);
-        if (it == vzGltfIO.assets.end() || !gEngineApp.IsSceneComponent(parentVid))
-        {
-            backlog::post("invalid vid", backlog::LogLevel::Error);
-            return INVALID_VID;
-        }
-
-        FilamentAsset* asset = it->second;
-
-        auto& rcm = gEngine->getRenderableManager();
-        auto& lcm = gEngine->getLightManager();
-        auto& tcm = gEngine->getTransformManager();
-        auto& ncm = VzNameCompManager::Get();
-
-        for (size_t i = 0, n = asset->getRenderableEntityCount(); i < n; i++) {
-            utils::Entity ett = asset->getRenderableEntities()[i];
-            auto ri = rcm.getInstance(ett);
-            rcm.setScreenSpaceContactShadows(ri, true);
-            
-            VzActor* actor = (VzActor*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, ncm.GetName(ett), 0);// ett.getId());
-
-
-
-            // TO DO : SET resources
-            VID vid_actor = actor->componentVID;
-            gEngineApp.AppendSceneEntityToParent(vid_actor, parentVid);
-        }
-
-        for (size_t i = 0, n = asset->getLightEntityCount(); i < n; i++) {
-            utils::Entity ett = asset->getLightEntities()[i];
-            auto li = lcm.getInstance(ett);
-            
-            VzLight* light = (VzLight*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::LIGHT, ncm.GetName(ett), 0);// ett.getId());
-            gEngineApp.AppendSceneEntityToParent(light->componentVID, parentVid);
-        }
-
-        for (size_t i = 0, n = asset->getCameraEntityCount(); i < n; i++) {
-            utils::Entity ett = asset->getCameraEntities()[i];
-            VzCamera* camera = (VzCamera*)gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::CAMERA, ncm.GetName(ett), 0);// ett.getId());
-            // TO DO : render path
-            gEngineApp.AppendSceneEntityToParent(camera->componentVID, parentVid);
-        }
-
-        return gEngineApp.GetSceneVidBelongTo(parentVid);
-    }
-
     VzBaseComp* GetVzComponent(const VID vid)
     {
         return gEngineApp.GetVzComponent<VzBaseComp>(vid);
@@ -2697,7 +4869,7 @@ namespace vzm
 
             std::vector<VID> cam_vids;
             size_t num_cameras = gEngineApp.GetCameraVids(cam_vids);
-            for (auto cid : cam_vids)
+            for (auto& cid : cam_vids)
             {
                 if (gEngineApp.GetRenderPath(cid)->GetView()->getScene() == scene)
                 {
@@ -2753,119 +4925,154 @@ namespace vzm
         return actor? actor->componentVID : INVALID_VID;
     }
 
-    VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, std::vector<VID>* resComponents)
+    static std::ifstream::pos_type getFileSize(const char* filename) {
+        std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+        return in.tellg();
+    }
+    filament::gltfio::FilamentAsset* loadAsset(const utils::Path& filename) {
+
+        filament::gltfio::FilamentAsset* asset = nullptr;
+
+        // Peek at the file size to allow pre-allocation.
+        long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
+        if (contentSize <= 0) {
+            backlog::post("Unable to open " + std::string(filename.c_str()), backlog::LogLevel::Error);
+            return nullptr;
+        }
+
+        // Consume the glTF file.
+        std::ifstream in(filename.c_str(), std::ifstream::binary | std::ifstream::in);
+        std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
+        if (!in.read((char*)buffer.data(), contentSize)) {
+            backlog::post("Unable to read " + std::string(filename.c_str()), backlog::LogLevel::Error);
+            return nullptr;
+        }
+
+        // Parse the glTF file and create Filament entities.
+        asset = vzGltfIO.assetLoader->createAsset(buffer.data(), buffer.size());
+        if (!asset) {
+            backlog::post("Unable to parse " + std::string(filename.c_str()), backlog::LogLevel::Error);
+            return nullptr;
+        }
+
+        buffer.clear();
+        buffer.shrink_to_fit();
+        return asset;
+    };
+
+    VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, vzm::VzAsset** assetComp)
     {
         utils::Path path = filename;
-        gltfio::FilamentAsset* asset = nullptr;
+        filament::gltfio::FilamentAsset* asset = nullptr;
+        // assume one instance per each asset (possibly multi-instance)
         if (path.isEmpty()) {
             asset = vzGltfIO.assetLoader->createAsset(
                 GLTF_DEMO_DAMAGEDHELMET_DATA,
                 GLTF_DEMO_DAMAGEDHELMET_SIZE);
-
-            //auto createSceneActors = [&ncm, &rcm, &tcm](auto& self, const utils::Entity ettParent) -> void
-            //    {
-            //        assert(tcm.hasComponent(ettParent));
-            //        if (!ncm.hasComponent(ettParent))
-            //        {
-            //            ncm.CreateNameComp(ettParent, "Node");
-            //        }
-            //        VID vid_parent = ettParent.getId();
-            //        VzSceneComp* v_comp = gEngineApp.GetVzComponent<VzSceneComp>(vid_parent);
-            //        if (v_comp == nullptr)
-            //        {
-            //            gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, ncm.GetName(ettParent), vid_parent);
-            //        }
-            //
-            //        auto ins = tcm.getInstance(ettParent);
-            //        
-            //        for (auto it = tcm.getChildrenBegin(ins); it != tcm.getChildrenEnd(ins); it++)
-            //        {
-            //            self(self, tcm.getEntity(*it));
-            //        }
-            //    };
         }
         else {
-            //loadAsset(filename);
+            asset = loadAsset(filename);
+        }
+        if (asset == nullptr)
+        {
+            backlog::post("asset loading failed!" + filename, backlog::LogLevel::Error);
+            return INVALID_VID;
+        }
+
+        filament::gltfio::FFilamentAsset* fasset = downcast(asset);
+        
+        size_t num_m = vzGltfIO.assetLoader->mMaterialMap.size();
+        size_t num_mi = vzGltfIO.assetLoader->mMIMap.size();
+        size_t num_geo = vzGltfIO.assetLoader->mGeometryMap.size();
+        size_t num_scenecomp = vzGltfIO.assetLoader->mSceneCompMap.size();
+        size_t num_skeleton = vzGltfIO.assetLoader->mSkeltonRootMap.size();
+        size_t num_ins = fasset->mInstances.size();
+        backlog::post(std::to_string(num_m) + " system-owned material" + (num_m > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_mi) + " material instance" + (num_mi > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_geo) + (num_geo > 1 ? " geometries are" : " geometry is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_scenecomp) + " scene component" + (num_scenecomp > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_skeleton) + " skeleton" + (num_skeleton > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_ins) + " gltf instance" + (num_ins > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+
+#if !defined(__EMSCRIPTEN__)
+        for (auto& it : vzGltfIO.assetLoader->mMaterialMap) {
+
+            Material* ma = (Material*)it.first;
+            // Don't attempt to precompile shaders on WebGL.
+            // Chrome already suffers from slow shader compilation:
+            // https://github.com/google/filament/issues/6615
+            // Precompiling shaders exacerbates the problem.
+            // First compile high priority variants
+            ma->compile(Material::CompilerPriorityQueue::HIGH,
+                UserVariantFilterBit::DIRECTIONAL_LIGHTING |
+                UserVariantFilterBit::DYNAMIC_LIGHTING |
+                UserVariantFilterBit::SHADOW_RECEIVER);
+
+            // and then, everything else at low priority, except STE, which is very uncommon.
+            ma->compile(Material::CompilerPriorityQueue::LOW,
+                UserVariantFilterBit::FOG |
+                UserVariantFilterBit::SKINNING |
+                UserVariantFilterBit::SSR |
+                UserVariantFilterBit::VSM);
+        }
+#endif
+        AssetVID vid_asset = gEngineApp.CreateAsset(assetName);
+        vzGltfIO.assetResMaps[vid_asset] = std::make_unique<VzAssetRes>();
+        VzAssetRes& asset_res = *vzGltfIO.assetResMaps[vid_asset].get();
+        asset_res.animator = VzAsset::Animator(vid_asset);
+        asset_res.asset = asset;
+        if (assetComp) *assetComp = gEngineApp.GetVzComponent<VzAsset>(vid_asset);
+
+        for (auto& instance : fasset->mInstances)
+        {
+            asset_res.rootVIDs.push_back(instance->mRoot.getId());
+        }
+
+        for (auto& it : vzGltfIO.assetLoader->mSkeltonRootMap)
+        {
+            asset_res.skeletons.push_back(it.first);
+            std::vector<Entity> bone_entities;
+            Entity ett = Entity::import(it.first);
+            bone_entities.push_back(ett);
+            getDescendants(ett, bone_entities);
+
+            gEngineApp.CreateSkeleton(it.second, it.first);
+            VzSkeletonRes* skeleton_res = vzGltfIO.skeletonResMaps[it.first].get();
+            
+            skeleton_res->bones.clear();
+            size_t num_bones = bone_entities.size();
+            skeleton_res->bones.reserve(num_bones);
+            for (size_t i = 0; i < num_bones; ++i)
+            {
+                BoneVID vid_bone = bone_entities[i].getId();
+                skeleton_res->bones[i] = vid_bone;
+                asset_res.assetOwnershipComponents.insert(vid_bone);
+            }
+            //asset_res.assetOwnershipComponents.insert(it.first); // already involved
         }
 
         if (!vzGltfIO.resourceLoader->asyncBeginLoad(asset)) {
-
-            vzGltfIO.assetLoader->destroyAsset(asset);
+            vzGltfIO.assetLoader->destroyAsset((filament::gltfio::FFilamentAsset*)asset);
             backlog::post("Unable to start loading resources for " + filename, backlog::LogLevel::Error);
             return INVALID_VID;
         }
 
-        auto& em = gEngine->getEntityManager();
-        auto& rcm = gEngine->getRenderableManager();
-        auto& lcm = gEngine->getLightManager();
-        auto& tcm = gEngine->getTransformManager();
-        auto& ncm = VzNameCompManager::Get();
-
-        utils::Entity ett_asset = em.create();
-        AssetVID vid_asset = ett_asset.getId();
-        vzGltfIO.assets[vid_asset] = asset;
-        std::vector<VID>& resComp = vzGltfIO.assetComponents[vid_asset];
-        ncm.CreateNameComp(ett_asset, assetName);
+        //auto& rcm = gEngine->getRenderableManager();
+        //auto& lcm = gEngine->getLightManager();
+        //auto& tcm = gEngine->getTransformManager();
 
         asset->releaseSourceData();
 
         // Enable stencil writes on all material instances.
-        gltfio::FilamentInstance* fm_instance = asset->getInstance();
-        const size_t matInstanceCount = fm_instance->getMaterialInstanceCount();
-        MaterialInstance* const* const instances = fm_instance->getMaterialInstances();
-        for (int mi = 0; mi < matInstanceCount; mi++) {
-            instances[mi]->setStencilWrite(true);
-            instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
+        filament::gltfio::FilamentInstance* asset_ins = asset->getInstance();
+        const size_t mi_count = asset_ins->getMaterialInstanceCount();
+        MaterialInstance* const* const mis = asset_ins->getMaterialInstances();
+        for (int mi = 0; mi < mi_count; mi++) {
+            mis[mi]->setStencilWrite(true);
+            mis[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
         } 
 
-        std::unordered_map<ActorVID, GeometryVID> actorGeoMap;
-        for (auto& it : downcast(asset)->renderablePritmitives)
-        {
-            GeometryVID vid = gEngineApp.CreateGeometry(assetName + ":Primitive #" + std::to_string(actorGeoMap.size()), it.second, asset)->componentVID;
-            actorGeoMap[it.first] = vid;
-            resComp.push_back(vid);
-        }
-        std::unordered_map<Material*, MaterialVID> materials;
-        std::unordered_map<MaterialInstance*, MaterialInstanceVID> mis;
-        std::unordered_map<ActorVID, std::vector<MaterialInstanceVID>> actorMIsMap;
-        for (auto& it : downcast(asset)->renderableMIs)
-        {
-            std::vector<MaterialInstanceVID> actor_mis;
-            for (auto& it_mi : it.second)
-            {
-                MaterialInstance* mi = it_mi;
-                Material* m = (Material*)mi->getMaterial();
-                if (!materials.contains(m))
-                {
-                    MaterialVID vid = gEngineApp.CreateMaterial(assetName + ":Material #" + std::to_string(materials.size()), m, asset)->componentVID;
-                    materials[m] = vid;
-                    resComp.push_back(vid);
-                }
-                if (!mis.contains(mi))
-                {
-                    MaterialInstanceVID vid = gEngineApp.CreateMaterialInstance(assetName + ":MI #" + std::to_string(mis.size()), mi, asset)->componentVID;
-                    mis[mi] = vid;
-                    resComp.push_back(vid);
-
-                    actor_mis.push_back(vid);
-                }
-                else
-                {
-                    actor_mis.push_back(mis[mi]);
-                }
-            }
-            actorMIsMap[it.first] = actor_mis;
-        }
-
-        for (auto it : resComp)
-        {
-            assert(!vzGltfIO.vzCompAssociatedAssets.contains(it));
-            vzGltfIO.vzCompAssociatedAssets[it] = vid_asset;
-        }
-
-        if (resComponents) *resComponents = resComp;
-
-        return ett_asset.getId();
+        return vid_asset;
     }
 
     float GetAsyncLoadProgress()
@@ -2885,71 +5092,10 @@ namespace vzm
 
     VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile, const bool displayEngineStates)
     {
-        //static bool isFirstCall = true;
-        //static VID sceneVid = gEngineApp.CreateSceneEntity("__VZM_ENGINE_INTERNAL__");
-        //VzmScene* sceneInternalState = gEngineApp.GetScene(sceneVid);
-        //static Entity canvasEtt = sceneInternalState->Entity_CreateCamera("INFO_CANVAS", w, h);
-        //static VzmRenderer* sysInfoRenderer = gEngineApp.CreateRenderer(canvasEtt);
-        //
-        //if (isFirstCall)
-        //{
-        //    sysInfoRenderer->init(w, h, CANVAS_INIT_DPI);
-        //
-        //    sysInfoRenderer->infoDisplay.active = true;
-        //    sysInfoRenderer->infoDisplay.watermark = true;
-        //    //sysInfoRenderer->infoDisplay.fpsinfo = true;
-        //    //sysInfoRenderer->infoDisplay.resolution = true;
-        //    //sysInfoRenderer->infoDisplay.colorspace = true;
-        //    sysInfoRenderer->infoDisplay.device_name = true;
-        //    sysInfoRenderer->infoDisplay.vram_usage = true;
-        //    sysInfoRenderer->infoDisplay.heap_allocation_counter = true;
-        //
-        //    sysInfoRenderer->DisplayProfile = true;
-        //    wi::profiler::SetEnabled(true);
-        //
-        //    {
-        //        const float fadeSeconds = 0.f;
-        //        wi::Color fadeColor = wi::Color(0, 0, 0, 255);
-        //        // Fade manager will activate on fadeout
-        //        sysInfoRenderer->fadeManager.Clear();
-        //        sysInfoRenderer->fadeManager.Start(fadeSeconds, fadeColor, []() {
-        //            sysInfoRenderer->Start();
-        //            });
-        //
-        //        sysInfoRenderer->fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
-        //    }
-        //    isFirstCall = false;
-        //}
-        //
-        //sysInfoRenderer->camEntity = canvasEtt;
-        //sysInfoRenderer->width = w;
-        //sysInfoRenderer->height = h;
-        //sysInfoRenderer->UpdateVmCamera();
-        //
-        //sysInfoRenderer->setSceneUpdateEnabled(false);
-        //sysInfoRenderer->scene->camera = *sysInfoRenderer->camera;
-        //
-        //wi::font::UpdateAtlas(sysInfoRenderer->GetDPIScaling());
-        //
-        //if (!wi::initializer::IsInitializeFinished())
-        //{
-        //    // Until engine is not loaded, present initialization screen...
-        //    //sysInfoRenderer->WaitRender();
-        //    return VZ_JOB_WAIT;
-        //}
-        //
-        //if (profileFrameFinished)
-        //{
-        //    profileFrameFinished = false;
-        //    wi::profiler::BeginFrame();
-        //}
-        //sysInfoRenderer->RenderFinalize(); // set profileFrameFinished to true inside
-        //
-        //return (VID)canvasEtt;
         return 0;
     }
 
     uint64_t GetGraphicsSharedRenderTarget() {
-      return gEngine->getSwapHandle();
+        return 0;// gEngine->getSwapHandle();
     }
 }

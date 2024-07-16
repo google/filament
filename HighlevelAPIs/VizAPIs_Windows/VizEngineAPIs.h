@@ -3,8 +3,6 @@
 
 #define SCPP(P) (vzm::VzSceneComp**)&P
 
-// user32.lib;gdi32.lib;opengl32.lib;backend.lib;basis_transcoder.lib;bluegl.lib;bluevk.lib;camutils.lib;civetweb.lib;dracodec.lib;filabridge.lib;filaflat.lib;filamat.lib;filament-iblprefilter.lib;filament.lib;filameshio.lib;geometry.lib;gltfio.lib;gltfio_core.lib;ibl-lite.lib;ibl.lib;image.lib;ktxreader.lib;matdbg.lib;meshoptimizer.lib;mikktspace.lib;shaders.lib;smol-v.lib;stb.lib;uberarchive.lib;uberzlib.lib;utils.lib;viewer.lib;vkshaders.lib;zstd.lib;../../VisualStudio/samples/Debug/suzanne-resources.lib;../../VisualStudio/samples/Debug/sample-resources.lib;%(AdditionalDependencies)
-
 namespace vzm
 {
     // This must be called before using engine APIs
@@ -35,9 +33,6 @@ namespace vzm
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
     __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
-    // Reveal asset's Components by appending the parent component
-    //  - return sceneId containing the parent component 
-    __dojostatic VID AppendAssetTo(const VID vidAsset, const VID parentVid);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
@@ -50,7 +45,7 @@ namespace vzm
     // Load gltf components into a new scene and return the asset ID
     //  - the lifespan of resComponents follows that of the associated asset (vidAsset) and cannot be deleted by the client
     //  - return zero in case of failure
-    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, std::vector<VID>* resComponents = nullptr);
+    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, vzm::VzAsset** assetComp = nullptr);
     __dojostatic float GetAsyncLoadProgress();
     // Get a graphics render target view 
     //  - Must belong to the internal scene

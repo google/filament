@@ -113,8 +113,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     VID vid_scene = vzm::NewScene("my scene", &scene);
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-    //std::vector<VID> resComponents;
-    VID vid_asset = vzm::LoadFileIntoAsset("", "my gltf asset");
+    vzm::VzAsset* asset;
+    //VID vid_asset = vzm::LoadFileIntoAsset("", "my gltf asset", &asset);
+    VID vid_asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset", &asset);
+
+    asset->GetAnimator()->AddPlayScene(vid_scene);
+    asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
+    asset->GetAnimator()->SetAnimation(1);
 
     vzm::VzRenderer* renderer;
     VID vid_renderer = vzm::NewRenderer("my renderer", &renderer);
@@ -136,7 +141,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzLight* light;
     VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
 
-    //vzm::AppendSceneComponentTo(vid_scene_loaded, vid_scene);
+    std::vector<VID> root_vids = asset->GetGLTFRoots();
+    if (root_vids.size() > 0)
+    {
+        vzm::AppendSceneComponentTo(root_vids[0], vid_scene);
+    }
     vzm::AppendSceneComponentTo(vid_light, vid_scene);
     vzm::AppendSceneComponentTo(vid_camera, vid_scene);
 
@@ -154,13 +163,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             if (msg.message == WM_QUIT) {
                 done = true;
             }
-            else
-            {
-                renderer->Render(vid_scene, vid_camera);
-            }
         }
         if (done)
             break;
+        renderer->Render(vid_scene, vid_camera);
     }
     vzm::DeinitEngineLib();
 
@@ -222,7 +228,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'J': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstance();
+            VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
@@ -231,7 +237,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'K': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstance();
+            VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
@@ -240,7 +246,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case 'L': {
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
-            VID miid = actor->GetMaterialInstance();
+            VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
             mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
@@ -285,7 +291,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
             int x = GET_X_LPARAM(lParam);
             int y = h - GET_Y_LPARAM(lParam);
-            cc->Scroll(x, y, (float)zDelta);
+            cc->Scroll(x, y, -(float)zDelta);
         }
         break;
     }

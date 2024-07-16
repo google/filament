@@ -136,6 +136,8 @@ mat4f transforms[] = {mat4f(1),
 int main(int argc, char** argv) {
     Config config;
     config.title = "hello skinning";
+    config.vulkanGPUHint = "0";
+    config.backend = filament::Engine::Backend::OPENGL;
 
     handleCommandLineArgments(argc, argv, &config);
 

@@ -175,27 +175,9 @@ namespace vzm
         void SetTransform(const float s[3] = nullptr, const float q[4] = nullptr, const float t[3] = nullptr, const bool additiveTransform = false);
         void SetMatrix(const float value[16], const bool additiveTransform = false, const bool rowMajor = false);
 
-        VID GetParentVid();
-        VID GetSceneVid();
-    };
-
-    __dojostruct VzAsset : VzBaseComp
-    {
-        // To Do..
-    };
-
-
-    __dojostruct VzRenderer : VzBaseComp
-    {
-        void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
-        void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
-
-        void SetViewport(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h);
-        void GetViewport(uint32_t* x, uint32_t* y, uint32_t* w, uint32_t* h);
-
-        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
-        // setters and getters of rendering options
-        VZRESULT Render(const VID vidScene, const VID vidCam);
+        VID GetParent();
+        std::vector<VID> GetChildren();
+        VID GetScene();
     };
     __dojostruct VzCamera : VzSceneComp
     {
@@ -207,7 +189,13 @@ namespace vzm
 
         void SetCameraCubeVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // helper object
 
-        __dojostruct Controller {
+        __dojostruct Controller{
+        private:
+            VID vidCam_ = INVALID_VID;
+        public:
+            Controller(VID vidCam) { vidCam_ = vidCam; }
+            VID GetCameraVID() { return vidCam_; }
+
             // Configuration parameters //
             // Common properties
             float targetPosition[3] = {0, 0, 0};        //! World-space position of interest, defaults to (0,0,0)
@@ -249,8 +237,6 @@ namespace vzm
             void GrabEnd();
             void SetViewport(const int w, const int h);
             void UpdateCamera(const float deltaTime); // this is for final sync to the camera
-
-            VID vidCam = INVALID_VID;   // DO NOT SET
         };
         Controller* GetController();              // this activates the camera manipulator
     };
@@ -270,11 +256,11 @@ namespace vzm
     {
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
 
-        void SetMaterialInstance(const VID vidMI, const int slot = 0);
-        void SetMaterialInstances(const std::vector<VID>& mis);
-        void SetGeometry(const VID vidGeometry);
+        void SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs);
+        void SetMI(const VID vidMI, const int slot = 0);
 
-        VID GetMaterialInstance(const int slot = 0);
+        std::vector<VID> GetMIs();
+        VID GetMI(const int slot = 0);
         VID GetMaterial(const int slot = 0);
         VID GetGeometry();
     };
@@ -287,7 +273,6 @@ namespace vzm
     {
         // 
     };
-    
     __dojostruct VzMaterial : VzResource
     {
         enum class MaterialType : uint8_t {
@@ -382,5 +367,81 @@ namespace vzm
 
         // use attributes
         //void Update();
+    };
+
+    __dojostruct VzAsset : VzBaseComp
+    {
+        std::vector<VID> GetGLTFRoots();
+        std::vector<VID> GetSkeletons();
+
+        // Animator //
+        __dojostruct Animator{
+        public:
+            enum class PlayMode { INIT_POSE, PLAY, PAUSE, };
+        private:
+            VID vidAsset_ = INVALID_VID;
+            size_t animationIndex_ = 0; // if this becomes GetAnimationCount(), apply all.
+            size_t prevAnimationIndex_ = 0;
+            double crossFadeDurationSec_ = 1.0;
+            TimeStamp timer_ = {};
+            double elapsedTimeSec_ = 0.0;
+            double prevElapsedTimeSec_ = 0.0;
+            double fixedUpdateTime_ = 1. / 60.; // default is 60 fps
+            std::set<VID> associatedScenes_;
+            PlayMode playMode_ = PlayMode::INIT_POSE;
+            bool resetAnimation_ = true;
+        public:
+            Animator(VID vidAsset) { vidAsset_ = vidAsset; }
+
+            size_t AddPlayScene(const VID vidScene) { associatedScenes_.insert(vidScene); return associatedScenes_.size(); }
+            size_t RemovePlayScene(const VID vidScene) { associatedScenes_.erase(vidScene); return associatedScenes_.size(); }
+            bool IsPlayScene(const VID vidScene) { return associatedScenes_.contains(vidScene); }
+            VID GetAssetVID() { return vidAsset_; }
+            size_t GetAnimationCount();
+            std::string GetAnimationLabel(const int index);
+            std::vector<std::string> GetAnimationLabels();
+            std::string SetAnimation(const size_t index) { prevAnimationIndex_ = animationIndex_; animationIndex_ = index; return GetAnimationLabel(index); }
+            int SetAnimationByLabel(const std::string& label);
+            void SetCrossFadeDuration(const double timeSec = 1.) { crossFadeDurationSec_ = timeSec; }
+            float GetAnimationPlayTime(const size_t index);
+            float GetAnimationPlayTimeByLabel(const std::string& label);
+
+            void MovePlayTime(const double elsapsedTimeSec) { elapsedTimeSec_ = elsapsedTimeSec; }
+            void SetPlayMode(const PlayMode playMode) { playMode_ = playMode; resetAnimation_ = true; }
+            PlayMode GetPlayMode() { return playMode_; }
+            void Reset() { resetAnimation_ = true; }
+
+            // note: this is called in the renderer (whose target is the associated scene) by default 
+            void UpdateAnimation(); 
+        };
+        Animator* GetAnimator();              // this activates the camera manipulator
+    };
+
+    __dojostruct VzSkeleton : VzBaseComp
+    {
+        using BoneVID = VID;
+
+        // componentVID refers to the root bone
+        std::vector<BoneVID> GetBones(); // including this
+        std::vector<BoneVID> GetChildren();
+        VID GetParent();
+
+        void SetTransformTRS(const BoneVID vidBone, const float t[3], const float r[4], const float s[3]);
+        void UpdateBoneMatrices();
+
+        // future work... skinning...
+    };
+
+    __dojostruct VzRenderer : VzBaseComp
+    {
+        void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
+        void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
+
+        void SetViewport(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h);
+        void GetViewport(uint32_t* x, uint32_t* y, uint32_t* w, uint32_t* h);
+
+        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
+        // setters and getters of rendering options
+        VZRESULT Render(const VID vidScene, const VID vidCam);
     };
 }
