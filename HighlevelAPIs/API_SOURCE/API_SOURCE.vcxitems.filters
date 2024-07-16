@@ -29,15 +29,29 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzScene.cpp">
       <Filter>components</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)VizComponentAPIs.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)VzEngineApp.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzRenderer.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzSkeleton.cpp">
+      <Filter>components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)VzRenderPath.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.cpp">
+      <Filter>backend</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)VizComponentAPIs.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizEngineAPIs.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizCoreUtils.h">
       <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)CustomComponents.h">
-      <Filter>backend</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h">
       <Filter>components</Filter>
@@ -63,6 +77,33 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzScene.h">
       <Filter>components</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VizComponentAPIs.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzComponents.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzEngineApp.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzRenderer.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzNameComponents.hpp">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzSkeleton.h">
+      <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzRenderPath.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)FIncludes.h">
+      <Filter>common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="components">
@@ -73,6 +114,9 @@
     </Filter>
     <Filter Include="backend">
       <UniqueIdentifier>{ec000082-87ae-4f2f-995a-ae59cb734cb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{445478bb-73e7-42ca-96f7-d24dab3d09f8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

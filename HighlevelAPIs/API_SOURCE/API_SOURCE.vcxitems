@@ -14,6 +14,7 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzAsset.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzCamera.h" />
@@ -21,13 +22,25 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzLight.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMaterial.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMI.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzScene.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)CustomComponents.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzSkeleton.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FIncludes.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzComponents.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzNameComponents.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizComponentAPIs.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizCoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VizEngineAPIs.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzEngineApp.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)VzRenderPath.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzActor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzAsset.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzCamera.cpp" />
@@ -35,8 +48,13 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzLight.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMaterial.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMI.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzRenderer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzScene.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzSkeleton.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)VizComponentAPIs.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VizCoreUtils.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VizEngineAPIs.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)VzEngineApp.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)VzRenderPath.cpp" />
   </ItemGroup>
 </Project>

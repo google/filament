@@ -1,9 +1,7 @@
 #pragma once
-#include "VizComponentAPIs.h"
-#include "components/VzScene.h"
+#include "VzComponents.h"
 
 #define SCPP(P) (vzm::VzSceneComp**)&P
-
 namespace vzm
 {
     // This must be called before using engine APIs
