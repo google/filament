@@ -1,7 +1,6 @@
 #pragma once
 #include "VzComponents.h"
 
-#define SCPP(P) (vzm::VzSceneComp**)&P
 namespace vzm
 {
     // This must be called before using engine APIs
@@ -22,29 +21,32 @@ namespace vzm
     __dojostatic void RemoveComponent(const VID vid);
     // Create new scene and return scene (NOT a scene item) ID, a scene 
     //  - return zero in case of failure (the name is already registered or overflow VID)
-    __dojostatic VID NewScene(const std::string& sceneName, VzScene** scene = nullptr);
-    __dojostatic VID NewRenderer(const std::string& sceneName, VzRenderer** renderer = nullptr);
+    __dojostatic VzScene* NewScene(const std::string& sceneName);
+    __dojostatic VzRenderer* NewRenderer(const std::string& sceneName);
     // Create new scene component (SCENE_COMPONENT_TYPE::CAMERA, ACTOR, LIGHT) NOT SCENE_COMPONENT_TYPE::SCENEBASE
     //  - Must belong to a scene
     //  - parentVid cannot be a scene (renderable or 0)
     //  - return zero in case of failure (invalid sceneID, the name is already registered, or overflow VID)
-    __dojostatic VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid = 0u, VzSceneComp** sceneComp = nullptr);
-    // Append Component to the parent component
-    //  - return sceneId containing the parent component 
-    __dojostatic VID AppendSceneComponentTo(const VID vid, const VID parentVid);
+    __dojostatic VzSceneComp* NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid = 0u);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
+    // Append Component to the parent component
+    //  - return sceneId containing the parent component 
+    __dojostatic VID AppendSceneCompVidTo(const VID vid, const VID parentVid);
+    __dojostatic VzScene* AppendSceneCompTo(const VzBaseComp* comp, const VzBaseComp* parentComp) { 
+        return (VzScene*)GetVzComponent(AppendSceneCompVidTo(comp->GetVID(), parentComp->GetVID()));
+    };
     // Get Component IDs in a scene
     //  - return # of scene Components 
     __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly = false);	// Get CameraParams and return its pointer registered in renderer
     // Load scene components into a new scene and return the actor ID
     //  - return zero in case of failure
-    __dojostatic VID LoadTestModelIntoActor(const std::string& modelName);
+    __dojostatic VzActor* LoadTestModelIntoActor(const std::string& modelName);
     // Load gltf components into a new scene and return the asset ID
     //  - the lifespan of resComponents follows that of the associated asset (vidAsset) and cannot be deleted by the client
     //  - return zero in case of failure
-    __dojostatic VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, vzm::VzAsset** assetComp = nullptr);
+    __dojostatic VzAsset* LoadFileIntoAsset(const std::string& filename, const std::string& assetName);
     __dojostatic float GetAsyncLoadProgress();
     // Get a graphics render target view 
     //  - Must belong to the internal scene

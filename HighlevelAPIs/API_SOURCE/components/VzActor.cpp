@@ -11,7 +11,7 @@ namespace vzm
     {
         COMP_ACTOR(rcm, ett, ins, );
         rcm.setLayerMask(ins, layerBits, maskBits);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     void VzActor::SetMI(const VID vidMI, const int slot)
     {
@@ -21,38 +21,38 @@ namespace vzm
             backlog::post("invalid material instance!", backlog::LogLevel::Error);
             return;
         }
-        VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         if (!actor_res->SetMI(vidMI, slot))
         {
             return;
         }
         auto& rcm = gEngine->getRenderableManager();
-        utils::Entity ett_actor = utils::Entity::import(componentVID);
+        utils::Entity ett_actor = utils::Entity::import(GetVID());
         auto ins = rcm.getInstance(ett_actor);
         rcm.setMaterialInstanceAt(ins, slot, mi_res->mi);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     void VzActor::SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs)
     {
-        VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         actor_res->SetGeometry(vidGeo);
         actor_res->SetMIs(vidMIs);
-        gEngineApp.BuildRenderable(componentVID);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        gEngineApp.BuildRenderable(GetVID());
+        UpdateTimeStamp();
     }
     std::vector<VID> VzActor::GetMIs()
     {
-        VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         return actor_res->GetMIVids();
     }
     VID VzActor::GetMI(const int slot)
     {
-        VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         return actor_res->GetMIVid(slot);
     }
     VID VzActor::GetMaterial(const int slot)
     {
-        VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         MInstanceVID vid_mi = actor_res->GetMIVid(slot);
         VzMIRes* mi_res = gEngineApp.GetMIRes(vid_mi);
         if (mi_res == nullptr)
@@ -67,7 +67,7 @@ namespace vzm
     }
     VID VzActor::GetGeometry()
     {
-        VzActorRes* actor_res = gEngineApp.GetActorRes(componentVID);
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         return actor_res->GetGeometryVid();
     }
 }

@@ -392,7 +392,7 @@ namespace vzm
     }
 
     // Runtime can create a new entity with this
-    SceneVID VzEngineApp::CreateScene(const std::string& name)
+    VzScene* VzEngineApp::CreateScene(const std::string& name)
     {
         auto& em = utils::EntityManager::get();
         utils::Entity ett = em.create();
@@ -400,19 +400,12 @@ namespace vzm
         scenes_[vid] = gEngine->createScene();
         sceneResMap_[vid] = std::make_unique<VzSceneRes>();
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzScene>());
-        VzScene* v_scene = (VzScene*)it.first->second.get();
-        v_scene->componentVID = vid;
-        v_scene->originFrom = "CreateScene";
-        v_scene->type = "VzScene";
-        v_scene->timeStamp = std::chrono::high_resolution_clock::now();
-
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzScene>(vid, "CreateScene", "VzScene"));
         VzNameCompManager& ncm = VzNameCompManager::Get();
         ncm.CreateNameComp(ett, name);
-
-        return vid;
+        return (VzScene*)it.first->second.get();
     }
-    RendererVID VzEngineApp::CreateRenderPath(const std::string& name)
+    VzRenderer* VzEngineApp::CreateRenderPath(const std::string& name)
     {
         // note renderpath involves a renderer
         auto& em = utils::EntityManager::get();
@@ -421,19 +414,12 @@ namespace vzm
         renderPathMap_[vid] = std::make_unique<VzRenderPath>();
         VzRenderPath* renderPath = renderPathMap_[vid].get();
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzRenderer>());
-        VzRenderer* v_renderer = (VzRenderer*)it.first->second.get();
-        v_renderer->componentVID = vid;
-        v_renderer->originFrom = "CreateRenderPath";
-        v_renderer->type = "VzRenderer";
-        v_renderer->timeStamp = std::chrono::high_resolution_clock::now();
-
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzRenderer>(vid, "CreateRenderPath", "VzRenderer"));
         VzNameCompManager& ncm = VzNameCompManager::Get();
         ncm.CreateNameComp(ett, name);
-
-        return vid;
+        return (VzRenderer*)it.first->second.get();
     }
-    AssetVID VzEngineApp::CreateAsset(const std::string& name)
+    VzAsset* VzEngineApp::CreateAsset(const std::string& name)
     {
         auto& em = gEngine->getEntityManager();
         auto& ncm = VzNameCompManager::Get();
@@ -442,16 +428,10 @@ namespace vzm
         assetResMap_[vid] = std::make_unique<VzAssetRes>();
         ncm.CreateNameComp(ett, name);
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>());
-        VzAsset* v_asset = (VzAsset*)it.first->second.get();
-        v_asset->componentVID = vid;
-        v_asset->originFrom = "CreateAsset";
-        v_asset->type = "VzAsset";
-        v_asset->timeStamp = std::chrono::high_resolution_clock::now();
-
-        return vid;
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>(vid, "CreateAsset", "VzAsset"));
+        return (VzAsset*)it.first->second.get();
     }
-    SkeletonVID VzEngineApp::CreateSkeleton(const std::string& name, const SkeletonVID vidExist)
+    VzSkeleton* VzEngineApp::CreateSkeleton(const std::string& name, const SkeletonVID vidExist)
     {
         auto& em = gEngine->getEntityManager();
         auto& ncm = VzNameCompManager::Get();
@@ -464,14 +444,8 @@ namespace vzm
         skeletonResMap_[vid] = std::make_unique<VzSkeletonRes>();
         ncm.CreateNameComp(ett, name);
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>());
-        VzAsset* v_asset = (VzAsset*)it.first->second.get();
-        v_asset->componentVID = vid;
-        v_asset->originFrom = "CreateSkeleton";
-        v_asset->type = "VzSkeleton";
-        v_asset->timeStamp = std::chrono::high_resolution_clock::now();
-
-        return vid;
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>(vid, "CreateSkeleton", "VzSkeleton"));
+        return (VzSkeleton*)it.first->second.get();
     }
     size_t VzEngineApp::GetVidsByName(const std::string& name, std::vector<VID>& vids)
     {
@@ -858,9 +832,8 @@ namespace vzm
             actorSceneMap_[vid] = 0; // first creation
             actorResMap_[vid] = std::make_unique<VzActorRes>();
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>());
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent", "VzActor", compType));
             v_comp = (VzSceneComp*)it.first->second.get();
-            v_comp->type = "VzActor";
             break;
         }
         case SCENE_COMPONENT_TYPE::LIGHT:
@@ -878,9 +851,8 @@ namespace vzm
             lightSceneMap_[vid] = 0; // first creation
             lightResMap_[vid] = std::make_unique<VzLightRes>();
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzLight>());
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzLight>(vid, "CreateSceneComponent", "VzLight", compType));
             v_comp = (VzSceneComp*)it.first->second.get();
-            v_comp->type = "VzLight";
             break;
         }
         case SCENE_COMPONENT_TYPE::CAMERA:
@@ -900,18 +872,13 @@ namespace vzm
             VzCameraRes* cam_res = camResMap_[vid].get();
             cam_res->SetCamera(camera);
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzCamera>());
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzCamera>(vid, "CreateSceneComponent", "VzCamera", compType));
             v_comp = (VzSceneComp*)it.first->second.get();
-            v_comp->type = "VzCamera";
             break;
         }
         default:
             assert(0);
         }
-        v_comp->componentVID = vid;
-        v_comp->compType = compType;
-        v_comp->originFrom = "CreateSceneComponent";
-        v_comp->timeStamp = std::chrono::high_resolution_clock::now();
 
         auto& ncm = VzNameCompManager::Get();
         auto& tcm = gEngine->getTransformManager();
@@ -952,17 +919,17 @@ namespace vzm
             MaterialVID vid_m = GetFirstVidByName(material_name);
             VzMaterial* v_m = GetVzComponent<VzMaterial>(vid_m);
             assert(v_m != nullptr);
-            Material* m = materialResMap_[v_m->componentVID]->material;
+            Material* m = materialResMap_[v_m->GetVID()]->material;
             mi = m->createInstance(mi_name.c_str());
             mi->setParameter("baseColor", RgbType::LINEAR, float3{ 0.8, 0.1, 0.1 });
             mi->setParameter("metallic", 1.0f);
             mi->setParameter("roughness", 0.4f);
             mi->setParameter("reflectance", 0.5f);
             VzMI* v_mi = CreateMaterialInstance(mi_name, mi);
-            auto it_mi = miResMap_.find(v_mi->componentVID);
+            auto it_mi = miResMap_.find(v_mi->GetVID());
             assert(it_mi != miResMap_.end());
             assert(mi == it_mi->second->mi);
-            vid_mi = v_mi->componentVID;
+            vid_mi = v_mi->GetVID();
         }
         assert(vid_mi != INVALID_VID);
 
@@ -982,16 +949,11 @@ namespace vzm
             .aabb = box.getMin(),
             } });
         VzActorRes& actor_res = *actorResMap_[vid].get();
-        actor_res.SetGeometry(geo->componentVID);
+        actor_res.SetGeometry(geo->GetVID());
         actor_res.SetMIs({ vid_mi });
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateTestActor", "VzActor", SCENE_COMPONENT_TYPE::ACTOR));
         VzActor* v_actor = (VzActor*)it.first->second.get();
-        v_actor->componentVID = vid;
-        v_actor->originFrom = "CreateTestActor";
-        v_actor->type = "VzActor";
-        v_actor->compType = SCENE_COMPONENT_TYPE::ACTOR;
-        v_actor->timeStamp = std::chrono::high_resolution_clock::now();
         return v_actor;
     }
     VzGeometry* VzEngineApp::CreateGeometry(const std::string& name,
@@ -1018,15 +980,8 @@ namespace vzm
             geo_res.aabb.max = max(prim.aabb.max, geo_res.aabb.max);
         }
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzGeometry>());
-        VzGeometry* v_m = (VzGeometry*)it.first->second.get();
-        v_m->componentVID = vid;
-        v_m->compType = RES_COMPONENT_TYPE::GEOMATRY;
-        v_m->originFrom = "CreateGeometry";
-        v_m->type = "VzGeometry";
-        v_m->timeStamp = std::chrono::high_resolution_clock::now();
-
-        return v_m;
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzGeometry>(vid, "CreateGeometry", "VzGeometry", RES_COMPONENT_TYPE::GEOMATRY));
+        return (VzGeometry*)it.first->second.get();;
     }
     VzMaterial* VzEngineApp::CreateMaterial(const std::string& name,
         const Material* material,
@@ -1057,15 +1012,8 @@ namespace vzm
         m_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         m_res.isSystem = isSystem;
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>());
-        VzMaterial* v_m = (VzMaterial*)it.first->second.get();
-        v_m->componentVID = vid;
-        v_m->originFrom = "CreateMaterial";
-        v_m->type = "VzMaterial";
-        v_m->compType = RES_COMPONENT_TYPE::MATERIAL;
-        v_m->timeStamp = std::chrono::high_resolution_clock::now();
-
-        return v_m;
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>(vid, "CreateMaterial", "VzMaterial", RES_COMPONENT_TYPE::MATERIAL));
+        return (VzMaterial*)it.first->second.get();
     }
     VzMI* VzEngineApp::CreateMaterialInstance(const std::string& name,
         const MaterialInstance* mi,
@@ -1096,15 +1044,8 @@ namespace vzm
         mi_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         mi_res.isSystem = isSystem;
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMI>());
-        VzMI* v_m = (VzMI*)it.first->second.get();
-        v_m->componentVID = vid;
-        v_m->originFrom = "CreateMaterialInstance";
-        v_m->type = "VzMI";
-        v_m->compType = RES_COMPONENT_TYPE::MATERIALINSTANCE;
-        v_m->timeStamp = std::chrono::high_resolution_clock::now();
-
-        return v_m;
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMI>(vid, "CreateMaterialInstance", "VzMI", RES_COMPONENT_TYPE::MATERIALINSTANCE));
+        return (VzMI*)it.first->second.get();
     }
 
     void VzEngineApp::BuildRenderable(const ActorVID vid)

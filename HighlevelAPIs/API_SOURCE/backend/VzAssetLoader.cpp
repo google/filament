@@ -57,14 +57,14 @@ namespace filament::gltfio {
         }
         // note:
         // gltf support the same material instance
-        MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->componentVID;
+        MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->GetVID();
         mi_vids.push_back(mi_vid);
         //assert(!mMIMap.contains(mi));
         mMIMap[mi] = mi_vid;
         const Material* m = mi->getMaterial();
         if (!mMaterialMap.contains(m))
         {
-            mMaterialMap[m] = gEngineApp.CreateMaterial(m->getName(), m, nullptr, true)->componentVID;
+            mMaterialMap[m] = gEngineApp.CreateMaterial(m->getName(), m, nullptr, true)->GetVID();
         }
     }
 
@@ -162,7 +162,7 @@ namespace filament::gltfio {
         }
 
         // Create a single root node with an identity transform as a convenience to the client.
-        VID vid_gltf_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "gltf root")->componentVID;
+        VID vid_gltf_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "gltf root")->GetVID();
         fAsset->mRoot = Entity::import(vid_gltf_root); // mEntityManager
 
         // Check if the asset has an extras string.
@@ -236,7 +236,7 @@ namespace filament::gltfio {
         auto rootTransform = mTransformManager.getInstance(fAsset->mRoot);
         //Entity instanceRoot = mEntityManager.create();
         //mTransformManager.create(instanceRoot, rootTransform);
-        ActorVID vid_ins_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "instance root")->componentVID;
+        ActorVID vid_ins_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "instance root")->GetVID();
         Entity instanceRoot = Entity::import(vid_ins_root);
         mTransformManager.create(instanceRoot, rootTransform);
 
@@ -503,7 +503,7 @@ namespace filament::gltfio {
             v_prims.push_back(v_prim);
         }
 
-        mGeometryMap[(cgltf_mesh*)(mesh - gltf->meshes)] = gEngineApp.CreateGeometry(name, v_prims)->componentVID;
+        mGeometryMap[(cgltf_mesh*)(mesh - gltf->meshes)] = gEngineApp.CreateGeometry(name, v_prims)->GetVID();
 
         mat4f worldTransform;
         cgltf_node_transform_world(node, &worldTransform[0][0]);

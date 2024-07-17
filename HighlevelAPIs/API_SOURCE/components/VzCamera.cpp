@@ -47,12 +47,12 @@ namespace vzm
         // aspectRatio is W / H
         camera->setProjection(fovInDegree, aspectRatio, zNearP, zFarP,
             isVertical ? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
 
     void VzCamera::SetCameraCubeVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
     {
-        VzCameraRes* cam_res = gEngineApp.GetCameraRes(componentVID);
+        VzCameraRes* cam_res = gEngineApp.GetCameraRes(GetVID());
         if (cam_res == nullptr) return;
 
         Cube* camera_cube = cam_res->GetCameraCube();
@@ -60,9 +60,9 @@ namespace vzm
         rcm.setLayerMask(rcm.getInstance(camera_cube->getSolidRenderable()), layerBits, maskBits);
         rcm.setLayerMask(rcm.getInstance(camera_cube->getWireFrameRenderable()), layerBits, maskBits);
 
-        cubeToScene(camera_cube->getSolidRenderable().getId(), componentVID);
-        cubeToScene(camera_cube->getWireFrameRenderable().getId(), componentVID);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        cubeToScene(camera_cube->getSolidRenderable().getId(), GetVID());
+        cubeToScene(camera_cube->getWireFrameRenderable().getId(), GetVID());
+        UpdateTimeStamp();
     }
 
     void VzCamera::GetWorldPose(float pos[3], float view[3], float up[3])
@@ -90,13 +90,13 @@ namespace vzm
 
     VzCamera::Controller* VzCamera::GetController()
     {
-        VzCameraRes* cam_res = gEngineApp.GetCameraRes(componentVID);
+        VzCameraRes* cam_res = gEngineApp.GetCameraRes(GetVID());
         if (cam_res == nullptr) return nullptr;
         CameraManipulator* cm = cam_res->GetCameraManipulator();
         Controller* cc = cam_res->GetCameraController();
         if (cm == nullptr)
         {
-            Controller controller(componentVID);
+            Controller controller(GetVID());
             cam_res->NewCameraManipulator(controller);
             cc = cam_res->GetCameraController();
         }

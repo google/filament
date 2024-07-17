@@ -5,6 +5,8 @@ namespace vzm
 {
     __dojostruct VzCamera : VzSceneComp
     {
+        VzCamera(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
+            : VzSceneComp(vid, originFrom, typeName, scenecompType) {}
         // Pose parameters are defined in WS (not local space)
         void SetWorldPose(const float pos[3], const float view[3], const float up[3]);
         void SetPerspectiveProjection(const float zNearP, const float zFarP, const float fovInDegree, const float aspectRatio, const bool isVertical = true);

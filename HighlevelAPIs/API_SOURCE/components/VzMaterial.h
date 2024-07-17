@@ -5,6 +5,8 @@ namespace vzm
 {
     __dojostruct VzMaterial : VzResource
     {
+        VzMaterial(const VID vid, const std::string& originFrom, const std::string& typeName, const RES_COMPONENT_TYPE resType)
+            : VzResource(vid, originFrom, typeName, resType) {}
         enum class MaterialType : uint8_t {
             STANDARD = 0,
             CUSTOM

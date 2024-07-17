@@ -18,7 +18,7 @@ namespace vzm
     {
         COMP_NAME(ncm, ett, );
         ncm.SetName(ett, name);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
 #pragma endregion
 
@@ -93,14 +93,14 @@ namespace vzm
         }
         mat4f mat = mat_t * mat_r * mat_s;
         tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     void VzSceneComp::SetMatrix(const float value[16], const bool additiveTransform, const bool rowMajor)
     {
         COMP_TRANSFORM(tc, ett, ins, );
         mat4f mat = rowMajor ? transpose(*(mat4f*)value) : *(mat4f*)value;
         tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     VID VzSceneComp::GetParent()
     {
@@ -121,7 +121,7 @@ namespace vzm
     }
     VID VzSceneComp::GetScene()
     {
-        return gEngineApp.GetSceneVidBelongTo(componentVID);
+        return gEngineApp.GetSceneVidBelongTo(GetVID());
     }
 #pragma endregion 
 }

@@ -11,7 +11,7 @@ namespace vzm
     {
         COMP_LIGHT(lcm, ett, ins, );
         lcm.setIntensity(ins, intensity);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     float VzLight::GetIntensity() const
     {

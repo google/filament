@@ -13,7 +13,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->SetCanvas(w, h, dpi, window);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     void VzRenderer::GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window)
     {
@@ -25,12 +25,12 @@ namespace vzm
         COMP_RENDERPATH(render_path, );
         View* view = render_path->GetView();
         view->setVisibleLayers(layerBits, maskBits);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
 
     VZRESULT VzRenderer::Render(const VID vidScene, const VID vidCam)
     {
-        VzRenderPath* render_path = gEngineApp.GetRenderPath(componentVID);
+        VzRenderPath* render_path = gEngineApp.GetRenderPath(GetVID());
         if (render_path == nullptr)
         {
             backlog::post("invalid render path", backlog::LogLevel::Error);

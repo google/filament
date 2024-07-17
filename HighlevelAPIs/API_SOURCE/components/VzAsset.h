@@ -5,6 +5,8 @@ namespace vzm
 {
     __dojostruct VzAsset : VzBaseComp
     {
+        VzAsset(const VID vid, const std::string& originFrom, const std::string& typeName)
+            : VzBaseComp(vid, originFrom, typeName) {}
         std::vector<VID> GetGLTFRoots();
         std::vector<VID> GetSkeletons();
 

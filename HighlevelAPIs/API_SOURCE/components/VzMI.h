@@ -6,6 +6,8 @@ namespace vzm
 {
     __dojostruct VzMI : VzMaterial
     {
+        VzMI(const VID vid, const std::string& originFrom, const std::string& typeName, const RES_COMPONENT_TYPE resType)
+            : VzMaterial(vid, originFrom, typeName, resType) {}
         static constexpr size_t MATERIAL_PROPERTIES_COUNT = 29;
         enum class MProp : uint8_t {
             BASE_COLOR = 0,              //!< float4, all shading models

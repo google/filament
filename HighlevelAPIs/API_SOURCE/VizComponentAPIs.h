@@ -136,20 +136,35 @@ namespace vzm
     __dojostruct VzBaseComp
     {
         // DO NOT SET
-        VID componentVID = INVALID_VID;
-        TimeStamp timeStamp = {}; // will be automatically set 
-        std::string originFrom;
-        std::string type;
-
+    private:
+        VID componentVID_ = INVALID_VID;
+        TimeStamp timeStamp_ = {}; // will be automatically set 
+        std::string originFrom_;
+        std::string type_;
+    public:
         // User data
         ParamMap<std::string> attributes;
-
+        VzBaseComp(const VID vid, const std::string& originFrom, const std::string& typeName)
+            : componentVID_(vid), originFrom_(originFrom), type_(typeName)
+        {
+            UpdateTimeStamp();
+        }
+        VID GetVID() const { return componentVID_; }
+        void UpdateTimeStamp() 
+        {
+            timeStamp_ = std::chrono::high_resolution_clock::now();
+        }
         std::string GetName();
         void SetName(const std::string& name);
     };
     __dojostruct VzSceneComp : VzBaseComp
     {
-        SCENE_COMPONENT_TYPE compType = SCENE_COMPONENT_TYPE::SCENEBASE;
+    private:
+        SCENE_COMPONENT_TYPE scenecompType_ = SCENE_COMPONENT_TYPE::SCENEBASE;
+    public:
+        VzSceneComp(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
+            : VzBaseComp(vid, originFrom, typeName), scenecompType_(scenecompType) {}
+        SCENE_COMPONENT_TYPE GetSceneCompType() { return scenecompType_; };
 
         void GetWorldPosition(float v[3]);
         void GetWorldForward(float v[3]);
@@ -171,7 +186,12 @@ namespace vzm
     };
     __dojostruct VzResource : VzBaseComp
     {
-        RES_COMPONENT_TYPE compType = RES_COMPONENT_TYPE::RESOURCE;
+    private:
+        RES_COMPONENT_TYPE resType_ = RES_COMPONENT_TYPE::RESOURCE;
+    public:
+        VzResource(const VID vid, const std::string& originFrom, const std::string& typeName, const RES_COMPONENT_TYPE resType)
+            : VzBaseComp(vid, originFrom, typeName), resType_(resType) {}
+        RES_COMPONENT_TYPE GetResType() { return resType_; }
     };
 }
 

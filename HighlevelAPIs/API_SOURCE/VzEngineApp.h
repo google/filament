@@ -229,10 +229,10 @@ namespace vzm
 
     public:
         // Runtime can create a new entity with this
-        SceneVID CreateScene(const std::string& name);
-        RendererVID CreateRenderPath(const std::string& name);
-        AssetVID CreateAsset(const std::string& name);
-        SkeletonVID CreateSkeleton(const std::string& name, const SkeletonVID vidExist = 0);
+        VzScene* CreateScene(const std::string& name);
+        VzRenderer* CreateRenderPath(const std::string& name);
+        VzAsset* CreateAsset(const std::string& name);
+        VzSkeleton* CreateSkeleton(const std::string& name, const SkeletonVID vidExist = 0);
         size_t GetVidsByName(const std::string& name, std::vector<VID>& vids);
         VID GetFirstVidByName(const std::string& name);
         std::string GetNameByVid(const VID vid);
@@ -325,14 +325,14 @@ namespace vzm
     };
 }
 
-#define COMP_NAME(COMP, ENTITY, FAILRET) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET;
-#define COMP_TRANSFORM(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getTransformManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
-#define COMP_RENDERPATH(RENDERPATH, FAILRET)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(componentVID); if (RENDERPATH == nullptr) return FAILRET;
-#define COMP_LIGHT(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getLightManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
-#define COMP_ACTOR(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getRenderableManager(); Entity ENTITY = Entity::import(componentVID); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
-#define COMP_MI(COMP, FAILRET) VzMIRes* mi_res = gEngineApp.GetMIRes(componentVID); if (mi_res == nullptr) return FAILRET; MaterialInstance* COMP = mi_res->mi; if (COMP == nullptr) return FAILRET;
-#define COMP_CAMERA(COMP, ENTITY, FAILRET) Entity ENTITY = Entity::import(componentVID); Camera* COMP = gEngine->getCameraComponent(ENTITY); if (COMP == nullptr) return;
-#define COMP_ASSET(COMP, FAILRET)  VzAssetRes* COMP = gEngineApp.GetAssetRes(componentVID); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
+#define COMP_NAME(COMP, ENTITY, FAILRET) auto& COMP = VzNameCompManager::Get(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET;
+#define COMP_TRANSFORM(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getTransformManager(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
+#define COMP_RENDERPATH(RENDERPATH, FAILRET)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(GetVID()); if (RENDERPATH == nullptr) return FAILRET;
+#define COMP_LIGHT(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getLightManager(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
+#define COMP_ACTOR(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getRenderableManager(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
+#define COMP_MI(COMP, FAILRET) VzMIRes* mi_res = gEngineApp.GetMIRes(GetVID()); if (mi_res == nullptr) return FAILRET; MaterialInstance* COMP = mi_res->mi; if (COMP == nullptr) return FAILRET;
+#define COMP_CAMERA(COMP, ENTITY, FAILRET) Entity ENTITY = Entity::import(GetVID()); Camera* COMP = gEngine->getCameraComponent(ENTITY); if (COMP == nullptr) return;
+#define COMP_ASSET(COMP, FAILRET)  VzAssetRes* COMP = gEngineApp.GetAssetRes(GetVID()); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
 
 using namespace vzm;
 #endif

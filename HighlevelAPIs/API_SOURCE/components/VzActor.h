@@ -5,6 +5,9 @@ namespace vzm
 {
     __dojostruct VzActor : VzSceneComp
     {
+        VzActor(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
+            : VzSceneComp(vid, originFrom, typeName, scenecompType) {}
+
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
 
         void SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs);

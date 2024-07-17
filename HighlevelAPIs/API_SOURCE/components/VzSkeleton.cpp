@@ -7,11 +7,11 @@ extern vzm::VzEngineApp gEngineApp;
 
 namespace vzm
 {
-#define COMP_SKELETON(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(componentVID); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get();
+#define COMP_SKELETON(COMP, RESMAP, FAILRET)  auto it = RESMAP.find(GetVID()); if (it == RESMAP.end()) return FAILRET; VzAssetRes* COMP = it->second.get();
     std::vector<VID> VzSkeleton::GetBones()
     {
         std::vector<VID> root_vids;
-        VzSkeletonRes* skeleton_res = gEngineApp.GetSkeletonRes(componentVID);
+        VzSkeletonRes* skeleton_res = gEngineApp.GetSkeletonRes(GetVID());
         if (skeleton_res == nullptr) return root_vids;
 
         root_vids.reserve(skeleton_res->bones.size());

@@ -223,18 +223,18 @@ namespace vzm
             Material* material = Material::Builder()
                 .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
                 .build(*gEngine);
-            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material, nullptr, true)->componentVID);
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material, nullptr, true)->GetVID());
 
             material = Material::Builder()
                 .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
                 //.package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                 .build(*gEngine);
-            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_STANDARD_MATERIAL", material, nullptr, true)->componentVID);
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_STANDARD_MATERIAL", material, nullptr, true)->GetVID());
 
             material = Material::Builder()
                 .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
                 .build(*gEngine);
-            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material, nullptr, true)->componentVID);
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_TRANSPARENT_MATERIAL", material, nullptr, true)->GetVID());
 
             gMaterialTransparent = material;
         }
@@ -349,27 +349,17 @@ namespace vzm
         }
     }
 
-    VID NewScene(const std::string& sceneName, VzScene** scene)
+    VzScene* NewScene(const std::string& sceneName)
     {
-        SceneVID vid_scene = gEngineApp.CreateScene(sceneName);
-        if (scene)
-        {
-            *scene = gEngineApp.GetVzComponent<VzScene>(vid_scene);
-        }
-        return vid_scene;
+        return gEngineApp.CreateScene(sceneName);
     }
 
-    VID NewRenderer(const std::string& sceneName, VzRenderer** renderer)
+    VzRenderer* NewRenderer(const std::string& sceneName)
     {
-        RendererVID vid = gEngineApp.CreateRenderPath(sceneName);
-        if (renderer)
-        {
-            *renderer = gEngineApp.GetVzComponent<VzRenderer>(vid);
-        }
-        return vid;
+        return gEngineApp.CreateRenderPath(sceneName);
     }
 
-    VID NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid, VzSceneComp** sceneComp)
+    VzSceneComp* NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid)
     {
         VzSceneComp* v_comp = nullptr;
         v_comp = gEngineApp.CreateSceneComponent(compType, compName);
@@ -381,17 +371,13 @@ namespace vzm
 
         if (parentVid != 0)
         {
-            gEngineApp.AppendSceneEntityToParent(v_comp->componentVID, parentVid);
+            gEngineApp.AppendSceneEntityToParent(v_comp->GetVID(), parentVid);
         }
 
-        if (sceneComp)
-        {
-            *sceneComp = v_comp;
-        }
-        return v_comp->componentVID;
+        return v_comp;
     }
 
-    VID AppendSceneComponentTo(const VID vid, const VID parentVid)
+    VID AppendSceneCompVidTo(const VID vid, const VID parentVid)
     {
         if (!gEngineApp.AppendSceneEntityToParent(vid, parentVid))
         {
@@ -479,10 +465,9 @@ namespace vzm
         return vids.size();
     }
     
-    VID LoadTestModelIntoActor(const std::string& modelName)
+    VzActor* LoadTestModelIntoActor(const std::string& modelName)
     {
-        VzActor* actor = gEngineApp.CreateTestActor(modelName);
-        return actor? actor->componentVID : INVALID_VID;
+        return gEngineApp.CreateTestActor(modelName);
     }
 
     static std::ifstream::pos_type getFileSize(const char* filename) {
@@ -521,7 +506,7 @@ namespace vzm
         return asset;
     };
 
-    VID LoadFileIntoAsset(const std::string& filename, const std::string& assetName, vzm::VzAsset** assetComp)
+    VzAsset* LoadFileIntoAsset(const std::string& filename, const std::string& assetName)
     {
         utils::Path path = filename;
         filament::gltfio::FilamentAsset* asset = nullptr;
@@ -538,7 +523,7 @@ namespace vzm
         if (asset == nullptr)
         {
             backlog::post("asset loading failed!" + filename, backlog::LogLevel::Error);
-            return INVALID_VID;
+            return nullptr;
         }
 
         filament::gltfio::FFilamentAsset* fasset = downcast(asset);
@@ -584,11 +569,11 @@ namespace vzm
                 UserVariantFilterBit::VSM);
         }
 #endif
-        AssetVID vid_asset = gEngineApp.CreateAsset(assetName);
+        VzAsset* v_asset = gEngineApp.CreateAsset(assetName);
+        AssetVID vid_asset = v_asset->GetVID();
         VzAssetRes& asset_res = *gEngineApp.GetAssetRes(vid_asset);
         asset_res.animator = VzAsset::Animator(vid_asset);
         asset_res.asset = asset;
-        if (assetComp) *assetComp = gEngineApp.GetVzComponent<VzAsset>(vid_asset);
 
         for (auto& instance : fasset->mInstances)
         {
@@ -627,7 +612,7 @@ namespace vzm
         if (!resource_loader->asyncBeginLoad(asset)) {
             asset_loader->destroyAsset((filament::gltfio::FFilamentAsset*)asset);
             backlog::post("Unable to start loading resources for " + filename, backlog::LogLevel::Error);
-            return INVALID_VID;
+            return nullptr;
         }
 
         //auto& rcm = gEngine->getRenderableManager();
@@ -645,7 +630,7 @@ namespace vzm
             mis[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
         } 
 
-        return vid_asset;
+        return v_asset;
     }
 
     float GetAsyncLoadProgress()

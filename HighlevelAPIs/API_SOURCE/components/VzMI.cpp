@@ -13,7 +13,7 @@ namespace vzm
     {
         COMP_MI(mi, );
         mi->setTransparencyMode((filament::TransparencyMode)tMode);
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
     void VzMI::SetMaterialProperty(const MProp mProp, const std::vector<float>& v)
     {
@@ -22,6 +22,6 @@ namespace vzm
         {
             mi->setParameter(gMProp[(uint32_t)mProp].c_str(), (filament::RgbaType)rgbType, *(filament::math::float4*)&v[0]);
         }
-        timeStamp = std::chrono::high_resolution_clock::now();
+        UpdateTimeStamp();
     }
 }

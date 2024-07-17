@@ -114,19 +114,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return -1;
     }
     
-    vzm::VzScene* scene;
-    VID vid_scene = vzm::NewScene("my scene", &scene);
+    vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     
-    VID vid_actor = vzm::LoadTestModelIntoActor("my test model");
+    vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
     
-    vzm::VzRenderer* renderer;
-    VID vid_renderer = vzm::NewRenderer("my renderer", &renderer);
+    vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
     renderer->SetCanvas(w, h, dpi, hwnd);
     renderer->SetVisibleLayerMask(0x4, 0x4);
     
-    vzm::VzCamera* cam;
-    VID vid_camera = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
+    vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0);
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
@@ -137,12 +134,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     cc->UpdateControllerSettings();
     cc->SetViewport(w, h);
 
-    vzm::VzLight* light;
-    VID vid_light = vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0, SCPP(light));
+    vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
     
-    vzm::AppendSceneComponentTo(vid_actor, vid_scene);
-    vzm::AppendSceneComponentTo(vid_light, vid_scene);
-    vzm::AppendSceneComponentTo(vid_camera, vid_scene);
+    vzm::AppendSceneCompTo(actor, scene);
+    vzm::AppendSceneCompTo(light, scene);
+    vzm::AppendSceneCompTo(cam, scene);
 
     // Main loop
     bool done = false;
@@ -160,7 +156,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
             else
             {
-                renderer->Render(vid_scene, vid_camera);
+                renderer->Render(scene, cam);
             }
         }
         if (done)

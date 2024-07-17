@@ -5,6 +5,8 @@ namespace vzm
 {
     __dojostruct VzRenderer : VzBaseComp
     {
+        VzRenderer(const VID vid, const std::string& originFrom, const std::string& typeName)
+            : VzBaseComp(vid, originFrom, typeName) {}
         void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
         void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
 
@@ -14,5 +16,6 @@ namespace vzm
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
         // setters and getters of rendering options
         VZRESULT Render(const VID vidScene, const VID vidCam);
+        VZRESULT Render(const VzBaseComp* scene, const VzBaseComp* camera) { return Render(scene->GetVID(), camera->GetVID()); };
     };
 }
