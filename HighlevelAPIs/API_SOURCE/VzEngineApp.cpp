@@ -5,15 +5,16 @@
 
 #include "FIncludes.h"
 
+#include <iostream>>
+
 extern Engine* gEngine;
 extern Material* gMaterialTransparent; // do not release
 extern vzm::VzEngineApp gEngineApp;
 extern gltfio::MaterialProvider* gMaterialProvider;
 
-using CameraManipulator = filament::camutils::Manipulator<float>;
-
 namespace vzm
 {
+    using CameraManipulator = filament::camutils::Manipulator<float>;
     using Entity = utils::Entity;
 
     void getDescendants(const utils::Entity ett, std::vector<utils::Entity>& decendants)
@@ -103,7 +104,10 @@ namespace vzm
             delete cameraCube_;
             cameraCube_ = nullptr;
         }
-        cameraManipulator_.reset();
+        if (cameraManipulator_) {
+            delete cameraManipulator_;
+            cameraManipulator_ = nullptr;
+        }
     }
     void VzCameraRes::SetCamera(Camera* camera) { camera_ = camera; }
     Camera* VzCameraRes::GetCamera() { return camera_; }
@@ -119,7 +123,8 @@ namespace vzm
     void VzCameraRes::NewCameraManipulator(const VzCamera::Controller& camController)
     {
         camController_ = camController;
-        cameraManipulator_.reset(CameraManipulator::Builder()
+        delete cameraManipulator_;
+        cameraManipulator_ = CameraManipulator::Builder()
             .targetPosition(camController_.targetPosition[0], camController_.targetPosition[1], camController_.targetPosition[2])
             .upVector(camController_.upVector[0], camController_.upVector[1], camController_.upVector[2])
             .zoomSpeed(camController_.zoomSpeed)
@@ -142,7 +147,7 @@ namespace vzm
 
             .groundPlane(camController_.groundPlane[0], camController_.groundPlane[1], camController_.groundPlane[2], camController_.groundPlane[3])
             .panning(camController_.panning)
-            .build((camutils::Mode)camController_.mode));
+            .build((camutils::Mode)camController_.mode);
     }
     VzCamera::Controller* VzCameraRes::GetCameraController()
     {
@@ -150,11 +155,11 @@ namespace vzm
     }
     CameraManipulator* VzCameraRes::GetCameraManipulator()
     {
-        return cameraManipulator_.get();
+        return cameraManipulator_;
     }
     void VzCameraRes::UpdateCameraWithCM(float deltaTime)
     {
-        if (cameraManipulator_.get() != nullptr)
+        if (cameraManipulator_ != nullptr)
         {
             cameraManipulator_->update(deltaTime);
             filament::math::float3 eye, center, up;
@@ -226,26 +231,21 @@ namespace vzm
             }
         }
     }
-    void VzGeometryRes::Set(const std::vector<Primitive>& primitives)
+    void VzGeometryRes::Set(const std::vector<VzPrimitive>& primitives)
     {
         primitives_ = primitives;
-        for (Primitive& prim : primitives_)
+        for (VzPrimitive& prim : primitives_)
         {
             currentVBs_.insert(prim.vertices);
             currentIBs_.insert(prim.indices);
             currentMTBs_.insert(prim.morphTargetBuffer);
         }
     }
-    void VzGeometryRes::SetTypes(const std::vector<RenderableManager::PrimitiveType>& primitiveTypes)
-    {
-        primitiveTypes_ = primitiveTypes;
-    }
-    std::vector<filament::gltfio::Primitive>* VzGeometryRes::Get() { return &primitives_; }
-    std::vector<RenderableManager::PrimitiveType>* VzGeometryRes::GetTypes() { return &primitiveTypes_; }
+    std::vector<VzPrimitive>* VzGeometryRes::Get() { return &primitives_; }
 
-    std::set<filament::VertexBuffer*> VzGeometryRes::currentVBs_;
-    std::set<filament::IndexBuffer*> VzGeometryRes::currentIBs_;
-    std::set<filament::MorphTargetBuffer*> VzGeometryRes::currentMTBs_;
+    std::set<VertexBuffer*> VzGeometryRes::currentVBs_;
+    std::set<IndexBuffer*> VzGeometryRes::currentIBs_;
+    std::set<MorphTargetBuffer*> VzGeometryRes::currentMTBs_;
 #pragma endregion
 
 #pragma region // VzMaterialRes
@@ -322,16 +322,16 @@ namespace vzm
             {
                 // note that
                 // there can be intrinsic entities in the scene
-                auto it = actorSceneVids_.find(vid);
-                if (it != actorSceneVids_.end()) {
+                auto it = actorSceneMap_.find(vid);
+                if (it != actorSceneMap_.end()) {
                     it->second = 0;
                     ++retired_ett_count;
                 }
             }
             else if (lcm.hasComponent(ett))
             {
-                auto it = lightSceneVids_.find(vid);
-                if (it != lightSceneVids_.end()) {
+                auto it = lightSceneMap_.find(vid);
+                if (it != lightSceneMap_.end()) {
                     it->second = 0;
                     ++retired_ett_count;
                 }
@@ -339,8 +339,8 @@ namespace vzm
             else
             {
                 // optional.
-                auto it = camSceneVids_.find(vid);
-                if (it != camSceneVids_.end()) {
+                auto it = camSceneMap_.find(vid);
+                if (it != camSceneMap_.end()) {
                     backlog::post("cam VID : " + std::to_string(ett.getId()), backlog::LogLevel::Default);
                     it->second = 0;
                     ++retired_ett_count;
@@ -349,8 +349,8 @@ namespace vzm
                 {
                     auto& ncm = VzNameCompManager::Get();
 
-                    auto it = actorSceneVids_.find(vid);
-                    if (it == actorSceneVids_.end())
+                    auto it = actorSceneMap_.find(vid);
+                    if (it == actorSceneMap_.end())
                     {
                         backlog::post("entity VID : " + std::to_string(ett.getId()) + " (" + ncm.GetName(ett) + ") ==> not a scene component.. (maybe a bone)", backlog::LogLevel::Warning);
                     }
@@ -366,7 +366,7 @@ namespace vzm
         gEngine->destroy(scene);    // maybe.. all views are set to nullptr scenes
         scenes_.erase(vidScene);
 
-        for (auto& it_c : camSceneVids_)
+        for (auto& it_c : camSceneMap_)
         {
             if (it_c.second == vidScene)
             {
@@ -381,13 +381,13 @@ namespace vzm
         backlog::post("scene (" + name + ") has been removed, # associated components : " + std::to_string(retired_ett_count),
             backlog::LogLevel::Default);
 
-        auto it_srm = sceneResMaps_.find(vidScene);
-        assert(it_srm != sceneResMaps_.end());
+        auto it_srm = sceneResMap_.find(vidScene);
+        assert(it_srm != sceneResMap_.end());
         //scene->remove(it_srm->second.GetLightmapCube()->getSolidRenderable());
         //scene->remove(it_srm->second.GetLightmapCube()->getWireFrameRenderable());
-        sceneResMaps_.erase(it_srm); // calls destructor
+        sceneResMap_.erase(it_srm); // calls destructor
 
-        vzComponents_.erase(vidScene);
+        vzCompMap_.erase(vidScene);
         return true;
     }
 
@@ -398,9 +398,9 @@ namespace vzm
         utils::Entity ett = em.create();
         VID vid = ett.getId();
         scenes_[vid] = gEngine->createScene();
-        sceneResMaps_[vid] = std::make_unique<VzSceneRes>();
+        sceneResMap_[vid] = std::make_unique<VzSceneRes>();
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzScene>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzScene>());
         VzScene* v_scene = (VzScene*)it.first->second.get();
         v_scene->componentVID = vid;
         v_scene->originFrom = "CreateScene";
@@ -418,10 +418,10 @@ namespace vzm
         auto& em = utils::EntityManager::get();
         utils::Entity ett = em.create();
         VID vid = ett.getId();
-        renderPaths_[vid] = std::make_unique<VzRenderPath>();
-        VzRenderPath* renderPath = renderPaths_[vid].get();
+        renderPathMap_[vid] = std::make_unique<VzRenderPath>();
+        VzRenderPath* renderPath = renderPathMap_[vid].get();
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzRenderer>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzRenderer>());
         VzRenderer* v_renderer = (VzRenderer*)it.first->second.get();
         v_renderer->componentVID = vid;
         v_renderer->originFrom = "CreateRenderPath";
@@ -439,10 +439,10 @@ namespace vzm
         auto& ncm = VzNameCompManager::Get();
         utils::Entity ett = em.create();
         AssetVID vid = ett.getId();
-        assetResMaps_[vid] = std::make_unique<VzAssetRes>();
+        assetResMap_[vid] = std::make_unique<VzAssetRes>();
         ncm.CreateNameComp(ett, name);
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>());
         VzAsset* v_asset = (VzAsset*)it.first->second.get();
         v_asset->componentVID = vid;
         v_asset->originFrom = "CreateAsset";
@@ -451,7 +451,7 @@ namespace vzm
 
         return vid;
     }
-    SkeletonVID VzEngineApp::CreateSkeleton(const std::string& name, const SkeletonVID vidExist = 0)
+    SkeletonVID VzEngineApp::CreateSkeleton(const std::string& name, const SkeletonVID vidExist)
     {
         auto& em = gEngine->getEntityManager();
         auto& ncm = VzNameCompManager::Get();
@@ -461,10 +461,10 @@ namespace vzm
         }
 
         AssetVID vid = ett.getId();
-        vGltfIo.skeletonResMaps[vid] = std::make_unique<VzSkeletonRes>();
+        skeletonResMap_[vid] = std::make_unique<VzSkeletonRes>();
         ncm.CreateNameComp(ett, name);
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzAsset>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>());
         VzAsset* v_asset = (VzAsset*)it.first->second.get();
         v_asset->componentVID = vid;
         v_asset->originFrom = "CreateSkeleton";
@@ -515,21 +515,21 @@ namespace vzm
     {
         bool ret = gEngine->getRenderableManager().hasComponent(utils::Entity::import(vid));
 #ifdef _DEBUG
-        auto it = actorSceneVids_.find(vid);
-        assert(ret == (it != actorSceneVids_.end()));
+        auto it = actorSceneMap_.find(vid);
+        assert(ret == (it != actorSceneMap_.end()));
 #endif
         return ret;
     }
     bool VzEngineApp::IsSceneComponent(VID vid) // can be a node for a scene tree
     {
-        return scenes_.contains(vid) || camSceneVids_.contains(vid) || lightSceneVids_.contains(vid) || actorSceneVids_.contains(vid);
+        return scenes_.contains(vid) || camSceneMap_.contains(vid) || lightSceneMap_.contains(vid) || actorSceneMap_.contains(vid);
     }
     bool VzEngineApp::IsLight(const LightVID vid)
     {
         bool ret = gEngine->getLightManager().hasComponent(utils::Entity::import(vid));
 #ifdef _DEBUG
-        auto it = lightSceneVids_.find(vid);
-        assert(ret == (it != lightSceneVids_.end()));
+        auto it = lightSceneMap_.find(vid);
+        assert(ret == (it != lightSceneMap_.end()));
 #endif
         return ret;
     }
@@ -570,38 +570,50 @@ namespace vzm
 #define GET_RES_PTR(RES_MAP) auto it = RES_MAP.find(vid); if (it == RES_MAP.end()) return nullptr; return it->second.get();
     VzSceneRes* VzEngineApp::GetSceneRes(const SceneVID vid)
     {
-        GET_RES_PTR(sceneResMaps_);
+        GET_RES_PTR(sceneResMap_);
     }
     VzRenderPath* VzEngineApp::GetRenderPath(const RendererVID vid)
     {
-        GET_RES_PTR(renderPaths_);
+        GET_RES_PTR(renderPathMap_);
     }
     VzCameraRes* VzEngineApp::GetCameraRes(const CamVID vid)
     {
-        GET_RES_PTR(camResMaps_);
+        GET_RES_PTR(camResMap_);
     }
     VzActorRes* VzEngineApp::GetActorRes(const ActorVID vid)
     {
-        GET_RES_PTR(actorResMaps_);
+        GET_RES_PTR(actorResMap_);
     }
     VzLightRes* VzEngineApp::GetLightRes(const LightVID vid)
     {
-        GET_RES_PTR(lightResMaps_);
+        GET_RES_PTR(lightResMap_);
     }
     VzAssetRes* VzEngineApp::GetAssetRes(const AssetVID vid)
     {
-        GET_RES_PTR(assetResMaps);
+        GET_RES_PTR(assetResMap_);
     }
     VzSkeletonRes* VzEngineApp::GetSkeletonRes(const SkeletonVID vid)
     {
-        GET_RES_PTR(skeletonResMaps);
+        GET_RES_PTR(skeletonResMap_);
+    }
+    AssetVID VzEngineApp::GetAssetOwner(VID vid)
+    {
+        for (auto& it : assetResMap_)
+        {
+            VzAssetRes& asset_res = *it.second.get();
+            if (asset_res.assetOwnershipComponents.contains(vid))
+            {
+                return it.first;
+            }
+        }
+        return INVALID_VID;
     }
 
     size_t VzEngineApp::GetCameraVids(std::vector<CamVID>& camVids)
     {
         camVids.clear();
-        camVids.reserve(camSceneVids_.size());
-        for (auto& it : camSceneVids_)
+        camVids.reserve(camSceneMap_.size());
+        for (auto& it : camSceneMap_)
         {
             camVids.push_back(it.first);
         }
@@ -610,8 +622,8 @@ namespace vzm
     size_t VzEngineApp::GetActorVids(std::vector<ActorVID>& actorVids)
     {
         actorVids.clear();
-        actorVids.reserve(actorSceneVids_.size());
-        for (auto& it : actorSceneVids_)
+        actorVids.reserve(actorSceneMap_.size());
+        for (auto& it : actorSceneMap_)
         {
             actorVids.push_back(it.first);
         }
@@ -620,8 +632,8 @@ namespace vzm
     size_t VzEngineApp::GetLightVids(std::vector<LightVID>& lightVids)
     {
         lightVids.clear();
-        lightVids.reserve(lightSceneVids_.size());
-        for (auto& it : lightSceneVids_)
+        lightVids.reserve(lightSceneMap_.size());
+        for (auto& it : lightSceneMap_)
         {
             lightVids.push_back(it.first);
         }
@@ -630,8 +642,8 @@ namespace vzm
     size_t VzEngineApp::GetRenderPathVids(std::vector<RendererVID>& renderPathVids)
     {
         renderPathVids.clear();
-        renderPathVids.reserve(renderPaths_.size());
-        for (auto& it : renderPaths_)
+        renderPathVids.reserve(renderPathMap_.size());
+        for (auto& it : renderPathMap_)
         {
             renderPathVids.push_back(it.first);
         }
@@ -643,18 +655,18 @@ namespace vzm
     }
     SceneVID VzEngineApp::GetSceneVidBelongTo(const VID vid)
     {
-        auto itr = actorSceneVids_.find(vid);
-        if (itr != actorSceneVids_.end())
+        auto itr = actorSceneMap_.find(vid);
+        if (itr != actorSceneMap_.end())
         {
             return itr->second;
         }
-        auto itl = lightSceneVids_.find(vid);
-        if (itl != lightSceneVids_.end())
+        auto itl = lightSceneMap_.find(vid);
+        if (itl != lightSceneMap_.end())
         {
             return itl->second;
         }
-        auto itc = camSceneVids_.find(vid);
-        if (itc != camSceneVids_.end())
+        auto itc = camSceneMap_.find(vid);
+        if (itc != camSceneMap_.end())
         {
             return itc->second;
         }
@@ -672,20 +684,20 @@ namespace vzm
                 *scene = GetScene(vid_scene);
                 if (*scene == nullptr)
                 {
-                    auto itr = actorSceneVids_.find(vid);
-                    auto itl = lightSceneVids_.find(vid);
-                    auto itc = camSceneVids_.find(vid);
-                    if (itr == actorSceneVids_.end()
-                        && itl == lightSceneVids_.end()
-                        && itc == camSceneVids_.end())
+                    auto itr = actorSceneMap_.find(vid);
+                    auto itl = lightSceneMap_.find(vid);
+                    auto itc = camSceneMap_.find(vid);
+                    if (itr == actorSceneMap_.end()
+                        && itl == lightSceneMap_.end()
+                        && itc == camSceneMap_.end())
                     {
                         vid_scene = INVALID_VID;
                     }
                     else
                     {
-                        vid_scene = max(max(itl != lightSceneVids_.end() ? itl->second : INVALID_VID,
-                            itr != actorSceneVids_.end() ? itr->second : INVALID_VID),
-                            itc != camSceneVids_.end() ? itc->second : INVALID_VID);
+                        vid_scene = max(max(itl != lightSceneMap_.end() ? itl->second : INVALID_VID,
+                            itr != actorSceneMap_.end() ? itr->second : INVALID_VID),
+                            itc != camSceneMap_.end() ? itc->second : INVALID_VID);
                         //assert(vid_scene != INVALID_VID); can be INVALID_VID
                         *scene = GetScene(vid_scene);
                     }
@@ -783,14 +795,14 @@ namespace vzm
 
         for (auto& it : entities_moving)
         {
-            auto itr = actorSceneVids_.find(it.getId());
-            auto itl = lightSceneVids_.find(it.getId());
-            auto itc = camSceneVids_.find(it.getId());
-            if (itr != actorSceneVids_.end())
+            auto itr = actorSceneMap_.find(it.getId());
+            auto itl = lightSceneMap_.find(it.getId());
+            auto itc = camSceneMap_.find(it.getId());
+            if (itr != actorSceneMap_.end())
                 itr->second = 0;
-            else if (itl != lightSceneVids_.end())
+            else if (itl != lightSceneMap_.end())
                 itl->second = 0;
-            else if (itc != camSceneVids_.end())
+            else if (itc != camSceneMap_.end())
                 itc->second = 0;
             if (scene_src)
             {
@@ -805,21 +817,21 @@ namespace vzm
                 // The entity is ignored if it doesn't have a Renderable or Light component.
                 scene_dst->addEntity(it);
 
-                auto itr = actorSceneVids_.find(it.getId());
-                auto itl = lightSceneVids_.find(it.getId());
-                auto itc = camSceneVids_.find(it.getId());
-                if (itr != actorSceneVids_.end())
+                auto itr = actorSceneMap_.find(it.getId());
+                auto itl = lightSceneMap_.find(it.getId());
+                auto itc = camSceneMap_.find(it.getId());
+                if (itr != actorSceneMap_.end())
                     itr->second = vid_scene_dst;
-                if (itl != lightSceneVids_.end())
+                if (itl != lightSceneMap_.end())
                     itl->second = vid_scene_dst;
-                if (itc != camSceneVids_.end())
+                if (itc != camSceneMap_.end())
                     itc->second = vid_scene_dst;
             }
         }
         return true;
     }
 
-    VzSceneComp* VzEngineApp::CreateSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& name, const VID vidExist = 0)
+    VzSceneComp* VzEngineApp::CreateSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& name, const VID vidExist)
     {
         if (compType == SCENE_COMPONENT_TYPE::SCENEBASE)
         {
@@ -843,10 +855,10 @@ namespace vzm
         case SCENE_COMPONENT_TYPE::ACTOR:
         {
             // RenderableManager::Builder... with entity registers the entity in the renderableEntities
-            actorSceneVids_[vid] = 0; // first creation
-            actorResMaps_[vid] = std::make_unique<VzActorRes>();
+            actorSceneMap_[vid] = 0; // first creation
+            actorResMap_[vid] = std::make_unique<VzActorRes>();
 
-            auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>());
             v_comp = (VzSceneComp*)it.first->second.get();
             v_comp->type = "VzActor";
             break;
@@ -863,10 +875,10 @@ namespace vzm
                     .castShadows(false)
                     .build(*gEngine, ett);
             }
-            lightSceneVids_[vid] = 0; // first creation
-            lightResMaps_[vid] = std::make_unique<VzLightRes>();
+            lightSceneMap_[vid] = 0; // first creation
+            lightResMap_[vid] = std::make_unique<VzLightRes>();
 
-            auto it = vzComponents_.emplace(vid, std::make_unique<VzLight>());
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzLight>());
             v_comp = (VzSceneComp*)it.first->second.get();
             v_comp->type = "VzLight";
             break;
@@ -883,12 +895,12 @@ namespace vzm
             {
                 camera = gEngine->getCameraComponent(ett);
             }
-            camSceneVids_[vid] = 0;
-            camResMaps_[vid] = std::make_unique<VzCameraRes>();
-            VzCameraRes* cam_res = camResMaps_[vid].get();
+            camSceneMap_[vid] = 0;
+            camResMap_[vid] = std::make_unique<VzCameraRes>();
+            VzCameraRes* cam_res = camResMap_[vid].get();
             cam_res->SetCamera(camera);
 
-            auto it = vzComponents_.emplace(vid, std::make_unique<VzCamera>());
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzCamera>());
             v_comp = (VzSceneComp*)it.first->second.get();
             v_comp->type = "VzCamera";
             break;
@@ -915,7 +927,7 @@ namespace vzm
 
         return v_comp;
     }
-    VzActor* VzEngineApp::CreateTestActor(const std::string& modelName = "MONKEY_SUZANNE_DATA")
+    VzActor* VzEngineApp::CreateTestActor(const std::string& modelName)
     {
         std::string geo_name = modelName + "_GEOMETRY";
         const std::string material_name = "_DEFAULT_STANDARD_MATERIAL";
@@ -924,7 +936,7 @@ namespace vzm
 
         MaterialInstance* mi = nullptr;
         MInstanceVID vid_mi = INVALID_VID;
-        for (auto& it_mi : materialInstances_)
+        for (auto& it_mi : miResMap_)
         {
             utils::Entity ett = utils::Entity::import(it_mi.first);
 
@@ -940,15 +952,15 @@ namespace vzm
             MaterialVID vid_m = GetFirstVidByName(material_name);
             VzMaterial* v_m = GetVzComponent<VzMaterial>(vid_m);
             assert(v_m != nullptr);
-            Material* m = materials_[v_m->componentVID]->material;
+            Material* m = materialResMap_[v_m->componentVID]->material;
             mi = m->createInstance(mi_name.c_str());
             mi->setParameter("baseColor", RgbType::LINEAR, float3{ 0.8, 0.1, 0.1 });
             mi->setParameter("metallic", 1.0f);
             mi->setParameter("roughness", 0.4f);
             mi->setParameter("reflectance", 0.5f);
             VzMI* v_mi = CreateMaterialInstance(mi_name, mi);
-            auto it_mi = materialInstances_.find(v_mi->componentVID);
-            assert(it_mi != materialInstances_.end());
+            auto it_mi = miResMap_.find(v_mi->componentVID);
+            assert(it_mi != miResMap_.end());
             assert(mi == it_mi->second->mi);
             vid_mi = v_mi->componentVID;
         }
@@ -957,8 +969,8 @@ namespace vzm
         MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(gEngine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
         ncm.CreateNameComp(mesh.renderable, modelName);
         VID vid = mesh.renderable.getId();
-        actorSceneVids_[vid] = 0;
-        actorResMaps_[vid] = std::make_unique<VzActorRes>();
+        actorSceneMap_[vid] = 0;
+        actorResMap_[vid] = std::make_unique<VzActorRes>();
 
         auto& rcm = gEngine->getRenderableManager();
         auto ins = rcm.getInstance(mesh.renderable);
@@ -967,13 +979,13 @@ namespace vzm
         VzGeometry* geo = CreateGeometry(geo_name, { {
             .vertices = mesh.vertexBuffer,
             .indices = mesh.indexBuffer,
-            .aabb = Aabb(box.getMin(), box.getMax())
+            .aabb = box.getMin(),
             } });
-        VzActorRes& actor_res = *actorResMaps_[vid].get();
+        VzActorRes& actor_res = *actorResMap_[vid].get();
         actor_res.SetGeometry(geo->componentVID);
         actor_res.SetMIs({ vid_mi });
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzActor>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>());
         VzActor* v_actor = (VzActor*)it.first->second.get();
         v_actor->componentVID = vid;
         v_actor->originFrom = "CreateTestActor";
@@ -983,9 +995,9 @@ namespace vzm
         return v_actor;
     }
     VzGeometry* VzEngineApp::CreateGeometry(const std::string& name,
-        const std::vector<filament::gltfio::Primitive>& primitives,
-        const filament::gltfio::FilamentAsset* assetOwner = nullptr,
-        const bool isSystem = false)
+        const std::vector<VzPrimitive>& primitives,
+        const filament::gltfio::FilamentAsset* assetOwner,
+        const bool isSystem)
     {
         auto& em = utils::EntityManager::get();
         auto& ncm = VzNameCompManager::Get();
@@ -995,8 +1007,8 @@ namespace vzm
 
         VID vid = ett.getId();
 
-        geometries_[vid] = std::make_unique<VzGeometryRes>();
-        VzGeometryRes& geo_res = *geometries_[vid].get();
+        geometryResMap_[vid] = std::make_unique<VzGeometryRes>();
+        VzGeometryRes& geo_res = *geometryResMap_[vid].get();
         geo_res.Set(primitives);
         geo_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         geo_res.isSystem = isSystem;
@@ -1006,7 +1018,7 @@ namespace vzm
             geo_res.aabb.max = max(prim.aabb.max, geo_res.aabb.max);
         }
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzGeometry>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzGeometry>());
         VzGeometry* v_m = (VzGeometry*)it.first->second.get();
         v_m->componentVID = vid;
         v_m->compType = RES_COMPONENT_TYPE::GEOMATRY;
@@ -1017,16 +1029,16 @@ namespace vzm
         return v_m;
     }
     VzMaterial* VzEngineApp::CreateMaterial(const std::string& name,
-        const Material* material = nullptr,
-        const filament::gltfio::FilamentAsset* assetOwner = nullptr,
-        const bool isSystem = false)
+        const Material* material,
+        const filament::gltfio::FilamentAsset* assetOwner,
+        const bool isSystem)
     {
         auto& em = utils::EntityManager::get();
         auto& ncm = VzNameCompManager::Get();
 
         if (material != nullptr)
         {
-            for (auto& it : materials_)
+            for (auto& it : materialResMap_)
             {
                 if (it.second->material == material)
                 {
@@ -1039,13 +1051,13 @@ namespace vzm
         ncm.CreateNameComp(ett, name);
 
         VID vid = ett.getId();
-        materials_[vid] = std::make_unique<VzMaterialRes>();
-        VzMaterialRes& m_res = *materials_[vid].get();
+        materialResMap_[vid] = std::make_unique<VzMaterialRes>();
+        VzMaterialRes& m_res = *materialResMap_[vid].get();
         m_res.material = (Material*)material;
         m_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         m_res.isSystem = isSystem;
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzMaterial>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>());
         VzMaterial* v_m = (VzMaterial*)it.first->second.get();
         v_m->componentVID = vid;
         v_m->originFrom = "CreateMaterial";
@@ -1056,16 +1068,16 @@ namespace vzm
         return v_m;
     }
     VzMI* VzEngineApp::CreateMaterialInstance(const std::string& name,
-        const MaterialInstance* mi = nullptr,
-        const filament::gltfio::FilamentAsset* assetOwner = nullptr,
-        const bool isSystem = false)
+        const MaterialInstance* mi,
+        const filament::gltfio::FilamentAsset* assetOwner,
+        const bool isSystem)
     {
         auto& em = utils::EntityManager::get();
         auto& ncm = VzNameCompManager::Get();
 
         if (mi != nullptr)
         {
-            for (auto& it : materialInstances_)
+            for (auto& it : miResMap_)
             {
                 if (it.second->mi == mi)
                 {
@@ -1078,13 +1090,13 @@ namespace vzm
         ncm.CreateNameComp(ett, name);
 
         VID vid = ett.getId();
-        materialInstances_[vid] = std::make_unique<VzMIRes>();
-        VzMIRes& mi_res = *materialInstances_[vid].get();
+        miResMap_[vid] = std::make_unique<VzMIRes>();
+        VzMIRes& mi_res = *miResMap_[vid].get();
         mi_res.mi = (MaterialInstance*)mi;
         mi_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         mi_res.isSystem = isSystem;
 
-        auto it = vzComponents_.emplace(vid, std::make_unique<VzMI>());
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMI>());
         VzMI* v_m = (VzMI*)it.first->second.get();
         v_m->componentVID = vid;
         v_m->originFrom = "CreateMaterialInstance";
@@ -1115,8 +1127,7 @@ namespace vzm
         auto ins = rcm.getInstance(ett_actor);
         assert(ins.isValid());
 
-        std::vector<Primitive>& primitives = *geo_res->Get();
-        std::vector<RenderableManager::PrimitiveType>& primitive_types = *geo_res->GetTypes();
+        std::vector<VzPrimitive>& primitives = *geo_res->Get();
         std::vector<MaterialInstance*> mis;
         for (auto& it_mi : actor_res->GetMIVids())
         {
@@ -1127,10 +1138,9 @@ namespace vzm
 
         for (size_t index = 0, n = primitives.size(); index < n; ++index)
         {
-            Primitive* primitive = &primitives[index];
+            VzPrimitive* primitive = &primitives[index];
             MaterialInstance* mi = mis.size() > index ? mis[index] : nullptr;
-            RenderableManager::PrimitiveType prim_type = primitive_types.size() > index ?
-                primitive_types[index] : RenderableManager::PrimitiveType::TRIANGLES;
+            RenderableManager::PrimitiveType prim_type = (RenderableManager::PrimitiveType)primitive->ptype;
             builder.material(index, mi);
             builder.geometry(index, prim_type, primitive->vertices, primitive->indices);
             if (primitive->morphTargetBuffer)
@@ -1156,8 +1166,8 @@ namespace vzm
 
     VzGeometryRes* VzEngineApp::GetGeometryRes(const GeometryVID vidGeo)
     {
-        auto it = geometries_.find(vidGeo);
-        if (it == geometries_.end())
+        auto it = geometryResMap_.find(vidGeo);
+        if (it == geometryResMap_.end())
         {
             return nullptr;
         }
@@ -1165,8 +1175,8 @@ namespace vzm
     }
     VzMaterialRes* VzEngineApp::GetMaterialRes(const MaterialVID vidMaterial)
     {
-        auto it = materials_.find(vidMaterial);
-        if (it == materials_.end())
+        auto it = materialResMap_.find(vidMaterial);
+        if (it == materialResMap_.end())
         {
             return nullptr;
         }
@@ -1174,7 +1184,7 @@ namespace vzm
     }
     MaterialVID VzEngineApp::FindMaterialVID(const filament::Material* mat)
     {
-        for (auto& it : materials_)
+        for (auto& it : materialResMap_)
         {
             if (it.second->material == mat)
             {
@@ -1186,8 +1196,8 @@ namespace vzm
 
     VzMIRes* VzEngineApp::GetMIRes(const MInstanceVID vidMI)
     {
-        auto it = materialInstances_.find(vidMI);
-        if (it == materialInstances_.end())
+        auto it = miResMap_.find(vidMI);
+        if (it == miResMap_.end())
         {
             return nullptr;
         }
@@ -1195,7 +1205,7 @@ namespace vzm
     }
     MInstanceVID VzEngineApp::FindMaterialInstanceVID(const filament::MaterialInstance* mi)
     {
-        for (auto& it : materialInstances_)
+        for (auto& it : miResMap_)
         {
             if (it.second->mi == mi)
             {
@@ -1242,8 +1252,8 @@ namespace vzm
 #pragma region destroy by engine
             bool isRenderableResource = false; // geometry, material, or material instance
             // note filament engine handles the renderable objects (with the modified resource settings)
-            auto it_m = materials_.find(vid);
-            if (it_m != materials_.end())
+            auto it_m = materialResMap_.find(vid);
+            if (it_m != materialResMap_.end())
             {
                 VzMaterialRes& m_res = *it_m->second.get();
                 if (m_res.isSystem && !ignoreOnwership)
@@ -1262,7 +1272,7 @@ namespace vzm
                 }
                 else
                 {
-                    for (auto it = materialInstances_.begin(); it != materialInstances_.end();)
+                    for (auto it = miResMap_.begin(); it != miResMap_.end();)
                     {
                         if (it->second->mi->getMaterial() == m_res.material)
                         {
@@ -1286,7 +1296,7 @@ namespace vzm
                                 isRenderableResource = true;
                                 ncm.RemoveEntity(ett_mi); // explicitly 
                                 em.destroy(ett_mi); // double check
-                                it = materialInstances_.erase(it); // call destructor...
+                                it = miResMap_.erase(it); // call destructor...
                                 backlog::post("(" + name + ")-associated-MI (" + name_mi + ") has been removed", backlog::LogLevel::Default);
                             }
 
@@ -1296,15 +1306,15 @@ namespace vzm
                             ++it;
                         }
                     }
-                    materials_.erase(it_m); // call destructor...
+                    materialResMap_.erase(it_m); // call destructor...
                     backlog::post("Material (" + name + ") has been removed", backlog::LogLevel::Default);
                 }
                 // caution: 
                 // before destroying the material,
                 // destroy the associated material instances
             }
-            auto it_mi = materialInstances_.find(vid);
-            if (it_mi != materialInstances_.end())
+            auto it_mi = miResMap_.find(vid);
+            if (it_mi != miResMap_.end())
             {
                 VzMIRes& mi_res = *it_mi->second.get();
                 if (mi_res.isSystem && !ignoreOnwership)
@@ -1323,13 +1333,13 @@ namespace vzm
                 }
                 else
                 {
-                    materialInstances_.erase(it_mi); // call destructor...
+                    miResMap_.erase(it_mi); // call destructor...
                     isRenderableResource = true;
                     backlog::post("MI (" + name + ") has been removed", backlog::LogLevel::Default);
                 }
             }
-            auto it_geo = geometries_.find(vid);
-            if (it_geo != geometries_.end())
+            auto it_geo = geometryResMap_.find(vid);
+            if (it_geo != geometryResMap_.end())
             {
                 VzGeometryRes& geo_res = *it_geo->second.get();
                 if (geo_res.isSystem && !ignoreOnwership)
@@ -1348,7 +1358,7 @@ namespace vzm
                 }
                 else
                 {
-                    geometries_.erase(it_geo); // call destructor...
+                    geometryResMap_.erase(it_geo); // call destructor...
                     isRenderableResource = true;
                     backlog::post("Geometry (" + name + ") has been removed", backlog::LogLevel::Default);
                 }
@@ -1356,10 +1366,10 @@ namespace vzm
 
             if (isRenderableResource)
             {
-                for (auto& it_res : actorResMaps_)
+                for (auto& it_res : actorResMap_)
                 {
                     VzActorRes& actor_res = *it_res.second.get();
-                    if (geometries_.find(actor_res.GetGeometryVid()) == geometries_.end())
+                    if (geometryResMap_.find(actor_res.GetGeometryVid()) == geometryResMap_.end())
                     {
                         actor_res.SetGeometry(INVALID_VID);
                     }
@@ -1367,7 +1377,7 @@ namespace vzm
                     std::vector<MInstanceVID> mis = actor_res.GetMIVids();
                     for (int i = 0, n = (int)mis.size(); i < n; ++i)
                     {
-                        if (materialInstances_.find(mis[i]) == materialInstances_.end())
+                        if (miResMap_.find(mis[i]) == miResMap_.end())
                         {
                             actor_res.SetMI(INVALID_VID, i);
                         }
@@ -1375,8 +1385,8 @@ namespace vzm
                 }
             }
 
-            auto it_camres = camResMaps_.find(vid);
-            if (it_camres != camResMaps_.end())
+            auto it_camres = camResMap_.find(vid);
+            if (it_camres != camResMap_.end())
             {
                 VzCameraRes& cam_res = *it_camres->second.get();
                 Cube* cam_cube = cam_res.GetCameraCube();
@@ -1390,13 +1400,13 @@ namespace vzm
                         scene->remove(cam_cube->getWireFrameRenderable());
                     }
                 }
-                camResMaps_.erase(it_camres); // call destructor
+                camResMap_.erase(it_camres); // call destructor
             }
 
-            auto it_light = lightResMaps_.find(vid);
-            if (it_light != lightResMaps_.end())
+            auto it_light = lightResMap_.find(vid);
+            if (it_light != lightResMap_.end())
             {
-                lightResMaps_.erase(it_light); // call destructor
+                lightResMap_.erase(it_light); // call destructor
             }
 
             if (int vid_assetowner = GetAssetOwner(vid))
@@ -1415,21 +1425,21 @@ namespace vzm
                 {
                     RemoveComponent(it, true);
                 }
-                assetResMaps_.erase(vid);
+                assetResMap_.erase(vid);
             }
 
 #pragma endregion 
             // the remaining etts (not engine-destory group)
 
-            vzComponents_.erase(vid);
+            vzCompMap_.erase(vid);
 
-            actorSceneVids_.erase(vid);
-            actorResMaps_.erase(vid);
-            lightSceneVids_.erase(vid);
-            lightResMaps_.erase(vid);
-            camSceneVids_.erase(vid);
-            camResMaps_.erase(vid);
-            renderPaths_.erase(vid);
+            actorSceneMap_.erase(vid);
+            actorResMap_.erase(vid);
+            lightSceneMap_.erase(vid);
+            lightResMap_.erase(vid);
+            camSceneMap_.erase(vid);
+            camResMap_.erase(vid);
+            renderPathMap_.erase(vid);
 
             for (auto& it : scenes_)
             {
@@ -1442,20 +1452,6 @@ namespace vzm
         gEngine->destroy(ett);
 
         return true;
-    }
-
-    template <typename UM> void destroyTarget(UM& umap)
-    {
-        std::vector<VID> vids;
-        vids.reserve(umap.size());
-        for (auto it = umap.begin(); it != umap.end(); it++)
-        {
-            vids.push_back(it->first);
-        }
-        for (VID vid : vids)
-        {
-            RemoveComponent(vid);
-        }
     }
 
     void VzEngineApp::CancelAyncLoad()
@@ -1487,27 +1483,27 @@ namespace vzm
         //std::unordered_map<SceneVID, filament::Scene*> scenes_;
         //// note a VzRenderPath involves a view that includes
         //// 1. camera and 2. scene
-        //std::unordered_map<CamVID, VzRenderPath> renderPaths_;
-        //std::unordered_map<ActorVID, SceneVID> actorSceneVids_;
-        //std::unordered_map<LightVID, SceneVID> lightSceneVids_;
+        //std::unordered_map<CamVID, VzRenderPath> renderPathMap_;
+        //std::unordered_map<ActorVID, SceneVID> actorSceneMap_;
+        //std::unordered_map<LightVID, SceneVID> lightSceneMap_;
         //
         //// Resources
-        //std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometries_;
-        //std::unordered_map<MaterialVID, filament::Material*> materials_;
-        //std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> materialInstances_;
+        //std::unordered_map<GeometryVID, filamesh::MeshReader::Mesh> geometryResMap_;
+        //std::unordered_map<MaterialVID, filament::Material*> materialResMap_;
+        //std::unordered_map<MaterialInstanceVID, filament::MaterialInstance*> miResMap_;
 
         // iteratively calling RemoveEntity of the following keys 
-        destroyTarget(camSceneVids_);
-        destroyTarget(actorSceneVids_); // including actorResMaps_
-        destroyTarget(lightSceneVids_); // including lightResMaps_
-        destroyTarget(renderPaths_);
+        destroyTarget(camSceneMap_);
+        destroyTarget(actorSceneMap_); // including actorResMap_
+        destroyTarget(lightSceneMap_); // including lightResMap_
+        destroyTarget(renderPathMap_);
         destroyTarget(scenes_);
-        destroyTarget(geometries_);
-        destroyTarget(materialInstances_);
-        destroyTarget(materials_);
+        destroyTarget(geometryResMap_);
+        destroyTarget(miResMap_);
+        destroyTarget(materialResMap_);
 
-        if (assetResMaps_.size() > 0) {
-            for (auto& it : assetResMaps_)
+        if (assetResMap_.size() > 0) {
+            for (auto& it : assetResMap_)
             {
                 VzAssetRes& asset_res = *it.second.get();
                 // For membership of each gltf component belongs to VZM
@@ -1538,7 +1534,7 @@ namespace vzm
 
                 vGltfIo.assetLoader->destroyAsset(fasset); // involving skeletons...
             }
-            assetResMaps_.clear();
+            assetResMap_.clear();
         }
 
         vGltfIo.Destory();

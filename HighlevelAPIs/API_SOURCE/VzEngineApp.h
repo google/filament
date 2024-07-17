@@ -2,6 +2,19 @@
 #define VZENGINEAPP_H
 #include "VzComponents.h"
 
+#include "filament/VertexBuffer.h"
+#include "filament/IndexBuffer.h"
+#include "filament/MorphTargetBuffer.h"
+
+#include "camutils/Manipulator.h"
+#include "filament/Box.h"
+
+#include "gltfio/MaterialProvider.h"
+#include "gltfio/FilamentAsset.h"
+#include "gltfio/ResourceLoader.h"
+
+#include <array>
+
 using SceneVID = VID;
 using RendererVID = VID;
 using CamVID = VID;
@@ -14,7 +27,6 @@ using MaterialVID = VID;
 using AssetVID = VID;
 using SkeletonVID = VID;
 using BoneVID = VID;
-
 
 namespace vzm::backlog
 {
@@ -36,20 +48,42 @@ namespace vzm
     void cubeToScene(const VID vidCubeRenderable, const VID vidCube);
 }
 
-class IBL;
-class Cube;
-class CameraManipulator;
-namespace filament {
-    class Camera;
-    namespace gltfio {
-        class VzAssetLoader;
-    }
+namespace filament::gltfio {
+    struct VzAssetLoader;
 }
 
+class IBL;
+class Cube;
 // component contents
 namespace vzm
 {
+    enum class PrimitiveType : uint8_t {
+        // don't change the enums values (made to match GL)
+        POINTS = 0,    //!< points
+        LINES = 1,    //!< lines
+        LINE_STRIP = 3,    //!< line strip
+        TRIANGLES = 4,    //!< triangles
+        TRIANGLE_STRIP = 5     //!< triangle strip
+    };
+
+    using namespace filament;
+    using namespace filament::gltfio;
+
+    using CameraManipulator = filament::camutils::Manipulator<float>;
+
     struct GltfIO;
+
+    struct VzPrimitive {
+        VertexBuffer* vertices = nullptr;
+        IndexBuffer* indices = nullptr;
+        Aabb aabb; // object-space bounding box
+        UvMap uvmap; // mapping from each glTF UV set to either UV0 or UV1 (8 bytes)
+        MorphTargetBuffer* morphTargetBuffer = nullptr;
+        uint32_t morphTargetOffset;
+        std::vector<int> slotIndices;
+
+        PrimitiveType ptype = PrimitiveType::TRIANGLES;
+    };
 
     struct VzSceneRes
     {
@@ -70,7 +104,7 @@ namespace vzm
         filament::Camera* camera_ = nullptr;
         Cube* cameraCube_ = nullptr;
         VzCamera::Controller camController_ = VzCamera::Controller(0);
-        std::unique_ptr<CameraManipulator> cameraManipulator_;
+        CameraManipulator* cameraManipulator_;
     public:
         VzCameraRes() = default;
         ~VzCameraRes();
@@ -118,17 +152,13 @@ namespace vzm
         static std::set<IndexBuffer*> currentIBs_;
         static std::set<MorphTargetBuffer*> currentMTBs_;
 
-        std::vector<filament::gltfio::Primitive> primitives_;
-        std::vector<RenderableManager::PrimitiveType> primitiveTypes_;
+        std::vector<VzPrimitive> primitives_;
     public:
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
-        Aabb aabb;
-
-        void Set(const std::vector<Primitive>& primitives);
-        void SetTypes(const std::vector<RenderableManager::PrimitiveType>& primitiveTypes);
-        std::vector<filament::gltfio::Primitive>* Get();
-        std::vector<RenderableManager::PrimitiveType>* GetTypes();
+        filament::Aabb aabb;
+        void Set(const std::vector<VzPrimitive>& primitives);
+        std::vector<VzPrimitive>* Get();
 
         ~VzGeometryRes();
     };
@@ -136,14 +166,14 @@ namespace vzm
     {
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
-        filament::Material* material = nullptr;
+        Material* material = nullptr;
         ~VzMaterialRes();
     };
     struct VzMIRes
     {
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
-        filament::MaterialInstance* mi = nullptr;
+        MaterialInstance* mi = nullptr;
         ~VzMIRes();
     };
 
@@ -164,32 +194,36 @@ namespace vzm
 
 namespace vzm
 {
+    using namespace filament;
+
+    class VzRenderPath;
+
     class VzEngineApp
     {
     private:
         std::unordered_map<SceneVID, Scene*> scenes_;
-        std::unordered_map<SceneVID, std::unique_ptr<VzSceneRes>> sceneResMaps_;
+        std::unordered_map<SceneVID, std::unique_ptr<VzSceneRes>> sceneResMap_;
         // note a VzRenderPath involves a filament::view that includes
         // 1. filament::camera and 2. filament::scene
-        std::unordered_map<CamVID, SceneVID> camSceneVids_;
-        std::unordered_map<CamVID, std::unique_ptr<VzCameraRes>> camResMaps_;
-        std::unordered_map<ActorVID, SceneVID> actorSceneVids_;
-        std::unordered_map<ActorVID, std::unique_ptr<VzActorRes>> actorResMaps_; // consider when removing resources...
-        std::unordered_map<LightVID, SceneVID> lightSceneVids_;
-        std::unordered_map<LightVID, std::unique_ptr<VzLightRes>> lightResMaps_;
+        std::unordered_map<CamVID, SceneVID> camSceneMap_;
+        std::unordered_map<CamVID, std::unique_ptr<VzCameraRes>> camResMap_;
+        std::unordered_map<ActorVID, SceneVID> actorSceneMap_;
+        std::unordered_map<ActorVID, std::unique_ptr<VzActorRes>> actorResMap_; // consider when removing resources...
+        std::unordered_map<LightVID, SceneVID> lightSceneMap_;
+        std::unordered_map<LightVID, std::unique_ptr<VzLightRes>> lightResMap_;
 
-        std::unordered_map<RendererVID, std::unique_ptr<VzRenderPath>> renderPaths_;
+        std::unordered_map<RendererVID, std::unique_ptr<VzRenderPath>> renderPathMap_;
 
         // Resources (ownership check!)
-        std::unordered_map<GeometryVID, std::unique_ptr<VzGeometryRes>> geometries_;
-        std::unordered_map<MaterialVID, std::unique_ptr<VzMaterialRes>> materials_;
-        std::unordered_map<MInstanceVID, std::unique_ptr<VzMIRes>> materialInstances_;
+        std::unordered_map<GeometryVID, std::unique_ptr<VzGeometryRes>> geometryResMap_;
+        std::unordered_map<MaterialVID, std::unique_ptr<VzMaterialRes>> materialResMap_;
+        std::unordered_map<MInstanceVID, std::unique_ptr<VzMIRes>> miResMap_;
 
         // GLTF Asset
-        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assetResMaps_;
-        std::unordered_map<SkeletonVID, std::unique_ptr<VzSkeletonRes>> skeletonResMaps_;
+        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assetResMap_;
+        std::unordered_map<SkeletonVID, std::unique_ptr<VzSkeletonRes>> skeletonResMap_;
 
-        std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzComponents_;
+        std::unordered_map<VID, std::unique_ptr<VzBaseComp>> vzCompMap_;
 
         bool removeScene(SceneVID vidScene);
 
@@ -216,19 +250,11 @@ namespace vzm
         VzActorRes* GetActorRes(const ActorVID vid);
         VzLightRes* GetLightRes(const LightVID vid);
         VzAssetRes* GetAssetRes(const AssetVID vid);
-        VzSkeletonRes* GetSkeletonRes(const SkeletonVID vid);
-        AssetVID GetAssetOwner(VID vid)
-        {
-            for (auto& it : assetResMaps)
-            {
-                VzAssetRes& asset_res = *it.second.get();
-                if (asset_res.assetOwnershipComponents.contains(vid))
-                {
-                    return it.first;
-                }
-            }
-            return INVALID_VID;
+        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>>* GetAssetResMap() {
+            return &assetResMap_;
         }
+        VzSkeletonRes* GetSkeletonRes(const SkeletonVID vid);
+        AssetVID GetAssetOwner(VID vid);
 
         size_t GetCameraVids(std::vector<CamVID>& camVids);
         size_t GetActorVids(std::vector<ActorVID>& actorVids);
@@ -243,7 +269,7 @@ namespace vzm
             const std::string& name, const VID vidExist = 0);
         VzActor* CreateTestActor(const std::string& modelName = "MONKEY_SUZANNE_DATA");
         VzGeometry* CreateGeometry(const std::string& name,
-            const std::vector<filament::gltfio::Primitive>& primitives,
+            const std::vector<VzPrimitive>& primitives,
             const filament::gltfio::FilamentAsset* assetOwner = nullptr,
             const bool isSystem = false);
         VzMaterial* CreateMaterial(const std::string& name,
@@ -267,17 +293,30 @@ namespace vzm
         template <typename VZCOMP>
         VZCOMP* GetVzComponent(const VID vid)
         {
-            auto it = vzComponents_.find(vid);
-            if (it == vzComponents_.end())
+            auto it = vzCompMap_.find(vid);
+            if (it == vzCompMap_.end())
             {
                 return nullptr;
             }
             return (VZCOMP*)it->second.get();
         }
 
-        VzAssetLoader* GetGltfAssetLoader();
-        ResourceLoader* GetGltfResourceLoader();
+        gltfio::VzAssetLoader* GetGltfAssetLoader();
+        gltfio::ResourceLoader* GetGltfResourceLoader();
 
+        template <typename UM> void destroyTarget(UM& umap)
+        {
+            std::vector<VID> vids;
+            vids.reserve(umap.size());
+            for (auto it = umap.begin(); it != umap.end(); it++)
+            {
+                vids.push_back(it->first);
+            }
+            for (VID vid : vids)
+            {
+                RemoveComponent(vid);
+            }
+        }
         bool RemoveComponent(const VID vid, const bool forceToRemove = false);
 
         void CancelAyncLoad();

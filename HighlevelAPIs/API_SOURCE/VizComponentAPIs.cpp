@@ -1,5 +1,7 @@
 #include "VizComponentAPIs.h"
 #include "VzEngineApp.h"
+#include "VzNameComponents.hpp"
+#include "FIncludes.h"
 
 extern Engine* gEngine;
 extern vzm::VzEngineApp gEngineApp;

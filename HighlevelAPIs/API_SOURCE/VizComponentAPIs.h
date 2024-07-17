@@ -8,6 +8,7 @@
 #pragma warning (disable : 4068)
 #pragma warning (disable : 4267)
 #pragma warning (disable : 4244)
+#pragma warning (disable : 4067)
 
 #define _ITERATOR_DEBUG_LEVEL 0 // this is for using STL containers as our standard parameters
 

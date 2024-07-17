@@ -64,19 +64,19 @@ namespace vzm
 
         bool TryResizeRenderTargets();
 
-        inline void SetFixedTimeUpdate(const float targetFPS);
-        inline float GetFixedTimeUpdate() const;
+        void SetFixedTimeUpdate(const float targetFPS);
+        float GetFixedTimeUpdate() const;
 
-        inline void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window);
-        inline void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
-        inline filament::SwapChain* GetSwapChain();
+        void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window);
+        void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
+        filament::SwapChain* GetSwapChain();
 
         uint64_t FRAMECOUNT = 0;
         float deltaTime = 0;
         float deltaTimeAccumulator = 0;
 
-        inline filament::View* GetView();
-        inline filament::Renderer* GetRenderer();
+        filament::View* GetView();
+        filament::Renderer* GetRenderer();
     };
 }
 #endif

@@ -79,24 +79,24 @@ namespace vzm
         return true;
     }
 
-    inline void VzRenderPath::SetFixedTimeUpdate(const float targetFPS)
+    void VzRenderPath::SetFixedTimeUpdate(const float targetFPS)
     {
         targetFrameRate_ = targetFPS;
         timeStamp_ = std::chrono::high_resolution_clock::now();
     }
-    inline float VzRenderPath::GetFixedTimeUpdate() const
+    float VzRenderPath::GetFixedTimeUpdate() const
     {
         return targetFrameRate_;
     }
 
-    inline void VzRenderPath::GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window)
+    void VzRenderPath::GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window)
     {
         if (w) *w = width_;
         if (h) *h = height_;
         if (dpi) *dpi = dpi_;
         if (window) *window = nativeWindow_;
     }
-    inline void VzRenderPath::SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr)
+    void VzRenderPath::SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window)
     {
         // the resize is called during the rendering (pre-processing)
         width_ = w;
@@ -107,12 +107,12 @@ namespace vzm
         view_->setViewport(filament::Viewport(0, 0, w, h));
         timeStamp_ = std::chrono::high_resolution_clock::now();
     }
-    inline filament::SwapChain* VzRenderPath::GetSwapChain()
+    filament::SwapChain* VzRenderPath::GetSwapChain()
     {
         return swapChain_;
     }
 
-    inline filament::View* VzRenderPath::GetView() { return view_; }
+    filament::View* VzRenderPath::GetView() { return view_; }
 
-    inline filament::Renderer* VzRenderPath::GetRenderer() { return renderer_; }
+    filament::Renderer* VzRenderPath::GetRenderer() { return renderer_; }
 }

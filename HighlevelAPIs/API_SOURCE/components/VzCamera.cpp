@@ -7,6 +7,8 @@ extern VzEngineApp gEngineApp;
 
 namespace vzm
 {
+    using CameraManipulator = filament::camutils::Manipulator<float>;
+
     // Pose parameters are defined in WS (not local space)
     void VzCamera::SetWorldPose(const float pos[3], const float view[3], const float up[3])
     {
@@ -58,8 +60,8 @@ namespace vzm
         rcm.setLayerMask(rcm.getInstance(camera_cube->getSolidRenderable()), layerBits, maskBits);
         rcm.setLayerMask(rcm.getInstance(camera_cube->getWireFrameRenderable()), layerBits, maskBits);
 
-        cubeToScene(camera_cube->getSolidRenderable(), componentVID);
-        cubeToScene(camera_cube->getWireFrameRenderable(), componentVID);
+        cubeToScene(camera_cube->getSolidRenderable().getId(), componentVID);
+        cubeToScene(camera_cube->getWireFrameRenderable().getId(), componentVID);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
 

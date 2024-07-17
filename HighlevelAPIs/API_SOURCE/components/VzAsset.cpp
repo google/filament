@@ -91,7 +91,7 @@ namespace vzm
     void VzAsset::Animator::UpdateAnimation()
     {
         //COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, );
-        COMP_ASSET_ANI(asset_res, vzGltfIO.assetResMaps, );
+        COMP_ASSET_ANI(asset_res, );
         FilamentInstance* finst = asset_res->asset->getInstance();
         if (finst == nullptr) return;
         filament::gltfio::Animator* fani = finst->getAnimator();

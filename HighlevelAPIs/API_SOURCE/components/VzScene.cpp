@@ -53,8 +53,8 @@ namespace vzm
         rcm.setLayerMask(rcm.getInstance(light_cube->getSolidRenderable()), layerBits, maskBits);
         rcm.setLayerMask(rcm.getInstance(light_cube->getWireFrameRenderable()), layerBits, maskBits);
 
-        cubeToScene(light_cube->getSolidRenderable(), componentVID);
-        cubeToScene(light_cube->getWireFrameRenderable(), componentVID);
+        cubeToScene(light_cube->getSolidRenderable().getId(), componentVID);
+        cubeToScene(light_cube->getWireFrameRenderable().getId(), componentVID);
         timeStamp = std::chrono::high_resolution_clock::now();
     }
 }

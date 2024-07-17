@@ -96,10 +96,13 @@ namespace vzm
             cameraCube->mapFrustum(*gEngine, camera);
         }
 
-        if (vzGltfIO.resourceLoader)
-            vzGltfIO.resourceLoader->asyncUpdateLoad();
+        ResourceLoader* resource_loader = gEngineApp.GetGltfResourceLoader();
+        if (resource_loader)
+            resource_loader->asyncUpdateLoad();
 
-        for (auto& it : vzGltfIO.assetResMaps)
+        std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>>& assetResMap = *gEngineApp.GetAssetResMap();
+
+        for (auto& it : assetResMap)
         {
             VzAssetRes* asset_res = it.second.get();
             VzAsset* v_asset = gEngineApp.GetVzComponent<VzAsset>(it.first);

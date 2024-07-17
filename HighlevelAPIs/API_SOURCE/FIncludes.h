@@ -1,5 +1,14 @@
+#pragma once
 //////////////////////////////
 // filament intrinsics
+#pragma warning (disable : 4251)
+#pragma warning (disable : 4819)
+// FEngine Warnings
+#pragma warning (disable : 4146)
+#pragma warning (disable : 4068)
+#pragma warning (disable : 4267)
+#pragma warning (disable : 4244)
+
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Camera.h>
@@ -43,7 +52,7 @@
 
 // FEngine
 #include "../../libs/gltfio/src/FFilamentAsset.h"
-#include "../../libs/gltfio/src/FNodeManager.h""
+#include "../../libs/gltfio/src/FNodeManager.h"
 #include "../../libs/gltfio/src/extended/AssetLoaderExtended.h"
 #include "../../libs/gltfio/src/FTrsTransformManager.h"
 #include "../../libs/gltfio/src/GltfEnums.h"

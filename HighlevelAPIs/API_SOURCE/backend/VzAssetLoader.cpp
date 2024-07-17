@@ -1,6 +1,6 @@
 #pragma once
-#include "VzAssetLoader.h"
 #include "../VzEngineApp.h"
+#include "VzAssetLoader.h"
 
 extern vzm::VzEngineApp gEngineApp;
 
@@ -428,6 +428,17 @@ namespace filament::gltfio {
         }
     }
 
+    void CopyFPrim2VFrim(Primitive* fPrim, VzPrimitive* vPrim)
+    {
+        vPrim->indices = fPrim->indices;
+        vPrim->vertices = fPrim->vertices;
+        vPrim->uvmap = fPrim->uvmap;
+        vPrim->aabb = fPrim->aabb;
+        vPrim->morphTargetBuffer = fPrim->morphTargetBuffer;
+        vPrim->morphTargetOffset = fPrim->morphTargetOffset;
+        vPrim->slotIndices = fPrim->slotIndices;
+    }
+
     void VzAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
         FFilamentAsset* fAsset) {
         cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
@@ -446,7 +457,7 @@ namespace filament::gltfio {
 
         Aabb aabb;
 
-        std::vector<Primitive> v_prims;
+        std::vector<VzPrimitive> v_prims;
         for (cgltf_size index = 0, n = mesh->primitives_count; index < n; ++index) {
             Primitive& outputPrim = prims[index];
             cgltf_primitive& inputPrim = mesh->primitives[index];
@@ -487,7 +498,9 @@ namespace filament::gltfio {
             // Expand the object-space bounding box.
             aabb.min = min(outputPrim.aabb.min, aabb.min);
             aabb.max = max(outputPrim.aabb.max, aabb.max);
-            v_prims.push_back(outputPrim);
+            VzPrimitive v_prim;
+            CopyFPrim2VFrim(&outputPrim, &v_prim);
+            v_prims.push_back(v_prim);
         }
 
         mGeometryMap[(cgltf_mesh*)(mesh - gltf->meshes)] = gEngineApp.CreateGeometry(name, v_prims)->componentVID;
@@ -511,6 +524,7 @@ namespace filament::gltfio {
         FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
 
         std::vector<MInstanceVID> mi_vids;
+        std::vector<vzm::PrimitiveType> ptype_vids(prims.size());
         mi_vids.reserve(prims.size());
 
         assert_invariant(prims.size() == primitiveCount);
@@ -532,6 +546,7 @@ namespace filament::gltfio {
             if (!getPrimitiveType(inputPrim->type, &primType)) {
                 post("Unsupported primitive type in " + std::string(name), LogLevel::Warning);
             }
+            ptype_vids[index] = (vzm::PrimitiveType)primType;
 
             if (numMorphTargets != inputPrim->targets_count) {
                 post("Sister primitives must all have the same number of morph targets.", LogLevel::Warning);
@@ -668,11 +683,12 @@ namespace filament::gltfio {
         GeometryVID vid_geo = it->second;
         VzGeometryRes* geo_res = gEngineApp.GetGeometryRes(vid_geo);
         assert(geo_res);
-        std::vector<Primitive>& v_primitives = *geo_res->Get();
+        std::vector<VzPrimitive>& v_primitives = *geo_res->Get();
         outputPrim = prims.data();
         inputPrim = &mesh->primitives[0];
         for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
-            v_primitives[index] = *outputPrim;
+            CopyFPrim2VFrim(outputPrim, &v_primitives[index]);
+            v_primitives[index].ptype = ptype_vids[index];
         }
         assert(mi_vids.size() == primitiveCount);
         VzActorRes* actor_res = gEngineApp.GetActorRes(entity.getId());

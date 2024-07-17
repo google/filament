@@ -82,21 +82,21 @@ auto failRet = [](const std::string& err_str, const bool _warn = false)
     };
 
 
-static Config gConfig;
-static Engine::Config gEngineConfig = {};
-static filament::backend::VulkanPlatform* gVulkanPlatform = nullptr;
-static filament::SwapChain* gDummySwapChain = nullptr;
-static filament::Material* gMaterialTransparent = nullptr; // do not release
-static Engine* gEngine = nullptr;
-static VzEngineApp gEngineApp;
+Config gConfig;
+Engine::Config gEngineConfig = {};
+filament::backend::VulkanPlatform* gVulkanPlatform = nullptr;
+filament::SwapChain* gDummySwapChain = nullptr;
+filament::Material* gMaterialTransparent = nullptr; // do not release
+Engine* gEngine = nullptr;
+VzEngineApp gEngineApp;
 
 enum MaterialSource {
     JITSHADER,
     UBERSHADER,
 };
-gltfio::MaterialProvider* gMaterialProvider = nullptr;
 
-static std::vector<std::string> gMProp = {
+gltfio::MaterialProvider* gMaterialProvider = nullptr;
+std::vector<std::string> gMProp = {
             "baseColor",              //!< float4, all shading models
             "roughness",               //!< float,  lit shading models only
             "metallic",                //!< float,  all shading models, except unlit and cloth
@@ -622,7 +622,7 @@ namespace vzm
         configuration.gltfPath = path.c_str();
         configuration.normalizeSkinningWeights = true;
 
-        ResourceLoader* resource_loader = *gEngineApp.GetGltfResourceLoader();
+        ResourceLoader* resource_loader = gEngineApp.GetGltfResourceLoader();
         resource_loader->setConfiguration(configuration);
         if (!resource_loader->asyncBeginLoad(asset)) {
             asset_loader->destroyAsset((filament::gltfio::FFilamentAsset*)asset);
@@ -650,7 +650,7 @@ namespace vzm
 
     float GetAsyncLoadProgress()
     {
-        ResourceLoader* resource_loader = *gEngineApp.GetGltfResourceLoader();
+        ResourceLoader* resource_loader = gEngineApp.GetGltfResourceLoader();
         if (resource_loader == nullptr)
         {
             backlog::post("resource loader is not activated!", backlog::LogLevel::Error);
