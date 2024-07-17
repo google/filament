@@ -123,7 +123,7 @@ namespace vzm
 
         if (delta_time < fixedUpdateTime_)
         {
-            return;
+            //return; // WHY??? discontinuous?!
         }
         timer_ = timestamp;
         elapsedTimeSec_ += delta_time;
