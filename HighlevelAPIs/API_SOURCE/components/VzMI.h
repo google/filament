@@ -79,6 +79,7 @@ namespace vzm
         void SetTransparencyMode(const TransparencyMode tMode);
         void SetMaterialProperty(const MProp mProp, const std::vector<float>& v);
 
+        void SetTexture(const std::string& uniformName, const VID vidTexture);
         // use attributes
         //void Update();
     };

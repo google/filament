@@ -7,6 +7,12 @@ extern vzm::VzEngineApp gEngineApp;
 
 namespace vzm
 {
+    std::vector<VID> VzScene::GetSceneCompChildren()
+    {
+        std::vector<VID> children_vids;
+        gEngineApp.GetSceneCompChildren(GetVID(), children_vids);
+        return children_vids;
+    }
     bool VzScene::LoadIBL(const std::string& path)
     {
         VzSceneRes* scene_res = gEngineApp.GetSceneRes(GetVID());

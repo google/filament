@@ -22,8 +22,8 @@ using ActorVID = VID;
 using LightVID = VID;
 using GeometryVID = VID;
 using MaterialVID = VID;
+using TextureVID = VID;
 using MInstanceVID = VID;
-using MaterialVID = VID;
 using AssetVID = VID;
 using SkeletonVID = VID;
 using BoneVID = VID;
@@ -176,6 +176,13 @@ namespace vzm
         MaterialInstance* mi = nullptr;
         ~VzMIRes();
     };
+    struct VzTextureRes
+    {
+        bool isSystem = false;
+        gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
+        //Tex* mi = nullptr;
+        ~VzTextureRes();
+    };
 
     struct VzAssetRes
     {
@@ -218,6 +225,7 @@ namespace vzm
         std::unordered_map<GeometryVID, std::unique_ptr<VzGeometryRes>> geometryResMap_;
         std::unordered_map<MaterialVID, std::unique_ptr<VzMaterialRes>> materialResMap_;
         std::unordered_map<MInstanceVID, std::unique_ptr<VzMIRes>> miResMap_;
+        std::unordered_map<TextureVID, std::unique_ptr<VzTextureRes>> textureResMap_;
 
         // GLTF Asset
         std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assetResMap_;
@@ -262,6 +270,7 @@ namespace vzm
         size_t GetRenderPathVids(std::vector<RendererVID>& renderPathVids);
         VzRenderPath* GetFirstRenderPathByName(const std::string& name);
         SceneVID GetSceneVidBelongTo(const VID vid);
+        size_t GetSceneCompChildren(const SceneVID vidScene, std::vector<VID>& vidChildren);
 
         bool AppendSceneEntityToParent(const VID vidSrc, const VID vidDst);
 

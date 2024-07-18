@@ -273,6 +273,19 @@ namespace vzm
         }
     }
 #pragma endregion
+
+#pragma region // VzMIRes
+    VzTextureRes::~VzTextureRes()
+    {
+        if (assetOwner == nullptr && !isSystem)
+        {
+            //if (mi)
+            //    gEngine->destroy(mi);
+            //mi = nullptr;
+            // check MI...
+        }
+    }
+#pragma endregion
 }
 
 namespace vzm
@@ -645,6 +658,45 @@ namespace vzm
             return itc->second;
         }
         return INVALID_VID;
+    }
+    size_t VzEngineApp::GetSceneCompChildren(const SceneVID vidScene, std::vector<VID>& vidChildren)
+    {
+        vidChildren.clear();
+        auto& tcm = gEngine->getTransformManager();
+        for (auto& it : actorSceneMap_)
+        {
+            if (it.second == vidScene)
+            {
+                auto ins = tcm.getInstance(Entity::import(it.first));
+                if (tcm.getParent(ins).isNull())
+                {
+                    vidChildren.push_back(it.first);
+                }
+            }
+        }
+        for (auto& it : lightSceneMap_)
+        {
+            if (it.second == vidScene)
+            {
+                auto ins = tcm.getInstance(Entity::import(it.first));
+                if (tcm.getParent(ins).isNull())
+                {
+                    vidChildren.push_back(it.first);
+                }
+            }
+        }
+        for (auto& it : camSceneMap_)
+        {
+            if (it.second == vidScene)
+            {
+                auto ins = tcm.getInstance(Entity::import(it.first));
+                if (tcm.getParent(ins).isNull())
+                {
+                    vidChildren.push_back(it.first);
+                }
+            }
+        }
+        return vidChildren.size();
     }
 
     bool VzEngineApp::AppendSceneEntityToParent(const VID vidSrc, const VID vidDst)

@@ -111,14 +111,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
 
-    asset->GetAnimator()->AddPlayScene(scene->GetVID());
-    asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
-    asset->GetAnimator()->SetAnimation(1);
+    vzm::VzAsset::Animator* animator = asset->GetAnimator();
+    if (animator)
+    {
+        asset->GetAnimator()->AddPlayScene(scene->GetVID());
+        asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
+        asset->GetAnimator()->SetAnimation(1);
+    }
 
     vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
     renderer->SetCanvas(w, h, dpi, hwnd);
@@ -129,7 +132,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
     {
-        cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
+        //cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
     }
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);

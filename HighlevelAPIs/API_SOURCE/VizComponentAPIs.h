@@ -131,6 +131,7 @@ namespace vzm
         GEOMATRY,
         MATERIAL,
         MATERIALINSTANCE,
+        TEXTURE,
     };
 
     __dojostruct VzBaseComp

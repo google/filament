@@ -8,6 +8,7 @@ namespace filament::gltfio {
     using VID = uint32_t;
     using GeometryVID = VID;
     using MaterialVID = VID;
+    using TextureVID = VID;
     using MInstanceVID = VID;
 
     // The default glTF material.
