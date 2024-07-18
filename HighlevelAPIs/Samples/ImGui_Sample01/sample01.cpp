@@ -43,8 +43,9 @@
 #define VOLK_IMPLEMENTATION
 #include <Volk/volk.h>
 #endif
-
 #include <vulkan/vulkan_win32.h>
+
+#include <iostream>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -743,6 +744,23 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
   g_cc->Scroll(0, 0, 5.0f * (float)yOffset);
 }
 
+void treeNode(VID id) {
+  intptr_t treeNodeId = 1 + id;
+  vzm::VzSceneComp* component = (vzm::VzSceneComp*)vzm::GetVzComponent(id);
+
+  std::string sName = component->GetName();
+  const char* name = sName.length() > 0 ? sName.c_str() : "Node";
+  const char* label = name;
+  ImGuiTreeNodeFlags flags = 0;
+  if (ImGui::TreeNodeEx((const void*)treeNodeId, flags, "%s", label)) {
+    std::vector<VID> children = component->GetChildren();
+    for (auto ce : children) {
+      treeNode(ce);
+    }
+    ImGui::TreePop();
+  }
+};
+
 // Main code
 int main(int, char**) {
   glfwSetErrorCallback(glfw_error_callback);
@@ -794,13 +812,20 @@ int main(int, char**) {
   vzm::VzScene* scene = vzm::NewScene("my scene");
   scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-  vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
+  // vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
+
+  vzm::VzAsset* asset =
+      vzm::LoadFileIntoAsset("../assets/show_car.glb", "my gltf asset");
+  asset->GetAnimator()->AddPlayScene(scene->GetVID());
+  asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
+  asset->GetAnimator()->SetAnimation(1);
 
   vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
   renderer->SetCanvas(w, h, dpi, nullptr);
   renderer->SetVisibleLayerMask(0x4, 0x4);
 
-  vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
+  vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(
+      vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
   glm::fvec3 p(0, 0, 10);
   glm::fvec3 at(0, 0, -4);
   glm::fvec3 u(0, 1, 0);
@@ -811,9 +836,14 @@ int main(int, char**) {
   g_cc->UpdateControllerSettings();
   g_cc->SetViewport(w, h);
 
-  vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
+  vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(
+      vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
 
-  vzm::AppendSceneCompTo(actor, scene);
+  // vzm::AppendSceneCompTo(actor, scene);
+  std::vector<VID> root_vids = asset->GetGLTFRoots();
+  if (root_vids.size() > 0) {
+    vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
+  }
   vzm::AppendSceneCompTo(light, scene);
   vzm::AppendSceneCompTo(cam, scene);
 
@@ -904,6 +934,8 @@ int main(int, char**) {
   float anyVec[3] = {
       0,
   };
+
+  float editUIWidth = 0.0f;
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     renderer->Render(scene, cam);
@@ -936,40 +968,6 @@ int main(int, char**) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    HANDLE swapHandle = (HANDLE)vzm::GetGraphicsSharedRenderTarget();
-    int index = 0;
-    if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
-      if (swapHandles[0] != 0 && swapHandles[1] != 0) {
-        swapHandles[0] = 0;
-        swapHandles[1] = 0;
-      }
-      if (swapHandles[0] == 0)
-        index = 0;
-      else
-        index = 1;
-
-      auto [importedImage, importedMemory] = importImageFromHandle(
-          g_Device, g_PhysicalDevice, {(uint32_t)width, (uint32_t)height},
-          VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
-      VkImageView importedImageView =
-          createImageView(g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
-
-      swapHandles[index] = swapHandle;
-      swapTextures[index] = ImGui_ImplVulkan_AddTexture(
-          sampler, importedImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-      swapImages[index] = importedImage;
-      swapImageViews[index] = importedImageView;
-      swapMemories[index] = importedMemory;
-    } else {
-      if (swapHandles[0] == swapHandle)
-        index = 0;
-      else if (swapHandles[1] == swapHandle)
-        index = 1;
-    }
-
-    ImGui::GetBackgroundDrawList()->AddImage(
-        (ImTextureID)swapTextures[index], ImVec2(0, 0), ImVec2(width, height));
-
     // gltf viewer imgui
     {
       ImGui::GetStyle().WindowRounding = 0;
@@ -977,9 +975,11 @@ int main(int, char**) {
 
       const float width = ImGui::GetIO().DisplaySize.x;
       const float height = ImGui::GetIO().DisplaySize.y;
+
       ImGui::SetNextWindowSize(ImVec2(400, height), ImGuiCond_Once);
       ImGui::SetNextWindowSizeConstraints(ImVec2(20, height),
                                           ImVec2(width, height));
+
       ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
 
       const ImVec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
@@ -1309,74 +1309,139 @@ int main(int, char**) {
       // selection in remote mode. To support these features, we will need to
       // send a message (list of strings) from DebugServer to the WebSockets
       // client.
-      if (true) {  //! isRemoteMode()) {
-        if (ImGui::CollapsingHeader("Hierarchy")) {
-          ImGui::Indent();
-          ImGui::Checkbox("Show bounds", &bAny);
-          ImGui::Unindent();
-        }
 
-        if (true) {
-          ImGui::Indent();
-          for (size_t i = 0,
-                      count = 5;  // mInstance->getMaterialVariantCount();
-               i < count; ++i) {
-            ImGui::RadioButton("label", &iAny, i);
-          }
-          ImGui::Unindent();
-        }
-
-        // if (ImGui::CollapsingHeader("Animation")) {
-        //   ImGui::Indent();
-        //   ImGui::RadioButton("Disable", &iAny, -1);
-        //   ImGui::RadioButton("Apply all animations", &iAny, 5);
-        //   ImGui::SliderFloat("Cross fade", &any, 0.0f, 2.0f, "%4.2f seconds",
-        //                      ImGuiSliderFlags_AlwaysClamp);
-        //   for (size_t i = 0; i < 5; ++i) {
-        //     ImGui::RadioButton("label", &iAny, i);
-        //   }
-        //   ImGui::Checkbox("Show rest pose", &bAny);
-        //   ImGui::Unindent();
-        // }
-        // if (ImGui::CollapsingHeader("Morphing")) {
-        //   // if (isAnimating) {
-        //   //   ImGui::BeginDisabled();
-        //   // }
-        //   for (int i = 0; i != 5; /*mMorphWeights.size();*/ ++i) {
-        //     // const char* name =
-        //     //     mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i);
-        //     // std::string label =
-        //     //     name ? name : "Unnamed target " + std::to_string(i);
-        //     ImGui::SliderFloat("label", &any, 0.0f, 1.0);
-        //   }
-        //   // if (isAnimating) {
-        //   //   ImGui::EndDisabled();
-        //   // }
-        // }
+      if (ImGui::CollapsingHeader("Hierarchy")) {
+        ImGui::Indent();
+        ImGui::Checkbox("Show bounds", &bAny);
+        treeNode(root_vids[0]);
+        ImGui::Unindent();
       }
+
+      if (ImGui::CollapsingHeader("Animation")) {
+        ImGui::Indent();
+        ImGui::RadioButton("Disable", &iAny, -1);
+        ImGui::RadioButton("Apply all animations", &iAny, 5);
+        ImGui::SliderFloat("Cross fade", &any, 0.0f, 2.0f, "%4.2f seconds",
+                           ImGuiSliderFlags_AlwaysClamp);
+        for (size_t i = 0; i < 5; ++i) {
+          ImGui::RadioButton("label", &iAny, i);
+        }
+        ImGui::Checkbox("Show rest pose", &bAny);
+        ImGui::Unindent();
+      }
+
+      // if (true) {
+      //   ImGui::Indent();
+      //   for (size_t i = 0,
+      //               count = 5;  // mInstance->getMaterialVariantCount();
+      //        i < count; ++i) {
+      //     ImGui::RadioButton("label", &iAny, i);
+      //   }
+      //   ImGui::Unindent();
+      // }
+
+      // if (ImGui::CollapsingHeader("Morphing")) {
+      //   // if (isAnimating) {
+      //   //   ImGui::BeginDisabled();
+      //   // }
+      //   for (int i = 0; i != 5; /*mMorphWeights.size();*/ ++i) {
+      //     // const char* name =
+      //     //     mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i);
+      //     // std::string label =
+      //     //     name ? name : "Unnamed target " + std::to_string(i);
+      //     ImGui::SliderFloat("label", &any, 0.0f, 1.0);
+      //   }
+      //   // if (isAnimating) {
+      //   //   ImGui::EndDisabled();
+      //   // }
+      // }
+
+      editUIWidth = ImGui::GetWindowWidth();
       ImGui::End();
+    }
 
-      transitionImageLayout(g_Device, wd->Frames[wd->FrameIndex].CommandPool,
-                            g_Queue, swapImages[index],
-                            VK_IMAGE_LAYOUT_UNDEFINED,
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    // swap buffer image
+    {
+      HANDLE swapHandle = (HANDLE)vzm::GetGraphicsSharedRenderTarget();
+      if (swapHandle != 0) {
+        int index = 0;
+        if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
+          if (swapHandles[0] != 0 && swapHandles[1] != 0) {
+            swapHandles[0] = 0;
+            swapHandles[1] = 0;
+          }
+          if (swapHandles[0] == 0)
+            index = 0;
+          else
+            index = 1;
 
-      // Rendering
-      ImGui::Render();
-      ImDrawData* draw_data = ImGui::GetDrawData();
-      const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f ||
-                                 draw_data->DisplaySize.y <= 0.0f);
-      if (!is_minimized) {
-        wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
-        wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
-        wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
-        wd->ClearValue.color.float32[3] = clear_color.w;
-        FrameRender(wd, draw_data);
-        FramePresent(wd);
+          auto [importedImage, importedMemory] = importImageFromHandle(
+              g_Device, g_PhysicalDevice, {(uint32_t)width, (uint32_t)height},
+              VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
+          VkImageView importedImageView = createImageView(
+              g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
+
+          swapHandles[index] = swapHandle;
+          swapTextures[index] = ImGui_ImplVulkan_AddTexture(
+              sampler, importedImageView,
+              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+          swapImages[index] = importedImage;
+          swapImageViews[index] = importedImageView;
+          swapMemories[index] = importedMemory;
+
+        } else {
+          if (swapHandles[0] == swapHandle)
+            index = 0;
+          else if (swapHandles[1] == swapHandle)
+            index = 1;
+        }
+
+        ImGui::GetStyle().WindowRounding = 0;
+        ImGui::GetStyle().WindowPadding = ImVec2(0, 0);
+
+        ImGui::SetNextWindowPos(ImVec2(editUIWidth, 0));
+
+        const float width = ImGui::GetIO().DisplaySize.x;
+        const float height = ImGui::GetIO().DisplaySize.y;
+
+        ImGui::SetNextWindowSize(ImVec2(width - editUIWidth, height),
+                                 ImGuiCond_Once);
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(width - editUIWidth, height),
+            ImVec2(width - editUIWidth, height));
+        ImGui::Begin("swapchain", nullptr,
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
+
+        // ImVec2 avail_size = ImGui::GetContentRegionAvail();
+        ImGui::Image((ImTextureID)swapTextures[index],
+                     ImVec2(width - editUIWidth, height));
+        ImGui::End();
+        // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
+        //                                          ImVec2(0, 0),
+        //                                          ImVec2(width, height));
+        transitionImageLayout(g_Device, wd->Frames[wd->FrameIndex].CommandPool,
+                              g_Queue, swapImages[index],
+                              VK_IMAGE_LAYOUT_UNDEFINED,
+                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        // Rendering
       }
     }
-  }
 
+    //
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
+    const bool is_minimized =
+        (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+    if (!is_minimized) {
+      wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
+      wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
+      wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
+      wd->ClearValue.color.float32[3] = clear_color.w;
+      FrameRender(wd, draw_data);
+      FramePresent(wd);
+    }
+  }
   vzm::DeinitEngineLib();
 
   // Cleanup

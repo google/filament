@@ -64,8 +64,6 @@ struct RenderPassFboBundle {
 
 class VulkanDriver final : public DriverBase {
  public:
-    VulkanSwapChain* getSwapChain() { return mCurrentSwapChain; }
-    
     static Driver* create(VulkanPlatform* platform, VulkanContext const& context,
             Platform::DriverConfig const& driverConfig) noexcept;
 

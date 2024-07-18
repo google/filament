@@ -2024,10 +2024,11 @@ void VulkanDriver::resetState(int) {
 }
 
 uint64_t VulkanDriver::getSwapHandle() {
-  VulkanSwapChain* vsc = getSwapChain();
-
+  if (!mCurrentSwapChain) {
+    return 0;
+  }
   VulkanPlatformHeadlessSwapChain* headlessSwapChain =
-      (VulkanPlatformHeadlessSwapChain*)vsc->getHWSwapChain();
+      (VulkanPlatformHeadlessSwapChain*)mCurrentSwapChain->swapChain;
 
   return headlessSwapChain->getSwapHandle();
 }
