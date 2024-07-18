@@ -518,6 +518,14 @@ Handle<HwTexture> OpenGLDriver::createTextureViewS() noexcept {
     return initHandle<GLTexture>();
 }
 
+Handle<HwTexture> OpenGLDriver::createTextureExternalImageS() noexcept {
+    return initHandle<GLTexture>();
+}
+
+Handle<HwTexture> OpenGLDriver::createTextureExternalImagePlaneS() noexcept {
+    return initHandle<GLTexture>();
+}
+
 Handle<HwTexture> OpenGLDriver::importTextureS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -951,6 +959,19 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     ref->count++;
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
+    setExternalImage(th, image);
+}
+
+void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* image, uint32_t plane) {
+    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
+    setExternalImagePlane(th, image, plane);
 }
 
 void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,

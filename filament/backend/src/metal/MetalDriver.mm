@@ -445,6 +445,21 @@ void MetalDriver::createTextureViewR(Handle<HwTexture> th,
             src, baseLevel, levelCount));
 }
 
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+    createTextureR(
+            th, SamplerType::SAMPLER_EXTERNAL, 1, TextureFormat::RGBA8, 1, width, height, 1, usage);
+    setExternalImage(th, image);
+}
+
+void MetalDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* image, uint32_t plane) {
+    createTextureR(
+            th, SamplerType::SAMPLER_EXTERNAL, 1, TextureFormat::RGBA8, 1, width, height, 1, usage);
+    setExternalImagePlane(th, image, plane);
+}
+
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
@@ -648,6 +663,14 @@ Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImageS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImagePlaneS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 

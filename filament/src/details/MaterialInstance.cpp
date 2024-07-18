@@ -223,7 +223,7 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
 #endif
 
     auto binding = mMaterial->getSamplerBinding(name);
-    if (texture && texture->canHaveTextureView()) {
+    if (texture && texture->textureHandleCanMutate()) {
         mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
     } else {
         Handle<HwTexture> handle{};
