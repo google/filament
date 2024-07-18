@@ -127,18 +127,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     std::vector<VID> cameras;
     vzm::GetSceneCompoenentVids(vzm::SCENE_COMPONENT_TYPE::CAMERA, 0, cameras);
 
-    vzm::VzCamera* cam;
-    VID vid_camera = cameras[0];// vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera", 0, SCPP(cam));
-    cam = (vzm::VzCamera*)vzm::GetVzComponent(vid_camera);
+    vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
+    {
+        cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
+    }
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
-    //vzm::VzCamera::Controller* cc = cam->GetController();
-    //*(glm::fvec3*)cc->orbitHomePosition = p;
-    //cc->UpdateControllerSettings();
-    //cc->SetViewport(w, h);
+    vzm::VzCamera::Controller* cc = cam->GetController();
+    *(glm::fvec3*)cc->orbitHomePosition = p;
+    cc->UpdateControllerSettings();
+    cc->SetViewport(w, h);
 
 
     vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light", 0);

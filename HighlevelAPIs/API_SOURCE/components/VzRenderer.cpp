@@ -93,6 +93,7 @@ namespace vzm
         }
 
         // fixed time update
+        if (0)
         {
             render_path->deltaTimeAccumulator += render_path->deltaTime;
             if (render_path->deltaTimeAccumulator > 10)
