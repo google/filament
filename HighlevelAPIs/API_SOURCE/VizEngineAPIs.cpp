@@ -619,7 +619,7 @@ namespace vzm
         //auto& lcm = gEngine->getLightManager();
         //auto& tcm = gEngine->getTransformManager();
 
-        asset->releaseSourceData();
+        //asset->releaseSourceData();
 
         // Enable stencil writes on all material instances.
         filament::gltfio::FilamentInstance* asset_ins = asset->getInstance();

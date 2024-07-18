@@ -131,11 +131,11 @@ namespace vzm
         GEOMATRY,
         MATERIAL,
         MATERIALINSTANCE,
+        TEXTURE,
     };
 
     __dojostruct VzBaseComp
     {
-        // DO NOT SET
     private:
         VID componentVID_ = INVALID_VID;
         TimeStamp timeStamp_ = {}; // will be automatically set 
@@ -150,6 +150,8 @@ namespace vzm
             UpdateTimeStamp();
         }
         VID GetVID() const { return componentVID_; }
+        std::string GetType() { return type_; };
+        TimeStamp GetTimeStamp() { return timeStamp_; };
         void UpdateTimeStamp() 
         {
             timeStamp_ = std::chrono::high_resolution_clock::now();

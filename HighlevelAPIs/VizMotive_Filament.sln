@@ -6,23 +6,14 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizAPIs_Windows", "VizAPIs_Windows\VizAPIs_Windows.vcxproj", "{7486CC99-9B69-4B37-9EE9-B5F4AED1B35D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImGui_Sample01", "Samples\ImGui_Sample01\ImGui_Sample01.vcxproj", "{D8D4F4C4-B10A-49ED-92CD-967605441C2A}"
-	ProjectSection(ProjectDependencies) = postProject
-		{7486CC99-9B69-4B37-9EE9-B5F4AED1B35D} = {7486CC99-9B69-4B37-9EE9-B5F4AED1B35D}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "API_SOURCE", "API_SOURCE\API_SOURCE.vcxitems", "{FC26158A-596B-4679-82AF-18A6126DB44F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{94CF16FB-2B12-4E06-A9C0-6CF8258FC838}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImGui_Sample02", "Samples\ImGui_Sample02\ImGui_Sample02.vcxproj", "{9F316E83-5AE5-4939-A723-305A94F48005}"
-	ProjectSection(ProjectDependencies) = postProject
-		{7486CC99-9B69-4B37-9EE9-B5F4AED1B35D} = {7486CC99-9B69-4B37-9EE9-B5F4AED1B35D}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImGui_Sample03", "Samples\ImGui_Sample03\ImGui_Sample03.vcxproj", "{7BEF07DC-E2C1-4CF3-BC81-BC88BABB5CF0}"
-	ProjectSection(ProjectDependencies) = postProject
-		{7486CC99-9B69-4B37-9EE9-B5F4AED1B35D} = {7486CC99-9B69-4B37-9EE9-B5F4AED1B35D}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
