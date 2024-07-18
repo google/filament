@@ -12,6 +12,31 @@ namespace vzm
     void VzRenderer::SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window)
     {
         COMP_RENDERPATH(render_path, );
+
+        std::vector<RendererVID> render_path_vids;
+        gEngineApp.GetRenderPathVids(render_path_vids);
+        if (window) 
+        {
+            for (size_t i = 0, n = render_path_vids.size(); i < n; ++i)
+            {
+                VID vid_i = render_path_vids[i];
+                VzRenderPath* render_path_i = gEngineApp.GetRenderPath(vid_i);
+                if (render_path_i != render_path)
+                {
+                    void* window_i = nullptr;
+                    uint32_t w_i, h_i;
+                    float dpi_i;
+                    render_path_i->GetCanvas(&w_i, &h_i, &dpi_i, &window_i);
+                    if (window_i == window)
+                    {
+                        std::string name_i = gEngineApp.GetVzComponent<VzRenderer>(vid_i)->GetName();
+                        render_path_i->SetCanvas(w_i, h_i, dpi_i, nullptr);
+                        backlog::post("another renderer (" + name_i + ") has the same window handle, so force to set nullptr!", backlog::LogLevel::Warning);
+                    }
+                }
+            }
+        }
+
         render_path->SetCanvas(w, h, dpi, window);
         UpdateTimeStamp();
     }
