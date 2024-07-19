@@ -28,6 +28,7 @@ VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
     : mAllocator(allocator),
       mStagePool(stagePool),
       mUsage(usage),
+	  mUpdatedOffset(0),
       mUpdatedBytes(0) {
     // for now make sure that only 1 bit is set in usage
     // (because loadFromCpu() assumes that somewhat)
@@ -80,6 +81,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer = mGpuBuffer,
+			.offset = mUpdatedOffset,
             .size = mUpdatedBytes,
         };
         vkCmdPipelineBarrier(cmdbuf, srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
@@ -93,6 +95,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
     };
     vkCmdCopyBuffer(cmdbuf, stage->buffer, mGpuBuffer, 1, &region);
 
+	mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;
 
     // Firstly, ensure that the copy finishes before the next draw call.
