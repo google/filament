@@ -294,7 +294,7 @@ public:
     }
 
     math::float2 updateScale(FEngine& engine,
-            FrameInfo const& info,
+            details::FrameInfo const& info,
             Renderer::FrameRateOptions const& frameRateOptions,
             Renderer::DisplayInfo const& displayInfo) noexcept;
 

@@ -445,10 +445,10 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             << ") instances when supplying transforms via an InstanceBuffer.";
 
     if (mImpl->mGeometryType == GeometryType::STATIC) {
-        FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount > 0)
+        FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount == 0)
                 << "Skinning can't be used with STATIC geometry";
 
-        FILAMENT_CHECK_PRECONDITION(mImpl->mMorphTargetCount > 0)
+        FILAMENT_CHECK_PRECONDITION(mImpl->mMorphTargetCount == 0)
                 << "Morphing can't be used with STATIC geometry";
     }
 
