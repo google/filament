@@ -44,7 +44,9 @@
 namespace utils {
 
 class JobSystem {
-    static constexpr size_t MAX_JOB_COUNT = 16384;
+    static constexpr size_t MAX_JOB_COUNT = 1 << 14; // 16384
+    static constexpr uint32_t JOB_COUNT_MASK = MAX_JOB_COUNT - 1;
+    static constexpr uint32_t WAITER_COUNT_SHIFT = 24;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
     using Mutex = utils::Mutex;
@@ -81,13 +83,17 @@ public:
         void* storage[JOB_STORAGE_SIZE_WORDS];                  // 48 | 48
         JobFunc function;                                       //  4 |  8
         uint16_t parent;                                        //  2 |  2
-        std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
-        mutable std::atomic<uint16_t> refCount = { 1 };         //  2 |  2
         mutable ThreadId id = invalidThreadId;                  //  1 |  1
-                                                                //  1 |  1 (padding)
+        mutable std::atomic<uint8_t> refCount = { 1 };          //  1 |  1
+        std::atomic<uint32_t> runningJobCount = { 1 };          //  4 |  4
                                                                 //  4 |  0 (padding)
                                                                 // 64 | 64
     };
+
+#ifndef WIN32
+    // on windows std::function<void()> is bigger and forces the whole structure to be larger
+    static_assert(sizeof(Job) == 64);
+#endif
 
     explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
 
@@ -375,6 +381,16 @@ private:
         static constexpr uint32_t m = 0x7fffffffu;
         uint32_t mState; // must be 0 < seed < 0x7fffffff
     public:
+        using result_type = uint32_t;
+
+        static constexpr result_type min() noexcept {
+            return 1;
+        }
+
+        static constexpr result_type max() noexcept {
+            return m - 1;
+        }
+
         inline constexpr explicit default_random_engine(uint32_t seed = 1u) noexcept
                 : mState(((seed % m) == 0u) ? 1u : seed % m) {
         }
@@ -419,7 +435,9 @@ private:
     Job* pop(WorkQueue& workQueue) noexcept;
     Job* steal(WorkQueue& workQueue) noexcept;
 
-    void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
+    [[nodiscard]]
+    uint32_t wait(std::unique_lock<Mutex>& lock, Job* job) noexcept;
+    void wait(std::unique_lock<Mutex>& lock) noexcept;
     void wakeAll() noexcept;
     void wakeOne() noexcept;
 
@@ -448,7 +466,7 @@ private:
     uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for
     Job* mRootJob = nullptr;
 
-    utils::Mutex mThreadMapLock; // this should have very little contention
+    Mutex mThreadMapLock; // this should have very little contention
     tsl::robin_map<std::thread::id, ThreadState *> mThreadMap;
 };
 
