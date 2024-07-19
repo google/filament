@@ -371,7 +371,7 @@ size_t Engine::getMaxStereoscopicEyes() noexcept {
     return FEngine::getMaxStereoscopicEyes();
 }
 
-uint64_t Engine::getSwapHandle() noexcept {
+void* Engine::getSwapHandle() noexcept {
   return downcast(this)->getSwapHandle();
 }
 

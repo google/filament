@@ -3971,7 +3971,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 #endif
 }
 
-uint64_t OpenGLDriver::getSwapHandle() { return 0; }
+void* OpenGLDriver::getSwapHandle() { return (void*)0; }
 
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<OpenGLDriver>;

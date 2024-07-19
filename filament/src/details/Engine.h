@@ -122,7 +122,7 @@ public:
     using duration = clock::duration;
 
 public:
-    uint64_t getSwapHandle();
+    void* getSwapHandle();
 
     static Engine* create(Builder const& builder);
 

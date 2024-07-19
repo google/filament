@@ -137,7 +137,7 @@ Engine* FEngine::create(Engine::Builder const& builder) {
     return instance;
 }
 
-uint64_t FEngine::getSwapHandle() { return getDriverApi().getSwapHandle(); }
+void* FEngine::getSwapHandle() { return getDriverApi().getSwapHandle(); }
 
 #if UTILS_HAS_THREADING
 

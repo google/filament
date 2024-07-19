@@ -473,8 +473,8 @@ VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index,
   return VK_SUCCESS;
 }
 
-uint64_t VulkanPlatformHeadlessSwapChain::getSwapHandle()const {
-  return (uint64_t)handles[mCurrentIndex];
+void* VulkanPlatformHeadlessSwapChain::getSwapHandle()const {
+  return (void*)handles[mCurrentIndex];
 }
 
 VkResult VulkanPlatformHeadlessSwapChain::acquire(

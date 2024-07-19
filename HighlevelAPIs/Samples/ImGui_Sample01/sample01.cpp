@@ -1363,7 +1363,7 @@ int main(int, char**) {
     // swap buffer image
     {
       HANDLE swapHandle = (HANDLE)vzm::GetGraphicsSharedRenderTarget();
-      if (swapHandle != 0) {
+      if (swapHandle != INVALID_HANDLE_VALUE) {
         int index = 0;
         if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
           if (swapHandles[0] != 0 && swapHandles[1] != 0) {
@@ -1401,20 +1401,23 @@ int main(int, char**) {
 
         ImGui::SetNextWindowPos(ImVec2(editUIWidth, 0));
 
-        const float width = ImGui::GetIO().DisplaySize.x;
-        const float height = ImGui::GetIO().DisplaySize.y;
+        const float window_width = ImGui::GetIO().DisplaySize.x;
+        const float window_height = ImGui::GetIO().DisplaySize.y;
+        const float workspace_width = window_width - editUIWidth;
+        const float workspace_height =
+            window_height * (float) window_height / window_width;
 
-        ImGui::SetNextWindowSize(ImVec2(width - editUIWidth, height),
+        ImGui::SetNextWindowSize(ImVec2(workspace_width, workspace_height),
                                  ImGuiCond_Once);
         ImGui::SetNextWindowSizeConstraints(
-            ImVec2(width - editUIWidth, height),
-            ImVec2(width - editUIWidth, height));
+            ImVec2(workspace_width, workspace_height),
+            ImVec2(workspace_width, workspace_height));
         ImGui::Begin("swapchain", nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
 
         // ImVec2 avail_size = ImGui::GetContentRegionAvail();
         ImGui::Image((ImTextureID)swapTextures[index],
-                     ImVec2(width - editUIWidth, height));
+                     ImVec2(workspace_width, workspace_height));
         ImGui::End();
         // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
         //                                          ImVec2(0, 0),

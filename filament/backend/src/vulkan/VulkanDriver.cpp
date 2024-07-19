@@ -2023,9 +2023,9 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 void VulkanDriver::resetState(int) {
 }
 
-uint64_t VulkanDriver::getSwapHandle() {
+void* VulkanDriver::getSwapHandle() {
   if (!mCurrentSwapChain) {
-    return 0;
+    return (void*)-1;
   }
   VulkanPlatformHeadlessSwapChain* headlessSwapChain =
       (VulkanPlatformHeadlessSwapChain*)mCurrentSwapChain->swapChain;
