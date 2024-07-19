@@ -42,6 +42,7 @@ private:
     VmaAllocation mGpuMemory = VK_NULL_HANDLE;
     VkBuffer mGpuBuffer = VK_NULL_HANDLE;
     VkBufferUsageFlags mUsage = {};
+	uint32_t mUpdatedOffset = 0;
     uint32_t mUpdatedBytes = 0;
 };
 
