@@ -207,6 +207,21 @@ public:
         return job;
     }
 
+    // creates a job from a KNOWN method pointer w/ object passed by value
+    template<typename T, void(T::*method)(JobSystem&, Job*), typename ... ARGS>
+    Job* emplaceJob(Job* parent, ARGS&& ... args) noexcept {
+        static_assert(sizeof(T) <= sizeof(Job::storage), "user data too large");
+        Job* job = create(parent, [](void* storage, JobSystem& js, Job* job) {
+            T* const that = static_cast<T*>(storage);
+            (that->*method)(js, job);
+            that->~T();
+        });
+        if (job) {
+            new(job->storage) T(std::forward<ARGS>(args)...);
+        }
+        return job;
+    }
+
     // creates a job from a functor passed by value
     template<typename T>
     Job* createJob(Job* parent, T functor) noexcept {
@@ -218,6 +233,21 @@ public:
         });
         if (job) {
             new(job->storage) T(std::move(functor));
+        }
+        return job;
+    }
+
+    // creates a job from a functor passed by value
+    template<typename T, typename ... ARGS>
+    Job* emplaceJob(Job* parent, ARGS&& ... args) noexcept {
+        static_assert(sizeof(T) <= sizeof(Job::storage), "functor too large");
+        Job* job = create(parent, [](void* storage, JobSystem& js, Job* job){
+            T* const that = static_cast<T*>(storage);
+            that->operator()(js, job);
+            that->~T();
+        });
+        if (job) {
+            new(job->storage) T(std::forward<ARGS>(args)...);
         }
         return job;
     }
@@ -436,12 +466,13 @@ template<typename CALLABLE, typename ... ARGS>
 JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
         CALLABLE&& func, ARGS&&... args) noexcept {
     struct Data {
+        explicit Data(std::function<void()> f) noexcept: f(std::move(f)) {}
         std::function<void()> f;
         // Renaming the method below could cause an Arrested Development.
         void gob(JobSystem&, JobSystem::Job*) noexcept { f(); }
-    } user{ std::bind(std::forward<CALLABLE>(func),
-            std::forward<ARGS>(args)...) };
-    return js.createJob<Data, &Data::gob>(parent, std::move(user));
+    };
+    return js.emplaceJob<Data, &Data::gob>(parent,
+            std::bind(std::forward<CALLABLE>(func), std::forward<ARGS>(args)...));
 }
 
 template<typename CALLABLE, typename T, typename ... ARGS,
@@ -452,12 +483,13 @@ template<typename CALLABLE, typename T, typename ... ARGS,
 JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
         CALLABLE&& func, T&& o, ARGS&&... args) noexcept {
     struct Data {
+        explicit Data(std::function<void()> f) noexcept: f(std::move(f)) {}
         std::function<void()> f;
         // Renaming the method below could cause an Arrested Development.
         void gob(JobSystem&, JobSystem::Job*) noexcept { f(); }
-    } user{ std::bind(std::forward<CALLABLE>(func), std::forward<T>(o),
-            std::forward<ARGS>(args)...) };
-    return js.createJob<Data, &Data::gob>(parent, std::move(user));
+    };
+    return js.emplaceJob<Data, &Data::gob>(parent,
+            std::bind(std::forward<CALLABLE>(func), std::forward<T>(o), std::forward<ARGS>(args)...));
 }
 
 
@@ -486,8 +518,8 @@ struct ParallelForJobData {
 right_side:
         if (splitter.split(splits, count)) {
             const size_type lc = count / 2;
-            JobData ld(start, lc, splits + uint8_t(1), functor, splitter);
-            JobSystem::Job* l = js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(ld));
+            JobSystem::Job* l = js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
+                    start, lc, splits + uint8_t(1), functor, splitter);
             if (UTILS_UNLIKELY(l == nullptr)) {
                 // couldn't create a job, just pretend we're done splitting
                 goto execute;
@@ -527,8 +559,8 @@ template<typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         uint32_t start, uint32_t count, F functor, const S& splitter) noexcept {
     using JobData = details::ParallelForJobData<S, F>;
-    JobData jobData(start, count, 0, std::move(functor), splitter);
-    return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
+    return js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
+            start, count, 0, std::move(functor), splitter);
 }
 
 // parallel jobs with pointer/count
@@ -539,8 +571,8 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         f(data + s, c);
     };
     using JobData = details::ParallelForJobData<S, decltype(user)>;
-    JobData jobData(0, count, 0, std::move(user), splitter);
-    return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
+    return js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
+            0, count, 0, std::move(user), splitter);
 }
 
 // parallel jobs on a Slice<>
