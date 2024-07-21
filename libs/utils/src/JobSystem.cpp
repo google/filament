@@ -283,7 +283,7 @@ void JobSystem::wakeAll() noexcept {
     SYSTRACE_CALL();
     mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_all() happens
-    // after the condition's variables are set.
+    // either before the condition is checked, or after the condition variable sleeps.
     mWaiterLock.unlock();
     // notify_all() can be pretty slow, and it doesn't need to be inside the lock.
     mWaiterCondition.notify_all();
@@ -294,7 +294,7 @@ void JobSystem::wakeOne() noexcept {
     HEAVY_SYSTRACE_CALL();
     mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_one() happens
-    // after the condition's variables are set.
+    // either before the condition is checked, or after the condition variable sleeps.
     mWaiterLock.unlock();
     // notify_one() can be pretty slow, and it doesn't need to be inside the lock.
     mWaiterCondition.notify_one();
@@ -316,50 +316,37 @@ void JobSystem::put(WorkQueue& workQueue, Job* job) noexcept {
     size_t const index = job - mJobStorageBase;
     assert(index >= 0 && index < MAX_JOB_COUNT);
 
-    // put the job into the queue first
+    // put the job into the queue
     workQueue.push(uint16_t(index + 1));
-    // then increase our active job count
-    int32_t const oldActiveJobs = mActiveJobs.fetch_add(1, std::memory_order_relaxed);
-    // But it's possible that the job has already been picked-up, so oldActiveJobs could be
-    // negative for instance. We signal only if that's not the case.
-    if (oldActiveJobs >= 0) {
-        wakeOne(); // wake-up a thread if needed...
-    }
+
+    // increase our active job count (the order in which we're doing this must not matter
+    // because we're not using std::memory_order_seq_cst (here or in WorkQueue::push()).
+    mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+
+    // Note: it's absolutely possible for mActiveJobs to be 0 here, because the job could have
+    // been handled by a zealous worker already. In that case we could avoid calling wakeOne(),
+    // but that is not the common case.
+
+    wakeOne();
 }
 
 JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
-    // decrement mActiveJobs first, this is to ensure that if there is only a single job left
-    // (and we're about to pick it up), other threads don't loop trying to do the same.
-    mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
-
     size_t const index = workQueue.pop();
     assert(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
-
-    // If our guess was wrong, i.e. we couldn't pick up a job (b/c our queue was empty), we
-    // need to correct mActiveJobs.
-    if (UTILS_UNLIKELY(!job)) {
-        // no need to wake someone else up because, we will go into job-stealing mode
-        // immediately after this
-        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+    if (UTILS_LIKELY(job)) {
+        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
     }
     return job;
 }
 
 JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
-    // decrement mActiveJobs first, this is to ensure that if there is only a single job left
-    // (and we're about to pick it up), other threads don't loop trying to do the same.
-    mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
-
     size_t const index = workQueue.steal();
     assert_invariant(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
-
-    if (UTILS_UNLIKELY(!job)) {
-        // If we failed taking a job, we need to correct mActiveJobs.
-        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
+    if (UTILS_LIKELY(job)) {
+        mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
     }
-
     return job;
 }
 
