@@ -70,8 +70,20 @@ namespace vzm
     float VzAsset::Animator::GetAnimationPlayTime(const size_t index)
     {
         COMP_ASSET_ANI_INST_FANI(asset_res, finst, fani, 0.f);
-        if ((size_t)index >= fani->getAnimationCount()) return 0.f;
-        return fani->getAnimationDuration(index);
+        const size_t animation_count = fani->getAnimationCount();
+        if (index > animation_count) return 0.f;
+        float duration = 0.f;
+        if (animationIndex_ == animation_count) {
+            for (size_t i = 0; i < animation_count; i++) 
+            {
+                duration = std::max(duration, fani->getAnimationDuration(i));
+            }
+        }
+        else
+        {
+            duration = fani->getAnimationDuration(index);
+        }
+        return duration;
     }
     float VzAsset::Animator::GetAnimationPlayTimeByLabel(const std::string& label)
     {

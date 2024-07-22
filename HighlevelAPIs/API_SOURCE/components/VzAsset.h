@@ -43,7 +43,8 @@ namespace vzm
             float GetAnimationPlayTimeByLabel(const std::string& label);
 
             void MovePlayTime(const double elsapsedTimeSec) { elapsedTimeSec_ = elsapsedTimeSec; }
-            void SetPlayMode(const PlayMode playMode) { playMode_ = playMode; resetAnimation_ = true; }
+            double GetPlayTime() { return elapsedTimeSec_; }
+            void SetPlayMode(const PlayMode playMode) { playMode_ = playMode; resetAnimation_ = playMode == PlayMode::INIT_POSE; }
             PlayMode GetPlayMode() { return playMode_; }
             void Reset() { resetAnimation_ = true; }
 
