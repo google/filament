@@ -29,13 +29,14 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
 
 #include <array>
 #include <algorithm>
 #include <iterator>
+#include <memory>
+#include <optional>
 #include <utility>
 
 #include <stddef.h>
@@ -89,7 +90,14 @@ void ResourceAllocator::AssociativeContainer<K, V, H>::emplace(ARGS&& ... args) 
 }
 
 // ------------------------------------------------------------------------------------------------
+
 ResourceAllocatorInterface::~ResourceAllocatorInterface() = default;
+
+// ------------------------------------------------------------------------------------------------
+
+ResourceAllocatorDisposerInterface::~ResourceAllocatorDisposerInterface() = default;
+
+// ------------------------------------------------------------------------------------------------
 
 size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     size_t const pixelCount = width * height * depth;
@@ -110,16 +118,22 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
 
 ResourceAllocator::ResourceAllocator(Engine::Config const& config, DriverApi& driverApi) noexcept
         : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
-          mBackend(driverApi) {
+          mBackend(driverApi),
+          mDisposer(std::make_shared<ResourceAllocatorDisposer>(driverApi)) {
+}
+
+ResourceAllocator::ResourceAllocator(std::shared_ptr<ResourceAllocatorDisposer> disposer,
+        Engine::Config const& config, DriverApi& driverApi) noexcept
+        : mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
+          mBackend(driverApi),
+          mDisposer(std::move(disposer)) {
 }
 
 ResourceAllocator::~ResourceAllocator() noexcept {
-    assert_invariant(!mTextureCache.size());
-    assert_invariant(!mInUseTextures.size());
+    assert_invariant(mTextureCache.empty());
 }
 
 void ResourceAllocator::terminate() noexcept {
-    assert_invariant(!mInUseTextures.size());
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         mBackend.destroyTexture(it->second.handle);
@@ -174,7 +188,7 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
                         swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
             }
         }
-        mInUseTextures.emplace(handle, key);
+        mDisposer->checkout(handle, key);
     } else {
         if (swizzle == defaultSwizzle) {
             handle = mBackend.createTexture(
@@ -190,22 +204,19 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
 
 void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
     if constexpr (mEnabled) {
-        // find the texture in the in-use list (it must be there!)
-        auto it = mInUseTextures.find(h);
-        assert_invariant(it != mInUseTextures.end());
-
-        // move it to the cache
-        const TextureKey key = it->second;
-        uint32_t const size = key.getSize();
-
-        mTextureCache.emplace(key, TextureCachePayload{ h, mAge, size });
-        mCacheSize += size;
-
-        // remove it from the in-use list
-        mInUseTextures.erase(it);
+        auto const key = mDisposer->checkin(h);
+        if (UTILS_LIKELY(key.has_value())) {
+            uint32_t const size = key.value().getSize();
+            mTextureCache.emplace(key.value(), TextureCachePayload{ h, mAge, size });
+            mCacheSize += size;
+        }
     } else {
         mBackend.destroyTexture(h);
     }
+}
+
+ResourceAllocatorDisposerInterface& ResourceAllocator::getDisposer() noexcept {
+    return *mDisposer;
 }
 
 void ResourceAllocator::gc() noexcept {
@@ -252,6 +263,48 @@ void ResourceAllocator::purge(
     mBackend.destroyTexture(pos->second.handle);
     mCacheSize -= pos->second.size;
     mTextureCache.erase(pos);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+ResourceAllocatorDisposer::ResourceAllocatorDisposer(DriverApi& driverApi) noexcept
+        : mBackend(driverApi) {
+}
+
+ResourceAllocatorDisposer::~ResourceAllocatorDisposer() noexcept {
+     assert_invariant(mInUseTextures.empty());
+}
+
+void ResourceAllocatorDisposer::terminate() noexcept {
+    assert_invariant(mInUseTextures.empty());
+}
+
+void ResourceAllocatorDisposer::destroy(backend::TextureHandle handle) noexcept {
+    if (handle) {
+        auto r = checkin(handle);
+        if (r.has_value()) {
+            mBackend.destroyTexture(handle);
+        }
+    }
+}
+
+void ResourceAllocatorDisposer::checkout(backend::TextureHandle handle,
+        ResourceAllocator::TextureKey key) {
+    mInUseTextures.emplace(handle, key);
+}
+
+std::optional<ResourceAllocator::TextureKey> ResourceAllocatorDisposer::checkin(
+        backend::TextureHandle handle) {
+    // find the texture in the in-use list (it must be there!)
+    auto it = mInUseTextures.find(handle);
+    assert_invariant(it != mInUseTextures.end());
+    if (it == mInUseTextures.end()) {
+        return std::nullopt;
+    }
+    TextureKey const key = it->second;
+    // remove it from the in-use list
+    mInUseTextures.erase(it);
+    return key;
 }
 
 } // namespace filament

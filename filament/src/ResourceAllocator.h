@@ -28,16 +28,29 @@
 #include <utils/Hash.h>
 
 #include <array>
-#include <vector>
+#include <memory>
+#include <optional>
 #include <utility>
+#include <vector>
 
+#include <cstddef>
 #include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
 
+class ResourceAllocatorDisposer;
+
 // The only reason we use an interface here is for unit-tests, so we can mock this allocator.
 // This is not too time-critical, so that's okay.
+
+class ResourceAllocatorDisposerInterface {
+public:
+    virtual void destroy(backend::TextureHandle handle) noexcept = 0;
+protected:
+    virtual ~ResourceAllocatorDisposerInterface();
+};
+
 class ResourceAllocatorInterface {
 public:
     virtual backend::RenderTargetHandle createRenderTarget(const char* name,
@@ -60,15 +73,20 @@ public:
 
     virtual void destroyTexture(backend::TextureHandle h) noexcept = 0;
 
+    virtual ResourceAllocatorDisposerInterface& getDisposer() noexcept = 0;
+
 protected:
     virtual ~ResourceAllocatorInterface();
 };
 
-
 class ResourceAllocator final : public ResourceAllocatorInterface {
 public:
+    explicit ResourceAllocator(std::shared_ptr<ResourceAllocatorDisposer> disposer,
+            Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
+
     explicit ResourceAllocator(
             Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
+
     ~ResourceAllocator() noexcept override;
 
     void terminate() noexcept;
@@ -92,6 +110,8 @@ public:
             backend::TextureUsage usage) noexcept override;
 
     void destroyTexture(backend::TextureHandle h) noexcept override;
+
+    ResourceAllocatorDisposerInterface& getDisposer() noexcept override;
 
     void gc() noexcept;
 
@@ -181,6 +201,7 @@ private:
         using value_type = typename Container::value_type::second_type;
 
         size_t size() const { return mContainer.size(); }
+        bool empty() const { return size() == 0; }
         iterator begin() { return mContainer.begin(); }
         const_iterator begin() const { return mContainer.begin(); }
         iterator end() { return mContainer.end(); }
@@ -193,16 +214,35 @@ private:
     };
 
     using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
-    using InUseContainer = AssociativeContainer<backend::TextureHandle, TextureKey>;
 
     void purge(ResourceAllocator::CacheContainer::iterator const& pos);
 
     backend::DriverApi& mBackend;
+    std::shared_ptr<ResourceAllocatorDisposer> mDisposer;
     CacheContainer mTextureCache;
-    InUseContainer mInUseTextures;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;
     static constexpr bool mEnabled = true;
+
+    friend class ResourceAllocatorDisposer;
+};
+
+class ResourceAllocatorDisposer final : public ResourceAllocatorDisposerInterface {
+    using TextureKey = ResourceAllocator::TextureKey;
+public:
+    explicit ResourceAllocatorDisposer(backend::DriverApi& driverApi) noexcept;
+    ~ResourceAllocatorDisposer() noexcept override;
+    void terminate() noexcept;
+    void destroy(backend::TextureHandle handle) noexcept override;
+
+private:
+    friend class ResourceAllocator;
+    void checkout(backend::TextureHandle handle, TextureKey key);
+    std::optional<TextureKey> checkin(backend::TextureHandle handle);
+
+    using InUseContainer = ResourceAllocator::AssociativeContainer<backend::TextureHandle, TextureKey>;
+    backend::DriverApi& mBackend;
+    InUseContainer mInUseTextures;
 };
 
 } // namespace filament

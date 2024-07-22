@@ -46,12 +46,15 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
+
+class ResourceAllocator;
 
 namespace backend {
 class Driver;
@@ -206,6 +209,7 @@ private:
     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
     std::function<void()> mBeginFrameInternal;
     uint64_t mVsyncSteadyClockTimeNano = 0;
+    std::unique_ptr<ResourceAllocator> mResourceAllocator{};
 };
 
 FILAMENT_DOWNCAST(Renderer)

@@ -60,6 +60,7 @@
 
 #include <chrono>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <stddef.h>
@@ -88,7 +89,11 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
-        mUserEpoch(engine.getEngineEpoch())
+        mUserEpoch(engine.getEngineEpoch()),
+        mResourceAllocator(std::make_unique<ResourceAllocator>(
+                engine.getSharedResourceAllocatorDisposer(),
+                engine.getConfig(),
+                engine.getDriverApi()))
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
@@ -176,6 +181,7 @@ void FRenderer::terminate(FEngine& engine) {
     }
     mFrameInfoManager.terminate(driver);
     mFrameSkipper.terminate(driver);
+    mResourceAllocator->terminate();
 }
 
 void FRenderer::resetUserTime() {
@@ -380,7 +386,7 @@ void FRenderer::endFrame() {
     }
 
     // do this before engine.flush()
-    engine.getResourceAllocator().gc();
+    mResourceAllocator->gc();
 
     // Run the component managers' GC in parallel
     // WARNING: while doing this we can't access any component manager
@@ -750,7 +756,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
      * Frame graph
      */
 
-    FrameGraph fg(engine.getResourceAllocator(),
+    FrameGraph fg(*mResourceAllocator,
             isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
     auto& blackboard = fg.getBlackboard();
 
