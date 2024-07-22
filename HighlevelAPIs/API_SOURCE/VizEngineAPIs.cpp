@@ -17,6 +17,7 @@
 
 //#include "FIncludes.h"
 #include "backend/VzAssetLoader.h"
+#include "backend/VzAssetExporter.h"
 using namespace vzm;
 
 //////////////////////////////
@@ -631,6 +632,14 @@ namespace vzm
         } 
 
         return v_asset;
+    }
+    
+    void ExportAssetToGlb(const VzAsset* v_asset, const std::string& filename) {
+        AssetVID vid_asset = v_asset->GetVID();
+        VzAssetRes& asset_res = *gEngineApp.GetAssetRes(vid_asset);
+
+        filament::gltfio::VzAssetExpoter* asset_exporter = gEngineApp.GetGltfAssetExpoter();
+        asset_exporter->ExportToGlb(v_asset, filename);
     }
 
     float GetAsyncLoadProgress()

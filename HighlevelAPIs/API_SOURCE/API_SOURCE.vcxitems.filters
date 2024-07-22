@@ -50,6 +50,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzTexture.cpp">
       <Filter>components</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzAssetExporter.cpp">
+      <Filter>backend</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)VizEngineAPIs.h" />
@@ -109,6 +112,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzTexture.h">
       <Filter>components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetExporter.h">
+      <Filter>backend</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
