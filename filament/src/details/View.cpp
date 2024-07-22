@@ -118,7 +118,7 @@ void FView::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mRenderableUbh);
-    drainFrameHistory(engine);
+    clearFrameHistory();
 
     ShadowMapManager::terminate(engine, mShadowMapManager);
     mPerViewUniforms.terminate(driver);
@@ -1005,22 +1005,36 @@ FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGr
     return mShadowMapManager->render(engine, fg, passBuilder, *this, cameraInfo, userTime);
 }
 
-void FView::commitFrameHistory(FEngine& engine) noexcept {
+void FView::commitFrameHistory(std::shared_ptr<ResourceAllocator> const& cache) noexcept {
     // Here we need to destroy resources in mFrameHistory.back()
     auto& frameHistory = mFrameHistory;
 
+    //  keep a (weak) reference to the cache object into the frame entry
+    assert_invariant(frameHistory.getCurrent().cache.use_count() == 0);
+    frameHistory.getCurrent().cache = cache;
+
+    // destroy the last entry in the cache using the correct cache object
     FrameHistoryEntry& last = frameHistory.back();
-    last.taa.color.destroy(engine.getResourceAllocator());
-    last.ssr.color.destroy(engine.getResourceAllocator());
+    auto entryCache = last.cache.lock();
+    if (entryCache) {
+        last.taa.color.destroy(*entryCache);
+        last.ssr.color.destroy(*entryCache);
+        entryCache.reset();
+    }
 
     // and then push the new history entry to the history stack
     frameHistory.commit();
 }
 
-void FView::drainFrameHistory(FEngine& engine) noexcept {
+void FView::clearFrameHistory() noexcept {
     // make sure we free all resources in the history
-    for (size_t i = 0; i < mFrameHistory.size(); ++i) {
-        commitFrameHistory(engine);
+    for (size_t i = 0, c = mFrameHistory.size(); i < c; ++i) {
+        FrameHistoryEntry& entry = mFrameHistory[i];
+        auto entryCache = entry.cache.lock();
+        if (entryCache) {
+            entry.taa.color.destroy(*entryCache);
+            entry.ssr.color.destroy(*entryCache);
+        }
     }
 }
 

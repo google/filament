@@ -20,14 +20,24 @@
 #include <fg/FrameGraphId.h>
 #include <fg/FrameGraphTexture.h>
 
+#include <utils/compiler.h>
+
 #include <math/mat4.h>
+#include <math/vec2.h>
+
+#include <memory>
+
+#include <stdint.h>
 
 namespace filament {
+
+class ResourceAllocator;
 
 // This is where we store all the history of a frame
 // when adding things here, please update:
 //      FView::commitFrameHistory()
 struct FrameHistoryEntry {
+    std::weak_ptr<ResourceAllocator> cache;
     struct TemporalAA{
         FrameGraphTexture color;
         FrameGraphTexture::Descriptor desc;
@@ -40,6 +50,9 @@ struct FrameHistoryEntry {
         FrameGraphTexture::Descriptor desc;
         math::mat4 projection;
     } ssr;
+    bool isValid() const noexcept {
+        return !cache.expired();
+    }
 };
 
 /*

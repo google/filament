@@ -99,8 +99,6 @@ class FScene;
 class FSwapChain;
 class FView;
 
-class ResourceAllocator;
-
 /*
  * Concrete implementation of the Engine interface. This keeps track of all hardware resources
  * for a given context.
@@ -252,11 +250,6 @@ public:
                 }
                 return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
-    }
-
-    ResourceAllocator& getResourceAllocator() noexcept {
-        assert_invariant(mResourceAllocator);
-        return *mResourceAllocator;
     }
 
     void* streamAlloc(size_t size, size_t alignment) noexcept;
@@ -490,7 +483,6 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
-    ResourceAllocator* mResourceAllocator = nullptr;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
@@ -561,6 +553,8 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     std::thread::id mMainThreadId{};
+
+    bool mInitialized = false;
 
     // Creation parameters
     Config mConfig;

@@ -683,7 +683,8 @@ class_<View>("View")
     .function("isStencilBufferEnabled", &View::isStencilBufferEnabled)
     .function("setMaterialGlobal", &View::setMaterialGlobal)
     .function("getMaterialGlobal", &View::getMaterialGlobal)
-    .function("getFogEntity", &View::getFogEntity);
+    .function("getFogEntity", &View::getFogEntity)
+    .function("clearFrameHistory", &View::clearFrameHistory);
 
 /// Scene ::core class:: Flat container of renderables and lights.
 /// See also the [Engine] methods `createScene` and `destroyScene`.

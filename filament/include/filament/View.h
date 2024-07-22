@@ -878,6 +878,17 @@ public:
      */
     utils::Entity getFogEntity() const noexcept;
 
+
+    /**
+     * When certain temporal features are used (e.g.: TAA or Screen-space reflections), the view
+     * keeps an history of previous frame renders associated with the Renderer the view was last
+     * used with. When switching Renderer, it may be necessary to clear that history by calling
+     * this method. Similarly, if the whole content of the screen change, like when a cut-scene
+     * starts, clearing the history might be needed to avoid artifacts due to the previous frame
+     * being very different.
+     */
+    void clearFrameHistory() noexcept;
+
     /**
      * List of available ambient occlusion techniques
      * @deprecated use AmbientOcclusionOptions::enabled instead

@@ -127,6 +127,15 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
+std::vector<backend::TextureHandle> ResourceAllocator::getInUseTextures() const noexcept {
+    std::vector<backend::TextureHandle> result;
+    result.reserve(mInUseTextures.size());
+    for (auto const& entry : mInUseTextures) {
+        result.push_back(entry.first);
+    }
+    return result;
+}
+
 RenderTargetHandle ResourceAllocator::createRenderTarget(const char*,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, uint8_t layerCount, MRT color, TargetBufferInfo depth,
@@ -229,12 +238,16 @@ void ResourceAllocator::gc() noexcept {
             ++it;
         }
     }
+
+    dump(true);
 }
 
 UTILS_NOINLINE
 void ResourceAllocator::dump(bool brief) const noexcept {
-    slog.d << "# entries=" << mTextureCache.size() << ", sz=" << mCacheSize / float(1u << 20u)
-           << " MiB" << io::endl;
+    slog.d  << "# entries=" << mTextureCache.size()
+            << ", sz=" << float(mCacheSize) * (1.0f / float(1u << 20u)) << " MiB"
+            << ", inUse=" << mInUseTextures.size()
+            << io::endl;
     if (!brief) {
         for (auto const& it : mTextureCache) {
             auto w = it.first.width;

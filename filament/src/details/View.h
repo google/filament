@@ -75,6 +75,7 @@ class FEngine;
 class FMaterialInstance;
 class FRenderer;
 class FScene;
+class ResourceAllocator;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -420,7 +421,11 @@ public:
     // Clean-up the oldest frame and save the current frame information.
     // This is typically called after all operations for this View's rendering are complete.
     // (e.g.: after the FrameGraph execution).
-    void commitFrameHistory(FEngine& engine) noexcept;
+    void commitFrameHistory(std::shared_ptr<ResourceAllocator> const& cache) noexcept;
+
+    // Clean-up the whole history, free all resources. This is typically called when the View is
+    // being terminated. Or we're changing Renderer.
+    void clearFrameHistory() noexcept;
 
     // create the picking query
     View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
@@ -484,10 +489,6 @@ private:
             FRenderableManager::Visibility const* visibility,
             Culler::result_type* visibleMask,
             size_t count);
-
-    // Clean-up the whole history, free all resources. This is typically called when the View is
-    // being terminated.
-    void drainFrameHistory(FEngine& engine) noexcept;
 
     // we don't inline this one, because the function is quite large and there is not much to
     // gain from inlining.

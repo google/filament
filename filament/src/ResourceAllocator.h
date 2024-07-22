@@ -95,6 +95,8 @@ public:
 
     void gc() noexcept;
 
+    std::vector<backend::TextureHandle> getInUseTextures() const noexcept;
+
 private:
     size_t const mCacheMaxAge;
 
@@ -181,6 +183,7 @@ private:
         using value_type = typename Container::value_type::second_type;
 
         size_t size() const { return mContainer.size(); }
+        bool empty() const { return size() == 0; }
         iterator begin() { return mContainer.begin(); }
         const_iterator begin() const { return mContainer.begin(); }
         iterator end() { return mContainer.end(); }

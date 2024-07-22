@@ -60,6 +60,7 @@
 
 #include <chrono>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <stddef.h>
@@ -88,7 +89,8 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
-        mUserEpoch(engine.getEngineEpoch())
+        mUserEpoch(engine.getEngineEpoch()),
+        mResourceAllocator(std::make_shared<ResourceAllocator>(engine.getConfig(), engine.getDriverApi()))
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
@@ -176,6 +178,24 @@ void FRenderer::terminate(FEngine& engine) {
     }
     mFrameInfoManager.terminate(driver);
     mFrameSkipper.terminate(driver);
+
+    // there shouldn't be any outstanding strong references to the resource allocator
+    assert_invariant(mResourceAllocator.unique());
+
+    // If we have "in use" textures, that is textures managed by the cache, but checked-out by
+    // a client, we destroy them now. The handle will become invalid and if the texture is used
+    // again by the client, it will be caught by the use-after-free detector. And because
+    // weak references are made invalid, clients won't be able to double-free them; unless then
+    // destroy the handle directly with the driver api, which is a misuse of the API and will
+    // also be caught by the use-after-free detector.
+    // This case can happen when a View is destroyed after a Renderer that stored textures in the
+    // FrameHistory.
+    auto inUseTextures = mResourceAllocator->getInUseTextures();
+    for (auto h : inUseTextures) {
+        mResourceAllocator->destroyTexture(h);
+    }
+    mResourceAllocator->terminate();
+    mResourceAllocator.reset(); // all weak pointers become dead
 }
 
 void FRenderer::resetUserTime() {
@@ -380,7 +400,7 @@ void FRenderer::endFrame() {
     }
 
     // do this before engine.flush()
-    engine.getResourceAllocator().gc();
+    mResourceAllocator->gc();
 
     // Run the component managers' GC in parallel
     // WARNING: while doing this we can't access any component manager
@@ -750,7 +770,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
      * Frame graph
      */
 
-    FrameGraph fg(engine.getResourceAllocator(),
+    FrameGraph fg(*mResourceAllocator,
             isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
     auto& blackboard = fg.getBlackboard();
 
@@ -1275,7 +1295,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     fg.execute(driver);
 
     // save the current history entry and destroy the oldest entry
-    view.commitFrameHistory(engine);
+    view.commitFrameHistory(mResourceAllocator);
 
     recordHighWatermark(commandArena.getListener().getHighWatermark());
 }

@@ -550,7 +550,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
     };
 
     auto const& previous = frameHistory.getPrevious().ssr;
-    if (!previous.color.handle) {
+    if (!previous.color.handle || !frameHistory.getPrevious().isValid()) {
         return {};
     }
 
@@ -2629,12 +2629,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
     // if we don't have a history yet, just use the current color buffer as history
     FrameGraphId<FrameGraphTexture> colorHistory = input;
-    if (UTILS_LIKELY(previous.color.handle)) {
+    bool const hasHistory = previous.color.handle && !frameHistory.getPrevious().isValid();
+    if (UTILS_LIKELY(hasHistory)) {
         colorHistory = fg.import("TAA history", previous.desc,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
     }
 
-    mat4 const& historyProjection = previous.color.handle ?
+    mat4 const& historyProjection = hasHistory ?
             previous.projection : current.projection;
 
     struct TAAData {
