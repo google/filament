@@ -347,7 +347,16 @@ void MetalDriver::updateDescriptorSetTexture(
 
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* texture = handle_cast<MetalTexture>(th);
-    id<MTLTexture> mtlTexture = texture->getMtlTextureForRead();
+
+    id<MTLTexture> mtlTexture = nil;
+    if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+        // TODO: support Metal external images and descriptor sets
+        mtlTexture = getOrCreateEmptyTexture(mContext);
+    } else {
+        mtlTexture = texture->getMtlTextureForRead();
+    }
+    assert_invariant(mtlTexture != nil);
+
     descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding { mtlTexture, params };
 
     auto const& bindings = descriptorSet->layout->getBindings();
