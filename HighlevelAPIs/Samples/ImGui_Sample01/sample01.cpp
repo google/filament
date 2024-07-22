@@ -716,9 +716,11 @@ void setMouseButton(GLFWwindow* window, int button, int state,
     switch (state) {
       case GLFW_PRESS:
         g_cc->GrabBegin(xPos, yPos, false);
+        std::cout << "[GrabBegin] x: " << xPos << ", y: " << yPos << std::endl;
         break;
       case GLFW_RELEASE:
         g_cc->GrabEnd();
+        std::cout << "[GrapEnd] x: " << xPos << ", y: " << yPos << std::endl;
         break;
       default:
         break;
@@ -738,6 +740,7 @@ void setCursorPos(GLFWwindow* window, double x, double y) {
 
   if (state == GLFW_PRESS) {
     g_cc->GrabDrag(xPos, yPos);
+    std::cout << "[GrapDrag] x: " << xPos << ", y: " << yPos << std::endl;
   }
 }
 void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
@@ -784,7 +787,7 @@ int main(int, char**) {
   // Create window with Vulkan context
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   GLFWwindow* window = glfwCreateWindow(
-      1280, 720, "Dear ImGui GLFW+Vulkan example", nullptr, nullptr);
+      1280, 720, "Grapicar Filament Viewer", nullptr, nullptr);
   if (!glfwVulkanSupported()) {
     printf("GLFW: Vulkan Not Supported\n");
     return 1;
@@ -831,10 +834,10 @@ int main(int, char**) {
   // vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
 
   vzm::VzAsset* asset =
-      vzm::LoadFileIntoAsset("../assets/show_car.glb", "my gltf asset");
+      vzm::LoadFileIntoAsset("../assets/gltf/car_action_re.gltf", "my gltf asset");
   asset->GetAnimator()->AddPlayScene(scene->GetVID());
-  asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
-  asset->GetAnimator()->SetAnimation(1);
+  asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
+  asset->GetAnimator()->SetAnimation(0);
 
   g_renderer = vzm::NewRenderer("my renderer");
   g_renderer->SetCanvas(w, h, dpi, nullptr);
@@ -929,8 +932,6 @@ int main(int, char**) {
   float right_editUIWidth = 0.0f;
 
   int mCurrentAnimation = 0;
-  float currentAnimTime = 0.0;
-  double lastFrameTime = glfwGetTime();
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     g_renderer->Render(scene, g_cam);
@@ -987,32 +988,53 @@ int main(int, char**) {
       const size_t animationCount = animator->GetAnimationCount();
       if (ImGui::CollapsingHeader("Animation")) {
         ImGui::Indent();
-
-        //animation time 관리 -> 추후 제거
-        double currentFrameTime = glfwGetTime();
-        currentAnimTime += (float)(currentFrameTime - lastFrameTime);
-        if (currentAnimTime >
-            animator->GetAnimationPlayTime(mCurrentAnimation)) {
-          currentAnimTime = 0.0f;
+        float currentAnimPlayTime = animator->GetPlayTime();
+        float currentAnimTotalTime =
+            animator->GetAnimationPlayTime(mCurrentAnimation);
+        if (currentAnimPlayTime > currentAnimTotalTime) {
+          currentAnimPlayTime -= currentAnimTotalTime;
+          animator->MovePlayTime(currentAnimPlayTime);
         }
 
-        lastFrameTime = currentFrameTime;
+        if (ImGui::Button("Play / Pause")) {
+          vzm::VzAsset::Animator::PlayMode playMode = animator->GetPlayMode();
+          switch (playMode) {
+            case vzm::VzAsset::Animator::PlayMode::INIT_POSE:
+              animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
+              break;
+            case vzm::VzAsset::Animator::PlayMode::PLAY:
+              animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
+              break;
+            case vzm::VzAsset::Animator::PlayMode::PAUSE:
+              animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
+              break;
+          }
+        }
+        if (ImGui::Button("Stop")) {
+          currentAnimPlayTime = 0.0f;
+          animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::INIT_POSE);
+        }
+        if (ImGui::RadioButton("Select All Animations", &mCurrentAnimation,
+                               animationCount)) {
+          animator->SetAnimation(animationCount);
+        }
 
-        ImGui::RadioButton("Apply all animations", &mCurrentAnimation,
-                           animationCount);
+        ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
+                           currentAnimTotalTime, "%4.2f seconds", ImGuiSliderFlags_AlwaysClamp);
 
-        ImGui::SliderFloat("Animation Time", &currentAnimTime, 0.0f,
-                           animator->GetAnimationPlayTime(mCurrentAnimation),
-                           "%4.2f seconds", ImGuiSliderFlags_AlwaysClamp);
-        animator->MovePlayTime(currentAnimTime);
-
+        ImGui::Text("Choose Seperate Animation");
         for (size_t i = 0; i < animationCount; ++i) {
           std::string label = animator->GetAnimationLabel(i);
           if (label.empty()) {
             label = "Unnamed " + std::to_string(i);
           }
-          ImGui::RadioButton(label.c_str(), &mCurrentAnimation, i);
+          if (ImGui::RadioButton(label.c_str(), &mCurrentAnimation, i)) {
+            animator->SetAnimation(i);
+            currentAnimPlayTime = 0.0f;
+          }
         }
+
+        animator->MovePlayTime(currentAnimPlayTime);
         // ImGui::Checkbox("Show rest pose", &bAny);
         ImGui::Unindent();
       }
