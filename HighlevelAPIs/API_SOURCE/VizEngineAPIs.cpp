@@ -654,7 +654,7 @@ namespace vzm
         return 0;
     }
 
-    uint64_t GetGraphicsSharedRenderTarget() {
+    void* GetGraphicsSharedRenderTarget() {
         return gEngine->getSwapHandle();
     }
 }

@@ -2023,11 +2023,12 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 void VulkanDriver::resetState(int) {
 }
 
-uint64_t VulkanDriver::getSwapHandle() {
-  VulkanSwapChain* vsc = getSwapChain();
-
+void* VulkanDriver::getSwapHandle() {
+  if (!mCurrentSwapChain) {
+    return (void*)-1;
+  }
   VulkanPlatformHeadlessSwapChain* headlessSwapChain =
-      (VulkanPlatformHeadlessSwapChain*)vsc->getHWSwapChain();
+      (VulkanPlatformHeadlessSwapChain*)mCurrentSwapChain->swapChain;
 
   return headlessSwapChain->getSwapHandle();
 }
