@@ -44,7 +44,7 @@ namespace vzm
 
             void MovePlayTime(const double elsapsedTimeSec) { elapsedTimeSec_ = elsapsedTimeSec; }
             double GetPlayTime() { return elapsedTimeSec_; }
-            void SetPlayMode(const PlayMode playMode) { playMode_ = playMode; resetAnimation_ = true; }
+            void SetPlayMode(const PlayMode playMode) { playMode_ = playMode; resetAnimation_ = playMode == PlayMode::INIT_POSE; }
             PlayMode GetPlayMode() { return playMode_; }
             void Reset() { resetAnimation_ = true; }
 
