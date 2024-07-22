@@ -695,10 +695,14 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd) {
 }
 
 vzm::VzCamera::Controller* g_cc = nullptr;
+vzm::VzRenderer* g_renderer;
+vzm::VzCamera* g_cam;
 int g_Height = 0;
+bool g_screenFocused = false;
+
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
-  if (!g_cc) {
+  if (!g_cc || !g_screenFocused) {
     return;
   }
   if (button == 0) {
@@ -724,7 +728,7 @@ void setMouseButton(GLFWwindow* window, int button, int state,
 void setCursorPos(GLFWwindow* window, double x, double y) {
   int state;
 
-  if (!g_cc) {
+  if (!g_cc || !g_screenFocused) {
     return;
   }
   state = glfwGetMouseButton(window, 0);
@@ -737,11 +741,22 @@ void setCursorPos(GLFWwindow* window, double x, double y) {
   }
 }
 void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
-  if (!g_cc) {
+  if (!g_cc || !g_screenFocused) {
     return;
   }
   // 임시: x, y가 영향을 준다면 변경 필요
   g_cc->Scroll(0, 0, 5.0f * (float)yOffset);
+}
+void onFrameBufferResize(GLFWwindow* window, int width, int height) {
+  if (g_cc && g_renderer && g_cam) {
+    g_cc->SetViewport(width, height);
+
+    g_renderer->SetCanvas(width, height, 96.f, nullptr);
+    float zNearP, zFarP, fovInDegree;
+    g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
+    g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                     (float)width / (float)height);
+  }
 }
 
 void treeNode(VID id) {
@@ -792,6 +807,7 @@ int main(int, char**) {
   glfwSetMouseButtonCallback(window, setMouseButton);
   glfwSetCursorPosCallback(window, setCursorPos);
   glfwSetScrollCallback(window, setMouseScroll);
+  glfwSetFramebufferSizeCallback(window, onFrameBufferResize);
 
   // Create Framebuffers
   int w, h;
@@ -820,18 +836,18 @@ int main(int, char**) {
   asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
   asset->GetAnimator()->SetAnimation(1);
 
-  vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
-  renderer->SetCanvas(w, h, dpi, nullptr);
-  renderer->SetVisibleLayerMask(0x4, 0x4);
+  g_renderer = vzm::NewRenderer("my renderer");
+  g_renderer->SetCanvas(w, h, dpi, nullptr);
+  g_renderer->SetVisibleLayerMask(0x4, 0x4);
 
-  vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(
+  g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
   glm::fvec3 p(0, 0, 10);
   glm::fvec3 at(0, 0, -4);
   glm::fvec3 u(0, 1, 0);
-  cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-  cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
-  g_cc = cam->GetController();
+  g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
+  g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
+  g_cc = g_cam->GetController();
   *(glm::fvec3*)g_cc->orbitHomePosition = p;
   g_cc->UpdateControllerSettings();
   g_cc->SetViewport(w, h);
@@ -845,7 +861,7 @@ int main(int, char**) {
     vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
   }
   vzm::AppendSceneCompTo(light, scene);
-  vzm::AppendSceneCompTo(cam, scene);
+  vzm::AppendSceneCompTo(g_cam, scene);
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -880,32 +896,6 @@ int main(int, char**) {
   init_info.CheckVkResultFn = check_vk_result;
   ImGui_ImplVulkan_Init(&init_info);
 
-  // Load Fonts
-  // - If no fonts are loaded, dear imgui will use the default font. You can
-  // also load multiple fonts and use ImGui::PushFont()/PopFont() to select
-  // them.
-  // - AddFontFromFileTTF() will return the ImFont* so you can store it if you
-  // need to select the font among multiple.
-  // - If the file cannot be loaded, the function will return a nullptr. Please
-  // handle those errors in your application (e.g. use an assertion, or display
-  // an error and quit).
-  // - The fonts will be rasterized at a given size (w/ oversampling) and stored
-  // into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which
-  // ImGui_ImplXXXX_NewFrame below will call.
-  // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype
-  // for higher quality font rendering.
-  // - Read 'docs/FONTS.md' for more instructions and details.
-  // - Remember that in C/C++ if you want to include a backslash \ in a string
-  // literal you need to write a double backslash \\ !
-  // io.Fonts->AddFontDefault();
-  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-  // ImFont* font =
-  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
-  // nullptr, io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != nullptr);
-
   // Our state
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -935,10 +925,15 @@ int main(int, char**) {
       0,
   };
 
-  float editUIWidth = 0.0f;
+  float left_editUIWidth = 0.0f;
+  float right_editUIWidth = 0.0f;
+
+  int mCurrentAnimation = 0;
+  float currentAnimTime = 0.0;
+  double lastFrameTime = glfwGetTime();
   // Main loop
   while (!glfwWindowShouldClose(window)) {
-    renderer->Render(scene, cam);
+    g_renderer->Render(scene, g_cam);
     // Poll and handle events (inputs, window resize, etc.)
     // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to
     // tell if dear imgui wants to use your inputs.
@@ -967,11 +962,140 @@ int main(int, char**) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-
-    // gltf viewer imgui
+    // left ui
     {
       ImGui::GetStyle().WindowRounding = 0;
       ImGui::SetNextWindowPos(ImVec2(0, 0));
+
+      const float width = ImGui::GetIO().DisplaySize.x;
+      const float height = ImGui::GetIO().DisplaySize.y;
+
+      ImGui::SetNextWindowSize(ImVec2(400, height), ImGuiCond_Once);
+      ImGui::SetNextWindowSizeConstraints(ImVec2(20, height),
+                                          ImVec2(width, height));
+
+      ImGui::Begin("left-ui", nullptr, ImGuiWindowFlags_NoTitleBar);
+
+      if (ImGui::CollapsingHeader("Hierarchy")) {
+        ImGui::Indent();
+        ImGui::Checkbox("Show bounds", &bAny);
+        treeNode(root_vids[0]);
+        ImGui::Unindent();
+      }
+
+      vzm::VzAsset::Animator* animator = asset->GetAnimator();
+      const size_t animationCount = animator->GetAnimationCount();
+      if (ImGui::CollapsingHeader("Animation")) {
+        ImGui::Indent();
+
+        //animation time 관리 -> 추후 제거
+        double currentFrameTime = glfwGetTime();
+        currentAnimTime += (float)(currentFrameTime - lastFrameTime);
+        if (currentAnimTime >
+            animator->GetAnimationPlayTime(mCurrentAnimation)) {
+          currentAnimTime = 0.0f;
+        }
+
+        lastFrameTime = currentFrameTime;
+
+        ImGui::RadioButton("Apply all animations", &mCurrentAnimation,
+                           animationCount);
+
+        ImGui::SliderFloat("Animation Time", &currentAnimTime, 0.0f,
+                           animator->GetAnimationPlayTime(mCurrentAnimation),
+                           "%4.2f seconds", ImGuiSliderFlags_AlwaysClamp);
+        animator->MovePlayTime(currentAnimTime);
+
+        for (size_t i = 0; i < animationCount; ++i) {
+          std::string label = animator->GetAnimationLabel(i);
+          if (label.empty()) {
+            label = "Unnamed " + std::to_string(i);
+          }
+          ImGui::RadioButton(label.c_str(), &mCurrentAnimation, i);
+        }
+        // ImGui::Checkbox("Show rest pose", &bAny);
+        ImGui::Unindent();
+      }
+      left_editUIWidth = ImGui::GetWindowWidth();
+      ImGui::End();
+    }
+
+    // swap buffer image
+    {
+      HANDLE swapHandle = (HANDLE)vzm::GetGraphicsSharedRenderTarget();
+      if (swapHandle != INVALID_HANDLE_VALUE) {
+        int index = 0;
+        if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
+          if (swapHandles[0] != 0 && swapHandles[1] != 0) {
+            swapHandles[0] = 0;
+            swapHandles[1] = 0;
+          }
+          if (swapHandles[0] == 0)
+            index = 0;
+          else
+            index = 1;
+
+          auto [importedImage, importedMemory] = importImageFromHandle(
+              g_Device, g_PhysicalDevice, {(uint32_t)width, (uint32_t)height},
+              VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
+          VkImageView importedImageView = createImageView(
+              g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
+
+          swapHandles[index] = swapHandle;
+          swapTextures[index] = ImGui_ImplVulkan_AddTexture(
+              sampler, importedImageView,
+              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+          swapImages[index] = importedImage;
+          swapImageViews[index] = importedImageView;
+          swapMemories[index] = importedMemory;
+
+        } else {
+          if (swapHandles[0] == swapHandle)
+            index = 0;
+          else if (swapHandles[1] == swapHandle)
+            index = 1;
+        }
+
+        ImGui::GetStyle().WindowRounding = 0;
+        ImGui::GetStyle().WindowPadding = ImVec2(0, 0);
+
+        ImGui::SetNextWindowPos(ImVec2(left_editUIWidth, 0));
+
+        const float window_width = ImGui::GetIO().DisplaySize.x;
+        const float window_height = ImGui::GetIO().DisplaySize.y;
+        const float workspace_width =
+            window_width - left_editUIWidth - right_editUIWidth;
+        const float workspace_height = workspace_width * (float)height / width;
+
+        ImGui::SetNextWindowSize(ImVec2(workspace_width, workspace_height),
+                                 ImGuiCond_Once);
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(workspace_width, workspace_height),
+            ImVec2(workspace_width, workspace_height));
+        ImGui::Begin("swapchain", nullptr,
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
+
+        // ImVec2 avail_size = ImGui::GetContentRegionAvail();
+        ImGui::Image((ImTextureID)swapTextures[index],
+                     ImVec2(workspace_width, workspace_height));
+        g_screenFocused = ImGui::IsWindowFocused();
+        ImGui::End();
+        // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
+        //                                          ImVec2(0, 0),
+        //                                          ImVec2(width, height));
+        transitionImageLayout(g_Device, wd->Frames[wd->FrameIndex].CommandPool,
+                              g_Queue, swapImages[index],
+                              VK_IMAGE_LAYOUT_UNDEFINED,
+                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        // Rendering
+      }
+    }
+
+    // right ui
+    {
+      ImGui::GetStyle().WindowRounding = 0;
+      ImGui::SetNextWindowPos(ImVec2(width - right_editUIWidth, 0));
 
       const float width = ImGui::GetIO().DisplaySize.x;
       const float height = ImGui::GetIO().DisplaySize.y;
@@ -1305,133 +1429,12 @@ int main(int, char**) {
 
         ImGui::Unindent();
       }
-      // TODO(prideout): add support for hierarchy, animation and variant
-      // selection in remote mode. To support these features, we will need to
-      // send a message (list of strings) from DebugServer to the WebSockets
-      // client.
 
-      if (ImGui::CollapsingHeader("Hierarchy")) {
-        ImGui::Indent();
-        ImGui::Checkbox("Show bounds", &bAny);
-        treeNode(root_vids[0]);
-        ImGui::Unindent();
-      }
-
-      if (ImGui::CollapsingHeader("Animation")) {
-        ImGui::Indent();
-        ImGui::RadioButton("Disable", &iAny, -1);
-        ImGui::RadioButton("Apply all animations", &iAny, 5);
-        ImGui::SliderFloat("Cross fade", &any, 0.0f, 2.0f, "%4.2f seconds",
-                           ImGuiSliderFlags_AlwaysClamp);
-        for (size_t i = 0; i < 5; ++i) {
-          ImGui::RadioButton("label", &iAny, i);
-        }
-        ImGui::Checkbox("Show rest pose", &bAny);
-        ImGui::Unindent();
-      }
-
-      // if (true) {
-      //   ImGui::Indent();
-      //   for (size_t i = 0,
-      //               count = 5;  // mInstance->getMaterialVariantCount();
-      //        i < count; ++i) {
-      //     ImGui::RadioButton("label", &iAny, i);
-      //   }
-      //   ImGui::Unindent();
-      // }
-
-      // if (ImGui::CollapsingHeader("Morphing")) {
-      //   // if (isAnimating) {
-      //   //   ImGui::BeginDisabled();
-      //   // }
-      //   for (int i = 0; i != 5; /*mMorphWeights.size();*/ ++i) {
-      //     // const char* name =
-      //     //     mAsset->getMorphTargetNameAt(mCurrentMorphingEntity, i);
-      //     // std::string label =
-      //     //     name ? name : "Unnamed target " + std::to_string(i);
-      //     ImGui::SliderFloat("label", &any, 0.0f, 1.0);
-      //   }
-      //   // if (isAnimating) {
-      //   //   ImGui::EndDisabled();
-      //   // }
-      // }
-
-      editUIWidth = ImGui::GetWindowWidth();
+      right_editUIWidth = ImGui::GetWindowWidth();
       ImGui::End();
     }
 
-    // swap buffer image
-    {
-      HANDLE swapHandle = (HANDLE)vzm::GetGraphicsSharedRenderTarget();
-      if (swapHandle != INVALID_HANDLE_VALUE) {
-        int index = 0;
-        if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
-          if (swapHandles[0] != 0 && swapHandles[1] != 0) {
-            swapHandles[0] = 0;
-            swapHandles[1] = 0;
-          }
-          if (swapHandles[0] == 0)
-            index = 0;
-          else
-            index = 1;
-
-          auto [importedImage, importedMemory] = importImageFromHandle(
-              g_Device, g_PhysicalDevice, {(uint32_t)width, (uint32_t)height},
-              VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
-          VkImageView importedImageView = createImageView(
-              g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
-
-          swapHandles[index] = swapHandle;
-          swapTextures[index] = ImGui_ImplVulkan_AddTexture(
-              sampler, importedImageView,
-              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-          swapImages[index] = importedImage;
-          swapImageViews[index] = importedImageView;
-          swapMemories[index] = importedMemory;
-
-        } else {
-          if (swapHandles[0] == swapHandle)
-            index = 0;
-          else if (swapHandles[1] == swapHandle)
-            index = 1;
-        }
-
-        ImGui::GetStyle().WindowRounding = 0;
-        ImGui::GetStyle().WindowPadding = ImVec2(0, 0);
-
-        ImGui::SetNextWindowPos(ImVec2(editUIWidth, 0));
-
-        const float window_width = ImGui::GetIO().DisplaySize.x;
-        const float window_height = ImGui::GetIO().DisplaySize.y;
-        const float workspace_width = window_width - editUIWidth;
-        const float workspace_height =
-            window_height * (float) window_height / window_width;
-
-        ImGui::SetNextWindowSize(ImVec2(workspace_width, workspace_height),
-                                 ImGuiCond_Once);
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(workspace_width, workspace_height),
-            ImVec2(workspace_width, workspace_height));
-        ImGui::Begin("swapchain", nullptr,
-                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
-
-        // ImVec2 avail_size = ImGui::GetContentRegionAvail();
-        ImGui::Image((ImTextureID)swapTextures[index],
-                     ImVec2(workspace_width, workspace_height));
-        ImGui::End();
-        // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
-        //                                          ImVec2(0, 0),
-        //                                          ImVec2(width, height));
-        transitionImageLayout(g_Device, wd->Frames[wd->FrameIndex].CommandPool,
-                              g_Queue, swapImages[index],
-                              VK_IMAGE_LAYOUT_UNDEFINED,
-                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-        // Rendering
-      }
-    }
-
-    //
+    // render
     ImGui::Render();
     ImDrawData* draw_data = ImGui::GetDrawData();
     const bool is_minimized =
