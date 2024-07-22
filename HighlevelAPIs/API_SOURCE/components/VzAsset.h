@@ -16,8 +16,10 @@ namespace vzm
             enum class PlayMode { INIT_POSE, PLAY, PAUSE, };
         private:
             VID vidAsset_ = INVALID_VID;
-            size_t animationIndex_ = 0; // if this becomes GetAnimationCount(), apply all.
-            size_t prevAnimationIndex_ = 0;
+            std::set<size_t> activatedAnimations_ = {}; // if this becomes GetAnimationCount(), apply all.
+            size_t animationIndex_ = 0;
+            int crossFadeAnimationIndex_ = -1;
+            int crossFadePrevAnimationIndex_ = -1;
             double crossFadeDurationSec_ = 1.0;
             TimeStamp timer_ = {};
             double elapsedTimeSec_ = 0.0;
@@ -36,9 +38,11 @@ namespace vzm
             size_t GetAnimationCount();
             std::string GetAnimationLabel(const int index);
             std::vector<std::string> GetAnimationLabels();
-            std::string SetAnimation(const size_t index) { prevAnimationIndex_ = animationIndex_; animationIndex_ = index; return GetAnimationLabel(index); }
-            int SetAnimationByLabel(const std::string& label);
-            void SetCrossFadeDuration(const double timeSec = 1.) { crossFadeDurationSec_ = timeSec; }
+            std::string ActivateAnimation(const size_t index) { activatedAnimations_.insert(index); return GetAnimationLabel(index); }
+            int ActivateAnimationByLabel(const std::string& label);
+            void SetCrossFadeDuration(const int crossFadeAnimationIndex, const int crossFadePrevAnimationIndex, const double timeSec = 1.) { 
+                crossFadeAnimationIndex_ = crossFadeAnimationIndex; crossFadePrevAnimationIndex_ = crossFadePrevAnimationIndex;  crossFadeDurationSec_ = timeSec;
+            }
             float GetAnimationPlayTime(const size_t index);
             float GetAnimationPlayTimeByLabel(const std::string& label);
 

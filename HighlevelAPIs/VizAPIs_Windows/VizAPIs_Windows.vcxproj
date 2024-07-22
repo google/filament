@@ -130,6 +130,9 @@
       <AdditionalDependencies>user32.lib;gdi32.lib;opengl32.lib;backend.lib;basis_transcoder.lib;bluegl.lib;bluevk.lib;camutils.lib;civetweb.lib;dracodec.lib;filabridge.lib;filaflat.lib;filamat.lib;filament-iblprefilter.lib;filament.lib;filameshio.lib;geometry.lib;gltfio.lib;gltfio_core.lib;ibl-lite.lib;ibl.lib;image.lib;ktxreader.lib;matdbg.lib;meshoptimizer.lib;mikktspace.lib;shaders.lib;smol-v.lib;stb.lib;uberarchive.lib;uberzlib.lib;utils.lib;viewer.lib;vkshaders.lib;zstd.lib;../../VisualStudio/samples/Debug/suzanne-resources.lib;../../VisualStudio/samples/Debug/sample-resources.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../VisualStudio/install/lib/x86_64;</AdditionalLibraryDirectories>
     </Lib>
+    <PostBuildEvent>
+      <Command>install.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -150,6 +153,9 @@
       <AdditionalLibraryDirectories>../../VisualStudio/install/$(Configuration)/lib/x86_64;</AdditionalLibraryDirectories>
       <AdditionalDependencies>user32.lib;gdi32.lib;opengl32.lib;backend.lib;basis_transcoder.lib;bluegl.lib;bluevk.lib;camutils.lib;civetweb.lib;dracodec.lib;filabridge.lib;filaflat.lib;filamat.lib;filament-iblprefilter.lib;filament.lib;filameshio.lib;geometry.lib;gltfio.lib;gltfio_core.lib;ibl-lite.lib;ibl.lib;image.lib;ktxreader.lib;matdbg.lib;meshoptimizer.lib;mikktspace.lib;shaders.lib;smol-v.lib;stb.lib;uberarchive.lib;uberzlib.lib;utils.lib;viewer.lib;vkshaders.lib;zstd.lib;../../VisualStudio/samples/Release/suzanne-resources.lib;../../VisualStudio/samples/Release/sample-resources.lib;../../VisualStudio/libs/filamentapp/Release/filamentapp.lib;../../VisualStudio/libs/filamentapp/Release/filamentapp-resources.lib;../../VisualStudio/samples/Release/gltf-demo-resources.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>install.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -138,7 +138,7 @@ struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainImpl {
   VkResult present(uint32_t index, VkSemaphore finished);
 
  public:
-  uint64_t getSwapHandle() const;
+  void* getSwapHandle() const;
 
  protected:
   // Non-virtual override-able method

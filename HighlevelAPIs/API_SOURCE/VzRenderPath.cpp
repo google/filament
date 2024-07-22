@@ -14,6 +14,9 @@ namespace vzm
         view_ = gEngine->createView();
         renderer_ = gEngine->createRenderer();
         swapChain_ = gEngine->createSwapChain(width_, height_);
+
+        //for (int i = 0; i < 8; i++)
+        //view_->setStencilBufferEnabled(false);
     }
 
     VzRenderPath::~VzRenderPath()

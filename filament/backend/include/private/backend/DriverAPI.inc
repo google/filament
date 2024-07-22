@@ -312,7 +312,7 @@ DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
-DECL_DRIVER_API_SYNCHRONOUS_0(uint64_t, getSwapHandle)
+DECL_DRIVER_API_SYNCHRONOUS_0(void*, getSwapHandle)
 
 /*
  * Updating driver objects
