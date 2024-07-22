@@ -107,30 +107,45 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
+    //arguments.SetParam("api", std::string("opengl"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
 
     vzm::VzAsset::Animator* animator = asset->GetAnimator();
     if (animator)
     {
-        asset->GetAnimator()->AddPlayScene(scene->GetVID());
-        asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
-        asset->GetAnimator()->SetAnimation(1);
+        animator->AddPlayScene(scene->GetVID());
+        animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
+        animator->ActivateAnimation(0);
+
+        std::vector<std::string> animations = animator->GetAnimationLabels();
+        std::cout << "Total animations: " << animations.size() << std::endl;
+        std::cout << "Animation names:" << std::endl;
+        for (const auto& animName : animations) {
+            std::cout << "  - " << animName << std::endl;
+        }
     }
 
     vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
     renderer->SetCanvas(w, h, dpi, hwnd);
-    renderer->SetVisibleLayerMask(0x4, 0x4);
+    renderer->SetVisibleLayerMask(0xFF, 0xFF);
 
     std::vector<VID> cameras;
     vzm::GetSceneCompoenentVids(vzm::SCENE_COMPONENT_TYPE::CAMERA, 0, cameras);
+    for (auto cam_vid : cameras)
+    {
+        std::cout << vzm::GetVzComponent(cam_vid)->GetName() << std::endl;
+        vzm::RemoveComponent(cam_vid);
+    }
 
-    vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
+    vzm::VzCamera* cam= (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
     {
         //cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
     }
@@ -138,7 +153,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-    cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
+    cam->SetPerspectiveProjection(0.01f, 100.f, 45.f, (float)w / (float)h);
     vzm::VzCamera::Controller* cc = cam->GetController();
     *(glm::fvec3*)cc->orbitHomePosition = p;
     cc->UpdateControllerSettings();

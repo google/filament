@@ -52,7 +52,7 @@ namespace vzm
         }
         return labels;
     }
-    int VzAsset::Animator::SetAnimationByLabel(const std::string& label)
+    int VzAsset::Animator::ActivateAnimationByLabel(const std::string& label)
     {
         COMP_ASSET_ANI_INST_FANI(asset_res, finst, fani, -1);
         size_t num_ani = fani->getAnimationCount();
@@ -61,7 +61,7 @@ namespace vzm
         {
             if (label == fani->getAnimationName(i))
             {
-                SetAnimation(i);
+                ActivateAnimation(i);
                 return i;
             }
         }
@@ -70,8 +70,20 @@ namespace vzm
     float VzAsset::Animator::GetAnimationPlayTime(const size_t index)
     {
         COMP_ASSET_ANI_INST_FANI(asset_res, finst, fani, 0.f);
-        if ((size_t)index >= fani->getAnimationCount()) return 0.f;
-        return fani->getAnimationDuration(index);
+        const size_t animation_count = fani->getAnimationCount();
+        if (index > animation_count) return 0.f;
+        float duration = 0.f;
+        if (animationIndex_ == animation_count) {
+            for (size_t i = 0; i < animation_count; i++) 
+            {
+                duration = std::max(duration, fani->getAnimationDuration(i));
+            }
+        }
+        else
+        {
+            duration = fani->getAnimationDuration(index);
+        }
+        return duration;
     }
     float VzAsset::Animator::GetAnimationPlayTimeByLabel(const std::string& label)
     {
@@ -115,6 +127,7 @@ namespace vzm
             prevElapsedTimeSec_ = elapsedTimeSec_;
             elapsedTimeSec_ = 0;
             resetAnimation_ = false;
+            crossFadeAnimationIndex_ = crossFadePrevAnimationIndex_ = -1;
         }
 
         auto timestamp = std::chrono::high_resolution_clock::now();
@@ -129,19 +142,26 @@ namespace vzm
         elapsedTimeSec_ += delta_time;
 
         const size_t animation_count = fani->getAnimationCount();
-        if (animationIndex_ == animation_count) {
-            for (size_t i = 0; i < animation_count; i++) {
+        for (size_t i = 0; i < animation_count; ++i)
+        {
+            if (activatedAnimations_.contains(i)) {
                 fani->applyAnimation(i, elapsedTimeSec_);
+            }
+        }
+
+        if (elapsedTimeSec_ < crossFadeDurationSec_) 
+        {
+            if (crossFadeAnimationIndex_ >= 0 && crossFadePrevAnimationIndex_ >= 0 && crossFadeAnimationIndex_ != crossFadePrevAnimationIndex_) 
+            {
+                const double previousSeconds = prevElapsedTimeSec_ + delta_time;
+                const float lerpFactor = elapsedTimeSec_ / crossFadeDurationSec_;
+                fani->applyAnimation(crossFadeAnimationIndex_, elapsedTimeSec_);
+                fani->applyCrossFade(crossFadePrevAnimationIndex_, previousSeconds, lerpFactor);
             }
         }
         else
         {
-            fani->applyAnimation(animationIndex_, elapsedTimeSec_);
-        }
-        if (elapsedTimeSec_ < crossFadeDurationSec_ && prevAnimationIndex_ >= 0 && prevAnimationIndex_ != animation_count) {
-            const double previousSeconds = prevElapsedTimeSec_ + delta_time;
-            const float lerpFactor = elapsedTimeSec_ / crossFadeDurationSec_;
-            fani->applyCrossFade(prevAnimationIndex_, previousSeconds, lerpFactor);
+            crossFadeAnimationIndex_ = crossFadePrevAnimationIndex_ = -1;
         }
         fani->updateBoneMatrices();
     }
