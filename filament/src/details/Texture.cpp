@@ -231,6 +231,11 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
 
+    if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
+        // mHandle and mHandleForSampling will be created in setExternalImage()
+        return;
+    }
+
     if (UTILS_LIKELY(builder->mImportedId == 0)) {
         if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
             mHandle = driver.createTexture(
@@ -437,10 +442,12 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     // external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
-    if (mExternalImageHandle) {
-        api.destroyTexture(mExternalImageHandle);
+    if (mHandle) {
+        api.destroyTexture(mHandle);
+        assert_invariant(mHandleForSampling == mHandle);
     }
-    mExternalImageHandle = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
+    mHandle = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
+    mHandleForSampling = mHandle;
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
@@ -451,11 +458,12 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
     // the external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
-    if (mExternalImageHandle) {
-        api.destroyTexture(mExternalImageHandle);
+    if (mHandle) {
+        api.destroyTexture(mHandle);
+        assert_invariant(mHandleForSampling == mHandle);
     }
-    mExternalImageHandle =
-            api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
+    mHandle = api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
+    mHandleForSampling = mHandle;
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
@@ -498,6 +506,7 @@ bool FTexture::textureHandleCanMutate() const noexcept {
 }
 
 void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
+    assert_invariant(mTarget != SamplerType::SAMPLER_EXTERNAL);
     if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
         auto& range = mLodRange;
         uint8_t const last = int8_t(baseLevel + levelCount);
@@ -520,9 +529,6 @@ void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
 }
 
 backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
-    if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
-        return mExternalImageHandle;
-    }
     auto const& range = mLodRange;
     auto& activeRange = mActiveLodRange;
     if (UTILS_UNLIKELY(activeRange.first != range.first || activeRange.last != range.last)) {

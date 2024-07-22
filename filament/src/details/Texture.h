@@ -134,7 +134,6 @@ private:
     void updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     backend::Handle<backend::HwTexture> mHandle;
-    backend::Handle<backend::HwTexture> mExternalImageHandle;
     mutable backend::Handle<backend::HwTexture> mHandleForSampling;
     backend::DriverApi* mDriver = nullptr; // this is only needed for getHwHandleForSampling()
     LodRange mLodRange{};
