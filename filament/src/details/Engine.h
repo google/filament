@@ -86,6 +86,7 @@ namespace filament {
 
 class Renderer;
 class MaterialParser;
+class ResourceAllocatorDisposer;
 
 namespace backend {
 class Driver;
@@ -254,9 +255,13 @@ public:
         }
     }
 
-    ResourceAllocator& getResourceAllocator() noexcept {
-        assert_invariant(mResourceAllocator);
-        return *mResourceAllocator;
+    ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {
+        assert_invariant(mResourceAllocatorDisposer);
+        return *mResourceAllocatorDisposer;
+    }
+
+    std::shared_ptr<ResourceAllocatorDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
+        return mResourceAllocatorDisposer;
     }
 
     void* streamAlloc(size_t size, size_t alignment) noexcept;
@@ -490,7 +495,7 @@ private:
     FTransformManager mTransformManager;
     FLightManager mLightManager;
     FCameraManager mCameraManager;
-    ResourceAllocator* mResourceAllocator = nullptr;
+    std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
@@ -561,6 +566,8 @@ private:
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 
     std::thread::id mMainThreadId{};
+
+    bool mInitialized = false;
 
     // Creation parameters
     Config mConfig;
