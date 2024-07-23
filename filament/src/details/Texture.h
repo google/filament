@@ -120,7 +120,7 @@ public:
     static bool validatePixelFormatAndType(backend::TextureFormat internalFormat,
             backend::PixelDataFormat format, backend::PixelDataType type) noexcept;
 
-    bool canHaveTextureView() const noexcept;
+    bool textureHandleCanMutate() const noexcept;
     void updateLodRange(uint8_t level) noexcept;
 
 private:

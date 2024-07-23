@@ -231,6 +231,11 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
 
+    if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
+        // mHandle and mHandleForSampling will be created in setExternalImage()
+        return;
+    }
+
     if (UTILS_LIKELY(builder->mImportedId == 0)) {
         if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
             mHandle = driver.createTexture(
@@ -430,21 +435,35 @@ void FTexture::setImage(FEngine& engine, size_t level,
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
-    if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
-        engine.getDriverApi().setExternalImage(mHandle, image);
+    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
+        return;
     }
+    // The call to setupExternalImage is synchronous, and allows the driver to take ownership of the
+    // external image on this thread, if necessary.
+    auto& api = engine.getDriverApi();
+    api.setupExternalImage(image);
+    if (mHandle) {
+        api.destroyTexture(mHandle);
+        assert_invariant(mHandleForSampling == mHandle);
+    }
+    mHandle = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
+    mHandleForSampling = mHandle;
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
-    if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
-        engine.getDriverApi().setExternalImagePlane(mHandle, image, plane);
+    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
+        return;
     }
+    // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
+    // the external image on this thread, if necessary.
+    auto& api = engine.getDriverApi();
+    api.setupExternalImage(image);
+    if (mHandle) {
+        api.destroyTexture(mHandle);
+        assert_invariant(mHandleForSampling == mHandle);
+    }
+    mHandle = api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
+    mHandleForSampling = mHandle;
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
@@ -480,12 +499,14 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     const_cast<FTexture*>(this)->updateLodRange(0, mLevelCount);
 }
 
-bool FTexture::canHaveTextureView() const noexcept {
+bool FTexture::textureHandleCanMutate() const noexcept {
     // TODO: this will eventually include swizzling
-    return any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1;
+    return (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) ||
+            mTarget == SamplerType::SAMPLER_EXTERNAL;
 }
 
 void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
+    assert_invariant(mTarget != SamplerType::SAMPLER_EXTERNAL);
     if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
         auto& range = mLodRange;
         uint8_t const last = int8_t(baseLevel + levelCount);

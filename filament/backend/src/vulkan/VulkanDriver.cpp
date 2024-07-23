@@ -581,6 +581,15 @@ void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
     mResourceManager.acquire(vktexture);
 }
 
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+}
+
+void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* image, uint32_t plane) {
+}
+
 void VulkanDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
@@ -764,6 +773,14 @@ Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureExternalImageS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureExternalImagePlaneS() noexcept {
     return mResourceAllocator.allocHandle<VulkanTexture>();
 }
 
