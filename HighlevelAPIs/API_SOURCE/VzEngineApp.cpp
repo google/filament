@@ -1,6 +1,7 @@
 #include "VzEngineApp.h"
 #include "VzRenderPath.h"
 #include "backend/VzAssetLoader.h"
+#include "backend/VzAssetExporter.h"
 #include "VzNameComponents.hpp"
 
 #include "FIncludes.h"
@@ -293,6 +294,7 @@ namespace vzm
     struct GltfIO
     {
         gltfio::VzAssetLoader* assetLoader = nullptr;
+        gltfio::VzAssetExpoter* assetExpoter = nullptr;
 
         gltfio::ResourceLoader* resourceLoader = nullptr;
         gltfio::TextureProvider* stbDecoder = nullptr;
@@ -315,6 +317,7 @@ namespace vzm
             //AssetLoader::destroy(&assetLoader);
             gltfio::VzAssetLoader::destroy(&assetLoader);
             assetLoader = nullptr;
+            assetExpoter = nullptr;
         }
     } vGltfIo;
 
@@ -1212,6 +1215,11 @@ namespace vzm
     {
         return vGltfIo.assetLoader;
     }
+    
+    VzAssetExpoter* VzEngineApp::GetGltfAssetExpoter()
+    {
+        return vGltfIo.assetExpoter;
+    }
 
     ResourceLoader* VzEngineApp::GetGltfResourceLoader()
     {
@@ -1470,6 +1478,7 @@ namespace vzm
 
         auto& ncm = VzNameCompManager::Get();
         vGltfIo.assetLoader = new gltfio::VzAssetLoader({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
+        vGltfIo.assetExpoter = new gltfio::VzAssetExpoter();
     }
     void VzEngineApp::Destroy()
     {

@@ -50,6 +50,7 @@ namespace vzm
 
 namespace filament::gltfio {
     struct VzAssetLoader;
+    struct VzAssetExpoter;
 }
 
 class IBL;
@@ -311,6 +312,7 @@ namespace vzm
         }
 
         gltfio::VzAssetLoader* GetGltfAssetLoader();
+        gltfio::VzAssetExpoter* GetGltfAssetExpoter();
         gltfio::ResourceLoader* GetGltfResourceLoader();
 
         template <typename UM> void destroyTarget(UM& umap)

@@ -61,4 +61,5 @@ namespace vzm
     //  - return canvas VID (use this as a camVid)
     __dojostatic VID DisplayEngineProfiling(const int w, const int h, const bool displayProfile = true, const bool displayEngineStates = true);
     
+    __dojostatic void ExportAssetToGlb(const VzAsset* asset, const std::string& filename);
 }

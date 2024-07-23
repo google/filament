@@ -14,6 +14,7 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetExporter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzAsset.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)VzRenderPath.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzAssetExporter.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
