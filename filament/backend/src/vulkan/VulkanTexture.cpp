@@ -66,8 +66,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       mStagePool(stagePool),
       mDevice(device),
       mAllocator(allocator),
-      mCommands(commands),
-      mLayerCount(depth)
+      mCommands(commands)
       {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo{.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -97,8 +96,6 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.arrayLayers = depth * 6;
         imageInfo.extent.depth = 1;
     }
-
-    mLayerCount = imageInfo.arrayLayers;
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
@@ -391,11 +388,12 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
 
 VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange range) {
     range.levelCount = 1;
-    if (range.layerCount > 1) {
-      return getImageView(range, VK_IMAGE_VIEW_TYPE_2D_ARRAY, {});
-    }
     range.layerCount = 1;
     return getImageView(range, VK_IMAGE_VIEW_TYPE_2D, {});
+}
+
+VkImageView VulkanTexture::getMultiviewAttachmentView(VkImageSubresourceRange range) {
+    return getImageView(range, VK_IMAGE_VIEW_TYPE_2D_ARRAY, {});
 }
 
 VkImageView VulkanTexture::getViewForType(VkImageSubresourceRange const& range, VkImageViewType type) {
@@ -528,10 +526,6 @@ VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
         return VulkanLayout::UNDEFINED;
     }
     return mSubresourceLayouts.get(key);
-}
-
-uint32_t VulkanTexture::getLayerCount() {
-    return mLayerCount;
 }
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)

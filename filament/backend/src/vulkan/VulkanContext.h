@@ -44,6 +44,7 @@ struct VulkanAttachment {
     VulkanTexture* texture = nullptr;
     uint8_t level = 0;
     uint8_t baseViewIndex = 0;
+    uint8_t layerCount = 1;
     uint16_t layer = 0;
 
     bool isDepth() const;
