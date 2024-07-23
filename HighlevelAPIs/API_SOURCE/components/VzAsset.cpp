@@ -100,6 +100,32 @@ namespace vzm
         return 0.f;
     }
 
+    void VzAsset::Animator::ApplyAnimationTimeAt(const size_t index, const float elapsedTime) 
+    {
+        COMP_ASSET_ANI(asset_res, );
+        FilamentInstance* finst = asset_res->asset->getInstance();
+        if (finst == nullptr) return;
+        filament::gltfio::Animator* fani = finst->getAnimator();
+        if (fani == nullptr) return;
+
+        const size_t animation_count = fani->getAnimationCount();
+        if (animation_count <= index)
+        {
+            return;
+        }
+        fani->applyAnimation(index, elapsedTime);
+    }
+
+    void VzAsset::Animator::UpdateBoneMatrices()
+    {
+        COMP_ASSET_ANI(asset_res, );
+        FilamentInstance* finst = asset_res->asset->getInstance();
+        if (finst == nullptr) return;
+        filament::gltfio::Animator* fani = finst->getAnimator();
+        if (fani == nullptr) return;
+        fani->updateBoneMatrices();
+    }
+
     void VzAsset::Animator::UpdateAnimation()
     {
         //COMP_ASSET_ANI_INST_FANI(asset_res, vzGltfIO.assetResMaps, finst, fani, );

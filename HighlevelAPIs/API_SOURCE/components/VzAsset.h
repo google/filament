@@ -38,6 +38,11 @@ namespace vzm
             size_t GetAnimationCount();
             std::string GetAnimationLabel(const int index);
             std::vector<std::string> GetAnimationLabels();
+
+            void ApplyAnimationTimeAt(const size_t index, const float elapsedTime);
+            void UpdateBoneMatrices();
+            
+
             std::string ActivateAnimation(const size_t index) { activatedAnimations_.insert(index); return GetAnimationLabel(index); }
             int ActivateAnimationByLabel(const std::string& label);
             void SetCrossFadeDuration(const int crossFadeAnimationIndex, const int crossFadePrevAnimationIndex, const double timeSec = 1.) { 

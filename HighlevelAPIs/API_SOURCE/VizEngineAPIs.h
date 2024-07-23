@@ -53,7 +53,7 @@ namespace vzm
     __dojostatic float GetAsyncLoadProgress();
     // Get a graphics render target view 
     //  - Must belong to the internal scene
-    __dojostatic void* GetGraphicsSharedRenderTarget();
+    __dojostatic uint64_t GetGraphicsSharedRenderTarget();
     // Reload shaders
     __dojostatic void ReloadShader();
 
