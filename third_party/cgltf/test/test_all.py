@@ -52,13 +52,14 @@ if __name__ == "__main__":
         f = open(".git/info/sparse-checkout", "w+")
         f.write("2.0/*\n")
         f.close()
-        os.system("git pull --depth=1 origin master")
+        os.system("git pull --depth=1 origin main")
         os.chdir("..")
     collect_files("glTF-Sample-Models/2.0/", ".glb", "cgltf_test")
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "cgltf_test")
     collect_files("glTF-Sample-Models/2.0/", ".glb", "test_conversion")
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "test_conversion")
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "test_write")
+    collect_files("glTF-Sample-Models/2.0/", ".glb", "test_write_glb")
 
     result = os.system(get_executable_path("test_math"))
     if result != 0:

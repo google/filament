@@ -30,3 +30,8 @@ TransmissionTexture = unsupported
 # Volume Features
 Volume = unsupported
 VolumeThicknessTexture = unsupported
+
+# Specular Features
+Specular = unsupported
+SpecularTexture = unsupported
+SpecularColorTexture = unsupported

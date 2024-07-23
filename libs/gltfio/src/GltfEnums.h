@@ -131,6 +131,7 @@ inline bool getPrimitiveType(cgltf_primitive_type in,
         case cgltf_primitive_type_triangle_strip:
             *out = filament::RenderableManager::PrimitiveType::TRIANGLE_STRIP;
             return true;
+        case cgltf_primitive_type_invalid:
         case cgltf_primitive_type_line_loop:
         case cgltf_primitive_type_triangle_fan:
         case cgltf_primitive_type_max_enum:

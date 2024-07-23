@@ -489,32 +489,10 @@ public:
          * For standard morphing, A MorphTargetBuffer must be provided.
          * Standard morphing supports up to \c CONFIG_MAX_MORPH_TARGET_COUNT morph targets.
          *
-         * For legacy morphing, the attached VertexBuffer must provide data in the
-         * appropriate VertexAttribute slots (\c MORPH_POSITION_0 etc). Legacy morphing only
-         * supports up to 4 morph targets and will be deprecated in the future. Legacy morphing must
-         * be enabled on the material definition: either via the legacyMorphing material attribute
-         * or by calling filamat::MaterialBuilder::useLegacyMorphing().
-         *
          * See also RenderableManager::setMorphWeights(), which can be called on a per-frame basis
          * to advance the animation.
          */
         Builder& morphing(MorphTargetBuffer* UTILS_NONNULL morphTargetBuffer) noexcept;
-
-        /**
-         * @deprecated Use morphing(uint8_t level, size_t primitiveIndex, size_t offset, size_t count) instead
-         */
-        Builder& morphing(uint8_t level, size_t primitiveIndex,
-                MorphTargetBuffer* UTILS_NONNULL morphTargetBuffer,
-                size_t offset, size_t count) noexcept;
-
-        /**
-         * @deprecated Use morphing(uint8_t level, size_t primitiveIndex, size_t offset, size_t count) instead
-         */
-        inline Builder& morphing(uint8_t level, size_t primitiveIndex,
-                MorphTargetBuffer* UTILS_NONNULL morphTargetBuffer) noexcept {
-            return morphing(level, primitiveIndex, morphTargetBuffer, 0,
-                    morphTargetBuffer->getVertexCount());
-        }
 
         /**
          * Specifies the the range of the MorphTargetBuffer to use with this primitive.
@@ -522,10 +500,9 @@ public:
          * @param level the level of detail (lod), only 0 can be specified
          * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
          * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
-         * @param count number of vertices in the morph target buffer to read, must equal the geometry's count (for triangles, this should be a multiple of 3)
          */
-        Builder& morphing(uint8_t level, size_t primitiveIndex,
-                size_t offset, size_t count) noexcept;
+        RenderableManager::Builder& morphing(uint8_t level,
+                size_t primitiveIndex, size_t offset) noexcept;
 
 
         /**
@@ -786,25 +763,13 @@ public:
     /**
      * Associates a MorphTargetBuffer to the given primitive.
      */
-    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            size_t offset, size_t count);
-
-    /** @deprecated */
-    void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            MorphTargetBuffer* UTILS_NONNULL morphTargetBuffer, size_t offset, size_t count);
-
-    /** @deprecated */
-    inline void setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-            MorphTargetBuffer* UTILS_NONNULL morphTargetBuffer) {
-        setMorphTargetBufferAt(instance, level, primitiveIndex, morphTargetBuffer, 0,
-                morphTargetBuffer->getVertexCount());
-    }
+    void setMorphTargetBufferOffsetAt(Instance instance, uint8_t level, size_t primitiveIndex,
+            size_t offset);
 
     /**
-     * Get a MorphTargetBuffer to the given primitive or null if it doesn't exist.
+     * Get a MorphTargetBuffer to the given renderable or null if it doesn't exist.
      */
-    MorphTargetBuffer* UTILS_NULLABLE getMorphTargetBufferAt(Instance instance,
-            uint8_t level, size_t primitiveIndex) const noexcept;
+    MorphTargetBuffer* UTILS_NULLABLE getMorphTargetBuffer(Instance instance) const noexcept;
 
     /**
      * Gets the number of morphing in the given entity.

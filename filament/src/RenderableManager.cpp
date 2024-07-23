@@ -158,20 +158,14 @@ void RenderableManager::setMorphWeights(Instance instance, float const* weights,
     downcast(this)->setMorphWeights(instance, weights, count, offset);
 }
 
-void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level, size_t primitiveIndex,
-        MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) {
-    downcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex,
-            downcast(morphTargetBuffer), offset, count);
+void RenderableManager::setMorphTargetBufferOffsetAt(Instance instance, uint8_t level,
+        size_t primitiveIndex,
+        size_t offset) {
+    downcast(this)->setMorphTargetBufferOffsetAt(instance, level, primitiveIndex, offset);
 }
 
-void RenderableManager::setMorphTargetBufferAt(
-        Instance instance, uint8_t level, size_t primitiveIndex, size_t offset, size_t count) {
-    downcast(this)->setMorphTargetBufferAt(instance, level, primitiveIndex, offset, count);
-}
-
-MorphTargetBuffer* RenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex) const noexcept {
-    return downcast(this)->getMorphTargetBufferAt(instance, level, primitiveIndex);
+MorphTargetBuffer* RenderableManager::getMorphTargetBuffer(Instance instance) const noexcept {
+    return downcast(this)->getMorphTargetBuffer(instance);
 }
 
 size_t RenderableManager::getMorphTargetCount(Instance instance) const noexcept {
