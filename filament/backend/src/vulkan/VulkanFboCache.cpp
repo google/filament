@@ -188,10 +188,10 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     };
 
     VkRenderPassMultiviewCreateInfo multiviewCreateInfo = {};
-    uint32_t subpassViewMask = (1 << config.viewCount) - 1;
+    uint32_t const subpassViewMask = (1 << config.viewCount) - 1;
     // Prepare a view mask array for the maximum number of subpasses. All subpasses have all views
     // activated.
-    uint32_t viewMasks[2] = {subpassViewMask, subpassViewMask};
+    uint32_t const viewMasks[2] = {subpassViewMask, subpassViewMask};
     if (config.viewCount > 1) {
       // Fill the multiview create info.
       multiviewCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
