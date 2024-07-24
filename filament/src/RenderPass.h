@@ -428,8 +428,7 @@ private:
     void instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
-    // On a Pixel 4, 2048 commands is about half a millisecond of processing.
-    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 2048;
+    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 128;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
 

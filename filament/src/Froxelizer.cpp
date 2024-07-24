@@ -26,6 +26,7 @@
 #include <filament/Viewport.h>
 
 #include <utils/BinaryTreeArray.h>
+#include <utils/Log.h>
 #include <utils/Systrace.h>
 #include <utils/debug.h>
 
