@@ -242,6 +242,39 @@ void FRenderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
     mVsyncSteadyClockTimeNano = steadyClockTimeNano;
 }
 
+void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
+    SYSTRACE_CALL();
+
+    FILAMENT_CHECK_PRECONDITION(!mSwapChain) <<
+            "skipFrame() can't be called between beginFrame() and endFrame()";
+
+    if (!vsyncSteadyClockTimeNano) {
+        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
+        mVsyncSteadyClockTimeNano = 0;
+    }
+
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    // Gives the backend a chance to execute periodic tasks. This must be called before
+    // the frame skipper.
+    driver.tick();
+
+    // do this before engine.flush()
+    mResourceAllocator->gc(true);
+
+    // Run the component managers' GC in parallel
+    // WARNING: while doing this we can't access any component manager
+    auto& js = engine.getJobSystem();
+
+    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+
+    engine.flush();     // flush command stream
+
+    // make sure we're done with the gcs
+    js.waitAndRelease(job);
+}
+
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 

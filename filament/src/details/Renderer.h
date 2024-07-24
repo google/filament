@@ -91,6 +91,9 @@ public:
 
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
+    // skip a frame
+    void skipFrame(uint64_t vsyncSteadyClockTimeNano);
+
     // start a frame
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
 
