@@ -193,17 +193,17 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     // activated.
     uint32_t const viewMasks[2] = {subpassViewMask, subpassViewMask};
     if (config.viewCount > 1) {
-      // Fill the multiview create info.
-      multiviewCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
-      multiviewCreateInfo.pNext = nullptr;
-      multiviewCreateInfo.subpassCount = hasSubpasses ? 2u : 1u;
-      multiviewCreateInfo.pViewMasks = viewMasks;
-      multiviewCreateInfo.dependencyCount = 0;
-      multiviewCreateInfo.pViewOffsets = nullptr;
-      multiviewCreateInfo.correlationMaskCount = 1;
-      multiviewCreateInfo.pCorrelationMasks = &subpassViewMask;
+        // Fill the multiview create info.
+        multiviewCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+        multiviewCreateInfo.pNext = nullptr;
+        multiviewCreateInfo.subpassCount = hasSubpasses ? 2u : 1u;
+        multiviewCreateInfo.pViewMasks = viewMasks;
+        multiviewCreateInfo.dependencyCount = 0;
+        multiviewCreateInfo.pViewOffsets = nullptr;
+        multiviewCreateInfo.correlationMaskCount = 1;
+        multiviewCreateInfo.pCorrelationMasks = &subpassViewMask;
 
-      renderPassInfo.pNext = &multiviewCreateInfo;
+        renderPassInfo.pNext = &multiviewCreateInfo;
     }
 
     int attachmentIndex = 0;

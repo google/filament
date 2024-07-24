@@ -66,8 +66,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       mStagePool(stagePool),
       mDevice(device),
       mAllocator(allocator),
-      mCommands(commands)
-      {
+      mCommands(commands) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo{.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = target == SamplerType::SAMPLER_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
