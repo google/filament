@@ -113,7 +113,7 @@ public:
 
     ResourceAllocatorDisposerInterface& getDisposer() noexcept override;
 
-    void gc() noexcept;
+    void gc(bool skippedFrame = false) noexcept;
 
 private:
     size_t const mCacheMaxAge;
@@ -222,6 +222,7 @@ private:
     CacheContainer mTextureCache;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;
+    uint32_t mCacheSizeHiWaterMark = 0;
     static constexpr bool mEnabled = true;
 
     friend class ResourceAllocatorDisposer;
