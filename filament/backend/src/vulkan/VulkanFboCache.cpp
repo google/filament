@@ -184,7 +184,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         .subpassCount = hasSubpasses ? 2u : 1u,
         .pSubpasses = subpasses,
         .dependencyCount = hasSubpasses ? 1u : 0u,
-        .pDependencies = dependencies,
+        .pDependencies = dependencies
     };
 
     VkRenderPassMultiviewCreateInfo multiviewCreateInfo = {};

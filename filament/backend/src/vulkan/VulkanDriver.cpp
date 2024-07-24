@@ -1287,10 +1287,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .subpassMask = uint8_t(params.subpassMask),
         .viewCount = renderTargetLayerCount,
     };
-
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const VulkanAttachment& info = rt->getColor(i);
-
         if (info.texture) {
             assert_invariant(info.layerCount == renderTargetLayerCount);
             rpkey.initialColorLayoutMask |= 1 << i;
