@@ -162,7 +162,7 @@ void FView::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcep
 }
 
 float2 FView::updateScale(FEngine& engine,
-        FrameInfo const& info,
+        filament::details::FrameInfo const& info,
         Renderer::FrameRateOptions const& frameRateOptions,
         Renderer::DisplayInfo const& displayInfo) noexcept {
 

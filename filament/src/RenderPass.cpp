@@ -38,6 +38,7 @@
 #include <backend/PipelineState.h>
 
 #include "private/backend/CircularBuffer.h"
+#include "private/backend/CommandStream.h"
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -153,7 +154,7 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     sortCommands(builder.mArena);
 
     if (engine.isAutomaticInstancingEnabled()) {
-        uint32_t stereoscopicEyeCount = 1;
+        int32_t stereoscopicEyeCount = 1;
         if (builder.mFlags & IS_INSTANCED_STEREOSCOPIC) {
             stereoscopicEyeCount *= engine.getConfig().stereoscopicEyeCount;
         }
@@ -162,8 +163,7 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
 }
 
 // this destructor is actually heavy because it inlines ~vector<>
-RenderPass::~RenderPass() noexcept {
-}
+RenderPass::~RenderPass() noexcept = default;
 
 void RenderPass::resize(Arena& arena, size_t count) noexcept {
     if (mCommandBegin) {
@@ -885,14 +885,31 @@ void RenderPass::Executor::execute(FEngine& engine,
 
         // Maximum space occupied in the CircularBuffer by a single `Command`. This must be
         // reevaluated when the inner loop below adds DriverApi commands or when we change the
-        // CommandStream protocol. Currently, the maximum is 240 bytes, and we use 256 to be on
-        // the safer side.
-        size_t const maxCommandSizeInBytes = 256;
+        // CommandStream protocol. Currently, the maximum is 320 bytes.
+        // The batch size is calculated by adding the size of all commands that can possibly be
+        // emitted per draw call:
+        constexpr size_t const maxCommandSizeInBytes =
+                sizeof(CustomCommand) +
+                sizeof(COMMAND_TYPE(scissor)) +
+                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindBufferRange)) +
+                sizeof(COMMAND_TYPE(bindBufferRange)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindPipeline)) +
+                sizeof(COMMAND_TYPE(setPushConstant)) +
+                sizeof(COMMAND_TYPE(bindRenderPrimitive)) +
+                sizeof(COMMAND_TYPE(draw2));
+
 
         // Number of Commands that can be issued and guaranteed to fit in the current
         // CircularBuffer allocation. In practice, we'll have tons of headroom especially if
         // skinning and morphing aren't used. With a 2 MiB buffer (the default) a batch is
-        // 8192 commands (i.e. draw calls).
+        // 6553 commands (i.e. draw calls).
         size_t const batchCommandCount = capacity / maxCommandSizeInBytes;
         while(first != last) {
             Command const* const batchLast = std::min(first + batchCommandCount, last);

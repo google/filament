@@ -119,7 +119,7 @@ static void PlotEx(ImGuiPlotType plot_type, const char* label, int series_count,
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0));
     ImGui::ItemSize(total_bb, style.FramePadding.y);
     if (!ImGui::ItemAdd(total_bb, 0, &frame_bb)) return;
-    const bool hovered = ImGui::ItemHoverable(inner_bb, 0);
+    const bool hovered = ImGui::ItemHoverable(inner_bb, 0, ImGuiHoveredFlags_None);
 
     // Determine scale from values if not specified
     if (scale_min == FLT_MAX || scale_max == FLT_MAX) {

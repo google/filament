@@ -29,14 +29,15 @@ static constexpr bool DEBUG_FINISH_HANGS = false;
 #include <utils/JobSystem.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
-#include <utils/memalign.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
 #include <algorithm>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -252,6 +253,7 @@ inline bool JobSystem::hasJobCompleted(JobSystem::Job const* job) noexcept {
 }
 
 void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
+    HEAVY_SYSTRACE_CALL();
     if constexpr (!DEBUG_FINISH_HANGS) {
         mWaiterCondition.wait(lock);
     } else {
@@ -289,27 +291,29 @@ void JobSystem::wait(std::unique_lock<Mutex>& lock, Job* job) noexcept {
 }
 
 void JobSystem::wakeAll() noexcept {
+    // wakeAll() is called when a job finishes (to wake up any thread that might be waiting on it)
     HEAVY_SYSTRACE_CALL();
-    std::lock_guard<Mutex> const lock(mWaiterLock);
+    mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_all() happens
     // after the condition's variables are set.
+    mWaiterLock.unlock();
+    // notify_all() can be pretty slow, and it doesn't need to be inside the lock.
     mWaiterCondition.notify_all();
 }
 
-void JobSystem::wake(size_t hint) noexcept {
+void JobSystem::wakeOne() noexcept {
+    // wakeOne() is called when a new job is added to a queue
     HEAVY_SYSTRACE_CALL();
-    std::lock_guard<Mutex> const lock(mWaiterLock);
-    // this empty critical section is needed -- it guarantees that notify_all() happens
+    mWaiterLock.lock();
+    // this empty critical section is needed -- it guarantees that notify_one() happens
     // after the condition's variables are set.
-    if (hint == 1) {
-        mWaiterCondition.notify_one();
-    } else {
-        mWaiterCondition.notify_all();
-    }
+    mWaiterLock.unlock();
+    // notify_one() can be pretty slow, and it doesn't need to be inside the lock.
+    mWaiterCondition.notify_one();
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
-    std::lock_guard<utils::Mutex> const lock(mThreadMapLock);
+    std::lock_guard<Mutex> const lock(mThreadMapLock);
     auto iter = mThreadMap.find(std::this_thread::get_id());
     FILAMENT_CHECK_PRECONDITION(iter != mThreadMap.end()) << "This thread has not been adopted.";
     return *iter->second;
@@ -331,7 +335,7 @@ void JobSystem::put(WorkQueue& workQueue, Job* job) noexcept {
     // But it's possible that the job has already been picked-up, so oldActiveJobs could be
     // negative for instance. We signal only if that's not the case.
     if (oldActiveJobs >= 0) {
-        wake(oldActiveJobs + 1); // wake-up a thread if needed...
+        wakeOne(); // wake-up a thread if needed...
     }
 }
 
@@ -347,13 +351,9 @@ JobSystem::Job* JobSystem::pop(WorkQueue& workQueue) noexcept {
     // If our guess was wrong, i.e. we couldn't pick up a job (b/c our queue was empty), we
     // need to correct mActiveJobs.
     if (!job) {
-        int32_t const oldActiveJobs = mActiveJobs.fetch_add(1, std::memory_order_relaxed);
-        if (oldActiveJobs >= 0) {
-            // And if there are some active jobs, then we need to wake someone up. We know it
-            // can't be us, because we failed taking a job and we know another thread can't
-            // have added one in our queue.
-            wake(oldActiveJobs + 1); // wake-up a thread if needed...
-        }
+        // no need to wake someone else up because, we will go into job-stealing mode
+        // immediately after this
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
     }
     return job;
 }
@@ -364,19 +364,14 @@ JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
     mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
 
     size_t const index = workQueue.steal();
-    assert(index <= MAX_JOB_COUNT);
+    assert_invariant(index <= MAX_JOB_COUNT);
     Job* const job = !index ? nullptr : &mJobStorageBase[index - 1];
 
-    // If we failed taking a job, we need to correct mActiveJobs.
     if (!job) {
-        int32_t const oldActiveJobs = mActiveJobs.fetch_add(1, std::memory_order_relaxed);
-        if (oldActiveJobs >= 0) {
-            // And if there are some active jobs, then we need to wake someone up. We know it
-            // can't be us, because we failed taking a job and we know another thread can't
-            // have added one in our queue.
-            wake(oldActiveJobs + 1); // wake-up a thread if needed...
-        }
+        // If we failed taking a job, we need to correct mActiveJobs.
+        mActiveJobs.fetch_add(1, std::memory_order_relaxed);
     }
+
     return job;
 }
 
@@ -430,7 +425,9 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
 
         if (UTILS_LIKELY(job->function)) {
             HEAVY_SYSTRACE_NAME("job->function");
+            job->id = std::distance(mThreadStates.data(), &state);
             job->function(job->storage, *this, job);
+            job->id = invalidThreadId;
         }
         finish(job);
     }
@@ -442,9 +439,10 @@ void JobSystem::loop(ThreadState* state) noexcept {
     setThreadPriority(Priority::DISPLAY);
 
     // record our work queue
-    mThreadMapLock.lock();
+    std::unique_lock<Mutex> lock(mThreadMapLock);
     bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
-    mThreadMapLock.unlock();
+    lock.unlock();
+
     FILAMENT_CHECK_PRECONDITION(inserted) << "This thread is already in a loop.";
 
     // run our main loop...
@@ -532,14 +530,22 @@ void JobSystem::release(JobSystem::Job*& job) noexcept {
     job = nullptr;
 }
 
-void JobSystem::signal() noexcept {
-    wakeAll();
-}
-
 void JobSystem::run(Job*& job) noexcept {
     HEAVY_SYSTRACE_CALL();
 
     ThreadState& state(getState());
+
+    put(state.workQueue, job);
+
+    // after run() returns, the job is virtually invalid (it'll die on its own)
+    job = nullptr;
+}
+
+void JobSystem::run(Job*& job, uint8_t id) noexcept {
+    HEAVY_SYSTRACE_CALL();
+
+    ThreadState& state = mThreadStates[id];
+    assert_invariant(&state == &getState());
 
     put(state.workQueue, job);
 
@@ -591,6 +597,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
 }
 
 void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
+    SYSTRACE_CALL();
     runAndRetain(job);
     waitAndRelease(job);
 }
@@ -598,7 +605,7 @@ void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
 void JobSystem::adopt() {
     const auto tid = std::this_thread::get_id();
 
-    std::unique_lock<utils::Mutex> lock(mThreadMapLock);
+    std::unique_lock<Mutex> lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     lock.unlock();
@@ -631,7 +638,7 @@ void JobSystem::adopt() {
 
 void JobSystem::emancipate() {
     const auto tid = std::this_thread::get_id();
-    std::lock_guard<utils::Mutex> const lock(mThreadMapLock);
+    std::unique_lock<Mutex> const lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     FILAMENT_CHECK_PRECONDITION(state) << "this thread is not an adopted thread";
