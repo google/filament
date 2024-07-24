@@ -698,11 +698,15 @@ vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzCamera* g_cam;
 int g_Height = 0;
-bool g_screenFocused = false;
+float left_editUIWidth = 0.0f;
+float workspace_width = 0.0f;
+float workspace_height = 0.0f;
+
+VID currentVID = -1;
 
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
-  if (!g_cc || !g_screenFocused) {
+  if (!g_cc) {
     return;
   }
   if (button == 0) {
@@ -710,17 +714,18 @@ void setMouseButton(GLFWwindow* window, int button, int state,
     double y;
 
     glfwGetCursorPos(window, &x, &y);
-
-    int xPos = static_cast<int>(x);
+    
+    int xPos = static_cast<int>(x - left_editUIWidth);
     int yPos = g_Height - static_cast<int>(y);
     switch (state) {
       case GLFW_PRESS:
-        g_cc->GrabBegin(xPos, yPos, false);
-        std::cout << "[GrabBegin] x: " << xPos << ", y: " << yPos << std::endl;
+        if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
+            y < workspace_height) {
+          g_cc->GrabBegin(xPos, yPos, false);
+        }
         break;
       case GLFW_RELEASE:
         g_cc->GrabEnd();
-        std::cout << "[GrapEnd] x: " << xPos << ", y: " << yPos << std::endl;
         break;
       default:
         break;
@@ -730,25 +735,33 @@ void setMouseButton(GLFWwindow* window, int button, int state,
 void setCursorPos(GLFWwindow* window, double x, double y) {
   int state;
 
-  if (!g_cc || !g_screenFocused) {
+  if (!g_cc) {
     return;
   }
   state = glfwGetMouseButton(window, 0);
 
-  int xPos = static_cast<int>(x);
+  int xPos = static_cast<int>(x - left_editUIWidth);
   int yPos = g_Height - static_cast<int>(y);
 
   if (state == GLFW_PRESS) {
     g_cc->GrabDrag(xPos, yPos);
-    std::cout << "[GrapDrag] x: " << xPos << ", y: " << yPos << std::endl;
   }
 }
 void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
-  if (!g_cc || !g_screenFocused) {
+  if (!g_cc) {
     return;
   }
-  // 임시: x, y가 영향을 준다면 변경 필요
-  g_cc->Scroll(0, 0, 5.0f * (float)yOffset);
+  double x;
+  double y;
+
+  glfwGetCursorPos(window, &x, &y);
+
+  if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
+      y < workspace_height) {
+    g_cc->Scroll(static_cast<int>(x - left_editUIWidth),
+                 g_Height - static_cast<int>(y),
+                 5.0f * (float)yOffset);
+  }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
   if (g_cc && g_renderer && g_cam) {
@@ -763,19 +776,25 @@ void onFrameBufferResize(GLFWwindow* window, int width, int height) {
 }
 
 void treeNode(VID id) {
-  intptr_t treeNodeId = 1 + id;
   vzm::VzSceneComp* component = (vzm::VzSceneComp*)vzm::GetVzComponent(id);
 
   std::string sName = component->GetName();
   const char* name = sName.length() > 0 ? sName.c_str() : "Node";
   const char* label = name;
   ImGuiTreeNodeFlags flags = 0;
-  if (ImGui::TreeNodeEx((const void*)treeNodeId, flags, "%s", label)) {
+  if (ImGui::TreeNodeEx((const void*)id, flags, "%s", label)) {
+    if (ImGui::IsItemClicked()) {
+        currentVID = id;
+    }
     std::vector<VID> children = component->GetChildren();
     for (auto ce : children) {
       treeNode(ce);
     }
     ImGui::TreePop();
+  } else {
+    if (ImGui::IsItemClicked()) {
+      currentVID = id;
+    }
   }
 };
 
@@ -928,7 +947,6 @@ int main(int, char**) {
       0,
   };
 
-  float left_editUIWidth = 0.0f;
   float right_editUIWidth = 0.0f;
 
   int mCurrentAnimation = 0;
@@ -1012,7 +1030,7 @@ int main(int, char**) {
         }
         if (ImGui::Button("Stop")) {
           currentAnimPlayTime = 0.0f;
-          animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::INIT_POSE);
+          animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
         }
         if (ImGui::RadioButton("Select All Animations", &mCurrentAnimation,
                                animationCount)) {
@@ -1085,9 +1103,8 @@ int main(int, char**) {
 
         const float window_width = ImGui::GetIO().DisplaySize.x;
         const float window_height = ImGui::GetIO().DisplaySize.y;
-        const float workspace_width =
-            window_width - left_editUIWidth - right_editUIWidth;
-        const float workspace_height = workspace_width * (float)height / width;
+        workspace_width = window_width - left_editUIWidth - right_editUIWidth;
+        workspace_height = workspace_width * (float)height / width;
 
         ImGui::SetNextWindowSize(ImVec2(workspace_width, workspace_height),
                                  ImGuiCond_Once);
@@ -1100,7 +1117,6 @@ int main(int, char**) {
         // ImVec2 avail_size = ImGui::GetContentRegionAvail();
         ImGui::Image((ImTextureID)swapTextures[index],
                      ImVec2(workspace_width, workspace_height));
-        g_screenFocused = ImGui::IsWindowFocused();
         ImGui::End();
         // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
         //                                          ImVec2(0, 0),
@@ -1129,6 +1145,26 @@ int main(int, char**) {
       ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
 
       const ImVec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
+
+      if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+        if (currentVID != -1) {
+          vzm::VzSceneComp* component = (vzm::VzSceneComp*)vzm::GetVzComponent(currentVID);
+          ImGui::Text(component->GetName().c_str());
+          ImGui::NewLine();
+          std::string type = component->GetType();
+
+          if (type == "VzActor") {
+            float pos[3];
+            component->GetWorldPosition(pos);
+            if (ImGui::InputFloat3("WorldPosition", pos)) {
+                
+            }
+          }
+
+        }
+        ImGui::Unindent();
+      }
 
       if (ImGui::CollapsingHeader("Automation", 0)) {
         ImGui::Indent();
