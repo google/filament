@@ -308,19 +308,16 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
         const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
         const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
-        const VkAttachmentLoadOp loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep);
         depthAttachmentRef.layout = imgutil::getVkLayout(VulkanLayout::DEPTH_ATTACHMENT);
         depthAttachmentRef.attachment = attachmentIndex;
-        VkImageLayout initialLayout = imgutil::getVkLayout(config.initialDepthLayout);
-        
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
             .samples = (VkSampleCountFlagBits) config.samples,
-            .loadOp = loadOp,
+            .loadOp = clear ? kClear : (discardStart ? kDontCare : kKeep),
             .storeOp = discardEnd ? kDisableStore : kEnableStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = initialLayout,
+            .initialLayout = imgutil::getVkLayout(config.initialDepthLayout),
             .finalLayout = imgutil::getVkLayout(FINAL_DEPTH_ATTACHMENT_LAYOUT),
         };
     }
