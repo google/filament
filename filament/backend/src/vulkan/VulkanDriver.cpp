@@ -1273,7 +1273,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
     }
 
-    uint8_t renderTargetLayerCount = rt->getLayerCount();
+    uint8_t const renderTargetLayerCount = rt->getLayerCount();
 
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
