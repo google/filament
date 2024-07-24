@@ -417,7 +417,7 @@ private:
     void instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
-    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 1024;
+    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 128;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
 
