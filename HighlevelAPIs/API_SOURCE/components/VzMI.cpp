@@ -15,15 +15,10 @@ namespace vzm
         mi->setTransparencyMode((filament::TransparencyMode)tMode);
         UpdateTimeStamp();
     }
+#define SET_PARAM_COMP(COMP, RES, M_RES, FAILRET) COMP_MI(COMP, RES, FAILRET); VzMaterialRes* M_RES = gEngineApp.GetMaterialRes(RES->vidMaterial); if (!M_RES->allowedParamters.contains(name)) return FAILRET;
     bool VzMI::SetParameter(const std::string& name, const vzm::UniformType vType, const void* v)
     {
-        COMP_MI(mi, mi_res, false);
-        VzMaterialRes* m_res = gEngineApp.GetMaterialRes(mi_res->vidMaterial);
-        assert(m_res);
-        if (!m_res->allowedParamters.contains(name))
-        {
-            return false;
-        }
+        SET_PARAM_COMP(mi, mi_res, m_res, false);
 
         const char* cstr = name.c_str();
         switch (vType)
@@ -50,44 +45,29 @@ namespace vzm
         default:
             return false;
         }
-        //
-        
-
-
-        
-        //material->getParameterCount();
-        //material->getParameters()
-        //std::vector<Material::ParameterInfo> params
-
-        //if (mProp == MProp::BASE_COLOR)
-        //{
-        //    mi->setParameter(gMProp[(uint32_t)mProp].c_str(), (filament::RgbaType)rgbType, *(filament::math::float4*)&v[0]);
-        //}
         UpdateTimeStamp();
         return true;
     }
 
     bool VzMI::SetParameter(const std::string& name, const vzm::RgbType vType, const float* v)
     {
-        COMP_MI(mi, mi_res, false);
-        VzMaterialRes* m_res = gEngineApp.GetMaterialRes(mi_res->vidMaterial);
-        assert(m_res);
-        if (!m_res->allowedParamters.contains(name))
-        {
-            return false;
-        }
+        SET_PARAM_COMP(mi, mi_res, m_res, false);
+        mi->setParameter(name.c_str(), (filament::RgbType)vType, *(math::float3*)v);
+        UpdateTimeStamp();
         return true;
     }
 
     bool VzMI::SetParameter(const std::string& name, const vzm::RgbaType vType, const float* v)
     {
-        COMP_MI(mi, mi_res, false);
-        VzMaterialRes* m_res = gEngineApp.GetMaterialRes(mi_res->vidMaterial);
-        assert(m_res);
-        if (!m_res->allowedParamters.contains(name))
-        {
-            return false;
-        }
+        SET_PARAM_COMP(mi, mi_res, m_res, false);
+        mi->setParameter(name.c_str(), (filament::RgbaType)vType, *(math::float4*)v);
+        UpdateTimeStamp();
         return true;
+    }
+
+    VID VzMI::GetMaterial()
+    {
+        COMP_MI(mi, mi_res, INVALID_VID);
+        return mi_res->vidMaterial;
     }
 }

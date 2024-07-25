@@ -129,6 +129,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
+    cam->SetMatrixAutoUpdate(false);
     vzm::VzCamera::Controller* cc = cam->GetController();
     *(glm::fvec3*)cc->orbitHomePosition = p;
     cc->UpdateControllerSettings();
@@ -224,8 +225,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
             VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
-            glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
+            glm::fvec4 b_color(1, 0, 0, 1);
+            mi->SetParameter("baseColor", vzm::UniformType::FLOAT4, &b_color);
             break;
         }
         case 'K': {
@@ -233,8 +234,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
             VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
-            glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
+            glm::fvec4 b_color(0, 0, 1, 1);
+            mi->SetParameter("baseColor", vzm::UniformType::FLOAT4, &b_color);
             break;
         }
         case 'L': {
@@ -242,8 +243,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
             VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
-            glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
+            glm::fvec4 b_color(1, 1, 0, 1);
+            mi->SetParameter("baseColor", vzm::UniformType::FLOAT4, &b_color);
             break;
         }
         default:

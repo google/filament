@@ -976,7 +976,7 @@ namespace vzm
             assert(v_m != nullptr);
             Material* m = materialResMap_[v_m->GetVID()]->material;
             mi = m->createInstance(mi_name.c_str());
-            mi->setParameter("baseColor", RgbType::LINEAR, filament::math::float3{ 0.8, 0.1, 0.1 });
+            mi->setParameter("baseColor", filament::RgbType::LINEAR, filament::math::float3{ 0.8, 0.1, 0.1 });
             mi->setParameter("metallic", 1.0f);
             mi->setParameter("roughness", 0.4f);
             mi->setParameter("reflectance", 0.5f);
