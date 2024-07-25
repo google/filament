@@ -327,15 +327,15 @@ namespace filament::gltfio {
         }
 
         // check the node in animations
-        for (size_t i = 0; i < data->animations_count; ++i) {
-            const cgltf_animation& animation = data->animations[i];
-            for (size_t j = 0; j < animation.channels_count; ++j) {
-                const cgltf_animation_channel& channel = animation.channels[j];
-                if (channel.target_node == node) {
-                    return true;
-                }
-            }
-        }
+        //for (size_t i = 0; i < data->animations_count; ++i) {
+        //    const cgltf_animation& animation = data->animations[i];
+        //    for (size_t j = 0; j < animation.channels_count; ++j) {
+        //        const cgltf_animation_channel& channel = animation.channels[j];
+        //        if (channel.target_node == node) {
+        //            return true;
+        //        }
+        //    }
+        //}
 
         return false;
     }
@@ -392,7 +392,7 @@ namespace filament::gltfio {
         // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
         name = name ? name : "node";
 
-        if (name == "DoorRearRight")
+        if (name == "door_r_right_window_d")
         {
             int gg = 0;
         }
