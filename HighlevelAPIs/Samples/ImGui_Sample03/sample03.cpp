@@ -257,7 +257,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
+            //mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 1.f });
             break;
         }
         case 'K': {
@@ -266,7 +266,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
+            //mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 0, 0, 0.4f });
             break;
         }
         case 'L': {
@@ -275,7 +275,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             VID miid = actor->GetMI();
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
             glm::fvec4 b_color(1.f);
-            mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
+            //mi->SetMaterialProperty(vzm::VzMI::MProp::BASE_COLOR, { 1.f, 1.f, 0, 0.4f });
             break;
         }
         default:

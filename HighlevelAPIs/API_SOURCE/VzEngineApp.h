@@ -168,12 +168,14 @@ namespace vzm
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
         Material* material = nullptr;
+        std::unordered_map<std::string, Material::ParameterInfo> allowedParamters;
         ~VzMaterialRes();
     };
     struct VzMIRes
     {
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
+        MaterialVID vidMaterial = INVALID_VID;
         MaterialInstance* mi = nullptr;
         ~VzMIRes();
     };
@@ -287,6 +289,7 @@ namespace vzm
             const filament::gltfio::FilamentAsset* assetOwner = nullptr,
             const bool isSystem = false);
         VzMI* CreateMaterialInstance(const std::string& name,
+            const MaterialVID vidMaterial,
             const MaterialInstance* mi = nullptr,
             const filament::gltfio::FilamentAsset* assetOwner = nullptr,
             const bool isSystem = false);
@@ -341,7 +344,8 @@ namespace vzm
 #define COMP_RENDERPATH(RENDERPATH, FAILRET)  VzRenderPath* RENDERPATH = gEngineApp.GetRenderPath(GetVID()); if (RENDERPATH == nullptr) return FAILRET;
 #define COMP_LIGHT(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getLightManager(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
 #define COMP_ACTOR(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getRenderableManager(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
-#define COMP_MI(COMP, FAILRET) VzMIRes* mi_res = gEngineApp.GetMIRes(GetVID()); if (mi_res == nullptr) return FAILRET; MaterialInstance* COMP = mi_res->mi; if (COMP == nullptr) return FAILRET;
+#define COMP_MI(COMP, RES, FAILRET) VzMIRes* RES = gEngineApp.GetMIRes(GetVID()); if (RES == nullptr) return FAILRET; MaterialInstance* COMP = RES->mi; if (COMP == nullptr) return FAILRET;
+#define COMP_MAT(COMP, RES, FAILRET) VzMaterialRes* RES = gEngineApp.GetMaterialRes(GetVID()); if (RES == nullptr) return FAILRET; Material* COMP = RES->material; if (COMP == nullptr) return FAILRET;
 #define COMP_CAMERA(COMP, ENTITY, FAILRET) Entity ENTITY = Entity::import(GetVID()); Camera* COMP = gEngine->getCameraComponent(ENTITY); if (COMP == nullptr) return;
 #define COMP_ASSET(COMP, FAILRET)  VzAssetRes* COMP = gEngineApp.GetAssetRes(GetVID()); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
 

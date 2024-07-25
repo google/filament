@@ -55,17 +55,21 @@ namespace filament::gltfio {
             mi_vids.push_back(it->second);
             return;
         }
-        // note:
-        // gltf support the same material instance
-        MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), mi)->GetVID();
-        mi_vids.push_back(mi_vid);
-        //assert(!mMIMap.contains(mi));
-        mMIMap[mi] = mi_vid;
+
         const Material* m = mi->getMaterial();
         if (!mMaterialMap.contains(m))
         {
             mMaterialMap[m] = gEngineApp.CreateMaterial(m->getName(), m, nullptr, true)->GetVID();
         }
+        MaterialVID vid_m = mMaterialMap[m];
+        assert(vid_m != INVALID_VID);
+
+        // note:
+        // gltf support the same material instance
+        MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), vid_m, mi)->GetVID();
+        mi_vids.push_back(mi_vid);
+        //assert(!mMIMap.contains(mi));
+        mMIMap[mi] = mi_vid;
     }
 
     // MaterialInstanceCache
