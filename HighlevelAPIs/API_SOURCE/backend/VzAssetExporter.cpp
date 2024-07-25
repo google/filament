@@ -1,9 +1,9 @@
 #pragma once
+#include "../VzEngineApp.h"
 #include "VzAssetExporter.h"
 
 #include <fstream>
 
-#include "../VzEngineApp.h"
 #define CGLTF_WRITE_IMPLEMENTATION
 #include <cgltf_write.h>
 #include <viewer/Settings.h>
