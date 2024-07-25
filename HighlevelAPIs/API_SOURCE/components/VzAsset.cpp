@@ -67,6 +67,28 @@ namespace vzm
         }
         return -1;
     }
+    int VzAsset::Animator::DeactivateAnimationByLabel(const std::string& label)
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, finst, fani, -1);
+        size_t num_ani = fani->getAnimationCount();
+        std::vector<std::string> labels;
+        for (size_t i = 0; i < num_ani; ++i)
+        {
+            if (label == fani->getAnimationName(i))
+            {
+                activatedAnimations_.erase(i);
+                return i;
+            }
+        }
+        return -1;
+    }
+    int VzAsset::Animator::DeactivateAll()
+    {
+        COMP_ASSET_ANI_INST_FANI(asset_res, finst, fani, -1);
+        size_t num_ani = fani->getAnimationCount();
+        activatedAnimations_.clear();
+        return num_ani;
+    }
     float VzAsset::Animator::GetAnimationPlayTime(const size_t index)
     {
         COMP_ASSET_ANI_INST_FANI(asset_res, finst, fani, 0.f);

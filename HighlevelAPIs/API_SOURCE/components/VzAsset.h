@@ -45,6 +45,11 @@ namespace vzm
 
             std::string ActivateAnimation(const size_t index) { activatedAnimations_.insert(index); return GetAnimationLabel(index); }
             int ActivateAnimationByLabel(const std::string& label);
+            std::string DeactivateAnimation(const size_t index) {
+                activatedAnimations_.erase(index); return GetAnimationLabel(index);
+            }
+            int DeactivateAnimationByLabel(const std::string& label);
+            int DeactivateAll();
             void SetCrossFadeDuration(const int crossFadeAnimationIndex, const int crossFadePrevAnimationIndex, const double timeSec = 1.) { 
                 crossFadeAnimationIndex_ = crossFadeAnimationIndex; crossFadePrevAnimationIndex_ = crossFadePrevAnimationIndex;  crossFadeDurationSec_ = timeSec;
             }
