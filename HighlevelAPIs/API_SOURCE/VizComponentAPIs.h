@@ -166,7 +166,7 @@ namespace vzm
         float translation_[3] = { 0.0f, 0.0f, 0.0f };
         float quaternion_[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
         float scale_[3] = { 1.0f, 1.0f, 1.0f };
-        bool matrixAutoUpdate_ = true;
+        bool matrixAutoUpdate_ = false;
     public:
         VzSceneComp(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
             : VzBaseComp(vid, originFrom, typeName), scenecompType_(scenecompType) {}
