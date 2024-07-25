@@ -18,10 +18,32 @@ namespace vzm
             CLOTH,                  //!< cloth lighting model
             SPECULAR_GLOSSINESS,    //!< legacy lighting model
         };
+        struct ParameterInfo {
+            //! Name of the parameter.
+            const char* name;
+            //! Whether the parameter is a sampler (texture).
+            bool isSampler;
+            //! Whether the parameter is a subpass type.
+            bool isSubpass;
+            union {
+                //! Type of the parameter if the parameter is not a sampler.
+                UniformType type;
+                //! Type of the parameter if the parameter is a sampler.
+                SamplerType samplerType;
+                //! Type of the parameter if the parameter is a subpass.
+                SubpassType subpassType;
+            };
+            //! Size of the parameter when the parameter is an array.
+            uint32_t count;
+            //! Requested precision of the parameter.
+            Precision precision;
+        };
         void SetMaterialType(const MaterialType type);
         MaterialType GetMaterialType() const;
 
         void SetLightingModel(const LightingModel model);
         LightingModel GetLightingModel() const;
+
+        size_t GetAllowedParameters(std::map<std::string, vzm::UniformType>& paramters);
     };
 }

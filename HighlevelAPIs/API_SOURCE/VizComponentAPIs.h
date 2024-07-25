@@ -213,4 +213,83 @@ namespace vzm
     };
 }
 
+// enumerations
+namespace vzm
+{
+    // update this when a new version of filament wouldn't work with older materials
+    static constexpr size_t MATERIAL_VERSION = 53;
+
+    enum class UniformType : uint8_t {
+        BOOL,
+        BOOL2,
+        BOOL3,
+        BOOL4,
+        FLOAT,
+        FLOAT2,
+        FLOAT3,
+        FLOAT4,
+        INT,
+        INT2,
+        INT3,
+        INT4,
+        UINT,
+        UINT2,
+        UINT3,
+        UINT4,
+        MAT3,   //!< a 3x3 float matrix
+        MAT4,   //!< a 4x4 float matrix
+        STRUCT
+    };
+    enum class SamplerType : uint8_t {
+        SAMPLER_2D,             //!< 2D texture
+        SAMPLER_2D_ARRAY,       //!< 2D array texture
+        SAMPLER_CUBEMAP,        //!< Cube map texture
+        SAMPLER_EXTERNAL,       //!< External texture
+        SAMPLER_3D,             //!< 3D texture
+        SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
+    };
+    enum class SubpassType : uint8_t {
+        SUBPASS_INPUT
+    };
+
+    enum class Precision : uint8_t {
+        LOW,
+        MEDIUM,
+        HIGH,
+        DEFAULT
+    };
+
+    //! types of RGB colors
+    enum class RgbType : uint8_t {
+        sRGB,   //!< the color is defined in Rec.709-sRGB-D65 (sRGB) space
+        LINEAR, //!< the color is defined in Rec.709-Linear-D65 ("linear sRGB") space
+    };
+    //! types of RGBA colors
+    enum class RgbaType : uint8_t {
+        /**
+         * the color is defined in Rec.709-sRGB-D65 (sRGB) space and the RGB values
+         * have not been pre-multiplied by the alpha (for instance, a 50%
+         * transparent red is <1,0,0,0.5>)
+         */
+        sRGB,
+        /**
+         * the color is defined in Rec.709-Linear-D65 ("linear sRGB") space and the
+         * RGB values have not been pre-multiplied by the alpha (for instance, a 50%
+         * transparent red is <1,0,0,0.5>)
+         */
+        LINEAR,
+        /**
+         * the color is defined in Rec.709-sRGB-D65 (sRGB) space and the RGB values
+         * have been pre-multiplied by the alpha (for instance, a 50%
+         * transparent red is <0.5,0,0,0.5>)
+         */
+        PREMULTIPLIED_sRGB,
+        /**
+         * the color is defined in Rec.709-Linear-D65 ("linear sRGB") space and the
+         * RGB values have been pre-multiplied by the alpha (for instance, a 50%
+         * transparent red is <0.5,0,0,0.5>)
+         */
+        PREMULTIPLIED_LINEAR
+    };
+}
 #endif

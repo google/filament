@@ -976,11 +976,11 @@ namespace vzm
             assert(v_m != nullptr);
             Material* m = materialResMap_[v_m->GetVID()]->material;
             mi = m->createInstance(mi_name.c_str());
-            mi->setParameter("baseColor", RgbType::LINEAR, float3{ 0.8, 0.1, 0.1 });
+            mi->setParameter("baseColor", filament::RgbType::LINEAR, filament::math::float3{ 0.8, 0.1, 0.1 });
             mi->setParameter("metallic", 1.0f);
             mi->setParameter("roughness", 0.4f);
             mi->setParameter("reflectance", 0.5f);
-            VzMI* v_mi = CreateMaterialInstance(mi_name, mi);
+            VzMI* v_mi = CreateMaterialInstance(mi_name, vid_m, mi);
             auto it_mi = miResMap_.find(v_mi->GetVID());
             assert(it_mi != miResMap_.end());
             assert(mi == it_mi->second->mi);
@@ -1067,10 +1067,19 @@ namespace vzm
         m_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         m_res.isSystem = isSystem;
 
+        std::vector<Material::ParameterInfo> params(material->getParameterCount());
+        material->getParameters(&params[0], params.size());
+        for (auto& param : params)
+        {
+            assert(!m_res.allowedParamters.contains(param.name));
+            m_res.allowedParamters[param.name] = param;
+        }
+
         auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>(vid, "CreateMaterial", "VzMaterial", RES_COMPONENT_TYPE::MATERIAL));
         return (VzMaterial*)it.first->second.get();
     }
     VzMI* VzEngineApp::CreateMaterialInstance(const std::string& name,
+        const MaterialVID vidMaterial,
         const MaterialInstance* mi,
         const filament::gltfio::FilamentAsset* assetOwner,
         const bool isSystem)
@@ -1095,6 +1104,7 @@ namespace vzm
         VID vid = ett.getId();
         miResMap_[vid] = std::make_unique<VzMIRes>();
         VzMIRes& mi_res = *miResMap_[vid].get();
+        mi_res.vidMaterial = vidMaterial;
         mi_res.mi = (MaterialInstance*)mi;
         mi_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         mi_res.isSystem = isSystem;

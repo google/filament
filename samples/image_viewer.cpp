@@ -279,6 +279,7 @@ int main(int argc, char** argv) {
     App app;
 
     app.config.title = "Filament Image Viewer";
+    app.config.vulkanGPUHint = "0";
 
     int optionIndex = handleCommandLineArguments(argc, argv, &app);
 
