@@ -16,5 +16,12 @@ namespace vzm
         };
         void SetIntensity(const float intensity = 110000);
         float GetIntensity() const;
+        void SetColor(const float color[3]);
+        void GetColor(float color[3]);
+        void SetRange(const float range);
+        float GetRange() const;
+        void SetCone(const float inner, const float outer);
+        float getInnerCone() const;
+        float getOuterCone() const;
     };
 }
