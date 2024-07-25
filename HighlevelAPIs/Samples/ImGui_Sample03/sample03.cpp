@@ -113,8 +113,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
 
@@ -149,6 +149,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         //cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
     }
+    cam->SetMatrixAutoUpdate(false);
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
