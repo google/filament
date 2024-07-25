@@ -113,10 +113,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
-    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
+
+    //std::vector<VID> vid_list;
+    //vzm::GetVidsByName("DoorRearRight", vid_list);
+    //vzm::VzBaseComp* base_comp = vzm::GetVzComponentByName("DoorRearRight");
+    //vzm::VzBaseComp* base_comp1 = vzm::GetVzComponentByName("door_r_right_window_d");
+    //vzm::VzBaseComp* base_comp2 = vzm::GetVzComponentByName("DoorRearRight_window");
 
     vzm::VzAsset::Animator* animator = asset->GetAnimator();
     if (animator)

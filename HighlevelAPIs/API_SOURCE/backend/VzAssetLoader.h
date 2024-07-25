@@ -1,4 +1,5 @@
 #pragma once
+#include "../VzNameComponents.hpp"
 #include "../FIncludes.h"
 
 namespace filament::gltfio {
@@ -105,7 +106,7 @@ namespace filament::gltfio {
         VzAssetLoader(AssetConfiguration const& config) :
             mEntityManager(config.entities ? *config.entities : EntityManager::get()),
             mRenderableManager(config.engine->getRenderableManager()),
-            mNameManager(config.names),
+            mNameManager((vzm::VzNameCompManager*)config.names),
             mTransformManager(config.engine->getTransformManager()),
             mMaterials(*config.materials),
             mEngine(*config.engine),
@@ -184,7 +185,7 @@ namespace filament::gltfio {
     public:
         EntityManager& mEntityManager;
         RenderableManager& mRenderableManager;
-        NameComponentManager* const mNameManager;
+        vzm::VzNameCompManager* const mNameManager;
         TransformManager& mTransformManager;
         MaterialProvider& mMaterials;
         Engine& mEngine;

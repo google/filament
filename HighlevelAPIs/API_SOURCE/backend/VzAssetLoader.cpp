@@ -383,13 +383,19 @@ namespace filament::gltfio {
         if (name) {
             fAsset->mNameToEntity[name].push_back(entity);
             if (mNameManager) {
-                mNameManager->addComponent(entity);
-                mNameManager->setName(mNameManager->getInstance(entity), name);
+                //mNameManager->addComponent(entity);
+                //mNameManager->setName(mNameManager->getInstance(entity), name);
+                mNameManager->CreateNameComp(entity, name);
             }
         }
 
         // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
         name = name ? name : "node";
+
+        if (name == "DoorRearRight")
+        {
+            int gg = 0;
+        }
 
         // If the node has a mesh, then create a renderable component.
         if (node->mesh) {

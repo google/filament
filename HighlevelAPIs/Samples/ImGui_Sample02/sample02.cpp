@@ -116,8 +116,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-    
+
     vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
+    vzm::VzActor* actor1 = vzm::LoadTestModelIntoActor("my test model");
     
     vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
     renderer->SetCanvas(w, h, dpi, hwnd);

@@ -31,8 +31,18 @@ namespace vzm
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
-    __dojostatic VzBaseComp* GetVzComponentByName(const std::string& name) {
+    __dojostatic VzBaseComp* GetFirstVzComponentByName(const std::string& name) {
         return GetVzComponent(GetFirstVidByName(name));
+    }
+    __dojostatic size_t GetVzComponentsByName(const std::string& name, std::vector<VzBaseComp*>& components) {
+        std::vector<VID> vids;
+        if (size_t n = GetVidsByName(name, vids) > 0) {
+            components.reserve(n);
+            for (size_t i = 0; i < n; ++i) {
+                components.push_back(GetVzComponent(vids[i]));
+            }
+        }
+        return components.size();
     }
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
