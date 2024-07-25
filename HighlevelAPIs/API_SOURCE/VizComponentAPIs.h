@@ -163,6 +163,10 @@ namespace vzm
     {
     private:
         SCENE_COMPONENT_TYPE scenecompType_ = SCENE_COMPONENT_TYPE::SCENEBASE;
+        float translation_[3] = { 0.0f, 0.0f, 0.0f };
+        float quaternion_[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        float scale_[3] = { 1.0f, 1.0f, 1.0f };
+        bool matrixAutoUpdate_ = true;
     public:
         VzSceneComp(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
             : VzBaseComp(vid, originFrom, typeName), scenecompType_(scenecompType) {}
@@ -181,6 +185,18 @@ namespace vzm
         // local transforms
         void SetTransform(const float s[3] = nullptr, const float q[4] = nullptr, const float t[3] = nullptr, const bool additiveTransform = false);
         void SetMatrix(const float value[16], const bool additiveTransform = false, const bool rowMajor = false);
+
+        void GetTranslation(float v[3]);
+        void GetQuaternion(float v[4]);
+        void GetScale(float v[3]);
+
+        void SetTranslation(const float v[3]);
+        void SetQuaternion(const float v[4]);
+        void SetScale(const float v[3]);
+
+        bool GetMatrixAutoUpdate();
+        void SetMatrixAutoUpdate(const bool matrixAutoUpdate);
+        void UpdateMatrix();
 
         VID GetParent();
         std::vector<VID> GetChildren();
