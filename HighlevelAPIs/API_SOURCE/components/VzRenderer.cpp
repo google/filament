@@ -142,6 +142,16 @@ namespace vzm
 
         Renderer* renderer = render_path->GetRenderer();
 
+        auto& tcm = gEngine->getTransformManager();
+        scene->forEach([&tcm](Entity ett) {
+            VID vid = ett.getId();
+            VzSceneComp* comp = gEngineApp.GetVzComponent<VzSceneComp>(vid);
+            if (comp && comp->GetMatrixAutoUpdate())
+            {
+                comp->UpdateMatrix();
+            }
+        });
+
         // setup
         //if (preRender) {
         //    preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
