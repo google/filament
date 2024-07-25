@@ -53,7 +53,7 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
     }
 
     if (PipelineLayoutMap::iterator iter = mPipelineLayouts.find(key); iter != mPipelineLayouts.end()) {
-        PipelineLayoutCacheEntry& entry = iter.value();
+        PipelineLayoutCacheEntry& entry = iter->second;
         entry.lastUsed = mTimestamp++;
         return entry.handle;
     }

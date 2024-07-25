@@ -53,7 +53,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
     // If a cached object exists, re-use it, otherwise create a new one.
     if (PipelineMap::iterator pipelineIter = mPipelines.find(mPipelineRequirements);
             pipelineIter != mPipelines.end()) {
-        auto& pipeline = pipelineIter.value();
+        auto& pipeline = pipelineIter->second;
         pipeline.lastUsed = mCurrentTime;
         return &pipeline;
     }
@@ -242,7 +242,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
         return nullptr;
     }
 
-    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
+    return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first->second;
 }
 
 void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
@@ -310,7 +310,7 @@ void VulkanPipelineCache::gc() noexcept {
     // Any pipeline older than FVK_MAX_COMMAND_BUFFERS can be safely destroyed.
    using ConstPipeIterator = decltype(mPipelines)::const_iterator;
    for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
-       const PipelineCacheEntry& cacheEntry = iter.value();
+       const PipelineCacheEntry& cacheEntry = iter->second;
        if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
            vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
            iter = mPipelines.erase(iter);

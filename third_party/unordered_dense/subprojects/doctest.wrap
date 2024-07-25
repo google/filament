@@ -1,0 +1,9 @@
+[wrap-file]
+directory = doctest-2.4.9
+source_url = https://github.com/doctest/doctest/archive/refs/tags/v2.4.9.tar.gz
+source_filename = doctest-2.4.9.tar.gz
+source_hash = 19b2df757f2f3703a5e63cee553d85596875f06d91a3333acd80a969ef210856
+wrapdb_version = 2.4.9-1
+
+[provide]
+dependency_names = doctest

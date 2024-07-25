@@ -128,7 +128,6 @@ target_include_directories(filament-jni PRIVATE
         ..
         ${FILAMENT_DIR}/include
         ../../filament/backend/include
-        ../../third_party/robin-map
         ../../libs/utils/include)
 
 # Force a relink when the version script is changed:

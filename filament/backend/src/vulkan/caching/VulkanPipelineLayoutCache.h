@@ -23,6 +23,7 @@
 #include <utils/Hash.h>
 
 #include <tsl/robin_map.h>
+#include <ankerl/unordered_dense.h>
 
 namespace filament::backend {
 
@@ -73,7 +74,10 @@ private:
         }
     };
 
-    using PipelineLayoutMap = tsl::robin_map<PipelineLayoutKey, PipelineLayoutCacheEntry,
+//    using PipelineLayoutMap = tsl::robin_map<PipelineLayoutKey, PipelineLayoutCacheEntry,
+//            PipelineLayoutKeyHashFn, PipelineLayoutKeyEqual>;
+
+    using PipelineLayoutMap = ankerl::unordered_dense::map<PipelineLayoutKey, PipelineLayoutCacheEntry,
             PipelineLayoutKeyHashFn, PipelineLayoutKeyEqual>;
 
     VkDevice mDevice;

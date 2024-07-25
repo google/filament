@@ -33,11 +33,11 @@
 #include <utils/compiler.h>
 #include <utils/Hash.h>
 
+#include <ankerl/unordered_dense.h>
+
 #include <list>
-#include <tsl/robin_map.h>
 #include <type_traits>
 #include <vector>
-#include <unordered_map>
 
 namespace filament::backend {
 
@@ -238,7 +238,10 @@ private:
     // CACHE CONTAINERS
     // ----------------
 
-    using PipelineMap = tsl::robin_map<PipelineKey, PipelineCacheEntry,
+//    using PipelineMap = tsl::robin_map<PipelineKey, PipelineCacheEntry,
+//            PipelineHashFn, PipelineEqual>;
+
+    using PipelineMap = ankerl::unordered_dense::map<PipelineKey, PipelineCacheEntry,
             PipelineHashFn, PipelineEqual>;
 
 private:

@@ -1,0 +1,7 @@
+---
+Checks: '-*,
+    bugprone-infinite-loop
+    '
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+...
