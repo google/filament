@@ -172,7 +172,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
 
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                if (engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
+                if (view.hasStereo() && engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
                     layerCount = engine.getConfig().stereoscopicEyeCount;
                 }
 
