@@ -17,6 +17,7 @@
 #include "details/View.h"
 
 #include "Culler.h"
+#include "FrameHistory.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
 #include "ResourceAllocator.h"
@@ -126,7 +127,7 @@ void FView::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyBufferObject(mLightUbh);
     driver.destroyBufferObject(mRenderableUbh);
-    drainFrameHistory(engine);
+    clearFrameHistory(engine);
 
     ShadowMapManager::terminate(engine, mShadowMapManager);
     mUniforms.terminate(driver);
@@ -1055,20 +1056,29 @@ FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGr
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
     // Here we need to destroy resources in mFrameHistory.back()
+    auto& disposer = engine.getResourceAllocatorDisposer();
     auto& frameHistory = mFrameHistory;
 
     FrameHistoryEntry& last = frameHistory.back();
-    last.taa.color.destroy(engine.getResourceAllocator());
-    last.ssr.color.destroy(engine.getResourceAllocator());
+    disposer.destroy(last.taa.color.handle);
+    disposer.destroy(last.ssr.color.handle);
+    last.taa.color.handle.clear();
+    last.ssr.color.handle.clear();
 
     // and then push the new history entry to the history stack
     frameHistory.commit();
 }
 
-void FView::drainFrameHistory(FEngine& engine) noexcept {
+void FView::clearFrameHistory(FEngine& engine) noexcept {
     // make sure we free all resources in the history
-    for (size_t i = 0; i < mFrameHistory.size(); ++i) {
-        commitFrameHistory(engine);
+    auto& disposer = engine.getResourceAllocatorDisposer();
+    auto& frameHistory = mFrameHistory;
+    for (size_t i = 0; i < frameHistory.size(); ++i) {
+        FrameHistoryEntry& last = frameHistory[i];
+        disposer.destroy(last.taa.color.handle);
+        disposer.destroy(last.ssr.color.handle);
+        last.taa.color.handle.clear();
+        last.ssr.color.handle.clear();
     }
 }
 

@@ -272,6 +272,14 @@ public:
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
     /**
+     * Call skipFrame when momentarily skipping frames, for instance if the content of the
+     * scene doesn't change.
+     *
+     * @param vsyncSteadyClockTimeNano
+     */
+    void skipFrame(uint64_t vsyncSteadyClockTimeNano = 0u);
+
+    /**
      * Set-up a frame for this Renderer.
      *
      * beginFrame() manages frame pacing, and returns whether or not a frame should be drawn. The

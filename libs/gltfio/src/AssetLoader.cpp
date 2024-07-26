@@ -58,6 +58,8 @@
 
 #include "downcast.h"
 
+#include <codecvt>
+#include <locale>
 #include <memory>
 
 using namespace filament;
@@ -88,12 +90,57 @@ static constexpr cgltf_material kDefaultMat = {
     },
 };
 
-static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName) {
-    if (node->name) return node->name;
-    if (node->mesh && node->mesh->name) return node->mesh->name;
-    if (node->light && node->light->name) return node->light->name;
-    if (node->camera && node->camera->name) return node->camera->name;
-    return defaultNodeName;
+static std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
+    auto const getNameImpl = [node, defaultNodeName]() -> char const* {
+        if (node->name) return node->name;
+        if (node->mesh && node->mesh->name) return node->mesh->name;
+        if (node->light && node->light->name) return node->light->name;
+        if (node->camera && node->camera->name) return node->camera->name;
+        return defaultNodeName;
+    };
+
+    std::string strOrig(getNameImpl());
+
+    // We handle the potential case of escaped characters in the JSON which should be properly
+    // interpreted as unicode. See spec:
+    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#json-encoding
+    // Also see spec for escaped strings in JSON (Section 2.5) https://www.ietf.org/rfc/rfc4627.txt
+
+    std::string strEscaped;
+    size_t cur = 0, idx = 0;
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+
+    auto const addUnencodedSubstr = [&](size_t cursor, size_t nextPoint) {
+        assert_invariant(nextPoint >= cursor);
+        if (cursor == nextPoint) {
+            return;
+        }
+        strEscaped += strOrig.substr(cursor, nextPoint - cursor);
+    };
+
+    while ((idx = strOrig.find("\\u", cur)) != std::string::npos) {
+        if (idx + 6 > strOrig.length()) {
+            utils::slog.w << "gltfio: Unable to interpret node name=" << strOrig
+                          << " as proper unicode encoding." << utils::io::endl;
+            return strOrig;
+        }
+
+        // Turns string of the form \u0062 to 0x0062
+        std::string const hexStr = strOrig.substr(idx + 2, 4);
+        if (hexStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
+            utils::slog.w << "gltfio: Unable to interpret node name=" << strOrig
+                          << " as proper unicode encoding." << utils::io::endl;
+            return strOrig;
+        }
+
+        addUnencodedSubstr(cur, idx);
+
+        strEscaped += conv.to_bytes((char32_t) std::stoul(hexStr, nullptr, 16));
+        cur = idx + 6;
+    }
+    addUnencodedSubstr(cur, strOrig.length());
+
+    return strEscaped;
 }
 
 static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
@@ -504,7 +551,8 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
 }
 
 void FAssetLoader::recursePrimitives(const cgltf_node* node, FFilamentAsset* fAsset) {
-    const char* name = getNodeName(node, mDefaultNodeName);
+    auto nameStr = getNodeName(node, mDefaultNodeName);
+    const char* name = nameStr.c_str();
     name = name ? name : "node";
 
     if (node->mesh) {
@@ -573,7 +621,8 @@ void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Ent
     instance->mEntities.push_back(entity);
     instance->mNodeMap[node - srcAsset->nodes] = entity;
 
-    const char* name = getNodeName(node, mDefaultNodeName);
+    auto nameStr = getNodeName(node, mDefaultNodeName);
+    const char* name = nameStr.c_str();
 
     if (name) {
         fAsset->mNameToEntity[name].push_back(entity);

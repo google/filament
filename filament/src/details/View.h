@@ -432,6 +432,10 @@ public:
     // (e.g.: after the FrameGraph execution).
     void commitFrameHistory(FEngine& engine) noexcept;
 
+    // Clean-up the whole history, free all resources. This is typically called when the View is
+    // being terminated. Or we're changing Renderer.
+    void clearFrameHistory(FEngine& engine) noexcept;
+
     // create the picking query
     View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
             View::PickingQueryResultCallback callback) noexcept;
@@ -494,10 +498,6 @@ private:
             FRenderableManager::Visibility const* visibility,
             Culler::result_type* visibleMask,
             size_t count);
-
-    // Clean-up the whole history, free all resources. This is typically called when the View is
-    // being terminated.
-    void drainFrameHistory(FEngine& engine) noexcept;
 
     // we don't inline this one, because the function is quite large and there is not much to
     // gain from inlining.
