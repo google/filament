@@ -36,7 +36,8 @@ namespace vzm
     }
     __dojostatic size_t GetVzComponentsByName(const std::string& name, std::vector<VzBaseComp*>& components) {
         std::vector<VID> vids;
-        if (size_t n = GetVidsByName(name, vids) > 0) {
+        size_t n = GetVidsByName(name, vids);
+        if (n > 0) {
             components.reserve(n);
             for (size_t i = 0; i < n; ++i) {
                 components.push_back(GetVzComponent(vids[i]));

@@ -124,7 +124,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzBaseComp* base_comp1 = vzm::GetFirstVzComponentByName("door_r_right_window_d");
     if (base_comp1)
         std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>> " << base_comp1->GetName() << std::endl;
-    //vzm::VzBaseComp* base_comp2 = vzm::GetVzComponentByName("DoorRearRight_window");
+
+    std::vector<vzm::VzBaseComp*> comps;
+    if (vzm::GetVzComponentsByName("DoorFrLeft", comps) > 0)
+    {
+        for (auto it : comps)
+        {
+            std::cout << ">>>>>>>>> " << it->GetName() << std::endl;
+            std::cout << ">>>>>>>>> " << it->GetVID() << std::endl;
+            std::cout << ">>>>>>>>> " << it->GetType() << std::endl;
+        }
+    }
 
     vzm::VzAsset::Animator* animator = asset->GetAnimator();
     if (animator)

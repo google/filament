@@ -392,10 +392,7 @@ namespace filament::gltfio {
         // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
         name = name ? name : "node";
 
-        if (name == "door_r_right_window_d")
-        {
-            int gg = 0;
-        }
+        //std::string str_name = name; // for test
 
         // If the node has a mesh, then create a renderable component.
         if (node->mesh) {
