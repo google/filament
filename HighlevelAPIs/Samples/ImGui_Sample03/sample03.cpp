@@ -112,10 +112,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
 
     //std::vector<VID> vid_list;
@@ -163,10 +163,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         vzm::RemoveComponent(cam_vid);
     }
 
-    vzm::VzCamera* cam= (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
-    {
-        //cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
-    }
+    vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
+    vzm::VzCamera* cam2 = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera 2");
+    //vzm::VzCamera* cam1 = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
+    //vzm::AppendSceneCompTo(cam1, scene);
+    //cam1->SetCameraCubeVisibleLayerMask(0x4, 0x4);
+  
     cam->SetMatrixAutoUpdate(false);
     glm::fvec3 p(0, 0, 10);
     glm::fvec3 at(0, 0, -4);
