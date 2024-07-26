@@ -53,14 +53,14 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
     //    MetalRenderPrimitive         :  24       many
     //    MetalVertexBuffer            :  32       moderate
     // -- less than or equal 32 bytes
-    //    MetalIndexBuffer             :  40       moderate
     //    MetalFence                   :  48       few
-    //    MetalBufferObject            :  48       many
-    // -- less than or equal 48 bytes
+    //    MetalIndexBuffer             :  56       moderate
+    //    MetalBufferObject            :  64       many
+    // -- less than or equal 64 bytes
     //    MetalSamplerGroup            : 112       few
     //    MetalProgram                 : 152       moderate
     //    MetalTexture                 : 152       moderate
-    //    MetalSwapChain               : 184       few
+    //    MetalSwapChain               : 208       few
     //    MetalRenderTarget            : 272       few
     //    MetalVertexBufferInfo        : 552       moderate
     // -- less than or equal to 552 bytes
