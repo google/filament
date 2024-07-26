@@ -96,7 +96,8 @@ static std::string getNodeName(cgltf_node const* node, char const* defaultNodeNa
         if (node->mesh && node->mesh->name) return node->mesh->name;
         if (node->light && node->light->name) return node->light->name;
         if (node->camera && node->camera->name) return node->camera->name;
-        return defaultNodeName;
+        if (defaultNodeName) return defaultNodeName;
+        return "<unknown>";
     };
 
     std::string strOrig(getNameImpl());
