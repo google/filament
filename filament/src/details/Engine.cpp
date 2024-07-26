@@ -163,8 +163,7 @@ FEngine* FEngine::getEngine(void* token) {
     FILAMENT_CHECK_PRECONDITION(ThreadUtils::isThisThread(instance->mMainThreadId))
             << "Engine::createAsync() and Engine::getEngine() must be called on the same thread.";
 
-    // we use mResourceAllocator as a proxy for "am I already initialized"
-    if (!instance->mResourceAllocator) {
+    if (!instance->mInitialized) {
         if (UTILS_UNLIKELY(!instance->mDriver)) {
             // something went horribly wrong during driver initialization
             instance->mDriverThread.join();
@@ -262,7 +261,7 @@ void FEngine::init() {
     slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
 
 
-    mResourceAllocator = new ResourceAllocator(mConfig, driverApi);
+    mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
 
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
@@ -425,11 +424,13 @@ void FEngine::init() {
                     }
                 });
             });
+
+    mInitialized = true;
 }
 
 FEngine::~FEngine() noexcept {
     SYSTRACE_CALL();
-    delete mResourceAllocator;
+    assert_invariant(!mResourceAllocatorDisposer);
     delete mDriver;
     if (mOwnPlatform) {
         PlatformFactory::destroy(&mPlatform);
@@ -440,7 +441,7 @@ void FEngine::shutdown() {
     SYSTRACE_CALL();
 
     // by construction this should never be nullptr
-    assert_invariant(mResourceAllocator);
+    assert_invariant(mResourceAllocatorDisposer);
 
     FILAMENT_CHECK_PRECONDITION(ThreadUtils::isThisThread(mMainThreadId))
             << "Engine::shutdown() called from the wrong thread!";
@@ -460,7 +461,8 @@ void FEngine::shutdown() {
      */
 
     mPostProcessManager.terminate(driver);  // free-up post-process manager resources
-    mResourceAllocator->terminate();
+    mResourceAllocatorDisposer->terminate();
+    mResourceAllocatorDisposer.reset();
     mDFG.terminate(*this);                  // free-up the DFG
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights

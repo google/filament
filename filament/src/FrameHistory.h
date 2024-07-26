@@ -21,6 +21,9 @@
 #include <fg/FrameGraphTexture.h>
 
 #include <math/mat4.h>
+#include <math/vec2.h>
+
+#include <stdint.h>
 
 namespace filament {
 

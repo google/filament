@@ -298,6 +298,20 @@ public class Renderer {
     }
 
     /**
+     * Call skipFrame when momentarily skipping frames, for instance if the content of the
+     * scene doesn't change.
+     *
+     * @param vsyncSteadyClockTimeNano The time in nanoseconds when the frame started being rendered,
+     *                       in the {@link System#nanoTime()} timebase. Divide this value by 1000000 to
+     *                       convert it to the {@link android.os.SystemClock#uptimeMillis()}
+     *                       time base. This typically comes from
+     *                       {@link android.view.Choreographer.FrameCallback}.
+     */
+    public void skipFrame(long vsyncSteadyClockTimeNano) {
+        nSkipFrame(getNativeObject(), vsyncSteadyClockTimeNano);
+    }
+
+    /**
      * Sets up a frame for this <code>Renderer</code>.
      * <p><code>beginFrame</code> manages frame pacing, and returns whether or not a frame should be
      * drawn. The goal of this is to skip frames when the GPU falls behind in order to keep the frame
@@ -716,6 +730,7 @@ public class Renderer {
 
     private static native void nSetPresentationTime(long nativeObject, long monotonicClockNanos);
     private static native void nSetVsyncTime(long nativeObject, long steadyClockTimeNano);
+    private static native void nSkipFrame(long nativeObject, long vsyncSteadyClockTimeNano);
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain, long frameTimeNanos);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);
