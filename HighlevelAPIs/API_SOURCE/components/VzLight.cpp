@@ -10,7 +10,7 @@ namespace vzm
     void VzLight::SetIntensity(const float intensity)
     {
         COMP_LIGHT(lcm, ett, ins, );
-        lcm.setIntensity(ins, intensity);
+      lcm.setIntensityCandela(ins, intensity);
         UpdateTimeStamp();
     }
     float VzLight::GetIntensity() const
@@ -36,7 +36,7 @@ namespace vzm
     }
     float VzLight::GetRange() const {
         COMP_LIGHT(lcm, ett, ins, -1.f);
-        return lcm.getIntensity(ins);
+        return lcm.getFalloff(ins);
     }
     void VzLight::SetCone(const float inner, const float outer) {
         COMP_LIGHT(lcm, ett, ins, );
