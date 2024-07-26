@@ -1,181 +1,82 @@
-/*
- * Copyright (C) 2023 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#include <iostream>
+#include <utils/Hash.h>
+#include <tsl/robin_map.h>
+#include <bluevk/BlueVK.h>
 
-#include <utils/Log.h>
+namespace {
 
-#include <GLES3/gl3.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-
-#include <gtest/gtest.h>
-
-using namespace utils;
-using namespace std::literals;
-
-class CompilerTest : public testing::Test {
-protected:
-    void SetUp() override {
-        EGLBoolean success;
-        EGLint major, minor;
-        dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-        ASSERT_NE(dpy, EGL_NO_DISPLAY);
-
-        EGLBoolean const initialized = eglInitialize(dpy, &major, &minor);
-        ASSERT_TRUE(initialized);
-
-        EGLint const contextAttribs[] = {
-                EGL_CONTEXT_CLIENT_VERSION, 3,
-                EGL_NONE
-        };
-
-        EGLint configsCount;
-        EGLint configAttribs[] = {
-                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,        //  0
-                EGL_RED_SIZE,    8,                                 //  2
-                EGL_GREEN_SIZE,  8,                                 //  4
-                EGL_BLUE_SIZE,   8,                                 //  6
-                EGL_NONE                                            // 14
-        };
-        success = eglChooseConfig(dpy, configAttribs, &config, 1, &configsCount);
-        ASSERT_TRUE(success);
-
-        context = eglCreateContext(dpy, config, EGL_NO_CONTEXT, contextAttribs);
-        ASSERT_NE(context, EGL_NO_CONTEXT);
-
-        success = eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, context);
-        ASSERT_TRUE(success);
-
-        ASSERT_EQ(eglGetError(), EGL_SUCCESS);
-    }
-
-    void TearDown() override {
-        eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        eglDestroyContext(dpy, context);
-        eglTerminate(dpy);
-    }
-
-private:
-    EGLDisplay dpy;
-    EGLContext context;
-    EGLConfig config;
+struct T {
 };
 
-TEST_F(CompilerTest, Simple) {
-    auto shader = R"(
-#version 300 es
-void main()
-{
-})"sv;
+constexpr uint8_t const UNIQUE_DESCRIPTOR_SET_COUNT = 3;
+constexpr uint8_t const SHADER_TYPE_COUNT = 3;
+using Timestamp = uint64_t;
+using VulkanResourceAllocator = T;
 
-    const char* const src = shader.data();
-    GLint const len = (GLint)shader.size();
+struct PushConstantKey {
+    uint8_t stage;// We have one set of push constant per shader stage (fragment, vertex, etc).
+    uint8_t size;
+};
 
-    GLuint const id = glCreateShader(GL_VERTEX_SHADER);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+struct PipelineLayoutKey {
+    using DescriptorSetLayoutArray = std::array<VkDescriptorSetLayout, UNIQUE_DESCRIPTOR_SET_COUNT>;
+    DescriptorSetLayoutArray descSetLayouts = {};        // 8 * 3
+    PushConstantKey pushConstant[SHADER_TYPE_COUNT] = {};// 2 * 3
+    uint16_t padding = 0;
+};
+static_assert(sizeof(PipelineLayoutKey) == 32);
 
-    glShaderSource(id, 1, &src, &len);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+using PipelineLayoutKeyHashFn = utils::hash::MurmurHashFn<PipelineLayoutKey>;
+struct PipelineLayoutKeyEqual {
+    bool operator()(PipelineLayoutKey const& k1, PipelineLayoutKey const& k2) const {
+        return 0 == memcmp((const void*) &k1, (const void*) &k2, sizeof(PipelineLayoutKey));
+    }
+};
 
-    glCompileShader(id);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+struct PipelineLayoutCacheEntry {
+    VkPipelineLayout handle;
+    Timestamp lastUsed;
+};
 
-    GLint result = 0;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-    EXPECT_EQ(result, GL_TRUE);
+using PipelineLayoutMap = tsl::robin_map<PipelineLayoutKey, PipelineLayoutCacheEntry,
+        PipelineLayoutKeyHashFn, PipelineLayoutKeyEqual>;
 
-    glDeleteShader(id);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+class TestClass {
+public:
+    VkDevice mDevice;
+    VulkanResourceAllocator* mAllocator;
+    Timestamp mTimestamp;
+    PipelineLayoutMap layout;
+};
+
+void insert(PipelineLayoutMap& layout, uint64_t val) {
+    PipelineLayoutKey key{};
+    key.descSetLayouts[0] = (VkDescriptorSetLayout) val;
+    layout[key] = {(VkPipelineLayout) val, val};
 }
 
-TEST_F(CompilerTest, CrashPVRUniFlexCompileToHw) {
-
-    // Some PowerVR driver crash with this shader
-
-    auto shader = R"(
-#version 300 es
-
-layout(location = 0) in vec4 mesh_position;
-
-layout(std140) uniform FrameUniforms {
-    vec2 i;
-} frameUniforms;
-
-void main() {
-    gl_Position = mesh_position;
-    gl_Position.z = dot(gl_Position.zw, frameUniforms.i);
-})"sv;
-
-    const char* const src = shader.data();
-    GLint const len = (GLint)shader.size();
-
-    GLuint const id = glCreateShader(GL_VERTEX_SHADER);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    glShaderSource(id, 1, &src, &len);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    glCompileShader(id);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    GLint result = 0;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-    EXPECT_EQ(result, GL_TRUE);
-
-    glDeleteShader(id);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-}
-
-TEST_F(CompilerTest, ConstParameters) {
-
-    // Some PowerVR driver fail to compile this shader
-
-    auto shader = R"(
-#version 300 es
-
-highp mat3 m;
-void buggy(const mediump vec3 n) {
-    m*n;
-}
-
-void main() {
-})"sv;
-
-    const char* const src = shader.data();
-    GLint const len = (GLint)shader.size();
-
-    GLuint const id = glCreateShader(GL_FRAGMENT_SHADER);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    glShaderSource(id, 1, &src, &len);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    glCompileShader(id);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    GLint result = 0;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-    EXPECT_EQ(result, GL_TRUE);
-
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-
-    glDeleteShader(id);
-    EXPECT_EQ(glGetError(), GL_NO_ERROR);
-}
+}// namespace
 
 int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    constexpr uint32_t START = 1000;
+    TestClass c;
+    auto& layout = c.layout;
+
+    uint64_t count = 0;
+    for (; count < 20; count++) {
+        insert(layout, count + START);
+    }
+
+    for (uint64_t t = 0; t < count; ++t) {
+        PipelineLayoutKey key = {};
+        key.descSetLayouts[0] = (VkDescriptorSetLayout)(START + t);
+
+        if (layout.find(key) != layout.end()) {
+            std::cout << "found " << t << std::endl;
+        } else {
+            std::cout << "not found" << t << std::endl;
+        }
+    }
+
+    return 0;
 }

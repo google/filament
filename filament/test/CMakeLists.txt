@@ -62,6 +62,7 @@ if (ANDROID)
     target_link_libraries(test_compiler PRIVATE utils)
     target_link_libraries(test_compiler PRIVATE EGL)
     target_link_libraries(test_compiler PRIVATE GLESv3)
+    target_link_libraries(test_compiler PRIVATE bluevk)    
 endif()
 
 add_executable(test_material_parser
