@@ -107,7 +107,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    arguments.SetParam("api", std::string("vulkan"));
+    arguments.SetParam("api", std::string("opengl"));
     arguments.SetParam("vulkan-gpu-hint", std::string("0"));
     if (vzm::InitEngineLib(arguments) != VZ_OK) {
         std::cerr << "Failed to initialize engine library." << std::endl;
@@ -118,7 +118,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
     vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
-    vzm::VzActor* actor1 = vzm::LoadTestModelIntoActor("my test model");
     
     vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
     renderer->SetCanvas(w, h, dpi, hwnd);
@@ -204,7 +203,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_CLOSE:
     {
-        vzm::RemoveComponent(vid_camera);
+        //vzm::RemoveComponent(vid_camera);
+        vzm::ReleaseWindowHandlerTasks(hWnd);
         break;
     }
     case WM_KEYDOWN:
