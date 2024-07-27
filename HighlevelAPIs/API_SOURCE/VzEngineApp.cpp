@@ -1492,6 +1492,8 @@ namespace vzm
     }
     void VzEngineApp::Destroy()
     {
+        // dummy call //
+
         //std::unordered_map<SceneVID, filament::Scene*> scenes_;
         //// note a VzRenderPath involves a view that includes
         //// 1. camera and 2. scene

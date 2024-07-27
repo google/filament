@@ -107,7 +107,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    //arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("api", std::string("opengl"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
@@ -164,7 +164,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     vzm::VzCamera* cam = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
-    vzm::VzCamera* cam2 = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera 2");
+    //vzm::VzCamera* cam2 = (vzm::VzCamera*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera 2");
     //vzm::VzCamera* cam1 = (vzm::VzCamera*)vzm::GetVzComponent(cameras[0]);
     //vzm::AppendSceneCompTo(cam1, scene);
     //cam1->SetCameraCubeVisibleLayerMask(0x4, 0x4);
@@ -189,7 +189,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
     }
     vzm::AppendSceneCompTo(light, scene);
-    vzm::AppendSceneCompTo(cam, scene);
+    //vzm::AppendSceneCompTo(cam, scene);
+    //vzm::AppendSceneCompTo(cam2, scene);
 
     // Main loop
     bool done = false;
@@ -256,6 +257,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_CLOSE:
     {
         vzm::ReleaseWindowHandlerTasks(hWnd);
+        //vzm::RemoveComponent(vzm::GetFirstVzComponentByName("my camera 2")->GetVID());
         break;
     }
     case WM_KEYDOWN:

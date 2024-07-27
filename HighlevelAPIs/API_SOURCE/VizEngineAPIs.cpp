@@ -271,8 +271,10 @@ namespace vzm
 
         gEngineApp.Destroy();
 
-        gEngine->destroy(gDummySwapChain);
-        gDummySwapChain = nullptr;
+        if (gDummySwapChain) {
+            gEngine->destroy(gDummySwapChain);
+            gDummySwapChain = nullptr;
+        }
 
         gMaterialProvider->destroyMaterials();
         delete gMaterialProvider;
