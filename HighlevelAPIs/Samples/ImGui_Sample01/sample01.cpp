@@ -91,6 +91,23 @@ static void check_vk_result(VkResult err) {
   if (err < 0) abort();
 }
 
+#ifdef APP_USE_VULKAN_DEBUG_REPORT
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+debug_report(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
+             uint64_t object, size_t location, int32_t messageCode,
+             const char* pLayerPrefix, const char* pMessage, void* pUserData) {
+  (void)flags;
+  (void)object;
+  (void)location;
+  (void)messageCode;
+  (void)pUserData;
+  (void)pLayerPrefix;  // Unused arguments
+  fprintf(stderr, "[vulkan] Debug report from ObjectType: %i\nMessage: %s\n\n",
+          objectType, pMessage);
+  return VK_FALSE;
+}
+#endif  // APP_USE_VULKAN_DEBUG_REPORT
+
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties,
                         VkPhysicalDeviceMemoryProperties memProperties) {
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
@@ -660,9 +677,9 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd) {
 vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzCamera* g_cam;
-int g_Height = 0;
-float left_editUIWidth = 0.0f;
-float right_editUIWidth = 0.0f;
+std::string file_name = "";
+const float left_editUIWidth = 400.0f;
+const float right_editUIWidth = 400.0f;
 float workspace_width = 0.0f;
 float workspace_height = 0.0f;
 
@@ -676,11 +693,14 @@ void setMouseButton(GLFWwindow* window, int button, int state,
   if (button == 0) {
     double x;
     double y;
+    int width;
+    int height;
 
+    glfwGetWindowSize(window, &width, &height);
     glfwGetCursorPos(window, &x, &y);
 
     int xPos = static_cast<int>(x - left_editUIWidth);
-    int yPos = g_Height - static_cast<int>(y);
+    int yPos = height - static_cast<int>(y);
     switch (state) {
       case GLFW_PRESS:
         if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
@@ -698,14 +718,17 @@ void setMouseButton(GLFWwindow* window, int button, int state,
 }
 void setCursorPos(GLFWwindow* window, double x, double y) {
   int state;
+  int width;
+  int height;
 
   if (!g_cc) {
     return;
   }
   state = glfwGetMouseButton(window, 0);
+  glfwGetWindowSize(window, &width, &height);
 
   int xPos = static_cast<int>(x - left_editUIWidth);
-  int yPos = g_Height - static_cast<int>(y);
+  int yPos = height - static_cast<int>(y);
 
   if (state == GLFW_PRESS) {
     g_cc->GrabDrag(xPos, yPos);
@@ -717,26 +740,36 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
   }
   double x;
   double y;
+  int width;
+  int height;
 
+  glfwGetWindowSize(window, &width, &height);
   glfwGetCursorPos(window, &x, &y);
 
   if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
       y < workspace_height) {
     g_cc->Scroll(static_cast<int>(x - left_editUIWidth),
-                 g_Height - static_cast<int>(y), 5.0f * (float)yOffset);
+                 height - static_cast<int>(y), 5.0f * (float)yOffset);
   }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
   if (g_cc && g_renderer && g_cam) {
-    //int newWidth = width - left_editUIWidth - right_editUIWidth;
+    workspace_width = width - left_editUIWidth - right_editUIWidth;
+    workspace_height = height;
 
-    g_cc->SetViewport(width, height);
+    g_cc->SetViewport(workspace_width, workspace_height);
 
-    g_renderer->SetCanvas(width, height, 96.f, nullptr);
+    g_renderer->SetCanvas(workspace_width, workspace_height, 96.f, nullptr);
     float zNearP, zFarP, fovInDegree;
     g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
-    g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                    (float)width / (float)height);
+    g_cam->SetPerspectiveProjection(
+        zNearP, zFarP, fovInDegree,
+        (float)workspace_width / (float)workspace_height);
+  }
+}
+void setDrop(GLFWwindow* window, int count, const char** pathNames) {
+  if (count == 1 && file_name.empty()) {
+    file_name = pathNames[0];
   }
 }
 
@@ -769,8 +802,8 @@ int main(int, char**) {
 
   // Create window with Vulkan context
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  GLFWwindow* window = glfwCreateWindow(1280, 720, "Grapicar Filament Viewer",
-                                        nullptr, nullptr);
+  GLFWwindow* window =
+      glfwCreateWindow(1280, 720, "Grapicar Filament Viewer", nullptr, nullptr);
   if (!glfwVulkanSupported()) {
     printf("GLFW: Vulkan Not Supported\n");
     return 1;
@@ -794,6 +827,11 @@ int main(int, char**) {
   glfwSetCursorPosCallback(window, setCursorPos);
   glfwSetScrollCallback(window, setMouseScroll);
   glfwSetFramebufferSizeCallback(window, onFrameBufferResize);
+  glfwSetDropCallback(window, setDrop);
+
+  while (file_name.empty()) {
+    glfwWaitEvents();
+  }
 
   // Create Framebuffers
   int w, h;
@@ -814,16 +852,14 @@ int main(int, char**) {
   vzm::VzScene* scene = vzm::NewScene("my scene");
   scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-  // vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
-
-  vzm::VzAsset* asset =
-      vzm::LoadFileIntoAsset("../assets/gltf/car_action_re.gltf", "my gltf asset");
+  vzm::VzAsset* asset = vzm::LoadFileIntoAsset(file_name, "my gltf asset");
   asset->GetAnimator()->AddPlayScene(scene->GetVID());
   asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
   asset->GetAnimator()->ActivateAnimation(0);
 
   g_renderer = vzm::NewRenderer("my renderer");
-  g_renderer->SetCanvas(w, h, dpi, nullptr);
+  g_renderer->SetCanvas(w - left_editUIWidth - right_editUIWidth, h, dpi,
+                        nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
 
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
@@ -832,11 +868,13 @@ int main(int, char**) {
   glm::fvec3 at(0, 0, -4);
   glm::fvec3 u(0, 1, 0);
   g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-  g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
+  g_cam->SetPerspectiveProjection(
+      0.1f, 1000.f, 45.f,
+      (float)(w - left_editUIWidth - right_editUIWidth) / (float)h);
   g_cc = g_cam->GetController();
   *(glm::fvec3*)g_cc->orbitHomePosition = p;
   g_cc->UpdateControllerSettings();
-  g_cc->SetViewport(w, h);
+  g_cc->SetViewport(w - left_editUIWidth - right_editUIWidth, h);
 
   vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
@@ -901,7 +939,7 @@ int main(int, char**) {
       0,
   };
   HANDLE swapHandles[2] = {
-      0,
+      INVALID_HANDLE_VALUE,
   };
 
   float any = 0.0f;
@@ -910,7 +948,6 @@ int main(int, char**) {
   float anyVec[3] = {
       0,
   };
-
 
   int mCurrentAnimation = 0;
   int tabIdx = 0;
@@ -930,7 +967,6 @@ int main(int, char**) {
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    g_Height = height;
     if (g_SwapChainRebuild) {
       if (width > 0 && height > 0) {
         ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
@@ -950,18 +986,19 @@ int main(int, char**) {
       ImGui::GetStyle().WindowRounding = 0;
       ImGui::SetNextWindowPos(ImVec2(0, 0));
 
-      const float width = ImGui::GetIO().DisplaySize.x;
-      const float height = ImGui::GetIO().DisplaySize.y;
+      // const float width = ImGui::GetIO().DisplaySize.x;
+      // const float height = ImGui::GetIO().DisplaySize.y;
 
-      ImGui::SetNextWindowSize(ImVec2(400, height), ImGuiCond_Once);
-      ImGui::SetNextWindowSizeConstraints(ImVec2(20, height),
-                                          ImVec2(width, height));
+      ImGui::SetNextWindowSize(ImVec2(left_editUIWidth, height),
+                               ImGuiCond_Once);
+      ImGui::SetNextWindowSizeConstraints(ImVec2(left_editUIWidth, height),
+                                          ImVec2(left_editUIWidth, height));
 
       ImGui::Begin("left-ui", nullptr, ImGuiWindowFlags_NoTitleBar);
 
       if (ImGui::CollapsingHeader("Hierarchy")) {
         ImGui::Indent();
-        ImGui::Checkbox("Show bounds", &bAny);
+        //ImGui::Checkbox("Show bounds", &bAny);
         treeNode(root_vids[0]);
         ImGui::Unindent();
       }
@@ -1026,7 +1063,7 @@ int main(int, char**) {
         // ImGui::Checkbox("Show rest pose", &bAny);
         ImGui::Unindent();
       }
-      left_editUIWidth = ImGui::GetWindowWidth();
+      // left_editUIWidth = ImGui::GetWindowWidth();
       ImGui::End();
     }
 
@@ -1036,17 +1073,20 @@ int main(int, char**) {
       if (swapHandle != INVALID_HANDLE_VALUE) {
         int index = 0;
         if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
-          if (swapHandles[0] != 0 && swapHandles[1] != 0) {
-            swapHandles[0] = 0;
-            swapHandles[1] = 0;
+          if (swapHandles[0] != INVALID_HANDLE_VALUE &&
+              swapHandles[1] != INVALID_HANDLE_VALUE) {
+            swapHandles[0] = INVALID_HANDLE_VALUE;
+            swapHandles[1] = INVALID_HANDLE_VALUE;
           }
-          if (swapHandles[0] == 0)
+          if (swapHandles[0] == INVALID_HANDLE_VALUE)
             index = 0;
           else
             index = 1;
 
           auto [importedImage, importedMemory] = importImageFromHandle(
-              g_Device, g_PhysicalDevice, {(uint32_t)width, (uint32_t)height},
+              g_Device, g_PhysicalDevice,
+              {(uint32_t)(width - left_editUIWidth - right_editUIWidth),
+               (uint32_t)height},
               VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
           VkImageView importedImageView = createImageView(
               g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
@@ -1074,8 +1114,7 @@ int main(int, char**) {
         const float window_width = ImGui::GetIO().DisplaySize.x;
         const float window_height = ImGui::GetIO().DisplaySize.y;
         workspace_width = window_width - left_editUIWidth - right_editUIWidth;
-        workspace_height = workspace_width * (float)height / width;
-        //(float)height;  //
+        workspace_height = window_height;
 
         ImGui::SetNextWindowSize(ImVec2(workspace_width, workspace_height),
                                  ImGuiCond_Once);
@@ -1106,23 +1145,24 @@ int main(int, char**) {
       ImGui::GetStyle().WindowRounding = 0;
       ImGui::SetNextWindowPos(ImVec2(width - right_editUIWidth, 0));
 
-      const float width = ImGui::GetIO().DisplaySize.x;
-      const float height = ImGui::GetIO().DisplaySize.y;
+      // const float width = ImGui::GetIO().DisplaySize.x;
+      // const float height = ImGui::GetIO().DisplaySize.y;
 
-      ImGui::SetNextWindowSize(ImVec2(400, height), ImGuiCond_Once);
-      ImGui::SetNextWindowSizeConstraints(ImVec2(20, height),
-                                          ImVec2(width, height));
+      ImGui::SetNextWindowSize(ImVec2(right_editUIWidth, height),
+                               ImGuiCond_Once);
+      ImGui::SetNextWindowSizeConstraints(ImVec2(right_editUIWidth, height),
+                                          ImVec2(right_editUIWidth, height));
 
       ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
 
       const ImVec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
       {
         ImGui::SameLine();
-        if (ImGui::Button("Node", ImVec2(150, 25))) {
+        if (ImGui::Button("Node", ImVec2(right_editUIWidth/2 - 10, 25))) {
           tabIdx = 0;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Settings", ImVec2(150, 25))) {
+        if (ImGui::Button("Settings", ImVec2(right_editUIWidth/2 - 10, 25))) {
           tabIdx = 1;
         }
       }
@@ -1133,12 +1173,11 @@ int main(int, char**) {
           }
           vzm::VzSceneComp* component =
               (vzm::VzSceneComp*)vzm::GetVzComponent(currentVID);
-          std::string type = component->GetType();
+          vzm::SCENE_COMPONENT_TYPE type = component->GetSceneCompType();
           if (ImGui::CollapsingHeader(
                   "Transform",
                   ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::Text(type.c_str());
             ImGui::Text(component->GetName().c_str());
             ImGui::NewLine();
 
@@ -1160,12 +1199,72 @@ int main(int, char**) {
             }
             ImGui::Unindent();
           }
-          if (ImGui::CollapsingHeader("Material")) {
+          if (ImGui::CollapsingHeader(
+                  "Material",
+                  ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-
+            if (type == vzm::SCENE_COMPONENT_TYPE::ACTOR) {
+              vzm::VzActor* actor = (vzm::VzActor*)component;
+              std::vector<VID> mis = actor->GetMIs();
+              for (size_t prim = 0; prim < mis.size(); ++prim) {
+                vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(mis[prim]);
+                std::string mname = mi->GetName();
+                if (ImGui::CollapsingHeader(mname.c_str())) {
+                  ImGui::Indent();
+                  VID maid = mi->GetMaterial();
+                  vzm::VzMaterial* ma =
+                      (vzm::VzMaterial*)vzm::GetVzComponent(maid);
+                  std::map<std::string, vzm::UniformType> pram;
+                  ma->GetAllowedParameters(pram);
+                  auto it = pram.begin();
+                  auto end_it = pram.end();
+                  while (it != end_it) {
+                    std::vector<float> v;
+                    ImGui::Text("%s", it->first.c_str());
+                    int size = (int)it->second - 3;
+                    if (size > 0) {
+                      v.resize(size);
+                      mi->GetParameter(it->first, it->second, (void*)v.data());
+                      std::string pname = it->first + std::to_string(prim);
+                      switch (it->second) {
+                        case vzm::UniformType::BOOL:
+                          if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
+                            mi->SetParameter(it->first, it->second,
+                                             (void*)v.data());
+                          }
+                          break;
+                        case vzm::UniformType::FLOAT:
+                          if (ImGui::SliderFloat(pname.c_str(), &v[0], 0.0F,
+                                                 1.0F)) {
+                            mi->SetParameter(it->first, it->second,
+                                             (void*)v.data());
+                          }
+                          break;
+                        case vzm::UniformType::FLOAT3:
+                          if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
+                              ImGuiColorEditFlags_DefaultOptions_) {
+                            mi->SetParameter(it->first, it->second,
+                                             (void*)v.data());
+                          }
+                          break;
+                        case vzm::UniformType::FLOAT4:
+                          if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
+                              ImGuiColorEditFlags_DefaultOptions_) {
+                            mi->SetParameter(it->first, it->second,
+                                             (void*)v.data());
+                            break;
+                          }
+                      }
+                    }
+                    it++;
+                  }
+                  ImGui::Unindent();
+                }
+              }
+            }
             ImGui::Unindent();
           }
-          if (type == "VzLight") {
+          if (type == vzm::SCENE_COMPONENT_TYPE::LIGHT) {
             if (ImGui::CollapsingHeader("Light")) {
               ImGui::Indent();
               vzm::VzLight* lightComponent = (vzm::VzLight*)component;
@@ -1179,7 +1278,7 @@ int main(int, char**) {
               if (ImGui::InputFloat("Intensity", &intensity)) {
                 lightComponent->SetIntensity(intensity);
               }
-              if (ImGui::InputFloat3("Color", color)) {
+              if (ImGui::ColorEdit3("Color", color)) {
                 lightComponent->SetColor(color);
               }
               if (ImGui::InputFloat("Range", &range)) {
@@ -1198,7 +1297,7 @@ int main(int, char**) {
           break;
         }
         case 1:
-          if (ImGui::Button("Export", ImVec2(300, 100))) {
+          if (ImGui::Button("Export", ImVec2(right_editUIWidth, 50))) {
             vzm::ExportAssetToGlb(asset, "export.glb");
           }
           if (ImGui::CollapsingHeader("Automation", 0)) {
@@ -1388,8 +1487,14 @@ int main(int, char**) {
           if (ImGui::CollapsingHeader("Light")) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Indirect light")) {
-              ImGui::SliderFloat("IBL intensity", &any, 0.0f, 100000.0f);
-              ImGui::SliderAngle("IBL rotation", &any);
+              float iblIntensity = scene->GetIBLIntensity();
+              float iblRotation = scene->GetIBLRotation();
+              if (ImGui::InputFloat("IBL intensity", &iblIntensity)) {
+                scene->SetIBLIntensity(iblIntensity);
+              }
+              if (ImGui::SliderAngle("IBL rotation", &iblRotation)) {
+                scene->SetIBLRotation(iblRotation);
+              }
             }
             if (ImGui::CollapsingHeader("Sunlight")) {
               ImGui::Checkbox("Enable sunlight", &bAny);
@@ -1527,7 +1632,7 @@ int main(int, char**) {
           break;
       }
 
-      right_editUIWidth = ImGui::GetWindowWidth();
+      // right_editUIWidth = ImGui::GetWindowWidth();
       ImGui::End();
     }
 
