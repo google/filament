@@ -165,7 +165,7 @@ public:
 
     details::FrameInfo getLastFrameInfo() const noexcept {
         // if pFront is not set yet, return FrameInfo(). But the `valid` field will be false in this case.
-        return pFront ? *pFront : details::FrameInfo();
+        return pFront ? *pFront : details::FrameInfo{};
     }
 
     utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept;
