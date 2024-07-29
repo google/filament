@@ -23,6 +23,7 @@
 #include <filament/Scene.h>
 #include <filament/View.h>
 #include <filament/Skybox.h>
+#include <filament/ColorSpace.h>
 
 #include <utils/EntityManager.h>
 #include <utils/EntityInstance.h>
@@ -67,3 +68,4 @@ using namespace filament::math;
 using namespace filament::backend;
 using namespace filament::gltfio;
 using namespace utils;
+using namespace filament::color;

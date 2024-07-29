@@ -1,6 +1,5 @@
 #include "VzRenderPath.h"
 #include "VzEngineApp.h"
-#include "FIncludes.h"
 
 using namespace vzm;
 extern Engine* gEngine;
@@ -118,4 +117,32 @@ namespace vzm
     filament::View* VzRenderPath::GetView() { return view_; }
 
     filament::Renderer* VzRenderPath::GetRenderer() { return renderer_; }
+
+    void VzRenderPath::applyViewSettings()
+    {
+        if (!isViewSettingsDirty)
+            return;
+
+        view_->setAntiAliasing(viewSettings.antiAliasing);
+        view_->setTemporalAntiAliasingOptions(viewSettings.taa);
+        view_->setMultiSampleAntiAliasingOptions(viewSettings.msaa);
+        view_->setDynamicResolutionOptions(viewSettings.dsr);
+        view_->setAmbientOcclusionOptions(viewSettings.ssao);
+        view_->setScreenSpaceReflectionsOptions(viewSettings.screenSpaceReflections);
+        view_->setBloomOptions(viewSettings.bloom);
+        view_->setFogOptions(viewSettings.fog);
+        view_->setDepthOfFieldOptions(viewSettings.dof);
+        view_->setVignetteOptions(viewSettings.vignette);
+        view_->setDithering(viewSettings.dithering);
+        view_->setRenderQuality(viewSettings.renderQuality);
+        view_->setDynamicLightingOptions(viewSettings.dynamicLighting.zLightNear,
+            viewSettings.dynamicLighting.zLightFar);
+        view_->setShadowType(viewSettings.shadowType);
+        view_->setVsmShadowOptions(viewSettings.vsmShadowOptions);
+        view_->setGuardBandOptions(viewSettings.guardBand);
+        view_->setStereoscopicOptions(viewSettings.stereoscopicOptions);
+        view_->setPostProcessingEnabled(viewSettings.postProcessingEnabled);
+
+        isViewSettingsDirty = false;
+    }
 }

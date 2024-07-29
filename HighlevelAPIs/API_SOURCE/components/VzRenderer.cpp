@@ -52,7 +52,174 @@ namespace vzm
         view->setVisibleLayers(layerBits, maskBits);
         UpdateTimeStamp();
     }
-
+    void VzRenderer::SetPostProcessingEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.postProcessingEnabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsPostProcessingEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.postProcessingEnabled;
+    }
+    void VzRenderer::SetDitheringEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.dithering = enabled ? Dithering::TEMPORAL : Dithering::NONE;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsDitheringEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.dithering == Dithering::TEMPORAL;
+    }
+    void VzRenderer::SetBloomEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.bloom.enabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsBloomEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.bloom.enabled;
+    }
+    void VzRenderer::SetBloomStrength(float strength)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.bloom.strength = strength;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetBloomStrength()
+    {
+        COMP_RENDERPATH(render_path, 0);
+        return render_path->viewSettings.bloom.strength;
+    }
+    void VzRenderer::SetBloomThreshold(bool threshold)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.bloom.threshold = threshold;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsBloomThreshold()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.bloom.threshold;
+    }
+    void VzRenderer::SetBloomLevels(int levels)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.bloom.levels = levels;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    int VzRenderer::GetBloomLevels()
+    {
+        COMP_RENDERPATH(render_path, 0);
+        return render_path->viewSettings.bloom.levels;
+    }
+    void VzRenderer::SetBloomQuality(int quality)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.bloom.quality = (QualityLevel) quality;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    int VzRenderer::GetBloomQuality()
+    {
+        COMP_RENDERPATH(render_path, 0);
+        return (int) render_path->viewSettings.bloom.quality;
+    }
+    void VzRenderer::SetBloomLensFlare(bool lensFlare)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.bloom.lensFlare = lensFlare;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsBloomLensFlare()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.bloom.lensFlare;
+    }
+    void VzRenderer::SetTaaEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.taa.enabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsTaaEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.taa.enabled;
+    }
+    void VzRenderer::SetFxaaEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.antiAliasing = enabled ? AntiAliasing::FXAA : AntiAliasing::NONE;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsFxaaEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.antiAliasing == AntiAliasing::FXAA;
+    }
+    void VzRenderer::SetMsaaEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.msaa.enabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsMsaaEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.msaa.enabled;
+    }
+    void VzRenderer::SetSsaoEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.ssao.enabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsSsaoEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.ssao.enabled;
+    }
+    void VzRenderer::SetScreenSpaceReflectionEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.screenSpaceReflections.enabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsScreenSpaceReflectionEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.screenSpaceReflections.enabled;
+    }
+    void VzRenderer::SetGuardBandEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.guardBand.enabled = enabled;
+        render_path->isViewSettingsDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsGuardBandEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.guardBand.enabled;
+    }
     VZRESULT VzRenderer::Render(const VID vidScene, const VID vidCam)
     {
         VzRenderPath* render_path = gEngineApp.GetRenderPath(GetVID());
@@ -172,6 +339,8 @@ namespace vzm
         //        }
         //    }
         //}
+
+        render_path->applyViewSettings();
 
         filament::SwapChain* sc = render_path->GetSwapChain();
         if (renderer->beginFrame(sc)) {
