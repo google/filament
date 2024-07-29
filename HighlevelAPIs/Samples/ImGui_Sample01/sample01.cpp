@@ -1,25 +1,3 @@
-// Dear ImGui: standalone example application for Glfw + Vulkan
-
-// Learn about Dear ImGui:
-// - FAQ                  https://dearimgui.com/faq
-// - Getting Started      https://dearimgui.com/getting-started
-// - Documentation        https://dearimgui.com/docs (same as your local docs/
-// folder).
-// - Introduction, links and more at the top of imgui.cpp
-
-// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h
-// in their own engine/app.
-// - Common ImGui_ImplVulkan_XXX functions and structures are used to interface
-// with imgui_impl_vulkan.cpp/.h.
-//   You will use those if you want to use this rendering backend in your
-//   engine/app.
-// - Helper ImGui_ImplVulkanH_XXX functions and structures are only used by this
-// example (main.cpp) and by
-//   the backend itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used
-//   by your own engine/app code.
-// Read comments in imgui_impl_vulkan.h.
-
-// Filament highlevel APIs
 #include <stdio.h>   // printf, fprintf
 #include <stdlib.h>  // abort
 
@@ -998,7 +976,7 @@ int main(int, char**) {
 
       if (ImGui::CollapsingHeader("Hierarchy")) {
         ImGui::Indent();
-        //ImGui::Checkbox("Show bounds", &bAny);
+        // ImGui::Checkbox("Show bounds", &bAny);
         treeNode(root_vids[0]);
         ImGui::Unindent();
       }
@@ -1157,14 +1135,18 @@ int main(int, char**) {
 
       const ImVec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
       {
-        ImGui::SameLine();
-        if (ImGui::Button("Node", ImVec2(right_editUIWidth/2 - 10, 25))) {
+        ImGui::BeginTabBar("tab");
+
+        if (ImGui::BeginTabItem("Node")) {
           tabIdx = 0;
+          ImGui::EndTabItem();
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Settings", ImVec2(right_editUIWidth/2 - 10, 25))) {
+        if (ImGui::BeginTabItem("Settings")) {
           tabIdx = 1;
+          ImGui::EndTabItem();
         }
+
+        ImGui::EndTabBar();
       }
       switch (tabIdx) {
         case 0: {
@@ -1174,13 +1156,11 @@ int main(int, char**) {
           vzm::VzSceneComp* component =
               (vzm::VzSceneComp*)vzm::GetVzComponent(currentVID);
           vzm::SCENE_COMPONENT_TYPE type = component->GetSceneCompType();
+          ImGui::Text(component->GetName().c_str());
           if (ImGui::CollapsingHeader(
                   "Transform",
                   ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::Text(component->GetName().c_str());
-            ImGui::NewLine();
-
             float position[3];
             float quat[4];
             float scale[3];
@@ -1264,9 +1244,12 @@ int main(int, char**) {
             }
             ImGui::Unindent();
           }
-          if (type == vzm::SCENE_COMPONENT_TYPE::LIGHT) {
-            if (ImGui::CollapsingHeader("Light")) {
-              ImGui::Indent();
+          if (ImGui::CollapsingHeader(
+                  "Light",
+                  ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
+
+            if (type == vzm::SCENE_COMPONENT_TYPE::LIGHT) {
               vzm::VzLight* lightComponent = (vzm::VzLight*)component;
               float intensity = lightComponent->GetIntensity();
               float color[3];
@@ -1290,10 +1273,10 @@ int main(int, char**) {
               if (ImGui::InputFloat("Outer Cone", &outerCone)) {
                 lightComponent->SetCone(innerCone, outerCone);
               }
-
-              ImGui::Unindent();
             }
+            ImGui::Unindent();
           }
+
           break;
         }
         case 1:
@@ -1389,44 +1372,87 @@ int main(int, char**) {
           }
 
           if (ImGui::CollapsingHeader("View")) {
-            ImGui::Indent();
+            bool bPostProcessEnabled = g_renderer->IsPostProcessingEnabled();
+            bool bDitheringEnabled = g_renderer->IsDitheringEnabled();
+            bool bBloomEnabled = g_renderer->IsBloomEnabled();
+            bool bTaaEnabled = g_renderer->IsTaaEnabled();
+            bool bFxaaEnabled = g_renderer->IsFxaaEnabled();
+            bool bMsaaEnabled = g_renderer->IsMsaaEnabled();
+            bool bSsaoEnabled = g_renderer->IsSsaoEnabled();
+            bool bScreenSpaceReflectionEnabled =
+                g_renderer->IsScreenSpaceReflectionEnabled();
+            bool bGuardBandEnabled = g_renderer->IsGuardBandEnabled();
 
-            ImGui::Checkbox("Post-processing", &bAny);
             ImGui::Indent();
-            ImGui::Checkbox("Dithering", &bAny);
-            ImGui::Checkbox("Bloom", &bAny);
-            ImGui::Checkbox("TAA", &bAny);
-            // this clutters the UI and isn't that useful (except when working
-            // on TAA) ImGui::Indent(); ImGui::SliderFloat("feedback",
-            // &mSettings.view.taa.feedback, 0.0f, 1.0f);
-            // ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth,
-            // 0.0f, 2.0f); ImGui::Unindent();
+            
+            if (ImGui::Checkbox("Post-processing", &bPostProcessEnabled)) {
+              g_renderer->SetPostProcessingEnabled(bPostProcessEnabled);
+            }
+            ImGui::Indent();
+            if (ImGui::Checkbox("Dithering", &bDitheringEnabled)) {
+              g_renderer->SetDitheringEnabled(bDitheringEnabled);
+            }
+            if (ImGui::Checkbox("Bloom", &bBloomEnabled)) {
+              g_renderer->SetBloomEnabled(bBloomEnabled);
+            }
+            if (ImGui::Checkbox("TAA", &bTaaEnabled)) {
+              g_renderer->SetTaaEnabled(bTaaEnabled);
+            }
 
-            ImGui::Checkbox("FXAA", &bAny);
+            if (ImGui::Checkbox("FXAA", &bFxaaEnabled)) {
+              g_renderer->SetFxaaEnabled(bFxaaEnabled);
+            }
             ImGui::Unindent();
 
-            ImGui::Checkbox("MSAA 4x", &bAny);
-            ImGui::Indent();
-            ImGui::Checkbox("Custom resolve", &bAny);
+            if (ImGui::Checkbox("MSAA 4x", &bMsaaEnabled)) {
+              g_renderer->SetMsaaEnabled(bMsaaEnabled);
+            }
+            //ImGui::Indent();
+            //ImGui::Checkbox("Custom resolve", &bAny);
+            //ImGui::Unindent();
+
+            if (ImGui::Checkbox("SSAO", &bSsaoEnabled)) {
+              g_renderer->SetSsaoEnabled(bSsaoEnabled);
+            }
+
+            if(ImGui::Checkbox("Screen-space reflections",
+                                &bScreenSpaceReflectionEnabled)) {
+              g_renderer->SetScreenSpaceReflectionEnabled(
+                  bScreenSpaceReflectionEnabled);
+            }
             ImGui::Unindent();
 
-            ImGui::Checkbox("SSAO", &bAny);
-
-            ImGui::Checkbox("Screen-space reflections", &bAny);
-            ImGui::Unindent();
-
-            ImGui::Checkbox("Screen-space Guard Band", &bAny);
+            if (ImGui::Checkbox("Screen-space Guard Band",
+                                &bGuardBandEnabled)) {
+              g_renderer->SetGuardBandEnabled(bGuardBandEnabled);
+            }
           }
 
           if (ImGui::CollapsingHeader("Bloom Options")) {
-            ImGui::SliderFloat("Strength", &any, 0.0f, 1.0f);
-            ImGui::Checkbox("Threshold", &bAny);
+            float bloomStrength = g_renderer->GetBloomStrength();
+            bool isBloomThreshold = g_renderer->IsBloomThreshold();
+            int bloomLevels = g_renderer->GetBloomLevels();
+            int bloomQuality = g_renderer->GetBloomQuality();
+            bool isBloomLensFlare = g_renderer->IsBloomLensFlare();
 
-            ImGui::SliderInt("Levels", &iAny, 3, 11);
-            ImGui::SliderInt("Bloom Quality", &iAny, 0, 3);
-            ImGui::Checkbox("Lens Flare", &bAny);
+            if (ImGui::SliderFloat("Strength", &bloomStrength, 0.0f, 1.0f)) {
+              g_renderer->SetBloomStrength(bloomStrength);
+            }
+            if (ImGui::Checkbox("Threshold", &isBloomThreshold)) {
+              g_renderer->SetBloomThreshold(isBloomThreshold);
+            }
+            if (ImGui::SliderInt("Levels", &bloomLevels, 3, 11)) {
+              g_renderer->SetBloomLevels(bloomLevels);
+            }
+            if (ImGui::SliderInt("Bloom Quality", &bloomQuality, 0, 3)) {
+              g_renderer->SetBloomQuality(bloomQuality);
+            }
+            if (ImGui::Checkbox("Lens Flare", &isBloomLensFlare)) {
+              g_renderer->SetBloomLensFlare(isBloomLensFlare);
+            }
           }
-
+          
+          ///////////////////////////////////
           if (ImGui::CollapsingHeader("TAA Options")) {
             ImGui::Checkbox("Upscaling", &bAny);
             ImGui::Checkbox("History Reprojection", &bAny);
@@ -1583,14 +1609,30 @@ int main(int, char**) {
 
           if (ImGui::CollapsingHeader("Camera")) {
             ImGui::Indent();
+            float zNearP, zFarP, fovInDegree, aspectRatio;
+            g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree,
+                                            &aspectRatio);
+            if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
+            if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
+            if (ImGui::InputFloat("Fov", &fovInDegree)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
+            if (ImGui::InputFloat("AspectRatio", &aspectRatio)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
 
             ImGui::SliderFloat("Focal length (mm)", &any, 16.0f, 90.0f);
             ImGui::SliderFloat("Aperture", &any, 1.0f, 32.0f);
             ImGui::SliderFloat("Speed (1/s)", &any, 1000.0f, 1.0f);
             ImGui::SliderFloat("ISO", &any, 25.0f, 6400.0f);
-            ImGui::SliderFloat("Near", &any, 0.001f, 1.0f);
-            ImGui::SliderFloat("Far", &any, 1.0f, 10000.0f);
-
             if (ImGui::CollapsingHeader("DoF")) {
               ImGui::Checkbox("Enabled##dofEnabled", &bAny);
               ImGui::SliderFloat("Focus distance", &any, 0.0f, 30.0f);
