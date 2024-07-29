@@ -5,6 +5,9 @@ namespace vzm
 {
     __dojostruct VzScene : VzBaseComp
     {
+    private:
+        float iblRotation_ = 0.0f;
+    public:
         VzScene(const VID vid, const std::string& originFrom, const std::string& typeName)
             : VzBaseComp(vid, originFrom, typeName) {}
         
