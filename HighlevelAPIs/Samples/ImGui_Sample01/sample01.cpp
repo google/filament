@@ -1303,23 +1303,21 @@ int main(int, char**) {
           if (ImGui::CollapsingHeader("Automation", 0)) {
             ImGui::Indent();
 
-            if (true) {
-              ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
-            } else {
-              ImGui::TextColored(yellow, "%zu test cases", 0);
-            }
-
-            ImGui::PushItemWidth(150);
-            ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
-            ImGui::PopItemWidth();
-
-            ImGui::Checkbox("Export screenshot for each test", &bAny);
-            ImGui::Checkbox("Export settings JSON for each test", &bAny);
-            if (false) {
-              if (ImGui::Button("Stop batch test")) {
-              }
-            } else if (ImGui::Button("Run batch test")) {
-            }
+            // if (true) {
+            //   ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
+            // } else {
+            //   ImGui::TextColored(yellow, "%zu test cases", 0);
+            // }
+            // ImGui::PushItemWidth(150);
+            // ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
+            // ImGui::PopItemWidth();
+            // ImGui::Checkbox("Export screenshot for each test", &bAny);
+            // ImGui::Checkbox("Export settings JSON for each test", &bAny);
+            // if (false) {
+            //   if (ImGui::Button("Stop batch test")) {
+            //   }
+            // } else if (ImGui::Button("Run batch test")) {
+            // }
 
             if (ImGui::Button("Export view settings")) {
               ImGui::OpenPopup("MessageBox");
