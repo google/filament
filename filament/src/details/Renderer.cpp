@@ -525,7 +525,15 @@ void FRenderer::renderStandaloneView(FView const* view) {
                         1'000'000'000.0 / mDisplayInfo.refreshRate),
                 mFrameId);
 
+        // This need to occur after the backend beginFrame() because some backends need to start
+        // a command buffer before creating a fence.
+        mFrameInfoManager.beginFrame(driver, {
+                .historySize = mFrameRateOptions.history
+        }, mFrameId);
+
         renderInternal(view);
+
+        mFrameInfoManager.endFrame(driver);
 
         driver.endFrame(mFrameId);
     }
