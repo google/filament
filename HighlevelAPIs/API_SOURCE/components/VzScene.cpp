@@ -42,6 +42,19 @@ namespace vzm
         UpdateTimeStamp();
         return true;
     }
+    float VzScene::GetIBLIntensity()
+    {
+        VzSceneRes* scene_res = gEngineApp.GetSceneRes(GetVID());
+        IBL* ibl = scene_res->GetIBL();
+        return ibl->getIndirectLight()->getIntensity();
+    }
+    float VzScene::GetIBLRotation()
+    {
+        VzSceneRes* scene_res = gEngineApp.GetSceneRes(GetVID());
+        IBL* ibl = scene_res->GetIBL();
+        math::mat3f rot = ibl->getIndirectLight()->getRotation();
+        return atan2(rot[0][2], rot[0][0]);
+    }
     void VzScene::SetIBLIntensity(float intensity)
     {
         VzSceneRes* scene_res = gEngineApp.GetSceneRes(GetVID());

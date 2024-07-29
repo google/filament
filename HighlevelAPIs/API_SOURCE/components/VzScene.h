@@ -10,6 +10,8 @@ namespace vzm
         
         std::vector<VID> GetSceneCompChildren();
         bool LoadIBL(const std::string& iblPath);
+        float GetIBLIntensity();
+        float GetIBLRotation();
         void SetIBLIntensity(float intensity);
         void SetIBLRotation(float rotation);
         void SetSkyboxVisibleLayerMask(const uint8_t layerBits = 0x7, const uint8_t maskBits = 0x4);
