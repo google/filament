@@ -9,6 +9,9 @@ namespace vzm
             : VzBaseComp(vid, originFrom, typeName) {}
         std::vector<VID> GetGLTFRoots();
         std::vector<VID> GetSkeletons();
+        size_t GetVariantsCount();
+        std::string GetVariantName(int variantIndex);
+        void ApplyMaterialvariant(int variantIndex);
 
         // Animator //
         __dojostruct Animator{
