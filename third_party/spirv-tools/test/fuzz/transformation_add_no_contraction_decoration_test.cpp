@@ -36,7 +36,6 @@ TEST(TransformationAddNoContractionDecorationTest, BasicScenarios) {
                OpName %8 "x"
                OpName %10 "y"
                OpName %14 "i"
-               OpDecorate %32 NoContraction
           %2 = OpTypeVoid
           %3 = OpTypeFunction %2
           %6 = OpTypeFloat 32
@@ -110,9 +109,8 @@ TEST(TransformationAddNoContractionDecorationTest, BasicScenarios) {
   ASSERT_FALSE(TransformationAddNoContractionDecoration(24).IsApplicable(
       context.get(), transformation_context));
 
-  // It is valid to add NoContraction to each of these ids (and it's fine to
-  // have duplicates of the decoration, in the case of 32).
-  for (uint32_t result_id : {32u, 32u, 27u, 29u, 39u}) {
+  // It is valid to add NoContraction to each of these ids.
+  for (uint32_t result_id : {32u, 27u, 29u, 39u}) {
     TransformationAddNoContractionDecoration transformation(result_id);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
@@ -133,8 +131,6 @@ TEST(TransformationAddNoContractionDecorationTest, BasicScenarios) {
                OpName %8 "x"
                OpName %10 "y"
                OpName %14 "i"
-               OpDecorate %32 NoContraction
-               OpDecorate %32 NoContraction
                OpDecorate %32 NoContraction
                OpDecorate %27 NoContraction
                OpDecorate %29 NoContraction

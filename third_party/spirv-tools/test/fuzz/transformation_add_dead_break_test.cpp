@@ -2743,6 +2743,9 @@ TEST(TransformationAddDeadBreakTest, RespectDominanceRules7) {
                OpBranch %100
         %100 = OpLabel
                OpLoopMerge %101 %104 None
+               OpBranch %105
+        %105 = OpLabel
+               OpSelectionMerge %106 None
                OpBranchConditional %11 %102 %103
         %103 = OpLabel
         %200 = OpCopyObject %10 %11
@@ -2752,6 +2755,8 @@ TEST(TransformationAddDeadBreakTest, RespectDominanceRules7) {
                OpReturn
         %102 = OpLabel
                OpBranch %103
+        %106 = OpLabel
+               OpUnreachable
         %104 = OpLabel
                OpBranch %100
                OpFunctionEnd
@@ -2791,12 +2796,17 @@ TEST(TransformationAddDeadBreakTest, RespectDominanceRules8) {
                OpBranch %100
         %100 = OpLabel
                OpLoopMerge %101 %104 None
+               OpBranch %105
+        %105 = OpLabel
+               OpSelectionMerge %106 None
                OpBranchConditional %11 %102 %103
         %103 = OpLabel
         %200 = OpCopyObject %10 %11
                OpBranch %101
         %102 = OpLabel
                OpBranch %103
+        %106 = OpLabel
+               OpUnreachable
         %101 = OpLabel
         %201 = OpCopyObject %10 %200
                OpReturn

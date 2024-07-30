@@ -14,13 +14,9 @@
 
 #include "source/val/validate.h"
 
-#include <algorithm>
-#include <cassert>
-#include <cstdio>
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -28,15 +24,11 @@
 #include "source/diagnostic.h"
 #include "source/enum_string_mapping.h"
 #include "source/extensions.h"
-#include "source/instruction.h"
 #include "source/opcode.h"
-#include "source/operand.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_endian.h"
 #include "source/spirv_target_env.h"
-#include "source/spirv_validator_options.h"
 #include "source/val/construct.h"
-#include "source/val/function.h"
 #include "source/val/instruction.h"
 #include "source/val/validation_state.h"
 #include "spirv-tools/libspirv.h"
@@ -147,6 +139,13 @@ spv_result_t ValidateEntryPoints(ValidationState_t& _) {
                << "Entry points may not have a call graph with cycles.";
       }
     }
+  }
+
+  if (auto error = ValidateFloatControls2(_)) {
+    return error;
+  }
+  if (auto error = ValidateDuplicateExecutionModes(_)) {
+    return error;
   }
 
   return SPV_SUCCESS;
@@ -389,6 +388,8 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
   for (const auto& inst : vstate->ordered_instructions()) {
     if (auto error = ValidateExecutionLimitations(*vstate, &inst)) return error;
     if (auto error = ValidateSmallTypeUses(*vstate, &inst)) return error;
+    if (auto error = ValidateQCOMImageProcessingTextureUsages(*vstate, &inst))
+      return error;
   }
 
   return SPV_SUCCESS;

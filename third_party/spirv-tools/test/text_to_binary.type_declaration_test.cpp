@@ -59,6 +59,7 @@ INSTANTIATE_TEST_SUITE_P(
         CASE(Rect),
         CASE(Buffer),
         CASE(SubpassData),
+        CASE(TileImageDataEXT),
     }));
 #undef CASE
 // clang-format on
@@ -221,6 +222,7 @@ TEST_F(OpTypeForwardPointerTest, ValidStorageClass) {
   CASE(AtomicCounter);
   CASE(Image);
   CASE(StorageBuffer);
+  CASE(TileImageEXT);
 }
 
 #undef CASE

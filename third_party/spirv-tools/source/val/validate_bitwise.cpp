@@ -14,7 +14,6 @@
 
 // Validates correctness of bitwise instructions.
 
-#include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
@@ -206,12 +205,13 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode);
 
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
-      const uint32_t base_dimension = _.GetDimension(base_type);
-      const uint32_t result_dimension = _.GetDimension(result_type);
 
       if (spv_result_t error = ValidateBaseType(_, inst, base_type)) {
         return error;
       }
+
+      const uint32_t base_dimension = _.GetDimension(base_type);
+      const uint32_t result_dimension = _.GetDimension(result_type);
 
       if (base_dimension != result_dimension)
         return _.diag(SPV_ERROR_INVALID_DATA, inst)

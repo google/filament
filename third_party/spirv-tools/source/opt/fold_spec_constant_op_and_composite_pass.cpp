@@ -15,12 +15,9 @@
 #include "source/opt/fold_spec_constant_op_and_composite_pass.h"
 
 #include <algorithm>
-#include <initializer_list>
 #include <tuple>
 
 #include "source/opt/constants.h"
-#include "source/opt/fold.h"
-#include "source/opt/ir_context.h"
 #include "source/util/make_unique.h"
 
 namespace spvtools {
@@ -118,20 +115,9 @@ bool FoldSpecConstantOpAndCompositePass::ProcessOpSpecConstantOp(
          "The first in-operand of OpSpecConstantOp instruction must be of "
          "SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER type");
 
-  switch (static_cast<spv::Op>(inst->GetSingleWordInOperand(0))) {
-    case spv::Op::OpCompositeExtract:
-    case spv::Op::OpVectorShuffle:
-    case spv::Op::OpCompositeInsert:
-    case spv::Op::OpQuantizeToF16:
-      folded_inst = FoldWithInstructionFolder(pos);
-      break;
-    default:
-      // TODO: This should use the instruction folder as well, but some folding
-      // rules are missing.
-
-      // Component-wise operations.
-      folded_inst = DoComponentWiseOperation(pos);
-      break;
+  folded_inst = FoldWithInstructionFolder(pos);
+  if (!folded_inst) {
+    folded_inst = DoComponentWiseOperation(pos);
   }
   if (!folded_inst) return false;
 
@@ -179,8 +165,9 @@ Instruction* FoldSpecConstantOpAndCompositePass::FoldWithInstructionFolder(
   Instruction* new_const_inst =
       context()->get_instruction_folder().FoldInstructionToConstant(
           inst.get(), identity_map);
-  assert(new_const_inst != nullptr &&
-         "Failed to fold instruction that must be folded.");
+
+  // new_const_inst == null indicates we cannot fold this spec constant
+  if (!new_const_inst) return nullptr;
 
   // Get the instruction before |pos| to insert after.  |pos| cannot be the
   // first instruction in the list because its type has to come first.

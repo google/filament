@@ -12,26 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if (${SPIRV_SKIP_TESTS})
+  return()
+endif()
+
+if (TARGET gmock_main)
+  message(STATUS "Found Google Mock, building tests.")
+else()
+  message(STATUS "Did not find googletest, tests will not be built. "
+    "To enable tests place googletest in '<spirv-dir>/external/googletest'.")
+endif()
+
 # Add a SPIR-V Tools unit test. Signature:
 #   add_spvtools_unittest(
 #     TARGET target_name
 #     SRCS   src_file.h src_file.cpp
 #     LIBS   lib1 lib2
 #   )
-
-if (NOT "${SPIRV_SKIP_TESTS}")
-  if (TARGET gmock_main)
-    message(STATUS "Found Google Mock, building tests.")
-  else()
-    message(STATUS "Did not find googletest, tests will not be built. "
-      "To enable tests place googletest in '<spirv-dir>/external/googletest'.")
-  endif()
-endif()
-
 function(add_spvtools_unittest)
   if (NOT "${SPIRV_SKIP_TESTS}" AND TARGET gmock_main)
     set(one_value_args TARGET PCH_FILE)
-    set(multi_value_args SRCS LIBS ENVIRONMENT)
+    set(multi_value_args SRCS LIBS ENVIRONMENT DEFINES)
     cmake_parse_arguments(
       ARG "" "${one_value_args}" "${multi_value_args}" ${ARGN})
     set(target test_${ARG_TARGET})
@@ -40,6 +41,7 @@ function(add_spvtools_unittest)
       spvtools_pch(SRC_COPY ${ARG_PCH_FILE})
     endif()
     add_executable(${target} ${SRC_COPY})
+    target_compile_definitions(${target} PUBLIC ${ARG_DEFINES})
     spvtools_default_compile_options(${target})
     if(${COMPILER_IS_LIKE_GNU})
       target_compile_options(${target} PRIVATE -Wno-undef)
@@ -110,7 +112,6 @@ set(TEST_SOURCES
   hex_float_test.cpp
   immediate_int_test.cpp
   libspirv_macros_test.cpp
-  log_test.cpp
   named_id_test.cpp
   name_mapper_test.cpp
   opcode_make_test.cpp

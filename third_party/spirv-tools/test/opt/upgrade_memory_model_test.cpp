@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "assembly_builder.h"
-#include "gmock/gmock.h"
 #include "pass_fixture.h"
 #include "pass_utils.h"
 

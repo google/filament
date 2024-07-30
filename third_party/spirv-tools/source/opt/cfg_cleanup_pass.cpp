@@ -16,13 +16,9 @@
 // constructs (e.g., unreachable basic blocks, empty control flow structures,
 // etc)
 
-#include <queue>
-#include <unordered_set>
-
 #include "source/opt/cfg_cleanup_pass.h"
 
 #include "source/opt/function.h"
-#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
