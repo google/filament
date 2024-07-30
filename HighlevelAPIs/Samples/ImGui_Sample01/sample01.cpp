@@ -16,19 +16,12 @@
 #include "glm/gtx/transform.hpp"
 #include "glm/gtx/vector_angle.hpp"
 
-// Volk headers
-#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
-#define VOLK_IMPLEMENTATION
-#include <Volk/volk.h>
-#endif
 #include <vulkan/vulkan_win32.h>
-
-#include <iostream>
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
+#include <iostream>
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to
 // maximize ease of testing and compatibility with old VS compilers. To link
 // with VS2010-era libraries, VS2015+ requires linking with
@@ -656,12 +649,26 @@ vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzCamera* g_cam;
 std::string file_name = "";
-const float left_editUIWidth = 400.0f;
-const float right_editUIWidth = 400.0f;
-float workspace_width = 0.0f;
-float workspace_height = 0.0f;
+const int left_editUIWidth = 400;
+const int right_editUIWidth = 400;
+// workspace 공간의 크기
+int workspace_width = 0;
+int workspace_height = 0;
+// 스왑버퍼(렌더타겟) 크기
+int render_width = 1920;
+int render_height = 1080;
 
 VID currentVID = -1;
+
+void resize(int width, int height) {
+  g_cc->SetViewport(width, height);
+
+  g_renderer->SetCanvas(width, height, 96.f, nullptr);
+  float zNearP, zFarP, fovInDegree;
+  g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
+  g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                  (float)width / (float)height);
+}
 
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
@@ -735,14 +742,7 @@ void onFrameBufferResize(GLFWwindow* window, int width, int height) {
     workspace_width = width - left_editUIWidth - right_editUIWidth;
     workspace_height = height;
 
-    g_cc->SetViewport(workspace_width, workspace_height);
-
-    g_renderer->SetCanvas(workspace_width, workspace_height, 96.f, nullptr);
-    float zNearP, zFarP, fovInDegree;
-    g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
-    g_cam->SetPerspectiveProjection(
-        zNearP, zFarP, fovInDegree,
-        (float)workspace_width / (float)workspace_height);
+    resize(render_width, render_height);
   }
 }
 void setDrop(GLFWwindow* window, int count, const char** pathNames) {
@@ -835,9 +835,11 @@ int main(int, char**) {
   asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
   asset->GetAnimator()->ActivateAnimation(0);
 
+  workspace_width = w - left_editUIWidth - right_editUIWidth;
+  workspace_height = h;
+  
   g_renderer = vzm::NewRenderer("my renderer");
-  g_renderer->SetCanvas(w - left_editUIWidth - right_editUIWidth, h, dpi,
-                        nullptr);
+  g_renderer->SetCanvas(render_width, render_height, dpi, nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
 
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
@@ -846,13 +848,12 @@ int main(int, char**) {
   glm::fvec3 at(0, 0, -4);
   glm::fvec3 u(0, 1, 0);
   g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-  g_cam->SetPerspectiveProjection(
-      0.1f, 1000.f, 45.f,
-      (float)(w - left_editUIWidth - right_editUIWidth) / (float)h);
+  g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f,
+                                  (float)render_width / render_height);
   g_cc = g_cam->GetController();
   *(glm::fvec3*)g_cc->orbitHomePosition = p;
   g_cc->UpdateControllerSettings();
-  g_cc->SetViewport(w - left_editUIWidth - right_editUIWidth, h);
+  g_cc->SetViewport(render_width, render_height);
 
   vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
@@ -1041,6 +1042,30 @@ int main(int, char**) {
         // ImGui::Checkbox("Show rest pose", &bAny);
         ImGui::Unindent();
       }
+      if (ImGui::CollapsingHeader("Resolution")) {
+        ImGui::Indent();
+        int width = render_width;
+        int height = render_height;
+        if (ImGui::InputInt("width", &width, 1, 100,
+                            ImGuiInputTextFlags_EnterReturnsTrue)) {
+          if (width > 0 && width < 10000) {
+            render_width = width;
+            resize(render_width, render_height);
+          } else {
+            width = render_width;
+          }
+        }
+        if (ImGui::InputInt("height", &height, 1, 100,
+                            ImGuiInputTextFlags_EnterReturnsTrue)) {
+          if (height > 0 && height < 10000) {
+            render_height = height;
+            resize(render_width, render_height);
+          } else {
+            height = render_height;
+          }
+        }
+        ImGui::Unindent();
+      }
       // left_editUIWidth = ImGui::GetWindowWidth();
       ImGui::End();
     }
@@ -1063,8 +1088,7 @@ int main(int, char**) {
 
           auto [importedImage, importedMemory] = importImageFromHandle(
               g_Device, g_PhysicalDevice,
-              {(uint32_t)(width - left_editUIWidth - right_editUIWidth),
-               (uint32_t)height},
+              {(uint32_t)render_width, (uint32_t)render_height},
               VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
           VkImageView importedImageView = createImageView(
               g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
@@ -1089,8 +1113,8 @@ int main(int, char**) {
 
         ImGui::SetNextWindowPos(ImVec2(left_editUIWidth, 0));
 
-        const float window_width = ImGui::GetIO().DisplaySize.x;
-        const float window_height = ImGui::GetIO().DisplaySize.y;
+        const int window_width = (int)ImGui::GetIO().DisplaySize.x;
+        const int window_height = (int)ImGui::GetIO().DisplaySize.y;
         workspace_width = window_width - left_editUIWidth - right_editUIWidth;
         workspace_height = window_height;
 
@@ -1102,9 +1126,18 @@ int main(int, char**) {
         ImGui::Begin("swapchain", nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
 
-        // ImVec2 avail_size = ImGui::GetContentRegionAvail();
+        float image_width = 0.0f;
+        float image_height = 0.0f;
+        if ((float)render_width / render_height >
+            (float)workspace_width / workspace_height) {
+          image_width = (float)workspace_width;
+          image_height = (float)image_width * render_height / render_width;
+        } else {
+          image_height = (float)workspace_height;
+          image_width = (float)image_height * render_width / render_height;
+        }
         ImGui::Image((ImTextureID)swapTextures[index],
-                     ImVec2(workspace_width, workspace_height));
+                     ImVec2(image_width, image_height));
         ImGui::End();
         // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
         //                                          ImVec2(0, 0),
@@ -1384,7 +1417,7 @@ int main(int, char**) {
             bool bGuardBandEnabled = g_renderer->IsGuardBandEnabled();
 
             ImGui::Indent();
-            
+
             if (ImGui::Checkbox("Post-processing", &bPostProcessEnabled)) {
               g_renderer->SetPostProcessingEnabled(bPostProcessEnabled);
             }
@@ -1407,15 +1440,15 @@ int main(int, char**) {
             if (ImGui::Checkbox("MSAA 4x", &bMsaaEnabled)) {
               g_renderer->SetMsaaEnabled(bMsaaEnabled);
             }
-            //ImGui::Indent();
-            //ImGui::Checkbox("Custom resolve", &bAny);
-            //ImGui::Unindent();
+            // ImGui::Indent();
+            // ImGui::Checkbox("Custom resolve", &bAny);
+            // ImGui::Unindent();
 
             if (ImGui::Checkbox("SSAO", &bSsaoEnabled)) {
               g_renderer->SetSsaoEnabled(bSsaoEnabled);
             }
 
-            if(ImGui::Checkbox("Screen-space reflections",
+            if (ImGui::Checkbox("Screen-space reflections",
                                 &bScreenSpaceReflectionEnabled)) {
               g_renderer->SetScreenSpaceReflectionEnabled(
                   bScreenSpaceReflectionEnabled);
@@ -1451,7 +1484,7 @@ int main(int, char**) {
               g_renderer->SetBloomLensFlare(isBloomLensFlare);
             }
           }
-          
+
           ///////////////////////////////////
           if (ImGui::CollapsingHeader("TAA Options")) {
             ImGui::Checkbox("Upscaling", &bAny);
