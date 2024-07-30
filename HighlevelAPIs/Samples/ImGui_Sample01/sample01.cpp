@@ -1,25 +1,3 @@
-// Dear ImGui: standalone example application for Glfw + Vulkan
-
-// Learn about Dear ImGui:
-// - FAQ                  https://dearimgui.com/faq
-// - Getting Started      https://dearimgui.com/getting-started
-// - Documentation        https://dearimgui.com/docs (same as your local docs/
-// folder).
-// - Introduction, links and more at the top of imgui.cpp
-
-// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h
-// in their own engine/app.
-// - Common ImGui_ImplVulkan_XXX functions and structures are used to interface
-// with imgui_impl_vulkan.cpp/.h.
-//   You will use those if you want to use this rendering backend in your
-//   engine/app.
-// - Helper ImGui_ImplVulkanH_XXX functions and structures are only used by this
-// example (main.cpp) and by
-//   the backend itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used
-//   by your own engine/app code.
-// Read comments in imgui_impl_vulkan.h.
-
-// Filament highlevel APIs
 #include <stdio.h>   // printf, fprintf
 #include <stdlib.h>  // abort
 
@@ -38,19 +16,12 @@
 #include "glm/gtx/transform.hpp"
 #include "glm/gtx/vector_angle.hpp"
 
-// Volk headers
-#ifdef IMGUI_IMPL_VULKAN_USE_VOLK
-#define VOLK_IMPLEMENTATION
-#include <Volk/volk.h>
-#endif
 #include <vulkan/vulkan_win32.h>
-
-#include <iostream>
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
+#include <iostream>
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to
 // maximize ease of testing and compatibility with old VS compilers. To link
 // with VS2010-era libraries, VS2015+ requires linking with
@@ -678,12 +649,26 @@ vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzCamera* g_cam;
 std::string file_name = "";
-const float left_editUIWidth = 400.0f;
-const float right_editUIWidth = 400.0f;
-float workspace_width = 0.0f;
-float workspace_height = 0.0f;
+const int left_editUIWidth = 400;
+const int right_editUIWidth = 400;
+// workspace 공간의 크기
+int workspace_width = 0;
+int workspace_height = 0;
+// 스왑버퍼(렌더타겟) 크기
+int render_width = 1920;
+int render_height = 1080;
 
 VID currentVID = -1;
+
+void resize(int width, int height) {
+  g_cc->SetViewport(width, height);
+
+  g_renderer->SetCanvas(width, height, 96.f, nullptr);
+  float zNearP, zFarP, fovInDegree;
+  g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
+  g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                  (float)width / (float)height);
+}
 
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
@@ -757,14 +742,7 @@ void onFrameBufferResize(GLFWwindow* window, int width, int height) {
     workspace_width = width - left_editUIWidth - right_editUIWidth;
     workspace_height = height;
 
-    g_cc->SetViewport(workspace_width, workspace_height);
-
-    g_renderer->SetCanvas(workspace_width, workspace_height, 96.f, nullptr);
-    float zNearP, zFarP, fovInDegree;
-    g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree, nullptr);
-    g_cam->SetPerspectiveProjection(
-        zNearP, zFarP, fovInDegree,
-        (float)workspace_width / (float)workspace_height);
+    resize(render_width, render_height);
   }
 }
 void setDrop(GLFWwindow* window, int count, const char** pathNames) {
@@ -857,9 +835,11 @@ int main(int, char**) {
   asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
   asset->GetAnimator()->ActivateAnimation(0);
 
+  workspace_width = w - left_editUIWidth - right_editUIWidth;
+  workspace_height = h;
+  
   g_renderer = vzm::NewRenderer("my renderer");
-  g_renderer->SetCanvas(w - left_editUIWidth - right_editUIWidth, h, dpi,
-                        nullptr);
+  g_renderer->SetCanvas(render_width, render_height, dpi, nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
 
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
@@ -868,13 +848,12 @@ int main(int, char**) {
   glm::fvec3 at(0, 0, -4);
   glm::fvec3 u(0, 1, 0);
   g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-  g_cam->SetPerspectiveProjection(
-      0.1f, 1000.f, 45.f,
-      (float)(w - left_editUIWidth - right_editUIWidth) / (float)h);
+  g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f,
+                                  (float)render_width / render_height);
   g_cc = g_cam->GetController();
   *(glm::fvec3*)g_cc->orbitHomePosition = p;
   g_cc->UpdateControllerSettings();
-  g_cc->SetViewport(w - left_editUIWidth - right_editUIWidth, h);
+  g_cc->SetViewport(render_width, render_height);
 
   vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
@@ -998,7 +977,7 @@ int main(int, char**) {
 
       if (ImGui::CollapsingHeader("Hierarchy")) {
         ImGui::Indent();
-        //ImGui::Checkbox("Show bounds", &bAny);
+        // ImGui::Checkbox("Show bounds", &bAny);
         treeNode(root_vids[0]);
         ImGui::Unindent();
       }
@@ -1063,6 +1042,30 @@ int main(int, char**) {
         // ImGui::Checkbox("Show rest pose", &bAny);
         ImGui::Unindent();
       }
+      if (ImGui::CollapsingHeader("Resolution")) {
+        ImGui::Indent();
+        int width = render_width;
+        int height = render_height;
+        if (ImGui::InputInt("width", &width, 1, 100,
+                            ImGuiInputTextFlags_EnterReturnsTrue)) {
+          if (width > 0 && width < 10000) {
+            render_width = width;
+            resize(render_width, render_height);
+          } else {
+            width = render_width;
+          }
+        }
+        if (ImGui::InputInt("height", &height, 1, 100,
+                            ImGuiInputTextFlags_EnterReturnsTrue)) {
+          if (height > 0 && height < 10000) {
+            render_height = height;
+            resize(render_width, render_height);
+          } else {
+            height = render_height;
+          }
+        }
+        ImGui::Unindent();
+      }
       // left_editUIWidth = ImGui::GetWindowWidth();
       ImGui::End();
     }
@@ -1085,8 +1088,7 @@ int main(int, char**) {
 
           auto [importedImage, importedMemory] = importImageFromHandle(
               g_Device, g_PhysicalDevice,
-              {(uint32_t)(width - left_editUIWidth - right_editUIWidth),
-               (uint32_t)height},
+              {(uint32_t)render_width, (uint32_t)render_height},
               VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
           VkImageView importedImageView = createImageView(
               g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
@@ -1111,8 +1113,8 @@ int main(int, char**) {
 
         ImGui::SetNextWindowPos(ImVec2(left_editUIWidth, 0));
 
-        const float window_width = ImGui::GetIO().DisplaySize.x;
-        const float window_height = ImGui::GetIO().DisplaySize.y;
+        const int window_width = (int)ImGui::GetIO().DisplaySize.x;
+        const int window_height = (int)ImGui::GetIO().DisplaySize.y;
         workspace_width = window_width - left_editUIWidth - right_editUIWidth;
         workspace_height = window_height;
 
@@ -1124,9 +1126,18 @@ int main(int, char**) {
         ImGui::Begin("swapchain", nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
 
-        // ImVec2 avail_size = ImGui::GetContentRegionAvail();
+        float image_width = 0.0f;
+        float image_height = 0.0f;
+        if ((float)render_width / render_height >
+            (float)workspace_width / workspace_height) {
+          image_width = (float)workspace_width;
+          image_height = (float)image_width * render_height / render_width;
+        } else {
+          image_height = (float)workspace_height;
+          image_width = (float)image_height * render_width / render_height;
+        }
         ImGui::Image((ImTextureID)swapTextures[index],
-                     ImVec2(workspace_width, workspace_height));
+                     ImVec2(image_width, image_height));
         ImGui::End();
         // ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)swapTextures[index],
         //                                          ImVec2(0, 0),
@@ -1157,14 +1168,18 @@ int main(int, char**) {
 
       const ImVec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
       {
-        ImGui::SameLine();
-        if (ImGui::Button("Node", ImVec2(right_editUIWidth/2 - 10, 25))) {
+        ImGui::BeginTabBar("tab");
+
+        if (ImGui::BeginTabItem("Node")) {
           tabIdx = 0;
+          ImGui::EndTabItem();
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Settings", ImVec2(right_editUIWidth/2 - 10, 25))) {
+        if (ImGui::BeginTabItem("Settings")) {
           tabIdx = 1;
+          ImGui::EndTabItem();
         }
+
+        ImGui::EndTabBar();
       }
       switch (tabIdx) {
         case 0: {
@@ -1174,13 +1189,11 @@ int main(int, char**) {
           vzm::VzSceneComp* component =
               (vzm::VzSceneComp*)vzm::GetVzComponent(currentVID);
           vzm::SCENE_COMPONENT_TYPE type = component->GetSceneCompType();
+          ImGui::Text(component->GetName().c_str());
           if (ImGui::CollapsingHeader(
                   "Transform",
                   ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
-            ImGui::Text(component->GetName().c_str());
-            ImGui::NewLine();
-
             float position[3];
             float quat[4];
             float scale[3];
@@ -1264,9 +1277,12 @@ int main(int, char**) {
             }
             ImGui::Unindent();
           }
-          if (type == vzm::SCENE_COMPONENT_TYPE::LIGHT) {
-            if (ImGui::CollapsingHeader("Light")) {
-              ImGui::Indent();
+          if (ImGui::CollapsingHeader(
+                  "Light",
+                  ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Indent();
+
+            if (type == vzm::SCENE_COMPONENT_TYPE::LIGHT) {
               vzm::VzLight* lightComponent = (vzm::VzLight*)component;
               float intensity = lightComponent->GetIntensity();
               float color[3];
@@ -1290,10 +1306,10 @@ int main(int, char**) {
               if (ImGui::InputFloat("Outer Cone", &outerCone)) {
                 lightComponent->SetCone(innerCone, outerCone);
               }
-
-              ImGui::Unindent();
             }
+            ImGui::Unindent();
           }
+
           break;
         }
         case 1:
@@ -1303,23 +1319,21 @@ int main(int, char**) {
           if (ImGui::CollapsingHeader("Automation", 0)) {
             ImGui::Indent();
 
-            if (true) {
-              ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
-            } else {
-              ImGui::TextColored(yellow, "%zu test cases", 0);
-            }
-
-            ImGui::PushItemWidth(150);
-            ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
-            ImGui::PopItemWidth();
-
-            ImGui::Checkbox("Export screenshot for each test", &bAny);
-            ImGui::Checkbox("Export settings JSON for each test", &bAny);
-            if (false) {
-              if (ImGui::Button("Stop batch test")) {
-              }
-            } else if (ImGui::Button("Run batch test")) {
-            }
+            // if (true) {
+            //   ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
+            // } else {
+            //   ImGui::TextColored(yellow, "%zu test cases", 0);
+            // }
+            // ImGui::PushItemWidth(150);
+            // ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
+            // ImGui::PopItemWidth();
+            // ImGui::Checkbox("Export screenshot for each test", &bAny);
+            // ImGui::Checkbox("Export settings JSON for each test", &bAny);
+            // if (false) {
+            //   if (ImGui::Button("Stop batch test")) {
+            //   }
+            // } else if (ImGui::Button("Run batch test")) {
+            // }
 
             if (ImGui::Button("Export view settings")) {
               ImGui::OpenPopup("MessageBox");
@@ -1391,44 +1405,87 @@ int main(int, char**) {
           }
 
           if (ImGui::CollapsingHeader("View")) {
+            bool bPostProcessEnabled = g_renderer->IsPostProcessingEnabled();
+            bool bDitheringEnabled = g_renderer->IsDitheringEnabled();
+            bool bBloomEnabled = g_renderer->IsBloomEnabled();
+            bool bTaaEnabled = g_renderer->IsTaaEnabled();
+            bool bFxaaEnabled = g_renderer->IsFxaaEnabled();
+            bool bMsaaEnabled = g_renderer->IsMsaaEnabled();
+            bool bSsaoEnabled = g_renderer->IsSsaoEnabled();
+            bool bScreenSpaceReflectionEnabled =
+                g_renderer->IsScreenSpaceReflectionEnabled();
+            bool bGuardBandEnabled = g_renderer->IsGuardBandEnabled();
+
             ImGui::Indent();
 
-            ImGui::Checkbox("Post-processing", &bAny);
+            if (ImGui::Checkbox("Post-processing", &bPostProcessEnabled)) {
+              g_renderer->SetPostProcessingEnabled(bPostProcessEnabled);
+            }
             ImGui::Indent();
-            ImGui::Checkbox("Dithering", &bAny);
-            ImGui::Checkbox("Bloom", &bAny);
-            ImGui::Checkbox("TAA", &bAny);
-            // this clutters the UI and isn't that useful (except when working
-            // on TAA) ImGui::Indent(); ImGui::SliderFloat("feedback",
-            // &mSettings.view.taa.feedback, 0.0f, 1.0f);
-            // ImGui::SliderFloat("filter", &mSettings.view.taa.filterWidth,
-            // 0.0f, 2.0f); ImGui::Unindent();
+            if (ImGui::Checkbox("Dithering", &bDitheringEnabled)) {
+              g_renderer->SetDitheringEnabled(bDitheringEnabled);
+            }
+            if (ImGui::Checkbox("Bloom", &bBloomEnabled)) {
+              g_renderer->SetBloomEnabled(bBloomEnabled);
+            }
+            if (ImGui::Checkbox("TAA", &bTaaEnabled)) {
+              g_renderer->SetTaaEnabled(bTaaEnabled);
+            }
 
-            ImGui::Checkbox("FXAA", &bAny);
+            if (ImGui::Checkbox("FXAA", &bFxaaEnabled)) {
+              g_renderer->SetFxaaEnabled(bFxaaEnabled);
+            }
             ImGui::Unindent();
 
-            ImGui::Checkbox("MSAA 4x", &bAny);
-            ImGui::Indent();
-            ImGui::Checkbox("Custom resolve", &bAny);
+            if (ImGui::Checkbox("MSAA 4x", &bMsaaEnabled)) {
+              g_renderer->SetMsaaEnabled(bMsaaEnabled);
+            }
+            // ImGui::Indent();
+            // ImGui::Checkbox("Custom resolve", &bAny);
+            // ImGui::Unindent();
+
+            if (ImGui::Checkbox("SSAO", &bSsaoEnabled)) {
+              g_renderer->SetSsaoEnabled(bSsaoEnabled);
+            }
+
+            if (ImGui::Checkbox("Screen-space reflections",
+                                &bScreenSpaceReflectionEnabled)) {
+              g_renderer->SetScreenSpaceReflectionEnabled(
+                  bScreenSpaceReflectionEnabled);
+            }
             ImGui::Unindent();
 
-            ImGui::Checkbox("SSAO", &bAny);
-
-            ImGui::Checkbox("Screen-space reflections", &bAny);
-            ImGui::Unindent();
-
-            ImGui::Checkbox("Screen-space Guard Band", &bAny);
+            if (ImGui::Checkbox("Screen-space Guard Band",
+                                &bGuardBandEnabled)) {
+              g_renderer->SetGuardBandEnabled(bGuardBandEnabled);
+            }
           }
 
           if (ImGui::CollapsingHeader("Bloom Options")) {
-            ImGui::SliderFloat("Strength", &any, 0.0f, 1.0f);
-            ImGui::Checkbox("Threshold", &bAny);
+            float bloomStrength = g_renderer->GetBloomStrength();
+            bool isBloomThreshold = g_renderer->IsBloomThreshold();
+            int bloomLevels = g_renderer->GetBloomLevels();
+            int bloomQuality = g_renderer->GetBloomQuality();
+            bool isBloomLensFlare = g_renderer->IsBloomLensFlare();
 
-            ImGui::SliderInt("Levels", &iAny, 3, 11);
-            ImGui::SliderInt("Bloom Quality", &iAny, 0, 3);
-            ImGui::Checkbox("Lens Flare", &bAny);
+            if (ImGui::SliderFloat("Strength", &bloomStrength, 0.0f, 1.0f)) {
+              g_renderer->SetBloomStrength(bloomStrength);
+            }
+            if (ImGui::Checkbox("Threshold", &isBloomThreshold)) {
+              g_renderer->SetBloomThreshold(isBloomThreshold);
+            }
+            if (ImGui::SliderInt("Levels", &bloomLevels, 3, 11)) {
+              g_renderer->SetBloomLevels(bloomLevels);
+            }
+            if (ImGui::SliderInt("Bloom Quality", &bloomQuality, 0, 3)) {
+              g_renderer->SetBloomQuality(bloomQuality);
+            }
+            if (ImGui::Checkbox("Lens Flare", &isBloomLensFlare)) {
+              g_renderer->SetBloomLensFlare(isBloomLensFlare);
+            }
           }
 
+          ///////////////////////////////////
           if (ImGui::CollapsingHeader("TAA Options")) {
             ImGui::Checkbox("Upscaling", &bAny);
             ImGui::Checkbox("History Reprojection", &bAny);
@@ -1585,14 +1642,30 @@ int main(int, char**) {
 
           if (ImGui::CollapsingHeader("Camera")) {
             ImGui::Indent();
+            float zNearP, zFarP, fovInDegree, aspectRatio;
+            g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree,
+                                            &aspectRatio);
+            if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
+            if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
+            if (ImGui::InputFloat("Fov", &fovInDegree)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
+            if (ImGui::InputFloat("AspectRatio", &aspectRatio)) {
+              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+                                              aspectRatio);
+            }
 
             ImGui::SliderFloat("Focal length (mm)", &any, 16.0f, 90.0f);
             ImGui::SliderFloat("Aperture", &any, 1.0f, 32.0f);
             ImGui::SliderFloat("Speed (1/s)", &any, 1000.0f, 1.0f);
             ImGui::SliderFloat("ISO", &any, 25.0f, 6400.0f);
-            ImGui::SliderFloat("Near", &any, 0.001f, 1.0f);
-            ImGui::SliderFloat("Far", &any, 1.0f, 10000.0f);
-
             if (ImGui::CollapsingHeader("DoF")) {
               ImGui::Checkbox("Enabled##dofEnabled", &bAny);
               ImGui::SliderFloat("Focus distance", &any, 0.0f, 30.0f);
