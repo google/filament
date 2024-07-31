@@ -78,21 +78,10 @@ namespace vzm
     void VzSceneComp::SetTransform(const float s[3], const float q[4], const float t[3], const bool additiveTransform)
     {
         COMP_TRANSFORM(tc, ett, ins, );
-        mat4f mat_s = mat4f(), mat_r = mat4f(), mat_t = mat4f(); //c.f. mat4f(no_init)
-        if (s)
-        {
-            mat_s = math::mat4f::scaling(float3(s[0], s[1], s[2]));
-        }
-        if (t)
-        {
-            mat_t = math::mat4f::translation(float3(t[0], t[1], t[2]));
-        }
-        if (q)
-        {
-            mat_r = math::mat4f(*(math::quatf*)q);
-        }
-        mat4f mat = mat_t * mat_r * mat_s;
-        tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
+        auto translation = float3(t[0], t[1], t[2]);
+        auto rotation = quatf(q[3], q[0], q[1], q[2]);
+        auto scale = float3(s[0], s[1], s[2]);
+        tc.setTransform(ins, composeMatrix(translation, rotation, scale));
         UpdateTimeStamp();
     }
     void VzSceneComp::SetMatrix(const float value[16], const bool additiveTransform, const bool rowMajor)
@@ -102,23 +91,30 @@ namespace vzm
         tc.setTransform(ins, additiveTransform ? mat * tc.getTransform(ins) : mat);
         UpdateTimeStamp();
     }
-    void VzSceneComp::GetTranslation(float v[3])
+    void VzSceneComp::GetPosition(float v[3])
     {
-        v = translation_;
+        v[0] = position_[0];
+        v[1] = position_[1];
+        v[2] = position_[2];
     }
     void VzSceneComp::GetQuaternion(float v[4])
     {
-        v = quaternion_;
+        v[0] = quaternion_[0];
+        v[1] = quaternion_[1];
+        v[2] = quaternion_[2];
+        v[3] = quaternion_[3];
     }
     void VzSceneComp::GetScale(float v[3])
     {
-        v = scale_;
+        v[0] = scale_[0];
+        v[1] = scale_[1];
+        v[2] = scale_[2];
     }
-    void VzSceneComp::SetTranslation(const float v[3])
+    void VzSceneComp::SetPosition(const float v[3])
     {
-        translation_[0] = v[0];
-        translation_[1] = v[1];
-        translation_[2] = v[2];
+        position_[0] = v[0];
+        position_[1] = v[1];
+        position_[2] = v[2];
         UpdateTimeStamp();
     }
     void VzSceneComp::SetQuaternion(const float v[4])
@@ -148,14 +144,10 @@ namespace vzm
     void VzSceneComp::UpdateMatrix()
     {
         COMP_TRANSFORM(tc, ett, ins, );
-        if (matrixAutoUpdate_)
-        {
-            mat4f mat_s = mat4f::scaling(float3(scale_[0], scale_[1], scale_[2]));
-            mat4f mat_r = mat4f(*(math::quatf*)quaternion_);
-            mat4f mat_t = mat4f::translation(float3(translation_[0], translation_[1], translation_[2]));
-            mat4f mat = mat_t * mat_r * mat_s;
-            tc.setTransform(ins, mat);
-        }
+        auto translation = float3(position_[0], position_[1], position_[2]);
+        auto rotation = quatf(quaternion_[3], quaternion_[0], quaternion_[1], quaternion_[2]);
+        auto scale = float3(scale_[0], scale_[1], scale_[2]);
+        tc.setTransform(ins, composeMatrix(translation, rotation, scale));
         UpdateTimeStamp();
     }
     VID VzSceneComp::GetParent()

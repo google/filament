@@ -1197,12 +1197,12 @@ int main(int, char**) {
             float position[3];
             float quat[4];
             float scale[3];
-            component->GetTranslation(position);
+            component->GetPosition(position);
             component->GetQuaternion(quat);
             component->GetScale(scale);
 
             if (ImGui::InputFloat3("Position", position)) {
-              component->SetTranslation(position);
+              component->SetPosition(position);
             }
             if (ImGui::InputFloat4("Rotation", quat)) {
               component->SetQuaternion(quat);

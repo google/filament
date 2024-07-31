@@ -929,12 +929,13 @@ namespace vzm
 
             auto it = vzCompMap_.emplace(vid, std::make_unique<VzCamera>(vid, "CreateSceneComponent", "VzCamera", compType));
             v_comp = (VzSceneComp*)it.first->second.get();
+            v_comp->SetMatrixAutoUpdate(false);
             break;
         }
         default:
             assert(0);
         }
-
+        
         auto& ncm = VzNameCompManager::Get();
         auto& tcm = gEngine->getTransformManager();
 
@@ -946,6 +947,16 @@ namespace vzm
         {
             tcm.create(ett);
         }
+
+        mat4f localTransform = tcm.getTransform(tcm.getInstance(ett));
+        float3 scale;
+        quatf rotation;
+        float3 translation;
+        decomposeMatrix(localTransform, &translation, &rotation, &scale);
+
+        v_comp->SetScale(__FP(scale));
+        v_comp->SetQuaternion(__FP(rotation));
+        v_comp->SetPosition(__FP(translation));
 
         return v_comp;
     }
