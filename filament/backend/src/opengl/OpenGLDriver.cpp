@@ -2341,6 +2341,15 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
             GLTexture const* const t = handle_cast<const GLTexture*>(th);
             assert_invariant(t);
 
+            if (UTILS_UNLIKELY(es2)
+#if defined(GL_EXT_texture_filter_anisotropic)
+                    || UTILS_UNLIKELY(anisotropyWorkaround)
+ #endif
+                    ) {
+                // We must set texture parameters on the texture itself.
+                bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            }
+
             SamplerParams params = pSamplers[i].s;
             if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
                 // From OES_EGL_image_external spec:
