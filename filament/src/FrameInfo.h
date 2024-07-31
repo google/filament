@@ -163,9 +163,9 @@ public:
     // call this immediately before "swap buffers"
     void endFrame(backend::DriverApi& driver) noexcept;
 
-    details::FrameInfo const& getLastFrameInfo() const noexcept {
-        // if pFront is not set yet, return front() but in this case front().valid will be false
-        return pFront ? *pFront : mFrameTimeHistory.front();
+    details::FrameInfo getLastFrameInfo() const noexcept {
+        // if pFront is not set yet, return FrameInfo(). But the `valid` field will be false in this case.
+        return pFront ? *pFront : details::FrameInfo{};
     }
 
     utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept;

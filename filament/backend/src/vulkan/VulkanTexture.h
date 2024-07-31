@@ -136,6 +136,10 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // and the identity swizzle.
     VkImageView getAttachmentView(VkImageSubresourceRange range);
 
+    // Gets or creates a cached VkImageView for a single subresource that can be used as a render
+    // target attachment when rendering with multiview.
+    VkImageView getMultiviewAttachmentView(VkImageSubresourceRange range);
+
     // This is a workaround for the first few frames where we're waiting for the texture to actually
     // be uploaded.  In that case, we bind the sampler to an empty texture, but the corresponding
     // imageView needs to be of the right type. Hence, we provide an option to indicate the

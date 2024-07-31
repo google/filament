@@ -75,7 +75,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 TargetBufferFlags const clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearStencilFlags = config.clearFlags & TargetBufferFlags::STENCIL;
-                uint8_t layerCount = 0;
+                uint8_t layerCount = 1;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
