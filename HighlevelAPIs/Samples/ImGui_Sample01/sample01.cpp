@@ -7,21 +7,20 @@
 #include <GLFW/glfw3.h>
 #include <Windows.h>
 
-#include <iostream>
 #define GLM_ENABLE_EXPERIMENTAL
+#include <vulkan/vulkan_win32.h>
+
+#include <iostream>
+
 #include "glm/glm.hpp"
 #include "glm/gtc/constants.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/transform.hpp"
 #include "glm/gtx/vector_angle.hpp"
-
-#include <vulkan/vulkan_win32.h>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-
-#include <iostream>
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to
 // maximize ease of testing and compatibility with old VS compilers. To link
 // with VS2010-era libraries, VS2015+ requires linking with
@@ -773,7 +772,30 @@ void treeNode(VID id) {
   }
 };
 
-// Main code
+std::wstring OpenFileDialog() {
+  OPENFILENAME ofn;           // 구조체로 파일 대화 상자 설정
+  wchar_t szFile[260] = {0};  // 파일 경로를 저장할 버퍼
+  HWND hwnd = NULL;           // 현재 윈도우 핸들
+
+  ZeroMemory(&ofn, sizeof(ofn));
+  ofn.lStructSize = sizeof(ofn);
+  ofn.hwndOwner = nullptr;
+  ofn.lpstrFile = szFile;
+  ofn.nMaxFile = sizeof(szFile);
+  ofn.lpstrFilter = L"All\0*.*\0";
+  ofn.nFilterIndex = 1;
+  ofn.lpstrFileTitle = NULL;
+  ofn.nMaxFileTitle = 0;
+  ofn.lpstrInitialDir = NULL;
+  ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+  if (GetOpenFileName(&ofn) == TRUE) {
+    return std::wstring(ofn.lpstrFile);
+  }
+
+  return L"";
+}
+
 int main(int, char**) {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) return 1;
@@ -825,8 +847,7 @@ int main(int, char**) {
     return -1;
   }
 
-  float dpi = 96.f;
-
+  //
   vzm::VzScene* scene = vzm::NewScene("my scene");
   scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
@@ -837,9 +858,9 @@ int main(int, char**) {
 
   workspace_width = w - left_editUIWidth - right_editUIWidth;
   workspace_height = h;
-  
+
   g_renderer = vzm::NewRenderer("my renderer");
-  g_renderer->SetCanvas(render_width, render_height, dpi, nullptr);
+  g_renderer->SetCanvas(render_width, render_height, 96.f, nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
 
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
@@ -855,15 +876,10 @@ int main(int, char**) {
   g_cc->UpdateControllerSettings();
   g_cc->SetViewport(render_width, render_height);
 
-  vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(
-      vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
-
-  // vzm::AppendSceneCompTo(actor, scene);
   std::vector<VID> root_vids = asset->GetGLTFRoots();
   if (root_vids.size() > 0) {
     vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
   }
-  vzm::AppendSceneCompTo(light, scene);
   vzm::AppendSceneCompTo(g_cam, scene);
 
   // Setup Dear ImGui context
@@ -878,7 +894,6 @@ int main(int, char**) {
 
   // Setup Dear ImGui style
   ImGui::StyleColorsDark();
-  // ImGui::StyleColorsLight();
 
   // Setup Platform/Renderer backends
   ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -975,7 +990,36 @@ int main(int, char**) {
 
       ImGui::Begin("left-ui", nullptr, ImGuiWindowFlags_NoTitleBar);
 
-      if (ImGui::CollapsingHeader("Hierarchy")) {
+      if (ImGui::CollapsingHeader(
+              "Resolution",
+              ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Indent();
+        int width = render_width;
+        int height = render_height;
+        ImGui::Text("Type number and press Enter key.");
+        if (ImGui::InputInt("width", &width, 1, 100,
+                            ImGuiInputTextFlags_EnterReturnsTrue)) {
+          if (width > 0 && width < 10000) {
+            render_width = width;
+            resize(render_width, render_height);
+          } else {
+            width = render_width;
+          }
+        }
+        if (ImGui::InputInt("height", &height, 1, 100,
+                            ImGuiInputTextFlags_EnterReturnsTrue)) {
+          if (height > 0 && height < 10000) {
+            render_height = height;
+            resize(render_width, render_height);
+          } else {
+            height = render_height;
+          }
+        }
+        ImGui::Unindent();
+      }
+      if (ImGui::CollapsingHeader(
+              "Hierarchy",
+              ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
         // ImGui::Checkbox("Show bounds", &bAny);
         treeNode(root_vids[0]);
@@ -984,7 +1028,9 @@ int main(int, char**) {
 
       vzm::VzAsset::Animator* animator = asset->GetAnimator();
       const size_t animationCount = animator->GetAnimationCount();
-      if (ImGui::CollapsingHeader("Animation")) {
+      if (ImGui::CollapsingHeader(
+              "Animation",
+              ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
         float currentAnimPlayTime = animator->GetPlayTime();
         float currentAnimTotalTime =
@@ -1040,30 +1086,6 @@ int main(int, char**) {
 
         animator->MovePlayTime(currentAnimPlayTime);
         // ImGui::Checkbox("Show rest pose", &bAny);
-        ImGui::Unindent();
-      }
-      if (ImGui::CollapsingHeader("Resolution")) {
-        ImGui::Indent();
-        int width = render_width;
-        int height = render_height;
-        if (ImGui::InputInt("width", &width, 1, 100,
-                            ImGuiInputTextFlags_EnterReturnsTrue)) {
-          if (width > 0 && width < 10000) {
-            render_width = width;
-            resize(render_width, render_height);
-          } else {
-            width = render_width;
-          }
-        }
-        if (ImGui::InputInt("height", &height, 1, 100,
-                            ImGuiInputTextFlags_EnterReturnsTrue)) {
-          if (height > 0 && height < 10000) {
-            render_height = height;
-            resize(render_width, render_height);
-          } else {
-            height = render_height;
-          }
-        }
         ImGui::Unindent();
       }
       // left_editUIWidth = ImGui::GetWindowWidth();
@@ -1164,7 +1186,7 @@ int main(int, char**) {
       ImGui::SetNextWindowSizeConstraints(ImVec2(right_editUIWidth, height),
                                           ImVec2(right_editUIWidth, height));
 
-      ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
+      ImGui::Begin("right-ui", nullptr, ImGuiWindowFlags_NoTitleBar);
 
       const ImVec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
       {
@@ -1267,6 +1289,16 @@ int main(int, char**) {
                                              (void*)v.data());
                             break;
                           }
+
+                          // std::wstring filePath = OpenFileDialog();
+                          // if (!filePath.empty()) {
+                          //   std::wcout << "Selected file path: " << filePath
+                          //              << std::endl;
+                          // } else {
+                          //   std::cout
+                          //       << "No file selected or an error occurred."
+                          //       << std::endl;
+                          // }
                       }
                     }
                     it++;
