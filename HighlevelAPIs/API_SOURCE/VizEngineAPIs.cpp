@@ -394,9 +394,32 @@ namespace vzm
         return gEngineApp.GetSceneVidBelongTo(parentVid);
     }
 
+    VzScene* AppendSceneCompTo(const VzBaseComp* comp, const VzBaseComp* parentComp)
+    {
+        return (VzScene*) GetVzComponent(AppendSceneCompVidTo(comp->GetVID(), parentComp->GetVID()));
+    };
+
     VzBaseComp* GetVzComponent(const VID vid)
     {
         return gEngineApp.GetVzComponent<VzBaseComp>(vid);
+    }
+
+    VzBaseComp* GetFirstVzComponentByName(const std::string& name)
+    {
+        return GetVzComponent(GetFirstVidByName(name));
+    }
+
+    size_t GetVzComponentsByName(const std::string& name, std::vector<VzBaseComp*>& components)
+    {
+        std::vector<VID> vids;
+        size_t n = GetVidsByName(name, vids);
+        if (n > 0) {
+            components.reserve(n);
+            for (size_t i = 0; i < n; ++i) {
+                components.push_back(GetVzComponent(vids[i]));
+            }
+        }
+        return components.size();
     }
 
     size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly)

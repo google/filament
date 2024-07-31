@@ -31,26 +31,12 @@ namespace vzm
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
-    __dojostatic VzBaseComp* GetFirstVzComponentByName(const std::string& name) {
-        return GetVzComponent(GetFirstVidByName(name));
-    }
-    __dojostatic size_t GetVzComponentsByName(const std::string& name, std::vector<VzBaseComp*>& components) {
-        std::vector<VID> vids;
-        size_t n = GetVidsByName(name, vids);
-        if (n > 0) {
-            components.reserve(n);
-            for (size_t i = 0; i < n; ++i) {
-                components.push_back(GetVzComponent(vids[i]));
-            }
-        }
-        return components.size();
-    }
+    __dojostatic VzBaseComp* GetFirstVzComponentByName(const std::string& name);
+    __dojostatic size_t GetVzComponentsByName(const std::string& name, std::vector<VzBaseComp*>& components);
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
     __dojostatic VID AppendSceneCompVidTo(const VID vid, const VID parentVid);
-    __dojostatic VzScene* AppendSceneCompTo(const VzBaseComp* comp, const VzBaseComp* parentComp) { 
-        return (VzScene*)GetVzComponent(AppendSceneCompVidTo(comp->GetVID(), parentComp->GetVID()));
-    };
+    __dojostatic VzScene* AppendSceneCompTo(const VzBaseComp* comp, const VzBaseComp* parentComp);
     // Get Component IDs in a scene
     //  - return # of scene Components 
     __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly = false);	// Get CameraParams and return its pointer registered in renderer
