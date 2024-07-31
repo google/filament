@@ -23,6 +23,26 @@ namespace vzm
         COMP_ASSET(asset_res, std::vector<VID>());
         return asset_res->skeletons;
     }
+    size_t VzAsset::GetVariantsCount()
+    {
+        COMP_ASSET(asset_res, );
+        FilamentInstance* finst = asset_res->asset->getInstance();
+        return finst->getMaterialVariantCount();
+    }
+    std::string VzAsset::GetVariantName(int variantIndex)
+    {
+        std::string name = "";
+        COMP_ASSET(asset_res, name);
+        FilamentInstance* finst = asset_res->asset->getInstance();
+        name = finst->getMaterialVariantName(variantIndex);
+        return name;
+    }
+    void VzAsset::ApplyMaterialvariant(int variantIndex)
+    {
+        COMP_ASSET(asset_res, );
+        FilamentInstance* finst = asset_res->asset->getInstance();
+        finst->applyMaterialVariant(variantIndex);
+    }
 
     VzAsset::Animator* VzAsset::GetAnimator()
     {
