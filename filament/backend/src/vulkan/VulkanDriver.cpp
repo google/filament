@@ -685,10 +685,10 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     assert_invariant(tmin == tmax);
     assert_invariant(tmin.x >= width && tmin.y >= height);
 
-    auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
-
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, width, height,
-            samples, colorTargets, depthStencil, mStagePool, layerCount);
+    auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth,
+            mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator,
+            &mCommands, &mResourceAllocator, width, height, samples, colorTargets, depthStencil,
+            mStagePool, layerCount);
     mResourceManager.acquire(renderTarget);
 }
 
