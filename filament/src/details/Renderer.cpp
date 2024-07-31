@@ -468,6 +468,9 @@ void FRenderer::renderStandaloneView(FView const* view) {
     FILAMENT_CHECK_PRECONDITION(view->getRenderTarget())
             << "View \"" << view->getName() << "\" must have a RenderTarget associated";
 
+    FILAMENT_CHECK_PRECONDITION(!mSwapChain)
+            << "renderStandaloneView() must be called outside of beginFrame() / endFrame()";
+
     if (UTILS_LIKELY(view->getScene())) {
         mPreviousRenderTargets.clear();
         mFrameId++;

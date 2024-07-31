@@ -24,6 +24,7 @@
 
 #include <filamat/Enums.h>
 
+#include <utils/Log.h>
 #include <utils/JobSystem.h>
 
 #include "DirIncluder.h"
@@ -408,6 +409,7 @@ bool MaterialCompiler::run(const Config& config) {
         .targetApi(config.getTargetApi())
         .optimization(config.getOptimizationLevel())
         .printShaders(config.printShaders())
+        .saveRawVariants(config.saveRawVariants())
         .generateDebugInfo(config.isDebug())
         .variantFilter(config.getVariantFilter() | builder.getVariantFilter());
 

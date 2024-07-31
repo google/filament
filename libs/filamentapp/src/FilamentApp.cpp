@@ -174,11 +174,6 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     loadDirt(config);
     loadIBL(config);
-    if (mIBL != nullptr) {
-        mIBL->getSkybox()->setLayerMask(0x7, 0x4);
-        mScene->setSkybox(mIBL->getSkybox());
-        mScene->setIndirectLight(mIBL->getIndirectLight());
-    }
 
     for (auto& view : window->mViews) {
         if (view.get() != window->mUiView) {
@@ -519,31 +514,41 @@ const utils::Path& FilamentApp::getRootAssetsPath() {
     return root;
 }
 
-void FilamentApp::loadIBL(const Config& config) {
-    if (!config.iblDirectory.empty()) {
-        Path iblPath(config.iblDirectory);
+void FilamentApp::loadIBL(std::string_view path) {
+    Path iblPath(path);
+    if (!iblPath.exists()) {
+        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+        return;
+    }
 
-        if (!iblPath.exists()) {
-            std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+    mIBL = std::make_unique<IBL>(*mEngine);
+
+    if (!iblPath.isDirectory()) {
+        if (!mIBL->loadFromEquirect(iblPath)) {
+            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+            mIBL.reset(nullptr);
             return;
         }
-
-        mIBL = std::make_unique<IBL>(*mEngine);
-
-        if (!iblPath.isDirectory()) {
-            if (!mIBL->loadFromEquirect(iblPath)) {
-                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-                mIBL.reset(nullptr);
-                return;
-            }
-        } else {
-            if (!mIBL->loadFromDirectory(iblPath)) {
-                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-                mIBL.reset(nullptr);
-                return;
-            }
+    } else {
+        if (!mIBL->loadFromDirectory(iblPath)) {
+            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+            mIBL.reset(nullptr);
+            return;
         }
     }
+
+    if (mIBL != nullptr) {
+        mIBL->getSkybox()->setLayerMask(0x7, 0x4);
+        mScene->setSkybox(mIBL->getSkybox());
+        mScene->setIndirectLight(mIBL->getIndirectLight());
+    }
+}
+
+void FilamentApp::loadIBL(const Config& config) {
+    if (config.iblDirectory.empty()) {
+        return;
+    }
+    loadIBL(config.iblDirectory);
 }
 
 void FilamentApp::loadDirt(const Config& config) {
