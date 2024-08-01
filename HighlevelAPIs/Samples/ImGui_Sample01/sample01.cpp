@@ -834,6 +834,9 @@ int main(int, char**) {
 
   while (file_name.empty()) {
     glfwWaitEvents();
+    if (glfwWindowShouldClose(window)) {
+      return 0;
+    }
   }
 
   // Create Framebuffers
@@ -854,17 +857,17 @@ int main(int, char**) {
   vzm::VzScene* scene = vzm::NewScene("my scene");
   scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-  vzm::VzAsset* asset = vzm::LoadFileIntoAsset(file_name, "my gltf asset");
-  asset->GetAnimator()->AddPlayScene(scene->GetVID());
-  asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
-  asset->GetAnimator()->ActivateAnimation(0);
-
   workspace_width = w - left_editUIWidth - right_editUIWidth;
   workspace_height = h;
 
   g_renderer = vzm::NewRenderer("my renderer");
   g_renderer->SetCanvas(render_width, render_height, 96.f, nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
+
+  vzm::VzAsset* asset = vzm::LoadFileIntoAsset(file_name, "my gltf asset");
+  asset->GetAnimator()->AddPlayScene(scene->GetVID());
+  asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
+  asset->GetAnimator()->ActivateAnimation(0);
 
   std::vector<VID> root_vids = asset->GetGLTFRoots();
   if (root_vids.size() > 0) {
@@ -1028,8 +1031,12 @@ int main(int, char**) {
               "Hierarchy",
               ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        // ImGui::Checkbox("Show bounds", &bAny);
+        //std::vector<VID> scene_children = scene->GetSceneCompChildren();
+        //for (int i = 0; i < scene_children.size(); i++) {
+        //  treeNode(scene_children[i]);
+        //}
         treeNode(root_vids[0]);
+        //treeNode(root_vids[0]);
         ImGui::Unindent();
       }
 
