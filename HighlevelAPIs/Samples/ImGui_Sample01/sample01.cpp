@@ -1265,6 +1265,7 @@ int main(int, char**) {
                       v.resize(size);
                       mi->GetParameter(it->first, it->second, (void*)v.data());
                       std::string pname = it->first + std::to_string(prim);
+                      ImGui::PushItemWidth(-1);
                       switch (it->second) {
                         case vzm::UniformType::BOOL:
                           if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
@@ -1303,6 +1304,7 @@ int main(int, char**) {
                           //       << std::endl;
                           // }
                       }
+                      ImGui::PopItemWidth();
                     }
                     it++;
                   }
