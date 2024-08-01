@@ -113,7 +113,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Debug";GLTFIO_DRACO_SUPPORTED=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>../../libs/filabridge/include;../../filament/backend/include;../../filament/src;../../third_party/cgltf;../../VisualStudio/install/$(Configuration)/include/;../../libs/bluevk/include;../../libs/utils/include;../../libs/filamentapp/include</AdditionalIncludeDirectories>
@@ -140,7 +140,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Release";GLTFIO_DRACO_SUPPORTED=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>../../libs/filabridge/include;../../filament/backend/include;../../filament/src;../../third_party/cgltf;../../VisualStudio/install/$(Configuration)/include/;../../libs/bluevk/include;../../libs/utils/include;../../libs/filamentapp/include</AdditionalIncludeDirectories>
