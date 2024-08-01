@@ -1217,17 +1217,23 @@ int main(int, char**) {
                   ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent();
             float position[3];
-            float quat[4];
+            float rotation[3];
             float scale[3];
             component->GetPosition(position);
-            component->GetQuaternion(quat);
+            component->GetRotation(rotation);
+            rotation[0] = glm::degrees(rotation[0]);
+            rotation[1] = glm::degrees(rotation[1]);
+            rotation[2] = glm::degrees(rotation[2]);
             component->GetScale(scale);
 
             if (ImGui::InputFloat3("Position", position)) {
               component->SetPosition(position);
             }
-            if (ImGui::InputFloat4("Rotation", quat)) {
-              component->SetQuaternion(quat);
+            if (ImGui::InputFloat3("Rotation", rotation)) {
+              rotation[0] = glm::radians(rotation[0]);
+              rotation[1] = glm::radians(rotation[1]);
+              rotation[2] = glm::radians(rotation[2]);
+              component->SetRotation(rotation);
             }
             if (ImGui::InputFloat3("Scale", scale)) {
               component->SetScale(scale);
