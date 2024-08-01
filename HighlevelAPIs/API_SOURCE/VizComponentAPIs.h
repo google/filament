@@ -161,12 +161,19 @@ namespace vzm
     };
     __dojostruct VzSceneComp : VzBaseComp
     {
+    public:
+        enum class EULER_ORDER { XYZ,YXZ, ZXY, ZYX, YZX, XZY };
     private:
         SCENE_COMPONENT_TYPE scenecompType_ = SCENE_COMPONENT_TYPE::SCENEBASE;
         float position_[3] = {0.0f, 0.0f, 0.0f};
+        float rotation_[3] = {0.0f, 0.0f, 0.0f};
+        EULER_ORDER order_ = EULER_ORDER::XYZ;
         float quaternion_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
         float scale_[3] = {1.0f, 1.0f, 1.0f};
         bool matrixAutoUpdate_ = true;
+
+        void setQuaternionFromEuler();
+        void setEulerFromQuaternion();
     public:
         VzSceneComp(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
             : VzBaseComp(vid, originFrom, typeName), scenecompType_(scenecompType) {}
@@ -186,21 +193,24 @@ namespace vzm
         void SetTransform(const float s[3] = nullptr, const float q[4] = nullptr, const float t[3] = nullptr, const bool additiveTransform = false);
         void SetMatrix(const float value[16], const bool additiveTransform = false, const bool rowMajor = false);
 
-        void GetPosition(float v[3]);
-        void GetQuaternion(float v[4]);
-        void GetScale(float v[3]);
-
-        void SetPosition(const float v[3]);
-        void SetQuaternion(const float v[4]);
-        void SetScale(const float v[3]);
-         
-        bool GetMatrixAutoUpdate();
-        void SetMatrixAutoUpdate(const bool matrixAutoUpdate);
-        void UpdateMatrix();
-
         VID GetParent();
         std::vector<VID> GetChildren();
         VID GetScene();
+
+        void GetPosition(float position[3]) const;
+        void GetRotation(float rotation[3], EULER_ORDER* order = nullptr) const;
+        void GetQuaternion(float quaternion[4]) const;
+        void GetScale(float scale[3]) const;
+
+        void SetPosition(const float position[3]);
+        void SetRotation(const float rotation[3], const EULER_ORDER order = EULER_ORDER::XYZ);
+        void SetQuaternion(const float quaternion[4]);
+        void SetScale(const float scale[3]);
+         
+        bool IsMatrixAutoUpdate() const;
+        void SetMatrixAutoUpdate(const bool matrixAutoUpdate);
+
+        void UpdateMatrix();
     };
     __dojostruct VzResource : VzBaseComp
     {

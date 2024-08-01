@@ -313,7 +313,7 @@ namespace vzm
         scene->forEach([&tcm](Entity ett) {
             VID vid = ett.getId();
             VzSceneComp* comp = gEngineApp.GetVzComponent<VzSceneComp>(vid);
-            if (comp && comp->GetMatrixAutoUpdate())
+            if (comp && comp->IsMatrixAutoUpdate())
             {
                 comp->UpdateMatrix();
             }
