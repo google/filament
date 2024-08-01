@@ -863,6 +863,11 @@ int main(int, char**) {
   g_renderer->SetCanvas(render_width, render_height, 96.f, nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
 
+  std::vector<VID> root_vids = asset->GetGLTFRoots();
+  if (root_vids.size() > 0) {
+    vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
+  }
+
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
   glm::fvec3 p(0, 0, 10);
@@ -876,10 +881,9 @@ int main(int, char**) {
   g_cc->UpdateControllerSettings();
   g_cc->SetViewport(render_width, render_height);
 
-  std::vector<VID> root_vids = asset->GetGLTFRoots();
-  if (root_vids.size() > 0) {
-    vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
-  }
+  // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
+  //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
+  // vzm::AppendSceneCompTo(light, scene);
   vzm::AppendSceneCompTo(g_cam, scene);
 
   // Setup Dear ImGui context
@@ -1269,8 +1273,7 @@ int main(int, char**) {
                           }
                           break;
                         case vzm::UniformType::FLOAT:
-                          if (ImGui::SliderFloat(pname.c_str(), &v[0], 0.0F,
-                                                 1.0F)) {
+                          if (ImGui::InputFloat(pname.c_str(), &v[0])) {
                             mi->SetParameter(it->first, it->second,
                                              (void*)v.data());
                           }
