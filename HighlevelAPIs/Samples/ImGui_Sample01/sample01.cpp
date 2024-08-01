@@ -753,10 +753,13 @@ void setDrop(GLFWwindow* window, int count, const char** pathNames) {
 void treeNode(VID id) {
   vzm::VzSceneComp* component = (vzm::VzSceneComp*)vzm::GetVzComponent(id);
   std::string sName = component->GetName();
+  
+  ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+  if (component->GetChildren().size() == 0) {
+    flags |= ImGuiTreeNodeFlags_Leaf;
+  }
   const char* name = sName.length() > 0 ? sName.c_str() : "Node";
-  const char* label = name;
-  ImGuiTreeNodeFlags flags = 0;
-  if (ImGui::TreeNodeEx((const void*)id, flags, "%s", label)) {
+  if (ImGui::TreeNodeEx((const void*)id, flags, "%s", name)) {
     if (ImGui::IsItemClicked()) {
       currentVID = id;
     }
