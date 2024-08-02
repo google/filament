@@ -264,6 +264,7 @@ namespace vzm
         position_[0] = position[0];
         position_[1] = position[1];
         position_[2] = position[2];
+        UpdateMatrix();
         UpdateTimeStamp();
     }
     void VzSceneComp::SetRotation(const float rotation[3], const EULER_ORDER order)
@@ -273,6 +274,7 @@ namespace vzm
         rotation_[2] = rotation[2];
         order_ = order;
         setQuaternionFromEuler();
+        UpdateMatrix();
         UpdateTimeStamp();
     }
     void VzSceneComp::SetQuaternion(const float quaternion[4])
@@ -282,6 +284,7 @@ namespace vzm
         quaternion_[2] = quaternion[2];
         quaternion_[3] = quaternion[3];
         setEulerFromQuaternion();
+        UpdateMatrix();
         UpdateTimeStamp();
     }
     void VzSceneComp::SetScale(const float scale[3])
@@ -289,6 +292,7 @@ namespace vzm
         scale_[0] = scale[0];
         scale_[1] = scale[1];
         scale_[2] = scale[2];
+        UpdateMatrix();
         UpdateTimeStamp();
     }
     bool VzSceneComp::IsMatrixAutoUpdate() const

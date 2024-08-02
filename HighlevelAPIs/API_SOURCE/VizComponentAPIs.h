@@ -170,7 +170,7 @@ namespace vzm
         EULER_ORDER order_ = EULER_ORDER::XYZ;
         float quaternion_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
         float scale_[3] = {1.0f, 1.0f, 1.0f};
-        bool matrixAutoUpdate_ = true;
+        bool matrixAutoUpdate_ = false;
 
         void setQuaternionFromEuler();
         void setEulerFromQuaternion();
