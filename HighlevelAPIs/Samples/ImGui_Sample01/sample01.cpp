@@ -943,7 +943,6 @@ int main(int, char**) {
 
   int tabIdx = 0;
 
-  // 애니메이션 관리: HighLevel 완성 전까진 직접 관리
   int currentAnimIdx = 0;
   float currentAnimPlayTime = 0.0f;
   float currentAnimTotalTime = 0.0f;
