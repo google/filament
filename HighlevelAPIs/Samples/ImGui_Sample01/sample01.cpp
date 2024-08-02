@@ -948,7 +948,7 @@ int main(int, char**) {
   float currentAnimTotalTime = 0.0f;
   bool isPlay = false;
   clock_t prevTime = clock();
-  clock_t currentTime;
+  clock_t currentTime = clock();
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     g_renderer->Render(g_scene, g_cam);
@@ -1045,22 +1045,25 @@ int main(int, char**) {
           const size_t animationCount = animator->GetAnimationCount();
           int inputAnimIdx = currentAnimIdx;
 
-          if (currentAnimIdx == animationCount) {
-            for (int i = 0; i < animationCount; i++) {
-              animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
-            }
-          } else {
-            animator->ApplyAnimationTimeAt(currentAnimIdx, currentAnimPlayTime);
-          }
-
           // delta time 만큼 시간 진행
           if (isPlay) {
             currentAnimPlayTime += (currentTime - prevTime) / 1000.0f;
             if (currentAnimPlayTime > currentAnimTotalTime) {
               currentAnimPlayTime -= currentAnimTotalTime;
             }
+            
+            if (currentAnimIdx == animationCount) {
+              for (int i = 0; i < animationCount; i++) {
+                animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
+              }
+            } else {
+              animator->ApplyAnimationTimeAt(currentAnimIdx,
+                                             currentAnimPlayTime);
+            }
+            animator->UpdateBoneMatrices();
           }
 
+          //UI
           if (ImGui::Button("Play / Pause")) {
             isPlay = !isPlay;
           }
@@ -1092,9 +1095,19 @@ int main(int, char**) {
             currentAnimIdx = inputAnimIdx;
           }
 
-          ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
-                             currentAnimTotalTime, "%4.2f seconds",
-                             ImGuiSliderFlags_AlwaysClamp);
+          if (ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
+                                 currentAnimTotalTime, "%4.2f seconds",
+                                 ImGuiSliderFlags_AlwaysClamp)) {
+            if (currentAnimIdx == animationCount) {
+              for (int i = 0; i < animationCount; i++) {
+                animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
+              }
+            } else {
+              animator->ApplyAnimationTimeAt(currentAnimIdx,
+                                             currentAnimPlayTime);
+            }
+            animator->UpdateBoneMatrices();
+          }
 
           ImGui::Text("Choose Seperate Animation");
           for (size_t i = 0; i < animationCount; ++i) {
@@ -1118,7 +1131,6 @@ int main(int, char**) {
                   animator->GetAnimationPlayTime(currentAnimIdx);
             }
           }
-          animator->UpdateBoneMatrices();
         }
         prevTime = currentTime;
         ImGui::Unindent();
