@@ -646,8 +646,8 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd) {
 
 vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
+vzm::VzScene* g_scene;
 vzm::VzCamera* g_cam;
-// std::string file_name = "";
 vzm::VzAsset* g_asset;
 
 const int left_editUIWidth = 400;
@@ -773,9 +773,9 @@ void treeNode(VID id) {
 };
 
 std::wstring OpenFileDialog() {
-  OPENFILENAME ofn;           // 구조체로 파일 대화 상자 설정
-  wchar_t szFile[260] = {0};  // 파일 경로를 저장할 버퍼
-  HWND hwnd = NULL;           // 현재 윈도우 핸들
+  OPENFILENAME ofn; 
+  wchar_t szFile[260] = {0}; 
+  HWND hwnd = NULL;
 
   ZeroMemory(&ofn, sizeof(ofn));
   ofn.lStructSize = sizeof(ofn);
@@ -789,13 +789,42 @@ std::wstring OpenFileDialog() {
   ofn.lpstrInitialDir = NULL;
   ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
+  wchar_t originCurrentDirectory[260];
+  GetCurrentDirectory(260, originCurrentDirectory);
+
   if (GetOpenFileName(&ofn) == TRUE) {
+    SetCurrentDirectory(originCurrentDirectory);
     return std::wstring(ofn.lpstrFile);
   }
 
   return L"";
 }
 
+void initViewer() {
+  g_scene = vzm::NewScene("my scene");
+  g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+  g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
+      vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
+  glm::fvec3 p(0, 0, 10);
+  glm::fvec3 at(0, 0, -4);
+  glm::fvec3 u(0, 1, 0);
+  g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
+  g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f,
+                                  (float)render_width / render_height);
+  g_cc = g_cam->GetController();
+  *(glm::fvec3*)g_cc->orbitHomePosition = p;
+  g_cc->UpdateControllerSettings();
+  g_cc->SetViewport(render_width, render_height);
+
+  // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
+  //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
+  // vzm::AppendSceneCompTo(light, scene);
+  vzm::AppendSceneCompTo(g_cam, g_scene);
+}
+void deinitViewer() {
+  vzm::RemoveComponent(g_cam->GetVID());
+  vzm::RemoveComponent(g_scene->GetVID());
+}
 int main(int, char**) {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) return 1;
@@ -842,34 +871,14 @@ int main(int, char**) {
     return -1;
   }
 
-  //
-  vzm::VzScene* scene = vzm::NewScene("my scene");
-  scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-
   workspace_width = w - left_editUIWidth - right_editUIWidth;
   workspace_height = h;
 
+  //
   g_renderer = vzm::NewRenderer("my renderer");
   g_renderer->SetCanvas(render_width, render_height, 96.f, nullptr);
   g_renderer->SetVisibleLayerMask(0x4, 0x4);
-
-  g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
-      vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
-  glm::fvec3 p(0, 0, 10);
-  glm::fvec3 at(0, 0, -4);
-  glm::fvec3 u(0, 1, 0);
-  g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
-  g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f,
-                                  (float)render_width / render_height);
-  g_cc = g_cam->GetController();
-  *(glm::fvec3*)g_cc->orbitHomePosition = p;
-  g_cc->UpdateControllerSettings();
-  g_cc->SetViewport(render_width, render_height);
-
-  // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
-  //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
-  // vzm::AppendSceneCompTo(light, scene);
-  vzm::AppendSceneCompTo(g_cam, scene);
+  initViewer();
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -935,14 +944,15 @@ int main(int, char**) {
   int tabIdx = 0;
 
   // 애니메이션 관리: HighLevel 완성 전까진 직접 관리
-  int mCurrentAnimation = 0;
+  int currentAnimIdx = 0;
   float currentAnimPlayTime = 0.0f;
+  float currentAnimTotalTime = 0.0f;
   bool isPlay = false;
   clock_t prevTime = clock();
   clock_t currentTime;
   // Main loop
   while (!glfwWindowShouldClose(window)) {
-    g_renderer->Render(scene, g_cam);
+    g_renderer->Render(g_scene, g_cam);
     // Poll and handle events (inputs, window resize, etc.)
     // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to
     // tell if dear imgui wants to use your inputs.
@@ -1034,17 +1044,21 @@ int main(int, char**) {
         if (g_asset) {
           vzm::VzAsset::Animator* animator = g_asset->GetAnimator();
           const size_t animationCount = animator->GetAnimationCount();
+          int inputAnimIdx = currentAnimIdx;
 
-          float currentAnimTotalTime =
-              animator->GetAnimationPlayTime(mCurrentAnimation);
+          if (currentAnimIdx == animationCount) {
+            for (int i = 0; i < animationCount; i++) {
+              animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
+            }
+          } else {
+            animator->ApplyAnimationTimeAt(currentAnimIdx, currentAnimPlayTime);
+          }
 
           // delta time 만큼 시간 진행
           if (isPlay) {
             currentAnimPlayTime += (currentTime - prevTime) / 1000.0f;
             if (currentAnimPlayTime > currentAnimTotalTime) {
               currentAnimPlayTime -= currentAnimTotalTime;
-              animator->ApplyAnimationTimeAt(mCurrentAnimation,
-                                             currentAnimPlayTime);
             }
           }
 
@@ -1055,16 +1069,29 @@ int main(int, char**) {
           if (ImGui::Button("Stop")) {
             isPlay = false;
             currentAnimPlayTime = 0.0f;
-            animator->ApplyAnimationTimeAt(mCurrentAnimation,
-                                           currentAnimPlayTime);
+
+            if (currentAnimIdx == animationCount) {
+              for (int i = 0; i < animationCount; i++) {
+                animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
+              }
+            } else {
+              animator->ApplyAnimationTimeAt(currentAnimIdx,
+                                             currentAnimPlayTime);
+            }
           }
-          /*if (ImGui::RadioButton("Select All Animations", &mCurrentAnimation,
+
+          if (ImGui::RadioButton("Select All Animations", &inputAnimIdx,
                                  animationCount)) {
+            animator->ApplyAnimationTimeAt(currentAnimIdx, 0.0f);
             animator->DeactivateAll();
+            currentAnimTotalTime = 0.0f;
             for (int i = 0; i < animationCount; i++) {
               animator->ActivateAnimation(i);
+              float tempTime = animator->GetAnimationPlayTime(i);
+              currentAnimTotalTime = std::max(tempTime, currentAnimTotalTime);
             }
-          }*/
+            currentAnimIdx = inputAnimIdx;
+          }
 
           ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
                              currentAnimTotalTime, "%4.2f seconds",
@@ -1072,16 +1099,27 @@ int main(int, char**) {
 
           ImGui::Text("Choose Seperate Animation");
           for (size_t i = 0; i < animationCount; ++i) {
-            std::string label = animator->GetAnimationLabel(i);
+            std::string label = " " + animator->GetAnimationLabel(i);
             if (label.empty()) {
               label = "Unnamed " + std::to_string(i);
             }
-            if (ImGui::RadioButton(label.c_str(), &mCurrentAnimation, i)) {
+            if (ImGui::RadioButton(label.c_str(), &inputAnimIdx, i)) {
+              if (currentAnimIdx == animationCount) {
+                for (int j = 0; j < animationCount; j++) {
+                  animator->ApplyAnimationTimeAt(j, 0.0f);
+                }
+              } else {
+                animator->ApplyAnimationTimeAt(currentAnimIdx, 0.0f);
+              }
               animator->DeactivateAll();
-              animator->ActivateAnimation(i);
+              animator->ActivateAnimation(inputAnimIdx);
+              currentAnimIdx = inputAnimIdx;
               currentAnimPlayTime = 0.0f;
+              currentAnimTotalTime =
+                  animator->GetAnimationPlayTime(currentAnimIdx);
             }
           }
+          animator->UpdateBoneMatrices();
         }
         prevTime = currentTime;
         ImGui::Unindent();
@@ -1293,16 +1331,6 @@ int main(int, char**) {
                                              (void*)v.data());
                             break;
                           }
-
-                          // std::wstring filePath = OpenFileDialog();
-                          // if (!filePath.empty()) {
-                          //   std::wcout << "Selected file path: " << filePath
-                          //              << std::endl;
-                          // } else {
-                          //   std::cout
-                          //       << "No file selected or an error occurred."
-                          //       << std::endl;
-                          // }
                       }
                       ImGui::PopItemWidth();
                     }
@@ -1351,26 +1379,31 @@ int main(int, char**) {
         }
         case 1:
           if (ImGui::Button("Import", ImVec2(right_editUIWidth, 50))) {
-            if (g_asset) {
-              /*std::vector<VID> prev_root_vids = g_asset->GetGLTFRoots();
-              for (int i = 0; i < prev_root_vids.size(); i++) {
-                vzm::RemoveComponent(prev_root_vids[i]);
-              }*/
-              break;
-            }
             std::wstring filePath = OpenFileDialog();
-            std::string str_path;
-            str_path.assign(filePath.begin(), filePath.end());
+            if (filePath.size() > 0) {
+              std::string str_path;
+              str_path.assign(filePath.begin(), filePath.end());
 
-            g_asset = vzm::LoadFileIntoAsset(str_path, "my gltf asset");
-            g_asset->GetAnimator()->AddPlayScene(scene->GetVID());
-            g_asset->GetAnimator()->SetPlayMode(
-                vzm::VzAsset::Animator::PlayMode::PAUSE);
-            g_asset->GetAnimator()->ActivateAnimation(0);
+              if (g_asset) {
+                deinitViewer();
+                initViewer();
+              }
+              g_asset = vzm::LoadFileIntoAsset(str_path, "my gltf asset");
+              g_asset->GetAnimator()->AddPlayScene(g_scene->GetVID());
+              g_asset->GetAnimator()->SetPlayMode(
+                  vzm::VzAsset::Animator::PlayMode::PAUSE);
+              currentAnimIdx = g_asset->GetAnimator()->GetAnimationCount();
+              for (int i = 0; i < currentAnimIdx; i++) {
+                g_asset->GetAnimator()->ActivateAnimation(i);
+                currentAnimTotalTime =
+                    std::max(currentAnimTotalTime,
+                             g_asset->GetAnimator()->GetAnimationPlayTime(i));
+              }
 
-            std::vector<VID> root_vids = g_asset->GetGLTFRoots();
-            if (root_vids.size() > 0) {
-              vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
+              std::vector<VID> root_vids = g_asset->GetGLTFRoots();
+              if (root_vids.size() > 0) {
+                vzm::AppendSceneCompVidTo(root_vids[0], g_scene->GetVID());
+              }
             }
           }
           if (ImGui::Button("Export", ImVec2(right_editUIWidth, 50))) {
@@ -1604,13 +1637,21 @@ int main(int, char**) {
           if (ImGui::CollapsingHeader("Light")) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Indirect light")) {
-              float iblIntensity = scene->GetIBLIntensity();
-              float iblRotation = scene->GetIBLRotation();
+              float iblIntensity = g_scene->GetIBLIntensity();
+              float iblRotation = g_scene->GetIBLRotation();
+              //if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50))) {
+              //  std::wstring filePath = OpenFileDialog();
+              //  if (filePath.size() != 0) {
+              //    std::string str_path;
+              //    str_path.assign(filePath.begin(), filePath.end());
+              //    g_scene->LoadIBL(str_path);
+              //  }
+              //}
               if (ImGui::InputFloat("IBL intensity", &iblIntensity)) {
-                scene->SetIBLIntensity(iblIntensity);
+                g_scene->SetIBLIntensity(iblIntensity);
               }
               if (ImGui::SliderAngle("IBL rotation", &iblRotation)) {
-                scene->SetIBLRotation(iblRotation);
+                g_scene->SetIBLRotation(iblRotation);
               }
             }
             if (ImGui::CollapsingHeader("Sunlight")) {
