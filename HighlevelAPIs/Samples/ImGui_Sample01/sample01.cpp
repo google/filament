@@ -1119,6 +1119,7 @@ int main(int, char**) {
                   animator->GetAnimationPlayTime(currentAnimIdx);
             }
           }
+          animator->UpdateBoneMatrices();
         }
         prevTime = currentTime;
         ImGui::Unindent();
