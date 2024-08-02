@@ -16,6 +16,8 @@
 
 #include "details/Engine.h"
 
+#include "ResourceAllocator.h"
+
 #include "details/BufferObject.h"
 #include "details/Camera.h"
 #include "details/Fence.h"
