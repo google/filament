@@ -773,8 +773,8 @@ void treeNode(VID id) {
 };
 
 std::wstring OpenFileDialog() {
-  OPENFILENAME ofn; 
-  wchar_t szFile[260] = {0}; 
+  OPENFILENAME ofn;
+  wchar_t szFile[260] = {0};
   HWND hwnd = NULL;
 
   ZeroMemory(&ofn, sizeof(ofn));
@@ -943,7 +943,7 @@ int main(int, char**) {
 
   int tabIdx = 0;
 
-  int currentAnimIdx = 0;
+  std::vector<bool> animActiveVec;
   float currentAnimPlayTime = 0.0f;
   float currentAnimTotalTime = 0.0f;
   bool isPlay = false;
@@ -1043,7 +1043,7 @@ int main(int, char**) {
         if (g_asset) {
           vzm::VzAsset::Animator* animator = g_asset->GetAnimator();
           const size_t animationCount = animator->GetAnimationCount();
-          int inputAnimIdx = currentAnimIdx;
+          // int inputAnimIdx = currentAnimIdx;
 
           // delta time 만큼 시간 진행
           if (isPlay) {
@@ -1051,19 +1051,16 @@ int main(int, char**) {
             if (currentAnimPlayTime > currentAnimTotalTime) {
               currentAnimPlayTime -= currentAnimTotalTime;
             }
-            
-            if (currentAnimIdx == animationCount) {
-              for (int i = 0; i < animationCount; i++) {
+
+            for (int i = 0; i < animationCount; i++) {
+              if (animActiveVec[i]) {
                 animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
               }
-            } else {
-              animator->ApplyAnimationTimeAt(currentAnimIdx,
-                                             currentAnimPlayTime);
             }
             animator->UpdateBoneMatrices();
           }
 
-          //UI
+          // UI
           if (ImGui::Button("Play / Pause")) {
             isPlay = !isPlay;
           }
@@ -1072,63 +1069,67 @@ int main(int, char**) {
             isPlay = false;
             currentAnimPlayTime = 0.0f;
 
-            if (currentAnimIdx == animationCount) {
-              for (int i = 0; i < animationCount; i++) {
+            for (int i = 0; i < animationCount; i++) {
+              if (animActiveVec[i]) {
                 animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
               }
-            } else {
-              animator->ApplyAnimationTimeAt(currentAnimIdx,
-                                             currentAnimPlayTime);
             }
-          }
-
-          if (ImGui::RadioButton("Select All Animations", &inputAnimIdx,
-                                 animationCount)) {
-            animator->ApplyAnimationTimeAt(currentAnimIdx, 0.0f);
-            animator->DeactivateAll();
-            currentAnimTotalTime = 0.0f;
-            for (int i = 0; i < animationCount; i++) {
-              animator->ActivateAnimation(i);
-              float tempTime = animator->GetAnimationPlayTime(i);
-              currentAnimTotalTime = std::max(tempTime, currentAnimTotalTime);
-            }
-            currentAnimIdx = inputAnimIdx;
           }
 
           if (ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
                                  currentAnimTotalTime, "%4.2f seconds",
                                  ImGuiSliderFlags_AlwaysClamp)) {
-            if (currentAnimIdx == animationCount) {
-              for (int i = 0; i < animationCount; i++) {
+            for (int i = 0; i < animationCount; i++) {
+              if (animActiveVec[i]) {
                 animator->ApplyAnimationTimeAt(i, currentAnimPlayTime);
               }
-            } else {
-              animator->ApplyAnimationTimeAt(currentAnimIdx,
-                                             currentAnimPlayTime);
             }
             animator->UpdateBoneMatrices();
           }
 
-          ImGui::Text("Choose Seperate Animation");
+          if (ImGui::Button("Select All")) {
+            currentAnimTotalTime = 0.0f;
+            for (int i = 0; i < animationCount; i++) {
+              animActiveVec[i] = true;
+              currentAnimTotalTime = std::max(
+                  currentAnimTotalTime, animator->GetAnimationPlayTime(i));
+            }
+          }
+          if (ImGui::Button("Deselect All")) {
+            currentAnimTotalTime = 0.0f;
+            for (int i = 0; i < animationCount; i++) {
+              animator->ApplyAnimationTimeAt(i, 0.0f);
+              animActiveVec[i] = false;
+            }
+          }
           for (size_t i = 0; i < animationCount; ++i) {
             std::string label = " " + animator->GetAnimationLabel(i);
             if (label.empty()) {
               label = "Unnamed " + std::to_string(i);
             }
-            if (ImGui::RadioButton(label.c_str(), &inputAnimIdx, i)) {
-              if (currentAnimIdx == animationCount) {
-                for (int j = 0; j < animationCount; j++) {
+            bool isActive = animActiveVec[i];
+            if (ImGui::Checkbox(label.c_str(), &isActive)) {
+              animActiveVec[i] = isActive;
+
+              for (int j = 0; j < animationCount; j++) {
+                if (animActiveVec[j]) {
                   animator->ApplyAnimationTimeAt(j, 0.0f);
                 }
-              } else {
-                animator->ApplyAnimationTimeAt(currentAnimIdx, 0.0f);
               }
-              animator->DeactivateAll();
-              animator->ActivateAnimation(inputAnimIdx);
-              currentAnimIdx = inputAnimIdx;
+              if (animActiveVec[i]) {
+                animator->ActivateAnimation(i);
+              } else {
+                animator->ApplyAnimationTimeAt(i, 0.0f);
+                animator->DeactivateAnimation(i);
+              }
               currentAnimPlayTime = 0.0f;
-              currentAnimTotalTime =
-                  animator->GetAnimationPlayTime(currentAnimIdx);
+              currentAnimTotalTime = 0.0f;
+              for (int j = 0; j < animationCount; j++) {
+                if (animActiveVec[j]) {
+                  currentAnimTotalTime = std::max(
+                      currentAnimTotalTime, animator->GetAnimationPlayTime(j));
+                }
+              }
             }
           }
         }
@@ -1403,13 +1404,16 @@ int main(int, char**) {
               g_asset->GetAnimator()->AddPlayScene(g_scene->GetVID());
               g_asset->GetAnimator()->SetPlayMode(
                   vzm::VzAsset::Animator::PlayMode::PAUSE);
-              currentAnimIdx = g_asset->GetAnimator()->GetAnimationCount();
-              for (int i = 0; i < currentAnimIdx; i++) {
-                g_asset->GetAnimator()->ActivateAnimation(i);
-                currentAnimTotalTime =
-                    std::max(currentAnimTotalTime,
-                             g_asset->GetAnimator()->GetAnimationPlayTime(i));
-              }
+              int animCount = g_asset->GetAnimator()->GetAnimationCount();
+              animActiveVec = std::vector<bool>(animCount);
+              currentAnimTotalTime = 0.0f;
+              // currentAnimIdx = g_asset->GetAnimator()->GetAnimationCount();
+              // for (int i = 0; i < animCount; i++) {
+              //  g_asset->GetAnimator()->ActivateAnimation(i);
+              //  currentAnimTotalTime =
+              //      std::max(currentAnimTotalTime,
+              //               g_asset->GetAnimator()->GetAnimationPlayTime(i));
+              //}
 
               std::vector<VID> root_vids = g_asset->GetGLTFRoots();
               if (root_vids.size() > 0) {
@@ -1650,14 +1654,15 @@ int main(int, char**) {
             if (ImGui::CollapsingHeader("Indirect light")) {
               float iblIntensity = g_scene->GetIBLIntensity();
               float iblRotation = g_scene->GetIBLRotation();
-              //if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50))) {
-              //  std::wstring filePath = OpenFileDialog();
-              //  if (filePath.size() != 0) {
-              //    std::string str_path;
-              //    str_path.assign(filePath.begin(), filePath.end());
-              //    g_scene->LoadIBL(str_path);
-              //  }
-              //}
+              // if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50)))
+              // {
+              //   std::wstring filePath = OpenFileDialog();
+              //   if (filePath.size() != 0) {
+              //     std::string str_path;
+              //     str_path.assign(filePath.begin(), filePath.end());
+              //     g_scene->LoadIBL(str_path);
+              //   }
+              // }
               if (ImGui::InputFloat("IBL intensity", &iblIntensity)) {
                 g_scene->SetIBLIntensity(iblIntensity);
               }
