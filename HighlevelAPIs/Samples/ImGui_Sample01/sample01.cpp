@@ -647,7 +647,9 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd) {
 vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzCamera* g_cam;
-std::string file_name = "";
+// std::string file_name = "";
+vzm::VzAsset* g_asset;
+
 const int left_editUIWidth = 400;
 const int right_editUIWidth = 400;
 // workspace 공간의 크기
@@ -744,19 +746,17 @@ void onFrameBufferResize(GLFWwindow* window, int width, int height) {
     resize(render_width, render_height);
   }
 }
-void setDrop(GLFWwindow* window, int count, const char** pathNames) {
-  if (count == 1 && file_name.empty()) {
-    file_name = pathNames[0];
-  }
-}
 
 void treeNode(VID id) {
   vzm::VzSceneComp* component = (vzm::VzSceneComp*)vzm::GetVzComponent(id);
   std::string sName = component->GetName();
+
+  ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+  if (component->GetChildren().size() == 0) {
+    flags |= ImGuiTreeNodeFlags_Leaf;
+  }
   const char* name = sName.length() > 0 ? sName.c_str() : "Node";
-  const char* label = name;
-  ImGuiTreeNodeFlags flags = 0;
-  if (ImGui::TreeNodeEx((const void*)id, flags, "%s", label)) {
+  if (ImGui::TreeNodeEx((const void*)id, flags, "%s", name)) {
     if (ImGui::IsItemClicked()) {
       currentVID = id;
     }
@@ -827,11 +827,6 @@ int main(int, char**) {
   glfwSetCursorPosCallback(window, setCursorPos);
   glfwSetScrollCallback(window, setMouseScroll);
   glfwSetFramebufferSizeCallback(window, onFrameBufferResize);
-  glfwSetDropCallback(window, setDrop);
-
-  while (file_name.empty()) {
-    glfwWaitEvents();
-  }
 
   // Create Framebuffers
   int w, h;
@@ -850,11 +845,6 @@ int main(int, char**) {
   //
   vzm::VzScene* scene = vzm::NewScene("my scene");
   scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-
-  vzm::VzAsset* asset = vzm::LoadFileIntoAsset(file_name, "my gltf asset");
-  asset->GetAnimator()->AddPlayScene(scene->GetVID());
-  asset->GetAnimator()->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
-  asset->GetAnimator()->ActivateAnimation(0);
 
   workspace_width = w - left_editUIWidth - right_editUIWidth;
   workspace_height = h;
@@ -876,10 +866,9 @@ int main(int, char**) {
   g_cc->UpdateControllerSettings();
   g_cc->SetViewport(render_width, render_height);
 
-  std::vector<VID> root_vids = asset->GetGLTFRoots();
-  if (root_vids.size() > 0) {
-    vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
-  }
+  // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
+  //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
+  // vzm::AppendSceneCompTo(light, scene);
   vzm::AppendSceneCompTo(g_cam, scene);
 
   // Setup Dear ImGui context
@@ -943,8 +932,14 @@ int main(int, char**) {
       0,
   };
 
-  int mCurrentAnimation = 0;
   int tabIdx = 0;
+
+  // 애니메이션 관리: HighLevel 완성 전까진 직접 관리
+  int mCurrentAnimation = 0;
+  float currentAnimPlayTime = 0.0f;
+  bool isPlay = false;
+  clock_t prevTime = clock();
+  clock_t currentTime;
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     g_renderer->Render(scene, g_cam);
@@ -979,9 +974,6 @@ int main(int, char**) {
     {
       ImGui::GetStyle().WindowRounding = 0;
       ImGui::SetNextWindowPos(ImVec2(0, 0));
-
-      // const float width = ImGui::GetIO().DisplaySize.x;
-      // const float height = ImGui::GetIO().DisplaySize.y;
 
       ImGui::SetNextWindowSize(ImVec2(left_editUIWidth, height),
                                ImGuiCond_Once);
@@ -1021,71 +1013,77 @@ int main(int, char**) {
               "Hierarchy",
               ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        // ImGui::Checkbox("Show bounds", &bAny);
-        treeNode(root_vids[0]);
+        // std::vector<VID> scene_children = scene->GetSceneCompChildren();
+        // for (int i = 0; i < scene_children.size(); i++) {
+        //   treeNode(scene_children[i]);
+        // }
+        if (g_asset) {
+          std::vector<VID> root_vids = g_asset->GetGLTFRoots();
+          for (int i = 0; i < root_vids.size(); i++) {
+            treeNode(root_vids[i]);
+          }
+        }
         ImGui::Unindent();
       }
 
-      vzm::VzAsset::Animator* animator = asset->GetAnimator();
-      const size_t animationCount = animator->GetAnimationCount();
       if (ImGui::CollapsingHeader(
               "Animation",
               ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        float currentAnimPlayTime = animator->GetPlayTime();
-        float currentAnimTotalTime =
-            animator->GetAnimationPlayTime(mCurrentAnimation);
-        if (currentAnimPlayTime > currentAnimTotalTime) {
-          currentAnimPlayTime -= currentAnimTotalTime;
-          animator->MovePlayTime(currentAnimPlayTime);
-        }
+        currentTime = clock();
+        if (g_asset) {
+          vzm::VzAsset::Animator* animator = g_asset->GetAnimator();
+          const size_t animationCount = animator->GetAnimationCount();
 
-        if (ImGui::Button("Play / Pause")) {
-          vzm::VzAsset::Animator::PlayMode playMode = animator->GetPlayMode();
-          switch (playMode) {
-            case vzm::VzAsset::Animator::PlayMode::INIT_POSE:
-              animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
-              break;
-            case vzm::VzAsset::Animator::PlayMode::PLAY:
-              animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
-              break;
-            case vzm::VzAsset::Animator::PlayMode::PAUSE:
-              animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PLAY);
-              break;
-          }
-        }
-        if (ImGui::Button("Stop")) {
-          animator->MovePlayTime(0.0f);
-          currentAnimPlayTime = 0.0f;
-          animator->SetPlayMode(vzm::VzAsset::Animator::PlayMode::PAUSE);
-        }
-        if (ImGui::RadioButton("Select All Animations", &mCurrentAnimation,
-                               animationCount)) {
-          animator->DeactivateAll();
-          for (int i = 0; i < animationCount; i++) {
-            animator->ActivateAnimation(i);
-          }
-        }
+          float currentAnimTotalTime =
+              animator->GetAnimationPlayTime(mCurrentAnimation);
 
-        ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
-                           currentAnimTotalTime, "%4.2f seconds",
-                           ImGuiSliderFlags_AlwaysClamp);
-
-        ImGui::Text("Choose Seperate Animation");
-        for (size_t i = 0; i < animationCount; ++i) {
-          std::string label = animator->GetAnimationLabel(i);
-          if (label.empty()) {
-            label = "Unnamed " + std::to_string(i);
+          // delta time 만큼 시간 진행
+          if (isPlay) {
+            currentAnimPlayTime += (currentTime - prevTime) / 1000.0f;
+            if (currentAnimPlayTime > currentAnimTotalTime) {
+              currentAnimPlayTime -= currentAnimTotalTime;
+              animator->ApplyAnimationTimeAt(mCurrentAnimation,
+                                             currentAnimPlayTime);
+            }
           }
-          if (ImGui::RadioButton(label.c_str(), &mCurrentAnimation, i)) {
-            animator->DeactivateAll();
-            animator->ActivateAnimation(i);
+
+          if (ImGui::Button("Play / Pause")) {
+            isPlay = !isPlay;
+          }
+
+          if (ImGui::Button("Stop")) {
+            isPlay = false;
             currentAnimPlayTime = 0.0f;
+            animator->ApplyAnimationTimeAt(mCurrentAnimation,
+                                           currentAnimPlayTime);
+          }
+          /*if (ImGui::RadioButton("Select All Animations", &mCurrentAnimation,
+                                 animationCount)) {
+            animator->DeactivateAll();
+            for (int i = 0; i < animationCount; i++) {
+              animator->ActivateAnimation(i);
+            }
+          }*/
+
+          ImGui::SliderFloat("Time", &currentAnimPlayTime, 0.0f,
+                             currentAnimTotalTime, "%4.2f seconds",
+                             ImGuiSliderFlags_AlwaysClamp);
+
+          ImGui::Text("Choose Seperate Animation");
+          for (size_t i = 0; i < animationCount; ++i) {
+            std::string label = animator->GetAnimationLabel(i);
+            if (label.empty()) {
+              label = "Unnamed " + std::to_string(i);
+            }
+            if (ImGui::RadioButton(label.c_str(), &mCurrentAnimation, i)) {
+              animator->DeactivateAll();
+              animator->ActivateAnimation(i);
+              currentAnimPlayTime = 0.0f;
+            }
           }
         }
-
-        animator->MovePlayTime(currentAnimPlayTime);
-        // ImGui::Checkbox("Show rest pose", &bAny);
+        prevTime = currentTime;
         ImGui::Unindent();
       }
       // left_editUIWidth = ImGui::GetWindowWidth();
@@ -1267,6 +1265,7 @@ int main(int, char**) {
                       v.resize(size);
                       mi->GetParameter(it->first, it->second, (void*)v.data());
                       std::string pname = it->first + std::to_string(prim);
+                      ImGui::PushItemWidth(-1);
                       switch (it->second) {
                         case vzm::UniformType::BOOL:
                           if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
@@ -1275,8 +1274,7 @@ int main(int, char**) {
                           }
                           break;
                         case vzm::UniformType::FLOAT:
-                          if (ImGui::SliderFloat(pname.c_str(), &v[0], 0.0F,
-                                                 1.0F)) {
+                          if (ImGui::InputFloat(pname.c_str(), &v[0])) {
                             mi->SetParameter(it->first, it->second,
                                              (void*)v.data());
                           }
@@ -1306,6 +1304,7 @@ int main(int, char**) {
                           //       << std::endl;
                           // }
                       }
+                      ImGui::PopItemWidth();
                     }
                     it++;
                   }
@@ -1351,8 +1350,31 @@ int main(int, char**) {
           break;
         }
         case 1:
+          if (ImGui::Button("Import", ImVec2(right_editUIWidth, 50))) {
+            if (g_asset) {
+              /*std::vector<VID> prev_root_vids = g_asset->GetGLTFRoots();
+              for (int i = 0; i < prev_root_vids.size(); i++) {
+                vzm::RemoveComponent(prev_root_vids[i]);
+              }*/
+              break;
+            }
+            std::wstring filePath = OpenFileDialog();
+            std::string str_path;
+            str_path.assign(filePath.begin(), filePath.end());
+
+            g_asset = vzm::LoadFileIntoAsset(str_path, "my gltf asset");
+            g_asset->GetAnimator()->AddPlayScene(scene->GetVID());
+            g_asset->GetAnimator()->SetPlayMode(
+                vzm::VzAsset::Animator::PlayMode::PAUSE);
+            g_asset->GetAnimator()->ActivateAnimation(0);
+
+            std::vector<VID> root_vids = g_asset->GetGLTFRoots();
+            if (root_vids.size() > 0) {
+              vzm::AppendSceneCompVidTo(root_vids[0], scene->GetVID());
+            }
+          }
           if (ImGui::Button("Export", ImVec2(right_editUIWidth, 50))) {
-            vzm::ExportAssetToGlb(asset, "export.glb");
+            vzm::ExportAssetToGlb(g_asset, "export.glb");
           }
           if (ImGui::CollapsingHeader("Automation", 0)) {
             ImGui::Indent();
