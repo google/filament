@@ -3890,6 +3890,7 @@ void OpenGLDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    DEBUG_MARKER()
     GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
     if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
         return;
@@ -3911,6 +3912,7 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 }
 
 void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    DEBUG_MARKER()
     GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
     if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
         return;
@@ -3931,6 +3933,7 @@ void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_
 }
 
 void OpenGLDriver::scissor(Viewport scissor) {
+    DEBUG_MARKER()
     setScissor(scissor);
 }
 
@@ -3950,6 +3953,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+    DEBUG_MARKER()
     getShaderCompilerService().tick();
 
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(program);
