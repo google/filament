@@ -71,7 +71,7 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
-    static Config validateConfig(const Config* pConfig) noexcept;
+    static Config validateConfig(Config config) noexcept;
 };
 
 Engine* FEngine::create(Engine::Builder const& builder) {
@@ -1286,7 +1286,7 @@ Engine::Builder& Engine::Builder::platform(Platform* platform) noexcept {
 }
 
 Engine::Builder& Engine::Builder::config(Engine::Config const* config) noexcept {
-    mImpl->mConfig = BuilderDetails::validateConfig(config);
+    mImpl->mConfig = config ? *config : Engine::Config{};
     return *this;
 }
 
@@ -1314,21 +1314,14 @@ void Engine::Builder::build(Invocable<void(void*)>&& callback) const {
 #endif
 
 Engine* Engine::Builder::build() const {
+    mImpl->mConfig = BuilderDetails::validateConfig(mImpl->mConfig);
     return FEngine::create(*this);
 }
 
-Engine::Config Engine::BuilderDetails::validateConfig(const Config* const pConfig) noexcept {
+Engine::Config Engine::BuilderDetails::validateConfig(Config config) noexcept {
     // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
     constexpr uint32_t COMMAND_ARENA_OVERHEAD = 1;
     constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
-
-    Config config;
-    if (!pConfig) {
-        return config;
-    }
-
-    // make sure to copy all the fields
-    config = *pConfig;
 
     // Use at least the defaults set by the build system
     config.minCommandBufferSizeMB = std::max(
