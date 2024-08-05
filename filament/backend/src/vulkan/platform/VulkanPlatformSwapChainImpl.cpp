@@ -79,9 +79,10 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(
   return std::tuple(image, imageMemory);
 }
 
-std::tuple<VkImage, VkDeviceMemory, HANDLE> createImageAndMemoryHeadless(
+std::tuple<VkImage, VkDeviceMemory, void*> createImageAndMemoryHeadless(
     VulkanContext const& context, VkDevice device, VkExtent2D extent,
     VkFormat format) {
+  void* handleValue = (void*)-1;
   bool const isDepth = isVkDepthFormat(format);
 
   VkImageUsageFlags const blittable =
@@ -127,7 +128,11 @@ std::tuple<VkImage, VkDeviceMemory, HANDLE> createImageAndMemoryHeadless(
   // Add export memory allocate info
   VkExportMemoryAllocateInfo exportAllocInfo = {};
   exportAllocInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+  #ifdef _WIN32
   exportAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#elif __linux__
+  exportAllocInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+  #endif
 
   VkMemoryAllocateInfo allocInfo = {
       .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -147,7 +152,7 @@ std::tuple<VkImage, VkDeviceMemory, HANDLE> createImageAndMemoryHeadless(
     throw std::runtime_error("Unable to bind image memory");
   }
 
-  // Get the Win32 handle for the allocated memory
+  #ifdef _WIN32
   VkMemoryGetWin32HandleInfoKHR getWin32HandleInfo = {};
   getWin32HandleInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
   getWin32HandleInfo.memory = imageMemory;
@@ -159,6 +164,21 @@ std::tuple<VkImage, VkDeviceMemory, HANDLE> createImageAndMemoryHeadless(
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to get memory handle");
   }
+  handleValue = (void*)handle;
+  
+  #elif __linux__
+  VkMemoryGetFdInfoKHR getFdInfo = {};
+  getFdInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
+  getFdInfo.memory = imageMemory;
+  getFdInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+
+  int fd = -1;
+  result = vkGetMemoryFdKHR(device, &getFdInfo, &fd);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("Failed to get memory file descriptor");
+  }
+  handleValue = (void*)fd;
+  #endif
 
   return std::tuple(image, imageMemory, handle);
 }
