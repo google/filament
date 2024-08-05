@@ -79,7 +79,7 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(
   return std::tuple(image, imageMemory);
 }
 
-std::tuple<VkImage, VkDeviceMemory, void*> UTILS_NULLABLE createImageAndMemoryHeadless(
+std::tuple<VkImage, VkDeviceMemory, void * UTILS_NULLABLE> createImageAndMemoryHeadless(
     VulkanContext const& context, VkDevice device, VkExtent2D extent,
     VkFormat format) {
   void* handleValue = (void*)-1;
