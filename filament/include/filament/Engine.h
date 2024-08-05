@@ -1023,7 +1023,7 @@ public:
       */
     utils::JobSystem& getJobSystem() noexcept;
 
-    void* getSwapHandle() noexcept;
+    void* UTILS_NULLABLE getSwapHandle() noexcept;
 
 #if defined(__EMSCRIPTEN__)
     /**

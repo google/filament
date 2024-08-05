@@ -122,7 +122,7 @@ public:
     using duration = clock::duration;
 
 public:
-    void* getSwapHandle();
+    void* UTILS_NULLABLE getSwapHandle();
 
     static Engine* create(Builder const& builder);
 

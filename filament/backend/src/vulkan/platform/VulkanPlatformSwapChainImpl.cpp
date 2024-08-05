@@ -79,7 +79,7 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(
   return std::tuple(image, imageMemory);
 }
 
-std::tuple<VkImage, VkDeviceMemory, void*> createImageAndMemoryHeadless(
+std::tuple<VkImage, VkDeviceMemory, void*> UTILS_NULLABLE createImageAndMemoryHeadless(
     VulkanContext const& context, VkDevice device, VkExtent2D extent,
     VkFormat format) {
   void* handleValue = (void*)-1;
@@ -493,7 +493,7 @@ VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index,
   return VK_SUCCESS;
 }
 
-void* VulkanPlatformHeadlessSwapChain::getSwapHandle()const {
+void* UTILS_NULLABLE VulkanPlatformHeadlessSwapChain::getSwapHandle() const {
   return (void*)handles[mCurrentIndex];
 }
 
