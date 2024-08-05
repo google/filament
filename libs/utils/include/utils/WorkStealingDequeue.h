@@ -18,6 +18,7 @@
 #define TNT_UTILS_WORKSTEALINGDEQUEUE_H
 
 #include <atomic>
+#include <type_traits>
 
 #include <assert.h>
 #include <stddef.h>
