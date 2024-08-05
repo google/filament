@@ -177,7 +177,7 @@ std::tuple<VkImage, VkDeviceMemory, void*> createImageAndMemoryHeadless(
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to get memory file descriptor");
   }
-  handleValue = (void*)fd;
+  handleValue = (void*)(long long)fd;
   #endif
 
   return std::tuple(image, imageMemory, handle);
