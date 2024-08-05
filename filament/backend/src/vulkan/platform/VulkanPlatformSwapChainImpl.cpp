@@ -180,7 +180,7 @@ std::tuple<VkImage, VkDeviceMemory, void*> createImageAndMemoryHeadless(
   handleValue = (void*)(long long)fd;
   #endif
 
-  return std::tuple(image, imageMemory, handle);
+  return std::tuple(image, imageMemory, handleValue);
 }
 
 VkFormat selectDepthFormat(VkFormatList const& depthFormats, bool hasStencil) {
