@@ -824,7 +824,7 @@ void initViewer() {
   g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
   //g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
-      vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
+      vzm::SCENE_COMPONENT_TYPE::CAMERA, "UserCamera");
   glm::fvec3 p(0, 0, 10);
   glm::fvec3 at(0, 0, -4);
   glm::fvec3 u(0, 1, 0);
@@ -1674,15 +1674,15 @@ int main(int, char**) {
             if (ImGui::CollapsingHeader("Indirect light")) {
               float iblIntensity = g_scene->GetIBLIntensity();
               float iblRotation = g_scene->GetIBLRotation();
-              // if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50)))
-              // {
-              //   std::wstring filePath = OpenFileDialog();
-              //   if (filePath.size() != 0) {
-              //     std::string str_path;
-              //     str_path.assign(filePath.begin(), filePath.end());
-              //     g_scene->LoadIBL(str_path);
-              //   }
-              // }
+               if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50)))
+               {
+                 std::wstring filePath = OpenFileDialog();
+                 if (filePath.size() != 0) {
+                   std::string str_path;
+                   str_path.assign(filePath.begin(), filePath.end());
+                   g_scene->LoadIBL(str_path);
+                 }
+               }
               if (ImGui::InputFloat("IBL intensity", &iblIntensity)) {
                 g_scene->SetIBLIntensity(iblIntensity);
               }
