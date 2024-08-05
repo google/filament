@@ -147,8 +147,8 @@ struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainImpl {
  private:
   uint32_t mCurrentIndex;
 
-  HANDLE handles[HEADLESS_SWAPCHAIN_SIZE] = {
-      0,
+  void* handles[HEADLESS_SWAPCHAIN_SIZE] = {
+      (void*) - 1,
   };
 };
 

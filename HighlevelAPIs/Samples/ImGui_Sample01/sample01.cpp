@@ -8,7 +8,10 @@
 #include <Windows.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
+
+#ifdef _WIN32
 #include <vulkan/vulkan_win32.h>
+#endif
 
 #include <iostream>
 
@@ -214,7 +217,7 @@ VkSampler createSampler(VkDevice device) {
 
 std::tuple<VkImage, VkDeviceMemory> importImageFromHandle(
     VkDevice currentDevice, VkPhysicalDevice physicalDevice, VkExtent2D extent,
-    VkFormat format, HANDLE handle) {
+    VkFormat format, void* handle) {
   bool const isDepth = false;
 
   VkImageUsageFlags const blittable =
@@ -223,9 +226,13 @@ std::tuple<VkImage, VkDeviceMemory> importImageFromHandle(
   VkExternalMemoryImageCreateInfo externalImageCreateInfo = {};
   externalImageCreateInfo.sType =
       VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
+  #ifdef _WIN32
   externalImageCreateInfo.handleTypes =
       VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
-
+  #elif __linux__
+  externalImageCreateInfo.handleTypes =
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+  #endif
   VkImageCreateInfo imageInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = &externalImageCreateInfo,
@@ -246,11 +253,18 @@ std::tuple<VkImage, VkDeviceMemory> importImageFromHandle(
     throw std::runtime_error("Unable to create image");
   }
 
+  #ifdef _WIN32
   VkImportMemoryWin32HandleInfoKHR importMemoryInfo = {};
   importMemoryInfo.sType =
       VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR;
   importMemoryInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
   importMemoryInfo.handle = handle;
+  #elif __linux__
+  VkImportMemoryFdInfoKHR importMemoryInfo = {};
+  importMemoryInfo.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR;
+  importMemoryInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+  importMemoryInfo.fd = (int)handle;
+  #endif
 
   VkMemoryRequirements memRequirements;
   vkGetImageMemoryRequirements(currentDevice, image, &memRequirements);
@@ -426,9 +440,14 @@ static void SetupVulkan(ImVector<const char*> instance_extensions) {
     ImVector<const char*> device_extensions;
     device_extensions.push_back("VK_KHR_swapchain");
     device_extensions.push_back("VK_KHR_external_memory");
-    device_extensions.push_back("VK_KHR_external_memory_win32");
     device_extensions.push_back("VK_KHR_external_semaphore");
+#ifdef _WIN32
+    device_extensions.push_back("VK_KHR_external_memory_win32");
     device_extensions.push_back("VK_KHR_external_semaphore_win32");
+#elif __linux__
+    device_extensions.push_back("VK_KHR_external_memory_fd");
+    device_extensions.push_back("VK_KHR_external_semaphore_fd");
+#endif
 
     // Enumerate physical device extension
     uint32_t properties_count;
@@ -791,7 +810,7 @@ std::wstring OpenFileDialog() {
 
   wchar_t originCurrentDirectory[260];
   GetCurrentDirectory(260, originCurrentDirectory);
-
+  
   if (GetOpenFileName(&ofn) == TRUE) {
     SetCurrentDirectory(originCurrentDirectory);
     return std::wstring(ofn.lpstrFile);
@@ -803,6 +822,7 @@ std::wstring OpenFileDialog() {
 void initViewer() {
   g_scene = vzm::NewScene("my scene");
   g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+  //g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "my camera");
   glm::fvec3 p(0, 0, 10);
@@ -930,7 +950,7 @@ int main(int, char**) {
   VkDeviceMemory swapMemories[2] = {
       0,
   };
-  HANDLE swapHandles[2] = {
+  void* swapHandles[2] = {
       INVALID_HANDLE_VALUE,
   };
 
@@ -1142,7 +1162,7 @@ int main(int, char**) {
 
     // swap buffer image
     {
-      HANDLE swapHandle = (HANDLE)vzm::GetGraphicsSharedRenderTarget();
+      void* swapHandle = vzm::GetGraphicsSharedRenderTarget();
       if (swapHandle != INVALID_HANDLE_VALUE) {
         int index = 0;
         if (swapHandles[0] != swapHandle && swapHandles[1] != swapHandle) {
@@ -1159,7 +1179,7 @@ int main(int, char**) {
           auto [importedImage, importedMemory] = importImageFromHandle(
               g_Device, g_PhysicalDevice,
               {(uint32_t)render_width, (uint32_t)render_height},
-              VK_FORMAT_R8G8B8A8_UNORM, (HANDLE)swapHandle);
+              VK_FORMAT_R8G8B8A8_UNORM, swapHandle);
           VkImageView importedImageView = createImageView(
               g_Device, importedImage, VK_FORMAT_R8G8B8A8_UNORM);
 
@@ -1424,83 +1444,83 @@ int main(int, char**) {
           if (ImGui::Button("Export", ImVec2(right_editUIWidth, 50))) {
             vzm::ExportAssetToGlb(g_asset, "export.glb");
           }
-          if (ImGui::CollapsingHeader("Automation", 0)) {
-            ImGui::Indent();
+          if (ImGui::CollapsingHeader("Automation")) {
+            //ImGui::Indent();
 
-            // if (true) {
-            //   ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
-            // } else {
-            //   ImGui::TextColored(yellow, "%zu test cases", 0);
-            // }
-            // ImGui::PushItemWidth(150);
-            // ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
-            // ImGui::PopItemWidth();
-            // ImGui::Checkbox("Export screenshot for each test", &bAny);
-            // ImGui::Checkbox("Export settings JSON for each test", &bAny);
-            // if (false) {
-            //   if (ImGui::Button("Stop batch test")) {
-            //   }
-            // } else if (ImGui::Button("Run batch test")) {
-            // }
+            //// if (true) {
+            ////   ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
+            //// } else {
+            ////   ImGui::TextColored(yellow, "%zu test cases", 0);
+            //// }
+            //// ImGui::PushItemWidth(150);
+            //// ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
+            //// ImGui::PopItemWidth();
+            //// ImGui::Checkbox("Export screenshot for each test", &bAny);
+            //// ImGui::Checkbox("Export settings JSON for each test", &bAny);
+            //// if (false) {
+            ////   if (ImGui::Button("Stop batch test")) {
+            ////   }
+            //// } else if (ImGui::Button("Run batch test")) {
+            //// }
 
-            if (ImGui::Button("Export view settings")) {
-              ImGui::OpenPopup("MessageBox");
-            }
-            ImGui::Unindent();
+            //if (ImGui::Button("Export view settings")) {
+            //  ImGui::OpenPopup("MessageBox");
+            //}
+            //ImGui::Unindent();
           }
 
           if (ImGui::CollapsingHeader("Stats")) {
-            ImGui::Indent();
-            ImGui::Text("%zu entities in the asset", 0);
-            ImGui::Text("%zu renderables (excluding UI)", 0);
-            ImGui::Text("%zu skipped frames", 0);
-            ImGui::Unindent();
+            //ImGui::Indent();
+            //ImGui::Text("%zu entities in the asset", 0);
+            //ImGui::Text("%zu renderables (excluding UI)", 0);
+            //ImGui::Text("%zu skipped frames", 0);
+            //ImGui::Unindent();
           }
 
           if (ImGui::CollapsingHeader("Debug")) {
-            if (ImGui::Button("Capture frame")) {
-            }
-            ImGui::Checkbox("Disable buffer padding", &bAny);
-            ImGui::Checkbox("Disable sub-passes", &bAny);
-            ImGui::Checkbox("Camera at origin", &bAny);
-            ImGui::Checkbox("Far Origin", &bAny);
-            ImGui::SliderFloat("Origin", &any, 0, 1);
-            ImGui::Checkbox("Far uses shadow casters", &bAny);
-            ImGui::Checkbox("Focus shadow casters", &bAny);
-
-            bool debugDirectionalShadowmap;
-            if (true) {
-              ImGui::Checkbox("Debug DIR shadowmap", &bAny);
-            }
-
-            ImGui::Checkbox("Display Shadow Texture", &bAny);
-            if (true) {
-              int layerCount;
-              int levelCount;
-              ImGui::Indent();
-              ImGui::SliderFloat("scale", &any, 0.0f, 8.0f);
-              ImGui::SliderFloat("contrast", &any, 0.0f, 8.0f);
-              ImGui::SliderInt("layer", &iAny, 0, 10);
-              ImGui::SliderInt("level", &iAny, 0, 10);
-              ImGui::SliderInt("channel", &iAny, 0, 10);
-              ImGui::Unindent();
-            }
-            bool debugFroxelVisualization;
-            if (true) {
-              ImGui::Checkbox("Froxel Visualization", &bAny);
-            }
-
-#ifndef NDEBUG
-            ImGui::SliderFloat("Kp", &any, 0, 2);
-            ImGui::SliderFloat("Ki", &any, 0, 2);
-            ImGui::SliderFloat("Kd", &any, 0, 2);
-#endif
-            ImGui::BeginDisabled(bAny);  // overdrawDisabled);
-            ImGui::Checkbox(!bAny        // overdrawDisabled
-                                ? "Visualize overdraw"
-                                : "Visualize overdraw (disabled for Vulkan)",
-                            &bAny);
-            ImGui::EndDisabled();
+//            if (ImGui::Button("Capture frame")) {
+//            }
+//            ImGui::Checkbox("Disable buffer padding", &bAny);
+//            ImGui::Checkbox("Disable sub-passes", &bAny);
+//            ImGui::Checkbox("Camera at origin", &bAny);
+//            ImGui::Checkbox("Far Origin", &bAny);
+//            ImGui::SliderFloat("Origin", &any, 0, 1);
+//            ImGui::Checkbox("Far uses shadow casters", &bAny);
+//            ImGui::Checkbox("Focus shadow casters", &bAny);
+//
+//            bool debugDirectionalShadowmap;
+//            if (true) {
+//              ImGui::Checkbox("Debug DIR shadowmap", &bAny);
+//            }
+//
+//            ImGui::Checkbox("Display Shadow Texture", &bAny);
+//            if (true) {
+//              int layerCount;
+//              int levelCount;
+//              ImGui::Indent();
+//              ImGui::SliderFloat("scale", &any, 0.0f, 8.0f);
+//              ImGui::SliderFloat("contrast", &any, 0.0f, 8.0f);
+//              ImGui::SliderInt("layer", &iAny, 0, 10);
+//              ImGui::SliderInt("level", &iAny, 0, 10);
+//              ImGui::SliderInt("channel", &iAny, 0, 10);
+//              ImGui::Unindent();
+//            }
+//            bool debugFroxelVisualization;
+//            if (true) {
+//              ImGui::Checkbox("Froxel Visualization", &bAny);
+//            }
+//
+//#ifndef NDEBUG
+//            ImGui::SliderFloat("Kp", &any, 0, 2);
+//            ImGui::SliderFloat("Ki", &any, 0, 2);
+//            ImGui::SliderFloat("Kd", &any, 0, 2);
+//#endif
+//            ImGui::BeginDisabled(bAny);  // overdrawDisabled);
+//            ImGui::Checkbox(!bAny        // overdrawDisabled
+//                                ? "Visualize overdraw"
+//                                : "Visualize overdraw (disabled for Vulkan)",
+//                            &bAny);
+//            ImGui::EndDisabled();
           }
 
           if (ImGui::BeginPopupModal("MessageBox", nullptr,
@@ -1595,7 +1615,7 @@ int main(int, char**) {
 
           ///////////////////////////////////
           if (ImGui::CollapsingHeader("TAA Options")) {
-            ImGui::Checkbox("Upscaling", &bAny);
+            /*ImGui::Checkbox("Upscaling", &bAny);
             ImGui::Checkbox("History Reprojection", &bAny);
             ImGui::SliderFloat("Feedback", &any, 0.0f, 1.0f);
             ImGui::Checkbox("Filter History", &bAny);
@@ -1610,11 +1630,11 @@ int main(int, char**) {
             ImGui::Combo("Box Clipping", &iAny, "Accurate\0Clamp\0None\0\0");
             ImGui::Combo("Box Type", &iAny, "AABB\0Variance\0Both\0\0");
             ImGui::SliderFloat("Variance Gamma", &any, 0.75f, 1.25f);
-            ImGui::SliderFloat("RCAS", &any, 0.0f, 1.0f);
+            ImGui::SliderFloat("RCAS", &any, 0.0f, 1.0f);*/
           }
 
           if (ImGui::CollapsingHeader("SSAO Options")) {
-            ImGui::SliderInt("Quality", &iAny, 0, 3);
+         /*   ImGui::SliderInt("Quality", &iAny, 0, 3);
             ImGui::SliderInt("Low Pass", &iAny, 0, 2);
             ImGui::Checkbox("Bent Normals", &bAny);
             ImGui::Checkbox("High quality upsampling", &bAny);
@@ -1631,23 +1651,23 @@ int main(int, char**) {
               ImGui::SliderFloat("Depth bias", &any, 0.0f, 1.0f);
               ImGui::SliderFloat("Depth slope bias", &any, 0.0f, 1.0f);
               ImGui::SliderInt("Sample Count", &iAny, 1, 32);
-            }
+            }*/
           }
 
           if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
-            ImGui::SliderFloat("Ray thickness", &any, 0.001f, 0.2f);
+     /*       ImGui::SliderFloat("Ray thickness", &any, 0.001f, 0.2f);
             ImGui::SliderFloat("Bias", &any, 0.001f, 0.5f);
             ImGui::SliderFloat("Max distance", &any, 0.1f, 10.0f);
-            ImGui::SliderFloat("Stride", &any, 1.0, 10.0f);
+            ImGui::SliderFloat("Stride", &any, 1.0, 10.0f);*/
           }
 
           if (ImGui::CollapsingHeader("Dynamic Resolution")) {
-            ImGui::Checkbox("enabled", &bAny);
-            ImGui::Checkbox("homogeneous", &bAny);
-            ImGui::SliderFloat("min. scale", &any, 0.25f, 1.0f);
-            ImGui::SliderFloat("max. scale", &any, 0.25f, 1.0f);
-            ImGui::SliderInt("quality", &iAny, 0, 3);
-            ImGui::SliderFloat("sharpness", &any, 0.0f, 1.0f);
+            //ImGui::Checkbox("enabled", &bAny);
+            //ImGui::Checkbox("homogeneous", &bAny);
+            //ImGui::SliderFloat("min. scale", &any, 0.25f, 1.0f);
+            //ImGui::SliderFloat("max. scale", &any, 0.25f, 1.0f);
+            //ImGui::SliderInt("quality", &iAny, 0, 3);
+            //ImGui::SliderFloat("sharpness", &any, 0.0f, 1.0f);
           }
           if (ImGui::CollapsingHeader("Light")) {
             ImGui::Indent();
@@ -1670,53 +1690,53 @@ int main(int, char**) {
                 g_scene->SetIBLRotation(iblRotation);
               }
             }
-            if (ImGui::CollapsingHeader("Sunlight")) {
-              ImGui::Checkbox("Enable sunlight", &bAny);
-              ImGui::SliderFloat("Sun intensity", &any, 0.0f, 150000.0f);
-              ImGui::SliderFloat("Halo size", &any, 1.01f, 40.0f);
-              ImGui::SliderFloat("Halo falloff", &any, 4.0f, 1024.0f);
-              ImGui::SliderFloat("Sun radius", &any, 0.1f, 10.0f);
-              ImGui::SliderFloat("Shadow Far", &any, 0.0f, 10.0f);
-              //                             mSettings.viewer.cameraFar);
+            //if (ImGui::CollapsingHeader("Sunlight")) {
+            //  ImGui::Checkbox("Enable sunlight", &bAny);
+            //  ImGui::SliderFloat("Sun intensity", &any, 0.0f, 150000.0f);
+            //  ImGui::SliderFloat("Halo size", &any, 1.01f, 40.0f);
+            //  ImGui::SliderFloat("Halo falloff", &any, 4.0f, 1024.0f);
+            //  ImGui::SliderFloat("Sun radius", &any, 0.1f, 10.0f);
+            //  ImGui::SliderFloat("Shadow Far", &any, 0.0f, 10.0f);
+            //  //                             mSettings.viewer.cameraFar);
 
-              if (ImGui::CollapsingHeader("Shadow direction")) {
-                // ImGuiExt::DirectionWidget("Shadow direction",
-                // shadowDirection.v);
-              }
-            }
-            if (ImGui::CollapsingHeader("Shadows")) {
-              ImGui::Checkbox("Enable shadows", &bAny);
-              ImGui::SliderInt("Shadow map size", &iAny, 32, 1024);
-              ImGui::Checkbox("Stable Shadows", &bAny);
-              ImGui::Checkbox("Enable LiSPSM", &bAny);
+            //  if (ImGui::CollapsingHeader("Shadow direction")) {
+            //    // ImGuiExt::DirectionWidget("Shadow direction",
+            //    // shadowDirection.v);
+            //  }
+            //}
+            //if (ImGui::CollapsingHeader("Shadows")) {
+            //  ImGui::Checkbox("Enable shadows", &bAny);
+            //  ImGui::SliderInt("Shadow map size", &iAny, 32, 1024);
+            //  ImGui::Checkbox("Stable Shadows", &bAny);
+            //  ImGui::Checkbox("Enable LiSPSM", &bAny);
 
-              ImGui::Combo("Shadow type", &iAny,
-                           "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0");
+            //  ImGui::Combo("Shadow type", &iAny,
+            //               "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0");
 
-              if (true) {
-                ImGui::Checkbox("High precision", &bAny);
-                ImGui::Checkbox("ELVSM", &bAny);
-                ImGui::SliderInt("VSM MSAA samples", &iAny, 0, 3);
-                ImGui::SliderInt("VSM anisotropy", &iAny, 0, 3);
-                ImGui::Checkbox("VSM mipmapping", &bAny);
-                ImGui::SliderFloat("VSM blur", &any, 0.0f, 125.0f);
-              } else if (false) {
-                ImGui::SliderFloat("Penumbra scale", &any, 0.0f, 100.0f);
-                ImGui::SliderFloat("Penumbra Ratio scale", &any, 1.0f, 100.0f);
-              }
+            //  if (true) {
+            //    ImGui::Checkbox("High precision", &bAny);
+            //    ImGui::Checkbox("ELVSM", &bAny);
+            //    ImGui::SliderInt("VSM MSAA samples", &iAny, 0, 3);
+            //    ImGui::SliderInt("VSM anisotropy", &iAny, 0, 3);
+            //    ImGui::Checkbox("VSM mipmapping", &bAny);
+            //    ImGui::SliderFloat("VSM blur", &any, 0.0f, 125.0f);
+            //  } else if (false) {
+            //    ImGui::SliderFloat("Penumbra scale", &any, 0.0f, 100.0f);
+            //    ImGui::SliderFloat("Penumbra Ratio scale", &any, 1.0f, 100.0f);
+            //  }
 
-              ImGui::SliderInt("Cascades", &iAny, 1, 4);
-              ImGui::Checkbox("Debug cascades", &bAny);
-              ImGui::Checkbox("Enable contact shadows", &bAny);
-              ImGui::SliderFloat("Split pos 0", &any, 0.0f, 1.0f);
-              ImGui::SliderFloat("Split pos 1", &any, 0.0f, 1.0f);
-              ImGui::SliderFloat("Split pos 2", &any, 0.0f, 1.0f);
-            }
+            //  ImGui::SliderInt("Cascades", &iAny, 1, 4);
+            //  ImGui::Checkbox("Debug cascades", &bAny);
+            //  ImGui::Checkbox("Enable contact shadows", &bAny);
+            //  ImGui::SliderFloat("Split pos 0", &any, 0.0f, 1.0f);
+            //  ImGui::SliderFloat("Split pos 1", &any, 0.0f, 1.0f);
+            //  ImGui::SliderFloat("Split pos 2", &any, 0.0f, 1.0f);
+            //}
             ImGui::Unindent();
           }
 
           if (ImGui::CollapsingHeader("Fog")) {
-            ImGui::Indent();
+           /* ImGui::Indent();
             ImGui::Checkbox("Enable large-scale fog", &bAny);
             ImGui::SliderFloat("Start [m]", &any, 0.0f, 100.0f);
             ImGui::SliderFloat("Extinction [1/m]", &any, 0.0f, 1.0f);
@@ -1727,97 +1747,97 @@ int main(int, char**) {
             ImGui::Checkbox("Exclude Skybox", &bAny);
             ImGui::Combo("Color##fogColor", &iAny, "Constant\0IBL\0Skybox\0\0");
             ImGui::ColorPicker3("Color", anyVec);
-            ImGui::Unindent();
+            ImGui::Unindent();*/
           }
           if (ImGui::CollapsingHeader("Scene")) {
-            ImGui::Indent();
+            //ImGui::Indent();
 
-            if (ImGui::Checkbox("Scale to unit cube", &bAny)) {
-            }
+            //if (ImGui::Checkbox("Scale to unit cube", &bAny)) {
+            //}
 
-            ImGui::Checkbox("Automatic instancing", &bAny);
+            //ImGui::Checkbox("Automatic instancing", &bAny);
 
-            ImGui::Checkbox("Show skybox", &bAny);
-            ImGui::ColorEdit3("Background color", anyVec);
+            //ImGui::Checkbox("Show skybox", &bAny);
+            //ImGui::ColorEdit3("Background color", anyVec);
 
-            // We do not yet support ground shadow or scene selection in remote
-            // mode.
-            if (true) {
-              ImGui::Checkbox("Ground shadow", &bAny);
-              ImGui::Indent();
-              ImGui::SliderFloat("Strength", &any, 0.0f, 1.0f);
-              ImGui::Unindent();
+            //// We do not yet support ground shadow or scene selection in remote
+            //// mode.
+            //if (true) {
+            //  ImGui::Checkbox("Ground shadow", &bAny);
+            //  ImGui::Indent();
+            //  ImGui::SliderFloat("Strength", &any, 0.0f, 1.0f);
+            //  ImGui::Unindent();
 
-              // if (mAsset->getSceneCount() > 1) {
-              //   ImGui::Separator();
-              //   sceneSelectionUI();
-              // }
-            }
+            //  // if (mAsset->getSceneCount() > 1) {
+            //  //   ImGui::Separator();
+            //  //   sceneSelectionUI();
+            //  // }
+            //}
 
-            ImGui::Unindent();
+            //ImGui::Unindent();
           }
 
           if (ImGui::CollapsingHeader("Camera")) {
-            ImGui::Indent();
-            float zNearP, zFarP, fovInDegree, aspectRatio;
-            g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree,
-                                            &aspectRatio);
-            if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
-              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                              aspectRatio);
-            }
-            if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
-              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                              aspectRatio);
-            }
-            if (ImGui::InputFloat("Fov", &fovInDegree)) {
-              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                              aspectRatio);
-            }
-            if (ImGui::InputFloat("AspectRatio", &aspectRatio)) {
-              g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                              aspectRatio);
-            }
+            //ImGui::Indent();
+            //float zNearP, zFarP, fovInDegree, aspectRatio;
+            //g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree,
+            //                                &aspectRatio);
+            //if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
+            //  g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+            //                                  aspectRatio);
+            //}
+            //if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
+            //  g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+            //                                  aspectRatio);
+            //}
+            //if (ImGui::InputFloat("Fov", &fovInDegree)) {
+            //  g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+            //                                  aspectRatio);
+            //}
+            //if (ImGui::InputFloat("AspectRatio", &aspectRatio)) {
+            //  g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
+            //                                  aspectRatio);
+            //}
 
-            ImGui::SliderFloat("Focal length (mm)", &any, 16.0f, 90.0f);
-            ImGui::SliderFloat("Aperture", &any, 1.0f, 32.0f);
-            ImGui::SliderFloat("Speed (1/s)", &any, 1000.0f, 1.0f);
-            ImGui::SliderFloat("ISO", &any, 25.0f, 6400.0f);
-            if (ImGui::CollapsingHeader("DoF")) {
-              ImGui::Checkbox("Enabled##dofEnabled", &bAny);
-              ImGui::SliderFloat("Focus distance", &any, 0.0f, 30.0f);
-              ImGui::SliderFloat("Blur scale", &any, 0.1f, 10.0f);
-              ImGui::SliderFloat("CoC aspect-ratio", &any, 0.25f, 4.0f);
-              ImGui::SliderInt("Ring count", &iAny, 1, 17);
-              ImGui::SliderInt("Max CoC", &iAny, 1, 32);
-              ImGui::Checkbox("Native Resolution", &bAny);
-              ImGui::Checkbox("Median Filter", &bAny);
-            }
+            //ImGui::SliderFloat("Focal length (mm)", &any, 16.0f, 90.0f);
+            //ImGui::SliderFloat("Aperture", &any, 1.0f, 32.0f);
+            //ImGui::SliderFloat("Speed (1/s)", &any, 1000.0f, 1.0f);
+            //ImGui::SliderFloat("ISO", &any, 25.0f, 6400.0f);
+            //if (ImGui::CollapsingHeader("DoF")) {
+            //  ImGui::Checkbox("Enabled##dofEnabled", &bAny);
+            //  ImGui::SliderFloat("Focus distance", &any, 0.0f, 30.0f);
+            //  ImGui::SliderFloat("Blur scale", &any, 0.1f, 10.0f);
+            //  ImGui::SliderFloat("CoC aspect-ratio", &any, 0.25f, 4.0f);
+            //  ImGui::SliderInt("Ring count", &iAny, 1, 17);
+            //  ImGui::SliderInt("Max CoC", &iAny, 1, 32);
+            //  ImGui::Checkbox("Native Resolution", &bAny);
+            //  ImGui::Checkbox("Median Filter", &bAny);
+            //}
 
-            if (ImGui::CollapsingHeader("Vignette")) {
-              ImGui::Checkbox("Enabled##vignetteEnabled", &bAny);
-              ImGui::SliderFloat("Mid point", &any, 0.0f, 1.0f);
-              ImGui::SliderFloat("Roundness", &any, 0.0f, 1.0f);
-              ImGui::SliderFloat("Feather", &any, 0.0f, 1.0f);
-              ImGui::ColorEdit3("Color##vignetteColor", anyVec);
-            }
+            //if (ImGui::CollapsingHeader("Vignette")) {
+            //  ImGui::Checkbox("Enabled##vignetteEnabled", &bAny);
+            //  ImGui::SliderFloat("Mid point", &any, 0.0f, 1.0f);
+            //  ImGui::SliderFloat("Roundness", &any, 0.0f, 1.0f);
+            //  ImGui::SliderFloat("Feather", &any, 0.0f, 1.0f);
+            //  ImGui::ColorEdit3("Color##vignetteColor", anyVec);
+            //}
 
-            // We do not yet support camera selection in the remote UI. To
-            // support this feature, we would need to send a message from
-            // DebugServer to the WebSockets client.
-            /*       if (true) {
-                     ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(),
-                                    cstrings.size());
-                   }*/
+            //// We do not yet support camera selection in the remote UI. To
+            //// support this feature, we would need to send a message from
+            //// DebugServer to the WebSockets client.
+            ///*       if (true) {
+            //         ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(),
+            //                        cstrings.size());
+            //       }*/
 
-            ImGui::SliderFloat("Ocular distance", &any, 0.0f, 1.0f);
+            //ImGui::SliderFloat("Ocular distance", &any, 0.0f, 1.0f);
 
-            float toeInDegrees = any;
-            // mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
-            ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");
-            // mSettings.viewer.cameraEyeToeIn = toeInDegrees / 180.0f * f::PI;
+            //float toeInDegrees = any;
+            //// mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
+            //ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");
+            //// mSettings.viewer.cameraEyeToeIn = toeInDegrees / 180.0f * f::PI;
 
-            ImGui::Unindent();
+            //ImGui::Unindent();
           }
           break;
       }
