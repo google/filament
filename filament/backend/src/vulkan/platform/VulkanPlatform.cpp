@@ -174,7 +174,7 @@ ExtensionSet getInstanceExtensions(
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #elif __linux__
         VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-        VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, 
+        //VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, 
 #endif
   // Request these if available.
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
