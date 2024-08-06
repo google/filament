@@ -765,7 +765,8 @@ enum class TextureUsage : uint16_t {
     BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
     BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
     PROTECTED           = 0x0100,            //!< Texture can be used for protected content
-    DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
+    DEFAULT             = UPLOADABLE | SAMPLEABLE,   //!< Default texture usage
+    ALL_ATTACHMENTS     = COLOR_ATTACHMENT | DEPTH_ATTACHMENT | STENCIL_ATTACHMENT | SUBPASS_INPUT,   //!< Mask of all attachments
 };
 
 inline const char* stringify(TextureUsage usage) {
