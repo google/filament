@@ -48,6 +48,6 @@ namespace vzm
 
         size_t GetAllowedParameters(std::map<std::string, vzm::UniformType>& paramters);
 
-        size_t GetAllowedParameters(std::vector<ParameterInfo>& paramters);
+        size_t GetAllowedParameters(std::map<std::string,ParameterInfo>& paramters);
     };
 }
