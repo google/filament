@@ -28,4 +28,24 @@ namespace vzm
         }
         return m_res->allowedParamters.size();
     }
+
+    size_t VzMaterial::GetAllowedParameters(std::vector<ParameterInfo>& paramters)
+    {
+        COMP_MAT(material, m_res, 0);
+
+        for (auto& kv : m_res->allowedParamters)
+        {
+            ParameterInfo pi;
+            pi.name = kv.first.c_str();
+            pi.isSampler = kv.second.isSampler;
+            pi.isSubpass = kv.second.isSubpass;
+            pi.type = (vzm::UniformType)kv.second.type;
+            pi.samplerType = (vzm::SamplerType)kv.second.samplerType;
+            pi.subpassType = (vzm::SubpassType)kv.second.subpassType;
+            pi.count = kv.second.count;
+            pi.precision = (vzm::Precision)kv.second.precision;
+            paramters.push_back(pi);
+        }
+        return m_res->allowedParamters.size();
+    }
 }
