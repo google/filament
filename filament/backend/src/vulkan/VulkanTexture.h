@@ -36,7 +36,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
             VmaAllocator allocator, VulkanCommands* commands, SamplerType target, uint8_t levels,
             TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
             TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated = false,
-            VkComponentMapping swizzle = {});
+            VkComponentMapping swizzle = {}, bool preferTransientAttachment = false);
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     // The texture will never destroy the given VkImage, but it does manages its subresources.

@@ -356,7 +356,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
                         texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
                         samples, texture->width, texture->height, texture->depth, texture->usage,
-                        stagePool, true /* heap allocated */);
+                        stagePool, true /* heap allocated */, {} /* swizzle */,
+                        true /* preferTransientAttachment */);
                 texture->setSidecar(msTexture);
             }
             mMsaaAttachments[index] = {.texture = msTexture};
