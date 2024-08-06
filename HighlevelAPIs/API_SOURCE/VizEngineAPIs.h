@@ -34,6 +34,7 @@ namespace vzm
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
     __dojostatic VzBaseComp* GetFirstVzComponentByName(const std::string& name);
     __dojostatic size_t GetVzComponentsByName(const std::string& name, std::vector<VzBaseComp*>& components);
+    __dojostatic size_t GetVzComponentsByType(const std::string& type, std::vector<VzBaseComp*>& components);
     // Append Component to the parent component
     //  - return sceneId containing the parent component 
     __dojostatic VID AppendSceneCompVidTo(const VID vid, const VID parentVid);

@@ -446,6 +446,11 @@ namespace vzm
         return components.size();
     }
 
+    size_t GetVzComponentsByType(const std::string& type, std::vector<VzBaseComp*>& components)
+    {
+        return gEngineApp.GetVzComponentsByType(type, components);
+    }
+
     size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly)
     {
         Scene* scene = nullptr;

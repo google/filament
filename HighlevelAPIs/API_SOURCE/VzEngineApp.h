@@ -321,6 +321,18 @@ namespace vzm
             }
             return (VZCOMP*)it->second.get();
         }
+        size_t GetVzComponentsByType(const std::string& type, std::vector<VzBaseComp*>& components)
+        {
+            components.clear();
+            for (auto& it : vzCompMap_)
+            {
+                if (it.second->GetType() == type)
+                {
+                    components.push_back(it.second.get());
+                }
+            }
+            return components.size();
+        }
 
         gltfio::VzAssetLoader* GetGltfAssetLoader();
         gltfio::VzAssetExpoter* GetGltfAssetExpoter();

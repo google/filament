@@ -96,6 +96,22 @@ namespace vzm
         return true;
     }
 
+    bool VzMI::SetTexture(const std::string& name, const VID vidTexture)
+    {
+        SET_PARAM_COMP(mi, mi_res, m_res, false);
+
+        VzTextureRes* tex_res = gEngineApp.GetTextureRes(vidTexture);
+
+        if (tex_res->texture == nullptr) {
+            return false;
+        }
+
+        mi->setParameter(name.c_str(), tex_res->texture, tex_res->sampler);
+        
+        UpdateTimeStamp();
+        return true;
+    }
+
     VID VzMI::GetMaterial()
     {
         COMP_MI(mi, mi_res, INVALID_VID);

@@ -77,6 +77,7 @@ namespace vzm
         tex_res->sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
         tex_res->sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
 
+        UpdateTimeStamp();
         return true;
     }
 
@@ -84,20 +85,37 @@ namespace vzm
     {
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
         tex_res->sampler.setMinFilter((TextureSampler::MinFilter)filter);
+        UpdateTimeStamp();
     }
     void VzTexture::SetMagFilter(const SamplerMagFilter filter)
     {
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
         tex_res->sampler.setMagFilter((TextureSampler::MagFilter)filter);
+        UpdateTimeStamp();
     }
     void VzTexture::SetWrapModeS(const SamplerWrapMode mode)
     {
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
         tex_res->sampler.setWrapModeS((TextureSampler::WrapMode)mode);
+        UpdateTimeStamp();
     }
     void VzTexture::SetWrapModeT(const SamplerWrapMode mode)
     {
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
         tex_res->sampler.setWrapModeT((TextureSampler::WrapMode)mode);
+        UpdateTimeStamp();
+    }
+
+    bool VzTexture::GenerateMIPs()
+    {
+        VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
+
+        if (tex_res->texture == nullptr) {
+            return false;
+        }
+        tex_res->texture->generateMipmaps(*gEngine);
+
+        UpdateTimeStamp();
+        return true;
     }
 }

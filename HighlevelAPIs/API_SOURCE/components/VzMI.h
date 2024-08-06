@@ -20,7 +20,7 @@ namespace vzm
         bool SetParameter(const std::string& name, const vzm::RgbType vType, const float* v);
         bool SetParameter(const std::string& name, const vzm::RgbaType vType, const float* v);
         bool GetParameter(const std::string& name, const vzm::UniformType vType, const void* v);
-        void SetTexture(const std::string& uniformName, const VID vidTexture);
+        bool SetTexture(const std::string& name, const VID vidTexture);
         VID GetMaterial();
     };
 }
