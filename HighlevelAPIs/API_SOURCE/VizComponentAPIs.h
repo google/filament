@@ -12,9 +12,14 @@
 
 #define _ITERATOR_DEBUG_LEVEL 0 // this is for using STL containers as our standard parameters
 
-#define __dojostatic extern "C" __declspec(dllexport)
-#define __dojoclass class __declspec(dllexport)
-#define __dojostruct struct __declspec(dllexport)
+#ifdef WIN32
+#define API_EXPORT __declspec(dllexport)
+#else
+#define API_EXPORT __attribute__((visibility("default")))
+#endif
+#define __dojostatic extern "C" API_EXPORT
+#define __dojoclass class API_EXPORT
+#define __dojostruct struct API_EXPORT
 
 #define __FP (float*)&
 #define VZRESULT int
@@ -107,9 +112,9 @@ namespace vzm
         }
 
         typedef std::unordered_map<ID, std::any> MapType;
-        typename typedef MapType::iterator iterator;
-        typename typedef MapType::const_iterator const_iterator;
-        typename typedef MapType::reference reference;
+        typedef typename MapType::iterator iterator;
+        typedef typename MapType::const_iterator const_iterator;
+        typedef typename MapType::reference reference;
         iterator begin() { return __params.begin(); }
         const_iterator begin() const { return __params.begin(); }
         iterator end() { return __params.end(); }
@@ -300,6 +305,31 @@ namespace vzm
          * transparent red is <0.5,0,0,0.5>)
          */
         PREMULTIPLIED_LINEAR
+    };
+
+    //! Sampler Wrap mode
+    enum class SamplerWrapMode : uint8_t {
+        CLAMP_TO_EDGE,      //!< clamp-to-edge. The edge of the texture extends to infinity.
+        REPEAT,             //!< repeat. The texture infinitely repeats in the wrap direction.
+        MIRRORED_REPEAT,    //!< mirrored-repeat. The texture infinitely repeats and mirrors in the wrap direction.
+    };
+
+    //! Sampler minification filter
+    enum class SamplerMinFilter : uint8_t {
+        // don't change the enums values
+        NEAREST = 0,                //!< No filtering. Nearest neighbor is used.
+        LINEAR = 1,                 //!< Box filtering. Weighted average of 4 neighbors is used.
+        NEAREST_MIPMAP_NEAREST = 2, //!< Mip-mapping is activated. But no filtering occurs.
+        LINEAR_MIPMAP_NEAREST = 3,  //!< Box filtering within a mip-map level.
+        NEAREST_MIPMAP_LINEAR = 4,  //!< Mip-map levels are interpolated, but no other filtering occurs.
+        LINEAR_MIPMAP_LINEAR = 5    //!< Both interpolated Mip-mapping and linear filtering are used.
+    };
+
+    //! Sampler magnification filter
+    enum class SamplerMagFilter : uint8_t {
+        // don't change the enums values
+        NEAREST = 0,                //!< No filtering. Nearest neighbor is used.
+        LINEAR = 1,                 //!< Box filtering. Weighted average of 4 neighbors is used.
     };
 }
 #endif

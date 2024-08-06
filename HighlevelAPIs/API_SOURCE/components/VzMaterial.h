@@ -44,6 +44,8 @@ namespace vzm
         void SetLightingModel(const LightingModel model);
         LightingModel GetLightingModel() const;
 
+        // TODO : 'Default' Setters and Getters for Material Instances
+
         size_t GetAllowedParameters(std::map<std::string, vzm::UniformType>& paramters);
     };
 }

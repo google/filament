@@ -183,7 +183,8 @@ namespace vzm
     {
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
-        //Tex* mi = nullptr;
+        Texture* texture = nullptr;
+        TextureSampler sampler;
         ~VzTextureRes();
     };
 
@@ -293,6 +294,10 @@ namespace vzm
             const MaterialInstance* mi = nullptr,
             const filament::gltfio::FilamentAsset* assetOwner = nullptr,
             const bool isSystem = false);
+        VzTexture* CreateTexture(const std::string& name,
+            const Texture* texture = nullptr,
+            const filament::gltfio::FilamentAsset* assetOwner = nullptr,
+            const bool isSystem = false);
 
         void BuildRenderable(const ActorVID vid);
 
@@ -303,6 +308,9 @@ namespace vzm
         VzMIRes* GetMIRes(const MInstanceVID vidMI);
         MInstanceVID FindMaterialInstanceVID(const filament::MaterialInstance* mi);
 
+        VzTextureRes* GetTextureRes(const TextureVID vidTex);
+        TextureVID FindTextureVID(const filament::Texture* texture);
+
         template <typename VZCOMP>
         VZCOMP* GetVzComponent(const VID vid)
         {
@@ -312,6 +320,18 @@ namespace vzm
                 return nullptr;
             }
             return (VZCOMP*)it->second.get();
+        }
+        size_t GetVzComponentsByType(const std::string& type, std::vector<VzBaseComp*>& components)
+        {
+            components.clear();
+            for (auto& it : vzCompMap_)
+            {
+                if (it.second->GetType() == type)
+                {
+                    components.push_back(it.second.get());
+                }
+            }
+            return components.size();
         }
 
         gltfio::VzAssetLoader* GetGltfAssetLoader();

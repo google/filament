@@ -10,7 +10,7 @@ namespace vzm
     void VzLight::SetIntensity(const float intensity)
     {
         COMP_LIGHT(lcm, ett, ins, );
-      lcm.setIntensityCandela(ins, intensity);
+        lcm.setIntensityCandela(ins, intensity);
         UpdateTimeStamp();
     }
     float VzLight::GetIntensity() const

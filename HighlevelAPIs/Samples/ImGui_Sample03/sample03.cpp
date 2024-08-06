@@ -107,7 +107,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    arguments.SetParam("api", std::string("opengl"));
+    //arguments.SetParam("api", std::string("opengl"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
@@ -118,6 +118,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
 
+    std::vector<vzm::VzBaseComp*> components;
+    if (vzm::GetVzComponentsByType("VzMI", components) > 0)
+    {
+        vzm::VzMI* mi = (vzm::VzMI*)components[0];
+        vzm::VzMaterial* m = (vzm::VzMaterial*)vzm::GetVzComponent(mi->GetMaterial());
+        std::map<std::string, vzm::UniformType> paramters;
+        m->GetAllowedParameters(paramters);
+        for (auto& it : paramters)
+        {
+            std::cout << it.first << ", " << (uint8_t)it.second << std::endl;
+        }
+
+        vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
+        texture->ReadImage("../assets/testimage.png");
+        mi->SetTexture("baseColorMap", texture->GetVID());
+    }
     //std::vector<VID> vid_list;
     //vzm::GetVidsByName("DoorRearRight", vid_list);
     //vzm::VzBaseComp* base_comp = vzm::GetVzComponentByName("DoorRearRight");

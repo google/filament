@@ -369,7 +369,7 @@ namespace vzm
         if (v_comp == nullptr)
         {
             backlog::post("NewSceneComponent >> failure to gEngineApp.CreateSceneComponent", backlog::LogLevel::Error);
-            return 0;
+            return nullptr;
         }
 
         if (parentVid != 0)
@@ -377,6 +377,30 @@ namespace vzm
             gEngineApp.AppendSceneEntityToParent(v_comp->GetVID(), parentVid);
         }
 
+        return v_comp;
+    }
+
+    VzResource* NewResComponent(const RES_COMPONENT_TYPE compType, const std::string& compName)
+    {
+        VzResource* v_comp = nullptr;
+        switch (compType)
+        {
+        case RES_COMPONENT_TYPE::GEOMATRY:
+            v_comp = gEngineApp.CreateGeometry(compName, {}); break;
+        case RES_COMPONENT_TYPE::MATERIAL:
+            v_comp = gEngineApp.CreateMaterial(compName, {}); break;
+        case RES_COMPONENT_TYPE::MATERIALINSTANCE:
+            v_comp = gEngineApp.CreateMaterialInstance(compName, {}); break;
+        case RES_COMPONENT_TYPE::TEXTURE:
+            v_comp = gEngineApp.CreateTexture(compName, {}); break;
+        default:
+            backlog::post("INVALID RESOURCE TYPE", backlog::LogLevel::Error);
+        }
+        if (v_comp == nullptr)
+        {
+            backlog::post("NewResComponent >> failure to gEngineApp.Create[ResComp]", backlog::LogLevel::Error);
+            return nullptr;
+        }
         return v_comp;
     }
 
@@ -420,6 +444,11 @@ namespace vzm
             }
         }
         return components.size();
+    }
+
+    size_t GetVzComponentsByType(const std::string& type, std::vector<VzBaseComp*>& components)
+    {
+        return gEngineApp.GetVzComponentsByType(type, components);
     }
 
     size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly)
