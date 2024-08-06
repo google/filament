@@ -275,14 +275,14 @@ namespace vzm
     }
 #pragma endregion
 
-#pragma region // VzMIRes
+#pragma region // VzTextureRes
     VzTextureRes::~VzTextureRes()
     {
         if (assetOwner == nullptr && !isSystem)
         {
-            //if (mi)
-            //    gEngine->destroy(mi);
-            //mi = nullptr;
+            if (texture)
+                gEngine->destroy(texture);
+            texture = nullptr;
             // check MI...
         }
     }
@@ -1123,6 +1123,27 @@ namespace vzm
         auto it = vzCompMap_.emplace(vid, std::make_unique<VzMI>(vid, "CreateMaterialInstance", "VzMI", RES_COMPONENT_TYPE::MATERIALINSTANCE));
         return (VzMI*)it.first->second.get();
     }
+    VzTexture* VzEngineApp::CreateTexture(const std::string& name,
+        const Texture* texture,
+        const filament::gltfio::FilamentAsset* assetOwner,
+        const bool isSystem)
+    {
+        auto& em = utils::EntityManager::get();
+        auto& ncm = VzNameCompManager::Get();
+
+        utils::Entity ett = em.create();
+        ncm.CreateNameComp(ett, name);
+
+        VID vid = ett.getId();
+        textureResMap_[vid] = std::make_unique<VzTextureRes>();
+        VzTextureRes& tex_res = *textureResMap_[vid].get();
+        tex_res.texture = (Texture*)texture;
+        tex_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
+        tex_res.isSystem = isSystem;
+
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzTexture>(vid, "CreateTexture", "VzTexture", RES_COMPONENT_TYPE::TEXTURE));
+        return (VzTexture*)it.first->second.get();
+    }
 
     void VzEngineApp::BuildRenderable(const ActorVID vid)
     {
@@ -1225,6 +1246,26 @@ namespace vzm
         for (auto& it : miResMap_)
         {
             if (it.second->mi == mi)
+            {
+                return it.first;
+            }
+        }
+        return INVALID_VID;
+    }
+    VzTextureRes* VzEngineApp::GetTextureRes(const TextureVID vidTex)
+    {
+        auto it = textureResMap_.find(vidTex);
+        if (it == textureResMap_.end())
+        {
+            return nullptr;
+        }
+        return it->second.get();
+    }
+    TextureVID VzEngineApp::FindTextureVID(const filament::Texture* texture)
+    {
+        for (auto& it : textureResMap_)
+        {
+            if (it.second->texture == texture)
             {
                 return it.first;
             }

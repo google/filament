@@ -28,6 +28,7 @@ namespace vzm
     //  - parentVid cannot be a scene (renderable or 0)
     //  - return zero in case of failure (invalid sceneID, the name is already registered, or overflow VID)
     __dojostatic VzSceneComp* NewSceneComponent(const SCENE_COMPONENT_TYPE compType, const std::string& compName, const VID parentVid = 0u);
+    __dojostatic VzResource* NewResComponent(const RES_COMPONENT_TYPE compType, const std::string& compName);
     // Get Component and return its pointer registered in renderer
     //  - return nullptr in case of failure
     __dojostatic VzBaseComp* GetVzComponent(const VID vid);
