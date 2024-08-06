@@ -107,7 +107,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    //arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("vulkan-gpu-hint", std::string("0"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");

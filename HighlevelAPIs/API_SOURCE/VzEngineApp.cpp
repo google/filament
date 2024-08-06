@@ -1315,6 +1315,31 @@ namespace vzm
 #pragma region destroy by engine
             bool isRenderableResource = false; // geometry, material, or material instance
             // note filament engine handles the renderable objects (with the modified resource settings)
+            auto it_tx = textureResMap_.find(vid);
+            if (it_tx != textureResMap_.end())
+            {
+                VzTextureRes& tex_res = *it_tx->second.get();
+                if (tex_res.isSystem && !ignoreOnwership)
+                {
+                    backlog::post("Texture (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
+                }
+                else if (tex_res.assetOwner && !ignoreOnwership)
+                {
+                    AssetVID vid_asset = GetAssetOwner(it_tx->first);
+                    utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                    std::string name_asset = ncm.GetName(ett_asset);
+                    assert(vid_asset);
+                    backlog::post("Texture (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
+                }
+                else
+                {
+                    textureResMap_.erase(it_tx); // call destructor...
+                    isRenderableResource = true;
+                    backlog::post("Texture (" + name + ") has been removed", backlog::LogLevel::Default);
+                }
+            }
             auto it_m = materialResMap_.find(vid);
             if (it_m != materialResMap_.end())
             {
@@ -1565,6 +1590,7 @@ namespace vzm
         destroyTarget(renderPathMap_);
         destroyTarget(scenes_);
         destroyTarget(geometryResMap_);
+        destroyTarget(textureResMap_);
         destroyTarget(miResMap_);
         destroyTarget(materialResMap_);
 
