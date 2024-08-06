@@ -22,7 +22,7 @@
 
 #include <utils/Hash.h>
 
-#include <tsl/robin_map.h>
+#include <unordered_map>
 
 namespace filament::backend {
 
@@ -36,8 +36,8 @@ public:
     void terminate() noexcept;
 
     struct PushConstantKey {
-        uint8_t stage;// We have one set of push constant per shader stage (fragment, vertex, etc).
-        uint8_t size;
+        uint8_t stage = 0;// We have one set of push constant per shader stage (fragment, vertex, etc).
+        uint8_t size = 0;
         // Note that there is also an offset parameter for push constants, but
         // we always assume our update range will have the offset 0.
     };
@@ -73,7 +73,7 @@ private:
         }
     };
 
-    using PipelineLayoutMap = tsl::robin_map<PipelineLayoutKey, PipelineLayoutCacheEntry,
+    using PipelineLayoutMap = std::unordered_map<PipelineLayoutKey, PipelineLayoutCacheEntry,
             PipelineLayoutKeyHashFn, PipelineLayoutKeyEqual>;
 
     VkDevice mDevice;
@@ -82,6 +82,6 @@ private:
     PipelineLayoutMap mPipelineLayouts;
 };
 
-}
+} // filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_VULKANPIPELINECACHE_H

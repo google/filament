@@ -32,8 +32,8 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
     }
 
     // build the push constant layout key
-    uint32_t pushConstantRangeCount = program->getPushConstantRangeCount();
-    auto const& pushConstantRanges = program->getPushConstantRanges();    
+    uint32_t const pushConstantRangeCount = program->getPushConstantRangeCount();
+    auto const& pushConstantRanges = program->getPushConstantRanges();
     if (pushConstantRangeCount > 0) {
         assert_invariant(pushConstantRangeCount <= Program::SHADER_TYPE_COUNT);
         for (uint8_t i = 0; i < pushConstantRangeCount; ++i) {
@@ -52,8 +52,8 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         }
     }
 
-    if (PipelineLayoutMap::iterator iter = mPipelineLayouts.find(key); iter != mPipelineLayouts.end()) {
-        PipelineLayoutCacheEntry& entry = iter.value();
+    if (auto iter = mPipelineLayouts.find(key); iter != mPipelineLayouts.end()) {
+        PipelineLayoutCacheEntry& entry = iter->second;
         entry.lastUsed = mTimestamp++;
         return entry.handle;
     }
