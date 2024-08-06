@@ -572,23 +572,16 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
 
             // split shader source, so we can insert the specialization constants and the packing
             // functions
-            auto [version, prolog, body] = splitShaderSource({ shader_src, shader_len });
+            auto const [prolog, body] = splitShaderSource({ shader_src, shader_len });
 
-            // enable ESSL 3.10 if available
-            if (context.isAtLeastGLES<3, 1>()) {
-                version = "#version 310 es\n";
-            }
-
-            const std::array<const char*, 5> sources = {
-                    version.data(),
+            const std::array<const char*, 4> sources = {
                     prolog.data(),
                     specializationConstantString.c_str(),
                     packingFunctions.data(),
                     body.data()
             };
 
-            const std::array<GLint, 5> lengths = {
-                    (GLint)version.length(),
+            const std::array<GLint, 4> lengths = {
                     (GLint)prolog.length(),
                     (GLint)specializationConstantString.length(),
                     (GLint)packingFunctions.length(),
@@ -668,7 +661,6 @@ void ShaderCompilerService::process_OVR_multiview2(OpenGLContext& context,
 
 // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 (appeared in 4.2) and
 // macOS doesn't support GL_ARB_shading_language_packing
-// Also GLES3.0 didn't have the full set of packing/unpacking functions
 std::string_view ShaderCompilerService::process_ARB_shading_language_packing(OpenGLContext& context) noexcept {
     using namespace std::literals;
 #ifdef BACKEND_OPENGL_VERSION_GL
@@ -708,102 +700,31 @@ highp uint packHalf2x16(vec2 v) {
     highp uint y = fp32tou16(v.y);
     return (y << 16u) | x;
 }
-highp uint packUnorm4x8(mediump vec4 v) {
-    v = round(clamp(v, 0.0, 1.0) * 255.0);
-    highp uint a = uint(v.x);
-    highp uint b = uint(v.y) <<  8;
-    highp uint c = uint(v.z) << 16;
-    highp uint d = uint(v.w) << 24;
-    return (a|b|c|d);
-}
-highp uint packSnorm4x8(mediump vec4 v) {
-    v = round(clamp(v, -1.0, 1.0) * 127.0);
-    highp uint a = uint((int(v.x) & 0xff));
-    highp uint b = uint((int(v.y) & 0xff)) <<  8;
-    highp uint c = uint((int(v.z) & 0xff)) << 16;
-    highp uint d = uint((int(v.w) & 0xff)) << 24;
-    return (a|b|c|d);
-}
-mediump vec4 unpackUnorm4x8(highp uint v) {
-    return vec4(float((v & 0x000000ffu)      ),
-                float((v & 0x0000ff00u) >>  8),
-                float((v & 0x00ff0000u) >> 16),
-                float((v & 0xff000000u) >> 24)) / 255.0;
-}
-mediump vec4 unpackSnorm4x8(highp uint v) {
-    int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
-    int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
-    int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
-    int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
-    return clamp(vec4(float(a), float(b), float(c), float(d)) / 127.0, -1.0, 1.0);
-}
 )"sv;
     }
 #endif // BACKEND_OPENGL_VERSION_GL
-
-#ifdef BACKEND_OPENGL_VERSION_GLES
-    if (!context.isES2() && !context.isAtLeastGLES<3, 1>()) {
-        return R"(
-
-highp uint packUnorm4x8(mediump vec4 v) {
-    v = round(clamp(v, 0.0, 1.0) * 255.0);
-    highp uint a = uint(v.x);
-    highp uint b = uint(v.y) <<  8;
-    highp uint c = uint(v.z) << 16;
-    highp uint d = uint(v.w) << 24;
-    return (a|b|c|d);
-}
-highp uint packSnorm4x8(mediump vec4 v) {
-    v = round(clamp(v, -1.0, 1.0) * 127.0);
-    highp uint a = uint((int(v.x) & 0xff));
-    highp uint b = uint((int(v.y) & 0xff)) <<  8;
-    highp uint c = uint((int(v.z) & 0xff)) << 16;
-    highp uint d = uint((int(v.w) & 0xff)) << 24;
-    return (a|b|c|d);
-}
-mediump vec4 unpackUnorm4x8(highp uint v) {
-    return vec4(float((v & 0x000000ffu)      ),
-                float((v & 0x0000ff00u) >>  8),
-                float((v & 0x00ff0000u) >> 16),
-                float((v & 0xff000000u) >> 24)) / 255.0;
-}
-mediump vec4 unpackSnorm4x8(highp uint v) {
-    int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
-    int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
-    int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
-    int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
-    return clamp(vec4(float(a), float(b), float(c), float(d)) / 127.0, -1.0, 1.0);
-}
-)"sv;
-    }
-#endif // BACKEND_OPENGL_VERSION_GLES
     return ""sv;
 }
 
-// split shader source code in three:
-// - the version line
-// - extensions
-// - everything else
-std::array<std::string_view, 3> ShaderCompilerService::splitShaderSource(std::string_view source) noexcept {
-    auto version_start = source.find("#version");
-    assert_invariant(version_start != std::string_view::npos);
+// split shader source code in two, the first section goes from the start to the line after the
+// last #extension, and the 2nd part goes from there to the end.
+std::array<std::string_view, 2> ShaderCompilerService::splitShaderSource(std::string_view source) noexcept {
+    auto start = source.find("#version");
+    assert_invariant(start != std::string_view::npos);
 
-    auto version_eol = source.find('\n', version_start) + 1;
-    assert_invariant(version_eol != std::string_view::npos);
-
-    auto prolog_start = version_eol;
-    auto prolog_eol = source.rfind("\n#extension"); // last #extension line
-    if (prolog_eol == std::string_view::npos) {
-        prolog_eol = prolog_start;
+    auto pos = source.rfind("\n#extension");
+    if (pos == std::string_view::npos) {
+        pos = start;
     } else {
-        prolog_eol = source.find('\n', prolog_eol + 1) + 1;
+        ++pos;
     }
-    auto body_start = prolog_eol;
 
-    std::string_view const version = source.substr(version_start, version_eol - version_start);
-    std::string_view const prolog = source.substr(prolog_start, prolog_eol - prolog_start);
-    std::string_view const body = source.substr(body_start, source.length() - body_start);
-    return { version, prolog, body };
+    auto eol = source.find('\n', pos) + 1;
+    assert_invariant(eol != std::string_view::npos);
+
+    std::string_view const version = source.substr(start, eol - start);
+    std::string_view const body = source.substr(version.length(), source.length() - version.length());
+    return { version, body };
 }
 
 /*
