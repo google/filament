@@ -355,7 +355,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 // TODO: This should be allocated with the ResourceAllocator.
                 msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
                         texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
-                        samples, texture->width, texture->height, texture->depth, texture->usage,
+                        samples, texture->width, texture->height, texture->depth, texture->usage & TextureUsage::ALL_ATTACHMENTS,
                         stagePool, true /* heap allocated */, {} /* swizzle */,
                         true /* preferTransientAttachment */);
                 texture->setSidecar(msTexture);

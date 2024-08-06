@@ -97,16 +97,15 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.extent.depth = 1;
     }
 
-    constexpr TextureUsage attachmentUsageFlags = TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT | TextureUsage::SUBPASS_INPUT;
     const bool useTransientAttachment =
         // Transient attachment is requested.
         preferTransientAttachment &&
         // Lazily allocated memory is available.
         context.isLazilyAllocatedMemorySupported() &&
         // Usage consists of attachment flags only.
-        !any(tusage & ~attachmentUsageFlags) &&
+        !any(tusage & ~TextureUsage::ALL_ATTACHMENTS) &&
         // Usage contains at least one attachment flag.
-        any(tusage & attachmentUsageFlags);
+        any(tusage & TextureUsage::ALL_ATTACHMENTS);
 
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // We do not add the flags for transient attachments, because that would prevent the usage of
