@@ -116,7 +116,7 @@ add_definitions(-DGLTFIO_DRACO_SUPPORTED=1)
 # Sources and headers
 # ==================================================================================================
 
-set(PUBLIC_HDRS
+set(COMPONENT_HDRS
         ../API_SOURCE/components/VzActor.h
         ../API_SOURCE/components/VzAsset.h
         ../API_SOURCE/components/VzCamera.h
@@ -128,9 +128,17 @@ set(PUBLIC_HDRS
         ../API_SOURCE/components/VzScene.h
         ../API_SOURCE/components/VzSkeleton.h
         ../API_SOURCE/components/VzTexture.h
+)
+
+set(ROOT_HDRS
         ../API_SOURCE/VizComponentAPIs.h
         ../API_SOURCE/VizEngineAPIs.h
         ../API_SOURCE/VzComponents.h
+)
+
+set(PUBLIC_HDRS
+        ${COMPONENT_HDRS}
+        ${ROOT_HDRS}
 )
 
 set(SRCS
@@ -184,6 +192,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ../../libs/filamentapp/include
 )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX d)
+
 # ==================================================================================================
 # Dependencies
 # ==================================================================================================
@@ -224,3 +234,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${FILAMENT_DIR}/lib/x86_64/libvkshaders.a
     ${FILAMENT_DIR}/lib/x86_64/libzstd.a
 )
+
+# ==============================================================================================
+# Installation
+# ==============================================================================================
+install(FILES ${COMPONENT_HDRS} DESTINATION include/components)
+install(FILES ${ROOT_HDRS} DESTINATION include)
+
+install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION lib)
