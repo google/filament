@@ -112,9 +112,9 @@ namespace vzm
         }
 
         typedef std::unordered_map<ID, std::any> MapType;
-        typename typedef MapType::iterator iterator;
-        typename typedef MapType::const_iterator const_iterator;
-        typename typedef MapType::reference reference;
+        typedef typename MapType::iterator iterator;
+        typedef typename MapType::const_iterator const_iterator;
+        typedef typename MapType::reference reference;
         iterator begin() { return __params.begin(); }
         const_iterator begin() const { return __params.begin(); }
         iterator end() { return __params.end(); }
