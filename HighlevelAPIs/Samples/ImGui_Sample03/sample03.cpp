@@ -107,7 +107,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    arguments.SetParam("api", std::string("opengl"));
+    //arguments.SetParam("api", std::string("opengl"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
@@ -131,7 +131,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
 
         vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
-        texture->ReadImage("../assets/testimage.jpg");
+        texture->ReadImage("../assets/testimage.png");
         mi->SetTexture("baseColorMap", texture->GetVID());
     }
     //std::vector<VID> vid_list;
