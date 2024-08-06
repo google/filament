@@ -1009,7 +1009,7 @@ namespace vzm
         auto ins = rcm.getInstance(mesh.renderable);
         Box box = rcm.getAxisAlignedBoundingBox(ins);
 
-        VzGeometry* geo = CreateGeometry(geo_name, { {
+        VzGeometry* geo = CreateGeometry(geo_name, std::vector<VzPrimitive>{VzPrimitive{
             .vertices = mesh.vertexBuffer,
             .indices = mesh.indexBuffer,
             .aabb = box.getMin(),
@@ -1617,7 +1617,7 @@ namespace vzm
 
 namespace vzm::backlog
 {
-    void setConsoleColor(WORD color) {
+    void setConsoleColor(unsigned short color) {
 #ifdef WIN32
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         SetConsoleTextAttribute(hConsole, color);
