@@ -34,5 +34,8 @@ namespace vzm
         void SetAnchorPoint(const float u, const float v);
         
         // material settings
+        // 
+        // The rotation of the sprite in degrees. Default is 0.
+        void SetRotatation(const float rotDeg);
     };
 }
