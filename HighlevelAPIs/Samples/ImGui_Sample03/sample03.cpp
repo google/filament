@@ -129,6 +129,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             std::cout << it.first << ", " << (uint8_t)it.second << std::endl;
         }
+
+        vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
+        texture->ReadImage("../assets/testimage.jpg");
+        mi->SetTexture("baseColorMap", texture->GetVID());
     }
     //std::vector<VID> vid_list;
     //vzm::GetVidsByName("DoorRearRight", vid_list);

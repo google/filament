@@ -13,7 +13,7 @@ extern vzm::VzEngineApp gEngineApp;
 using namespace image;
 namespace vzm
 {
-    bool VzTexture::LoadImage(const std::string& fileName, const bool generateMIPs)
+    bool VzTexture::ReadImage(const std::string& fileName, const bool generateMIPs)
     {
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
 
