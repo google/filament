@@ -663,7 +663,6 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd) {
       wd->SemaphoreCount;  // Now we can use the next set of semaphores
 }
 
-vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzScene* g_scene;
 
@@ -685,7 +684,9 @@ int render_height = 1080;
 VID currentVID = -1;
 
 void resize(int width, int height) {
-  g_cc->SetViewport(width, height);
+  if (current_cam == g_cam) {
+    g_cam->GetController()->SetViewport(width, height);
+  }
 
   g_renderer->SetCanvas(width, height, 96.f, nullptr);
   float zNearP, zFarP, fovInDegree;
@@ -696,7 +697,7 @@ void resize(int width, int height) {
 
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
-  if (!g_cc) {
+  if (!g_cam || g_cam != current_cam) {
     return;
   }
   if (button == 0) {
@@ -714,11 +715,11 @@ void setMouseButton(GLFWwindow* window, int button, int state,
       case GLFW_PRESS:
         if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
             y < workspace_height) {
-          g_cc->GrabBegin(xPos, yPos, false);
+          g_cam->GetController()->GrabBegin(xPos, yPos, false);
         }
         break;
       case GLFW_RELEASE:
-        g_cc->GrabEnd();
+        g_cam->GetController()->GrabEnd();
         break;
       default:
         break;
@@ -730,7 +731,7 @@ void setCursorPos(GLFWwindow* window, double x, double y) {
   int width;
   int height;
 
-  if (!g_cc) {
+  if (!g_cam || g_cam != current_cam) {
     return;
   }
   state = glfwGetMouseButton(window, 0);
@@ -740,11 +741,11 @@ void setCursorPos(GLFWwindow* window, double x, double y) {
   int yPos = height - static_cast<int>(y);
 
   if (state == GLFW_PRESS) {
-    g_cc->GrabDrag(xPos, yPos);
+    g_cam->GetController()->GrabDrag(xPos, yPos);
   }
 }
 void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
-  if (!g_cc) {
+  if (!g_cam || g_cam != current_cam) {
     return;
   }
   double x;
@@ -757,12 +758,12 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
 
   if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
       y < workspace_height) {
-    g_cc->Scroll(static_cast<int>(x - left_editUIWidth),
+    g_cam->GetController()->Scroll(static_cast<int>(x - left_editUIWidth),
                  height - static_cast<int>(y), 5.0f * (float)yOffset);
   }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
-  if (g_cc && g_renderer && current_cam) {
+  if (g_renderer && current_cam) {
     workspace_width = width - left_editUIWidth - right_editUIWidth;
     workspace_height = height;
 
@@ -826,7 +827,7 @@ std::wstring OpenFileDialog() {
 void initViewer() {
   g_scene = vzm::NewScene("my scene");
   g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-  // g_scene->LoadIBL("lightroom_14b");
+  //g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "UserCamera");
   glm::fvec3 p(0, 0, 10);
@@ -835,10 +836,10 @@ void initViewer() {
   g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
   g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f,
                                   (float)render_width / render_height);
-  g_cc = g_cam->GetController();
-  *(glm::fvec3*)g_cc->orbitHomePosition = p;
-  g_cc->UpdateControllerSettings();
-  g_cc->SetViewport(render_width, render_height);
+  vzm::VzCamera::Controller* cc = g_cam->GetController();
+  *(glm::fvec3*)cc->orbitHomePosition = p;
+  cc->UpdateControllerSettings();
+  cc->SetViewport(render_width, render_height);
 
   // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
   //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
@@ -1061,6 +1062,7 @@ int main(int, char**) {
               if (ImGui::Selectable(camName.c_str(), is_selected)) {
                 current_cam_idx = n;
                 current_cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[n]);
+                resize(render_width, render_height);
               }
               if (is_selected) {
                 ImGui::SetItemDefaultFocus();
