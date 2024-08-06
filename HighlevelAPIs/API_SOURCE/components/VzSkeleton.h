@@ -5,8 +5,8 @@ namespace vzm
 {
     __dojostruct VzSkeleton : VzBaseComp
     {
-        VzSkeleton(const VID vid, const std::string& originFrom, const std::string& typeName)
-            : VzBaseComp(vid, originFrom, typeName) {}
+        VzSkeleton(const VID vid, const std::string& originFrom)
+            : VzBaseComp(vid, originFrom, "VzSkeleton") {}
         using BoneVID = VID;
         // componentVID refers to the root bone
         std::vector<BoneVID> GetBones(); // including this

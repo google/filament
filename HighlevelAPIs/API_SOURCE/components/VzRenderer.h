@@ -5,8 +5,8 @@ namespace vzm
 {
     __dojostruct VzRenderer : VzBaseComp
     {
-        VzRenderer(const VID vid, const std::string& originFrom, const std::string& typeName)
-            : VzBaseComp(vid, originFrom, typeName) {}
+        VzRenderer(const VID vid, const std::string& originFrom)
+            : VzBaseComp(vid, originFrom, "VzRenderer") {}
         void SetCanvas(const uint32_t w, const uint32_t h, const float dpi, void* window = nullptr);
         void GetCanvas(uint32_t* w, uint32_t* h, float* dpi, void** window = nullptr);
 

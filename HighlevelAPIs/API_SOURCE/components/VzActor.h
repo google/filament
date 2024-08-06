@@ -5,8 +5,8 @@ namespace vzm
 {
     __dojostruct VzActor : VzSceneComp
     {
-        VzActor(const VID vid, const std::string& originFrom, const std::string& typeName, const SCENE_COMPONENT_TYPE scenecompType)
-            : VzSceneComp(vid, originFrom, typeName, scenecompType) {}
+        VzActor(const VID vid, const std::string& originFrom)
+            : VzSceneComp(vid, originFrom, "VzActor", SCENE_COMPONENT_TYPE::ACTOR) {}
 
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
 
@@ -19,10 +19,10 @@ namespace vzm
         VID GetGeometry();
     };
 
-    __dojostruct VzSprite : VzSceneComp
+    __dojostruct VzSpriteActor : VzSceneComp
     {
-        VzSprite(const VID vid, const std::string & originFrom, const std::string & typeName, const SCENE_COMPONENT_TYPE scenecompType)
-            : VzSceneComp(vid, originFrom, typeName, scenecompType) {}
+        VzSpriteActor(const VID vid, const std::string & originFrom, const std::string & typeName, const SCENE_COMPONENT_TYPE scenecompType)
+            : VzSceneComp(vid, originFrom, "VzSpriteActor", SCENE_COMPONENT_TYPE::SPRITE_ACTOR) {}
 
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
 

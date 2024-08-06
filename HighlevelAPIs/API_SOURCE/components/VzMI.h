@@ -6,8 +6,8 @@ namespace vzm
 {
     __dojostruct VzMI : VzResource
     {
-        VzMI(const VID vid, const std::string& originFrom, const std::string& typeName, const RES_COMPONENT_TYPE resType)
-            : VzResource(vid, originFrom, typeName, resType) {}
+        VzMI(const VID vid, const std::string& originFrom)
+            : VzResource(vid, originFrom, "VzMI", RES_COMPONENT_TYPE::MATERIALINSTANCE) {}
 
         enum class TransparencyMode : uint8_t {
             DEFAULT = 0, // following the rasterizer state
