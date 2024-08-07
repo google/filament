@@ -773,6 +773,9 @@ void treeNode(VID id) {
   std::string sName = component->GetName();
 
   ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+  if (currentVID == id) {
+    flags |= ImGuiTreeNodeFlags_Selected;
+  }
   if (component->GetChildren().size() == 0) {
     flags |= ImGuiTreeNodeFlags_Leaf;
   }
@@ -1384,9 +1387,9 @@ int main(int, char**) {
 
                     switch (paramInfo.type) {
                       case vzm::UniformType::BOOL:
-                        v.resize(1);
-                        mi->GetParameter(paramInfo.name, paramInfo.type,
-                                         (void*)v.data());
+                        //v.resize(1);
+                        //mi->GetParameter(paramInfo.name, paramInfo.type,
+                        //                 (void*)v.data());
                         if (paramInfo.isSampler) {
                           std::string label = "Upload Texture";
                           label += "##";
