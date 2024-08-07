@@ -97,6 +97,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.extent.depth = 1;
     }
 
+    // Determine if we can use the transient usage flag combined with lazily allocated memory.
     const bool useTransientAttachment =
         // Transient attachment is requested.
         preferTransientAttachment &&
