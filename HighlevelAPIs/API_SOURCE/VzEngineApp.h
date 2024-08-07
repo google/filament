@@ -130,6 +130,8 @@ namespace vzm
         std::vector<MInstanceVID> vidMIs_;
         std::vector<std::vector<MInstanceVID>> vidMIVariants_;
     public:
+        bool isSprite = false;
+
         void SetGeometry(const GeometryVID vid);
         void SetMIs(const std::vector<MInstanceVID>& vidMIs);
         bool SetMI(const MInstanceVID vid, const int slot);
@@ -138,6 +140,7 @@ namespace vzm
         MInstanceVID GetMIVid(const int slot);
         std::vector<MInstanceVID>& GetMIVids();
         std::vector<std::vector<MInstanceVID>>& GetMIVariants();
+        ~VzActorRes();
     };
     struct VzLightRes
     {

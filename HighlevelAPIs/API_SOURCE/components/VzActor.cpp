@@ -70,4 +70,5 @@ namespace vzm
         VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         return actor_res->GetGeometryVid();
     }
+
 }

@@ -32,10 +32,12 @@ namespace vzm
         // A value of (0.5, 0.5) corresponds to the midpoint of the sprite. 
         // A value of (0, 0) corresponds to the lower left corner of the sprite. The default is (0.5, 0.5).
         void SetAnchorPoint(const float u, const float v);
+        void SetSize(const float w, const float h);
         
         // material settings
         // 
         // The rotation of the sprite in degrees. Default is 0.
         void SetRotatation(const float rotDeg);
+        void SetTexture(const VID vidTexture);
     };
 }
