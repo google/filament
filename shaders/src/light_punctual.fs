@@ -9,6 +9,7 @@
 
 #define LIGHT_TYPE_POINT            0u
 #define LIGHT_TYPE_SPOT             1u
+#define LIGHT_TYPE_AREA             2u
 
 
 struct FroxelParams {
@@ -130,11 +131,13 @@ Light getLight(const uint lightIndex) {
 
     highp vec4 positionFalloff = data[0];
     highp vec3 direction = data[1].xyz;
+    highp float width = data[1][3];
     vec4 colorIES = vec4(
         unpackHalf2x16(floatBitsToUint(data[2][0])),
         unpackHalf2x16(floatBitsToUint(data[2][1]))
     );
     highp vec2 scaleOffset = data[2].zw;
+    highp float height = data[3][0];
     highp float intensity = data[3][1];
     highp uint typeShadow = floatBitsToUint(data[3][2]);
     highp uint channels = floatBitsToUint(data[3][3]);
@@ -155,7 +158,7 @@ Light getLight(const uint lightIndex) {
     light.channels = int(channels);
     light.contactShadows = bool(typeShadow & 0x10u);
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-    light.type = (typeShadow & 0x1u);
+    light.type = (typeShadow & 0xFu);
 #if defined(VARIANT_HAS_SHADOWING)
     light.shadowIndex = int((typeShadow >>  8u) & 0xFFu);
     light.castsShadows   = bool(channels & 0x10000u);
@@ -165,6 +168,9 @@ Light getLight(const uint lightIndex) {
 #endif
     if (light.type == LIGHT_TYPE_SPOT) {
         light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
+    } else if (light.type == LIGHT_TYPE_AREA) {
+        light.width = width;
+        light.height = height;
     }
 #endif
     return light;

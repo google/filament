@@ -21,6 +21,7 @@
 
 #include "Allocators.h"
 #include "DFG.h"
+#include "LTC.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
 #include "HwVertexBufferInfoFactory.h"
@@ -141,6 +142,8 @@ public:
     }
 
     DFG const& getDFG() const noexcept { return mDFG; }
+
+    LTC const& getLTC() const noexcept { return mLTC; }
 
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
@@ -526,6 +529,8 @@ private:
     std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>> mMaterialInstances;
 
     DFG mDFG;
+
+    LTC mLTC;
 
     std::thread mDriverThread;
     backend::CommandBufferQueue mCommandBufferQueue;

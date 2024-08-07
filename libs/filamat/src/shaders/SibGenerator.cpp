@@ -49,7 +49,9 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
                     { "ssao",        Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "ssr",         Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "structure",   Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH   },
-                    { "fog",         Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM }}
+                    { "fog",         Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM },
+                    { "ltc_1",       Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM },
+                    { "ltc_2",       Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM }}
             )
             .build() };
 
@@ -62,7 +64,9 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
                     { "ssao",        Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "ssr",         Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "structure",   Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH   },
-                    { "fog",         Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM }}
+                    { "fog",         Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM },
+                    { "ltc_1",       Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM },
+                    { "ltc_2",       Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM }}
             )
             .build() };
 
@@ -75,7 +79,9 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
                     { "unused3" },
                     { "ssr",         Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM },
                     { "structure",   Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH   },
-                    { "unused5" }}
+                    { "unused6" },
+                    { "unused7" },
+                    { "unused8" }}
             )
             .build() };
 
