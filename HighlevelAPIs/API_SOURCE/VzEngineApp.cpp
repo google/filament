@@ -416,7 +416,7 @@ namespace vzm
         scenes_[vid] = gEngine->createScene();
         sceneResMap_[vid] = std::make_unique<VzSceneRes>();
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzScene>(vid, "CreateScene", "VzScene"));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzScene>(vid, "CreateScene"));
         VzNameCompManager& ncm = VzNameCompManager::Get();
         ncm.CreateNameComp(ett, name);
         return (VzScene*)it.first->second.get();
@@ -430,7 +430,7 @@ namespace vzm
         renderPathMap_[vid] = std::make_unique<VzRenderPath>();
         VzRenderPath* renderPath = renderPathMap_[vid].get();
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzRenderer>(vid, "CreateRenderPath", "VzRenderer"));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzRenderer>(vid, "CreateRenderPath"));
         VzNameCompManager& ncm = VzNameCompManager::Get();
         ncm.CreateNameComp(ett, name);
         return (VzRenderer*)it.first->second.get();
@@ -444,7 +444,7 @@ namespace vzm
         assetResMap_[vid] = std::make_unique<VzAssetRes>();
         ncm.CreateNameComp(ett, name);
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>(vid, "CreateAsset", "VzAsset"));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>(vid, "CreateAsset"));
         return (VzAsset*)it.first->second.get();
     }
     VzSkeleton* VzEngineApp::CreateSkeleton(const std::string& name, const SkeletonVID vidExist)
@@ -460,7 +460,7 @@ namespace vzm
         skeletonResMap_[vid] = std::make_unique<VzSkeletonRes>();
         ncm.CreateNameComp(ett, name);
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>(vid, "CreateSkeleton", "VzSkeleton"));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzAsset>(vid, "CreateSkeleton"));
         return (VzSkeleton*)it.first->second.get();
     }
     size_t VzEngineApp::GetVidsByName(const std::string& name, std::vector<VID>& vids)
@@ -887,7 +887,7 @@ namespace vzm
             actorSceneMap_[vid] = 0; // first creation
             actorResMap_[vid] = std::make_unique<VzActorRes>();
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent", "VzActor", compType));
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent"));
             v_comp = (VzSceneComp*)it.first->second.get();
             break;
         }
@@ -906,7 +906,7 @@ namespace vzm
             lightSceneMap_[vid] = 0; // first creation
             lightResMap_[vid] = std::make_unique<VzLightRes>();
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzLight>(vid, "CreateSceneComponent", "VzLight", compType));
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzLight>(vid, "CreateSceneComponent"));
             v_comp = (VzSceneComp*)it.first->second.get();
             break;
         }
@@ -927,7 +927,7 @@ namespace vzm
             VzCameraRes* cam_res = camResMap_[vid].get();
             cam_res->SetCamera(camera);
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzCamera>(vid, "CreateSceneComponent", "VzCamera", compType));
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzCamera>(vid, "CreateSceneComponent"));
             v_comp = (VzSceneComp*)it.first->second.get();
             v_comp->SetMatrixAutoUpdate(false);
             break;
@@ -1018,7 +1018,7 @@ namespace vzm
         actor_res.SetGeometry(geo->GetVID());
         actor_res.SetMIs({ vid_mi });
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateTestActor", "VzActor", SCENE_COMPONENT_TYPE::ACTOR));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateTestActor"));
         VzActor* v_actor = (VzActor*)it.first->second.get();
         return v_actor;
     }
@@ -1046,7 +1046,7 @@ namespace vzm
             geo_res.aabb.max = max(prim.aabb.max, geo_res.aabb.max);
         }
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzGeometry>(vid, "CreateGeometry", "VzGeometry", RES_COMPONENT_TYPE::GEOMATRY));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzGeometry>(vid, "CreateGeometry"));
         return (VzGeometry*)it.first->second.get();;
     }
     VzMaterial* VzEngineApp::CreateMaterial(const std::string& name,
@@ -1086,7 +1086,7 @@ namespace vzm
             m_res.allowedParamters[param.name] = param;
         }
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>(vid, "CreateMaterial", "VzMaterial", RES_COMPONENT_TYPE::MATERIAL));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>(vid, "CreateMaterial"));
         return (VzMaterial*)it.first->second.get();
     }
     VzMI* VzEngineApp::CreateMaterialInstance(const std::string& name,
@@ -1120,7 +1120,7 @@ namespace vzm
         mi_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         mi_res.isSystem = isSystem;
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMI>(vid, "CreateMaterialInstance", "VzMI", RES_COMPONENT_TYPE::MATERIALINSTANCE));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzMI>(vid, "CreateMaterialInstance"));
         return (VzMI*)it.first->second.get();
     }
     VzTexture* VzEngineApp::CreateTexture(const std::string& name,
@@ -1141,7 +1141,7 @@ namespace vzm
         tex_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         tex_res.isSystem = isSystem;
 
-        auto it = vzCompMap_.emplace(vid, std::make_unique<VzTexture>(vid, "CreateTexture", "VzTexture", RES_COMPONENT_TYPE::TEXTURE));
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzTexture>(vid, "CreateTexture"));
         return (VzTexture*)it.first->second.get();
     }
 
@@ -1315,6 +1315,31 @@ namespace vzm
 #pragma region destroy by engine
             bool isRenderableResource = false; // geometry, material, or material instance
             // note filament engine handles the renderable objects (with the modified resource settings)
+            auto it_tx = textureResMap_.find(vid);
+            if (it_tx != textureResMap_.end())
+            {
+                VzTextureRes& tex_res = *it_tx->second.get();
+                if (tex_res.isSystem && !ignoreOnwership)
+                {
+                    backlog::post("Texture (" + name + ") is system-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
+                }
+                else if (tex_res.assetOwner && !ignoreOnwership)
+                {
+                    AssetVID vid_asset = GetAssetOwner(it_tx->first);
+                    utils::Entity ett_asset = utils::Entity::import(vid_asset);
+                    std::string name_asset = ncm.GetName(ett_asset);
+                    assert(vid_asset);
+                    backlog::post("Texture (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
+                }
+                else
+                {
+                    textureResMap_.erase(it_tx); // call destructor...
+                    isRenderableResource = true;
+                    backlog::post("Texture (" + name + ") has been removed", backlog::LogLevel::Default);
+                }
+            }
             auto it_m = materialResMap_.find(vid);
             if (it_m != materialResMap_.end())
             {
@@ -1565,6 +1590,7 @@ namespace vzm
         destroyTarget(renderPathMap_);
         destroyTarget(scenes_);
         destroyTarget(geometryResMap_);
+        destroyTarget(textureResMap_);
         destroyTarget(miResMap_);
         destroyTarget(materialResMap_);
 

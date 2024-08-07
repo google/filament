@@ -5,8 +5,8 @@ namespace vzm
 {
     __dojostruct VzMaterial : VzResource
     {
-        VzMaterial(const VID vid, const std::string& originFrom, const std::string& typeName, const RES_COMPONENT_TYPE resType)
-            : VzResource(vid, originFrom, typeName, resType) {}
+        VzMaterial(const VID vid, const std::string& originFrom)
+            : VzResource(vid, originFrom, "VzMaterial", RES_COMPONENT_TYPE::MATERIAL) {}
         enum class MaterialType : uint8_t {
             STANDARD = 0,
             CUSTOM
@@ -45,9 +45,6 @@ namespace vzm
         LightingModel GetLightingModel() const;
 
         // TODO : 'Default' Setters and Getters for Material Instances
-
-        size_t GetAllowedParameters(std::map<std::string, vzm::UniformType>& paramters);
-
-        size_t GetAllowedParameters(std::vector<ParameterInfo>& paramters);
+        size_t GetAllowedParameters(std::map<std::string, ParameterInfo>& paramters);
     };
 }

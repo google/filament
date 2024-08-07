@@ -128,6 +128,7 @@ namespace vzm
         CAMERA,
         LIGHT,
         ACTOR,
+        SPRITE_ACTOR,
     };
 
     enum class RES_COMPONENT_TYPE

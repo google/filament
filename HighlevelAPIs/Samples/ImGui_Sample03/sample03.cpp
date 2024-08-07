@@ -107,7 +107,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    //arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("vulkan-gpu-hint", std::string("0"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
@@ -123,11 +124,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         vzm::VzMI* mi = (vzm::VzMI*)components[0];
         vzm::VzMaterial* m = (vzm::VzMaterial*)vzm::GetVzComponent(mi->GetMaterial());
-        std::map<std::string, vzm::UniformType> paramters;
+        std::map<std::string, vzm::VzMaterial::ParameterInfo> paramters;
         m->GetAllowedParameters(paramters);
         for (auto& it : paramters)
         {
-            std::cout << it.first << ", " << (uint8_t)it.second << std::endl;
+            std::cout << it.first << ", " << (uint8_t)it.second.type << std::endl;
         }
 
         vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");

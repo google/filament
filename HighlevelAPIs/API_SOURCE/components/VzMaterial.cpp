@@ -18,24 +18,14 @@ namespace vzm
         UpdateTimeStamp();
     }
 
-    size_t VzMaterial::GetAllowedParameters(std::map<std::string, vzm::UniformType>& paramters)
-    {
-        COMP_MAT(material, m_res, 0);
-
-        for (auto& kv : m_res->allowedParamters)
-        {
-            paramters[kv.first] = (vzm::UniformType)kv.second.type;
-        }
-        return m_res->allowedParamters.size();
-    }
-
-    size_t VzMaterial::GetAllowedParameters(std::vector<ParameterInfo>& paramters)
+    size_t VzMaterial::GetAllowedParameters(std::map<std::string, ParameterInfo>& paramters)
     {
         COMP_MAT(material, m_res, 0);
 
         for (auto& kv : m_res->allowedParamters)
         {
             ParameterInfo pi;
+
             pi.name = kv.first.c_str();
             pi.isSampler = kv.second.isSampler;
             pi.isSubpass = kv.second.isSubpass;
@@ -44,7 +34,8 @@ namespace vzm
             pi.subpassType = (vzm::SubpassType)kv.second.subpassType;
             pi.count = kv.second.count;
             pi.precision = (vzm::Precision)kv.second.precision;
-            paramters.push_back(pi);
+
+            paramters[kv.first] = pi;
         }
         return m_res->allowedParamters.size();
     }
