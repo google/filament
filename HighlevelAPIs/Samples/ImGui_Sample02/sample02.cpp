@@ -253,6 +253,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
         return 0;
     case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
     {
         if (is_valid) {
             int x = GET_X_LPARAM(lParam);
@@ -261,7 +262,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             //camera->GetWorldPose((float*)&p, (float*)&v, (float*)&u);
             //*(glm::fvec3*)cc->orbitHomePosition = p;
             //cc->UpdateControllerSettings();
-            cc->GrabBegin(x, y, false);
+            cc->GrabBegin(x, y, msg == WM_RBUTTONDOWN);
         }
         break;
     }
@@ -275,6 +276,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
     }
     case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
     {
         if (cc) {
             cc->GrabEnd();
