@@ -9,11 +9,30 @@ extern std::vector<std::string> gMProp;
 
 namespace vzm
 {
+    void VzMI::SetDoubleSided(const bool doubleSided)
+    {
+        COMP_MI(mi, mi_res, );
+        mi->setDoubleSided(doubleSided);
+        UpdateTimeStamp();
+    }
+
+    bool VzMI::IsDoubleSided() const
+    {
+        COMP_MI(mi, mi_res, false);
+        return mi->isDoubleSided();
+    }
+
     void VzMI::SetTransparencyMode(const TransparencyMode tMode)
     {
         COMP_MI(mi, mi_res, );
         mi->setTransparencyMode((filament::TransparencyMode)tMode);
         UpdateTimeStamp();
+    }
+
+    VzMI::TransparencyMode VzMI::GetTransparencyMode() const
+    {
+        COMP_MI(mi, mi_res, TransparencyMode::DEFAULT);
+        return (TransparencyMode)mi->getTransparencyMode();
     }
 #define SET_PARAM_COMP(COMP, RES, M_RES, FAILRET) COMP_MI(COMP, RES, FAILRET); VzMaterialRes* M_RES = gEngineApp.GetMaterialRes(RES->vidMaterial); if (!M_RES->allowedParamters.contains(name)) return FAILRET;
     bool VzMI::SetParameter(const std::string& name, const vzm::UniformType vType, const void* v)

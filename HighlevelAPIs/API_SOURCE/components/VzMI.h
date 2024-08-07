@@ -15,7 +15,10 @@ namespace vzm
             TWO_PASSES_TWO_SIDES
         };
 
+        void SetDoubleSided(const bool doubleSided);
+        bool IsDoubleSided() const;
         void SetTransparencyMode(const TransparencyMode tMode);
+        TransparencyMode GetTransparencyMode() const;
         bool SetParameter(const std::string& name, const vzm::UniformType vType, const void* v);
         bool SetParameter(const std::string& name, const vzm::RgbType vType, const float* v);
         bool SetParameter(const std::string& name, const vzm::RgbaType vType, const float* v);
