@@ -1,20 +1,16 @@
-#include <stdio.h>   // printf, fprintf
-#include <stdlib.h>  // abort
-
 #include "VizEngineAPIs.h"
-#define GLFW_INCLUDE_NONE
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <Windows.h>
-
-#define GLM_ENABLE_EXPERIMENTAL
 
 #ifdef _WIN32
+#include <Windows.h>
 #include <vulkan/vulkan_win32.h>
 #endif
 
 #include <iostream>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/glm.hpp"
 #include "glm/gtc/constants.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -759,7 +755,8 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
   if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
       y < workspace_height) {
     g_cam->GetController()->Scroll(static_cast<int>(x - left_editUIWidth),
-                 height - static_cast<int>(y), 5.0f * (float)yOffset);
+                                   height - static_cast<int>(y),
+                                   5.0f * (float)yOffset);
   }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
@@ -827,7 +824,7 @@ std::wstring OpenFileDialog() {
 void initViewer() {
   g_scene = vzm::NewScene("my scene");
   g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-  //g_scene->LoadIBL("lightroom_14b");
+  // g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "UserCamera");
   glm::fvec3 p(0, 0, 10);
@@ -849,10 +846,12 @@ void initViewer() {
 
   cameras.clear();
 }
+
 void deinitViewer() {
   vzm::RemoveComponent(g_cam->GetVID());
   vzm::RemoveComponent(g_scene->GetVID());
 }
+
 int main(int, char**) {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) return 1;
@@ -1371,50 +1370,83 @@ int main(int, char**) {
                   VID maid = mi->GetMaterial();
                   vzm::VzMaterial* ma =
                       (vzm::VzMaterial*)vzm::GetVzComponent(maid);
-                  std::map<std::string, vzm::UniformType> pram;
+                  std::map<std::string, vzm::VzMaterial::ParameterInfo> pram;
+                  // std::map<std::string, vzm::UniformType> pram;
                   ma->GetAllowedParameters(pram);
-                  auto it = pram.begin();
-                  auto end_it = pram.end();
-                  while (it != end_it) {
+                  for (auto iter = pram.begin(); iter != pram.end(); iter++) {
                     std::vector<float> v;
-                    ImGui::Text("%s", it->first.c_str());
-                    int size = (int)it->second - 3;
-                    if (size > 0) {
-                      v.resize(size);
-                      mi->GetParameter(it->first, it->second, (void*)v.data());
-                      std::string pname = it->first + std::to_string(prim);
-                      ImGui::PushItemWidth(-1);
-                      switch (it->second) {
-                        case vzm::UniformType::BOOL:
-                          if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
+                    vzm::VzMaterial::ParameterInfo& paramInfo = iter->second;
+                    std::string pname = paramInfo.name;
+                    ImGui::BeginGroup();
+                    ImGui::Text("%s", pname.c_str());
+
+                    ImGui::PushItemWidth(-1);
+
+                    switch (paramInfo.type) {
+                      case vzm::UniformType::BOOL:
+                        v.resize(1);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (paramInfo.isSampler) {
+                          std::string label = "Upload Texture";
+                          label += "##";
+                          label += maid;
+                          label += paramInfo.name;
+                          if (ImGui::Button(label.c_str(),
+                                            ImVec2(right_editUIWidth, 20))) {
+                            vzm::VzTexture* texture =
+                                (vzm::VzTexture*)vzm::NewResComponent(
+                                    vzm::RES_COMPONENT_TYPE::TEXTURE,
+                                    "my image");
+                            std::wstring filePath = OpenFileDialog();
+
+                            if (filePath.size() > 0) {
+                              std::string str_path;
+                              str_path.assign(filePath.begin(), filePath.end());
+                              texture->ReadImage(str_path);
+                              mi->SetTexture(pname, texture->GetVID());
+                            }
                           }
+                        } else {
+                          // v.resize(1);
+                          // if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
+                          //   mi->SetParameter(it->first, it->second,
+                          //                    (void*)v.data());
+                          // }
+                        }
+                        break;
+                      case vzm::UniformType::FLOAT:
+                        v.resize(1);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (ImGui::InputFloat(pname.c_str(), &v[0])) {
+                          mi->SetParameter(paramInfo.name, paramInfo.type,
+                                           (void*)v.data());
+                        }
+                        break;
+                      case vzm::UniformType::FLOAT3:
+                        v.resize(3);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
+                            ImGuiColorEditFlags_DefaultOptions_) {
+                          mi->SetParameter(paramInfo.name, paramInfo.type,
+                                           (void*)v.data());
+                        }
+                        break;
+                      case vzm::UniformType::FLOAT4:
+                        v.resize(4);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
+                            ImGuiColorEditFlags_DefaultOptions_) {
+                          mi->SetParameter(paramInfo.name, paramInfo.type,
+                                           (void*)v.data());
                           break;
-                        case vzm::UniformType::FLOAT:
-                          if (ImGui::InputFloat(pname.c_str(), &v[0])) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
-                          }
-                          break;
-                        case vzm::UniformType::FLOAT3:
-                          if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
-                              ImGuiColorEditFlags_DefaultOptions_) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
-                          }
-                          break;
-                        case vzm::UniformType::FLOAT4:
-                          if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
-                              ImGuiColorEditFlags_DefaultOptions_) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
-                            break;
-                          }
-                      }
-                      ImGui::PopItemWidth();
+                        }
                     }
-                    it++;
+                    ImGui::PopItemWidth();
+                    ImGui::EndGroup();
                   }
                   ImGui::Unindent();
                 }
@@ -1721,7 +1753,7 @@ int main(int, char**) {
             // ImGui::SliderInt("quality", &iAny, 0, 3);
             // ImGui::SliderFloat("sharpness", &any, 0.0f, 1.0f);
           }
-          if (ImGui::CollapsingHeader("Light")) {
+          if (ImGui::CollapsingHeader("Light Settings")) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Indirect light")) {
               float iblIntensity = g_scene->GetIBLIntensity();
