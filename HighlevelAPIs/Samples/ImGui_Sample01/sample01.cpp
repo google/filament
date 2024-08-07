@@ -1,20 +1,16 @@
-#include <stdio.h>   // printf, fprintf
-#include <stdlib.h>  // abort
-
 #include "VizEngineAPIs.h"
-#define GLFW_INCLUDE_NONE
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <Windows.h>
-
-#define GLM_ENABLE_EXPERIMENTAL
 
 #ifdef _WIN32
+#include <Windows.h>
 #include <vulkan/vulkan_win32.h>
 #endif
 
 #include <iostream>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/glm.hpp"
 #include "glm/gtc/constants.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -663,7 +659,6 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd) {
       wd->SemaphoreCount;  // Now we can use the next set of semaphores
 }
 
-vzm::VzCamera::Controller* g_cc = nullptr;
 vzm::VzRenderer* g_renderer;
 vzm::VzScene* g_scene;
 
@@ -685,7 +680,9 @@ int render_height = 1080;
 VID currentVID = -1;
 
 void resize(int width, int height) {
-  g_cc->SetViewport(width, height);
+  if (current_cam == g_cam) {
+    g_cam->GetController()->SetViewport(width, height);
+  }
 
   g_renderer->SetCanvas(width, height, 96.f, nullptr);
   float zNearP, zFarP, fovInDegree;
@@ -696,7 +693,7 @@ void resize(int width, int height) {
 
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
-  if (!g_cc) {
+  if (!g_cam || g_cam != current_cam) {
     return;
   }
   if (button == 0) {
@@ -714,11 +711,11 @@ void setMouseButton(GLFWwindow* window, int button, int state,
       case GLFW_PRESS:
         if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
             y < workspace_height) {
-          g_cc->GrabBegin(xPos, yPos, false);
+          g_cam->GetController()->GrabBegin(xPos, yPos, false);
         }
         break;
       case GLFW_RELEASE:
-        g_cc->GrabEnd();
+        g_cam->GetController()->GrabEnd();
         break;
       default:
         break;
@@ -730,7 +727,7 @@ void setCursorPos(GLFWwindow* window, double x, double y) {
   int width;
   int height;
 
-  if (!g_cc) {
+  if (!g_cam || g_cam != current_cam) {
     return;
   }
   state = glfwGetMouseButton(window, 0);
@@ -740,11 +737,11 @@ void setCursorPos(GLFWwindow* window, double x, double y) {
   int yPos = height - static_cast<int>(y);
 
   if (state == GLFW_PRESS) {
-    g_cc->GrabDrag(xPos, yPos);
+    g_cam->GetController()->GrabDrag(xPos, yPos);
   }
 }
 void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
-  if (!g_cc) {
+  if (!g_cam || g_cam != current_cam) {
     return;
   }
   double x;
@@ -757,12 +754,13 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
 
   if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
       y < workspace_height) {
-    g_cc->Scroll(static_cast<int>(x - left_editUIWidth),
-                 height - static_cast<int>(y), 5.0f * (float)yOffset);
+    g_cam->GetController()->Scroll(static_cast<int>(x - left_editUIWidth),
+                                   height - static_cast<int>(y),
+                                   5.0f * (float)yOffset);
   }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
-  if (g_cc && g_renderer && current_cam) {
+  if (g_renderer && current_cam) {
     workspace_width = width - left_editUIWidth - right_editUIWidth;
     workspace_height = height;
 
@@ -835,10 +833,10 @@ void initViewer() {
   g_cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
   g_cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f,
                                   (float)render_width / render_height);
-  g_cc = g_cam->GetController();
-  *(glm::fvec3*)g_cc->orbitHomePosition = p;
-  g_cc->UpdateControllerSettings();
-  g_cc->SetViewport(render_width, render_height);
+  vzm::VzCamera::Controller* cc = g_cam->GetController();
+  *(glm::fvec3*)cc->orbitHomePosition = p;
+  cc->UpdateControllerSettings();
+  cc->SetViewport(render_width, render_height);
 
   // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
   //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
@@ -848,10 +846,12 @@ void initViewer() {
 
   cameras.clear();
 }
+
 void deinitViewer() {
   vzm::RemoveComponent(g_cam->GetVID());
   vzm::RemoveComponent(g_scene->GetVID());
 }
+
 int main(int, char**) {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit()) return 1;
@@ -1061,6 +1061,7 @@ int main(int, char**) {
               if (ImGui::Selectable(camName.c_str(), is_selected)) {
                 current_cam_idx = n;
                 current_cam = (vzm::VzCamera*)vzm::GetVzComponent(cameras[n]);
+                resize(render_width, render_height);
               }
               if (is_selected) {
                 ImGui::SetItemDefaultFocus();
@@ -1369,50 +1370,83 @@ int main(int, char**) {
                   VID maid = mi->GetMaterial();
                   vzm::VzMaterial* ma =
                       (vzm::VzMaterial*)vzm::GetVzComponent(maid);
-                  std::map<std::string, vzm::UniformType> pram;
+                  std::map<std::string, vzm::VzMaterial::ParameterInfo> pram;
+                  // std::map<std::string, vzm::UniformType> pram;
                   ma->GetAllowedParameters(pram);
-                  auto it = pram.begin();
-                  auto end_it = pram.end();
-                  while (it != end_it) {
+                  for (auto iter = pram.begin(); iter != pram.end(); iter++) {
                     std::vector<float> v;
-                    ImGui::Text("%s", it->first.c_str());
-                    int size = (int)it->second - 3;
-                    if (size > 0) {
-                      v.resize(size);
-                      mi->GetParameter(it->first, it->second, (void*)v.data());
-                      std::string pname = it->first + std::to_string(prim);
-                      ImGui::PushItemWidth(-1);
-                      switch (it->second) {
-                        case vzm::UniformType::BOOL:
-                          if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
+                    vzm::VzMaterial::ParameterInfo& paramInfo = iter->second;
+                    std::string pname = paramInfo.name;
+                    ImGui::BeginGroup();
+                    ImGui::Text("%s", pname.c_str());
+
+                    ImGui::PushItemWidth(-1);
+
+                    switch (paramInfo.type) {
+                      case vzm::UniformType::BOOL:
+                        v.resize(1);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (paramInfo.isSampler) {
+                          std::string label = "Upload Texture";
+                          label += "##";
+                          label += maid;
+                          label += paramInfo.name;
+                          if (ImGui::Button(label.c_str(),
+                                            ImVec2(right_editUIWidth, 20))) {
+                            vzm::VzTexture* texture =
+                                (vzm::VzTexture*)vzm::NewResComponent(
+                                    vzm::RES_COMPONENT_TYPE::TEXTURE,
+                                    "my image");
+                            std::wstring filePath = OpenFileDialog();
+
+                            if (filePath.size() > 0) {
+                              std::string str_path;
+                              str_path.assign(filePath.begin(), filePath.end());
+                              texture->ReadImage(str_path);
+                              mi->SetTexture(pname, texture->GetVID());
+                            }
                           }
+                        } else {
+                          // v.resize(1);
+                          // if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
+                          //   mi->SetParameter(it->first, it->second,
+                          //                    (void*)v.data());
+                          // }
+                        }
+                        break;
+                      case vzm::UniformType::FLOAT:
+                        v.resize(1);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (ImGui::InputFloat(pname.c_str(), &v[0])) {
+                          mi->SetParameter(paramInfo.name, paramInfo.type,
+                                           (void*)v.data());
+                        }
+                        break;
+                      case vzm::UniformType::FLOAT3:
+                        v.resize(3);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
+                            ImGuiColorEditFlags_DefaultOptions_) {
+                          mi->SetParameter(paramInfo.name, paramInfo.type,
+                                           (void*)v.data());
+                        }
+                        break;
+                      case vzm::UniformType::FLOAT4:
+                        v.resize(4);
+                        mi->GetParameter(paramInfo.name, paramInfo.type,
+                                         (void*)v.data());
+                        if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
+                            ImGuiColorEditFlags_DefaultOptions_) {
+                          mi->SetParameter(paramInfo.name, paramInfo.type,
+                                           (void*)v.data());
                           break;
-                        case vzm::UniformType::FLOAT:
-                          if (ImGui::InputFloat(pname.c_str(), &v[0])) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
-                          }
-                          break;
-                        case vzm::UniformType::FLOAT3:
-                          if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
-                              ImGuiColorEditFlags_DefaultOptions_) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
-                          }
-                          break;
-                        case vzm::UniformType::FLOAT4:
-                          if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
-                              ImGuiColorEditFlags_DefaultOptions_) {
-                            mi->SetParameter(it->first, it->second,
-                                             (void*)v.data());
-                            break;
-                          }
-                      }
-                      ImGui::PopItemWidth();
+                        }
                     }
-                    it++;
+                    ImGui::PopItemWidth();
+                    ImGui::EndGroup();
                   }
                   ImGui::Unindent();
                 }
@@ -1719,7 +1753,7 @@ int main(int, char**) {
             // ImGui::SliderInt("quality", &iAny, 0, 3);
             // ImGui::SliderFloat("sharpness", &any, 0.0f, 1.0f);
           }
-          if (ImGui::CollapsingHeader("Light")) {
+          if (ImGui::CollapsingHeader("Light Settings")) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Indirect light")) {
               float iblIntensity = g_scene->GetIBLIntensity();
