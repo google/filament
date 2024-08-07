@@ -9,6 +9,19 @@ extern std::vector<std::string> gMProp;
 
 namespace vzm
 {
+    void VzMI::SetDoubleSided(const bool doubleSided)
+    {
+        COMP_MI(mi, mi_res, );
+        mi->setDoubleSided(doubleSided);
+        UpdateTimeStamp();
+    }
+
+    bool VzMI::IsDoubleSided() const
+    {
+        COMP_MI(mi, mi_res, false);
+        return mi->isDoubleSided();
+    }
+
     void VzMI::SetTransparencyMode(const TransparencyMode tMode)
     {
         COMP_MI(mi, mi_res, );
