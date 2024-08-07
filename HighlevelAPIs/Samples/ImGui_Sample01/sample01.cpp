@@ -1368,6 +1368,9 @@ int main(int, char**) {
               for (size_t prim = 0; prim < mis.size(); ++prim) {
                 vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(mis[prim]);
                 std::string mname = mi->GetName();
+                std::string postLabel = "##";
+                postLabel += mi->GetVID();
+
                 if (ImGui::CollapsingHeader(mname.c_str())) {
                   ImGui::Indent();
                   VID maid = mi->GetMaterial();
@@ -1376,10 +1379,26 @@ int main(int, char**) {
                   std::map<std::string, vzm::VzMaterial::ParameterInfo> pram;
                   // std::map<std::string, vzm::UniformType> pram;
                   ma->GetAllowedParameters(pram);
+
+                  std::string labelName = "DoubleSided##";
+                  labelName += postLabel;
+
+                  bool doubleSided = mi->IsDoubleSided();
+                  if (ImGui::Checkbox(labelName.c_str(),
+                                      &doubleSided)) {
+                    mi->SetDoubleSided(doubleSided);
+                  }
                   for (auto iter = pram.begin(); iter != pram.end(); iter++) {
                     std::vector<float> v;
                     vzm::VzMaterial::ParameterInfo& paramInfo = iter->second;
                     std::string pname = paramInfo.name;
+                    std::string param_label = pname + postLabel;
+
+                    //_ 붙은 파라미터 제외
+                    if (pname.find('_') != std::string::npos) {
+                      continue;
+                    }
+
                     ImGui::BeginGroup();
                     ImGui::Text("%s", pname.c_str());
 
@@ -1387,14 +1406,9 @@ int main(int, char**) {
 
                     switch (paramInfo.type) {
                       case vzm::UniformType::BOOL:
-                        //v.resize(1);
-                        //mi->GetParameter(paramInfo.name, paramInfo.type,
-                        //                 (void*)v.data());
                         if (paramInfo.isSampler) {
                           std::string label = "Upload Texture";
-                          label += "##";
-                          label += maid;
-                          label += paramInfo.name;
+                          label += postLabel;
                           if (ImGui::Button(label.c_str(),
                                             ImVec2(right_editUIWidth, 20))) {
                             vzm::VzTexture* texture =
@@ -1410,19 +1424,13 @@ int main(int, char**) {
                               mi->SetTexture(pname, texture->GetVID());
                             }
                           }
-                        } else {
-                          // v.resize(1);
-                          // if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
-                          //   mi->SetParameter(it->first, it->second,
-                          //                    (void*)v.data());
-                          // }
                         }
                         break;
                       case vzm::UniformType::FLOAT:
                         v.resize(1);
                         mi->GetParameter(paramInfo.name, paramInfo.type,
                                          (void*)v.data());
-                        if (ImGui::InputFloat(pname.c_str(), &v[0])) {
+                        if (ImGui::InputFloat(param_label.c_str(), &v[0])) {
                           mi->SetParameter(paramInfo.name, paramInfo.type,
                                            (void*)v.data());
                         }
@@ -1431,7 +1439,7 @@ int main(int, char**) {
                         v.resize(3);
                         mi->GetParameter(paramInfo.name, paramInfo.type,
                                          (void*)v.data());
-                        if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
+                        if (ImGui::ColorEdit3(param_label.c_str(), &v[0]),
                             ImGuiColorEditFlags_DefaultOptions_) {
                           mi->SetParameter(paramInfo.name, paramInfo.type,
                                            (void*)v.data());
@@ -1441,7 +1449,7 @@ int main(int, char**) {
                         v.resize(4);
                         mi->GetParameter(paramInfo.name, paramInfo.type,
                                          (void*)v.data());
-                        if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
+                        if (ImGui::ColorEdit4(param_label.c_str(), &v[0]),
                             ImGuiColorEditFlags_DefaultOptions_) {
                           mi->SetParameter(paramInfo.name, paramInfo.type,
                                            (void*)v.data());
