@@ -186,12 +186,12 @@ namespace vzm
         float deltaTime = 0;
         float deltaTimeAccumulator = 0;
         ViewSettings viewSettings;
-        bool isViewSettingsDirty = true;
+        bool isDirty = true;
 
         filament::View* GetView();
         filament::Renderer* GetRenderer();
 
-        void applyViewSettings();
+        void applySettings();
     };
 }
 #endif

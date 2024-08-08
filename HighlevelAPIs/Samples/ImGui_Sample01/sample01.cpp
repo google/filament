@@ -1636,8 +1636,8 @@ int main(int, char**) {
             bool bFxaaEnabled = g_renderer->IsFxaaEnabled();
             bool bMsaaEnabled = g_renderer->IsMsaaEnabled();
             bool bSsaoEnabled = g_renderer->IsSsaoEnabled();
-            bool bScreenSpaceReflectionEnabled =
-                g_renderer->IsScreenSpaceReflectionEnabled();
+            bool bScreenSpaceReflectionsEnabled =
+                g_renderer->IsScreenSpaceReflectionsEnabled();
             bool bGuardBandEnabled = g_renderer->IsGuardBandEnabled();
 
             ImGui::Indent();
@@ -1673,9 +1673,9 @@ int main(int, char**) {
             }
 
             if (ImGui::Checkbox("Screen-space reflections",
-                                &bScreenSpaceReflectionEnabled)) {
-              g_renderer->SetScreenSpaceReflectionEnabled(
-                  bScreenSpaceReflectionEnabled);
+                                &bScreenSpaceReflectionsEnabled)) {
+              g_renderer->SetScreenSpaceReflectionsEnabled(
+                  bScreenSpaceReflectionsEnabled);
             }
             ImGui::Unindent();
 
