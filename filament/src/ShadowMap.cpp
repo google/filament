@@ -1208,7 +1208,7 @@ ShadowMap::SceneInfo::SceneInfo(
           visibleLayers(visibleLayers) {
 
     // the code below only works with affine transforms
-    assert_invariant(transpose(viewMatrix)[3] == float4(0, 0, 0, 1));
+    // Filament's API requires viewMatrix to be rigid (and thus affine).
 
     // We assume the light is at the origin to compute the SceneInfo. This is consumed later by
     // computeShadowCameraDirectional() which takes this into account.
