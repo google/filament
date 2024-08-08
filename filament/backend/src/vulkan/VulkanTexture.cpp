@@ -56,7 +56,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
         SamplerType target, uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w,
         uint32_t h, uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool,
-        bool heapAllocated, VkComponentMapping swizzle)
+        bool heapAllocated, VkComponentMapping swizzle, bool preferTransientAttachment)
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
@@ -97,12 +97,30 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.extent.depth = 1;
     }
 
+    // Determine if we can use the transient usage flag combined with lazily allocated memory.
+    const bool useTransientAttachment =
+        // Transient attachment is requested.
+        preferTransientAttachment &&
+        // Lazily allocated memory is available.
+        context.isLazilyAllocatedMemorySupported() &&
+        // Usage consists of attachment flags only.
+        !any(tusage & ~TextureUsage::ALL_ATTACHMENTS) &&
+        // Usage contains at least one attachment flag.
+        any(tusage & TextureUsage::ALL_ATTACHMENTS);
+
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
+    // We do not add the flags for transient attachments, because that would prevent the usage of
+    // the VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT flag.
     // TODO: investigate performance implications of setting these flags.
-    constexpr VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-            VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    const VkImageUsageFlags blittable =
+       useTransientAttachment ?
+       0U :
+       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    const VkImageUsageFlags transient =
+       useTransientAttachment ? VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT : 0U;
 
     if (any(usage & (TextureUsage::BLIT_DST | TextureUsage::BLIT_SRC))) {
+        assert_invariant(!useTransientAttachment);
         imageInfo.usage |= blittable;
     }
 
@@ -121,20 +139,19 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | blittable;
+        imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | blittable | transient;
         if (any(usage & TextureUsage::SUBPASS_INPUT)) {
             imageInfo.usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
         }
     }
     if (any(usage & TextureUsage::STENCIL_ATTACHMENT)) {
-        imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | transient;
     }
     if (any(usage & TextureUsage::UPLOADABLE)) {
         imageInfo.usage |= blittable;
     }
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        imageInfo.usage |= blittable;
-        imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | blittable | transient;
 
         // Depth resolves uses a custom shader and therefore needs to be sampleable.
         if (samples > 1) {
@@ -183,8 +200,11 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     VkMemoryRequirements memReqs = {};
     vkGetImageMemoryRequirements(mDevice, mTextureImage, &memReqs);
 
+    const VkFlags requiredMemoryFlags =
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+        (useTransientAttachment ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : 0U);
     uint32_t memoryTypeIndex
-            = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            = context.selectMemoryType(memReqs.memoryTypeBits, requiredMemoryFlags);
 
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
             << "VulkanTexture: unable to find a memory type that meets requirements.";
