@@ -198,6 +198,34 @@ namespace vzm
         void SetDynamicResoultionSharpness(float sharpness);
         float GetDynamicResoultionSharpness();
 
+        enum class ShadowType : uint8_t {
+            PCF,        //!< percentage-closer filtered shadows (default)
+            VSM,        //!< variance shadows
+            DPCF,       //!< PCF with contact hardening simulation
+            PCSS,       //!< PCF with soft shadows and contact hardening
+            PCFd,       // for debugging only, don't use.
+        };
+        void SetShadowType(ShadowType shadowType);
+        ShadowType GetShadowType();
+
+        void SetVsmHighPrecision(bool highPrecision);
+        bool IsVsmHighPrecision();
+
+        void SetVsmMsaaSamples(int msaaSamples);
+        int GetVsmMsaaSamples();
+
+        void SetVsmAnisotropy(int anisotropy);
+        int GetVsmAnisotropy();
+
+        void SetVsmMipmapping(bool mipmapping);
+        bool IsVsmMipmapping();
+
+        void SetSoftShadowPenumbraScale(float penumbraScale);
+        float GetSoftShadowPenumbraScale();
+
+        void SetSoftShadowPenumbraRatioScale(float penumbraRatioScale);
+        float GetSoftShadowPenumbraRatioScale();
+
         VZRESULT Render(const VID vidScene, const VID vidCam);
         VZRESULT Render(const VzBaseComp* scene, const VzBaseComp* camera) { return Render(scene->GetVID(), camera->GetVID()); };
     };

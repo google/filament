@@ -20,23 +20,6 @@ namespace vzm
         DISPLAY_RANGE = 7,
     };
 
-    using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
-    using ScreenSpaceReflectionsOptions = filament::View::ScreenSpaceReflectionsOptions;
-    using AntiAliasing = filament::View::AntiAliasing;
-    using BloomOptions = filament::View::BloomOptions;
-    using DepthOfFieldOptions = filament::View::DepthOfFieldOptions;
-    using Dithering = filament::View::Dithering;
-    using FogOptions = filament::View::FogOptions;
-    using RenderQuality = filament::View::RenderQuality;
-    using ShadowType = filament::View::ShadowType;
-    using DynamicResolutionOptions = filament::View::DynamicResolutionOptions;
-    using MultiSampleAntiAliasingOptions = filament::View::MultiSampleAntiAliasingOptions;
-    using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
-    using VignetteOptions = filament::View::VignetteOptions;
-    using VsmShadowOptions = filament::View::VsmShadowOptions;
-    using GuardBandOptions = filament::View::GuardBandOptions;
-    using StereoscopicOptions = filament::View::StereoscopicOptions;
-
     struct GenericToneMapperSettings {
         float contrast = 1.55f;
         float midGrayIn = 0.18f;
@@ -118,6 +101,7 @@ namespace vzm
         TemporalAntiAliasingOptions taa;
         VignetteOptions vignette;
         VsmShadowOptions vsmShadowOptions;
+        SoftShadowOptions softShadowOptions;
         GuardBandOptions guardBand;
         StereoscopicOptions stereoscopicOptions;
 

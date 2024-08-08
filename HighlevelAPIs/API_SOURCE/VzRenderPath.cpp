@@ -139,6 +139,7 @@ namespace vzm
             viewSettings.dynamicLighting.zLightFar);
         view_->setShadowType(viewSettings.shadowType);
         view_->setVsmShadowOptions(viewSettings.vsmShadowOptions);
+        view_->setSoftShadowOptions(viewSettings.softShadowOptions);
         view_->setGuardBandOptions(viewSettings.guardBand);
         view_->setStereoscopicOptions(viewSettings.stereoscopicOptions);
         view_->setPostProcessingEnabled(viewSettings.postProcessingEnabled);
