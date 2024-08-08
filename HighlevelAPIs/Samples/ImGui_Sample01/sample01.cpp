@@ -697,33 +697,33 @@ void setMouseButton(GLFWwindow* window, int button, int state,
     return;
   }
 
-    double x;
-    double y;
-    int width;
-    int height;
+  double x;
+  double y;
+  int width;
+  int height;
 
-    glfwGetWindowSize(window, &width, &height);
-    glfwGetCursorPos(window, &x, &y);
+  glfwGetWindowSize(window, &width, &height);
+  glfwGetCursorPos(window, &x, &y);
 
-    int xPos = static_cast<int>(x - left_editUIWidth);
-    int yPos = height - static_cast<int>(y);
-    switch (state) {
-      case GLFW_PRESS:
-        if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
-            y < workspace_height) {
-          if (button == 0) {
-            g_cam->GetController()->GrabBegin(xPos, yPos, false);
-          } else if (button == 1) {
-            g_cam->GetController()->GrabBegin(xPos, yPos, true);
-          }
+  int xPos = static_cast<int>(x - left_editUIWidth);
+  int yPos = height - static_cast<int>(y);
+  switch (state) {
+    case GLFW_PRESS:
+      if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
+          y < workspace_height) {
+        if (button == 0) {
+          g_cam->GetController()->GrabBegin(xPos, yPos, false);
+        } else if (button == 1) {
+          g_cam->GetController()->GrabBegin(xPos, yPos, true);
         }
-        break;
-      case GLFW_RELEASE:
-        g_cam->GetController()->GrabEnd();
-        break;
-      default:
-        break;
-    }
+      }
+      break;
+    case GLFW_RELEASE:
+      g_cam->GetController()->GrabEnd();
+      break;
+    default:
+      break;
+  }
 }
 void setCursorPos(GLFWwindow* window, double x, double y) {
   int width;
@@ -864,7 +864,7 @@ int main(int, char**) {
   // Create window with Vulkan context
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   GLFWwindow* window =
-      glfwCreateWindow(1280, 720, "Grapicar Filament Viewer", nullptr, nullptr);
+      glfwCreateWindow(1280, 720, "Grapicar Viewer", nullptr, nullptr);
   if (!glfwVulkanSupported()) {
     printf("GLFW: Vulkan Not Supported\n");
     return 1;
@@ -1386,8 +1386,7 @@ int main(int, char**) {
                   labelName += postLabel;
 
                   bool doubleSided = mi->IsDoubleSided();
-                  if (ImGui::Checkbox(labelName.c_str(),
-                                      &doubleSided)) {
+                  if (ImGui::Checkbox(labelName.c_str(), &doubleSided)) {
                     mi->SetDoubleSided(doubleSided);
                   }
                   for (auto iter = pram.begin(); iter != pram.end(); iter++) {
@@ -1709,62 +1708,212 @@ int main(int, char**) {
             }
           }
 
-          ///////////////////////////////////
           if (ImGui::CollapsingHeader("TAA Options")) {
-            /*ImGui::Checkbox("Upscaling", &bAny);
-            ImGui::Checkbox("History Reprojection", &bAny);
-            ImGui::SliderFloat("Feedback", &any, 0.0f, 1.0f);
-            ImGui::Checkbox("Filter History", &bAny);
-            ImGui::Checkbox("Filter Input", &bAny);
-            ImGui::SliderFloat("FilterWidth", &any, 0.2f, 2.0f);
-            ImGui::SliderFloat("LOD bias", &any, -8.0f, 0.0f);
-            ImGui::Checkbox("Use YCoCg", &bAny);
-            ImGui::Checkbox("Prevent Flickering", &bAny);
-            ImGui::Combo("Jitter Pattern", &iAny,
-                         "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton "
-                         "x16\0Halton x32\0\0");
-            ImGui::Combo("Box Clipping", &iAny, "Accurate\0Clamp\0None\0\0");
-            ImGui::Combo("Box Type", &iAny, "AABB\0Variance\0Both\0\0");
-            ImGui::SliderFloat("Variance Gamma", &any, 0.75f, 1.25f);
-            ImGui::SliderFloat("RCAS", &any, 0.0f, 1.0f);*/
+            bool taaUpscaling = g_renderer->IsTaaUpscaling();
+            bool isTaaHistoryReprojection =
+                g_renderer->IsTaaHistoryReprojection();
+            float feedback = g_renderer->GetTaaFeedback();
+            bool filterHistory = g_renderer->IsTaaFilterHistory();
+            bool filterInput = g_renderer->IsTaaFilterInput();
+            float filterWidth = g_renderer->GetTaaFilterWidth();
+            float lodBias = g_renderer->GetTaaLodBias();
+            bool useYCoCg = g_renderer->IsTaaUseYCoCg();
+            bool preventFlickering = g_renderer->IsTaaPreventFlickering();
+            int taaJlitterPattern = (int)g_renderer->GetTaaJitterPattern();
+            int taaBoxClipping = (int)g_renderer->GetTaaBoxClipping();
+            int taaBoxType = (int)g_renderer->GetTaaBoxType();
+            float varianceGamma = g_renderer->GetTaaVarianceGamma();
+            float rcas = g_renderer->GetTaaSharpness();
+
+            if (ImGui::Checkbox("Upscaling", &taaUpscaling)) {
+              g_renderer->SetTaaUpscaling(taaUpscaling);
+            }
+            if (ImGui::Checkbox("History Reprojection",
+                                &isTaaHistoryReprojection)) {
+              g_renderer->SetTaaHistoryReprojection(isTaaHistoryReprojection);
+            }
+            if (ImGui::SliderFloat("Feedback", &feedback, 0.0f, 1.0f)) {
+              g_renderer->SetTaaFeedback(feedback);
+            }
+            if (ImGui::Checkbox("Filter History", &filterHistory)) {
+              g_renderer->SetTaaFilterHistory(filterHistory);
+            }
+            if (ImGui::Checkbox("Filter Input", &filterInput)) {
+              g_renderer->SetTaaFilterInput(filterInput);
+            }
+            if (ImGui::SliderFloat("FilterWidth", &filterWidth, 0.2f, 2.0f)) {
+              g_renderer->SetTaaFilterWidth(filterWidth);
+            }
+            if (ImGui::SliderFloat("LOD bias", &lodBias, -8.0f, 0.0f)) {
+              g_renderer->SetTaaLodBias(lodBias);
+            }
+            if (ImGui::Checkbox("Use YCoCg", &useYCoCg)) {
+              g_renderer->SetTaaUseYCoCg(useYCoCg);
+            }
+            if (ImGui::Checkbox("Prevent Flickering", &preventFlickering)) {
+              g_renderer->SetTaaPreventFlickering(preventFlickering);
+            }
+            if (ImGui::Combo("Jitter Pattern", &taaJlitterPattern,
+                             "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton "
+                             "x16\0Halton x32\0\0")) {
+              g_renderer->SetTaaJitterPattern(
+                  (vzm::VzRenderer::JitterPattern)taaJlitterPattern);
+            }
+            if (ImGui::Combo("Box Clipping", &taaBoxClipping,
+                             "Accurate\0Clamp\0None\0\0")) {
+              g_renderer->SetTaaBoxClipping(
+                  (vzm::VzRenderer::BoxClipping)taaBoxClipping);
+            }
+            if (ImGui::Combo("Box Type", &taaBoxType,
+                             "AABB\0Variance\0Both\0\0")) {
+              g_renderer->SetTaaBoxType((vzm::VzRenderer::BoxType)taaBoxType);
+            }
+            if (ImGui::SliderFloat("Variance Gamma", &varianceGamma, 0.75f,
+                                   1.25f)) {
+              g_renderer->SetTaaVarianceGamma(varianceGamma);
+            }
+            if (ImGui::SliderFloat("RCAS", &rcas, 0.0f, 1.0f)) {
+              g_renderer->SetTaaSharpness(rcas);
+            }
           }
 
           if (ImGui::CollapsingHeader("SSAO Options")) {
-            /*   ImGui::SliderInt("Quality", &iAny, 0, 3);
-               ImGui::SliderInt("Low Pass", &iAny, 0, 2);
-               ImGui::Checkbox("Bent Normals", &bAny);
-               ImGui::Checkbox("High quality upsampling", &bAny);
-               ImGui::SliderFloat("Min Horizon angle", &any, 0.0f, (float)1.0);
-               ImGui::SliderFloat("Bilateral Threshold", &any, 0.0f, 0.1f);
-               ImGui::Checkbox("Half resolution", &bAny);
-               if (ImGui::CollapsingHeader(
-                       "Dominant Light Shadows (experimental)")) {
-                 ImGui::Checkbox("Enabled##dls", &bAny);
-                 ImGui::SliderFloat("Cone angle", &any, 0.0f, 1.0f);
-                 ImGui::SliderFloat("Shadow Distance", &any, 0.0f, 10.0f);
-                 ImGui::SliderFloat("Contact dist max", &any, 0.0f, 100.0f);
-                 ImGui::SliderFloat("Intensity##dls", &any, 0.0f, 10.0f);
-                 ImGui::SliderFloat("Depth bias", &any, 0.0f, 1.0f);
-                 ImGui::SliderFloat("Depth slope bias", &any, 0.0f, 1.0f);
-                 ImGui::SliderInt("Sample Count", &iAny, 1, 32);
-               }*/
+            int quality = g_renderer->GetSsaoQuality();
+            int lowPass = g_renderer->GetSsaoLowPassFilter();
+            bool bentNormals = g_renderer->IsSsaoBentNormals();
+            bool isUpsampling = g_renderer->IsSsaoUpsampling();
+            float minHorizonAngle = g_renderer->GetSsaoMinHorizonAngleRad();
+            float bilateralThreshold = g_renderer->GetSsaoBilateralThreshold();
+            bool halfResolution = g_renderer->IsSsaoHalfResolution();
+
+            if (ImGui::SliderInt("Quality", &quality, 0, 3)) {
+              g_renderer->SetSsaoQuality(quality);
+            }
+            if (ImGui::SliderInt("Low Pass", &lowPass, 0, 2)) {
+              g_renderer->SetSsaoLowPassFilter(lowPass);
+            }
+            if (ImGui::Checkbox("Bent Normals", &bentNormals)) {
+              g_renderer->SetSsaoBentNormals(bentNormals);
+            }
+            if (ImGui::Checkbox("High quality upsampling", &isUpsampling)) {
+              g_renderer->SetSsaoUpsampling(isUpsampling);
+            }
+            if (ImGui::SliderFloat("Min Horizon angle", &minHorizonAngle, 0.0f,
+                                   (float)1.0)) {
+              g_renderer->SetSsaoMinHorizonAngleRad(minHorizonAngle);
+            }
+            if (ImGui::SliderFloat("Bilateral Threshold", &bilateralThreshold,
+                                   0.0f, 0.1f)) {
+              g_renderer->SetSsaoBilateralThreshold(bilateralThreshold);
+            }
+            if (ImGui::Checkbox("Half resolution", &halfResolution)) {
+              g_renderer->SetSsaoHalfResolution(halfResolution);
+            }
+
+            if (ImGui::CollapsingHeader(
+                    "Dominant Light Shadows (experimental)")) {
+              bool ssctEnabled = g_renderer->IsSsaoSsctEnabled();
+              float ssctLightConeRad = g_renderer->GetSsaoSsctLightConeRad();
+              float shadowDist = g_renderer->GetSsaoSsctShadowDistance();
+              float contactDistMax =
+                  g_renderer->GetSsaoSsctContactDistanceMax();
+              float ssctIntensity = g_renderer->GetSsaoSsctIntensity();
+              float ssctDepthBias = g_renderer->GetSsaoSsctDepthBias();
+              float ssctDepthSlopeBias =
+                  g_renderer->GetSsaoSsctDepthSlopeBias();
+              int sampleCount = g_renderer->GetSsaoSsctSampleCount();
+              float lightDirection[3];
+              g_renderer->GetSsaoSsctLightDirection(lightDirection);
+
+              if (ImGui::Checkbox("Enabled##dls", &ssctEnabled)) {
+                g_renderer->SetSsaoSsctEnabled(ssctEnabled);
+              }
+              if (ImGui::SliderFloat("Cone angle", &ssctLightConeRad, 0.0f,
+                                     1.0f)) {
+                g_renderer->SetSsaoSsctLightConeRad(ssctLightConeRad);
+              }
+              if (ImGui::SliderFloat("Shadow Distance", &shadowDist, 0.0f,
+                                     10.0f)) {
+                g_renderer->SetSsaoSsctShadowDistance(shadowDist);
+              }
+              if (ImGui::SliderFloat("Contact dist max", &contactDistMax, 0.0f,
+                                     100.0f)) {
+                g_renderer->SetSsaoSsctContactDistanceMax(contactDistMax);
+              }
+              if (ImGui::SliderFloat("Intensity##dls", &ssctIntensity, 0.0f,
+                                     10.0f)) {
+                g_renderer->SetSsaoSsctIntensity(ssctIntensity);
+              }
+              if (ImGui::SliderFloat("Depth bias", &ssctDepthBias, 0.0f,
+                                     1.0f)) {
+                g_renderer->SetSsaoSsctDepthBias(ssctDepthBias);
+              }
+              if (ImGui::SliderFloat("Depth slope bias", &ssctDepthSlopeBias,
+                                     0.0f, 1.0f)) {
+                g_renderer->SetSsaoSsctDepthSlopeBias(ssctDepthSlopeBias);
+              }
+              if (ImGui::SliderInt("Sample Count", &sampleCount, 1, 32)) {
+                g_renderer->SetSsaoSsctSampleCount(sampleCount);
+              }
+              // ImGuiExt::DirectionWidget("Direction##dls", lightDirection);
+              if (ImGui::InputFloat3("Direction##dls", lightDirection)) {
+                g_renderer->SetSsaoSsctLightDirection(lightDirection);
+              }
+            }
           }
 
           if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
-            /*       ImGui::SliderFloat("Ray thickness", &any, 0.001f, 0.2f);
-                   ImGui::SliderFloat("Bias", &any, 0.001f, 0.5f);
-                   ImGui::SliderFloat("Max distance", &any, 0.1f, 10.0f);
-                   ImGui::SliderFloat("Stride", &any, 1.0, 10.0f);*/
+            float rayThickness =
+                g_renderer->GetScreenSpaceReflectionsThickness();
+            float bias = g_renderer->GetScreenSpaceReflectionsBias();
+            float maxDist = g_renderer->GetScreenSpaceReflectionsMaxDistance();
+            float stride = g_renderer->GetScreenSpaceReflectionsStride();
+
+            if (ImGui::SliderFloat("Ray thickness", &rayThickness, 0.001f,
+                                   0.2f)) {
+              g_renderer->SetScreenSpaceReflectionsThickness(rayThickness);
+            }
+            if (ImGui::SliderFloat("Bias", &bias, 0.001f, 0.5f)) {
+              g_renderer->SetScreenSpaceReflectionsBias(bias);
+            }
+            if (ImGui::SliderFloat("Max distance", &maxDist, 0.1f, 10.0f)) {
+              g_renderer->SetScreenSpaceReflectionsMaxDistance(maxDist);
+            }
+            if (ImGui::SliderFloat("Stride", &stride, 1.0, 10.0f)) {
+              g_renderer->SetScreenSpaceReflectionsStride(stride);
+            }
           }
 
           if (ImGui::CollapsingHeader("Dynamic Resolution")) {
-            // ImGui::Checkbox("enabled", &bAny);
-            // ImGui::Checkbox("homogeneous", &bAny);
-            // ImGui::SliderFloat("min. scale", &any, 0.25f, 1.0f);
-            // ImGui::SliderFloat("max. scale", &any, 0.25f, 1.0f);
-            // ImGui::SliderInt("quality", &iAny, 0, 3);
-            // ImGui::SliderFloat("sharpness", &any, 0.0f, 1.0f);
+            bool enabled = g_renderer->IsDynamicResoultionEnabled();
+            bool homogeneous =
+                g_renderer->IsDynamicResoultionHomogeneousScaling();
+            float minScale = g_renderer->GetDynamicResoultionMinScale();
+            float maxScale = g_renderer->GetDynamicResoultionMaxScale();
+            int quality = g_renderer->GetDynamicResoultionQuality();
+            float sharpness = g_renderer->GetDynamicResoultionSharpness();
+
+            if (ImGui::Checkbox("enabled", &enabled)) {
+              g_renderer->SetDynamicResoultionEnabled(enabled);
+            }
+            if (ImGui::Checkbox("homogeneous", &homogeneous)) {
+              g_renderer->SetDynamicResoultionHomogeneousScaling(homogeneous);
+            }
+            if (ImGui::SliderFloat("min. scale", &minScale, 0.25f, 1.0f)) {
+              g_renderer->SetDynamicResoultionMinScale(minScale);
+            }
+            if (ImGui::SliderFloat("max. scale", &maxScale, 0.25f, 1.0f)) {
+              g_renderer->SetDynamicResoultionMaxScale(maxScale);
+            }
+            if (ImGui::SliderInt("quality", &quality, 0, 3)) {
+              g_renderer->SetDynamicResoultionQuality(quality);
+            }
+            if (ImGui::SliderFloat("sharpness", &sharpness, 0.0f, 1.0f)) {
+              g_renderer->SetDynamicResoultionSharpness(sharpness);
+            }
           }
+
+          /////////////////////////////////////////////
           if (ImGui::CollapsingHeader("Light Settings")) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Indirect light")) {
