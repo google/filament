@@ -146,7 +146,7 @@ private:
 
     static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
 
-    static std::array<std::string_view, 3> splitShaderSource(std::string_view source) noexcept;
+    static std::array<std::string_view, 2> splitShaderSource(std::string_view source) noexcept;
 
     static GLuint linkProgram(OpenGLContext& context,
             std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders,
