@@ -739,6 +739,93 @@ namespace vzm
     }
 #pragma endregion
 
+#pragma region Shadows
+    void VzRenderer::SetShadowType(ShadowType shadowType)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.shadowType = (filament::ShadowType) shadowType;
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    VzRenderer::ShadowType VzRenderer::GetShadowType()
+    {
+        COMP_RENDERPATH(render_path, ShadowType::PCF);
+        return (ShadowType) render_path->viewSettings.shadowType;
+    }
+    void VzRenderer::SetVsmHighPrecision(bool highPrecision)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.vsmShadowOptions.highPrecision = highPrecision;
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsVsmHighPrecision()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.vsmShadowOptions.highPrecision;
+    }
+    void VzRenderer::SetVsmMsaaSamples(int msaaSamples)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.vsmShadowOptions.msaaSamples = (uint8_t) std::clamp(msaaSamples, 1, 8);
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    int VzRenderer::GetVsmMsaaSamples()
+    {
+        COMP_RENDERPATH(render_path, 1);
+        return render_path->viewSettings.vsmShadowOptions.msaaSamples;
+    }
+    void VzRenderer::SetVsmAnisotropy(int anisotropy)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.vsmShadowOptions.anisotropy = (uint8_t) std::clamp(anisotropy, 1, 16);
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    int VzRenderer::GetVsmAnisotropy()
+    {
+        COMP_RENDERPATH(render_path, 1);
+        return render_path->viewSettings.vsmShadowOptions.anisotropy;
+    }
+    void VzRenderer::SetVsmMipmapping(bool mipmapping)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.vsmShadowOptions.mipmapping = mipmapping;
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsVsmMipmapping()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.vsmShadowOptions.mipmapping;
+    }
+    void VzRenderer::SetSoftShadowPenumbraScale(float penumbraScale)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.softShadowOptions.penumbraScale = std::clamp(penumbraScale, 0.0f, 100.0f);
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetSoftShadowPenumbraScale()
+    {
+        COMP_RENDERPATH(render_path, 1.0f);
+        return render_path->viewSettings.softShadowOptions.penumbraScale;
+    }
+    void VzRenderer::SetSoftShadowPenumbraRatioScale(float penumbraRatioScale)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.softShadowOptions.penumbraRatioScale = std::clamp(penumbraRatioScale, 1.0f, 100.0f);
+        render_path->isDirty = true;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetSoftShadowPenumbraRatioScale()
+    {
+        COMP_RENDERPATH(render_path, 1.0f);
+        return render_path->viewSettings.softShadowOptions.penumbraRatioScale;
+    }
+#pragma endregion
+
     VZRESULT VzRenderer::Render(const VID vidScene, const VID vidCam)
     {
         VzRenderPath* render_path = gEngineApp.GetRenderPath(GetVID());
