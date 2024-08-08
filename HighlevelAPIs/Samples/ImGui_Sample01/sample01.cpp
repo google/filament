@@ -1475,9 +1475,9 @@ int main(int, char**) {
               float intensity = lightComponent->GetIntensity();
               float color[3];
               lightComponent->GetColor(color);
-              float range = lightComponent->GetRange();
-              float innerCone = lightComponent->getInnerCone();
-              float outerCone = lightComponent->getOuterCone();
+              float falloff = lightComponent->GetFalloff();
+              float spotLightInnerCone = lightComponent->GetSpotLightInnerCone();
+              float spotLightOuterCone = lightComponent->GetSpotLightOuterCone();
 
               if (ImGui::InputFloat("Intensity", &intensity)) {
                 lightComponent->SetIntensity(intensity);
@@ -1485,14 +1485,14 @@ int main(int, char**) {
               if (ImGui::ColorEdit3("Color", color)) {
                 lightComponent->SetColor(color);
               }
-              if (ImGui::InputFloat("Range", &range)) {
-                lightComponent->SetRange(range);
+              if (ImGui::InputFloat("Falloff", &falloff)) {
+                lightComponent->SetFalloff(falloff);
               }
-              if (ImGui::InputFloat("Inner Cone", &innerCone)) {
-                lightComponent->SetCone(innerCone, outerCone);
+              if (ImGui::InputFloat("Spot Light Inner Cone", &spotLightInnerCone)) {
+                lightComponent->SetSpotLightCone(spotLightInnerCone, spotLightOuterCone);
               }
-              if (ImGui::InputFloat("Outer Cone", &outerCone)) {
-                lightComponent->SetCone(innerCone, outerCone);
+              if (ImGui::InputFloat("Spot Light Outer Cone", &spotLightOuterCone)) {
+                lightComponent->SetSpotLightCone(spotLightInnerCone, spotLightOuterCone);
               }
             }
             ImGui::Unindent();
