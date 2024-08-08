@@ -118,9 +118,9 @@ namespace vzm
 
     filament::Renderer* VzRenderPath::GetRenderer() { return renderer_; }
 
-    void VzRenderPath::applyViewSettings()
+    void VzRenderPath::applySettings()
     {
-        if (!isViewSettingsDirty)
+        if (!isDirty)
             return;
 
         view_->setAntiAliasing(viewSettings.antiAliasing);
@@ -143,6 +143,6 @@ namespace vzm
         view_->setStereoscopicOptions(viewSettings.stereoscopicOptions);
         view_->setPostProcessingEnabled(viewSettings.postProcessingEnabled);
 
-        isViewSettingsDirty = false;
+        isDirty = false;
     }
 }
