@@ -113,8 +113,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
@@ -323,6 +323,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
         return 0;
     case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN:
     {
         if (is_valid) {
             int x = GET_X_LPARAM(lParam);
@@ -331,7 +332,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             //camera->GetWorldPose((float*)&p, (float*)&v, (float*)&u);
             //*(glm::fvec3*)cc->orbitHomePosition = p;
             //cc->UpdateControllerSettings();
-            cc->GrabBegin(x, y, false);
+            cc->GrabBegin(x, y, msg == WM_RBUTTONDOWN);
         }
         break;
     }
@@ -345,6 +346,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
     }
     case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
     {
         if (is_valid) {
             cc->GrabEnd();

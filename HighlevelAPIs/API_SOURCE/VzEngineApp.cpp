@@ -204,6 +204,13 @@ namespace vzm
         return vidMIs_;
     }
     std::vector<std::vector<MInstanceVID>>& VzActorRes::GetMIVariants() { return vidMIVariants_; }
+    VzActorRes::~VzActorRes()
+    {
+        if (isSprite)
+        {
+            gEngineApp.RemoveComponent(vidMIs_[0]);
+        }
+    }
 #pragma endregion
 
 #pragma region // VzLight
@@ -881,6 +888,7 @@ namespace vzm
 
         switch (compType)
         {
+        case SCENE_COMPONENT_TYPE::SPRITE_ACTOR:
         case SCENE_COMPONENT_TYPE::ACTOR:
         {
             // RenderableManager::Builder... with entity registers the entity in the renderableEntities
@@ -889,6 +897,24 @@ namespace vzm
 
             auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent"));
             v_comp = (VzSceneComp*)it.first->second.get();
+
+            if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
+            {
+                VzActorRes* actor_res = actorResMap_[vid].get();
+                actor_res->isSprite = true;
+
+                GeometryVID vid_geo = GetFirstVidByName("_DEFAULT_QUAD_GEOMETRY");
+                actor_res->SetGeometry(vid_geo);
+                MaterialVID vid_m = GetFirstVidByName("_DEFAULT_STANDARD_MATERIAL");
+                Material* m = materialResMap_[vid_m]->material;
+                MaterialInstance* mi = m->createInstance();
+                mi->setParameter("baseColor", filament::RgbType::LINEAR, filament::math::float3{ 1.0, 1.0, 1.0 });
+                mi->setParameter("metallic", 1.0f);
+                mi->setParameter("roughness", 0.4f);
+                mi->setParameter("reflectance", 0.5f);
+                VzMI* v_mi = CreateMaterialInstance(name + "_mi", vid_m, mi);
+                actor_res->SetMIs({ v_mi->GetVID() });
+            }
             break;
         }
         case SCENE_COMPONENT_TYPE::LIGHT:
