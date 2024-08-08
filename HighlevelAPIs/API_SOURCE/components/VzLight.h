@@ -14,6 +14,7 @@ namespace vzm
             FOCUSED_SPOT,   //!< Physically correct spot light.
             SPOT,           //!< Spot light with coupling of outer cone and illumination disabled.
         };
+        void SetType(const Type type);
         Type GetType() const;
 
         void SetLightChannel(unsigned int channel, bool enable = true);

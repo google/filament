@@ -7,6 +7,29 @@ extern vzm::VzEngineApp gEngineApp;
 
 namespace vzm
 {
+    void VzLight::SetType(const Type type)
+    {
+        COMP_LIGHT(lcm, ett, ins, );
+        LightManager::Builder builder((LightManager::Type) type);
+        for (unsigned int channel = 0; channel < 8; channel++)
+        {
+            builder.lightChannel(channel, lcm.getLightChannel(ins, channel));
+        }
+        builder.castShadows(lcm.isShadowCaster(ins));
+        builder.shadowOptions(lcm.getShadowOptions(ins));
+        builder.position(lcm.getPosition(ins));
+        builder.direction(lcm.getDirection(ins));
+        builder.color(lcm.getColor(ins));
+        builder.intensityCandela(lcm.getIntensity(ins));
+        builder.falloff(lcm.getFalloff(ins));
+        builder.spotLightCone(lcm.getSpotLightInnerCone(ins), lcm.getSpotLightOuterCone(ins));
+        builder.sunAngularRadius(lcm.getSunAngularRadius(ins));
+        builder.sunHaloSize(lcm.getSunHaloSize(ins));
+        builder.sunHaloFalloff(lcm.getSunHaloFalloff(ins));
+        lcm.destroy(ett);
+        builder.build(*gEngine, ett);
+        UpdateTimeStamp();
+    }
     VzLight::Type VzLight::GetType() const
     {
         COMP_LIGHT(lcm, ett, ins, Type::DIRECTIONAL);
