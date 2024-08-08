@@ -696,7 +696,7 @@ void setMouseButton(GLFWwindow* window, int button, int state,
   if (!g_cam || g_cam != current_cam) {
     return;
   }
-  if (button == 0) {
+
     double x;
     double y;
     int width;
@@ -711,7 +711,11 @@ void setMouseButton(GLFWwindow* window, int button, int state,
       case GLFW_PRESS:
         if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
             y < workspace_height) {
-          g_cam->GetController()->GrabBegin(xPos, yPos, false);
+          if (button == 0) {
+            g_cam->GetController()->GrabBegin(xPos, yPos, false);
+          } else if (button == 1) {
+            g_cam->GetController()->GrabBegin(xPos, yPos, true);
+          }
         }
         break;
       case GLFW_RELEASE:
@@ -720,23 +724,21 @@ void setMouseButton(GLFWwindow* window, int button, int state,
       default:
         break;
     }
-  }
 }
 void setCursorPos(GLFWwindow* window, double x, double y) {
-  int state;
   int width;
   int height;
 
   if (!g_cam || g_cam != current_cam) {
     return;
   }
-  state = glfwGetMouseButton(window, 0);
   glfwGetWindowSize(window, &width, &height);
 
   int xPos = static_cast<int>(x - left_editUIWidth);
   int yPos = height - static_cast<int>(y);
 
-  if (state == GLFW_PRESS) {
+  if (glfwGetMouseButton(window, 0) == GLFW_PRESS ||
+      glfwGetMouseButton(window, 1) == GLFW_PRESS) {
     g_cam->GetController()->GrabDrag(xPos, yPos);
   }
 }
@@ -756,7 +758,7 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
       y < workspace_height) {
     g_cam->GetController()->Scroll(static_cast<int>(x - left_editUIWidth),
                                    height - static_cast<int>(y),
-                                   5.0f * (float)yOffset);
+                                   -5.0f * (float)yOffset);
   }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
@@ -1409,8 +1411,7 @@ int main(int, char**) {
                         if (paramInfo.isSampler) {
                           std::string label = "Upload Texture";
                           label += postLabel;
-                          if (ImGui::Button(label.c_str(),
-                                            ImVec2(right_editUIWidth, 20))) {
+                          if (ImGui::Button(label.c_str())) {
                             vzm::VzTexture* texture =
                                 (vzm::VzTexture*)vzm::NewResComponent(
                                     vzm::RES_COMPONENT_TYPE::TEXTURE,
@@ -1769,7 +1770,7 @@ int main(int, char**) {
             if (ImGui::CollapsingHeader("Indirect light")) {
               float iblIntensity = g_scene->GetIBLIntensity();
               float iblRotation = g_scene->GetIBLRotation();
-              if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50))) {
+              if (ImGui::Button("Select IBL")) {
                 std::wstring filePath = OpenFileDialog();
                 if (filePath.size() != 0) {
                   std::string str_path;
