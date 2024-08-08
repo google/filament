@@ -865,7 +865,7 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
             engine.getDriverApi().getMaxUniformBufferSize() / 16u);
 
     bool const staticTextureWorkaround =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
     bool const powerVrShaderWorkarounds =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);

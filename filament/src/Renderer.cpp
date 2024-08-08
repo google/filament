@@ -16,9 +16,10 @@
 
 #include <filament/Renderer.h>
 
-#include "details/Renderer.h"
+#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
+#include "details/Renderer.h"
 #include "details/View.h"
 
 #include <utils/FixedCapacityVector.h>

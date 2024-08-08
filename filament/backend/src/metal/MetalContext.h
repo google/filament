@@ -143,7 +143,7 @@ struct MetalContext {
     } highestSupportedGpuFamily;
 
     struct {
-        bool a8xStaticTextureTargetError;
+        bool staticTextureTargetError;
     } bugs;
 
     // sampleCountLookup[requestedSamples] gives a <= sample count supported by the device.

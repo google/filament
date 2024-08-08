@@ -1310,7 +1310,7 @@ enum class Workaround : uint16_t {
     ADRENO_UNIFORM_ARRAY_CRASH,
     // Workaround a Metal pipeline compilation error with the message:
     // "Could not statically determine the target of a texture". See light_indirect.fs
-    A8X_STATIC_TEXTURE_TARGET_ERROR,
+    METAL_STATIC_TEXTURE_TARGET_ERROR,
     // Adreno drivers sometimes aren't able to blit into a layer of a texture array.
     DISABLE_BLIT_INTO_TEXTURE_ARRAY,
     // Multiple workarounds needed for PowerVR GPUs

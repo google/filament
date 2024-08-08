@@ -3862,6 +3862,7 @@ void OpenGLDriver::updateDescriptors(utils::bitset8 invalidDescriptorSets) noexc
 }
 
 void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    DEBUG_MARKER()
     assert_invariant(!mContext.isES2());
     assert_invariant(mBoundRenderPrimitive);
 #if FILAMENT_ENABLE_MATDBG
@@ -3896,6 +3897,7 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 
 // This is the ES2 version of draw2().
 void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    DEBUG_MARKER()
     assert_invariant(mContext.isES2());
     assert_invariant(mBoundRenderPrimitive);
 #if FILAMENT_ENABLE_MATDBG
@@ -3926,6 +3928,7 @@ void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_
 }
 
 void OpenGLDriver::scissor(Viewport scissor) {
+    DEBUG_MARKER()
     setScissor(scissor);
 }
 
@@ -3945,6 +3948,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+    DEBUG_MARKER()
     getShaderCompilerService().tick();
 
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(program);
