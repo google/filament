@@ -696,7 +696,7 @@ void setMouseButton(GLFWwindow* window, int button, int state,
   if (!g_cam || g_cam != current_cam) {
     return;
   }
-  if (button == 0) {
+
     double x;
     double y;
     int width;
@@ -711,7 +711,11 @@ void setMouseButton(GLFWwindow* window, int button, int state,
       case GLFW_PRESS:
         if (x > left_editUIWidth && x < left_editUIWidth + workspace_width &&
             y < workspace_height) {
-          g_cam->GetController()->GrabBegin(xPos, yPos, false);
+          if (button == 0) {
+            g_cam->GetController()->GrabBegin(xPos, yPos, false);
+          } else if (button == 1) {
+            g_cam->GetController()->GrabBegin(xPos, yPos, true);
+          }
         }
         break;
       case GLFW_RELEASE:
@@ -720,23 +724,21 @@ void setMouseButton(GLFWwindow* window, int button, int state,
       default:
         break;
     }
-  }
 }
 void setCursorPos(GLFWwindow* window, double x, double y) {
-  int state;
   int width;
   int height;
 
   if (!g_cam || g_cam != current_cam) {
     return;
   }
-  state = glfwGetMouseButton(window, 0);
   glfwGetWindowSize(window, &width, &height);
 
   int xPos = static_cast<int>(x - left_editUIWidth);
   int yPos = height - static_cast<int>(y);
 
-  if (state == GLFW_PRESS) {
+  if (glfwGetMouseButton(window, 0) == GLFW_PRESS ||
+      glfwGetMouseButton(window, 1) == GLFW_PRESS) {
     g_cam->GetController()->GrabDrag(xPos, yPos);
   }
 }
@@ -756,7 +758,7 @@ void setMouseScroll(GLFWwindow* window, double xOffset, double yOffset) {
       y < workspace_height) {
     g_cam->GetController()->Scroll(static_cast<int>(x - left_editUIWidth),
                                    height - static_cast<int>(y),
-                                   5.0f * (float)yOffset);
+                                   -5.0f * (float)yOffset);
   }
 }
 void onFrameBufferResize(GLFWwindow* window, int width, int height) {
@@ -773,6 +775,9 @@ void treeNode(VID id) {
   std::string sName = component->GetName();
 
   ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+  if (currentVID == id) {
+    flags |= ImGuiTreeNodeFlags_Selected;
+  }
   if (component->GetChildren().size() == 0) {
     flags |= ImGuiTreeNodeFlags_Leaf;
   }
@@ -1365,6 +1370,9 @@ int main(int, char**) {
               for (size_t prim = 0; prim < mis.size(); ++prim) {
                 vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(mis[prim]);
                 std::string mname = mi->GetName();
+                std::string postLabel = "##";
+                postLabel += mi->GetVID();
+
                 if (ImGui::CollapsingHeader(mname.c_str())) {
                   ImGui::Indent();
                   VID maid = mi->GetMaterial();
@@ -1373,10 +1381,26 @@ int main(int, char**) {
                   std::map<std::string, vzm::VzMaterial::ParameterInfo> pram;
                   // std::map<std::string, vzm::UniformType> pram;
                   ma->GetAllowedParameters(pram);
+
+                  std::string labelName = "DoubleSided##";
+                  labelName += postLabel;
+
+                  bool doubleSided = mi->IsDoubleSided();
+                  if (ImGui::Checkbox(labelName.c_str(),
+                                      &doubleSided)) {
+                    mi->SetDoubleSided(doubleSided);
+                  }
                   for (auto iter = pram.begin(); iter != pram.end(); iter++) {
                     std::vector<float> v;
                     vzm::VzMaterial::ParameterInfo& paramInfo = iter->second;
                     std::string pname = paramInfo.name;
+                    std::string param_label = pname + postLabel;
+
+                    //_ 붙은 파라미터 제외
+                    if (pname.find('_') != std::string::npos) {
+                      continue;
+                    }
+
                     ImGui::BeginGroup();
                     ImGui::Text("%s", pname.c_str());
 
@@ -1384,16 +1408,10 @@ int main(int, char**) {
 
                     switch (paramInfo.type) {
                       case vzm::UniformType::BOOL:
-                        v.resize(1);
-                        mi->GetParameter(paramInfo.name, paramInfo.type,
-                                         (void*)v.data());
                         if (paramInfo.isSampler) {
                           std::string label = "Upload Texture";
-                          label += "##";
-                          label += maid;
-                          label += paramInfo.name;
-                          if (ImGui::Button(label.c_str(),
-                                            ImVec2(right_editUIWidth, 20))) {
+                          label += postLabel;
+                          if (ImGui::Button(label.c_str())) {
                             vzm::VzTexture* texture =
                                 (vzm::VzTexture*)vzm::NewResComponent(
                                     vzm::RES_COMPONENT_TYPE::TEXTURE,
@@ -1407,19 +1425,13 @@ int main(int, char**) {
                               mi->SetTexture(pname, texture->GetVID());
                             }
                           }
-                        } else {
-                          // v.resize(1);
-                          // if (ImGui::Checkbox(pname.c_str(), (bool*)&v[0])) {
-                          //   mi->SetParameter(it->first, it->second,
-                          //                    (void*)v.data());
-                          // }
                         }
                         break;
                       case vzm::UniformType::FLOAT:
                         v.resize(1);
                         mi->GetParameter(paramInfo.name, paramInfo.type,
                                          (void*)v.data());
-                        if (ImGui::InputFloat(pname.c_str(), &v[0])) {
+                        if (ImGui::InputFloat(param_label.c_str(), &v[0])) {
                           mi->SetParameter(paramInfo.name, paramInfo.type,
                                            (void*)v.data());
                         }
@@ -1428,7 +1440,7 @@ int main(int, char**) {
                         v.resize(3);
                         mi->GetParameter(paramInfo.name, paramInfo.type,
                                          (void*)v.data());
-                        if (ImGui::ColorEdit3(pname.c_str(), &v[0]),
+                        if (ImGui::ColorEdit3(param_label.c_str(), &v[0]),
                             ImGuiColorEditFlags_DefaultOptions_) {
                           mi->SetParameter(paramInfo.name, paramInfo.type,
                                            (void*)v.data());
@@ -1438,7 +1450,7 @@ int main(int, char**) {
                         v.resize(4);
                         mi->GetParameter(paramInfo.name, paramInfo.type,
                                          (void*)v.data());
-                        if (ImGui::ColorEdit4(pname.c_str(), &v[0]),
+                        if (ImGui::ColorEdit4(param_label.c_str(), &v[0]),
                             ImGuiColorEditFlags_DefaultOptions_) {
                           mi->SetParameter(paramInfo.name, paramInfo.type,
                                            (void*)v.data());
@@ -1758,7 +1770,7 @@ int main(int, char**) {
             if (ImGui::CollapsingHeader("Indirect light")) {
               float iblIntensity = g_scene->GetIBLIntensity();
               float iblRotation = g_scene->GetIBLRotation();
-              if (ImGui::Button("Select IBL", ImVec2(right_editUIWidth, 50))) {
+              if (ImGui::Button("Select IBL")) {
                 std::wstring filePath = OpenFileDialog();
                 if (filePath.size() != 0) {
                   std::string str_path;
