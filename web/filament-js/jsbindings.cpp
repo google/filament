@@ -627,6 +627,7 @@ class_<Renderer>("Renderer")
     .function("getClearOptions", &Renderer::getClearOptions)
     .function("setPresentationTime", &Renderer::setPresentationTime)
     .function("setVsyncTime", &Renderer::setVsyncTime)
+    .function("skipFrame", &Renderer::skipFrame)
     .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
         return self->beginFrame(swapChain);
     }), allow_raw_pointers())
@@ -683,7 +684,8 @@ class_<View>("View")
     .function("isStencilBufferEnabled", &View::isStencilBufferEnabled)
     .function("setMaterialGlobal", &View::setMaterialGlobal)
     .function("getMaterialGlobal", &View::getMaterialGlobal)
-    .function("getFogEntity", &View::getFogEntity);
+    .function("getFogEntity", &View::getFogEntity)
+    .function("clearFrameHistory", &View::clearFrameHistory);
 
 /// Scene ::core class:: Flat container of renderables and lights.
 /// See also the [Engine] methods `createScene` and `destroyScene`.

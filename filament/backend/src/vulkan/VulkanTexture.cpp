@@ -387,10 +387,13 @@ void VulkanTexture::setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel) 
 }
 
 VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange range) {
-    // Attachments should only have one mipmap level and one layer.
     range.levelCount = 1;
     range.layerCount = 1;
     return getImageView(range, VK_IMAGE_VIEW_TYPE_2D, {});
+}
+
+VkImageView VulkanTexture::getMultiviewAttachmentView(VkImageSubresourceRange range) {
+    return getImageView(range, VK_IMAGE_VIEW_TYPE_2D_ARRAY, {});
 }
 
 VkImageView VulkanTexture::getViewForType(VkImageSubresourceRange const& range, VkImageViewType type) {

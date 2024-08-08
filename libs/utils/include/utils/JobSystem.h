@@ -44,7 +44,9 @@
 namespace utils {
 
 class JobSystem {
-    static constexpr size_t MAX_JOB_COUNT = 16384;
+    static constexpr size_t MAX_JOB_COUNT = 1 << 14; // 16384
+    static constexpr uint32_t JOB_COUNT_MASK = MAX_JOB_COUNT - 1;
+    static constexpr uint32_t WAITER_COUNT_SHIFT = 24;
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
     using Mutex = utils::Mutex;
@@ -81,13 +83,17 @@ public:
         void* storage[JOB_STORAGE_SIZE_WORDS];                  // 48 | 48
         JobFunc function;                                       //  4 |  8
         uint16_t parent;                                        //  2 |  2
-        std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
-        mutable std::atomic<uint16_t> refCount = { 1 };         //  2 |  2
         mutable ThreadId id = invalidThreadId;                  //  1 |  1
-                                                                //  1 |  1 (padding)
+        mutable std::atomic<uint8_t> refCount = { 1 };          //  1 |  1
+        std::atomic<uint32_t> runningJobCount = { 1 };          //  4 |  4
                                                                 //  4 |  0 (padding)
                                                                 // 64 | 64
     };
+
+#ifndef WIN32
+    // on windows std::function<void()> is bigger and forces the whole structure to be larger
+    static_assert(sizeof(Job) == 64);
+#endif
 
     explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
 
@@ -207,6 +213,21 @@ public:
         return job;
     }
 
+    // creates a job from a KNOWN method pointer w/ object passed by value
+    template<typename T, void(T::*method)(JobSystem&, Job*), typename ... ARGS>
+    Job* emplaceJob(Job* parent, ARGS&& ... args) noexcept {
+        static_assert(sizeof(T) <= sizeof(Job::storage), "user data too large");
+        Job* job = create(parent, [](void* storage, JobSystem& js, Job* job) {
+            T* const that = static_cast<T*>(storage);
+            (that->*method)(js, job);
+            that->~T();
+        });
+        if (job) {
+            new(job->storage) T(std::forward<ARGS>(args)...);
+        }
+        return job;
+    }
+
     // creates a job from a functor passed by value
     template<typename T>
     Job* createJob(Job* parent, T functor) noexcept {
@@ -218,6 +239,21 @@ public:
         });
         if (job) {
             new(job->storage) T(std::move(functor));
+        }
+        return job;
+    }
+
+    // creates a job from a functor passed by value
+    template<typename T, typename ... ARGS>
+    Job* emplaceJob(Job* parent, ARGS&& ... args) noexcept {
+        static_assert(sizeof(T) <= sizeof(Job::storage), "functor too large");
+        Job* job = create(parent, [](void* storage, JobSystem& js, Job* job){
+            T* const that = static_cast<T*>(storage);
+            that->operator()(js, job);
+            that->~T();
+        });
+        if (job) {
+            new(job->storage) T(std::forward<ARGS>(args)...);
         }
         return job;
     }
@@ -345,6 +381,16 @@ private:
         static constexpr uint32_t m = 0x7fffffffu;
         uint32_t mState; // must be 0 < seed < 0x7fffffff
     public:
+        using result_type = uint32_t;
+
+        static constexpr result_type min() noexcept {
+            return 1;
+        }
+
+        static constexpr result_type max() noexcept {
+            return m - 1;
+        }
+
         inline constexpr explicit default_random_engine(uint32_t seed = 1u) noexcept
                 : mState(((seed % m) == 0u) ? 1u : seed % m) {
         }
@@ -389,7 +435,9 @@ private:
     Job* pop(WorkQueue& workQueue) noexcept;
     Job* steal(WorkQueue& workQueue) noexcept;
 
-    void wait(std::unique_lock<Mutex>& lock, Job* job = nullptr) noexcept;
+    [[nodiscard]]
+    uint32_t wait(std::unique_lock<Mutex>& lock, Job* job) noexcept;
+    void wait(std::unique_lock<Mutex>& lock) noexcept;
     void wakeAll() noexcept;
     void wakeOne() noexcept;
 
@@ -418,7 +466,7 @@ private:
     uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for
     Job* mRootJob = nullptr;
 
-    utils::Mutex mThreadMapLock; // this should have very little contention
+    Mutex mThreadMapLock; // this should have very little contention
     tsl::robin_map<std::thread::id, ThreadState *> mThreadMap;
 };
 
@@ -436,12 +484,13 @@ template<typename CALLABLE, typename ... ARGS>
 JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
         CALLABLE&& func, ARGS&&... args) noexcept {
     struct Data {
+        explicit Data(std::function<void()> f) noexcept: f(std::move(f)) {}
         std::function<void()> f;
         // Renaming the method below could cause an Arrested Development.
         void gob(JobSystem&, JobSystem::Job*) noexcept { f(); }
-    } user{ std::bind(std::forward<CALLABLE>(func),
-            std::forward<ARGS>(args)...) };
-    return js.createJob<Data, &Data::gob>(parent, std::move(user));
+    };
+    return js.emplaceJob<Data, &Data::gob>(parent,
+            std::bind(std::forward<CALLABLE>(func), std::forward<ARGS>(args)...));
 }
 
 template<typename CALLABLE, typename T, typename ... ARGS,
@@ -452,12 +501,13 @@ template<typename CALLABLE, typename T, typename ... ARGS,
 JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
         CALLABLE&& func, T&& o, ARGS&&... args) noexcept {
     struct Data {
+        explicit Data(std::function<void()> f) noexcept: f(std::move(f)) {}
         std::function<void()> f;
         // Renaming the method below could cause an Arrested Development.
         void gob(JobSystem&, JobSystem::Job*) noexcept { f(); }
-    } user{ std::bind(std::forward<CALLABLE>(func), std::forward<T>(o),
-            std::forward<ARGS>(args)...) };
-    return js.createJob<Data, &Data::gob>(parent, std::move(user));
+    };
+    return js.emplaceJob<Data, &Data::gob>(parent,
+            std::bind(std::forward<CALLABLE>(func), std::forward<T>(o), std::forward<ARGS>(args)...));
 }
 
 
@@ -486,8 +536,8 @@ struct ParallelForJobData {
 right_side:
         if (splitter.split(splits, count)) {
             const size_type lc = count / 2;
-            JobData ld(start, lc, splits + uint8_t(1), functor, splitter);
-            JobSystem::Job* l = js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(ld));
+            JobSystem::Job* l = js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
+                    start, lc, splits + uint8_t(1), functor, splitter);
             if (UTILS_UNLIKELY(l == nullptr)) {
                 // couldn't create a job, just pretend we're done splitting
                 goto execute;
@@ -527,8 +577,8 @@ template<typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         uint32_t start, uint32_t count, F functor, const S& splitter) noexcept {
     using JobData = details::ParallelForJobData<S, F>;
-    JobData jobData(start, count, 0, std::move(functor), splitter);
-    return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
+    return js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
+            start, count, 0, std::move(functor), splitter);
 }
 
 // parallel jobs with pointer/count
@@ -539,8 +589,8 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         f(data + s, c);
     };
     using JobData = details::ParallelForJobData<S, decltype(user)>;
-    JobData jobData(0, count, 0, std::move(user), splitter);
-    return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
+    return js.emplaceJob<JobData, &JobData::parallelWithJobs>(parent,
+            0, count, 0, std::move(user), splitter);
 }
 
 // parallel jobs on a Slice<>

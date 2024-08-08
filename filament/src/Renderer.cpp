@@ -45,6 +45,10 @@ void Renderer::setPresentationTime(int64_t monotonic_clock_ns) {
     downcast(this)->setPresentationTime(monotonic_clock_ns);
 }
 
+void Renderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
+    downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
+}
+
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     return downcast(this)->beginFrame(downcast(swapChain), vsyncSteadyClockTimeNano);
 }

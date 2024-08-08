@@ -60,6 +60,7 @@
 
 #include <chrono>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <stddef.h>
@@ -88,7 +89,11 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
-        mUserEpoch(engine.getEngineEpoch())
+        mUserEpoch(engine.getEngineEpoch()),
+        mResourceAllocator(std::make_unique<ResourceAllocator>(
+                engine.getSharedResourceAllocatorDisposer(),
+                engine.getConfig(),
+                engine.getDriverApi()))
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
@@ -176,6 +181,7 @@ void FRenderer::terminate(FEngine& engine) {
     }
     mFrameInfoManager.terminate(driver);
     mFrameSkipper.terminate(driver);
+    mResourceAllocator->terminate();
 }
 
 void FRenderer::resetUserTime() {
@@ -234,6 +240,39 @@ void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
 
 void FRenderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
     mVsyncSteadyClockTimeNano = steadyClockTimeNano;
+}
+
+void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
+    SYSTRACE_CALL();
+
+    FILAMENT_CHECK_PRECONDITION(!mSwapChain) <<
+            "skipFrame() can't be called between beginFrame() and endFrame()";
+
+    if (!vsyncSteadyClockTimeNano) {
+        vsyncSteadyClockTimeNano = mVsyncSteadyClockTimeNano;
+        mVsyncSteadyClockTimeNano = 0;
+    }
+
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+
+    // Gives the backend a chance to execute periodic tasks. This must be called before
+    // the frame skipper.
+    driver.tick();
+
+    // do this before engine.flush()
+    mResourceAllocator->gc(true);
+
+    // Run the component managers' GC in parallel
+    // WARNING: while doing this we can't access any component manager
+    auto& js = engine.getJobSystem();
+
+    auto *job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+
+    engine.flush();     // flush command stream
+
+    // make sure we're done with the gcs
+    js.waitAndRelease(job);
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
@@ -380,7 +419,7 @@ void FRenderer::endFrame() {
     }
 
     // do this before engine.flush()
-    engine.getResourceAllocator().gc();
+    mResourceAllocator->gc();
 
     // Run the component managers' GC in parallel
     // WARNING: while doing this we can't access any component manager
@@ -750,7 +789,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
      * Frame graph
      */
 
-    FrameGraph fg(engine.getResourceAllocator(),
+    FrameGraph fg(*mResourceAllocator,
             isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
     auto& blackboard = fg.getBlackboard();
 

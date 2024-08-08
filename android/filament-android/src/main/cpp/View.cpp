@@ -531,3 +531,12 @@ Java_com_google_android_filament_View_nGetFogEntity(JNIEnv *env, jclass clazz,
     View *view = (View *) nativeView;
     return (jint)view->getFogEntity().getId();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nClearFrameHistory(JNIEnv *env, jclass clazz,
+        jlong nativeView, jlong nativeEngine) {
+    View *view = (View *) nativeView;
+    Engine *engine = (Engine *) nativeEngine;
+    view->clearFrameHistory(*engine);
+}
