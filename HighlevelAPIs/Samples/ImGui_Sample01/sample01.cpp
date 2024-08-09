@@ -967,6 +967,7 @@ int main(int, char**) {
   };
 
   int tabIdx = 0;
+  int camTabIdx = 0;
 
   std::vector<bool> animActiveVec;
   float currentAnimPlayTime = 0.0f;
@@ -1047,9 +1048,6 @@ int main(int, char**) {
       if (ImGui::CollapsingHeader(
               "Camera", ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
         if (cameras.size() > 0) {
-          float zNearP, zFarP, fovInDegree;
-          current_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree,
-                                                nullptr);
           vzm::VzBaseComp* comp = vzm::GetVzComponent(cameras[current_cam_idx]);
           std::string previewName = comp->GetName();
           if (ImGui::BeginCombo("Current Camera", previewName.c_str())) {
@@ -1067,17 +1065,80 @@ int main(int, char**) {
             }
             ImGui::EndCombo();
           }
-          if (ImGui::InputFloat("near", &zNearP)) {
-            current_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                                  (float)width / (float)height);
+
+          ImGui::Text("set projection from");
+          {
+            ImGui::BeginTabBar("camTab");
+            if (ImGui::BeginTabItem("fov")) {
+              camTabIdx = 0;
+              ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("focal length")) {
+              camTabIdx = 1;
+              ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
           }
-          if (ImGui::InputFloat("far", &zFarP)) {
-            current_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                                  (float)width / (float)height);
+          switch (camTabIdx) {
+            case 0: {
+              float zNearP, zFarP, fovInDegree;
+              current_cam->GetPerspectiveProjection(&zNearP, &zFarP,
+                                                    &fovInDegree, nullptr);
+              if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
+                current_cam->SetPerspectiveProjection(
+                    zNearP, zFarP, fovInDegree, (float)width / (float)height);
+              }
+              if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
+                current_cam->SetPerspectiveProjection(
+                    zNearP, zFarP, fovInDegree, (float)width / (float)height);
+              }
+              if (ImGui::InputFloat("fov", &fovInDegree)) {
+                current_cam->SetPerspectiveProjection(
+                    zNearP, zFarP, fovInDegree, (float)width / (float)height);
+              }
+              break;
+            }
+            case 1: {
+              float zNearP = current_cam->GetNear();
+              float zFarP = current_cam->GetCullingFar();
+              float focalLength = current_cam->GetFocalLength();
+              if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
+                current_cam->SetLensProjection(
+                    focalLength, (float)width / (float)height, zNearP, zFarP);
+              }
+              if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
+                current_cam->SetLensProjection(
+                    focalLength, (float)width / (float)height, zNearP, zFarP);
+              }
+              if (ImGui::SliderFloat("Focal length (mm)", &focalLength, 16.0f,
+                                     90.0f)) {
+                current_cam->SetLensProjection(
+                    focalLength, (float)width / (float)height, zNearP, zFarP);
+              }
+              break;
+            }
           }
-          if (ImGui::InputFloat("fov", &fovInDegree)) {
-            current_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-                                                  (float)width / (float)height);
+
+          float aperture = current_cam->GetAperture();
+          float shutterSpeed = 1.0f / current_cam->GetShutterSpeed();
+          float sensitivity = current_cam->GetSensitivity();
+          float focusDistance = current_cam->GetFocusDistance();
+
+          if (ImGui::SliderFloat("Aperture", &aperture, 1.0f, 32.0f)) {
+            current_cam->SetExposure(aperture, 1.0f / shutterSpeed,
+                                     sensitivity);
+          }
+          if (ImGui::SliderFloat("Speed (1/s)", &shutterSpeed, 1000.0f, 1.0f)) {
+            current_cam->SetExposure(aperture, 1.0f / shutterSpeed,
+                                     sensitivity);
+          }
+          if (ImGui::SliderFloat("ISO", &sensitivity, 25.0f, 6400.0f)) {
+            current_cam->SetExposure(aperture, 1.0f / shutterSpeed,
+                                     sensitivity);
+          }
+          if (ImGui::SliderFloat("Focus distance", &focusDistance, 0.0f,
+                                 30.0f)) {
+            current_cam->SetFocusDistance(focusDistance);
           }
         }
       }
@@ -1485,9 +1546,10 @@ int main(int, char**) {
               float color[3];
               lightComponent->GetColor(color);
               float falloff = lightComponent->GetFalloff();
-              
-              if (ImGui::Combo("Light Type", &lightType,
-                               "SUN\0DIRECTIONAL\0POINT\0FOCUSED_SPOT\0SPOT\0\0")) {
+
+              if (ImGui::Combo(
+                      "Light Type", &lightType,
+                      "SUN\0DIRECTIONAL\0POINT\0FOCUSED_SPOT\0SPOT\0\0")) {
                 lightComponent->SetType((vzm::VzLight::Type)lightType);
               }
 
@@ -1552,8 +1614,8 @@ int main(int, char**) {
                 }
               }
 
-
-              vzm::VzLight::ShadowOptions sOpts = lightComponent->GetShadowOptions();
+              vzm::VzLight::ShadowOptions sOpts =
+                  lightComponent->GetShadowOptions();
 
               ImGui::Indent();
               if (ImGui::CollapsingHeader("Shadow")) {
@@ -1582,13 +1644,12 @@ int main(int, char**) {
                   sOpts.shadowFar = shadowFar;
                   lightComponent->SetShadowOptions(sOpts);
                 }
-                //if (ImGui::CollapsingHeader("Shadow direction")) {
+                // if (ImGui::CollapsingHeader("Shadow direction")) {
                 float fSunLightDirection[3];
                 lightComponent->GetDirection(fSunLightDirection);
-                  if (ImGui::InputFloat3("Light Direction",
-                                         fSunLightDirection)) {
-                    lightComponent->SetDirection(fSunLightDirection);
-                  }
+                if (ImGui::InputFloat3("Light Direction", fSunLightDirection)) {
+                  lightComponent->SetDirection(fSunLightDirection);
+                }
                 //}
                 if (g_renderer->GetShadowType() ==
                     vzm::VzRenderer::ShadowType::VSM) {
@@ -2126,37 +2187,36 @@ int main(int, char**) {
                   g_light->SetShadowOptions(sOpts);
                 }
 
-                //if (ImGui::CollapsingHeader("Shadow direction")) {
-                  float fSunLightDirection[3];
-                  g_light->GetDirection(fSunLightDirection);
-                  if (ImGui::InputFloat3("Light Direction",
-                                         fSunLightDirection)) {
-                    g_light->SetDirection(fSunLightDirection);
-                  }
-                  // glm::vec3 sunLightDirection(fSunLightDirection[0],
-                  //                             fSunLightDirection[1],
-                  //                             fSunLightDirection[2]);
-                  // glm::vec4 shadowTransform(
-                  //     sOpts.transform[0], sOpts.transform[1],
-                  //     sOpts.transform[2], sOpts.transform[3]);
-                  // glm::vec3 shadowDirection =
-                  //     shadowTransform * glm::vec4(sunLightDirection, 0.0f);
-                  //// ImGuiExt::DirectionWidget("Shadow direction",
-                  //// shadowDirection.v);
-                  // if (ImGui::InputFloat3("Shadow Direction",
-                  //                        (float*)&shadowDirection[0])) {
-                  //   shadowTransform = glm::normalize(glm::vec4(
-                  //       glm::cross(sunLightDirection, shadowDirection),
-                  //       glm::sqrt(length2(sunLightDirection) *
-                  //                 length2(shadowDirection)) +
-                  //           glm::dot(sunLightDirection, shadowDirection)));
-                  //   sOpts.transform[0] = shadowTransform[0];
-                  //   sOpts.transform[1] = shadowTransform[1];
-                  //   sOpts.transform[2] = shadowTransform[2];
-                  //   sOpts.transform[3] = shadowTransform[3];
+                // if (ImGui::CollapsingHeader("Shadow direction")) {
+                float fSunLightDirection[3];
+                g_light->GetDirection(fSunLightDirection);
+                if (ImGui::InputFloat3("Light Direction", fSunLightDirection)) {
+                  g_light->SetDirection(fSunLightDirection);
+                }
+                // glm::vec3 sunLightDirection(fSunLightDirection[0],
+                //                             fSunLightDirection[1],
+                //                             fSunLightDirection[2]);
+                // glm::vec4 shadowTransform(
+                //     sOpts.transform[0], sOpts.transform[1],
+                //     sOpts.transform[2], sOpts.transform[3]);
+                // glm::vec3 shadowDirection =
+                //     shadowTransform * glm::vec4(sunLightDirection, 0.0f);
+                //// ImGuiExt::DirectionWidget("Shadow direction",
+                //// shadowDirection.v);
+                // if (ImGui::InputFloat3("Shadow Direction",
+                //                        (float*)&shadowDirection[0])) {
+                //   shadowTransform = glm::normalize(glm::vec4(
+                //       glm::cross(sunLightDirection, shadowDirection),
+                //       glm::sqrt(length2(sunLightDirection) *
+                //                 length2(shadowDirection)) +
+                //           glm::dot(sunLightDirection, shadowDirection)));
+                //   sOpts.transform[0] = shadowTransform[0];
+                //   sOpts.transform[1] = shadowTransform[1];
+                //   sOpts.transform[2] = shadowTransform[2];
+                //   sOpts.transform[3] = shadowTransform[3];
 
-                  //  g_light->SetShadowOptions(sOpts);
-                  //};
+                //  g_light->SetShadowOptions(sOpts);
+                //};
                 //}
 
                 if (g_renderer->GetShadowType() ==
@@ -2306,6 +2366,7 @@ int main(int, char**) {
             }
             ImGui::Unindent();
           }
+
           if (ImGui::CollapsingHeader("Scene")) {
             // ImGui::Indent();
 
