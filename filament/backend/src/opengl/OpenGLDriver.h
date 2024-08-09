@@ -85,7 +85,7 @@ public:
             const Platform::DriverConfig& driverConfig) noexcept;
 
     class DebugMarker {
-        OpenGLDriver& driver;
+        UTILS_UNUSED OpenGLDriver& driver;
     public:
         DebugMarker(OpenGLDriver& driver, const char* string) noexcept;
         ~DebugMarker() noexcept;
