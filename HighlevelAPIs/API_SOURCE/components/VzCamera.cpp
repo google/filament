@@ -47,6 +47,7 @@ namespace vzm
         // aspectRatio is W / H
         camera->setProjection(fovInDegree, aspectRatio, zNearP, zFarP,
             isVertical ? Camera::Fov::VERTICAL : Camera::Fov::HORIZONTAL);
+        camera->setScaling(1.0f);
         UpdateTimeStamp();
     }
 
@@ -86,6 +87,60 @@ namespace vzm
             mat4 mat_proj = camera->getProjectionMatrix();
             *aspectRatio = (float)(mat_proj[1][1] / mat_proj[0][0]);
         }
+    }
+    void VzCamera::SetLensProjection(float focalLengthInMillimeters, float aspect, float near, float far)
+    {
+        COMP_CAMERA(camera, ett, );
+        camera->setLensProjection(focalLengthInMillimeters, aspect, near, far);
+        camera->setScaling(1.0f);
+        UpdateTimeStamp();
+    }
+    float VzCamera::GetNear()
+    {
+        COMP_CAMERA(camera, ett, 0.0f);
+        return (float) camera->getNear();
+    }
+    float VzCamera::GetCullingFar()
+    {
+        COMP_CAMERA(camera, ett, 0.0f);
+        return (float) camera->getCullingFar();
+    }
+    void VzCamera::SetExposure(float aperture, float shutterSpeed, float sensitivity)
+    {
+        COMP_CAMERA(camera, ett, );
+        camera->setExposure(aperture, shutterSpeed, sensitivity);
+        UpdateTimeStamp();
+    }
+    float VzCamera::GetAperture()
+    {
+        COMP_CAMERA(camera, ett, 16.0f);
+        return (float) camera->getAperture();
+    }
+    float VzCamera::GetShutterSpeed()
+    {
+        COMP_CAMERA(camera, ett, 1.0f / 125.0f);
+        return (float) camera->getShutterSpeed();
+    }
+    float VzCamera::GetSensitivity()
+    {
+        COMP_CAMERA(camera, ett, 100.0f);
+        return (float) camera->getSensitivity();
+    }
+    float VzCamera::GetFocalLength()
+    {
+        COMP_CAMERA(camera, ett, 0);
+        return (float) camera->getFocalLength();
+    }
+    void VzCamera::SetFocusDistance(float distance)
+    {
+        COMP_CAMERA(camera, ett, );
+        camera->setFocusDistance(distance);
+        UpdateTimeStamp();
+    }
+    float VzCamera::GetFocusDistance()
+    {
+        COMP_CAMERA(camera, ett, 0);
+        return (float) camera->getFocusDistance();
     }
 
     VzCamera::Controller* VzCamera::GetController()

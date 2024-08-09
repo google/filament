@@ -26,7 +26,6 @@ namespace vzm
         builder.sunAngularRadius(lcm.getSunAngularRadius(ins));
         builder.sunHaloSize(lcm.getSunHaloSize(ins));
         builder.sunHaloFalloff(lcm.getSunHaloFalloff(ins));
-        lcm.destroy(ett);
         builder.build(*gEngine, ett);
         UpdateTimeStamp();
     }
