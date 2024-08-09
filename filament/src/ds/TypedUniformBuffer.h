@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,60 +17,73 @@
 #ifndef TNT_FILAMENT_TYPEDUNIFORMBUFFER_H
 #define TNT_FILAMENT_TYPEDUNIFORMBUFFER_H
 
-#include "private/backend/DriverApi.h"
-
-#include <utils/compiler.h>
+#include "TypedBuffer.h"
 
 #include <backend/BufferDescriptor.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
 
 #include <stddef.h>
 
 namespace filament {
 
 template<typename T, size_t N = 1>
-class TypedUniformBuffer { // NOLINT(cppcoreguidelines-pro-type-member-init)
+class TypedUniformBuffer {
 public:
 
+    explicit TypedUniformBuffer(backend::DriverApi& driver) noexcept {
+        mUboHandle = driver.createBufferObject(
+                mTypedBuffer.getSize(),
+                backend::BufferObjectBinding::UNIFORM,
+                backend::BufferUsage::DYNAMIC);
+    }
+
+    void terminate(backend::DriverApi& driver) noexcept {
+        driver.destroyBufferObject(mUboHandle);
+    }
+
+    TypedBuffer<T,N>& getTypedBuffer() noexcept {
+        return mTypedBuffer;
+    }
+
+    backend::BufferObjectHandle getUboHandle() const noexcept {
+        return mUboHandle;
+    }
+
     T& itemAt(size_t i) noexcept {
-        mSomethingDirty = true;
-        return mBuffer[i];
+        return mTypedBuffer.itemAt(i);
     }
 
     T& edit() noexcept {
-        return itemAt(0);
+        return mTypedBuffer.itemAt(0);
     }
 
     // size of the uniform buffer in bytes
-    size_t getSize() const noexcept { return sizeof(T) * N; }
+    size_t getSize() const noexcept { return mTypedBuffer.getSize(); }
 
     // return if any uniform has been changed
-    bool isDirty() const noexcept { return mSomethingDirty; }
+    bool isDirty() const noexcept { return mTypedBuffer.isDirty(); }
 
     // mark the whole buffer as "clean" (no modified uniforms)
-    void clean() const noexcept { mSomethingDirty = false; }
+    void clean() const noexcept { mTypedBuffer.clean(); }
 
     // helper functions
-
     backend::BufferDescriptor toBufferDescriptor(backend::DriverApi& driver) const noexcept {
-        return toBufferDescriptor(driver, 0, getSize());
+        return mTypedBuffer.toBufferDescriptor(driver);
     }
 
     // copy the UBO data and cleans the dirty bits
     backend::BufferDescriptor toBufferDescriptor(
             backend::DriverApi& driver, size_t offset, size_t size) const noexcept {
-        backend::BufferDescriptor p;
-        p.size = size;
-        p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large
-        memcpy(p.buffer, reinterpret_cast<const char*>(mBuffer) + offset, p.size); // inlined
-        clean();
-        return p;
+        return mTypedBuffer.toBufferDescriptor(driver, offset, size);
     }
 
 private:
-    T mBuffer[N];
-    mutable bool mSomethingDirty = false;
+    TypedBuffer<T,N> mTypedBuffer;
+    backend::BufferObjectHandle mUboHandle;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_TYPEDUNIFORMBUFFER_H
+
+#endif //TNT_FILAMENT_TYPEDUNIFORMBUFFER_H

@@ -220,7 +220,7 @@ void evaluatePunctualLights(const MaterialInputs material,
                             vec4(getWorldPosition(), 1.0));
                 }
                 highp vec4 shadowPosition = getShadowPosition(shadowIndex, light.direction, light.zLight);
-                visibility = shadow(false, light_shadowMap, shadowIndex,
+                visibility = shadow(false, sampler0_shadowMap, shadowIndex,
                         shadowPosition, light.zLight);
             }
             if (light.contactShadows && visibility > 0.0) {

@@ -30,9 +30,8 @@ class SamplerInterfaceBlock;
 class SibGenerator {
 public:
     static SamplerInterfaceBlock const& getPerViewSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const& getPerRenderPrimitiveMorphingSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const& getPerRenderPrimitiveBonesSib(Variant variant) noexcept;
-    static SamplerInterfaceBlock const* getSib(filament::SamplerBindingPoints bindingPoint, Variant variant) noexcept;
+    static SamplerInterfaceBlock const& getPerRenderableSib(Variant variant) noexcept;
+    static SamplerInterfaceBlock const* getSib(filament::DescriptorSetBindingPoints bindingPoint, Variant variant) noexcept;
     // When adding a sampler block here, make sure to also update
     //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
 };

@@ -405,12 +405,13 @@ constexpr VkFormat ALL_VK_FORMATS[] = {
         VK_FORMAT_R16G16_S10_5_NV,
 };
 
-// An Array that will be fixed capacity, but the "size" (as in user added elements) is variable.
-// Note that this class is movable.
+// An Array that will be statically fixed in capacity, but the "size" (as in user added elements) is
+// variable. Note that this class is movable.
 template<typename T, uint16_t CAPACITY>
 class CappedArray {
 private:
     using FixedSizeArray = std::array<T, CAPACITY>;
+
 public:
     using const_iterator = typename FixedSizeArray::const_iterator;
     using iterator = typename FixedSizeArray::iterator;
@@ -446,6 +447,20 @@ public:
             return mArray.begin() + mInd;
         }
         return mArray.cend();
+    }
+
+    inline iterator begin() {
+        if (mInd == 0) {
+            return mArray.end();
+        }
+        return mArray.begin();
+    }
+
+    inline iterator end() {
+        if (mInd > 0 && mInd < CAPACITY) {
+            return mArray.begin() + mInd;
+        }
+        return mArray.end();
     }
 
     inline T back() {
@@ -515,15 +530,12 @@ private:
 // TODO: ok to remove once Filament-side API is complete
 namespace descset {
 
-// Used to describe the descriptor binding in shader stages. We assume that the binding index does
-// not exceed 31. We also assume that we have two shader stages - vertex and fragment.  The below
-// types and struct are used across VulkanDescriptorSet and VulkanProgram.
-using UniformBufferBitmask = uint32_t;
+using UniformBufferBitmask = uint64_t;
 using SamplerBitmask = uint64_t;
 
 // We only have at most one input attachment, so this bitmask exists only to make the code more
 // general.
-using InputAttachmentBitmask = uint8_t;
+using InputAttachmentBitmask = uint64_t;
 
 constexpr UniformBufferBitmask UBO_VERTEX_STAGE = 0x1;
 constexpr UniformBufferBitmask UBO_FRAGMENT_STAGE = (0x1ULL << (sizeof(UniformBufferBitmask) * 4));
@@ -532,6 +544,7 @@ constexpr SamplerBitmask SAMPLER_FRAGMENT_STAGE = (0x1ULL << (sizeof(SamplerBitm
 constexpr InputAttachmentBitmask INPUT_ATTACHMENT_VERTEX_STAGE = 0x1;
 constexpr InputAttachmentBitmask INPUT_ATTACHMENT_FRAGMENT_STAGE =
         (0x1ULL << (sizeof(InputAttachmentBitmask) * 4));
+
 
 template<typename Bitmask>
 static constexpr Bitmask getVertexStage() noexcept {
@@ -558,35 +571,6 @@ static constexpr Bitmask getFragmentStage() noexcept {
         return INPUT_ATTACHMENT_FRAGMENT_STAGE;
     }
 }
-
-typedef enum ShaderStageFlags2 : uint8_t {
-    NONE        =    0,
-    VERTEX      =    0x1,
-    FRAGMENT    =    0x2,
-} ShaderStageFlags2;
-
-enum class DescriptorType : uint8_t {
-    UNIFORM_BUFFER,
-    SAMPLER,
-    INPUT_ATTACHMENT,
-};
-
-enum class DescriptorFlags : uint8_t {
-    NONE = 0x00,
-    DYNAMIC_OFFSET = 0x01
-};
-
-struct DescriptorSetLayoutBinding {
-    DescriptorType type;
-    ShaderStageFlags2 stageFlags;
-    uint8_t binding;
-    DescriptorFlags flags;
-    uint16_t count;
-};
-
-struct DescriptorSetLayout {
-    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-};
 
 } // namespace descset
 

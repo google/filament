@@ -58,6 +58,14 @@ public:
          */
         Builder& sampler(size_t index, const std::string& name) noexcept;
 
+        /**
+         * Add a buffer argument to the argument buffer structure.
+         * @param index the [[id(n)]] index of the buffer argument
+         * @param type the type of data the buffer points to
+         * @param name the name of the buffer argument
+         */
+        Builder& buffer(size_t index, const std::string& type, const std::string& name) noexcept;
+
         MetalArgumentBuffer* build();
 
         friend class MetalArgumentBuffer;
@@ -82,7 +90,15 @@ public:
             std::ostream& write(std::ostream& os) const;
         };
 
-        using ArgumentType = std::variant<TextureArgument, SamplerArgument>;
+        struct BufferArgument {
+            std::string name;
+            size_t index;
+            std::string type;
+
+            std::ostream& write(std::ostream& os) const;
+        };
+
+        using ArgumentType = std::variant<TextureArgument, SamplerArgument, BufferArgument>;
         std::vector<ArgumentType> mArguments;
     };
 

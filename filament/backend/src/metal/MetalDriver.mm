@@ -41,6 +41,16 @@
 
 #include <algorithm>
 
+#ifndef DEBUG_LOG_DESCRIPTOR_SETS
+#define DEBUG_LOG_DESCRIPTOR_SETS 0
+#endif
+
+#if DEBUG_LOG_DESCRIPTOR_SETS == 1
+#define DEBUG_LOG(...) printf(__VA_ARGS__)
+#else
+#define DEBUG_LOG(...)
+#endif
+
 namespace filament {
 namespace backend {
 
@@ -111,6 +121,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
+
+    mContext->emptyBuffer = [mContext->device newBufferWithLength:4 * 1024
+                                                          options:MTLResourceStorageModePrivate];
 
     initializeSupportedGpuFamilies(mContext);
 
@@ -226,6 +239,9 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    DEBUG_LOG(
+            "[DS] beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
+            monotonic_clock_ns, refreshIntervalNs, frameId);
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
@@ -262,6 +278,7 @@ void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {
+    DEBUG_LOG("[DS] endFrame(frameId = %d)\n", frameId);
     // If we haven't committed the command buffer (if the frame was canceled), do it now. There may
     // be commands in it (like fence signaling) that need to execute.
     submitPendingCommands(mContext);
@@ -292,6 +309,70 @@ void MetalDriver::endFrame(uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
 #endif
+}
+
+void MetalDriver::updateDescriptorSetBuffer(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::BufferObjectHandle boh,
+        uint32_t offset,
+        uint32_t size) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateDescriptorSetBuffer must be called outside of a render pass.");
+    DEBUG_LOG(
+            "[DS] updateDescriptorSetBuffer(dsh = %d, binding = %d, boh = %d, offset = %d, size = "
+            "%d)\n",
+            dsh.getId(), binding, boh.getId(), offset, size);
+
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
+    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
+    ShaderStageFlags stageFlags = descriptorSet->layout->getBindings()[binding].stageFlags;
+    if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+        descriptorSet->vertexResources.push_back(mtlBuffer);
+    }
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+        descriptorSet->fragmentResources.push_back(mtlBuffer);
+    }
+}
+
+void MetalDriver::updateDescriptorSetTexture(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::TextureHandle th,
+        SamplerParams params) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateDescriptorSetTexture must be called outside of a render pass.");
+    DEBUG_LOG("[DS] updateDescriptorSetTexture(dsh = %d, binding = %d, th = %d, params = {...})\n",
+            dsh.getId(), binding, th.getId());
+
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    auto* texture = handle_cast<MetalTexture>(th);
+
+    id<MTLTexture> mtlTexture = nil;
+    if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+        // TODO: support Metal external images and descriptor sets
+        mtlTexture = getOrCreateEmptyTexture(mContext);
+    } else {
+        mtlTexture = texture->getMtlTextureForRead();
+    }
+    assert_invariant(mtlTexture != nil);
+
+    descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding { mtlTexture, params };
+
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    assert_invariant(found != bindings.end());
+
+    ShaderStageFlags stageFlags = found->stageFlags;
+    if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+        descriptorSet->vertexResources.push_back(mtlTexture);
+    }
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+        descriptorSet->fragmentResources.push_back(mtlTexture);
+    }
 }
 
 void MetalDriver::flush(int) {
@@ -344,6 +425,11 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
             target, levels, format, samples, width, height, depth, usage,
             TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
             TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
+
+    DEBUG_LOG(
+            "createTextureR(th = %d, target = %s, levels = %d, format = ?, samples = %d, width = "
+            "%d, height = %d, depth = %d, usage = %s)\n",
+            th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -356,6 +442,33 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
 
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
             target, levels, format, samples, width, height, depth, usage, r, g, b, a));
+
+    DEBUG_LOG(
+            "createTextureSwizzledR(th = %d, target = %s, levels = %d, format = ?, samples = %d, "
+            "width = %d, height = %d, depth = %d, usage = %s, r = ?, g = ?, b = ?, a = ?)\n",
+            th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
+}
+
+void MetalDriver::createTextureViewR(Handle<HwTexture> th,
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+    MetalTexture const* src = handle_cast<MetalTexture>(srch);
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+            src, baseLevel, levelCount));
+}
+
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+    createTextureR(
+            th, SamplerType::SAMPLER_EXTERNAL, 1, TextureFormat::RGBA8, 1, width, height, 1, usage);
+    setExternalImage(th, image);
+}
+
+void MetalDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* image, uint32_t plane) {
+    createTextureR(
+            th, SamplerType::SAMPLER_EXTERNAL, 1, TextureFormat::RGBA8, 1, width, height, 1, usage);
+    setExternalImagePlane(th, image, plane);
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -421,7 +534,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         FILAMENT_CHECK_PRECONDITION(colorTexture->getMtlTextureForWrite())
                 << "Color texture passed to render target has no texture allocation";
-        colorTexture->extendLodRangeTo(buffer.level);
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
@@ -432,7 +544,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         FILAMENT_CHECK_PRECONDITION(depthTexture->getMtlTextureForWrite())
                 << "Depth texture passed to render target has no texture allocation.";
-        depthTexture->extendLodRangeTo(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
@@ -443,7 +554,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         FILAMENT_CHECK_PRECONDITION(stencilTexture->getMtlTextureForWrite())
                 << "Stencil texture passed to render target has no texture allocation.";
-        stencilTexture->extendLodRangeTo(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
 
@@ -475,6 +585,70 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
 
+const char* prettyDescriptorType(DescriptorType type) {
+    switch (type) {
+        case DescriptorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
+        case DescriptorType::SHADER_STORAGE_BUFFER: return "SHADER_STORAGE_BUFFER";
+        case DescriptorType::SAMPLER: return "SAMPLER";
+        case DescriptorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
+    }
+}
+
+const char* prettyShaderStageFlags(ShaderStageFlags flags) {
+    std::vector<const char*> stages;
+    if (any(flags & ShaderStageFlags::VERTEX)) {
+        stages.push_back("VERTEX");
+    }
+    if (any(flags & ShaderStageFlags::FRAGMENT)) {
+        stages.push_back("FRAGMENT");
+    }
+    if (any(flags & ShaderStageFlags::COMPUTE)) {
+        stages.push_back("COMPUTE");
+    }
+    if (stages.empty()) {
+        return "NONE";
+    }
+    static char buffer[64];
+    buffer[0] = '\0';
+    for (size_t i = 0; i < stages.size(); i++) {
+        if (i > 0) {
+            strcat(buffer, " | ");
+        }
+        strcat(buffer, stages[i]);
+    }
+    return buffer;
+}
+
+const char* prettyDescriptorFlags(DescriptorFlags flags) {
+    if (flags == DescriptorFlags::DYNAMIC_OFFSET) {
+        return "DYNAMIC_OFFSET";
+    }
+    return "NONE";
+}
+
+void MetalDriver::createDescriptorSetLayoutR(
+        Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info) {
+    DEBUG_LOG("[DS] createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
+    for (size_t i = 0; i < info.bindings.size(); i++) {
+        DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s}",
+                info.bindings[i].binding, prettyDescriptorType(info.bindings[i].type),
+                info.bindings[i].count, prettyShaderStageFlags(info.bindings[i].stageFlags),
+                prettyDescriptorFlags(info.bindings[i].flags));
+        DEBUG_LOG(",\n");
+    }
+    DEBUG_LOG("})\n");
+    std::sort(info.bindings.begin(), info.bindings.end(),
+            [](const auto& a, const auto& b) { return a.binding < b.binding; });
+    construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
+}
+
+void MetalDriver::createDescriptorSetR(
+        Handle<HwDescriptorSet> dsh, Handle<HwDescriptorSetLayout> dslh) {
+    DEBUG_LOG("[DS] createDescriptorSetR(dsh = %d, dslh = %d)\n", dsh.getId(), dslh.getId());
+    MetalDescriptorSetLayout* layout = handle_cast<MetalDescriptorSetLayout>(dslh);
+    construct_handle<MetalDescriptorSet>(dsh, layout);
+}
+
 Handle<HwVertexBufferInfo> MetalDriver::createVertexBufferInfoS() noexcept {
     return alloc_handle<MetalVertexBufferInfo>();
 }
@@ -496,6 +670,18 @@ Handle<HwTexture> MetalDriver::createTextureS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImageS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImagePlaneS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
@@ -541,6 +727,14 @@ Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
     return alloc_and_construct_handle<MetalTimerQuery, HwTimerQuery>();
+}
+
+Handle<HwDescriptorSetLayout> MetalDriver::createDescriptorSetLayoutS() noexcept {
+    return alloc_handle<MetalDescriptorSetLayout>();
+}
+
+Handle<HwDescriptorSet> MetalDriver::createDescriptorSetS() noexcept {
+    return alloc_handle<MetalDescriptorSet>();
 }
 
 void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
@@ -649,6 +843,20 @@ void MetalDriver::destroyStream(Handle<HwStream> sh) {
 void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     if (tqh) {
         destruct_handle<MetalTimerQuery>(tqh);
+    }
+}
+
+void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh) {
+    DEBUG_LOG("[DS] destroyDescriptorSetLayout(dslh = %d)\n", dslh.getId());
+    if (dslh) {
+        destruct_handle<MetalDescriptorSetLayout>(dslh);
+    }
+}
+
+void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
+    DEBUG_LOG("[DS] destroyDescriptorSet(dsh = %d)\n", dsh.getId());
+    if (dsh) {
+        destruct_handle<MetalDescriptorSet>(dsh);
     }
 }
 
@@ -918,11 +1126,6 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
-void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    auto tex = handle_cast<MetalTexture>(th);
-    tex->setLodRange(minLevel, maxLevel);
-}
-
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
@@ -932,6 +1135,11 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
     auto tex = handle_cast<MetalTexture>(th);
     tex->loadImage(level, MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
     scheduleDestroy(std::move(data));
+
+    DEBUG_LOG(
+            "update3DImage(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width = "
+            "%d, height = %d, depth = %d, data = ?)\n",
+            th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
 }
 
 void MetalDriver::setupExternalImage(void* image) {
@@ -971,6 +1179,8 @@ void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
             << "generateMipmaps must be called outside of a render pass.";
     auto tex = handle_cast<MetalTexture>(th);
     tex->generateMipmaps();
+
+    DEBUG_LOG("generateMipmaps(th = %d)\n", th.getId());
 }
 
 void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescriptor&& data) {
@@ -1024,7 +1234,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     });
     auto& encoderCache = mContext->argumentEncoderCache;
     id<MTLArgumentEncoder> encoder =
-            encoderCache.getOrCreateState(ArgumentEncoderState(std::move(textureTypes)));
+            encoderCache.getOrCreateState(ArgumentEncoderState(0, std::move(textureTypes)));
     sb->reset(getPendingCommandBuffer(mContext), encoder, mContext->device);
 
     // In a perfect world, all the MTLTexture bindings would be known at updateSamplerGroup time.
@@ -1072,6 +1282,7 @@ void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
+    DEBUG_LOG("[DS] beginRenderPass(rth = %d, params = {...})\n", rth.getId());
 
 #if defined(FILAMENT_METAL_PROFILING)
     const char* renderPassName = "Unknown";
@@ -1114,6 +1325,22 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedSamplerGroups.clear();
+    mContext->finalizedDescriptorSets.clear();
+    mContext->descriptorBindings.invalidate();
+    mContext->dynamicOffsets.setDirty(true);
+
+    // Finalize any descriptor sets that were bound before the render pass.
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        auto* descriptorSet = mContext->currentDescriptorSets[i];
+        if (!descriptorSet) {
+            continue;
+        }
+        descriptorSet->finalize(this);
+        mContext->finalizedDescriptorSets.insert(descriptorSet);
+    }
+
+    // Bind descriptor sets.
+    mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
 
     for (auto& pc : mContext->currentPushConstants) {
         pc.clear();
@@ -1123,6 +1350,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 void MetalDriver::nextSubpass(int dummy) {}
 
 void MetalDriver::endRenderPass(int dummy) {
+    DEBUG_LOG("[DS] endRenderPass()\n");
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, OS_SIGNPOST_ID_EXCLUSIVE, "Render pass");
 #endif
@@ -1214,45 +1442,6 @@ void MetalDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t inde
                     .buffer = bo,
                     .offset = offset,
                     .bound = true
-            };
-
-            break;
-        }
-    }
-}
-
-void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
-
-    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
-                     bindingType == BufferObjectBinding::UNIFORM);
-
-    switch (bindingType) {
-        default:
-        case BufferObjectBinding::UNIFORM: {
-            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
-            auto* currentBo = mContext->uniformState[index].buffer;
-            if (currentBo) {
-                currentBo->boundUniformBuffers.unset(index);
-            }
-            mContext->uniformState[index] = BufferState {
-                    .buffer = nullptr,
-                    .offset = 0,
-                    .bound = false
-            };
-
-            break;
-        }
-
-        case BufferObjectBinding::SHADER_STORAGE: {
-            assert_invariant(index < MAX_SSBO_COUNT);
-            auto* currentBo = mContext->ssboState[index].buffer;
-            if (currentBo) {
-                currentBo->boundSsbos.unset(index);
-            }
-            mContext->ssboState[index] = BufferState {
-                    .buffer = nullptr,
-                    .offset = 0,
-                    .bound = false
             };
 
             break;
@@ -1508,7 +1697,11 @@ void MetalDriver::blit(
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "blit/resolve");
 
-    dstTexture->extendLodRangeTo(dstLevel);
+    DEBUG_LOG(
+            "blit(dst = %d, srcLevel = %d, srcLayer = %d, dstOrigin = (%d, %d), src = %d, dstLevel "
+            "= %d, dstLayer = %d, srcOrigin = (%d, %d), size = (%d, %d))\n",
+            dst.getId(), srcLevel, srcLayer, dstOrigin.x, dstOrigin.y, src.getId(), dstLevel,
+            dstLayer, srcOrigin.x, srcOrigin.y, size.x, size.y);
 }
 
 void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
@@ -1804,10 +1997,10 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
         if (!samplerGroup) {
             continue;
         }
-        const auto& stageFlags = program->getSamplerGroupInfo()[s].stageFlags;
-        if (stageFlags == ShaderStageFlags::NONE) {
-            continue;
-        }
+//        const auto& stageFlags = program->getSamplerGroupInfo()[s].stageFlags;
+//        if (stageFlags == ShaderStageFlags::NONE) {
+//            continue;
+//        }
 
         auto iter = mContext->finalizedSamplerGroups.find(samplerGroup);
         if (iter == mContext->finalizedSamplerGroups.end()) {
@@ -1817,16 +2010,16 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
 
         assert_invariant(samplerGroup->getArgumentBuffer());
 
-        if (uint8_t(stageFlags) & uint8_t(ShaderStageFlags::VERTEX)) {
-            [mContext->currentRenderPassEncoder setVertexBuffer:samplerGroup->getArgumentBuffer()
-                                                         offset:samplerGroup->getArgumentBufferOffset()
-                                                        atIndex:(SAMPLER_GROUP_BINDING_START + s)];
-        }
-        if (uint8_t(stageFlags) & uint8_t(ShaderStageFlags::FRAGMENT)) {
-            [mContext->currentRenderPassEncoder setFragmentBuffer:samplerGroup->getArgumentBuffer()
-                                                           offset:samplerGroup->getArgumentBufferOffset()
-                                                          atIndex:(SAMPLER_GROUP_BINDING_START + s)];
-        }
+//        if (uint8_t(stageFlags) & uint8_t(ShaderStageFlags::VERTEX)) {
+//            [mContext->currentRenderPassEncoder setVertexBuffer:samplerGroup->getArgumentBuffer()
+//                                                         offset:samplerGroup->getArgumentBufferOffset()
+//                                                        atIndex:(SAMPLER_GROUP_BINDING_START + s)];
+//        }
+//        if (uint8_t(stageFlags) & uint8_t(ShaderStageFlags::FRAGMENT)) {
+//            [mContext->currentRenderPassEncoder setFragmentBuffer:samplerGroup->getArgumentBuffer()
+//                                                           offset:samplerGroup->getArgumentBufferOffset()
+//                                                          atIndex:(SAMPLER_GROUP_BINDING_START + s)];
+//        }
     }
 }
 
@@ -1867,23 +2060,57 @@ void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
                                                atIndex:ZERO_VERTEX_BUFFER_BINDING];
 }
 
+void MetalDriver::bindDescriptorSet(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_set_t set,
+        backend::DescriptorSetOffsetArray&& offsets) {
+    auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
+    utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
+    DEBUG_LOG("[DS] bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
+    for (size_t i = 0; i < dynamicBindings; i++) {
+        DEBUG_LOG("%d", offsets[i]);
+        if (i < dynamicBindings - 1) {
+            DEBUG_LOG(", ");
+        }
+
+        offsetsVector[i] = offsets[i];
+    }
+    DEBUG_LOG("])\n");
+
+    // Bind the descriptor set.
+    mContext->currentDescriptorSets[set] = descriptorSet;
+    mContext->descriptorBindings.setBuffer(descriptorSet->finalizeAndGetBuffer(this), 0, set);
+    mContext->dynamicOffsets.setOffsets(set, offsets.data(), dynamicBindings);
+
+    // If we're inside a render pass, we should also finalize the descriptor set and update the
+    // argument buffers. Otherwise, we'll do this the next time we enter a render pass.
+    if (isInRenderPass(mContext)) {
+        auto found = mContext->finalizedDescriptorSets.find(descriptorSet);
+        if (found == mContext->finalizedDescriptorSets.end()) {
+            descriptorSet->finalize(this);
+            mContext->finalizedDescriptorSets.insert(descriptorSet);
+        }
+        mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+    }
+}
+
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
+    DEBUG_LOG("[DS] draw2(...)\n");
 
-    // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
-    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
-
-    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
-            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
-                    uint32_t index) {
-                uniformsToBind[index] = buffer;
-                offsets[index] = state.offset;
-            });
-    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
-            uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
+    // Bind the offset data.
+    if (mContext->dynamicOffsets.isDirty()) {
+        const auto [size, data] = mContext->dynamicOffsets.getOffsets();
+        [mContext->currentRenderPassEncoder setFragmentBytes:data
+                                                      length:size * sizeof(uint32_t)
+                                                     atIndex:25];
+        [mContext->currentRenderPassEncoder setVertexBytes:data
+                                                    length:size * sizeof(uint32_t)
+                                                   atIndex:25];
+        mContext->dynamicOffsets.setDirty(false);
+    }
 
     // Update push constants.
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
@@ -1897,8 +2124,7 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
 
     MetalIndexBuffer* indexBuffer = primitive->indexBuffer;
 
-    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
-    id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw(cmdBuffer);
+    id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw();
     [mContext->currentRenderPassEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
                                                    indexCount:indexCount
                                                     indexType:getIndexType(indexBuffer->elementSize)

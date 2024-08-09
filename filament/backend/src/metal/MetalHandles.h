@@ -44,6 +44,7 @@
 #include <condition_variable>
 #include <memory>
 #include <type_traits>
+#include <vector>
 
 namespace filament {
 namespace backend {
@@ -200,12 +201,12 @@ public:
     MetalProgram(MetalContext& context, Program&& program) noexcept;
 
     const MetalShaderCompiler::MetalFunctionBundle& getFunctions();
-    const Program::SamplerGroupInfo& getSamplerGroupInfo() { return samplerGroupInfo; }
+//    const Program::SamplerGroupInfo& getSamplerGroupInfo() { return samplerGroupInfo; }
 
 private:
     void initialize();
 
-    Program::SamplerGroupInfo samplerGroupInfo;
+//    Program::SamplerGroupInfo samplerGroupInfo;
     MetalContext& mContext;
     MetalShaderCompiler::MetalFunctionBundle mFunctionBundle;
     MetalShaderCompiler::program_token_t mToken;
@@ -228,8 +229,11 @@ class MetalTexture : public HwTexture {
 public:
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a)
-            noexcept;
+            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept;
+
+    // constructor for creating a texture view
+    MetalTexture(MetalContext& context,
+            MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
@@ -238,27 +242,16 @@ public:
 
     ~MetalTexture();
 
-    // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle and
-    // LOD clamping.
-    id<MTLTexture> getMtlTextureForRead() noexcept;
+    // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle.
+    id<MTLTexture> getMtlTextureForRead() const noexcept;
 
     // Returns the id<MTLTexture> for attaching to a render pass.
-    id<MTLTexture> getMtlTextureForWrite() noexcept {
+    id<MTLTexture> getMtlTextureForWrite() const noexcept {
         return texture;
     }
 
     void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
     void generateMipmaps() noexcept;
-
-    // A texture starts out with none of its mip levels (also referred to as LODs) available for
-    // reading. 4 actions update the range of LODs available:
-    // - calling loadImage
-    // - calling generateMipmaps
-    // - using the texture as a render target attachment
-    // - calling setMinMaxLevels
-    // A texture's available mips are consistent throughout a render pass.
-    void setLodRange(uint16_t minLevel, uint16_t maxLevel);
-    void extendLodRangeTo(uint16_t level);
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
@@ -306,10 +299,6 @@ private:
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
     // bound as a render target attachment.
     id<MTLTexture> swizzledTextureView = nil;
-    id<MTLTexture> lodTextureView = nil;
-
-    uint16_t minLod = std::numeric_limits<uint16_t>::max();
-    uint16_t maxLod = 0;
 
     bool terminated = false;
 };
@@ -545,6 +534,151 @@ struct MetalTimerQuery : public HwTimerQuery {
     };
 
     std::shared_ptr<Status> status;
+};
+
+class MetalDescriptorSetLayout : public HwDescriptorSetLayout {
+public:
+    MetalDescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
+
+    const auto& getBindings() const noexcept { return mLayout.bindings; }
+
+    size_t getDynamicOffsetCount() const noexcept { return mDynamicOffsetCount; }
+
+    id<MTLArgumentEncoder> getArgumentEncoderForTextureTypes(
+            id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
+
+private:
+    id<MTLArgumentEncoder> getArgumentEncoderForTextureTypesSlow(
+            id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
+
+    DescriptorSetLayout mLayout;
+    size_t mDynamicOffsetCount = 0;
+    id<MTLArgumentEncoder> mCachedArgumentEncoder = nil;
+    utils::FixedCapacityVector<MTLTextureType> mCachedTextureTypes;
+};
+
+struct MetalDescriptorSet : public HwDescriptorSet {
+    MetalDescriptorSet(MetalDescriptorSetLayout* layout) noexcept;
+
+    void finalize(MetalDriver* driver) {
+        [driver->mContext->currentRenderPassEncoder useResource:driver->mContext->emptyBuffer
+                                                          usage:MTLResourceUsageRead];
+        [driver->mContext->currentRenderPassEncoder
+                useResource:getOrCreateEmptyTexture(driver->mContext)
+                      usage:MTLResourceUsageRead];
+
+        if (@available(iOS 13.0, *)) {
+            [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                               count:vertexResources.size()
+                                                               usage:MTLResourceUsageRead
+                                                              stages:MTLRenderStageVertex];
+            [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                               count:fragmentResources.size()
+                                                               usage:MTLResourceUsageRead
+                                                              stages:MTLRenderStageFragment];
+        } else {
+            [driver->mContext->currentRenderPassEncoder useResources:vertexResources.data()
+                                                               count:vertexResources.size()
+                                                               usage:MTLResourceUsageRead];
+            [driver->mContext->currentRenderPassEncoder useResources:fragmentResources.data()
+                                                               count:fragmentResources.size()
+                                                               usage:MTLResourceUsageRead];
+        }
+    }
+
+    id<MTLBuffer> finalizeAndGetBuffer(MetalDriver* driver) {
+        if (buffer) {
+            return buffer;
+        }
+
+        // Map all the texture bindings to their respective texture types.
+        auto const& bindings = layout->getBindings();
+        auto textureTypes = utils::FixedCapacityVector<MTLTextureType>::with_capacity(bindings.size());
+        for (auto const& binding : bindings) {
+            MTLTextureType textureType = MTLTextureType2D;
+            if (auto found = textures.find(binding.binding); found != textures.end()) {
+                auto const& textureBinding = textures[binding.binding];
+                textureType = textureBinding.texture.textureType;
+            }
+            textureTypes.push_back(textureType);
+        }
+
+        MetalContext const& context = *driver->mContext;
+
+        id<MTLArgumentEncoder> encoder =
+                layout->getArgumentEncoderForTextureTypes(context.device, textureTypes);
+
+        buffer = [context.device newBufferWithLength:encoder.encodedLength
+                                             options:MTLResourceStorageModeShared];
+        [encoder setArgumentBuffer:buffer offset:0];
+
+        for (auto const& binding : bindings) {
+            switch (binding.type) {
+                case DescriptorType::UNIFORM_BUFFER:
+                case DescriptorType::SHADER_STORAGE_BUFFER: {
+                    auto found = buffers.find(binding.binding);
+                    if (found == buffers.end()) {
+                        [encoder setBuffer:driver->mContext->emptyBuffer
+                                    offset:0
+                                   atIndex:binding.binding * 2];
+                        continue;
+                    }
+
+                    auto const& bufferBinding = buffers[binding.binding];
+                    [encoder setBuffer:bufferBinding.buffer
+                                offset:bufferBinding.offset
+                               atIndex:binding.binding * 2];
+                    break;
+                }
+                case DescriptorType::SAMPLER: {
+                    auto found = textures.find(binding.binding);
+                    if (found == textures.end()) {
+                        [encoder setTexture:driver->mContext->emptyTexture
+                                    atIndex:binding.binding * 2];
+                        id<MTLSamplerState> sampler =
+                                driver->mContext->samplerStateCache.getOrCreateState({});
+                        [encoder setSamplerState:sampler
+                                         atIndex:binding.binding * 2 + 1];
+                        continue;
+                    }
+
+                    auto const& textureBinding = textures[binding.binding];
+                    [encoder setTexture:textureBinding.texture atIndex:binding.binding * 2];
+                    SamplerState samplerState {
+                            .samplerParams = textureBinding.sampler
+                    };
+                    id<MTLSamplerState> sampler = driver->mContext->samplerStateCache.getOrCreateState(samplerState);
+                    [encoder setSamplerState:sampler
+                                     atIndex:binding.binding * 2 + 1];
+                    break;
+                }
+                case DescriptorType::INPUT_ATTACHMENT:
+                    assert_invariant(false);
+                    break;
+            }
+        }
+
+        return buffer;
+    }
+
+    MetalDescriptorSetLayout* layout;
+
+    struct BufferBinding {
+        id<MTLBuffer> buffer;
+        uint32_t offset;
+        uint32_t size;
+    };
+    struct TextureBinding {
+        id<MTLTexture> texture;
+        SamplerParams sampler;
+    };
+    tsl::robin_map<descriptor_binding_t, BufferBinding> buffers;
+    tsl::robin_map<descriptor_binding_t, TextureBinding> textures;
+
+    std::vector<id<MTLResource>> vertexResources;
+    std::vector<id<MTLResource>> fragmentResources;
+
+    id<MTLBuffer> buffer = nil;
 };
 
 } // namespace backend

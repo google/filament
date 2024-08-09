@@ -236,7 +236,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
                         config.logicalViewport);
 
-                view.commitUniforms(driver);
+                view.commitUniformsAndSamplers(driver);
 
                 // TODO: this should be a parameter of FrameGraphRenderPass::Descriptor
                 out.params.clearStencil = config.clearStencil;
@@ -315,7 +315,11 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
                 }, config, { .asSubpass = false },
                 pass.getExecutor(pass.begin(), refraction));
 
-        // generate the mipmap chain
+
+        // Generate the mipmap chain
+        // Note: we can run some post-processing effects while the "color pass" descriptor set
+        // in bound because only the descriptor 0 (frame uniforms) matters, and it's
+        // present in both.
         PostProcessManager::generateMipmapSSR(ppm, fg,
                 input, ssrConfig.refraction, true, ssrConfig);
 

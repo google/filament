@@ -21,7 +21,11 @@
 #include "TrianglePrimitive.h"
 #include "BackendTestUtils.h"
 
-#include "private/backend/SamplerGroup.h"
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace {
 
@@ -71,7 +75,7 @@ namespace test {
 using namespace filament;
 using namespace filament::backend;
 
-TEST_F(BackendTest, SetMinMaxLevel) {
+TEST_F(BackendTest, TextureViewLod) {
     auto& api = getDriverApi();
     api.startCapture(0);
 
@@ -87,25 +91,34 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         {
             ShaderGenerator shaderGen(vertex, whiteFragment, sBackend, sIsMobilePlatform);
             Program p = shaderGen.getProgram(api);
-            Program::Sampler sampler{utils::CString("backend_test_sib_tex"), 0};
-            p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
+            p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
             whiteProgram = api.createProgram(std::move(p));
         }
 
         // Create a program that samples a texture.
         Handle<HwProgram> textureProgram;
         {
-            SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-                    .name("backend_test_sib")
-                    .stageFlags(backend::ShaderStageFlags::FRAGMENT)
-                    .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
-                    .build();
-            ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "backend_test", "sib_tex", 0,
+                SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+            filamat::DescriptorSets descriptors;
+            descriptors[1] = { { "backend_test_sib_tex",
+                    { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 }, samplerInfo } };
+            ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
             Program p = shaderGen.getProgram(api);
-            Program::Sampler sampler{utils::CString("backend_test_sib_tex"), 0};
-            p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
+            p.descriptorBindings(0, {{"backend_test_sib_tex", DescriptorType::SAMPLER, 0}});
             textureProgram = api.createProgram(std::move(p));
         }
+
+        DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+                {{
+                         DescriptorType::SAMPLER,
+                         ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                         DescriptorFlags::NONE, 0
+                 }}});
+
+        DescriptorSetHandle descriptorSet[2];
+        descriptorSet[0] = api.createDescriptorSet(descriptorSetLayout);
+        descriptorSet[1] = api.createDescriptorSet(descriptorSetLayout);
 
         // Create a texture that has 4 mip levels. Each level is a different color.
         // Level 0: 128x128 (red)
@@ -150,7 +163,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Level 1:   64x64 (green)             <-- base
         // Level 2:   32x32 (blue)              <--- white triangle rendered
         // Level 3:   16x16 (yellow)            <-- max
-        api.setMinMaxLevels(texture, 1, 3);
+        auto texture13 = api.createTextureView(texture, 1, 3);
 
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
@@ -183,20 +196,17 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         PipelineState state;
         state.program = textureProgram;
+        state.pipelineLayout.setLayout = { descriptorSetLayout };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = SamplerCompareFunc::A;
         state.rasterState.culling = CullingMode::NONE;
 
-        SamplerGroup samplers(1);
-        SamplerParams samplerParams {};
-        samplerParams.filterMag = SamplerMagFilter::NEAREST;
-        samplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
-        samplers.setSampler(0, { texture, samplerParams });
-        backend::Handle<HwSamplerGroup> samplerGroup =
-                api.createSamplerGroup(1, utils::FixedSizeString<32>("Test"));
-        api.updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(api));
-        api.bindSamplers(0, samplerGroup);
+        api.updateDescriptorSetTexture(descriptorSet[0], 0, texture13, {
+                .filterMag = SamplerMagFilter::NEAREST,
+                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+
+        api.bindDescriptorSet(descriptorSet[0], 0, {});
 
         // Render a triangle to the screen, sampling from mip level 1.
         // Because the min level is 1, the result color should be the white triangle drawn in the
@@ -208,7 +218,13 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         // Adjust the base mip to 2.
         // Note that this is done without another call to updateSamplerGroup.
-        api.setMinMaxLevels(texture, 2, 3);
+        auto texture22 = api.createTextureView(texture, 2, 2);
+
+        api.updateDescriptorSetTexture(descriptorSet[1], 0, texture22, {
+                .filterMag = SamplerMagFilter::NEAREST,
+                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+
+        api.bindDescriptorSet(descriptorSet[1], 0, {});
 
         // Render a second, smaller, triangle, again sampling from mip level 1.
         // This triangle should be yellow striped.
@@ -233,7 +249,12 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Cleanup.
         api.destroySwapChain(swapChain);
         api.destroyRenderTarget(renderTarget);
+        api.destroyDescriptorSet(descriptorSet[0]);
+        api.destroyDescriptorSet(descriptorSet[1]);
+        api.destroyDescriptorSetLayout(descriptorSetLayout);
         api.destroyTexture(texture);
+        api.destroyTexture(texture13);
+        api.destroyTexture(texture22);
         api.destroyProgram(whiteProgram);
         api.destroyProgram(textureProgram);
     }

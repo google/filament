@@ -51,10 +51,15 @@ protected:
     static void fullViewport(filament::backend::RenderPassParams& params);
     static void fullViewport(filament::backend::Viewport& viewport);
 
-    void renderTriangle(filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
+    void renderTriangle(
+            filament::backend::PipelineLayout const& pipelineLayout,
+            filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
             filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
             filament::backend::Handle<filament::backend::HwProgram> program);
-    void renderTriangle(filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
+
+    void renderTriangle(
+            filament::backend::PipelineLayout const& pipelineLayout,
+            filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
             filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
             filament::backend::Handle<filament::backend::HwProgram> program,
             const filament::backend::RenderPassParams& params);

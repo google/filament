@@ -297,11 +297,11 @@ bool VulkanCommands::flush() {
 #endif
 
     auto& cmdfence = currentbuf->fence;
-    std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
-    cmdfence->status.store(VK_NOT_READY);
-    UTILS_UNUSED_IN_RELEASE VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
-    cmdfence->condition.notify_all();
-    lock.unlock();
+    UTILS_UNUSED_IN_RELEASE VkResult result = VK_SUCCESS;
+    {
+        auto scope = cmdfence->setValue(VK_NOT_READY);
+        result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->getFence());
+    }
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
@@ -340,7 +340,7 @@ void VulkanCommands::wait() {
         auto wrapper = mStorage[i].get();
         if (wrapper->buffer() != VK_NULL_HANDLE
                 && mCurrentCommandBufferIndex != static_cast<int8_t>(i)) {
-            fences[count++] = wrapper->fence->fence;
+            fences[count++] = wrapper->fence->getFence();
         }
     }
     if (count > 0) {
@@ -361,12 +361,13 @@ void VulkanCommands::gc() {
         if (wrapper->buffer() == VK_NULL_HANDLE) {
             continue;
         }
-        VkResult const result = vkGetFenceStatus(mDevice, wrapper->fence->fence);
+        auto const vkfence = wrapper->fence->getFence();
+        VkResult const result = vkGetFenceStatus(mDevice, vkfence);
         if (result != VK_SUCCESS) {
             continue;
         }
-        fences[count++] = wrapper->fence->fence;
-        wrapper->fence->status.store(VK_SUCCESS);
+        fences[count++] = vkfence;
+        wrapper->fence->setValue(VK_SUCCESS);
         wrapper->reset();
         mAvailableBufferCount++;
     }
@@ -383,9 +384,9 @@ void VulkanCommands::updateFences() {
         if (wrapper->buffer() != VK_NULL_HANDLE) {
             VulkanCmdFence* fence = wrapper->fence.get();
             if (fence) {
-                VkResult status = vkGetFenceStatus(mDevice, fence->fence);
+                VkResult status = vkGetFenceStatus(mDevice, fence->getFence());
                 // This is either VK_SUCCESS, VK_NOT_READY, or VK_ERROR_DEVICE_LOST.
-                fence->status.store(status, std::memory_order_relaxed);
+                fence->setValue(status);
             }
         }
     }

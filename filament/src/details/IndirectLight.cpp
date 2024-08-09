@@ -200,11 +200,13 @@ void FIndirectLight::terminate(FEngine& engine) {
 }
 
 backend::Handle<backend::HwTexture> FIndirectLight::getReflectionHwHandle() const noexcept {
-    return mReflectionsTexture ? mReflectionsTexture->getHwHandle() : backend::Handle<backend::HwTexture> {};
+    return mReflectionsTexture ? mReflectionsTexture->getHwHandleForSampling()
+                               : backend::Handle<backend::HwTexture>{};
 }
 
 backend::Handle<backend::HwTexture> FIndirectLight::getIrradianceHwHandle() const noexcept {
-    return mIrradianceTexture ? mIrradianceTexture->getHwHandle() : backend::Handle<backend::HwTexture> {};
+    return mIrradianceTexture ? mIrradianceTexture->getHwHandleForSampling()
+                              : backend::Handle<backend::HwTexture>{};
 }
 
 math::float3 FIndirectLight::getDirectionEstimate(math::float3 const* f) noexcept {

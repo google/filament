@@ -16,11 +16,17 @@
 
 #include "private/filament/SamplerInterfaceBlock.h"
 
-#include <utils/Panic.h>
-#include <utils/compiler.h>
 
+#include <backend/DriverEnums.h>
+
+#include <utils/Panic.h>
+
+#include <initializer_list>
+#include <iterator>
+#include <string_view>
 #include <utility>
 
+#include <stddef.h>
 #include <stdint.h>
 
 using namespace utils;
@@ -43,11 +49,12 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
 }
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        std::string_view samplerName, Type type, Format format,
+        std::string_view samplerName, Binding binding, Type type, Format format,
         Precision precision, bool multisample) noexcept {
     mEntries.push_back({
-            { samplerName.data(), samplerName.size() }, { },
-            uint8_t(mEntries.size()), type, format, precision, multisample });
+            { samplerName.data(), samplerName.size() }, // name
+            { }, // uniform name
+            binding, type, format, precision, multisample });
     return *this;
 }
 
@@ -58,7 +65,7 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::initializer_list<ListEntry> list) noexcept {
     for (auto& e : list) {
-        add(e.name, e.type, e.format, e.precision, e.multisample);
+        add(e.name, e.binding, e.type, e.format, e.precision, e.multisample);
     }
     return *this;
 }
@@ -79,15 +86,13 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
 
     auto& samplersInfoList = mSamplersInfoList;
 
-    size_t i = 0;
     for (auto const& e : builder.mEntries) {
-        assert_invariant(i == e.offset);
-        SamplerInfo& info = samplersInfoList[i++];
+        size_t const i = std::distance(builder.mEntries.data(), &e);
+        SamplerInfo& info = samplersInfoList[i];
         info = e;
         info.uniformName = generateUniformName(mName.c_str(), e.name.c_str());
-        infoMap[{ info.name.data(), info.name.size() }] = info.offset; // info.name.c_str() guaranteed constant
+        infoMap[{ info.name.data(), info.name.size() }] = i; // info.name.c_str() guaranteed constant
     }
-    assert_invariant(i == samplersInfoList.size());
 }
 
 const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
