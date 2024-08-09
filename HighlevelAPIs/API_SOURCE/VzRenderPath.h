@@ -170,7 +170,30 @@ namespace vzm
         float deltaTime = 0;
         float deltaTimeAccumulator = 0;
         ViewSettings viewSettings;
-        bool isDirty = true;
+
+        enum class DirtyFlags : uint32_t {
+            NONE                        = 0,
+            ANTI_ALIASING               = 1 << 0,
+            TAA                         = 1 << 1,
+            MSAA                        = 1 << 2,
+            DSR                         = 1 << 3,
+            SSAO                        = 1 << 4,
+            SCREEN_SPACE_REFLECTIONS    = 1 << 5,
+            BLOOM                       = 1 << 6,
+            FOG                         = 1 << 7,
+            DOF                         = 1 << 8,
+            VIGNETTE                    = 1 << 9,
+            DITHERING                   = 1 << 10,
+            RENDER_QUALITY              = 1 << 11,
+            DYNAMIC_LIGHTING            = 1 << 12,
+            SHADOW_TYPE                 = 1 << 13,
+            VSM_SHADOW_OPTIONS          = 1 << 14,
+            SOFT_SHADOW_OPTIONS         = 1 << 15,
+            GUARD_BAND                  = 1 << 16,
+            STEREOSCOPIC_OPTIONS        = 1 << 17,
+            POST_PROCESSING_ENABLED     = 1 << 18,
+            ALL                         = 0xFFFFFFFF
+        } dirtyFlags = DirtyFlags::ALL;
 
         filament::View* GetView();
         filament::Renderer* GetRenderer();
@@ -178,4 +201,9 @@ namespace vzm
         void applySettings();
     };
 }
+
+template<> struct utils::EnableBitMaskOperators<vzm::VzRenderPath::DirtyFlags>
+: public std::true_type {
+};
+
 #endif

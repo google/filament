@@ -226,6 +226,41 @@ namespace vzm
         void SetSoftShadowPenumbraRatioScale(float penumbraRatioScale);
         float GetSoftShadowPenumbraRatioScale();
 
+        void SetFogEnabled(bool enabled);
+        bool IsFogEnabled();
+
+        void SetFogDistance(float distance);
+        float GetFogDistance();
+
+        void SetFogDensity(float density);
+        float GetFogDensity();
+
+        void SetFogHeight(float height);
+        float GetFogHeight();
+
+        void SetFogHeightFalloff(float heightFalloff);
+        float GetFogHeightFalloff();
+
+        void SetFogInScatteringStart(float inScatteringStart);
+        float GetFogInScatteringStart();
+
+        void SetFogInScatteringSize(float inScatteringSize);
+        float GetFogInScatteringSize();
+
+        void SetFogExcludeSkybox(bool excludeSkybox);
+        bool IsFogExcludeSkybox();
+
+        enum class FogColorSource : uint8_t {
+            CONSTANT,
+            IBL,
+            SKYBOX
+        };
+        void SetFogColorSource(FogColorSource fogColorSource);
+        FogColorSource GetFogColorSource();
+
+        void SetFogColor(const float color[3]);
+        void GetFogColor(float color[3]);
+
         VZRESULT Render(const VID vidScene, const VID vidCam);
         VZRESULT Render(const VzBaseComp* scene, const VzBaseComp* camera) { return Render(scene->GetVID(), camera->GetVID()); };
     };
