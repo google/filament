@@ -118,32 +118,65 @@ namespace vzm
 
     filament::Renderer* VzRenderPath::GetRenderer() { return renderer_; }
 
-    void VzRenderPath::applySettings()
-    {
-        if (!isDirty)
-            return;
+    void VzRenderPath::applySettings() {
+        if (any(dirtyFlags & DirtyFlags::ANTI_ALIASING))
+            view_->setAntiAliasing(viewSettings.antiAliasing);
 
-        view_->setAntiAliasing(viewSettings.antiAliasing);
-        view_->setTemporalAntiAliasingOptions(viewSettings.taa);
-        view_->setMultiSampleAntiAliasingOptions(viewSettings.msaa);
-        view_->setDynamicResolutionOptions(viewSettings.dsr);
-        view_->setAmbientOcclusionOptions(viewSettings.ssao);
-        view_->setScreenSpaceReflectionsOptions(viewSettings.screenSpaceReflections);
-        view_->setBloomOptions(viewSettings.bloom);
-        view_->setFogOptions(viewSettings.fog);
-        view_->setDepthOfFieldOptions(viewSettings.dof);
-        view_->setVignetteOptions(viewSettings.vignette);
-        view_->setDithering(viewSettings.dithering);
-        view_->setRenderQuality(viewSettings.renderQuality);
-        view_->setDynamicLightingOptions(viewSettings.dynamicLighting.zLightNear,
-            viewSettings.dynamicLighting.zLightFar);
-        view_->setShadowType(viewSettings.shadowType);
-        view_->setVsmShadowOptions(viewSettings.vsmShadowOptions);
-        view_->setSoftShadowOptions(viewSettings.softShadowOptions);
-        view_->setGuardBandOptions(viewSettings.guardBand);
-        view_->setStereoscopicOptions(viewSettings.stereoscopicOptions);
-        view_->setPostProcessingEnabled(viewSettings.postProcessingEnabled);
+        if (any(dirtyFlags & DirtyFlags::TAA))
+            view_->setTemporalAntiAliasingOptions(viewSettings.taa);
 
-        isDirty = false;
+        if (any(dirtyFlags & DirtyFlags::MSAA))
+            view_->setMultiSampleAntiAliasingOptions(viewSettings.msaa);
+
+        if (any(dirtyFlags & DirtyFlags::DSR))
+            view_->setDynamicResolutionOptions(viewSettings.dsr);
+
+        if (any(dirtyFlags & DirtyFlags::SSAO))
+            view_->setAmbientOcclusionOptions(viewSettings.ssao);
+
+        if (any(dirtyFlags & DirtyFlags::SCREEN_SPACE_REFLECTIONS))
+            view_->setScreenSpaceReflectionsOptions(viewSettings.screenSpaceReflections);
+
+        if (any(dirtyFlags & DirtyFlags::BLOOM))
+            view_->setBloomOptions(viewSettings.bloom);
+
+        if (any(dirtyFlags & DirtyFlags::FOG))
+            view_->setFogOptions(viewSettings.fog);
+
+        if (any(dirtyFlags & DirtyFlags::DOF))
+            view_->setDepthOfFieldOptions(viewSettings.dof);
+
+        if (any(dirtyFlags & DirtyFlags::VIGNETTE))
+            view_->setVignetteOptions(viewSettings.vignette);
+
+        if (any(dirtyFlags & DirtyFlags::DITHERING))
+            view_->setDithering(viewSettings.dithering);
+
+        if (any(dirtyFlags & DirtyFlags::RENDER_QUALITY))
+            view_->setRenderQuality(viewSettings.renderQuality);
+
+        if (any(dirtyFlags & DirtyFlags::DYNAMIC_LIGHTING))
+            view_->setDynamicLightingOptions(viewSettings.dynamicLighting.zLightNear,
+                                             viewSettings.dynamicLighting.zLightFar);
+
+        if (any(dirtyFlags & DirtyFlags::SHADOW_TYPE))
+            view_->setShadowType(viewSettings.shadowType);
+
+        if (any(dirtyFlags & DirtyFlags::VSM_SHADOW_OPTIONS))
+            view_->setVsmShadowOptions(viewSettings.vsmShadowOptions);
+
+        if (any(dirtyFlags & DirtyFlags::SOFT_SHADOW_OPTIONS))
+            view_->setSoftShadowOptions(viewSettings.softShadowOptions);
+
+        if (any(dirtyFlags & DirtyFlags::GUARD_BAND))
+            view_->setGuardBandOptions(viewSettings.guardBand);
+
+        if (any(dirtyFlags & DirtyFlags::STEREOSCOPIC_OPTIONS))
+            view_->setStereoscopicOptions(viewSettings.stereoscopicOptions);
+
+        if (any(dirtyFlags & DirtyFlags::POST_PROCESSING_ENABLED))
+            view_->setPostProcessingEnabled(viewSettings.postProcessingEnabled);
+
+        dirtyFlags = DirtyFlags::NONE;
     }
 }

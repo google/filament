@@ -31,6 +31,7 @@
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
 #include <utils/Systrace.h>
+#include <utils/BitmaskEnum.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>

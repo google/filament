@@ -58,7 +58,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.postProcessingEnabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::POST_PROCESSING_ENABLED;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsPostProcessingEnabled()
@@ -70,7 +70,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dithering = enabled ? Dithering::TEMPORAL : Dithering::NONE;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DITHERING;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsDitheringEnabled()
@@ -82,7 +82,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.bloom.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::BLOOM;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsBloomEnabled()
@@ -94,7 +94,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaEnabled()
@@ -106,7 +106,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.antiAliasing = enabled ? AntiAliasing::FXAA : AntiAliasing::NONE;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::ANTI_ALIASING;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsFxaaEnabled()
@@ -118,7 +118,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.msaa.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::MSAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsMsaaEnabled()
@@ -130,7 +130,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.msaa.customResolve = customResolve;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::MSAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsMsaaCustomResolve()
@@ -142,7 +142,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsSsaoEnabled()
@@ -154,7 +154,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.screenSpaceReflections.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SCREEN_SPACE_REFLECTIONS;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsScreenSpaceReflectionsEnabled()
@@ -166,7 +166,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.guardBand.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::GUARD_BAND;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsGuardBandEnabled()
@@ -181,7 +181,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.bloom.strength = std::clamp(strength, 0.0f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::BLOOM;
         UpdateTimeStamp();
     }
     float VzRenderer::GetBloomStrength()
@@ -193,7 +193,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.bloom.threshold = threshold;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::BLOOM;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsBloomThreshold()
@@ -205,7 +205,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.bloom.levels = (uint8_t) std::clamp(levels, 3, 11);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::BLOOM;
         UpdateTimeStamp();
     }
     int VzRenderer::GetBloomLevels()
@@ -217,7 +217,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.bloom.quality = (QualityLevel) std::clamp(quality, 0, 3);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::BLOOM;
         UpdateTimeStamp();
     }
     int VzRenderer::GetBloomQuality()
@@ -229,7 +229,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.bloom.lensFlare = lensFlare;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::BLOOM;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsBloomLensFlare()
@@ -244,7 +244,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.upscaling = upscaling;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaUpscaling()
@@ -256,7 +256,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.historyReprojection = historyReprojection;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaHistoryReprojection()
@@ -268,7 +268,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.feedback = std::clamp(feedback, 0.0f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     float VzRenderer::GetTaaFeedback()
@@ -280,7 +280,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.filterHistory = filterHistory;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaFilterHistory()
@@ -292,7 +292,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.filterInput = filterInput;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaFilterInput()
@@ -304,7 +304,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.filterWidth = std::clamp(filterWidth, 0.2f, 2.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     float VzRenderer::GetTaaFilterWidth()
@@ -316,7 +316,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.lodBias = std::clamp(lodBias, -8.0f, 0.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     float VzRenderer::GetTaaLodBias()
@@ -328,7 +328,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.useYCoCg = useYCoCg;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaUseYCoCg()
@@ -340,7 +340,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.preventFlickering = preventFlickering;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsTaaPreventFlickering()
@@ -352,7 +352,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.jitterPattern = (TemporalAntiAliasingOptions::JitterPattern) pattern;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     VzRenderer::JitterPattern VzRenderer::GetTaaJitterPattern()
@@ -364,7 +364,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping) boxClipping;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     VzRenderer::BoxClipping VzRenderer::GetTaaBoxClipping()
@@ -376,7 +376,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.boxType = (TemporalAntiAliasingOptions::BoxType) boxType;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     VzRenderer::BoxType VzRenderer::GetTaaBoxType()
@@ -388,7 +388,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.varianceGamma = std::clamp(varianceGamma, 0.75f, 1.25f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     float VzRenderer::GetTaaVarianceGamma()
@@ -400,7 +400,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.taa.sharpness = std::clamp(sharpness, 0.0f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::TAA;
         UpdateTimeStamp();
     }
     float VzRenderer::GetTaaSharpness()
@@ -415,7 +415,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.quality = (QualityLevel) std::clamp(quality, 0, 3);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     int VzRenderer::GetSsaoQuality()
@@ -427,7 +427,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.lowPassFilter = (QualityLevel) std::clamp(lowPassFilter, 0, 2);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     int VzRenderer::GetSsaoLowPassFilter()
@@ -439,7 +439,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.bentNormals = bentNormals;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsSsaoBentNormals()
@@ -451,7 +451,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.upsampling = upsampling ? QualityLevel::HIGH : QualityLevel::LOW;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsSsaoUpsampling()
@@ -463,7 +463,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.minHorizonAngleRad = std::clamp(minHorizonAngleRad, 0.0f, VZ_PIDIV4);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoMinHorizonAngleRad()
@@ -475,7 +475,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.bilateralThreshold = std::clamp(bilateralThreshold, 0.0f, 0.1f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoBilateralThreshold()
@@ -487,7 +487,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.resolution = halfResolution ? 0.5f : 1.0f;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsSsaoHalfResolution()
@@ -501,7 +501,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsSsaoSsctEnabled()
@@ -513,7 +513,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.lightConeRad = std::clamp(lightConeRad, 0.0f, VZ_PIDIV2);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoSsctLightConeRad()
@@ -525,7 +525,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.shadowDistance = std::clamp(shadowDistance, 0.0f, 10.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoSsctShadowDistance()
@@ -537,7 +537,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.contactDistanceMax = std::clamp(contactDistanceMax, 0.0f, 10.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoSsctContactDistanceMax()
@@ -549,7 +549,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.intensity = std::clamp(intensity, 0.0f, 10.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoSsctIntensity()
@@ -561,7 +561,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.depthBias = std::clamp(depthBias, 0.0f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoSsctDepthBias()
@@ -573,7 +573,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.depthSlopeBias = std::clamp(depthSlopeBias, 0.0f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSsaoSsctDepthSlopeBias()
@@ -585,7 +585,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.ssao.ssct.sampleCount = (uint8_t) std::clamp(sampleCount, 1, 32);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     int VzRenderer::GetSsaoSsctSampleCount()
@@ -599,15 +599,15 @@ namespace vzm
         render_path->viewSettings.ssao.ssct.lightDirection.x = lightDirection[0];
         render_path->viewSettings.ssao.ssct.lightDirection.y = lightDirection[1];
         render_path->viewSettings.ssao.ssct.lightDirection.z = lightDirection[2];
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SSAO;
         UpdateTimeStamp();
     }
     void VzRenderer::GetSsaoSsctLightDirection(float lightDirection[3])
     {
         COMP_RENDERPATH(render_path, );
-        lightDirection[0] = render_path->viewSettings.ssao.ssct.lightDirection[0];
-        lightDirection[1] = render_path->viewSettings.ssao.ssct.lightDirection[1];
-        lightDirection[2] = render_path->viewSettings.ssao.ssct.lightDirection[2];
+        lightDirection[0] = render_path->viewSettings.ssao.ssct.lightDirection.x;
+        lightDirection[1] = render_path->viewSettings.ssao.ssct.lightDirection.y;
+        lightDirection[2] = render_path->viewSettings.ssao.ssct.lightDirection.z;
     }
 #pragma endregion
 
@@ -618,7 +618,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.screenSpaceReflections.thickness = std::clamp(thickness, 0.001f, 0.2f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SCREEN_SPACE_REFLECTIONS;
         UpdateTimeStamp();
     }
     float VzRenderer::GetScreenSpaceReflectionsThickness()
@@ -630,7 +630,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.screenSpaceReflections.bias = std::clamp(bias, 0.001f, 0.5f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SCREEN_SPACE_REFLECTIONS;
         UpdateTimeStamp();
     }
     float VzRenderer::GetScreenSpaceReflectionsBias()
@@ -642,7 +642,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.screenSpaceReflections.maxDistance = std::clamp(maxDistance, 0.1f, 10.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SCREEN_SPACE_REFLECTIONS;
         UpdateTimeStamp();
     }
     float VzRenderer::GetScreenSpaceReflectionsMaxDistance()
@@ -654,7 +654,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.screenSpaceReflections.stride = std::clamp(stride, 0.1f, 10.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SCREEN_SPACE_REFLECTIONS;
         UpdateTimeStamp();
     }
     float VzRenderer::GetScreenSpaceReflectionsStride()
@@ -669,7 +669,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dsr.enabled = enabled;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DSR;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsDynamicResoultionEnabled()
@@ -681,7 +681,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dsr.homogeneousScaling = homogeneousScaling;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DSR;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsDynamicResoultionHomogeneousScaling()
@@ -693,7 +693,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dsr.minScale = std::clamp(minScale, 0.25f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DSR;
         UpdateTimeStamp();
     }
     float VzRenderer::GetDynamicResoultionMinScale()
@@ -705,7 +705,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dsr.maxScale = std::clamp(maxScale, 0.25f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DSR;
         UpdateTimeStamp();
     }
     float VzRenderer::GetDynamicResoultionMaxScale()
@@ -717,7 +717,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dsr.quality = (QualityLevel) std::clamp(quality, 0, 3);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DSR;
         UpdateTimeStamp();
     }
     int VzRenderer::GetDynamicResoultionQuality()
@@ -729,7 +729,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.dsr.sharpness = std::clamp(sharpness, 0.0f, 1.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::DSR;
         UpdateTimeStamp();
     }
     float VzRenderer::GetDynamicResoultionSharpness()
@@ -744,7 +744,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.shadowType = (filament::ShadowType) shadowType;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::VSM_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     VzRenderer::ShadowType VzRenderer::GetShadowType()
@@ -756,7 +756,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.vsmShadowOptions.highPrecision = highPrecision;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::VSM_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsVsmHighPrecision()
@@ -768,7 +768,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.vsmShadowOptions.msaaSamples = (uint8_t) std::clamp(msaaSamples, 1, 8);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::VSM_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     int VzRenderer::GetVsmMsaaSamples()
@@ -780,7 +780,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.vsmShadowOptions.anisotropy = (uint8_t) std::clamp(anisotropy, 1, 16);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::VSM_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     int VzRenderer::GetVsmAnisotropy()
@@ -792,7 +792,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.vsmShadowOptions.mipmapping = mipmapping;
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::VSM_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     bool VzRenderer::IsVsmMipmapping()
@@ -804,7 +804,7 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.softShadowOptions.penumbraScale = std::clamp(penumbraScale, 0.0f, 100.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SOFT_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSoftShadowPenumbraScale()
@@ -816,13 +816,160 @@ namespace vzm
     {
         COMP_RENDERPATH(render_path, );
         render_path->viewSettings.softShadowOptions.penumbraRatioScale = std::clamp(penumbraRatioScale, 1.0f, 100.0f);
-        render_path->isDirty = true;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::SOFT_SHADOW_OPTIONS;
         UpdateTimeStamp();
     }
     float VzRenderer::GetSoftShadowPenumbraRatioScale()
     {
         COMP_RENDERPATH(render_path, 1.0f);
         return render_path->viewSettings.softShadowOptions.penumbraRatioScale;
+    }
+#pragma endregion
+
+#pragma region Fog
+    void VzRenderer::SetFogEnabled(bool enabled)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.enabled = enabled;
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsFogEnabled()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return render_path->viewSettings.fog.enabled;
+    }
+    void VzRenderer::SetFogDistance(float distance)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.distance = std::clamp(distance, 0.0f, 1000.0f);
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetFogDistance()
+    {
+        COMP_RENDERPATH(render_path, 100.0f);
+        return render_path->viewSettings.fog.distance;
+    }
+    void VzRenderer::SetFogDensity(float density)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.density = std::clamp(density, 0.0f, 1.0f);
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetFogDensity()
+    {
+        COMP_RENDERPATH(render_path, 0.1f);
+        return render_path->viewSettings.fog.density;
+    }
+    void VzRenderer::SetFogHeight(float height)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.height = std::clamp(height, 0.0f, 1000.0f);
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetFogHeight()
+    {
+        COMP_RENDERPATH(render_path, 100.0f);
+        return render_path->viewSettings.fog.height;
+    }
+    void VzRenderer::SetFogHeightFalloff(float heightFalloff)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.heightFalloff = std::clamp(heightFalloff, 0.0f, 1000.0f);
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetFogHeightFalloff()
+    {
+        COMP_RENDERPATH(render_path, 100.0f);
+        return render_path->viewSettings.fog.heightFalloff;
+    }
+    void VzRenderer::SetFogInScatteringStart(float inScatteringStart)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.inScatteringStart = std::clamp(inScatteringStart, 0.0f, 1000.0f);
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetFogInScatteringStart()
+    {
+        COMP_RENDERPATH(render_path, 100.0f);
+        return render_path->viewSettings.fog.inScatteringStart;
+    }
+    void VzRenderer::SetFogInScatteringSize(float inScatteringSize)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.inScatteringSize = std::clamp(inScatteringSize, 0.0f, 1000.0f);
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    float VzRenderer::GetFogInScatteringSize()
+    {
+        COMP_RENDERPATH(render_path, 100.0f);
+        return render_path->viewSettings.fog.inScatteringSize;
+    }
+    void VzRenderer::SetFogExcludeSkybox(bool excludeSkybox)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.cutOffDistance =
+            excludeSkybox ? 1e6f : std::numeric_limits<float>::infinity();
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    bool VzRenderer::IsFogExcludeSkybox()
+    {
+        COMP_RENDERPATH(render_path, false);
+        return !std::isinf(render_path->viewSettings.fog.cutOffDistance);
+    }
+    void VzRenderer::SetFogColorSource(FogColorSource fogColorSource)
+    {
+        COMP_RENDERPATH(render_path, );
+        switch (fogColorSource) {
+            case FogColorSource::CONSTANT:
+                render_path->viewSettings.fog.skyColor = nullptr;
+                render_path->viewSettings.fog.fogColorFromIbl = false;
+                break;
+            case FogColorSource::IBL:
+                render_path->viewSettings.fog.skyColor = nullptr;
+                render_path->viewSettings.fog.fogColorFromIbl = true;
+                break;
+            case FogColorSource::SKYBOX:
+                render_path->viewSettings.fog.skyColor = render_path->viewSettings.fogSettings.fogColorTexture;
+                render_path->viewSettings.fog.fogColorFromIbl = false;
+                break;
+        }
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    VzRenderer::FogColorSource VzRenderer::GetFogColorSource()
+    {
+        COMP_RENDERPATH(render_path, FogColorSource::CONSTANT);
+        FogColorSource fogColorSource = FogColorSource::CONSTANT;
+        if (render_path->viewSettings.fog.skyColor) {
+            fogColorSource = FogColorSource::SKYBOX;
+        } else if (render_path->viewSettings.fog.fogColorFromIbl) {
+            fogColorSource = FogColorSource::IBL;
+        }
+        return fogColorSource;
+    }
+    void VzRenderer::SetFogColor(const float color[3])
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->viewSettings.fog.color.r = color[0];
+        render_path->viewSettings.fog.color.g = color[1];
+        render_path->viewSettings.fog.color.b = color[2];
+        render_path->dirtyFlags |= VzRenderPath::DirtyFlags::FOG;
+        UpdateTimeStamp();
+    }
+    void VzRenderer::GetFogColor(float color[3])
+    {
+        COMP_RENDERPATH(render_path, );
+        color[0] = render_path->viewSettings.fog.color.r;
+        color[1] = render_path->viewSettings.fog.color.g;
+        color[2] = render_path->viewSettings.fog.color.b;
     }
 #pragma endregion
 
@@ -946,6 +1093,8 @@ namespace vzm
         //    }
         //}
 
+        filament::Texture* fogColorTexture = gEngineApp.GetSceneRes(vidScene)->GetIBL()->getFogTexture();
+        render_path->viewSettings.fog.skyColor = fogColorTexture;
         render_path->applySettings();
 
         filament::SwapChain* sc = render_path->GetSwapChain();
