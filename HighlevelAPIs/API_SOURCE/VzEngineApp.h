@@ -369,7 +369,7 @@ namespace vzm
 #define COMP_ACTOR(COMP, ENTITY, INS, FAILRET)  auto & COMP = gEngine->getRenderableManager(); Entity ENTITY = Entity::import(GetVID()); if (ENTITY.isNull()) return FAILRET; auto INS = COMP.getInstance(ENTITY);
 #define COMP_MI(COMP, RES, FAILRET) VzMIRes* RES = gEngineApp.GetMIRes(GetVID()); if (RES == nullptr) return FAILRET; MaterialInstance* COMP = RES->mi; if (COMP == nullptr) return FAILRET;
 #define COMP_MAT(COMP, RES, FAILRET) VzMaterialRes* RES = gEngineApp.GetMaterialRes(GetVID()); if (RES == nullptr) return FAILRET; Material* COMP = RES->material; if (COMP == nullptr) return FAILRET;
-#define COMP_CAMERA(COMP, ENTITY, FAILRET) Entity ENTITY = Entity::import(GetVID()); Camera* COMP = gEngine->getCameraComponent(ENTITY); if (COMP == nullptr) return;
+#define COMP_CAMERA(COMP, ENTITY, FAILRET) Entity ENTITY = Entity::import(GetVID()); Camera* COMP = gEngine->getCameraComponent(ENTITY); if (COMP == nullptr) return FAILRET;
 #define COMP_ASSET(COMP, FAILRET)  VzAssetRes* COMP = gEngineApp.GetAssetRes(GetVID()); assert(COMP->asset->getAssetInstanceCount() == 1); // later... for multi-instance cases
 
 using namespace vzm;

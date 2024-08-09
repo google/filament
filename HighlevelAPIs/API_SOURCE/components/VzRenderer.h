@@ -261,6 +261,42 @@ namespace vzm
         void SetFogColor(const float color[3]);
         void GetFogColor(float color[3]);
 
+        void SetDofEnabled(bool enabled);
+        bool IsDofEnabled();
+
+        void SetDofCocScale(float cocScale);
+        float GetDofCocScale();
+
+        void SetDofCocAspectRatio(float cocAspectRatio);
+        float GetDofCocAspectRatio();
+
+        void SetDofRingCount(int dofRingCount);
+        int GetDofRingCount();
+
+        void SetDofMaxCoc(int maxCoc);
+        int GetDofMaxCoc();
+
+        void SetDofNativeResolution(bool nativeResolution);
+        bool IsDofNativeResolution();
+
+        void SetDofMedian(bool dofMedian);
+        bool IsDofMedian();
+
+        void SetVignetteEnabled(bool enabled);
+        bool IsVignetteEnabled();
+
+        void SetVignetteMidPoint(float midPoint);
+        float GetVignetteMidPoint();
+
+        void SetVignetteRoundness(float roundness);
+        float GetVignetteRoundness();
+
+        void SetVignetteFeather(float feather);
+        float GetVignetteFeather();
+
+        void SetVignetteColor(const float color[3]);
+        void GetVignetteColor(float color[3]);
+
         VZRESULT Render(const VID vidScene, const VID vidCam);
         VZRESULT Render(const VzBaseComp* scene, const VzBaseComp* camera) { return Render(scene->GetVID(), camera->GetVID()); };
     };

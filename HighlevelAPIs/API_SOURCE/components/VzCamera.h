@@ -15,6 +15,21 @@ namespace vzm
 
         void SetCameraCubeVisibleLayerMask(const uint8_t layerBits = 0x3, const uint8_t maskBits = 0x2); // helper object
 
+        void SetLensProjection(float focalLengthInMillimeters, float aspect, float near, float far);
+
+        float GetNear();
+        float GetCullingFar();
+
+        void SetExposure(float aperture, float shutterSpeed, float sensitivity);
+        float GetAperture();
+        float GetShutterSpeed();
+        float GetSensitivity();
+
+        float GetFocalLength();
+
+        void SetFocusDistance(float distance);
+        float GetFocusDistance();
+
         __dojostruct Controller{
         private:
             VID vidCam_ = INVALID_VID;
