@@ -198,6 +198,7 @@ public:
         POINT,          //!< Point light, emits light from a position, in all directions.
         FOCUSED_SPOT,   //!< Physically correct spot light.
         SPOT,           //!< Spot light with coupling of outer cone and illumination disabled.
+        AREA,
     };
 
     /**
@@ -651,6 +652,10 @@ public:
          */
         Builder& sunHaloFalloff(float haloFalloff) noexcept;
 
+        Builder& width(float width) noexcept;
+
+        Builder& height(float height) noexcept;
+
         enum Result { Error = -1, Success = 0  };
 
         /**
@@ -717,6 +722,10 @@ public:
     inline bool isSpotLight(Instance i) const noexcept {
         Type const type = getType(i);
         return type == Type::SPOT || type == Type::FOCUSED_SPOT;
+    }
+
+    inline bool isAreaLight(Instance i) const noexcept {
+        return getType(i) == Type::AREA;
     }
 
     /**
@@ -935,6 +944,14 @@ public:
      * @return the halo falloff
      */
     float getSunHaloFalloff(Instance i) const noexcept;
+
+    void setWidth(Instance i, float width) noexcept;
+
+    float getWidth(Instance i) const noexcept;
+
+    void setHeight(Instance i, float height) noexcept;
+
+    float getHeight(Instance i) const noexcept;
 
     /**
      * returns the shadow-map options for a given light

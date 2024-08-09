@@ -389,6 +389,7 @@ void FEngine::init() {
 
         mLightManager.init(*this);
         mDFG.init(*this);
+        mLTC.init(*this);
     }
 
     mPostProcessManager.init();
@@ -464,6 +465,7 @@ void FEngine::shutdown() {
     mResourceAllocatorDisposer->terminate();
     mResourceAllocatorDisposer.reset();
     mDFG.terminate(*this);                  // free-up the DFG
+    mLTC.terminate(*this);
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights
     mCameraManager.terminate(*this);        // free-up all cameras

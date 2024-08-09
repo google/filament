@@ -1273,6 +1273,8 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity, FFilamen
                     light->spot_outer_cone_angle);
             builder.intensityCandela(light->intensity);
             break;
+        case LightManager::Type::AREA:
+            break;
     }
 
     if (light->range == 0.0f) {

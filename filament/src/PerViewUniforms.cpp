@@ -17,6 +17,7 @@
 #include "PerViewUniforms.h"
 
 #include "DFG.h"
+#include "LTC.h"
 #include "Froxelizer.h"
 #include "ShadowMapManager.h"
 
@@ -53,6 +54,14 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
         TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
         mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
                 { engine.getDFG().getTexture(), sampler.getSamplerParams() });
+    }
+
+    if (engine.getLTC().isValid()) {
+        TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
+        mSamplers.setSampler(PerViewSib::LTC_LUT_1,
+                { engine.getLTC().getTexture1(), sampler.getSamplerParams() });
+        mSamplers.setSampler(PerViewSib::LTC_LUT_2,
+                { engine.getLTC().getTexture2(), sampler.getSamplerParams() });
     }
 }
 
