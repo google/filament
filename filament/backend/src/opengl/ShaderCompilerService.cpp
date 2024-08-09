@@ -614,7 +614,24 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             };
 
             GLuint const shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+
+            if (context.bugs.concatenate_shader_strings) {
+                size_t totalSize = 0;
+                for (size_t i = 0; i < sources.size(); i++) {
+                    totalSize += lengths[i];
+                }
+                std::string concatenatedShaderSource;
+                concatenatedShaderSource.reserve(totalSize);
+                for (size_t i = 0; i < sources.size(); i++) {
+                    concatenatedShaderSource.append(sources[i], lengths[i]);
+                }
+                const GLchar* ptr = concatenatedShaderSource.c_str();
+                GLint length = concatenatedShaderSource.length();
+                glShaderSource(shaderId, 1, &ptr, &length);
+            } else {
+                glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+            }
+
             glCompileShader(shaderId);
 
 #ifndef NDEBUG
