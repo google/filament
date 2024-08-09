@@ -1128,6 +1128,18 @@ namespace vzm
     }
 #pragma endregion
 
+    void VzRenderer::SetClearOptions(const ClearOptions& clearOptions)
+    {
+        COMP_RENDERPATH(render_path, );
+        render_path->GetRenderer()->setClearOptions((Renderer::ClearOptions&) clearOptions);
+        UpdateTimeStamp();
+    }
+    void VzRenderer::GetClearOptions(ClearOptions& clearOptions)
+    {
+        COMP_RENDERPATH(render_path, );
+        clearOptions = (ClearOptions&) render_path->GetRenderer()->getClearOptions();
+    }
+
     VZRESULT VzRenderer::Render(const VID vidScene, const VID vidCam)
     {
         VzRenderPath* render_path = gEngineApp.GetRenderPath(GetVID());
