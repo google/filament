@@ -297,6 +297,15 @@ namespace vzm
         void SetVignetteColor(const float color[3]);
         void GetVignetteColor(float color[3]);
 
+        struct ClearOptions {
+            float clearColor[4] = {};
+            uint8_t clearStencil = 0u;
+            bool clear = false;
+            bool discard = true;
+        };
+        void SetClearOptions(const ClearOptions& clearOptions);
+        void GetClearOptions(ClearOptions& clearOptions);
+
         VZRESULT Render(const VID vidScene, const VID vidCam);
         VZRESULT Render(const VzBaseComp* scene, const VzBaseComp* camera) { return Render(scene->GetVID(), camera->GetVID()); };
     };

@@ -129,7 +129,7 @@ namespace vzm
     float VzCamera::GetFocalLength()
     {
         COMP_CAMERA(camera, ett, 0);
-        return (float) camera->getFocalLength();
+        return (float) camera->getFocalLength() * 1000.0f;
     }
     void VzCamera::SetFocusDistance(float distance)
     {
