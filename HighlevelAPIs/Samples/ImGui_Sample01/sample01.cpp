@@ -20,16 +20,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to
-// maximize ease of testing and compatibility with old VS compilers. To link
-// with VS2010-era libraries, VS2015+ requires linking with
-// legacy_stdio_definitions.lib, which we do using this pragma. Your own project
-// should not be affected, as you are likely to link with a newer binary of GLFW
-// that is adequate for your version of Visual Studio.
-#if defined(_MSC_VER) && (_MSC_VER >= 1900) && \
-    !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
-#pragma comment(lib, "legacy_stdio_definitions")
-#endif
 
 // #define APP_USE_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
@@ -667,6 +657,9 @@ vzm::VzCamera* current_cam;
 int current_cam_idx = 0;
 std::vector<VID> cameras;
 
+bool g_lightEnabled = false;
+vzm::VzLight* g_light;
+
 vzm::VzAsset* g_asset;
 const int left_editUIWidth = 400;
 const int right_editUIWidth = 400;
@@ -828,8 +821,8 @@ std::wstring OpenFileDialog() {
 
 void initViewer() {
   g_scene = vzm::NewScene("my scene");
-  g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-  // g_scene->LoadIBL("lightroom_14b");
+  // g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+  g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "UserCamera");
   glm::fvec3 p(0, 0, 10);
@@ -843,9 +836,9 @@ void initViewer() {
   cc->UpdateControllerSettings();
   cc->SetViewport(render_width, render_height);
 
-  // vzm::VzLight* g_light = (vzm::VzLight*)vzm::NewSceneComponent(
-  //     vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
-  // vzm::AppendSceneCompTo(light, scene);
+  g_light = (vzm::VzLight*)vzm::NewSceneComponent(
+      vzm::SCENE_COMPONENT_TYPE::LIGHT, "sunlight");
+  vzm::AppendSceneCompTo(g_light, g_scene);
   vzm::AppendSceneCompTo(g_cam, g_scene);
   current_cam = g_cam;
 
@@ -1382,13 +1375,27 @@ int main(int, char**) {
                   // std::map<std::string, vzm::UniformType> pram;
                   ma->GetAllowedParameters(pram);
 
-                  std::string labelName = "DoubleSided##";
-                  labelName += postLabel;
-
                   bool doubleSided = mi->IsDoubleSided();
-                  if (ImGui::Checkbox(labelName.c_str(), &doubleSided)) {
+                  std::string dsLabelName = "DoubleSided";
+                  dsLabelName += postLabel;
+                  if (ImGui::Checkbox(dsLabelName.c_str(), &doubleSided)) {
                     mi->SetDoubleSided(doubleSided);
                   }
+
+                  ImGui::PushItemWidth(-1);
+                  int transparencyMode = (int)mi->GetTransparencyMode();
+                  std::string tmLabelName = "TransparencyMode";
+                  tmLabelName += postLabel;
+                  ImGui::Text("Transparency Mode");
+                  if (ImGui::Combo(
+                          tmLabelName.c_str(), &transparencyMode,
+                          "DEFAULT\0TWO_PASSES_ONE_SIDE\0TWO_PASSES_TWO_"
+                          "SIDES\0\0")) {
+                    mi->SetTransparencyMode(
+                        (vzm::VzMI::TransparencyMode)transparencyMode);
+                  }
+                  ImGui::PopItemWidth();
+
                   for (auto iter = pram.begin(); iter != pram.end(); iter++) {
                     std::vector<float> v;
                     vzm::VzMaterial::ParameterInfo& paramInfo = iter->second;
@@ -1472,27 +1479,159 @@ int main(int, char**) {
 
             if (type == vzm::SCENE_COMPONENT_TYPE::LIGHT) {
               vzm::VzLight* lightComponent = (vzm::VzLight*)component;
+
+              int lightType = (int)lightComponent->GetType();
               float intensity = lightComponent->GetIntensity();
               float color[3];
               lightComponent->GetColor(color);
               float falloff = lightComponent->GetFalloff();
-              float spotLightInnerCone = lightComponent->GetSpotLightInnerCone();
-              float spotLightOuterCone = lightComponent->GetSpotLightOuterCone();
+              
+              if (ImGui::Combo("Light Type", &lightType,
+                               "SUN\0DIRECTIONAL\0POINT\0FOCUSED_SPOT\0SPOT\0\0")) {
+                lightComponent->SetType((vzm::VzLight::Type)lightType);
+              }
 
-              if (ImGui::InputFloat("Intensity", &intensity)) {
+              if (ImGui::SliderFloat("intensity", &intensity, 0.0f,
+                                     150000.0f)) {
                 lightComponent->SetIntensity(intensity);
               }
+
               if (ImGui::ColorEdit3("Color", color)) {
                 lightComponent->SetColor(color);
               }
               if (ImGui::InputFloat("Falloff", &falloff)) {
                 lightComponent->SetFalloff(falloff);
               }
-              if (ImGui::InputFloat("Spot Light Inner Cone", &spotLightInnerCone)) {
-                lightComponent->SetSpotLightCone(spotLightInnerCone, spotLightOuterCone);
+
+              switch ((vzm::VzLight::Type)lightType) {
+                case vzm::VzLight::Type::SUN: {
+                  float haloSize = lightComponent->GetSunHaloSize();
+                  float haloFallOff = lightComponent->GetSunHaloFalloff();
+                  float sunRadius = lightComponent->GetSunAngularRadius();
+
+                  if (ImGui::SliderFloat("Halo size", &haloSize, 1.01f,
+                                         40.0f)) {
+                    lightComponent->SetSunHaloSize(haloSize);
+                  }
+                  if (ImGui::SliderFloat("Halo falloff", &haloFallOff, 4.0f,
+                                         1024.0f)) {
+                    lightComponent->SetSunHaloFalloff(haloFallOff);
+                  }
+                  if (ImGui::SliderFloat("Sun radius", &sunRadius, 0.1f,
+                                         10.0f)) {
+                    lightComponent->SetSunAngularRadius(sunRadius);
+                  }
+                  break;
+                }
+                case vzm::VzLight::Type::DIRECTIONAL: {
+                  break;
+                }
+                case vzm::VzLight::Type::POINT: {
+                  break;
+                }
+                case vzm::VzLight::Type::FOCUSED_SPOT: {
+                  break;
+                }
+                case vzm::VzLight::Type::SPOT: {
+                  float spotLightInnerCone =
+                      lightComponent->GetSpotLightInnerCone();
+                  float spotLightOuterCone =
+                      lightComponent->GetSpotLightOuterCone();
+
+                  if (ImGui::InputFloat("Spot Light Inner Cone",
+                                        &spotLightInnerCone)) {
+                    lightComponent->SetSpotLightCone(spotLightInnerCone,
+                                                     spotLightOuterCone);
+                  }
+                  if (ImGui::InputFloat("Spot Light Outer Cone",
+                                        &spotLightOuterCone)) {
+                    lightComponent->SetSpotLightCone(spotLightInnerCone,
+                                                     spotLightOuterCone);
+                  }
+                  break;
+                }
               }
-              if (ImGui::InputFloat("Spot Light Outer Cone", &spotLightOuterCone)) {
-                lightComponent->SetSpotLightCone(spotLightInnerCone, spotLightOuterCone);
+
+
+              vzm::VzLight::ShadowOptions sOpts = lightComponent->GetShadowOptions();
+
+              ImGui::Indent();
+              if (ImGui::CollapsingHeader("Shadow")) {
+                bool shadowEnabled = lightComponent->IsShadowCaster();
+                int mapSize = sOpts.mapSize;
+                bool stableShadows = sOpts.stable;
+                bool enableLiSPSM = sOpts.lispsm;
+                float shadowFar = sOpts.shadowFar;
+
+                if (ImGui::Checkbox("Enable shadow", &shadowEnabled)) {
+                  lightComponent->SetShadowCaster(shadowEnabled);
+                }
+                if (ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024)) {
+                  sOpts.mapSize = mapSize;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::Checkbox("Stable Shadows", &stableShadows)) {
+                  sOpts.stable = stableShadows;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::Checkbox("Enable LiSPSM", &enableLiSPSM)) {
+                  sOpts.lispsm = enableLiSPSM;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Shadow Far", &shadowFar, 0.0f, 10.0f)) {
+                  sOpts.shadowFar = shadowFar;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                //if (ImGui::CollapsingHeader("Shadow direction")) {
+                float fSunLightDirection[3];
+                lightComponent->GetDirection(fSunLightDirection);
+                  if (ImGui::InputFloat3("Light Direction",
+                                         fSunLightDirection)) {
+                    lightComponent->SetDirection(fSunLightDirection);
+                  }
+                //}
+                if (g_renderer->GetShadowType() ==
+                    vzm::VzRenderer::ShadowType::VSM) {
+                  bool elvsm = sOpts.vsm.elvsm;
+                  float vsmBlur = sOpts.vsm.blurWidth;
+
+                  if (ImGui::Checkbox("ELVSM", &elvsm)) {
+                    sOpts.vsm.elvsm = elvsm;
+                    lightComponent->SetShadowOptions(sOpts);
+                  }
+                  if (ImGui::SliderFloat("VSM blur", &vsmBlur, 0.0f, 125.0f)) {
+                    sOpts.vsm.blurWidth = vsmBlur;
+                    lightComponent->SetShadowOptions(sOpts);
+                  }
+                }
+
+                int shadowCascades = sOpts.shadowCascades;
+                bool enableContactShadows = sOpts.screenSpaceContactShadows;
+                float splitPos0 = sOpts.cascadeSplitPositions[0];
+                float splitPos1 = sOpts.cascadeSplitPositions[1];
+                float splitPos2 = sOpts.cascadeSplitPositions[2];
+
+                if (ImGui::SliderInt("Cascades", &shadowCascades, 1, 4)) {
+                  sOpts.shadowCascades = shadowCascades;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::Checkbox("Enable contact shadows",
+                                    &enableContactShadows)) {
+                  sOpts.screenSpaceContactShadows = enableContactShadows;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Split pos 0", &splitPos0, 0.0f, 1.0f)) {
+                  sOpts.cascadeSplitPositions[0] = splitPos0;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Split pos 1", &splitPos1, 0.0f, 1.0f)) {
+                  sOpts.cascadeSplitPositions[1] = splitPos1;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Split pos 2", &splitPos2, 0.0f, 1.0f)) {
+                  sOpts.cascadeSplitPositions[2] = splitPos2;
+                  lightComponent->SetShadowOptions(sOpts);
+                }
               }
             }
             ImGui::Unindent();
@@ -1810,6 +1949,7 @@ int main(int, char**) {
               g_renderer->SetSsaoHalfResolution(halfResolution);
             }
 
+            ImGui::Indent();
             if (ImGui::CollapsingHeader(
                     "Dominant Light Shadows (experimental)")) {
               bool ssctEnabled = g_renderer->IsSsaoSsctEnabled();
@@ -1860,6 +2000,7 @@ int main(int, char**) {
                 g_renderer->SetSsaoSsctLightDirection(lightDirection);
               }
             }
+            ImGui::Unindent();
           }
 
           if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
@@ -1913,7 +2054,6 @@ int main(int, char**) {
             }
           }
 
-          /////////////////////////////////////////////
           if (ImGui::CollapsingHeader("Light Settings")) {
             ImGui::Indent();
             if (ImGui::CollapsingHeader("Indirect light")) {
@@ -1934,65 +2074,237 @@ int main(int, char**) {
                 g_scene->SetIBLRotation(iblRotation);
               }
             }
-            // if (ImGui::CollapsingHeader("Sunlight")) {
-            //   ImGui::Checkbox("Enable sunlight", &bAny);
-            //   ImGui::SliderFloat("Sun intensity", &any, 0.0f, 150000.0f);
-            //   ImGui::SliderFloat("Halo size", &any, 1.01f, 40.0f);
-            //   ImGui::SliderFloat("Halo falloff", &any, 4.0f, 1024.0f);
-            //   ImGui::SliderFloat("Sun radius", &any, 0.1f, 10.0f);
-            //   ImGui::SliderFloat("Shadow Far", &any, 0.0f, 10.0f);
-            //   //                             mSettings.viewer.cameraFar);
+            if (ImGui::CollapsingHeader("Sunlight")) {
+              vzm::VzLight::ShadowOptions sOpts = g_light->GetShadowOptions();
+              float intensity = g_light->GetIntensity();
+              float haloSize = g_light->GetSunHaloSize();
+              float haloFallOff = g_light->GetSunHaloFalloff();
+              float sunRadius = g_light->GetSunAngularRadius();
+              float shadowFar = sOpts.shadowFar;
 
-            //  if (ImGui::CollapsingHeader("Shadow direction")) {
-            //    // ImGuiExt::DirectionWidget("Shadow direction",
-            //    // shadowDirection.v);
-            //  }
-            //}
-            // if (ImGui::CollapsingHeader("Shadows")) {
-            //  ImGui::Checkbox("Enable shadows", &bAny);
-            //  ImGui::SliderInt("Shadow map size", &iAny, 32, 1024);
-            //  ImGui::Checkbox("Stable Shadows", &bAny);
-            //  ImGui::Checkbox("Enable LiSPSM", &bAny);
+              if (ImGui::Checkbox("Enable sunlight", &g_lightEnabled)) {
+              }
 
-            //  ImGui::Combo("Shadow type", &iAny,
-            //               "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0");
+              if (ImGui::SliderFloat("Sun intensity", &intensity, 0.0f,
+                                     150000.0f)) {
+                g_light->SetIntensity(intensity);
+              }
+              if (ImGui::SliderFloat("Halo size", &haloSize, 1.01f, 40.0f)) {
+                g_light->SetSunHaloSize(haloSize);
+              }
+              if (ImGui::SliderFloat("Halo falloff", &haloFallOff, 4.0f,
+                                     1024.0f)) {
+                g_light->SetSunHaloFalloff(haloFallOff);
+              }
+              if (ImGui::SliderFloat("Sun radius", &sunRadius, 0.1f, 10.0f)) {
+                g_light->SetSunAngularRadius(sunRadius);
+              }
+              ImGui::Indent();
+              if (ImGui::CollapsingHeader("Shadow")) {
+                bool shadowEnabled = g_light->IsShadowCaster();
+                int mapSize = sOpts.mapSize;
+                bool stableShadows = sOpts.stable;
+                bool enableLiSPSM = sOpts.lispsm;
+                if (ImGui::Checkbox("Enable shadow", &shadowEnabled)) {
+                  g_light->SetShadowCaster(shadowEnabled);
+                }
+                if (ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024)) {
+                  sOpts.mapSize = mapSize;
+                  g_light->SetShadowOptions(sOpts);
+                }
+                if (ImGui::Checkbox("Stable Shadows", &stableShadows)) {
+                  sOpts.stable = stableShadows;
+                  g_light->SetShadowOptions(sOpts);
+                }
+                if (ImGui::Checkbox("Enable LiSPSM", &enableLiSPSM)) {
+                  sOpts.lispsm = enableLiSPSM;
+                  g_light->SetShadowOptions(sOpts);
+                }
 
-            //  if (true) {
-            //    ImGui::Checkbox("High precision", &bAny);
-            //    ImGui::Checkbox("ELVSM", &bAny);
-            //    ImGui::SliderInt("VSM MSAA samples", &iAny, 0, 3);
-            //    ImGui::SliderInt("VSM anisotropy", &iAny, 0, 3);
-            //    ImGui::Checkbox("VSM mipmapping", &bAny);
-            //    ImGui::SliderFloat("VSM blur", &any, 0.0f, 125.0f);
-            //  } else if (false) {
-            //    ImGui::SliderFloat("Penumbra scale", &any, 0.0f, 100.0f);
-            //    ImGui::SliderFloat("Penumbra Ratio scale", &any, 1.0f,
-            //    100.0f);
-            //  }
+                if (ImGui::SliderFloat("Shadow Far", &shadowFar, 0.0f, 10.0f)) {
+                  sOpts.shadowFar = shadowFar;
+                  g_light->SetShadowOptions(sOpts);
+                }
 
-            //  ImGui::SliderInt("Cascades", &iAny, 1, 4);
-            //  ImGui::Checkbox("Debug cascades", &bAny);
-            //  ImGui::Checkbox("Enable contact shadows", &bAny);
-            //  ImGui::SliderFloat("Split pos 0", &any, 0.0f, 1.0f);
-            //  ImGui::SliderFloat("Split pos 1", &any, 0.0f, 1.0f);
-            //  ImGui::SliderFloat("Split pos 2", &any, 0.0f, 1.0f);
-            //}
+                //if (ImGui::CollapsingHeader("Shadow direction")) {
+                  float fSunLightDirection[3];
+                  g_light->GetDirection(fSunLightDirection);
+                  if (ImGui::InputFloat3("Light Direction",
+                                         fSunLightDirection)) {
+                    g_light->SetDirection(fSunLightDirection);
+                  }
+                  // glm::vec3 sunLightDirection(fSunLightDirection[0],
+                  //                             fSunLightDirection[1],
+                  //                             fSunLightDirection[2]);
+                  // glm::vec4 shadowTransform(
+                  //     sOpts.transform[0], sOpts.transform[1],
+                  //     sOpts.transform[2], sOpts.transform[3]);
+                  // glm::vec3 shadowDirection =
+                  //     shadowTransform * glm::vec4(sunLightDirection, 0.0f);
+                  //// ImGuiExt::DirectionWidget("Shadow direction",
+                  //// shadowDirection.v);
+                  // if (ImGui::InputFloat3("Shadow Direction",
+                  //                        (float*)&shadowDirection[0])) {
+                  //   shadowTransform = glm::normalize(glm::vec4(
+                  //       glm::cross(sunLightDirection, shadowDirection),
+                  //       glm::sqrt(length2(sunLightDirection) *
+                  //                 length2(shadowDirection)) +
+                  //           glm::dot(sunLightDirection, shadowDirection)));
+                  //   sOpts.transform[0] = shadowTransform[0];
+                  //   sOpts.transform[1] = shadowTransform[1];
+                  //   sOpts.transform[2] = shadowTransform[2];
+                  //   sOpts.transform[3] = shadowTransform[3];
+
+                  //  g_light->SetShadowOptions(sOpts);
+                  //};
+                //}
+
+                if (g_renderer->GetShadowType() ==
+                    vzm::VzRenderer::ShadowType::VSM) {
+                  bool elvsm = sOpts.vsm.elvsm;
+                  float vsmBlur = sOpts.vsm.blurWidth;
+
+                  if (ImGui::Checkbox("ELVSM", &elvsm)) {
+                    sOpts.vsm.elvsm = elvsm;
+                    g_light->SetShadowOptions(sOpts);
+                  }
+                  if (ImGui::SliderFloat("VSM blur", &vsmBlur, 0.0f, 125.0f)) {
+                    sOpts.vsm.blurWidth = vsmBlur;
+                    g_light->SetShadowOptions(sOpts);
+                  }
+                }
+
+                int shadowCascades = sOpts.shadowCascades;
+                bool enableContactShadows = sOpts.screenSpaceContactShadows;
+                float splitPos0 = sOpts.cascadeSplitPositions[0];
+                float splitPos1 = sOpts.cascadeSplitPositions[1];
+                float splitPos2 = sOpts.cascadeSplitPositions[2];
+
+                if (ImGui::SliderInt("Cascades", &shadowCascades, 1, 4)) {
+                  sOpts.shadowCascades = shadowCascades;
+                  g_light->SetShadowOptions(sOpts);
+                }
+                // ImGui::Checkbox("Debug cascades",
+                //                 debug.getPropertyAddress<bool>(
+                //                     "d.shadowmap.visualize_cascades"));
+                if (ImGui::Checkbox("Enable contact shadows",
+                                    &enableContactShadows)) {
+                  sOpts.screenSpaceContactShadows = enableContactShadows;
+                  g_light->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Split pos 0", &splitPos0, 0.0f, 1.0f)) {
+                  sOpts.cascadeSplitPositions[0] = splitPos0;
+                  g_light->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Split pos 1", &splitPos1, 0.0f, 1.0f)) {
+                  sOpts.cascadeSplitPositions[1] = splitPos1;
+                  g_light->SetShadowOptions(sOpts);
+                }
+                if (ImGui::SliderFloat("Split pos 2", &splitPos2, 0.0f, 1.0f)) {
+                  sOpts.cascadeSplitPositions[2] = splitPos2;
+                  g_light->SetShadowOptions(sOpts);
+                }
+              }
+
+              ImGui::Unindent();
+            }
+
+            if (ImGui::CollapsingHeader("Shadow Settings")) {
+              int shadowType = (int)g_renderer->GetShadowType();
+
+              if (ImGui::Combo("Shadow type", &shadowType,
+                               "PCF\0VSM\0DPCF\0PCSS\0PCFd\0\0")) {
+                g_renderer->SetShadowType(
+                    (vzm::VzRenderer::ShadowType)shadowType);
+              }
+
+              if (shadowType == (int)vzm::VzRenderer::ShadowType::VSM) {
+                bool highPrecision = g_renderer->IsVsmHighPrecision();
+
+                int vsmMSAASamples = g_renderer->GetVsmMsaaSamples();
+                int vsmAnisotropy = g_renderer->GetVsmAnisotropy();
+                bool vsmMipmapping = g_renderer->IsVsmMipmapping();
+
+                ImGui::Checkbox("High precision", &highPrecision);
+                ImGui::SliderInt("VSM MSAA samples", &vsmMSAASamples, 0, 3);
+                ImGui::SliderInt("VSM anisotropy", &vsmAnisotropy, 0, 3);
+                ImGui::Checkbox("VSM mipmapping", &vsmMipmapping);
+
+              } else if (shadowType == (int)vzm::VzRenderer::ShadowType::DPCF ||
+                         shadowType == (int)vzm::VzRenderer::ShadowType::PCSS) {
+                float softShadowPenumbraScale =
+                    g_renderer->GetSoftShadowPenumbraScale();
+                float softShadowPenumbraRatioScale =
+                    g_renderer->GetSoftShadowPenumbraRatioScale();
+
+                if (ImGui::SliderFloat("Penumbra scale",
+                                       &softShadowPenumbraScale, 0.0f,
+                                       100.0f)) {
+                  g_renderer->SetSoftShadowPenumbraScale(
+                      softShadowPenumbraScale);
+                }
+                if (ImGui::SliderFloat("Penumbra Ratio scale",
+                                       &softShadowPenumbraRatioScale, 1.0f,
+                                       100.0f)) {
+                  g_renderer->SetSoftShadowPenumbraRatioScale(
+                      softShadowPenumbraRatioScale);
+                }
+              }
+            }
             ImGui::Unindent();
           }
 
           if (ImGui::CollapsingHeader("Fog")) {
-            /* ImGui::Indent();
-             ImGui::Checkbox("Enable large-scale fog", &bAny);
-             ImGui::SliderFloat("Start [m]", &any, 0.0f, 100.0f);
-             ImGui::SliderFloat("Extinction [1/m]", &any, 0.0f, 1.0f);
-             ImGui::SliderFloat("Floor [m]", &any, 0.0f, 100.0f);
-             ImGui::SliderFloat("Height falloff [1/m]", &any, 0.0f, 4.0f);
-             ImGui::SliderFloat("Sun Scattering start [m]", &any, 0.0f, 100.0f);
-             ImGui::SliderFloat("Sun Scattering size", &any, 0.1f, 100.0f);
-             ImGui::Checkbox("Exclude Skybox", &bAny);
-             ImGui::Combo("Color##fogColor", &iAny,
-             "Constant\0IBL\0Skybox\0\0"); ImGui::ColorPicker3("Color", anyVec);
-             ImGui::Unindent();*/
+            ImGui::Indent();
+            bool isFogEnabled = g_renderer->IsFogEnabled();
+            float fogDist = g_renderer->GetFogDistance();
+            float fogDensity = g_renderer->GetFogDensity();
+            float fogHeight = g_renderer->GetFogHeight();
+            float fogHeightFalloff = g_renderer->GetFogHeightFalloff();
+            float fogInScatteringStart = g_renderer->GetFogInScatteringStart();
+            float fogInScatteringSize = g_renderer->GetFogInScatteringSize();
+            bool isFogExcludeSkybox = g_renderer->IsFogExcludeSkybox();
+            int fogColorSource = (int)g_renderer->GetFogColorSource();
+            float fogColor[3];
+            g_renderer->GetFogColor(fogColor);
+
+            if (ImGui::Checkbox("Enable large-scale fog", &isFogEnabled)) {
+              g_renderer->SetFogEnabled(isFogEnabled);
+            }
+            if (ImGui::SliderFloat("Start [m]", &fogDist, 0.0f, 100.0f)) {
+              g_renderer->SetFogDistance(fogDist);
+            }
+            if (ImGui::SliderFloat("Extinction [1/m]", &fogDensity, 0.0f,
+                                   1.0f)) {
+              g_renderer->SetFogDensity(fogDensity);
+            }
+            if (ImGui::SliderFloat("Floor [m]", &fogHeight, 0.0f, 100.0f)) {
+              g_renderer->SetFogHeight(fogHeight);
+            }
+            if (ImGui::SliderFloat("Height falloff [1/m]", &fogHeightFalloff,
+                                   0.0f, 4.0f)) {
+              g_renderer->SetFogHeightFalloff(fogHeightFalloff);
+            }
+            if (ImGui::SliderFloat("Sun Scattering start [m]",
+                                   &fogInScatteringStart, 0.0f, 100.0f)) {
+              g_renderer->SetFogInScatteringStart(fogInScatteringStart);
+            }
+            if (ImGui::SliderFloat("Sun Scattering size", &fogInScatteringSize,
+                                   0.1f, 100.0f)) {
+              g_renderer->SetFogInScatteringSize(fogInScatteringSize);
+            }
+            if (ImGui::Checkbox("Exclude Skybox", &isFogExcludeSkybox)) {
+              g_renderer->SetFogExcludeSkybox(isFogExcludeSkybox);
+            }
+            if (ImGui::Combo("Color##fogColor", &fogColorSource,
+                             "Constant\0IBL\0Skybox\0\0")) {
+              g_renderer->SetFogColorSource(
+                  (vzm::VzRenderer::FogColorSource)fogColorSource);
+            }
+            if (ImGui::ColorPicker3("Color", fogColor)) {
+              g_renderer->SetFogColor(fogColor);
+            }
+            ImGui::Unindent();
           }
           if (ImGui::CollapsingHeader("Scene")) {
             // ImGui::Indent();
