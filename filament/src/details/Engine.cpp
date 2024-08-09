@@ -1197,6 +1197,22 @@ bool FEngine::isValid(const FInstanceBuffer* p) const {
     return isValid(p, mInstanceBuffers);
 }
 
+size_t FEngine::getBufferObjectCount() const noexcept { return mBufferObjects.size(); }
+size_t FEngine::getViewCount() const noexcept { return mViews.size(); }
+size_t FEngine::getSceneCount() const noexcept { return mScenes.size(); }
+size_t FEngine::getSwapChainCount() const noexcept { return mSwapChains.size(); }
+size_t FEngine::getStreamCount() const noexcept { return mStreams.size(); }
+size_t FEngine::getIndexBufferCount() const noexcept { return mIndexBuffers.size(); }
+size_t FEngine::getSkinningBufferCount() const noexcept { return mSkinningBuffers.size(); }
+size_t FEngine::getMorphTargetBufferCount() const noexcept { return mMorphTargetBuffers.size(); }
+size_t FEngine::getInstanceBufferCount() const noexcept { return mInstanceBuffers.size(); }
+size_t FEngine::getVertexBufferCount() const noexcept { return mVertexBuffers.size(); }
+size_t FEngine::getIndirectLightCount() const noexcept { return mIndirectLights.size(); }
+size_t FEngine::getMaterialCount() const noexcept { return mMaterials.size(); }
+size_t FEngine::getTextureCount() const noexcept { return mTextures.size(); }
+size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
+size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
+size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
 void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     // we allow this only for small allocations

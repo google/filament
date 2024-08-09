@@ -897,6 +897,29 @@ public:
     bool isValid(const InstanceBuffer* UTILS_NULLABLE p) const;
 
     /**
+     * Retrieve the count of each resource tracked by Engine.
+     * This is intended for debugging.
+     * @{
+     */
+    size_t getBufferObjectCount() const noexcept;
+    size_t getViewCount() const noexcept;
+    size_t getSceneCount() const noexcept;
+    size_t getSwapChainCount() const noexcept;
+    size_t getStreamCount() const noexcept;
+    size_t getIndexBufferCount() const noexcept;
+    size_t getSkinningBufferCount() const noexcept;
+    size_t getMorphTargetBufferCount() const noexcept;
+    size_t getInstanceBufferCount() const noexcept;
+    size_t getVertexBufferCount() const noexcept;
+    size_t getIndirectLightCount() const noexcept;
+    size_t getMaterialCount() const noexcept;
+    size_t getTextureCount() const noexcept;
+    size_t getSkyboxeCount() const noexcept;
+    size_t getColorGradingCount() const noexcept;
+    size_t getRenderTargetCount() const noexcept;
+    /**  @} */
+
+    /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
      * all commands to this point are executed. Note that does guarantee that the
      * hardware is actually finished.
