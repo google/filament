@@ -615,7 +615,7 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
 
             GLuint const shaderId = glCreateShader(glShaderType);
 
-            if (context.bugs.concatenate_shader_strings) {
+            if (UTILS_UNLIKELY(context.bugs.concatenate_shader_strings)) {
                 size_t totalSize = 0;
                 for (size_t i = 0; i < sources.size(); i++) {
                     totalSize += lengths[i];
