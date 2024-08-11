@@ -267,8 +267,78 @@ public:
      */
     VkQueue getGraphicsQueue() const noexcept;
 
-private:
+    static constexpr float QUEUE_PRIORITY[] = {1.0f};
+
+    // The Platform class can require 1 or 2 instance extensions, plus we'll
+    // request at most 5 instance extensions here in the common code. So that's
+    // a max of 7.
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
+
+    // The Platform class currently requests at most 7 device extensions. So
+    // that's a max of 7.
+    static constexpr uint32_t MAX_DEVICE_EXTENSION_COUNT = 8;
+
+    static constexpr uint32_t const INVALID_VK_INDEX = 0xFFFFFFFF;
+
+    struct DeviceFeatures {
+      VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {};
+      VkPhysicalDeviceMultiviewFeaturesKHR multiview = {};
+    };
+
+    static uint32_t getEnabledLayerCount(
+        const char* ppEnabledLayers[], bool& validationFeaturesSupported);
+
+    static uint32_t getEnabledInstanceExtensionCount(
+        ExtensionSet const& instanceExtensions,
+        const char* ppEnabledExtensions[], bool validationFeaturesSupported);
+
+    static void populateInstanceCreateInfo(
+        VkInstanceCreateInfo& instanceCreateInfo, VkApplicationInfo& appInfo,
+        ExtensionSet const& requiredExts, const char* enabledExtensions[],
+        uint32_t enabledExtensionCount, uint32_t enabledLayerCount = 0, const char* enabledLayers[] = 0);
+
+    static void verifyEnabledDeviceFeatures(VkPhysicalDeviceFeatures& out,
+                                            const VkPhysicalDeviceFeatures& in);
+
+    static uint32_t getEnabledDeviceExtensionCount(
+        ExtensionSet const& deviceExtensions,
+        const char* ppEnabledExtensions[]);
+
+    static void* getDeviceFeaturesPNext(ExtensionSet const& deviceExtensions, DeviceFeatures& deviceFeatures);
+
+    static void populateDeviceCreateInfo(
+        VkDeviceCreateInfo& deviceCreateInfo,
+        ExtensionSet const& deviceExtensions,
+        VkDeviceQueueCreateInfo (&deviceQueueCreateInfo)[1],
+        uint32_t graphicsQueueFamilyIndex,
+        VkPhysicalDeviceFeatures enabledFeatures,
+        const char* ppEnabledExtensions[], uint32_t enabledExtensionCount);
+
+   protected:
     static ExtensionSet getSwapchainInstanceExtensions();
+
+    static ExtensionSet getInstanceExtensions(
+        ExtensionSet const& externallyRequiredExts = {});
+
+    static utils::FixedCapacityVector<const char*> getEnabledLayers();
+
+    static VkPhysicalDevice selectPhysicalDevice(
+        VkInstance instance,
+        VulkanPlatform::Customization::GPUPreference const& gpuPreference);
+
+    static uint32_t identifyGraphicsQueueFamilyIndex(
+        VkPhysicalDevice physicalDevice);
+
+    static ExtensionSet getDeviceExtensions(VkPhysicalDevice device);
+
+    static std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(
+        VkPhysicalDevice device, ExtensionSet const& instanceExtensions,
+        ExtensionSet const& deviceExtensions);
+
+    static utils::FixedCapacityVector<VkQueueFamilyProperties>
+    getPhysicalDeviceQueueFamilyPropertiesHelper(VkPhysicalDevice device);
+
+private:
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

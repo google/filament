@@ -44,8 +44,6 @@ namespace filament::backend {
 
 namespace {
 
-constexpr uint32_t const INVALID_VK_INDEX = 0xFFFFFFFF;
-
 using ExtensionSet = VulkanPlatform::ExtensionSet;
 
 inline bool setContains(ExtensionSet const& set, utils::CString const& extension) {
@@ -63,25 +61,6 @@ const std::string_view DESIRED_LAYERS[] = {
         "VK_LAYER_RENDERDOC_Capture",
 #endif
 };
-
-FixedCapacityVector<const char*> getEnabledLayers() {
-    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
-
-    const FixedCapacityVector<VkLayerProperties> availableLayers
-            = filament::backend::enumerate(vkEnumerateInstanceLayerProperties);
-
-    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
-    for (auto const& desired: DESIRED_LAYERS) {
-        for (const VkLayerProperties& layer: availableLayers) {
-            const std::string_view availableLayer(layer.layerName);
-            if (availableLayer == desired) {
-                enabledLayers.push_back(desired.data());
-                break;
-            }
-        }
-    }
-    return enabledLayers;
-}
 #endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
 
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
@@ -154,269 +133,70 @@ void printDepthFormats(VkPhysicalDevice device) {
 }
 #endif
 
-ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = {}) {
-    ExtensionSet const TARGET_EXTS = {
-        // Request all cross-platform extensions.
-        VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
-
-    // Request these if available.
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
-
-#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#endif
-    };
-    ExtensionSet exts;
-    FixedCapacityVector<VkExtensionProperties> const availableExts =
-            filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
-                    static_cast<char const*>(nullptr) /* pLayerName */);
-    for (auto const& extProps: availableExts) {
-        utils::CString name { extProps.extensionName };
-
-        // To workaround an Adreno bug where the extension name could be of 0 length.
-        if (name.size() == 0) {
-            continue;
-        }
-
-        if (setContains(TARGET_EXTS, name) || setContains(externallyRequiredExts, name)) {
-            exts.insert(name);
-        }
-    }
-    return exts;
-}
-
-ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
-    ExtensionSet const TARGET_EXTS = {
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-            VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
-            VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
-            VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-            VK_KHR_MAINTENANCE2_EXTENSION_NAME,
-            VK_KHR_MAINTENANCE3_EXTENSION_NAME,
-            VK_KHR_MULTIVIEW_EXTENSION_NAME,
-    };
-    ExtensionSet exts;
-    // Identify supported physical device extensions
-    FixedCapacityVector<VkExtensionProperties> const extensions
-            = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties, device,
-                    static_cast<const char*>(nullptr) /* pLayerName */);
-    for (auto const& extension: extensions) {
-        utils::CString name { extension.extensionName };
-
-        // To workaround an Adreno bug where the extension name could be of 0 length.
-        if (name.size() == 0) {
-            continue;
-        }
-
-        if (setContains(TARGET_EXTS, name)) {
-            exts.insert(name);
-        }
-    }
-    return exts;
-}
-
 VkInstance createInstance(ExtensionSet const& requiredExts) {
     VkInstance instance;
-    VkInstanceCreateInfo instanceCreateInfo = {};
-    bool validationFeaturesSupported = false;
+  VkInstanceCreateInfo instanceCreateInfo = {};
+  VkApplicationInfo appInfo = {};
+  bool validationFeaturesSupported = false;
+
+  const char* ppEnabledExtensions[VulkanPlatform::MAX_INSTANCE_EXTENSION_COUNT];
+  uint32_t enabledExtensionCount;
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-    auto const enabledLayers = getEnabledLayers();
-    if (!enabledLayers.empty()) {
-        // If layers are supported, Check if VK_EXT_validation_features is supported.
-        FixedCapacityVector<VkExtensionProperties> const availableValidationExts
-                = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
-                        "VK_LAYER_KHRONOS_validation");
-        for (auto const& extProps: availableValidationExts) {
-            if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
-                validationFeaturesSupported = true;
-                break;
-            }
-        }
-        instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
-        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
-    } else {
-#if defined(__ANDROID__)
-        FVK_LOGD << "Validation layers are not available; did you set jniLibs in your "
-                 << "gradle file?" << utils::io::endl;
-#else
-        FVK_LOGD << "Validation layer not available; did you install the Vulkan SDK?\n"
-                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
-#endif // __ANDROID__
+  constexpr size_t kMaxEnabledLayersCount =
+      sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
+  const char* ppEnabledLayers[kMaxEnabledLayersCount];
+    uint32_t enabledLayerCount = getEnabledLayerCount(ppEnabledLayers, validationFeaturesSupported);
 
-    }
-#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
+  enabledExtensionCount = VulkanPlatform::getEnabledInstanceExtensionCount(
+          requiredExts, ppEnabledExtensions, validationFeaturesSupported);
+  VulkanPlatform::populateInstanceCreateInfo(instanceCreateInfo, appInfo, requiredExts,
+                           ppEnabledExtensions, enabledExtensionCount, enabledLayerCount, ppEnabledLayers);
+  #else
+  enabledExtensionCount = VulkanPlatform::getEnabledInstanceExtensionCount(
+          requiredExts, ppEnabledExtensions, validationFeaturesSupported);
+  VulkanPlatform::populateInstanceCreateInfo(instanceCreateInfo, appInfo, requiredExts,
+                           ppEnabledExtensions, enabledExtensionCount);
+#endif
 
-    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
-    // instance extensions here in the common code. So that's a max of 7.
-    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
-    const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
-    uint32_t enabledExtensionCount = 0;
-
-    if (validationFeaturesSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
-    }
-    // Request platform-specific extensions.
-    for (auto const& requiredExt: requiredExts) {
-        assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
-        ppEnabledExtensions[enabledExtensionCount++] = requiredExt.data();
-    }
-
-    // Create the Vulkan instance.
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pEngineName = "Filament";
-    appInfo.apiVersion
-            = VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0);
-    instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
-    instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
-    if (setContains(requiredExts, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
-        instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    }
-
-    VkValidationFeaturesEXT features = {};
-    VkValidationFeatureEnableEXT enables[] = {
-            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-    };
-    if (validationFeaturesSupported) {
-        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-        features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
-        features.pEnabledValidationFeatures = enables;
-        instanceCreateInfo.pNext = &features;
-    }
-
-    VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "Unable to create Vulkan instance. Result=" << result;
-    return instance;
+  VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
+  FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+      << "Unable to create Vulkan instance. Result=" << result;
+  return instance;
 }
 
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceFeatures const& features, uint32_t graphicsQueueFamilyIndex,
         ExtensionSet const& deviceExtensions) {
-    VkDevice device;
-    VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
-    const float queuePriority[] = {1.0f};
-    VkDeviceCreateInfo deviceCreateInfo = {};
-    FixedCapacityVector<const char*> requestExtensions;
-    requestExtensions.reserve(deviceExtensions.size() + 1);
+  VkDevice device;
+  VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
+  VkDeviceCreateInfo deviceCreateInfo = {};
 
-    // TODO: We don't really need this if we only ever expect headless swapchains.
-    requestExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    for (auto const& ext: deviceExtensions) {
-        requestExtensions.push_back(ext.data());
-    }
-    deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    deviceQueueCreateInfo->queueFamilyIndex = graphicsQueueFamilyIndex;
-    deviceQueueCreateInfo->queueCount = 1;
-    deviceQueueCreateInfo->pQueuePriorities = &queuePriority[0];
-    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.queueCreateInfoCount = 1;
-    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
+  // We could simply enable all supported features, but since that may have
+  // performance consequences let's just enable the features we need.
+  VkPhysicalDeviceFeatures enabledFeatures = {};
+  VulkanPlatform::verifyEnabledDeviceFeatures(enabledFeatures, features);
 
-    // We could simply enable all supported features, but since that may have performance
-    // consequences let's just enable the features we need.
-    VkPhysicalDeviceFeatures enabledFeatures{
-            .samplerAnisotropy = features.samplerAnisotropy,
-            .textureCompressionETC2 = features.textureCompressionETC2,
-            .textureCompressionBC = features.textureCompressionBC,
-            .shaderClipDistance = features.shaderClipDistance,
-    };
+  const char* ppEnabledExtensions[VulkanPlatform::MAX_DEVICE_EXTENSION_COUNT];
+  uint32_t enabledExtensionCount =
+      VulkanPlatform::getEnabledDeviceExtensionCount(deviceExtensions,
+                                                     ppEnabledExtensions);
 
-    deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
-    deviceCreateInfo.enabledExtensionCount = (uint32_t) requestExtensions.size();
-    deviceCreateInfo.ppEnabledExtensionNames = requestExtensions.data();
+  VulkanPlatform::populateDeviceCreateInfo(
+      deviceCreateInfo, deviceExtensions, deviceQueueCreateInfo,
+      graphicsQueueFamilyIndex, enabledFeatures, ppEnabledExtensions,
+      enabledExtensionCount);
 
-    void* pNext = nullptr;
-    VkPhysicalDevicePortabilitySubsetFeaturesKHR portability = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
-            .pNext = nullptr,
-            .imageViewFormatSwizzle = VK_TRUE,
-            .mutableComparisonSamplers = VK_TRUE,
-    };
-    if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
-        portability.pNext = pNext;
-        pNext = &portability;
-    }
+  VulkanPlatform::DeviceFeatures deviceFeatures;
+  deviceCreateInfo.pNext =
+      VulkanPlatform::getDeviceFeaturesPNext(deviceExtensions, deviceFeatures);
 
-    VkPhysicalDeviceMultiviewFeaturesKHR multiview = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
-            .pNext = nullptr,
-            .multiview = VK_TRUE,
-            .multiviewGeometryShader = VK_FALSE,
-            .multiviewTessellationShader = VK_FALSE
-    };
-    if (setContains(deviceExtensions, VK_KHR_MULTIVIEW_EXTENSION_NAME)) {
-        multiview.pNext = pNext;
-        pNext = &multiview;
-    }
+  VkResult result =
+      vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
+  FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+      << "vkCreateDevice error=" << result << ".";
 
-    deviceCreateInfo.pNext = pNext;
-
-    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
-
-    return device;
-}
-
-// This method is used to enable/disable extensions based on external factors (i.e.
-// driver/device workarounds).
-std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
-        ExtensionSet const& instExts, ExtensionSet const& deviceExts) {
-    ExtensionSet newInstExts = instExts;
-    ExtensionSet newDeviceExts = deviceExts;
-
-#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
-    // debugUtils and debugMarkers extensions are used mutually exclusively.
-    if (setContains(newInstExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) &&
-            setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
-        newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    }
-#endif
-
-#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
-    // debugMarker must also request debugReport the instance extension. So check if that's present.
-    if (setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) &&
-            !setContains(newInstExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
-        newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    }
-#endif
-
-    return std::tuple(newInstExts, newDeviceExts);
-}
-
-FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropertiesHelper(
-        VkPhysicalDevice device) {
-    uint32_t queueFamiliesCount;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
-    FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
-    if (queueFamiliesCount > 0) {
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount,
-                queueFamiliesProperties.data());
-    }
-    return queueFamiliesProperties;
-}
-
-uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice) {
-    const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties
-            = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
-    uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
-    for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
-        VkQueueFamilyProperties props = queueFamiliesProperties[j];
-        if (props.queueCount != 0 && props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            graphicsQueueFamilyIndex = j;
-            break;
-        }
-    }
-    return graphicsQueueFamilyIndex;
+  return device;
 }
 
 // Provide a preference ordering of device types.
@@ -439,95 +219,6 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
                      << utils::io::endl;
             return -1;
     }
-}
-
-VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
-        VulkanPlatform::Customization::GPUPreference const& gpuPreference) {
-    FixedCapacityVector<VkPhysicalDevice> const physicalDevices =
-            filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
-    struct DeviceInfo {
-        VkPhysicalDevice device = VK_NULL_HANDLE;
-        VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
-        int8_t index = -1;
-        std::string_view name;
-    };
-    FixedCapacityVector<DeviceInfo> deviceList(physicalDevices.size());
-
-    for (size_t deviceInd = 0; deviceInd < physicalDevices.size(); ++deviceInd) {
-        auto const candidateDevice = physicalDevices[deviceInd];
-        VkPhysicalDeviceProperties targetDeviceProperties;
-        vkGetPhysicalDeviceProperties(candidateDevice, &targetDeviceProperties);
-
-        int const major = VK_VERSION_MAJOR(targetDeviceProperties.apiVersion);
-        int const minor = VK_VERSION_MINOR(targetDeviceProperties.apiVersion);
-
-        // Does the device support the required Vulkan level?
-        if (major < FVK_REQUIRED_VERSION_MAJOR) {
-            continue;
-        }
-        if (major == FVK_REQUIRED_VERSION_MAJOR && minor < FVK_REQUIRED_VERSION_MINOR) {
-            continue;
-        }
-
-        // Does the device have any command queues that support graphics?
-        // In theory, we should also ensure that the device supports presentation of our
-        // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice) == INVALID_VK_INDEX) {
-            continue;
-        }
-
-        // Does the device support the VK_KHR_swapchain extension?
-        FixedCapacityVector<VkExtensionProperties> const extensions
-                = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties,
-                        candidateDevice, static_cast<char const*>(nullptr) /* pLayerName */);
-        bool supportsSwapchain = false;
-        for (auto const& extension: extensions) {
-            if (!strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
-                supportsSwapchain = true;
-                break;
-            }
-        }
-        if (!supportsSwapchain) {
-            continue;
-        }
-        deviceList[deviceInd].device = candidateDevice;
-        deviceList[deviceInd].deviceType = targetDeviceProperties.deviceType;
-        deviceList[deviceInd].index = deviceInd;
-        deviceList[deviceInd].name = targetDeviceProperties.deviceName;
-    }
-
-    FILAMENT_CHECK_PRECONDITION(gpuPreference.index < static_cast<int32_t>(deviceList.size()))
-            << "Provided GPU index=" << gpuPreference.index
-            << " >= the number of GPUs=" << static_cast<int32_t>(deviceList.size());
-
-    // Sort the found devices
-    std::sort(deviceList.begin(), deviceList.end(),
-            [pref = gpuPreference](DeviceInfo const& a, DeviceInfo const& b) {
-                if (b.device == VK_NULL_HANDLE) {
-                    return false;
-                }
-                if (a.device == VK_NULL_HANDLE) {
-                    return true;
-                }
-                if (!pref.deviceName.empty()) {
-                    if (a.name.find(pref.deviceName.c_str()) != a.name.npos) {
-                        return false;
-                    }
-                    if (b.name.find(pref.deviceName.c_str()) != b.name.npos) {
-                        return true;
-                    }
-                }
-                if (pref.index == a.index) {
-                    return false;
-                }
-                if (pref.index == b.index) {
-                    return true;
-                }
-                return deviceTypeOrder(a.deviceType) < deviceTypeOrder(b.deviceType);
-            });
-    auto device = deviceList.back().device;
-    FILAMENT_CHECK_POSTCONDITION(device != VK_NULL_HANDLE) << "Unable to find suitable device.";
-    return device;
 }
 
 VkFormatList findAttachmentDepthStencilFormats(VkPhysicalDevice device) {
@@ -580,8 +271,8 @@ struct VulkanPlatformPrivate {
     VkInstance mInstance = VK_NULL_HANDLE;
     VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
     VkDevice mDevice = VK_NULL_HANDLE;
-    uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
-    uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
+    uint32_t mGraphicsQueueFamilyIndex = VulkanPlatform::INVALID_VK_INDEX;
+    uint32_t mGraphicsQueueIndex = VulkanPlatform::INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
     VulkanContext mContext = {};
 
@@ -609,6 +300,387 @@ void VulkanPlatform::terminate() {
         vkDestroyDevice(mImpl->mDevice, VKALLOC);
         vkDestroyInstance(mImpl->mInstance, VKALLOC);
     }
+}
+
+ExtensionSet VulkanPlatform::getInstanceExtensions(
+    ExtensionSet const& externallyRequiredExts) {
+  ExtensionSet const TARGET_EXTS = {
+      // Request all cross-platform extensions.
+      VK_KHR_SURFACE_EXTENSION_NAME,
+      VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+
+  // Request these if available.
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+      VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+      VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+      VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#endif
+  };
+
+  ExtensionSet exts;
+
+  FixedCapacityVector<VkExtensionProperties> const availableExts =
+      filament::backend::enumerate(
+          vkEnumerateInstanceExtensionProperties,
+          static_cast<char const*>(nullptr) /* pLayerName */);
+  for (auto const& extProps : availableExts) {
+    utils::CString name{extProps.extensionName};
+    // To workaround an Adreno bug where the extension name could be of 0
+    // length.
+    if (name.size() == 0) {
+      continue;
+    }
+
+    if (setContains(TARGET_EXTS, name) ||
+        setContains(externallyRequiredExts, name)) {
+      exts.insert(name);
+    }
+  }
+  return exts;
+}
+
+FixedCapacityVector<VkQueueFamilyProperties>
+VulkanPlatform::getPhysicalDeviceQueueFamilyPropertiesHelper(
+    VkPhysicalDevice device) {
+  uint32_t queueFamiliesCount;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount,
+                                           nullptr);
+  FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties(
+      queueFamiliesCount);
+  if (queueFamiliesCount > 0) {
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount,
+                                             queueFamiliesProperties.data());
+  }
+  return queueFamiliesProperties;
+}
+
+uint32_t VulkanPlatform::identifyGraphicsQueueFamilyIndex(
+    VkPhysicalDevice physicalDevice) {
+  const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties =
+      getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
+  uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
+  for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
+    VkQueueFamilyProperties props = queueFamiliesProperties[j];
+    if (props.queueCount != 0 && props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      graphicsQueueFamilyIndex = j;
+      break;
+    }
+  }
+  return graphicsQueueFamilyIndex;
+}
+
+VkPhysicalDevice VulkanPlatform::selectPhysicalDevice(
+    VkInstance instance,
+    VulkanPlatform::Customization::GPUPreference const& gpuPreference) {
+  FixedCapacityVector<VkPhysicalDevice> const physicalDevices =
+      filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+  struct DeviceInfo {
+    VkPhysicalDevice device = VK_NULL_HANDLE;
+    VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
+    int8_t index = -1;
+    std::string_view name;
+  };
+
+  FixedCapacityVector<DeviceInfo> deviceList(physicalDevices.size());
+
+  for (size_t deviceInd = 0; deviceInd < physicalDevices.size(); ++deviceInd) {
+    auto const candidateDevice = physicalDevices[deviceInd];
+    VkPhysicalDeviceProperties targetDeviceProperties;
+    vkGetPhysicalDeviceProperties(candidateDevice, &targetDeviceProperties);
+
+    int const major = VK_VERSION_MAJOR(targetDeviceProperties.apiVersion);
+    int const minor = VK_VERSION_MINOR(targetDeviceProperties.apiVersion);
+
+    // Does the device support the required Vulkan level?
+    if (major < FVK_REQUIRED_VERSION_MAJOR) {
+      continue;
+    }
+    if (major == FVK_REQUIRED_VERSION_MAJOR &&
+        minor < FVK_REQUIRED_VERSION_MINOR) {
+      continue;
+    }
+
+    // Does the device have any command queues that support graphics?
+    // In theory, we should also ensure that the device supports presentation of
+    // our particular VkSurface, but we don't have a VkSurface yet, so we'll
+    // skip this requirement.
+    if (identifyGraphicsQueueFamilyIndex(candidateDevice) ==
+        VulkanPlatform::INVALID_VK_INDEX) {
+      continue;
+    }
+
+    // Does the device support the VK_KHR_swapchain extension?
+    FixedCapacityVector<VkExtensionProperties> const extensions =
+        filament::backend::enumerate(
+            vkEnumerateDeviceExtensionProperties, candidateDevice,
+            static_cast<char const*>(nullptr) /* pLayerName */);
+    bool supportsSwapchain = false;
+    for (auto const& extension : extensions) {
+      if (!strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
+        supportsSwapchain = true;
+        break;
+      }
+    }
+    if (!supportsSwapchain) {
+      continue;
+    }
+    deviceList[deviceInd].device = candidateDevice;
+    deviceList[deviceInd].deviceType = targetDeviceProperties.deviceType;
+    deviceList[deviceInd].index = deviceInd;
+    deviceList[deviceInd].name = targetDeviceProperties.deviceName;
+  }
+
+  FILAMENT_CHECK_PRECONDITION(gpuPreference.index <
+                              static_cast<int32_t>(deviceList.size()))
+      << "Provided GPU index=" << gpuPreference.index
+      << " >= the number of GPUs=" << static_cast<int32_t>(deviceList.size());
+
+  // Sort the found devices
+  std::sort(deviceList.begin(), deviceList.end(),
+            [pref = gpuPreference](DeviceInfo const& a, DeviceInfo const& b) {
+              if (b.device == VK_NULL_HANDLE) {
+                return false;
+              }
+              if (a.device == VK_NULL_HANDLE) {
+                return true;
+              }
+              if (!pref.deviceName.empty()) {
+                if (a.name.find(pref.deviceName.c_str()) != a.name.npos) {
+                  return false;
+                }
+                if (b.name.find(pref.deviceName.c_str()) != b.name.npos) {
+                  return true;
+                }
+              }
+              if (pref.index == a.index) {
+                return false;
+              }
+              if (pref.index == b.index) {
+                return true;
+              }
+              return deviceTypeOrder(a.deviceType) <
+                     deviceTypeOrder(b.deviceType);
+            });
+  auto device = deviceList.back().device;
+  FILAMENT_CHECK_POSTCONDITION(device != VK_NULL_HANDLE)
+      << "Unable to find suitable device.";
+  return device;
+}
+
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+uint32_t VulkanPlatform::getEnabledLayerCount(
+        const char* ppEnabledLayers[], bool& validationFeaturesSupported) {
+  uint32_t enabledLayerCount = 0;
+
+  const FixedCapacityVector<VkLayerProperties> availableLayers =
+      filament::backend::enumerate(vkEnumerateInstanceLayerProperties);
+
+  for (auto const& desired : DESIRED_LAYERS) {
+    for (const VkLayerProperties& layer : availableLayers) {
+      const std::string_view availableLayer(layer.layerName);
+      if (availableLayer == desired) {
+        ppEnabledLayers[enabledLayerCount++] = desired.data();
+        // ppEnabledLayers.push_back(desired.data());
+        break;
+      }
+    }
+  }
+
+  if (enabledLayerCount != 0) {
+    // If layers are supported, Check if VK_EXT_validation_features is
+    // supported.
+    FixedCapacityVector<VkExtensionProperties> const availableValidationExts =
+        filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+                                     "VK_LAYER_KHRONOS_validation");
+    for (auto const& extProps : availableValidationExts) {
+      if (!strcmp(extProps.extensionName,
+                  VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
+        validationFeaturesSupported = true;
+        break;
+      }
+    }
+  } else {
+#if defined(__ANDROID__)
+    FVK_LOGD
+        << "Validation layers are not available; did you set jniLibs in your "
+        << "gradle file?" << utils::io::endl;
+#else
+    FVK_LOGD
+        << "Validation layer not available; did you install the Vulkan SDK?\n"
+        << "Please ensure that VK_LAYER_PATH is set correctly."
+        << utils::io::endl;
+#endif  // __ANDROID__
+  }
+  return enabledLayerCount;
+}
+#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
+
+uint32_t VulkanPlatform::getEnabledInstanceExtensionCount(
+    ExtensionSet const& instanceExtensions, const char* ppEnabledExtensions[],
+    bool validationFeaturesSupported) {
+  uint32_t enabledExtensionCount = 0;
+  if (validationFeaturesSupported) {
+  ppEnabledExtensions[enabledExtensionCount++] =
+      VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
+}
+// Request platform-specific extensions.
+for (auto const& extension : instanceExtensions) {
+  assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
+  ppEnabledExtensions[enabledExtensionCount++] = extension.data();
+}
+  return enabledExtensionCount;
+}
+
+void VulkanPlatform::populateInstanceCreateInfo(
+    VkInstanceCreateInfo& instanceCreateInfo, VkApplicationInfo& appInfo,
+    ExtensionSet const& instanceExtensions, const char* ppEnabledExtensions[],
+    uint32_t enabledExtensionCount, uint32_t enabledLayerCount, const char* enabledLayers[]) {
+
+  // Create the Vulkan instance.
+  appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  appInfo.pEngineName = "Filament";
+  appInfo.apiVersion = VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR,
+                                           FVK_REQUIRED_VERSION_MINOR, 0);
+  instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  instanceCreateInfo.pApplicationInfo = &appInfo;
+  instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
+  instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+  instanceCreateInfo.enabledLayerCount = enabledLayerCount;
+  instanceCreateInfo.ppEnabledLayerNames = enabledLayers;
+  if (setContains(instanceExtensions,
+                  VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+    instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+  }
+}
+
+void VulkanPlatform::verifyEnabledDeviceFeatures(
+    VkPhysicalDeviceFeatures& requestedFeatures,
+    const VkPhysicalDeviceFeatures& availableFeatures) {
+  requestedFeatures.samplerAnisotropy = availableFeatures.samplerAnisotropy;
+  requestedFeatures.textureCompressionETC2 =
+      availableFeatures.textureCompressionETC2;
+  requestedFeatures.textureCompressionBC =
+      availableFeatures.textureCompressionBC;
+  requestedFeatures.shaderClipDistance = availableFeatures.shaderClipDistance;
+}
+
+uint32_t VulkanPlatform::getEnabledDeviceExtensionCount(
+    ExtensionSet const& deviceExtensions, const char* ppEnabledExtensions[]) {
+  uint32_t enabledExtensionCount = 0;
+
+  // TODO: We don't really need this if we only ever expect headless swapchains.
+  ppEnabledExtensions[enabledExtensionCount++] =
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+  for (auto const& extension : deviceExtensions) {
+    ppEnabledExtensions[enabledExtensionCount++] = extension.data();
+  }
+
+  return enabledExtensionCount;
+}
+
+void* VulkanPlatform::getDeviceFeaturesPNext(
+    ExtensionSet const& deviceExtensions, DeviceFeatures& deviceFeatures) {
+  if (setContains(deviceExtensions, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+    deviceFeatures.portability.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;
+    deviceFeatures.portability.imageViewFormatSwizzle = VK_TRUE,
+    deviceFeatures.portability.mutableComparisonSamplers = VK_TRUE,
+    deviceFeatures.portability.pNext = nullptr;
+  }
+
+  if (setContains(deviceExtensions, VK_KHR_MULTIVIEW_EXTENSION_NAME)) {
+    deviceFeatures.multiview.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR;
+    deviceFeatures.multiview.multiview = VK_TRUE;
+    deviceFeatures.multiview.multiviewGeometryShader = VK_FALSE;
+    deviceFeatures.multiview.multiviewTessellationShader = VK_FALSE;
+    deviceFeatures.multiview.pNext = &deviceFeatures.portability;
+  }
+
+  return &deviceFeatures.multiview;
+}
+
+void VulkanPlatform::populateDeviceCreateInfo(
+    VkDeviceCreateInfo& deviceCreateInfo, ExtensionSet const& deviceExtensions,
+    VkDeviceQueueCreateInfo (&deviceQueueCreateInfo)[1],
+    uint32_t graphicsQueueFamilyIndex, VkPhysicalDeviceFeatures enabledFeatures,
+    const char* ppEnabledExtensions[], uint32_t enabledExtensionCount) {
+  deviceQueueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  deviceQueueCreateInfo[0].queueFamilyIndex = graphicsQueueFamilyIndex;
+  deviceQueueCreateInfo[0].queueCount = 1;
+  deviceQueueCreateInfo[0].pQueuePriorities = &QUEUE_PRIORITY[0];
+  deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  deviceCreateInfo.queueCreateInfoCount = 1;
+  deviceCreateInfo.pQueueCreateInfos = &deviceQueueCreateInfo[0];
+
+  deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
+  deviceCreateInfo.enabledExtensionCount = enabledExtensionCount;
+  deviceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
+  deviceCreateInfo.pNext = nullptr;
+}
+
+ExtensionSet VulkanPlatform::getDeviceExtensions(VkPhysicalDevice device) {
+  ExtensionSet const TARGET_EXTS = {
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+      VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
+      VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+      VK_KHR_MAINTENANCE1_EXTENSION_NAME,
+      VK_KHR_MAINTENANCE2_EXTENSION_NAME,
+      VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+      VK_KHR_MULTIVIEW_EXTENSION_NAME,
+  };
+  ExtensionSet exts;
+  // Identify supported physical device extensions
+  FixedCapacityVector<VkExtensionProperties> const extensions =
+      filament::backend::enumerate(
+          vkEnumerateDeviceExtensionProperties, device,
+          static_cast<const char*>(nullptr) /* pLayerName */);
+  for (auto const& extension : extensions) {
+    utils::CString name{extension.extensionName};
+
+    // To workaround an Adreno bug where the extension name could be of 0
+    // length.
+    if (name.size() == 0) {
+      continue;
+    }
+
+    if (setContains(TARGET_EXTS, name)) {
+      exts.insert(name);
+    }
+  }
+  return exts;
+}
+
+// This method is used to enable/disable extensions based on external
+// factors (i.e. driver/device workarounds).
+std::tuple<ExtensionSet, ExtensionSet> VulkanPlatform::pruneExtensions(
+    VkPhysicalDevice device, ExtensionSet const& instanceExtensions,
+    ExtensionSet const& deviceExtensions) {
+  ExtensionSet newInstanceExtensions = instanceExtensions;
+  ExtensionSet newDeviceExtensions = deviceExtensions;
+
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+  // debugUtils and debugMarkers extensions are used mutually exclusively.
+  if (setContains(newInstanceExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) &&
+      setContains(newInstanceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+    newDeviceExtensions.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+  }
+#endif
+
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+  // debugMarker must also request debugReport the instance extension. So check
+  // if that's present.
+  if (setContains(newInstanceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) &&
+      !setContains(newInstanceExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+    newDeviceExtensions.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+  }
+#endif
+
+  return std::tuple(newInstanceExtensions, newDeviceExtensions);
 }
 
 // This is the main entry point for context creation.
