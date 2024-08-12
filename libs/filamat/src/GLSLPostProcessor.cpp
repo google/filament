@@ -556,8 +556,10 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                 "spvDescriptorSetBuffer" + std::to_string(int(setIndex)));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
-            // TODO: Handle INPUT_ATTACHMENT case
             switch (info.type) {
+                case DescriptorType::INPUT_ATTACHMENT:
+                    // TODO: Handle INPUT_ATTACHMENT case
+                    break;
                 case DescriptorType::UNIFORM_BUFFER:
                 case DescriptorType::SHADER_STORAGE_BUFFER: {
                     std::string lowercasedName = name.c_str();
