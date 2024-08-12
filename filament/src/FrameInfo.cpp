@@ -145,7 +145,6 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
     size_t first = history.size();
     for (size_t i = 0, c = history.size(); i < c; ++i) {
         if (history[i].frameTime != duration(0)) {
-            assert_invariant(std::addressof(history[i]) == pFront);
             first = i;
             break;
         }
