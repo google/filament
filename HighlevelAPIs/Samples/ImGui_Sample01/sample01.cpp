@@ -960,8 +960,7 @@ int main(int, char**) {
   VkDeviceMemory swapMemories[2] = {
       0,
   };
-  void* swapHandles[2] = {
-      INVALID_HANDLE_VALUE,
+  void* swapHandles[2] = {INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE
   };
 
   float any = 0.0f;
