@@ -21,6 +21,11 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1900) && \
+    !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
+#pragma comment(lib, "legacy_stdio_definitions")
+#endif
+
 // #define APP_USE_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define APP_USE_VULKAN_DEBUG_REPORT
@@ -821,8 +826,8 @@ std::wstring OpenFileDialog() {
 
 void initViewer() {
   g_scene = vzm::NewScene("my scene");
-  // g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-  g_scene->LoadIBL("lightroom_14b");
+  g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+  //g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "UserCamera");
   glm::fvec3 p(0, 0, 10);
