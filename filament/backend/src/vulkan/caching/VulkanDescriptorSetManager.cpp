@@ -149,7 +149,7 @@ public:
         UTILS_UNUSED VkResult result = vkAllocateDescriptorSets(mDevice, &allocInfo, &vkSet);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
                 << "Failed to allocate descriptor set code=" << result << " size=" << mSize
-                << " capacity=" << mCapacity << " count=" << "%s";
+                << " capacity=" << mCapacity << " count=" << mUnusedCount;
         mSize++;
         return vkSet;
     }

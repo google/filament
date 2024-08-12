@@ -25,6 +25,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
+#include <utils/Systrace.h>
 
 #include <algorithm>
 #include <atomic>
@@ -78,24 +79,32 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint3
     });
 
     // now is a good time to check the oldest active query
-    uint64_t elapsed = 0;
-    TimerQueryResult const result = driver.getTimerQueryValue(mQueries[mLast].handle, &elapsed);
-    switch (result) {
-        case TimerQueryResult::NOT_READY:
-            // nothing to do
+    while (mLast != mIndex) {
+        uint64_t elapsed = 0;
+        TimerQueryResult const result = driver.getTimerQueryValue(mQueries[mLast].handle, &elapsed);
+        switch (result) {
+            case TimerQueryResult::NOT_READY:
+                // nothing to do
+                break;
+            case TimerQueryResult::ERROR:
+                mLast = (mLast + 1) % POOL_COUNT;
+                break;
+            case TimerQueryResult::AVAILABLE: {
+                SYSTRACE_CONTEXT();
+                SYSTRACE_VALUE32("FrameInfo::elapsed", uint32_t(elapsed));
+                // conversion to our duration happens here
+                pFront = mQueries[mLast].pInfo;
+                pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+                mLast = (mLast + 1) % POOL_COUNT;
+                denoiseFrameTime(history, config);
+                break;
+            }
+        }
+        if (result != TimerQueryResult::AVAILABLE) {
             break;
-        case TimerQueryResult::ERROR:
-            mLast = (mLast + 1) % POOL_COUNT;
-            break;
-        case TimerQueryResult::AVAILABLE:
-            // conversion to our duration happens here
-            pFront = mQueries[mLast].pInfo;
-            pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
-            mLast = (mLast + 1) % POOL_COUNT;
-            denoiseFrameTime(config);
-            break;
+        }
+        // read the pending timer queries until we find one that's not ready
     }
-
 
     // keep this just for debugging
     if constexpr (false) {
@@ -129,15 +138,13 @@ void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
     mIndex = (mIndex + 1) % POOL_COUNT;
 }
 
-void FrameInfoManager::denoiseFrameTime(Config const& config) noexcept {
-    auto& history = mFrameTimeHistory;
+void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const& config) noexcept {
     assert_invariant(!history.empty());
 
     // find the first slot that has a valid frame duration
     size_t first = history.size();
     for (size_t i = 0, c = history.size(); i < c; ++i) {
         if (history[i].frameTime != duration(0)) {
-            assert_invariant(std::addressof(history[i]) == pFront);
             first = i;
             break;
         }

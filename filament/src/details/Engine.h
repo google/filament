@@ -353,6 +353,23 @@ public:
     bool isValid(const FView* p) const;
     bool isValid(const FInstanceBuffer* p) const;
 
+    size_t getBufferObjectCount() const noexcept;
+    size_t getViewCount() const noexcept;
+    size_t getSceneCount() const noexcept;
+    size_t getSwapChainCount() const noexcept;
+    size_t getStreamCount() const noexcept;
+    size_t getIndexBufferCount() const noexcept;
+    size_t getSkinningBufferCount() const noexcept;
+    size_t getMorphTargetBufferCount() const noexcept;
+    size_t getInstanceBufferCount() const noexcept;
+    size_t getVertexBufferCount() const noexcept;
+    size_t getIndirectLightCount() const noexcept;
+    size_t getMaterialCount() const noexcept;
+    size_t getTextureCount() const noexcept;
+    size_t getSkyboxeCount() const noexcept;
+    size_t getColorGradingCount() const noexcept;
+    size_t getRenderTargetCount() const noexcept;
+
     void destroy(utils::Entity e);
 
     bool isPaused() const noexcept;

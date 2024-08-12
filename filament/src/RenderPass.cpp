@@ -127,10 +127,11 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     uint32_t const customCommandCount =
             builder.mCustomCommands.has_value() ? builder.mCustomCommands->size() : 0;
 
-    Command* const curr = builder.mArena.alloc<Command>(commandCount + customCommandCount);
-    assert_invariant(curr);
+    Command* const commandBegin = builder.mArena.alloc<Command>(commandCount + customCommandCount);
+    Command* commandEnd = commandBegin + (commandCount + customCommandCount);
+    assert_invariant(commandBegin);
 
-    if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(curr))) {
+    if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(commandBegin))) {
         static bool sLogOnce = true;
         if (UTILS_UNLIKELY(sLogOnce)) {
             sLogOnce = false;
@@ -139,10 +140,7 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
         }
     }
 
-    mCommandBegin = curr;
-    mCommandEnd = curr + commandCount + customCommandCount;
-
-    appendCommands(engine, { curr, commandCount },
+    appendCommands(engine, { commandBegin, commandCount },
             builder.mVisibleRenderables,
             builder.mCommandTypeFlags,
             builder.mFlags,
@@ -152,32 +150,36 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
             builder.mCameraForwardVector);
 
     if (builder.mCustomCommands.has_value()) {
-        Command* p = curr + commandCount;
+        Command* p = commandBegin + commandCount;
         for (auto const& [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
             appendCustomCommand(p++, channel, passId, command, order, fn);
         }
     }
 
     // sort commands once we're done adding commands
-    sortCommands(builder.mArena);
+    commandEnd = resize(builder.mArena,
+            RenderPass::sortCommands(commandBegin, commandEnd));
 
     if (engine.isAutomaticInstancingEnabled()) {
         int32_t stereoscopicEyeCount = 1;
         if (builder.mFlags & IS_INSTANCED_STEREOSCOPIC) {
             stereoscopicEyeCount *= engine.getConfig().stereoscopicEyeCount;
         }
-        instanceify(engine, builder.mArena, stereoscopicEyeCount);
+        commandEnd = resize(builder.mArena,
+                instanceify(engine, commandBegin, commandEnd, stereoscopicEyeCount));
     }
+
+    // these are `const` from this point on...
+    mCommandBegin = commandBegin;
+    mCommandEnd = commandEnd;
 }
 
 // this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
-void RenderPass::resize(Arena& arena, size_t count) noexcept {
-    if (mCommandBegin) {
-        mCommandEnd = mCommandBegin + count;
-        arena.rewind(mCommandEnd);
-    }
+RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexcept {
+    arena.rewind(last);
+    return last;
 }
 
 void RenderPass::appendCommands(FEngine& engine,
@@ -266,18 +268,19 @@ void RenderPass::appendCustomCommand(Command* commands,
     commands->key = cmd;
 }
 
-void RenderPass::sortCommands(Arena& arena) noexcept {
-    SYSTRACE_NAME("sort and trim commands");
+RenderPass::Command* RenderPass::sortCommands(
+        Command* const begin, Command* const end) noexcept {
+    SYSTRACE_NAME("sort commands");
 
-    std::sort(mCommandBegin, mCommandEnd);
+    std::sort(begin, end);
 
     // find the last command
-    Command const* const last = std::partition_point(mCommandBegin, mCommandEnd,
+    Command* const last = std::partition_point(begin, end,
             [](Command const& c) {
                 return c.key != uint64_t(Pass::SENTINEL);
             });
 
-    resize(arena, uint32_t(last - mCommandBegin));
+    return last;
 }
 
 void RenderPass::execute(RenderPass const& pass,
@@ -290,7 +293,9 @@ void RenderPass::execute(RenderPass const& pass,
     driver.endRenderPass();
 }
 
-void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept {
+RenderPass::Command* RenderPass::instanceify(FEngine& engine,
+        Command* curr, Command* const last,
+        int32_t eyeCount) const noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -303,14 +308,12 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
 
     UTILS_UNUSED uint32_t drawCallsSavedCount = 0;
 
-    Command* curr = mCommandBegin;
-    Command* const last = mCommandEnd;
-
     Command* firstSentinel = nullptr;
     PerRenderableData const* uboData = nullptr;
     PerRenderableData* stagingBuffer = nullptr;
     uint32_t stagingBufferSize = 0;
     uint32_t instancedPrimitiveOffset = 0;
+    size_t const count = last - curr;
 
     // TODO: for the case of instancing we could actually use 128 instead of 64 instances
     constexpr size_t maxInstanceCount = CONFIG_MAX_INSTANCES;
@@ -359,9 +362,7 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
                 // The lifetime of this object is the longest of this RenderPass and all its
                 // executors.
 
-                // The maximum size we need for out buffer is to accommodate the remaining number
-                // of draw commands.
-                size_t const count = last - curr;
+                // create a temporary UBO for instancing
                 mInstancedUboHandle = BufferObjectSharedHandle{
                         driver.createBufferObject(
                                 count * sizeof(PerRenderableData) + sizeof(PerRenderableUib),
@@ -415,8 +416,8 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
     }
 
     if (UTILS_UNLIKELY(firstSentinel)) {
-//        slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-//               << mCommandEnd - mCommandBegin << io::endl;
+        //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+        //       << count << io::endl;
 
         // we have instanced primitives
         DriverApi& driver = engine.getDriverApi();
@@ -432,14 +433,15 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
         stagingBuffer = nullptr;
 
         // remove all the canceled commands
-        auto lastCommand = std::remove_if(firstSentinel, mCommandEnd, [](auto const& command) {
+        auto lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
             return command.key == uint64_t(Pass::SENTINEL);
         });
 
-        resize(arena, uint32_t(lastCommand - mCommandBegin));
+        return lastCommand;
     }
 
     assert_invariant(stagingBuffer == nullptr);
+    return last;
 }
 
 
