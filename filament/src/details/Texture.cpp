@@ -46,6 +46,7 @@
 
 #include <algorithm>
 #include <array>
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -82,6 +83,7 @@ struct Texture::BuilderDetails {
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
+    std::optional<std::string_view> mName;
 };
 
 using BuilderType = Texture;
@@ -137,6 +139,14 @@ Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
 Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept {
     mImpl->mTextureIsSwizzled = true;
     mImpl->mSwizzle = { r, g, b, a };
+    return *this;
+}
+
+Texture::Builder& Texture::Builder::name(const char* name, size_t len) noexcept {
+    if (!name) {
+        return *this;
+    }
+    mImpl->mName = std::string_view(name, len == 0 ? strlen(name) : len);
     return *this;
 }
 
@@ -242,6 +252,9 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     } else {
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+    }
+    if (auto name = builder->mName) {
+        driver.setDebugTag(mHandle.getId(), std::string(name->data(), name->size()));
     }
 }
 

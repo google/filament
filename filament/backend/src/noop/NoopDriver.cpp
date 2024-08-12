@@ -388,4 +388,7 @@ void NoopDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 void NoopDriver::resetState(int) {
 }
 
+void NoopDriver::setDebugTag(HandleBase::HandleId handleId, std::string&& tag) {
+}
+
 } // namespace filament

@@ -30,6 +30,8 @@
 
 #include <cstddef>
 #include <exception>
+#include <optional>
+#include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -173,8 +175,10 @@ public:
                 uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
                 auto const pNode = static_cast<typename Allocator::Node*>(p);
                 uint8_t const expectedAge = pNode[-1].age;
-                FILAMENT_CHECK_POSTCONDITION(expectedAge == age) <<
-                        "use-after-free of Handle with id=" << handle.getId();
+                std::optional<std::string_view> const maybeTag = get_handle_tag(handle.getId());
+                FILAMENT_CHECK_POSTCONDITION(expectedAge == age)
+                        << "use-after-free of Handle with id=" << handle.getId()
+                        << ", tag=" << maybeTag.value_or("(no tag)");
             }
         }
 
@@ -199,6 +203,32 @@ public:
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B> const& handle) {
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
+    }
+
+    void associate_handle(HandleBase::HandleId id, std::string&& tag) noexcept {
+        // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
+        // those
+        if (isPoolHandle(id)) {
+            // Truncate the tag's age to N bits.
+            constexpr uint8_t N = 2; // support a history of 4 tags
+            constexpr uint8_t mask = (1 << N) - 1;
+
+            uint8_t const age = (id & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+            uint8_t const newAge = age & mask;
+            uint32_t const key = (id & ~HANDLE_AGE_MASK) | (newAge << HANDLE_AGE_SHIFT);
+
+            mDebugTags[key] = std::move(tag);
+        }
+    }
+
+    std::optional<std::string_view> get_handle_tag(HandleBase::HandleId id) const noexcept {
+        if (!isPoolHandle(id)) {
+            return {};
+        }
+        if (auto pos = mDebugTags.find(id); pos != mDebugTags.end()) {
+            return pos->second;
+        }
+        return {};
     }
 
 private:
@@ -363,6 +393,7 @@ private:
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
+    tsl::robin_map<HandleBase::HandleId, std::string> mDebugTags;
     HandleBase::HandleId mId = 0;
     bool mUseAfterFreeCheckDisabled = false;
 };

@@ -2061,6 +2061,10 @@ void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
 void MetalDriver::resetState(int) {
 }
 
+void MetalDriver::setDebugTag(HandleBase::HandleId handleId, std::string&& tag) {
+    mHandleAllocator.associate_handle(handleId, std::move(tag));
+}
+
 void MetalDriver::runAtNextTick(const std::function<void()>& fn) noexcept {
     std::lock_guard<std::mutex> const lock(mTickOpsLock);
     mTickOps.push_back(fn);

@@ -203,6 +203,17 @@ public:
         Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
 
         /**
+         * Associate an optional tag with this Texture for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible.
+         * The name string must persist until build() has been called on this Builder.
+         *
+         * @param name A short string to identify this Texture
+         * @param len Length name tag, or 0 to compute the length if name is null-terminated
+         */
+        Builder& name(const char* UTILS_NONNULL name, size_t len = 0) noexcept;
+
+        /**
          * Creates the Texture object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Texture with.
