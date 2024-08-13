@@ -122,6 +122,7 @@ public:
     bool hasSpecularAntiAliasing(bool* value) const noexcept;
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;
     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
+    bool getStereoscopicType(backend::StereoscopicType*) const noexcept;
 
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
             Variant variant, backend::ShaderStage stage) noexcept;
