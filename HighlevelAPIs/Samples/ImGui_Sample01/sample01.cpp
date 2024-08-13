@@ -21,11 +21,6 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1900) && \
-    !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
-#pragma comment(lib, "legacy_stdio_definitions")
-#endif
-
 // #define APP_USE_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define APP_USE_VULKAN_DEBUG_REPORT
@@ -960,8 +955,7 @@ int main(int, char**) {
   VkDeviceMemory swapMemories[2] = {
       0,
   };
-  void* swapHandles[2] = {INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE
-  };
+  void* swapHandles[2] = {INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE};
 
   float any = 0.0f;
   int iAny = 0;
