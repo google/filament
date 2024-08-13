@@ -15,6 +15,8 @@
  */
 
 #include "details/View.h"
+#include "filament/View.h"
+
 
 namespace filament {
 
@@ -310,6 +312,10 @@ math::float4 View::getMaterialGlobal(uint32_t index) const {
 
 utils::Entity View::getFogEntity() const noexcept {
     return downcast(this)->getFogEntity();
+}
+
+void View::clearFrameHistory(Engine& engine) noexcept {
+    downcast(this)->clearFrameHistory(downcast(engine));
 }
 
 } // namespace filament

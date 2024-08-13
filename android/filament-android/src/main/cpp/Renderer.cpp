@@ -28,6 +28,14 @@
 using namespace filament;
 using namespace backend;
 
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *, jclass, jlong nativeRenderer,
+        jlong vsyncSteadyClockTimeNano) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->skipFrame(uint64_t(vsyncSteadyClockTimeNano));
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *, jclass, jlong nativeRenderer,
         jlong nativeSwapChain, jlong frameTimeNanos) {

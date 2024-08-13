@@ -26,15 +26,27 @@
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
 #include <utils/Systrace.h>
 
+#include <array>
 #include <cctype>
 #include <chrono>
+#include <mutex>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <utility>
 #include <variant>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -476,6 +488,12 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
     // check status of program linking and shader compilation, logs error and free all resources
     // in case of error.
     bool const success = checkProgramStatus(token);
+
+    // Unless we have matdbg, we panic if a program is invalid. Otherwise, we'd get a UB.
+    // The compilation error has been logged to log.e by this point.
+    FILAMENT_CHECK_POSTCONDITION(FILAMENT_ENABLE_MATDBG || success)
+            << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
+
     if (UTILS_LIKELY(success)) {
         program = token->gl.program;
         // no need to keep the shaders around
@@ -596,7 +614,24 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             };
 
             GLuint const shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+
+            if (UTILS_UNLIKELY(context.bugs.concatenate_shader_strings)) {
+                size_t totalSize = 0;
+                for (size_t i = 0; i < sources.size(); i++) {
+                    totalSize += lengths[i];
+                }
+                std::string concatenatedShaderSource;
+                concatenatedShaderSource.reserve(totalSize);
+                for (size_t i = 0; i < sources.size(); i++) {
+                    concatenatedShaderSource.append(sources[i], lengths[i]);
+                }
+                const GLchar* ptr = concatenatedShaderSource.c_str();
+                GLint length = concatenatedShaderSource.length();
+                glShaderSource(shaderId, 1, &ptr, &length);
+            } else {
+                glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+            }
+
             glCompileShader(shaderId);
 
 #ifndef NDEBUG

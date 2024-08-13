@@ -7,6 +7,18 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.53.5
+
+- engine: Fix bug causing certain sampler parameters to not be applied correctly in GLES 2.0 and on
+  certain GLES 3.0 drivers.
+
+## v1.53.4
+
+
+## v1.53.3
+
+- Add drag and drop support for IBL files for desktop gltf_viewer.
+
 ## v1.53.2
 
 

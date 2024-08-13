@@ -34,6 +34,10 @@ using namespace backend;
 
 class MockResourceAllocator : public ResourceAllocatorInterface {
     uint32_t handle = 0;
+    struct MockDisposer : public ResourceAllocatorDisposerInterface {
+        void destroy(backend::TextureHandle) noexcept override {}
+    } disposer;
+
 public:
     backend::RenderTargetHandle createRenderTarget(const char* name,
             backend::TargetBufferFlags targetBufferFlags,
@@ -59,6 +63,10 @@ public:
     }
 
     void destroyTexture(backend::TextureHandle h) noexcept override {
+    }
+
+    ResourceAllocatorDisposerInterface& getDisposer() noexcept override {
+        return disposer;
     }
 };
 

@@ -143,21 +143,25 @@ void TimerQueryNativeFactory::endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQ
 
     driver.runEveryNowAndThen([&context = mContext, weak]() -> bool {
         auto state = weak.lock();
-        if (state) {
-            GLuint available = 0;
-            context.procs.getQueryObjectuiv(state->gl.query, GL_QUERY_RESULT_AVAILABLE, &available);
-            CHECK_GL_ERROR(utils::slog.e)
-            if (!available) {
-                // we need to try this one again later
-                return false;
-            }
-            GLuint64 elapsedTime = 0;
-            // we won't end-up here if we're on ES and don't have GL_EXT_disjoint_timer_query
-            context.procs.getQueryObjectui64v(state->gl.query, GL_QUERY_RESULT, &elapsedTime);
-            state->elapsed.store((int64_t)elapsedTime, std::memory_order_relaxed);
-        } else {
-            state->elapsed.store(int64_t(TimerQueryResult::ERROR), std::memory_order_relaxed);
+        if (!state) {
+            // The timer query state has been destroyed on the way, very likely due to the IBL
+            // prefilter context destruction. We still return true to get this element removed from
+            // the query list.
+            return true;
         }
+
+        GLuint available = 0;
+        context.procs.getQueryObjectuiv(state->gl.query, GL_QUERY_RESULT_AVAILABLE, &available);
+        CHECK_GL_ERROR(utils::slog.e)
+        if (!available) {
+            // we need to try this one again later
+            return false;
+        }
+        GLuint64 elapsedTime = 0;
+        // we won't end-up here if we're on ES and don't have GL_EXT_disjoint_timer_query
+        context.procs.getQueryObjectui64v(state->gl.query, GL_QUERY_RESULT, &elapsedTime);
+        state->elapsed.store((int64_t)elapsedTime, std::memory_order_relaxed);
+
         return true;
     });
 }

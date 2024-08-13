@@ -425,9 +425,12 @@ public class Engine {
         public long resourceAllocatorCacheSizeMB = 64;
 
         /*
-         * This value determines for how many frames are texture entries kept in the cache.
+         * This value determines how many frames texture entries are kept for in the cache. This
+         * is a soft limit, meaning some texture older than this are allowed to stay in the cache.
+         * Typically only one texture is evicted per frame.
+         * The default is 1.
          */
-        public long resourceAllocatorCacheMaxAge = 2;
+        public long resourceAllocatorCacheMaxAge = 1;
 
         /*
          * Disable backend handles use-after-free checks.

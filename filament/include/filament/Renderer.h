@@ -22,9 +22,11 @@
 #include <filament/FilamentAPI.h>
 
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/vec4.h>
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
@@ -80,6 +82,37 @@ public:
         UTILS_DEPRECATED uint64_t presentationDeadlineNanos = 0;
         UTILS_DEPRECATED uint64_t vsyncOffsetNanos = 0;
     };
+
+    /**
+     * Timing information about a frame
+     * @see getFrameInfoHistory()
+     */
+    struct FrameInfo {
+        using time_point_ns = int64_t;
+        using duration_ns = int64_t;
+        uint32_t frameId;                   //!< monotonically increasing frame identifier
+        duration_ns frameTime;              //!< frame duration on the GPU in nanosecond [ns]
+        duration_ns denoisedFrameTime;      //!< denoised frame duration on the GPU in [ns]
+        time_point_ns beginFrame;           //!< Renderer::beginFrame() time since epoch [ns]
+        time_point_ns endFrame;             //!< Renderer::endFrame() time since epoch [ns]
+        time_point_ns backendBeginFrame;    //!< Backend thread time of frame start since epoch [ns]
+        time_point_ns backendEndFrame;      //!< Backend thread time of frame end since epoch [ns]
+    };
+
+    /**
+     * Retrieve an historic of frame timing information. The maximum frame history size is
+     * given by getMaxFrameHistorySize().
+     * @param historySize requested history size. The returned vector could be smaller.
+     * @return A vector of FrameInfo.
+     */
+    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(
+            size_t historySize = 1) const noexcept;
+
+    /**
+     * @return the maximum supported frame history size.
+     * @see getFrameInfoHistory()
+     */
+    size_t getMaxFrameHistorySize() const noexcept;
 
     /**
      * Use FrameRateOptions to set the desired frame rate and control how quickly the system
@@ -237,6 +270,14 @@ public:
      * @see Renderer::BeginFrame()
      */
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
+
+    /**
+     * Call skipFrame when momentarily skipping frames, for instance if the content of the
+     * scene doesn't change.
+     *
+     * @param vsyncSteadyClockTimeNano
+     */
+    void skipFrame(uint64_t vsyncSteadyClockTimeNano = 0u);
 
     /**
      * Set-up a frame for this Renderer.
