@@ -821,8 +821,8 @@ std::wstring OpenFileDialog() {
 
 void initViewer() {
   g_scene = vzm::NewScene("my scene");
-  // g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
-  g_scene->LoadIBL("lightroom_14b");
+  g_scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
+  //g_scene->LoadIBL("lightroom_14b");
   g_cam = (vzm::VzCamera*)vzm::NewSceneComponent(
       vzm::SCENE_COMPONENT_TYPE::CAMERA, "UserCamera");
   glm::fvec3 p(0, 0, 10);
@@ -955,9 +955,7 @@ int main(int, char**) {
   VkDeviceMemory swapMemories[2] = {
       0,
   };
-  void* swapHandles[2] = {
-      INVALID_HANDLE_VALUE,
-  };
+  void* swapHandles[2] = {INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE};
 
   float any = 0.0f;
   int iAny = 0;
