@@ -2341,6 +2341,15 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
             GLTexture const* const t = handle_cast<const GLTexture*>(th);
             assert_invariant(t);
 
+            if (UTILS_UNLIKELY(es2)
+#if defined(GL_EXT_texture_filter_anisotropic)
+                    || UTILS_UNLIKELY(anisotropyWorkaround)
+ #endif
+                    ) {
+                // We must set texture parameters on the texture itself.
+                bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+            }
+
             SamplerParams params = pSamplers[i].s;
             if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
                 // From OES_EGL_image_external spec:
@@ -3881,6 +3890,7 @@ void OpenGLDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    DEBUG_MARKER()
     GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
     if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
         return;
@@ -3902,6 +3912,7 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 }
 
 void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    DEBUG_MARKER()
     GLRenderPrimitive const* const rp = mBoundRenderPrimitive;
     if (UTILS_UNLIKELY(!rp || !mValidProgram)) {
         return;
@@ -3922,6 +3933,7 @@ void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_
 }
 
 void OpenGLDriver::scissor(Viewport scissor) {
+    DEBUG_MARKER()
     setScissor(scissor);
 }
 
@@ -3941,6 +3953,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
+    DEBUG_MARKER()
     getShaderCompilerService().tick();
 
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(program);
