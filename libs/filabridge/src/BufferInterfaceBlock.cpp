@@ -166,7 +166,8 @@ ssize_t BufferInterfaceBlock::getFieldOffset(std::string_view name, size_t index
 BufferInterfaceBlock::FieldInfo const* BufferInterfaceBlock::getFieldInfo(
         std::string_view name) const {
     auto pos = mInfoMap.find(name);
-    FILAMENT_CHECK_PRECONDITION(pos != mInfoMap.end()) << "uniform named \"%.*s\" not found";
+    FILAMENT_CHECK_PRECONDITION(pos != mInfoMap.end()) << "uniform named \""
+            << name << "\" not found";
     return &mFieldInfoList[pos->second];
 }
 

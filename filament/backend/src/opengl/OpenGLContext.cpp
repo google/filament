@@ -541,6 +541,9 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             bugs->delay_fbo_destruction = true;
             // PowerVR seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
+            // PowerVR doesn't respect lengths passed to glShaderSource, so concatenate them into a
+            // single string.
+            bugs->concatenate_shader_strings = true;
         } else if (strstr(renderer, "Apple")) {
             // Apple GPU
         } else if (strstr(renderer, "Tegra") ||

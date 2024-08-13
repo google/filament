@@ -83,12 +83,20 @@
 #define HAS_MAPBUFFERS 1
 #endif
 
-#define DEBUG_MARKER_NONE       0x00    // no debug marker
-#define DEBUG_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_ALL        0x03    // all markers
+#define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
+#define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
+#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
+#define DEBUG_GROUP_MARKER_ALL        0x03    // all markers
 
-// set to the desired debug marker level
+#define DEBUG_MARKER_NONE             0x00    // no debug marker
+#define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
+#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
+#define DEBUG_MARKER_ALL              0x03    // all markers
+
+// set to the desired debug marker level (for user markers [default: All])
+#define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_ALL
+
+// set to the desired debug level (for internal debugging [Default: None])
 #define DEBUG_MARKER_LEVEL      DEBUG_MARKER_NONE
 
 #if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
@@ -196,11 +204,37 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
 
 OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string) noexcept
         : driver(driver) {
-    driver.pushGroupMarker(string, strlen(string));
+#ifndef __EMSCRIPTEN__
+#ifdef GL_EXT_debug_marker
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
+    if (UTILS_LIKELY(driver.getContext().ext.EXT_debug_marker)) {
+        glPushGroupMarkerEXT(GLsizei(strlen(string)), string);
+    }
+#endif
+#endif
+
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
+    SYSTRACE_CONTEXT();
+    SYSTRACE_NAME_BEGIN(string);
+#endif
+#endif
 }
 
 OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
-    driver.popGroupMarker();
+#ifndef __EMSCRIPTEN__
+#ifdef GL_EXT_debug_marker
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
+    if (UTILS_LIKELY(driver.getContext().ext.EXT_debug_marker)) {
+        glPopGroupMarkerEXT();
+    }
+#endif
+#endif
+
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
+    SYSTRACE_CONTEXT();
+    SYSTRACE_NAME_END();
+#endif
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -3160,14 +3194,14 @@ void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
-#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
+#if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_OPENGL
     if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
         glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
 #endif
 #endif
 
-#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
+#if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
     SYSTRACE_CONTEXT();
     SYSTRACE_NAME_BEGIN(string);
 #endif
@@ -3177,14 +3211,14 @@ void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
 void OpenGLDriver::popGroupMarker(int) {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
-#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
+#if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_OPENGL
     if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
         glPopGroupMarkerEXT();
     }
 #endif
 #endif
 
-#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
+#if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
     SYSTRACE_CONTEXT();
     SYSTRACE_NAME_END();
 #endif

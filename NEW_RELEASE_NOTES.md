@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - materials: add a new `stereoscopicType` material parameter. [⚠️ **New Material Version**]
+- Fix a crash when compiling shaders on IMG devices

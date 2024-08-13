@@ -28,6 +28,7 @@ namespace filament {
 class ResourceListBase {
 public:
     using iterator = typename tsl::robin_set<void*>::iterator;
+    using const_iterator = typename tsl::robin_set<void*>::const_iterator;
 
     explicit ResourceListBase(const char* typeName);
     ResourceListBase(ResourceListBase&& rhs) noexcept = default;
@@ -55,6 +56,14 @@ public:
     }
 
     iterator end() noexcept {
+        return mList.end();
+    }
+
+    const_iterator begin() const noexcept {
+        return mList.begin();
+    }
+
+    const_iterator end() const noexcept {
         return mList.end();
     }
 
