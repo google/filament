@@ -203,14 +203,17 @@ public:
         Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
 
         /**
-         * Associate an optional tag with this Texture for debugging purposes.
+         * Associate an optional name with this Texture for debugging purposes.
          *
-         * name will show in error messages and should be kept as short as possible.
+         * name will show in error messages and should be kept as short as possible. The name is
+         * truncated to a maximum of 128 characters.
+         *
          * The name string is copied during this method so clients may free its memory after
          * the function returns.
          *
-         * @param name A short string to identify this Texture
-         * @param len Length name tag, or 0 to compute the length if name is null-terminated
+         * @param name A string to identify this Texture
+         * @param len Length of name, or 0 to compute the length if name is null-terminated
+         * @return This Builder, for chaining calls.
          */
         Builder& name(const char* UTILS_NONNULL name, size_t len = 0) noexcept;
 

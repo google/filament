@@ -146,7 +146,8 @@ Texture::Builder& Texture::Builder::name(const char* name, size_t len) noexcept 
     if (!name) {
         return *this;
     }
-    mImpl->mName = utils::CString(name, len == 0 ? strlen(name) : len);
+    size_t const length = std::min(len == 0 ? strlen(name) : len, size_t { 128u });
+    mImpl->mName = utils::CString(name, length);
     return *this;
 }
 
