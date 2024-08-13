@@ -494,7 +494,6 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
 
     struct StructureMipmapData {
         FrameGraphId<FrameGraphTexture> depth;
-        uint32_t rt[8];
     };
 
     fg.addPass<StructureMipmapData>("StructureMipmap",
@@ -505,7 +504,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                             .level = uint8_t(i)
                     });
                     out = builder.write(out, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                    data.rt[i - 1] = builder.declareRenderPass("Structure mip target", {
+                    builder.declareRenderPass("Structure mip target", {
                             .attachments = { .depth = out }
                     });
                 }
