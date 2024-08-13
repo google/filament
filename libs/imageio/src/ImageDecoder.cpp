@@ -26,6 +26,7 @@
 #include <sstream>
 
 #include <png.h>
+#include <stb_image.h>
 
 // for ntohs
 #if defined(WIN32)
@@ -74,6 +75,27 @@ private:
 
     png_structp mPNG = nullptr;
     png_infop mInfo = nullptr;
+    std::istream& mStream;
+    std::streampos mStreamStartPos;
+};
+
+// -----------------------------------------------------------------------------------------------
+
+class STBDecoder : public ImageDecoder::Decoder {
+   public:
+    static STBDecoder* create(std::istream& stream);
+    static bool checkSignature(char const* buf);
+
+    STBDecoder(const STBDecoder&) = delete;
+    STBDecoder& operator=(const STBDecoder&) = delete;
+
+   private:
+    explicit STBDecoder(std::istream& stream);
+    ~STBDecoder() override;
+
+    LinearImage decode() override;
+
+    static const char sig[];
     std::istream& mStream;
     std::streampos mStreamStartPos;
 };
@@ -142,6 +164,8 @@ LinearImage ImageDecoder::decode(std::istream& stream, const std::string& source
         format = Format::PSD;
     } else if (EXRDecoder::checkSignature(buf)) {
         format = Format::EXR;
+    } else if (STBDecoder::checkSignature(buf)) {
+        format = Format::JPG;
     }
 
     stream.seekg(pos);
@@ -164,6 +188,10 @@ LinearImage ImageDecoder::decode(std::istream& stream, const std::string& source
             break;
         case Format::EXR:
             decoder.reset(EXRDecoder::create(stream, sourceName));
+            decoder->setColorSpace(ColorSpace::LINEAR);
+            break;
+        case Format::JPG:
+            decoder.reset(STBDecoder::create(stream));
             decoder->setColorSpace(ColorSpace::LINEAR);
             break;
     }
@@ -314,6 +342,67 @@ void PNGDecoder::cb_error(png_structp png, png_const_charp) {
 
 void PNGDecoder::error() {
     throw std::runtime_error("Error while decoding PNG stream.");
+}
+
+// -----------------------------------------------------------------------------------------------
+
+const char STBDecoder::sig[] = { 0xff, 0xd8};
+
+STBDecoder* STBDecoder::create(std::istream& stream) {
+    STBDecoder* decoder = new STBDecoder(stream);
+    return decoder;
+}
+
+bool STBDecoder::checkSignature(char const* buf) {
+    return !memcmp(buf, sig, sizeof(sig));
+}
+
+STBDecoder::STBDecoder(std::istream& stream)
+    : mStream(stream), mStreamStartPos(stream.tellg()) {
+}
+
+STBDecoder::~STBDecoder() = default;
+
+LinearImage STBDecoder::decode() {
+    std::vector<uint8_t> source;
+    stbi_uc* rgba;
+    try {
+        int width, height, comp;        
+        mStream.seekg(0, std::ios::end);
+        source.reserve((size_t)mStream.tellg());
+        mStream.seekg(0, std::ios::beg);
+        source.assign((std::istreambuf_iterator<char>(mStream)),
+                       std::istreambuf_iterator<char>());
+        rgba = stbi_load_from_memory(source.data(), source.size(), &width,
+                                      &height, &comp, 4);
+        source.clear();
+        source.shrink_to_fit();
+        LinearImage image(width, height, 4);
+
+        size_t i = 0;
+        for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < width; x++) {
+                filament::math::float4& pixel = *reinterpret_cast<filament::math::float4*>(
+                        image.getPixelRef(x, y));
+                pixel.r = rgba[i++];
+                pixel.g = rgba[i++];
+                pixel.b = rgba[i++];
+                pixel.a = rgba[i++];
+                pixel /= 255.0F;
+
+            }
+        }
+        stbi_image_free(rgba);
+        return image;
+    } catch (std::runtime_error& e) {
+        // reset the stream, like we found it
+        std::cerr << "Runtime error while decoding PNG: " << e.what()
+                  << std::endl;
+        mStream.seekg(mStreamStartPos);
+        source.clear();
+        source.shrink_to_fit();
+    }
+    return LinearImage();
 }
 
 // -----------------------------------------------------------------------------------------------
