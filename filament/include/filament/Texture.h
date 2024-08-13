@@ -206,7 +206,8 @@ public:
          * Associate an optional tag with this Texture for debugging purposes.
          *
          * name will show in error messages and should be kept as short as possible.
-         * The name string must persist until build() has been called on this Builder.
+         * The name string is copied during this method so clients may free its memory after
+         * the function returns.
          *
          * @param name A short string to identify this Texture
          * @param len Length name tag, or 0 to compute the length if name is null-terminated

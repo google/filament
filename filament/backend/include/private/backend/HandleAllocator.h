@@ -20,18 +20,17 @@
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
+#include <utils/CString.h>
 #include <utils/Log.h>
+#include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
 
 #include <tsl/robin_map.h>
 
 #include <cstddef>
 #include <exception>
-#include <optional>
-#include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -175,10 +174,10 @@ public:
                 uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
                 auto const pNode = static_cast<typename Allocator::Node*>(p);
                 uint8_t const expectedAge = pNode[-1].age;
-                std::optional<std::string_view> const maybeTag = get_handle_tag(handle.getId());
+                utils::CString const tag = get_handle_tag(handle.getId());
                 FILAMENT_CHECK_POSTCONDITION(expectedAge == age)
                         << "use-after-free of Handle with id=" << handle.getId()
-                        << ", tag=" << maybeTag.value_or("(no tag)");
+                        << ", tag=" << tag.c_str_safe();
             }
         }
 
@@ -205,7 +204,7 @@ public:
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
     }
 
-    void associate_handle(HandleBase::HandleId id, std::string&& tag) noexcept {
+    void associate_handle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
         // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
         // those
         if (isPoolHandle(id)) {
@@ -221,14 +220,14 @@ public:
         }
     }
 
-    std::optional<std::string_view> get_handle_tag(HandleBase::HandleId id) const noexcept {
+    utils::CString get_handle_tag(HandleBase::HandleId id) const noexcept {
         if (!isPoolHandle(id)) {
-            return {};
+            return "(no tag)";
         }
         if (auto pos = mDebugTags.find(id); pos != mDebugTags.end()) {
             return pos->second;
         }
-        return {};
+        return "(no tag)";
     }
 
 private:
@@ -393,7 +392,7 @@ private:
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
-    tsl::robin_map<HandleBase::HandleId, std::string> mDebugTags;
+    tsl::robin_map<HandleBase::HandleId, utils::CString> mDebugTags;
     HandleBase::HandleId mId = 0;
     bool mUseAfterFreeCheckDisabled = false;
 };

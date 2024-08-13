@@ -83,7 +83,7 @@ struct Texture::BuilderDetails {
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
-    std::optional<std::string_view> mName;
+    std::optional<utils::CString> mName;
 };
 
 using BuilderType = Texture;
@@ -146,7 +146,7 @@ Texture::Builder& Texture::Builder::name(const char* name, size_t len) noexcept 
     if (!name) {
         return *this;
     }
-    mImpl->mName = std::string_view(name, len == 0 ? strlen(name) : len);
+    mImpl->mName = utils::CString(name, len == 0 ? strlen(name) : len);
     return *this;
 }
 
@@ -254,7 +254,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
     if (auto name = builder->mName) {
-        driver.setDebugTag(mHandle.getId(), std::string(name->data(), name->size()));
+        driver.setDebugTag(mHandle.getId(), std::move(*name));
     }
 }
 

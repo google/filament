@@ -164,7 +164,7 @@ DECL_DRIVER_API_0(resetState)
 
 DECL_DRIVER_API_N(setDebugTag,
         backend::HandleBase::HandleId, handleId,
-        std::string&&, tag)
+        utils::CString, tag)
 
 /*
  * Creating driver objects

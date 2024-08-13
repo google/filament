@@ -2210,7 +2210,7 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::setDebugTag(HandleBase::HandleId handleId, std::string&& tag) {
+void OpenGLDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
     mHandleAllocator.associate_handle(handleId, std::move(tag));
 }
 

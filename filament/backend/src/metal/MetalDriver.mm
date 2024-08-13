@@ -2061,7 +2061,7 @@ void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
 void MetalDriver::resetState(int) {
 }
 
-void MetalDriver::setDebugTag(HandleBase::HandleId handleId, std::string&& tag) {
+void MetalDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
     mHandleAllocator.associate_handle(handleId, std::move(tag));
 }
 

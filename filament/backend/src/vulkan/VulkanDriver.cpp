@@ -2032,7 +2032,7 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 void VulkanDriver::resetState(int) {
 }
 
-void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, std::string&& tag) {
+void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
     // TODO
     // mResourceAllocator.associate_handle(handleId, tag, length);
 }
