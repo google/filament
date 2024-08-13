@@ -174,10 +174,10 @@ public:
                 uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
                 auto const pNode = static_cast<typename Allocator::Node*>(p);
                 uint8_t const expectedAge = pNode[-1].age;
-                utils::CString const tag = get_handle_tag(handle.getId());
+                // get_handle_tag() is only called if the check fails.
                 FILAMENT_CHECK_POSTCONDITION(expectedAge == age)
                         << "use-after-free of Handle with id=" << handle.getId()
-                        << ", tag=" << tag.c_str_safe();
+                        << ", tag=" << get_handle_tag(handle.getId()).c_str_safe();
             }
         }
 
