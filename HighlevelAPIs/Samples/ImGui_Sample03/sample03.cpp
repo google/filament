@@ -107,17 +107,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("api", std::string("vulkan"));
     arguments.SetParam("vulkan-gpu-hint", std::string("0"));
     vzm::InitEngineLib(arguments);
 
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom1/car_action_08.gltf", "my gltf asset");
 
     std::vector<vzm::VzBaseComp*> components;
     if (vzm::GetVzComponentsByType("VzMI", components) > 0)

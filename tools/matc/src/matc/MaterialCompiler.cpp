@@ -24,6 +24,7 @@
 
 #include <filamat/Enums.h>
 
+#include <utils/Log.h>
 #include <utils/JobSystem.h>
 
 #include "DirIncluder.h"

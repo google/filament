@@ -1965,8 +1965,8 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
         // - visible bloom size changes with dynamic resolution in non-homogenous mode
         // This allows us to use the 9 sample downsampling filter (instead of 13)
         // for at least 4 levels.
-        uint32_t width  = std::max(1u, uint32_t(std::floor(bloomWidth)));
-        uint32_t height = std::max(1u, uint32_t(std::floor(bloomHeight)));
+        uint32_t width  = std::max(16u, uint32_t(std::floor(bloomWidth)));
+        uint32_t height = std::max(16u, uint32_t(std::floor(bloomHeight)));
         width  &= ~((1 << 4) - 1);  // at least 4 levels
         height &= ~((1 << 4) - 1);
         bloomWidth  = float(width);
@@ -1977,6 +1977,8 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
 
     // we don't need to do the fireflies reduction if we have TAA (it already does it)
     bool fireflies = threshold && !taaOptions.enabled;
+
+    assert_invariant(bloomWidth && bloomHeight);
 
     while (2 * bloomWidth < float(desc.width) || 2 * bloomHeight < float(desc.height)) {
         if (inoutBloomOptions.quality == QualityLevel::LOW ||

@@ -75,7 +75,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 TargetBufferFlags const clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
                 TargetBufferFlags clearStencilFlags = config.clearFlags & TargetBufferFlags::STENCIL;
-                uint8_t layerCount = 0;
+                uint8_t layerCount = 1;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
                 data.ssao = blackboard.get<FrameGraphTexture>("ssao");
@@ -172,7 +172,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
 
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                if (engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
+                if (view.hasStereo() && engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW) {
                     layerCount = engine.getConfig().stereoscopicEyeCount;
                 }
 

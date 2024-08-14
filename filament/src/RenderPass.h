@@ -408,17 +408,19 @@ private:
             uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
             Executor::CustomCommandFn command);
 
-    void resize(Arena& arena, size_t count) noexcept;
+    static Command* resize(Arena& arena, Command* const last) noexcept;
 
     // sorts commands then trims sentinels
-    void sortCommands(Arena& arena) noexcept;
+    static Command* sortCommands(
+            Command* begin, Command* end) noexcept;
 
     // instanceify commands then trims sentinels
-    void instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept;
+    RenderPass::Command* instanceify(FEngine& engine,
+            Command* begin, Command* end,
+            int32_t eyeCount) const noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
-    // On a Pixel 4, 2048 commands is about half a millisecond of processing.
-    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 2048;
+    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 128;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
 
@@ -449,10 +451,10 @@ private:
 
     FScene::RenderableSoa const& mRenderableSoa;
     backend::Viewport const mScissorViewport;
-    Command* mCommandBegin = nullptr;   // Pointer to the first command
-    Command* mCommandEnd = nullptr;     // Pointer to one past the last command
+    Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
+    Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
     // a UBO for instanced primitives
-    BufferObjectSharedHandle mInstancedUboHandle;
+    mutable BufferObjectSharedHandle mInstancedUboHandle;
     // a vector for our custom commands
     using CustomCommandVector = std::vector<Executor::CustomCommandFn,
             utils::STLAllocator<Executor::CustomCommandFn, LinearAllocatorArena>>;

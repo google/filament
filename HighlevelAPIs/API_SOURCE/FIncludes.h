@@ -32,6 +32,7 @@
 #include <utils/Path.h>
 #include <utils/Systrace.h>
 #include <utils/BitmaskEnum.h>
+#include <utils/Log.h>
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>

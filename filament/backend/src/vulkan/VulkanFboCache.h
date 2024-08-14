@@ -64,7 +64,7 @@ public:
         uint8_t samples; // 1 byte
         uint8_t needsResolveMask; // 1 byte
         uint8_t subpassMask; // 1 byte
-        uint8_t padding2; // 1 byte
+        uint8_t viewCount; // 1 byte
     };
     struct RenderPassVal {
         VkRenderPass handle;

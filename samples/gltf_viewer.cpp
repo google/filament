@@ -588,11 +588,8 @@ static bool checkGLTFAsset(const utils::Path& filename) {
 
 int main(int argc, char** argv) {
     App app;
-
-    app.config.title = "Filament";
-    app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
     app.config.vulkanGPUHint = "0";
-    app.config.backend = filament::Engine::Backend::OPENGL;
+    //app.config.backend = filament::Engine::Backend::OPENGL;
 
     int const optionIndex = handleCommandLineArguments(argc, argv, &app);
 
@@ -605,6 +602,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+    filename = "D:\\data\\showroom1\\car_action_08.gltf";
 
     auto loadAsset = [&app](const utils::Path& filename) {
         // Peek at the file size to allow pre-allocation.

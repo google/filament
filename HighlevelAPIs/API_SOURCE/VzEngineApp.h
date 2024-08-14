@@ -187,6 +187,7 @@ namespace vzm
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
         Texture* texture = nullptr;
+        std::string fileName;
         TextureSampler sampler;
         ~VzTextureRes();
     };

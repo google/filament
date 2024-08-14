@@ -101,9 +101,8 @@ void CommandBufferQueue::flush() noexcept {
     size_t const used = std::distance(
             static_cast<char const*>(begin), static_cast<char const*>(end));
 
+
     std::unique_lock<utils::Mutex> lock(mLock);
-    mCommandBuffersToExecute.push_back({ begin, end });
-    mCondition.notify_one();
 
     // circular buffer is too small, we corrupted the stream
     FILAMENT_CHECK_POSTCONDITION(used <= mFreeSpace) <<
@@ -112,10 +111,12 @@ void CommandBufferQueue::flush() noexcept {
             "Space used at this time: " << used <<
             " bytes, overflow: " << used - mFreeSpace << " bytes";
 
-    // wait until there is enough space in the buffer
     mFreeSpace -= used;
-    if (UTILS_UNLIKELY(mFreeSpace < requiredSize)) {
+    mCommandBuffersToExecute.push_back({ begin, end });
+    mCondition.notify_one();
 
+    // wait until there is enough space in the buffer
+    if (UTILS_UNLIKELY(mFreeSpace < requiredSize)) {
 
 #ifndef NDEBUG
         size_t const totalUsed = circularBuffer.size() - mFreeSpace;
@@ -153,8 +154,10 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
 }
 
 void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Range const& buffer) {
+    size_t const used = std::distance(
+            static_cast<char const*>(buffer.begin), static_cast<char const*>(buffer.end));
     std::lock_guard<utils::Mutex> const lock(mLock);
-    mFreeSpace += uintptr_t(buffer.end) - uintptr_t(buffer.begin);
+    mFreeSpace += used;
     mCondition.notify_one();
 }
 

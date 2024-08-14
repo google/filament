@@ -14,10 +14,20 @@
  * limitations under the License.
  */
 
-#include "details/Renderer.h"
+#include <filament/Renderer.h>
+
+#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
+#include "details/Renderer.h"
 #include "details/View.h"
+
+#include <utils/FixedCapacityVector.h>
+
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -34,6 +44,10 @@ void Renderer::render(View const* view) {
 
 void Renderer::setPresentationTime(int64_t monotonic_clock_ns) {
     downcast(this)->setPresentationTime(monotonic_clock_ns);
+}
+
+void Renderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
+    downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
@@ -91,6 +105,14 @@ void Renderer::renderStandaloneView(View const* view) {
 
 void Renderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
     downcast(this)->setVsyncTime(steadyClockTimeNano);
+}
+
+utils::FixedCapacityVector<Renderer::FrameInfo> Renderer::getFrameInfoHistory(size_t historySize) const noexcept {
+    return downcast(this)->getFrameInfoHistory(historySize);
+}
+
+size_t Renderer::getMaxFrameHistorySize() const noexcept {
+    return downcast(this)->getMaxFrameHistorySize();
 }
 
 } // namespace filament

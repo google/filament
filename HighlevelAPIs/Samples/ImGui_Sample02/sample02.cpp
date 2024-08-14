@@ -107,7 +107,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     float dpi = 96.f;
 
     vzm::ParamMap<std::string> arguments;
-    arguments.SetParam("api", std::string("opengl"));
+    arguments.SetParam("api", std::string("vulkan"));
     arguments.SetParam("vulkan-gpu-hint", std::string("0"));
     if (vzm::InitEngineLib(arguments) != VZ_OK) {
         std::cerr << "Failed to initialize engine library." << std::endl;
@@ -136,7 +136,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     cc->SetViewport(w, h);
 
     vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
-    
+
+    vzm::VzSpriteActor* sprite = (vzm::VzSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::SPRITE_ACTOR, "my sprite");
+
+    //vzm::AppendSceneCompTo(sprite, scene);
     vzm::AppendSceneCompTo(actor, scene);
     vzm::AppendSceneCompTo(light, scene);
     vzm::AppendSceneCompTo(cam, scene);

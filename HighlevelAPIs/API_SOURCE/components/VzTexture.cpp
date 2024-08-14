@@ -28,6 +28,8 @@ namespace vzm
             return false;
         }
 
+        tex_res->fileName = fileName;
+
         std::ifstream inputStream(file_name, std::ios::binary);
         image::LinearImage* image = new LinearImage(ImageDecoder::decode(
             inputStream, file_name, ImageDecoder::ColorSpace::SRGB));
@@ -79,6 +81,16 @@ namespace vzm
 
         UpdateTimeStamp();
         return true;
+    }
+
+    std::string VzTexture::GetImageFileName()
+    {
+        VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
+        if (tex_res == nullptr)
+        {
+            return "";
+        }
+        return tex_res->fileName;
     }
 
     void VzTexture::SetMinFilter(const SamplerMinFilter filter)
