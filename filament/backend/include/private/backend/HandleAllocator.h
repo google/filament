@@ -216,6 +216,8 @@ public:
             uint8_t const newAge = age & mask;
             uint32_t const key = (id & ~HANDLE_AGE_MASK) | (newAge << HANDLE_AGE_SHIFT);
 
+            // This line is the costly part. In the future, we could potentially use a custom
+            // allocator.
             mDebugTags[key] = std::move(tag);
         }
     }
