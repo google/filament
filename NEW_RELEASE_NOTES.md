@@ -8,5 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- Fix a crash when compiling shaders on IMG devices
 - Add a `name` API to Filament objects for debugging handle use-after-free assertions

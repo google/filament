@@ -192,6 +192,22 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
+    MaterialDomain materialDomain;
+    materialParser->getMaterialDomain(&materialDomain);
+    if (materialDomain == MaterialDomain::SURFACE) {
+        StereoscopicType const engineStereoscopicType = engine.getConfig().stereoscopicType;
+        StereoscopicType materialStereoscopicType = StereoscopicType::NONE;
+        materialParser->getStereoscopicType(&materialStereoscopicType);
+        if (materialStereoscopicType != engineStereoscopicType) {
+            CString name;
+            materialParser->getName(&name);
+            slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
+                    << "' is " << (int)materialStereoscopicType
+                    << ", which is not compatiable with the engine's setting "
+                    << (int)engineStereoscopicType << "." << io::endl;
+        }
+    }
+
     return downcast(engine).createMaterial(*this, std::move(materialParser));
 }
 
@@ -200,8 +216,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
         : mIsDefaultMaterial(builder->mDefaultMaterial),
           mEngine(engine),
           mMaterialId(engine.getMaterialId()),
-          mMaterialParser(std::move(materialParser))
-{
+          mMaterialParser(std::move(materialParser)) {
     MaterialParser* const parser = mMaterialParser.get();
 
     UTILS_UNUSED_IN_RELEASE bool const nameOk = parser->getName(&mName);

@@ -268,6 +268,71 @@ bool Engine::isValid(const InstanceBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }
 
+size_t Engine::getBufferObjectCount() const noexcept {
+    return downcast(this)->getBufferObjectCount();
+}
+
+size_t Engine::getViewCount() const noexcept {
+    return downcast(this)->getViewCount();
+}
+
+size_t Engine::getSceneCount() const noexcept {
+    return downcast(this)->getSceneCount();
+}
+
+size_t Engine::getSwapChainCount() const noexcept {
+    return downcast(this)->getSwapChainCount();
+}
+
+size_t Engine::getStreamCount() const noexcept {
+    return downcast(this)->getStreamCount();
+}
+
+size_t Engine::getIndexBufferCount() const noexcept {
+    return downcast(this)->getIndexBufferCount();
+}
+
+size_t Engine::getSkinningBufferCount() const noexcept {
+    return downcast(this)->getSkinningBufferCount();
+}
+
+size_t Engine::getMorphTargetBufferCount() const noexcept {
+    return downcast(this)->getMorphTargetBufferCount();
+}
+
+size_t Engine::getInstanceBufferCount() const noexcept {
+    return downcast(this)->getInstanceBufferCount();
+}
+
+size_t Engine::getVertexBufferCount() const noexcept {
+    return downcast(this)->getVertexBufferCount();
+}
+
+size_t Engine::getIndirectLightCount() const noexcept {
+    return downcast(this)->getIndirectLightCount();
+}
+
+size_t Engine::getMaterialCount() const noexcept {
+    return downcast(this)->getMaterialCount();
+}
+
+size_t Engine::getTextureCount() const noexcept {
+    return downcast(this)->getTextureCount();
+}
+
+size_t Engine::getSkyboxeCount() const noexcept {
+    return downcast(this)->getSkyboxeCount();
+}
+
+size_t Engine::getColorGradingCount() const noexcept {
+    return downcast(this)->getColorGradingCount();
+}
+
+size_t Engine::getRenderTargetCount() const noexcept {
+    return downcast(this)->getRenderTargetCount();
+}
+
+
 void Engine::flushAndWait() {
     downcast(this)->flushAndWait();
 }
