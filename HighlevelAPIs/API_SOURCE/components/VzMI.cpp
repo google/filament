@@ -126,9 +126,21 @@ namespace vzm
         }
 
         mi->setParameter(name.c_str(), tex_res->texture, tex_res->sampler);
+        mi_res->texMap[name] = vidTexture;
         
         UpdateTimeStamp();
         return true;
+    }
+
+    VID VzMI::GetTexture(const std::string& name)
+    {
+        SET_PARAM_COMP(mi, mi_res, m_res, INVALID_VID);
+        auto it = mi_res->texMap.find(name);
+        if (it == mi_res->texMap.end())
+        {
+            return INVALID_VID;
+        }
+        return it->second;
     }
 
     VID VzMI::GetMaterial()

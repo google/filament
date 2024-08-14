@@ -599,6 +599,7 @@ namespace vzm
         utils::Path path = filename;
         filament::gltfio::FilamentAsset* asset = nullptr;
         VzAssetLoader* asset_loader = gEngineApp.GetGltfAssetLoader();
+        asset_loader->mAssetName = assetName;
         // assume one instance per each asset (possibly multi-instance)
         if (path.isEmpty()) {
             asset = asset_loader->createAsset(
@@ -618,6 +619,7 @@ namespace vzm
         
         size_t num_m = asset_loader->mMaterialMap.size();
         size_t num_mi = asset_loader->mMIMap.size();
+        size_t num_tex = asset_loader->mTextureMap.size();
         size_t num_geo = asset_loader->mGeometryMap.size();
         size_t num_renderable = asset_loader->mRenderableActorMap.size();
         size_t num_node = asset_loader->mNodeActorMap.size();
@@ -627,6 +629,7 @@ namespace vzm
         size_t num_ins = fasset->mInstances.size();
         backlog::post(std::to_string(num_m) + " system-owned material" + (num_m > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_mi) + " material instance" + (num_mi > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
+        backlog::post(std::to_string(num_tex) + " texture" + (num_tex > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_geo) + (num_geo > 1 ? " geometries are" : " geometry is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_renderable) + " renderable actor" + (num_renderable > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);
         backlog::post(std::to_string(num_node) + " node actor" + (num_node > 1 ? "s are" : " is") + " created", backlog::LogLevel::Default);

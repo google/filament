@@ -40,6 +40,7 @@
 #include <gltfio/TextureProvider.h>
 #include <gltfio/NodeManager.h>
 #include <gltfio/Animator.h>
+#include <gltfio/math.h>
 
 #include <filameshio/MeshReader.h>
 

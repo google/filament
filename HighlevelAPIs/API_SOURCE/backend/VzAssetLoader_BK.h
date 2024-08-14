@@ -1,20 +1,4 @@
-/*
- * Copyright (C) 2019 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 #pragma once
-
 #include "../VzNameComponents.hpp"
 #include "../FIncludes.h"
 
@@ -46,17 +30,6 @@ namespace filament::gltfio {
         },
     };
 
-    // MaterialInstanceCache
-    // ---------------------
-    // Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
-    // cached when loading a FilamentInstance. If a given glTF material is referenced by multiple
-    // glTF meshes, then their corresponding Filament primitives will share the same Filament
-    // MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
-    // Filament's 2 texcoord sets.
-    //
-    // Notes:
-    // - The Material objects (used to create instances) are cached in MaterialProvider, not here.
-    // - The cache is not responsible for destroying material instances.
     class MaterialInstanceCache {
     public:
         struct Entry {
@@ -146,8 +119,6 @@ namespace filament::gltfio {
             }
         }
 
-        std::string mAssetName = "";
-
         FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
         FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
             FilamentInstance** instances, size_t numInstances);
@@ -233,7 +204,6 @@ namespace filament::gltfio {
         std::unordered_map<const cgltf_mesh*, GeometryVID> mGeometryMap;
         std::unordered_map<const Material*, MaterialVID> mMaterialMap;
         std::unordered_map<const MaterialInstance*, MInstanceVID> mMIMap;
-        std::unordered_map<size_t, TextureVID> mTextureMap;
         std::unordered_map<VID, std::string> mLightMap;
         std::unordered_map<VID, std::string> mCameraMap;
         std::unordered_map<VID, std::string> mRenderableActorMap;

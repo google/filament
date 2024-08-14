@@ -180,6 +180,10 @@ namespace vzm
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
         MaterialVID vidMaterial = INVALID_VID;
         MaterialInstance* mi = nullptr;
+
+        // ... TODO: update... when removing textures 
+        std::unordered_map<std::string, TextureVID> texMap; 
+
         ~VzMIRes();
     };
     struct VzTextureRes
