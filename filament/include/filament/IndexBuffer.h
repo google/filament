@@ -84,6 +84,21 @@ public:
         Builder& bufferType(IndexType indexType) noexcept;
 
         /**
+         * Associate an optional name with this IndexBuffer for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible. The name is
+         * truncated to a maximum of 128 characters.
+         *
+         * The name string is copied during this method so clients may free its memory after
+         * the function returns.
+         *
+         * @param name A string to identify this IndexBuffer
+         * @param len Length of name, or 0 to compute the length if name is null-terminated
+         * @return This Builder, for chaining calls.
+         */
+        Builder& name(const char* UTILS_NONNULL name, size_t len = 0) noexcept;
+
+        /**
          * Creates the IndexBuffer object and returns a pointer to it. After creation, the index
          * buffer is uninitialized. Use IndexBuffer::setBuffer() to initialize the IndexBuffer.
          *

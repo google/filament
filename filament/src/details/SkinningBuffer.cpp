@@ -27,7 +27,10 @@
 #include <math/half.h>
 #include <math/mat4.h>
 
+#include <utils/CString.h>
+
 #include <cstring>
+#include <optional>
 
 namespace filament {
 
@@ -37,6 +40,7 @@ using namespace math;
 struct SkinningBuffer::BuilderDetails {
     uint32_t mBoneCount = 0;
     bool mInitialize = false;
+    std::optional<utils::CString> mName;
 };
 
 using BuilderType = SkinningBuffer;
@@ -55,6 +59,15 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::boneCount(uint32_t boneCount) 
 
 SkinningBuffer::Builder& SkinningBuffer::Builder::initialize(bool initialize) noexcept {
     mImpl->mInitialize = initialize;
+    return *this;
+}
+
+SkinningBuffer::Builder& SkinningBuffer::Builder::name(const char* name, size_t len) noexcept {
+    if (!name) {
+        return *this;
+    }
+    size_t const length = std::min(len == 0 ? strlen(name) : len, size_t { 128u });
+    mImpl->mName = utils::CString(name, length);
     return *this;
 }
 
@@ -79,6 +92,11 @@ FSkinningBuffer::FSkinningBuffer(FEngine& engine, const Builder& builder)
             getPhysicalBoneCount(mBoneCount) * sizeof(PerRenderableBoneUib::BoneData),
             BufferObjectBinding::UNIFORM,
             BufferUsage::DYNAMIC);
+
+    if (auto name = builder->mName) {
+        // TODO: We should also tag the texture created inside createIndicesAndWeightsHandle.
+        driver.setDebugTag(mHandle.getId(), std::move(*name));
+    }
 
     if (builder->mInitialize) {
         // initialize the bones to identity (before rounding up)

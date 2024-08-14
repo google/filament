@@ -20,11 +20,16 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <utils/CString.h>
+
+#include <optional>
+
 namespace filament {
 
 struct IndexBuffer::BuilderDetails {
     uint32_t mIndexCount = 0;
     IndexType mIndexType = IndexType::UINT;
+    std::optional<utils::CString> mName;
 };
 
 using BuilderType = IndexBuffer;
@@ -45,6 +50,15 @@ IndexBuffer::Builder& IndexBuffer::Builder::bufferType(IndexType indexType) noex
     return *this;
 }
 
+IndexBuffer::Builder& IndexBuffer::Builder::name(const char* name, size_t len) noexcept {
+    if (!name) {
+        return *this;
+    }
+    size_t const length = std::min(len == 0 ? strlen(name) : len, size_t { 128u });
+    mImpl->mName = utils::CString(name, length);
+    return *this;
+}
+
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createIndexBuffer(*this);
 }
@@ -58,6 +72,9 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
             (backend::ElementType)builder->mIndexType,
             uint32_t(builder->mIndexCount),
             backend::BufferUsage::STATIC);
+    if (auto name = builder->mName) {
+        driver.setDebugTag(mHandle.getId(), std::move(*name));
+    }
 }
 
 void FIndexBuffer::terminate(FEngine& engine) {

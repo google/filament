@@ -595,6 +595,7 @@ Program FMaterial::getProgramWithVariants(
 
 void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
     auto program = mEngine.getDriverApi().createProgram(std::move(p));
+    mEngine.getDriverApi().setDebugTag(program.getId(), mName);
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 }

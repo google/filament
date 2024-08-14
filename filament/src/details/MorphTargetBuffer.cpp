@@ -25,6 +25,10 @@
 #include <math/mat4.h>
 #include <math/norm.h>
 
+#include <utils/CString.h>
+
+#include <optional>
+
 namespace filament {
 
 using namespace backend;
@@ -33,6 +37,7 @@ using namespace math;
 struct MorphTargetBuffer::BuilderDetails {
     size_t mVertexCount = 0;
     size_t mCount = 0;
+    std::optional<utils::CString> mName;
 };
 
 using BuilderType = MorphTargetBuffer;
@@ -45,6 +50,16 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 
 MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::vertexCount(size_t vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
+    return *this;
+}
+
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(
+        const char* name, size_t len) noexcept {
+    if (!name) {
+        return *this;
+    }
+    size_t const length = std::min(len == 0 ? strlen(name) : len, size_t { 128u });
+    mImpl->mName = utils::CString(name, length);
     return *this;
 }
 
@@ -123,6 +138,11 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT);
+
+    if (auto name = builder->mName) {
+        driver.setDebugTag(mPbHandle.getId(), *name);
+        driver.setDebugTag(mTbHandle.getId(), std::move(*name));
+    }
 
     // create and update sampler group
     mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT,
