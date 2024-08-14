@@ -602,7 +602,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    //filename = "D:\\data\\showroom1\\car_action_08.gltf";
+    filename = "D:\\data\\showroom1\\car_action_08.gltf";
 
     auto loadAsset = [&app](const utils::Path& filename) {
         // Peek at the file size to allow pre-allocation.
