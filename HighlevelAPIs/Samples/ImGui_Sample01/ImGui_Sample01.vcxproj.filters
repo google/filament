@@ -57,5 +57,6 @@
     <ClInclude Include="..\imgui_common\glfw_vulkan\imgui_impl_vulkan.h">
       <Filter>imgui_backend</Filter>
     </ClInclude>
+    <ClInclude Include="settings.hpp" />
   </ItemGroup>
 </Project>

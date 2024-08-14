@@ -21,6 +21,8 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
+#include "settings.hpp"
+
 // #define APP_USE_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define APP_USE_VULKAN_DEBUG_REPORT
@@ -1434,6 +1436,16 @@ int main(int, char**) {
                   // std::map<std::string, vzm::UniformType> pram;
                   ma->GetAllowedParameters(pram);
 
+                  //int lightModel = (int)ma->GetLightingModel();
+                  //std::string lmLabelName = "LightModel";
+                  //lmLabelName += postLabel;
+                  //if (ImGui::Combo(
+                  //        lmLabelName.c_str(), &lightModel,
+                  //        "UNLIT\0LIT\0SUBSURFACE\0CLOTH\0SPECULAR_GLOSSINESS\0\0")) {
+                  //  ma->SetLightingModel(
+                  //      (vzm::VzMaterial::LightingModel)lightModel);
+                  //}
+
                   bool doubleSided = mi->IsDoubleSided();
                   std::string dsLabelName = "DoubleSided";
                   dsLabelName += postLabel;
@@ -1699,7 +1711,7 @@ int main(int, char**) {
           break;
         }
         case 1:
-          if (ImGui::Button("Import", ImVec2(right_editUIWidth, 50))) {
+          if (ImGui::Button("Import", ImVec2(right_editUIWidth, 40))) {
             std::wstring filePath = OpenFileDialog();
             if (filePath.size() > 0) {
               std::string str_path;
@@ -1733,88 +1745,105 @@ int main(int, char**) {
               }
             }
           }
-          if (ImGui::Button("Export", ImVec2(right_editUIWidth, 50))) {
+          if (ImGui::Button("Import Settings", ImVec2(right_editUIWidth, 40))) {
+            std::wstring filePath = OpenFileDialog();
+            if (filePath.size() > 0) {
+              std::string str_path;
+              str_path.assign(filePath.begin(), filePath.end());
+              std::vector<VID> root_vids = g_asset->GetGLTFRoots();
+              if (root_vids.size() > 0) {
+                settingsIO::importSettings(root_vids[0], str_path);
+              } else {
+                std::cerr << "asset 없음" << std::endl;
+              }
+            }
+          }
+          if (ImGui::Button("Export", ImVec2(right_editUIWidth, 40))) {
             vzm::ExportAssetToGlb(g_asset, "export.glb");
           }
-          if (ImGui::CollapsingHeader("Automation")) {
-            // ImGui::Indent();
-
-            //// if (true) {
-            ////   ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
-            //// } else {
-            ////   ImGui::TextColored(yellow, "%zu test cases", 0);
-            //// }
-            //// ImGui::PushItemWidth(150);
-            //// ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
-            //// ImGui::PopItemWidth();
-            //// ImGui::Checkbox("Export screenshot for each test", &bAny);
-            //// ImGui::Checkbox("Export settings JSON for each test", &bAny);
-            //// if (false) {
-            ////   if (ImGui::Button("Stop batch test")) {
-            ////   }
-            //// } else if (ImGui::Button("Run batch test")) {
-            //// }
-
-            // if (ImGui::Button("Export view settings")) {
-            //   ImGui::OpenPopup("MessageBox");
-            // }
-            // ImGui::Unindent();
+          if (ImGui::Button("Export Settings", ImVec2(right_editUIWidth, 40))) {
+            std::vector<VID> root_vids = g_asset->GetGLTFRoots();
+            if (root_vids.size() > 0) {
+              settingsIO::exportSettings(root_vids[0]);
+            } else {
+              std::cerr << "asset 없음" << std::endl;
+            }
           }
-
-          if (ImGui::CollapsingHeader("Stats")) {
-            // ImGui::Indent();
-            // ImGui::Text("%zu entities in the asset", 0);
-            // ImGui::Text("%zu renderables (excluding UI)", 0);
-            // ImGui::Text("%zu skipped frames", 0);
-            // ImGui::Unindent();
-          }
-
-          if (ImGui::CollapsingHeader("Debug")) {
-            //            if (ImGui::Button("Capture frame")) {
-            //            }
-            //            ImGui::Checkbox("Disable buffer padding", &bAny);
-            //            ImGui::Checkbox("Disable sub-passes", &bAny);
-            //            ImGui::Checkbox("Camera at origin", &bAny);
-            //            ImGui::Checkbox("Far Origin", &bAny);
-            //            ImGui::SliderFloat("Origin", &any, 0, 1);
-            //            ImGui::Checkbox("Far uses shadow casters", &bAny);
-            //            ImGui::Checkbox("Focus shadow casters", &bAny);
-            //
-            //            bool debugDirectionalShadowmap;
-            //            if (true) {
-            //              ImGui::Checkbox("Debug DIR shadowmap", &bAny);
-            //            }
-            //
-            //            ImGui::Checkbox("Display Shadow Texture", &bAny);
-            //            if (true) {
-            //              int layerCount;
-            //              int levelCount;
-            //              ImGui::Indent();
-            //              ImGui::SliderFloat("scale", &any, 0.0f, 8.0f);
-            //              ImGui::SliderFloat("contrast", &any, 0.0f, 8.0f);
-            //              ImGui::SliderInt("layer", &iAny, 0, 10);
-            //              ImGui::SliderInt("level", &iAny, 0, 10);
-            //              ImGui::SliderInt("channel", &iAny, 0, 10);
-            //              ImGui::Unindent();
-            //            }
-            //            bool debugFroxelVisualization;
-            //            if (true) {
-            //              ImGui::Checkbox("Froxel Visualization", &bAny);
-            //            }
-            //
-            // #ifndef NDEBUG
-            //            ImGui::SliderFloat("Kp", &any, 0, 2);
-            //            ImGui::SliderFloat("Ki", &any, 0, 2);
-            //            ImGui::SliderFloat("Kd", &any, 0, 2);
-            // #endif
-            //            ImGui::BeginDisabled(bAny);  // overdrawDisabled);
-            //            ImGui::Checkbox(!bAny        // overdrawDisabled
-            //                                ? "Visualize overdraw"
-            //                                : "Visualize overdraw (disabled
-            //                                for Vulkan)",
-            //                            &bAny);
-            //            ImGui::EndDisabled();
-          }
+          //if (ImGui::CollapsingHeader("Automation")) {
+          //  // ImGui::Indent();
+          //  //// if (true) {
+          //  ////   ImGui::TextColored(yellow, "Test case %zu / %zu", 0, 0);
+          //  //// } else {
+          //  ////   ImGui::TextColored(yellow, "%zu test cases", 0);
+          //  //// }
+          //  //// ImGui::PushItemWidth(150);
+          //  //// ImGui::SliderFloat("Sleep (seconds)", &any, 0.0, 5.0);
+          //  //// ImGui::PopItemWidth();
+          //  //// ImGui::Checkbox("Export screenshot for each test", &bAny);
+          //  //// ImGui::Checkbox("Export settings JSON for each test", &bAny);
+          //  //// if (false) {
+          //  ////   if (ImGui::Button("Stop batch test")) {
+          //  ////   }
+          //  //// } else if (ImGui::Button("Run batch test")) {
+          //  //// }
+          //  // if (ImGui::Button("Export view settings")) {
+          //  //   ImGui::OpenPopup("MessageBox");
+          //  // }
+          //  // ImGui::Unindent();
+          //}
+          //if (ImGui::CollapsingHeader("Stats")) {
+          //  // ImGui::Indent();
+          //  // ImGui::Text("%zu entities in the asset", 0);
+          //  // ImGui::Text("%zu renderables (excluding UI)", 0);
+          //  // ImGui::Text("%zu skipped frames", 0);
+          //  // ImGui::Unindent();
+          //}
+          //if (ImGui::CollapsingHeader("Debug")) {
+          //  //            if (ImGui::Button("Capture frame")) {
+          //  //            }
+          //  //            ImGui::Checkbox("Disable buffer padding", &bAny);
+          //  //            ImGui::Checkbox("Disable sub-passes", &bAny);
+          //  //            ImGui::Checkbox("Camera at origin", &bAny);
+          //  //            ImGui::Checkbox("Far Origin", &bAny);
+          //  //            ImGui::SliderFloat("Origin", &any, 0, 1);
+          //  //            ImGui::Checkbox("Far uses shadow casters", &bAny);
+          //  //            ImGui::Checkbox("Focus shadow casters", &bAny);
+          //  //
+          //  //            bool debugDirectionalShadowmap;
+          //  //            if (true) {
+          //  //              ImGui::Checkbox("Debug DIR shadowmap", &bAny);
+          //  //            }
+          //  //
+          //  //            ImGui::Checkbox("Display Shadow Texture", &bAny);
+          //  //            if (true) {
+          //  //              int layerCount;
+          //  //              int levelCount;
+          //  //              ImGui::Indent();
+          //  //              ImGui::SliderFloat("scale", &any, 0.0f, 8.0f);
+          //  //              ImGui::SliderFloat("contrast", &any, 0.0f, 8.0f);
+          //  //              ImGui::SliderInt("layer", &iAny, 0, 10);
+          //  //              ImGui::SliderInt("level", &iAny, 0, 10);
+          //  //              ImGui::SliderInt("channel", &iAny, 0, 10);
+          //  //              ImGui::Unindent();
+          //  //            }
+          //  //            bool debugFroxelVisualization;
+          //  //            if (true) {
+          //  //              ImGui::Checkbox("Froxel Visualization", &bAny);
+          //  //            }
+          //  //
+          //  // #ifndef NDEBUG
+          //  //            ImGui::SliderFloat("Kp", &any, 0, 2);
+          //  //            ImGui::SliderFloat("Ki", &any, 0, 2);
+          //  //            ImGui::SliderFloat("Kd", &any, 0, 2);
+          //  // #endif
+          //  //            ImGui::BeginDisabled(bAny);  // overdrawDisabled);
+          //  //            ImGui::Checkbox(!bAny        // overdrawDisabled
+          //  //                                ? "Visualize overdraw"
+          //  //                                : "Visualize overdraw (disabled
+          //  //                                for Vulkan)",
+          //  //                            &bAny);
+          //  //            ImGui::EndDisabled();
+          //}
 
           if (ImGui::BeginPopupModal("MessageBox", nullptr,
                                      ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -2365,97 +2394,97 @@ int main(int, char**) {
             ImGui::Unindent();
           }
 
-          if (ImGui::CollapsingHeader("Scene")) {
-            // ImGui::Indent();
-
-            // if (ImGui::Checkbox("Scale to unit cube", &bAny)) {
-            // }
-
-            // ImGui::Checkbox("Automatic instancing", &bAny);
-
-            // ImGui::Checkbox("Show skybox", &bAny);
-            // ImGui::ColorEdit3("Background color", anyVec);
-
-            //// We do not yet support ground shadow or scene selection in
-            /// remote / mode.
-            // if (true) {
-            //   ImGui::Checkbox("Ground shadow", &bAny);
-            //   ImGui::Indent();
-            //   ImGui::SliderFloat("Strength", &any, 0.0f, 1.0f);
-            //   ImGui::Unindent();
-
-            //  // if (mAsset->getSceneCount() > 1) {
-            //  //   ImGui::Separator();
-            //  //   sceneSelectionUI();
-            //  // }
-            //}
-
-            // ImGui::Unindent();
-          }
+          //if (ImGui::CollapsingHeader("Scene")) {
+          //   ImGui::Indent();
+          //   vzm::VzRenderer::ClearOptions clearOptions;
+          //   g_renderer->GetClearOptions(clearOptions);
+          //   if (ImGui::Checkbox("Scale to unit cube", &bAny)) {
+          //   }
+          //   ImGui::Checkbox("Automatic instancing", &bAny);
+          //   ImGui::Checkbox("Show skybox", &bAny);
+          //   ImGui::ColorEdit3("Background color", anyVec);
+          //  // We do not yet support ground shadow or scene selection in remote mode.
+          //   if (true) {
+          //     ImGui::Checkbox("Ground shadow", &bAny);
+          //     ImGui::Indent();
+          //     ImGui::SliderFloat("Strength", &any, 0.0f, 1.0f);
+          //     ImGui::Unindent();
+          //     
+          //    // if (mAsset->getSceneCount() > 1) {
+          //    //   ImGui::Separator();
+          //    //   sceneSelectionUI();
+          //    // }
+          //  }
+          //   g_renderer->SetClearOptions(clearOptions);
+          //   ImGui::Unindent();
+          //}
 
           if (ImGui::CollapsingHeader("Camera")) {
-            // ImGui::Indent();
-            // float zNearP, zFarP, fovInDegree, aspectRatio;
-            // g_cam->GetPerspectiveProjection(&zNearP, &zFarP, &fovInDegree,
-            //                                 &aspectRatio);
-            // if (ImGui::SliderFloat("Near", &zNearP, 0.001f, 1.0f)) {
-            //   g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-            //                                   aspectRatio);
-            // }
-            // if (ImGui::SliderFloat("Far", &zFarP, 1.0f, 10000.0f)) {
-            //   g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-            //                                   aspectRatio);
-            // }
-            // if (ImGui::InputFloat("Fov", &fovInDegree)) {
-            //   g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-            //                                   aspectRatio);
-            // }
-            // if (ImGui::InputFloat("AspectRatio", &aspectRatio)) {
-            //   g_cam->SetPerspectiveProjection(zNearP, zFarP, fovInDegree,
-            //                                   aspectRatio);
-            // }
+             ImGui::Indent();
+             if (ImGui::CollapsingHeader("DoF")) {
+               bool dofEnabled = g_renderer->IsDofEnabled();
+               float dofCocScale = g_renderer->GetDofCocScale();
+               float dofCocAspectRatio = g_renderer->GetDofCocAspectRatio();
+               int dofRingCount = g_renderer->GetDofRingCount();
+               int dofMaxCoc = g_renderer->GetDofMaxCoc();
+               bool isDofNativeResolution = g_renderer->IsDofNativeResolution();
+               bool isDofMedian = g_renderer->IsDofMedian();
 
-            // ImGui::SliderFloat("Focal length (mm)", &any, 16.0f, 90.0f);
-            // ImGui::SliderFloat("Aperture", &any, 1.0f, 32.0f);
-            // ImGui::SliderFloat("Speed (1/s)", &any, 1000.0f, 1.0f);
-            // ImGui::SliderFloat("ISO", &any, 25.0f, 6400.0f);
-            // if (ImGui::CollapsingHeader("DoF")) {
-            //   ImGui::Checkbox("Enabled##dofEnabled", &bAny);
-            //   ImGui::SliderFloat("Focus distance", &any, 0.0f, 30.0f);
-            //   ImGui::SliderFloat("Blur scale", &any, 0.1f, 10.0f);
-            //   ImGui::SliderFloat("CoC aspect-ratio", &any, 0.25f, 4.0f);
-            //   ImGui::SliderInt("Ring count", &iAny, 1, 17);
-            //   ImGui::SliderInt("Max CoC", &iAny, 1, 32);
-            //   ImGui::Checkbox("Native Resolution", &bAny);
-            //   ImGui::Checkbox("Median Filter", &bAny);
-            // }
+               if (ImGui::Checkbox("Enabled##dofEnabled", &dofEnabled)) {
+                 g_renderer->SetDofEnabled(dofEnabled);
+               }
+               //if (ImGui::SliderFloat("Focus distance", &any, 0.0f,
+               //                       30.0f)) {
+               //}
+               if (ImGui::SliderFloat("Blur scale", &dofCocScale, 0.1f,
+                                      10.0f)) {
+                 g_renderer->SetDofCocScale(dofCocScale);
+               }
+               if (ImGui::SliderFloat("CoC aspect-ratio", &dofCocAspectRatio,
+                                      0.25f, 4.0f)) {
+                 g_renderer->SetDofCocAspectRatio(dofCocAspectRatio);
+               }
+               if (ImGui::SliderInt("Ring count", &dofRingCount, 1, 17)) {
+                 g_renderer->SetDofRingCount(dofRingCount);
+               }
+               if (ImGui::SliderInt("Max CoC", &dofMaxCoc, 1, 32)) {
+                 g_renderer->SetDofMaxCoc(dofMaxCoc);
+               }
+               if (ImGui::Checkbox("Native Resolution",
+                                   &isDofNativeResolution)) {
+                 g_renderer->SetDofNativeResolution(isDofNativeResolution);
+               }
+               if (ImGui::Checkbox("Median Filter", &isDofMedian)) {
+                 g_renderer->SetDofMedian(isDofMedian);
+               }
+             }
+             if (ImGui::CollapsingHeader("Vignette")) {
+               bool vignetteEnabled = g_renderer->IsVignetteEnabled();
+               float midPoint = g_renderer->GetVignetteMidPoint();
+               float roundness = g_renderer->GetVignetteRoundness();
+               float feather = g_renderer->GetVignetteFeather();
+               float color[3];
+               g_renderer->GetVignetteColor(color);
 
-            // if (ImGui::CollapsingHeader("Vignette")) {
-            //   ImGui::Checkbox("Enabled##vignetteEnabled", &bAny);
-            //   ImGui::SliderFloat("Mid point", &any, 0.0f, 1.0f);
-            //   ImGui::SliderFloat("Roundness", &any, 0.0f, 1.0f);
-            //   ImGui::SliderFloat("Feather", &any, 0.0f, 1.0f);
-            //   ImGui::ColorEdit3("Color##vignetteColor", anyVec);
-            // }
+               if (ImGui::Checkbox("Enabled##vignetteEnabled",
+                                   &vignetteEnabled)) {
+                 g_renderer->SetVignetteEnabled(vignetteEnabled);
+               }
+               if (ImGui::SliderFloat("Mid point", &midPoint, 0.0f, 1.0f)) {
+                 g_renderer->SetVignetteMidPoint(midPoint);
+               }
+               if (ImGui::SliderFloat("Roundness", &roundness, 0.0f, 1.0f)) {
+                 g_renderer->SetVignetteRoundness(roundness);
+               }
+               if (ImGui::SliderFloat("Feather", &feather, 0.0f, 1.0f)) {
+                 g_renderer->SetVignetteFeather(feather);
+               }
+               if (ImGui::ColorEdit3("Color##vignetteColor", color)) {
+                 g_renderer->SetVignetteColor(color);
+               }
+             }
 
-            //// We do not yet support camera selection in the remote UI. To
-            //// support this feature, we would need to send a message from
-            //// DebugServer to the WebSockets client.
-            ///*       if (true) {
-            //         ImGui::ListBox("Cameras", &mCurrentCamera,
-            //         cstrings.data(),
-            //                        cstrings.size());
-            //       }*/
-
-            // ImGui::SliderFloat("Ocular distance", &any, 0.0f, 1.0f);
-
-            // float toeInDegrees = any;
-            //// mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
-            // ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");
-            //// mSettings.viewer.cameraEyeToeIn = toeInDegrees / 180.0f *
-            /// f::PI;
-
-            // ImGui::Unindent();
+             ImGui::Unindent();
           }
           break;
       }
