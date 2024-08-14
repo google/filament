@@ -908,12 +908,14 @@ namespace vzm
                 MaterialVID vid_m = GetFirstVidByName("_DEFAULT_STANDARD_MATERIAL");
                 Material* m = materialResMap_[vid_m]->material;
                 MaterialInstance* mi = m->createInstance();
-                mi->setParameter("baseColor", filament::RgbType::LINEAR, filament::math::float3{ 1.0, 1.0, 1.0 });
+                mi->setParameter("baseColor", filament::RgbaType::LINEAR, filament::math::float4{ 1.0, 1.0, 1.0, 1.0 });
                 mi->setParameter("metallic", 1.0f);
                 mi->setParameter("roughness", 0.4f);
                 mi->setParameter("reflectance", 0.5f);
                 VzMI* v_mi = CreateMaterialInstance(name + "_mi", vid_m, mi);
                 actor_res->SetMIs({ v_mi->GetVID() });
+
+                gEngineApp.BuildRenderable(vid);
             }
             break;
         }
@@ -1013,7 +1015,7 @@ namespace vzm
             assert(v_m != nullptr);
             Material* m = materialResMap_[v_m->GetVID()]->material;
             mi = m->createInstance(mi_name.c_str());
-            mi->setParameter("baseColor", filament::RgbType::LINEAR, filament::math::float3{ 0.8, 0.1, 0.1 });
+            mi->setParameter("baseColor", filament::RgbaType::LINEAR, filament::math::float4{ 0.8, 0.1, 0.1, 1.0 });
             mi->setParameter("metallic", 1.0f);
             mi->setParameter("roughness", 0.4f);
             mi->setParameter("reflectance", 0.5f);
@@ -1189,7 +1191,12 @@ namespace vzm
         auto& rcm = gEngine->getRenderableManager();
         utils::Entity ett_actor = utils::Entity::import(vid);
         auto ins = rcm.getInstance(ett_actor);
-        assert(ins.isValid());
+        if (ins.isValid())
+        {
+            ett_actor = gEngine->getEntityManager().create();
+            ins = rcm.getInstance(ett_actor);
+        }
+        //assert(ins.isValid());
 
         std::vector<VzPrimitive>& primitives = *geo_res->Get();
         std::vector<MaterialInstance*> mis;

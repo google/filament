@@ -65,36 +65,37 @@ using namespace utils;
 
 namespace {
 
-using namespace filament::backend;
+    using namespace filament::backend;
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-class FilamentAppVulkanPlatform : public VulkanPlatform {
-public:
-    FilamentAppVulkanPlatform(char const* gpuHintCstr) {
-        utils::CString gpuHint{ gpuHintCstr };
-        if (gpuHint.empty()) {
-            return;
+    class FilamentAppVulkanPlatform : public VulkanPlatform {
+    public:
+        FilamentAppVulkanPlatform(char const* gpuHintCstr) {
+            utils::CString gpuHint{ gpuHintCstr };
+            if (gpuHint.empty()) {
+                return;
+            }
+            VulkanPlatform::Customization::GPUPreference pref;
+            // Check to see if it is an integer, if so turn it into an index.
+            if (std::all_of(gpuHint.begin(), gpuHint.end(), ::isdigit)) {
+                char* p_end{};
+                pref.index = static_cast<int8_t>(std::strtol(gpuHint.c_str(), &p_end, 10));
+            }
+            else {
+                pref.deviceName = gpuHint;
+            }
+            mCustomization = {
+                .gpu = pref
+            };
         }
-        VulkanPlatform::Customization::GPUPreference pref;
-        // Check to see if it is an integer, if so turn it into an index.
-        if (std::all_of(gpuHint.begin(), gpuHint.end(), ::isdigit)) {
-            char* p_end {};
-            pref.index = static_cast<int8_t>(std::strtol(gpuHint.c_str(), &p_end, 10));
-        } else {
-            pref.deviceName = gpuHint;
+
+        virtual VulkanPlatform::Customization getCustomization() const noexcept override {
+            return mCustomization;
         }
-        mCustomization = {
-            .gpu = pref
-        };
-    }
 
-    virtual VulkanPlatform::Customization getCustomization() const noexcept override {
-        return mCustomization;
-    }
-
-private:
-    VulkanPlatform::Customization mCustomization;
-};
+    private:
+        VulkanPlatform::Customization mCustomization;
+    };
 #endif
 
 } // anonymous namespace
@@ -117,31 +118,31 @@ View* FilamentApp::getGuiView() const noexcept {
 }
 
 void FilamentApp::run(const Config& config, SetupCallback setupCallback,
-        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
-        PreRenderCallback preRender, PostRenderCallback postRender,
-        size_t width, size_t height) {
+    CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
+    PreRenderCallback preRender, PostRenderCallback postRender,
+    size_t width, size_t height) {
     mWindowTitle = config.title;
     std::unique_ptr<FilamentApp::Window> window(
-            new FilamentApp::Window(this, config, config.title, width, height));
+        new FilamentApp::Window(this, config, config.title, width, height));
 
     mDepthMaterial = Material::Builder()
-            .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
-            .build(*mEngine);
+        .package(FILAMENTAPP_DEPTHVISUALIZER_DATA, FILAMENTAPP_DEPTHVISUALIZER_SIZE)
+        .build(*mEngine);
 
     mDepthMI = mDepthMaterial->createInstance();
 
     mDefaultMaterial = Material::Builder()
-            .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
-            .build(*mEngine);
+        .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
+        .build(*mEngine);
 
     mTransparentMaterial = Material::Builder()
-            .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
-            .build(*mEngine);
+        .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
+        .build(*mEngine);
 
-    std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));
+    std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, { 1,0,0 }));
     // we can't cull the light-frustum because it's not applied a rigid transform
     // and currently, filament assumes that for culling
-    std::unique_ptr<Cube> lightmapCube(new Cube(*mEngine, mTransparentMaterial, {0,1,0}, false));
+    std::unique_ptr<Cube> lightmapCube(new Cube(*mEngine, mTransparentMaterial, { 0,1,0 }, false));
     mScene = mEngine->createScene();
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
@@ -187,12 +188,12 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
             getRootAssetsPath() + "assets/fonts/Roboto-Medium.ttf");
         ImGuiIO& io = ImGui::GetIO();
-        #ifdef WIN32
-            SDL_SysWMinfo wmInfo;
-            SDL_VERSION(&wmInfo.version);
-            SDL_GetWindowWMInfo(window->getSDLWindow(), &wmInfo);
-            ImGui::GetMainViewport()->PlatformHandleRaw = wmInfo.info.win.window;
-        #endif
+#ifdef WIN32
+        SDL_SysWMinfo wmInfo;
+        SDL_VERSION(&wmInfo.version);
+        SDL_GetWindowWMInfo(window->getSDLWindow(), &wmInfo);
+        ImGui::GetMainViewport()->PlatformHandleRaw = wmInfo.info.win.window;
+#endif
         io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
         io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
         io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
@@ -216,10 +217,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
         io.SetClipboardTextFn = [](void*, const char* text) {
             SDL_SetClipboardText(text);
-        };
+            };
         io.GetClipboardTextFn = [](void*) -> const char* {
             return SDL_GetClipboardText();
-        };
+            };
         io.ClipboardUserData = nullptr;
     }
 
@@ -255,7 +256,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         // Allow the app to animate the scene if desired.
         if (mAnimation) {
-            double now = (double) SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();
+            double now = (double)SDL_GetPerformanceCounter() / SDL_GetPerformanceFrequency();
             mAnimation(mEngine, window->mMainView->getView(), now);
         }
 
@@ -270,34 +271,34 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 ImGuiIO& io = ImGui::GetIO();
                 SDL_Event* event = &events[nevents];
                 switch (event->type) {
-                    case SDL_MOUSEWHEEL: {
-                        if (event->wheel.x > 0) io.MouseWheelH += 1;
-                        if (event->wheel.x < 0) io.MouseWheelH -= 1;
-                        if (event->wheel.y > 0) io.MouseWheel += 1;
-                        if (event->wheel.y < 0) io.MouseWheel -= 1;
-                        break;
-                    }
-                    case SDL_MOUSEBUTTONDOWN: {
-                        if (event->button.button == SDL_BUTTON_LEFT) mousePressed[0] = true;
-                        if (event->button.button == SDL_BUTTON_RIGHT) mousePressed[1] = true;
-                        if (event->button.button == SDL_BUTTON_MIDDLE) mousePressed[2] = true;
-                        break;
-                    }
-                    case SDL_TEXTINPUT: {
-                        io.AddInputCharactersUTF8(event->text.text);
-                        break;
-                    }
-                    case SDL_KEYDOWN:
-                    case SDL_KEYUP: {
-                        int key = event->key.keysym.scancode;
-                        IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
-                        io.KeysDown[key] = (event->type == SDL_KEYDOWN);
-                        io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-                        io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
-                        io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
-                        io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
-                        break;
-                    }
+                case SDL_MOUSEWHEEL: {
+                    if (event->wheel.x > 0) io.MouseWheelH += 1;
+                    if (event->wheel.x < 0) io.MouseWheelH -= 1;
+                    if (event->wheel.y > 0) io.MouseWheel += 1;
+                    if (event->wheel.y < 0) io.MouseWheel -= 1;
+                    break;
+                }
+                case SDL_MOUSEBUTTONDOWN: {
+                    if (event->button.button == SDL_BUTTON_LEFT) mousePressed[0] = true;
+                    if (event->button.button == SDL_BUTTON_RIGHT) mousePressed[1] = true;
+                    if (event->button.button == SDL_BUTTON_MIDDLE) mousePressed[2] = true;
+                    break;
+                }
+                case SDL_TEXTINPUT: {
+                    io.AddInputCharactersUTF8(event->text.text);
+                    break;
+                }
+                case SDL_KEYDOWN:
+                case SDL_KEYUP: {
+                    int key = event->key.keysym.scancode;
+                    IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
+                    io.KeysDown[key] = (event->type == SDL_KEYDOWN);
+                    io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+                    io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+                    io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+                    io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+                    break;
+                }
                 }
             }
             nevents++;
@@ -308,59 +309,59 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             const SDL_Event& event = events[i];
             ImGuiIO* io = mImGuiHelper ? &ImGui::GetIO() : nullptr;
             switch (event.type) {
-                case SDL_QUIT:
+            case SDL_QUIT:
+                mClosed = true;
+                break;
+            case SDL_KEYDOWN:
+                if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
                     mClosed = true;
-                    break;
-                case SDL_KEYDOWN:
-                    if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-                        mClosed = true;
-                    }
+                }
 #ifndef NDEBUG
-                    if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
-                        DebugRegistry& debug = mEngine->getDebugRegistry();
-                        bool* captureFrame =
-                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
-                        *captureFrame = true;
-                    }
+                if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
+                    DebugRegistry& debug = mEngine->getDebugRegistry();
+                    bool* captureFrame =
+                        debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                    *captureFrame = true;
+                }
 #endif
-                    window->keyDown(event.key.keysym.scancode);
-                    break;
-                case SDL_KEYUP:
-                    window->keyUp(event.key.keysym.scancode);
-                    break;
-                case SDL_MOUSEWHEEL:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseWheel(event.wheel.y);
-                    break;
-                case SDL_MOUSEBUTTONDOWN:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseDown(event.button.button, event.button.x, event.button.y);
-                    break;
-                case SDL_MOUSEBUTTONUP:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseUp(event.button.x, event.button.y);
-                    break;
-                case SDL_MOUSEMOTION:
-                    if (!io || !io->WantCaptureMouse)
-                        window->mouseMoved(event.motion.x, event.motion.y);
-                    break;
-                case SDL_DROPFILE:
-                    if (mDropHandler) {
-                        mDropHandler(event.drop.file);
-                    }
-                    SDL_free(event.drop.file);
-                    break;
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event) {
-                        case SDL_WINDOWEVENT_RESIZED:
-                            window->resize();
-                            break;
-                        default:
-                            break;
-                    }
+                window->keyDown(event.key.keysym.scancode);
+                break;
+            case SDL_KEYUP:
+                window->keyUp(event.key.keysym.scancode);
+                break;
+            case SDL_MOUSEWHEEL:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseWheel(event.wheel.y);
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseDown(event.button.button, event.button.x, event.button.y);
+                break;
+            case SDL_MOUSEBUTTONUP:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseUp(event.button.x, event.button.y);
+                break;
+            case SDL_MOUSEMOTION:
+                if (!io || !io->WantCaptureMouse)
+                    window->mouseMoved(event.motion.x, event.motion.y);
+                break;
+            case SDL_DROPFILE:
+                if (mDropHandler) {
+                    mDropHandler(event.drop.file);
+                }
+                SDL_free(event.drop.file);
+                break;
+            case SDL_WINDOWEVENT:
+                switch (event.window.event) {
+                case SDL_WINDOWEVENT_RESIZED:
+                    window->resize();
                     break;
                 default:
                     break;
+                }
+                break;
+            default:
+                break;
             }
         }
 
@@ -368,7 +369,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         static Uint64 frequency = SDL_GetPerformanceFrequency();
         Uint64 now = SDL_GetPerformanceCounter();
         const float timeStep = mTime > 0 ? (float)((double)(now - mTime) / frequency) :
-                (float)(1.0f / 60.0f);
+            (float)(1.0f / 60.0f);
         mTime = now;
 
         // Populate the UI scene, regardless of whether Filament wants to a skip frame. We should
@@ -378,14 +379,15 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             // Inform ImGui of the current window size in case it was resized.
             if (config.headless) {
                 mImGuiHelper->setDisplaySize(window->mWidth, window->mHeight);
-            } else {
+            }
+            else {
                 int windowWidth, windowHeight;
                 int displayWidth, displayHeight;
                 SDL_GetWindowSize(window->mWindow, &windowWidth, &windowHeight);
                 SDL_GL_GetDrawableSize(window->mWindow, &displayWidth, &displayHeight);
                 mImGuiHelper->setDisplaySize(windowWidth, windowHeight,
-                        windowWidth > 0 ? ((float)displayWidth / windowWidth) : 0,
-                        displayHeight > 0 ? ((float)displayHeight / windowHeight) : 0);
+                    windowWidth > 0 ? ((float)displayWidth / windowWidth) : 0,
+                    displayHeight > 0 ? ((float)displayHeight / windowHeight) : 0);
             }
 
             // Setup mouse inputs (we already got mouse wheel, keyboard keys & characters
@@ -451,28 +453,29 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         }
 
         if (config.splitView) {
-            if(!window->mOrthoView->getView()->hasCamera()) {
+            if (!window->mOrthoView->getView()->hasCamera()) {
                 Camera const* debugDirectionalShadowCamera =
-                        window->mMainView->getView()->getDirectionalShadowCamera();
+                    window->mMainView->getView()->getDirectionalShadowCamera();
                 if (debugDirectionalShadowCamera) {
                     window->mOrthoView->setCamera(
-                            const_cast<Camera*>(debugDirectionalShadowCamera));
+                        const_cast<Camera*>(debugDirectionalShadowCamera));
                 }
             }
         }
 
         if (renderer->beginFrame(window->getSwapChain())) {
-            for (filament::View* offscreenView: mOffscreenViews) {
+            for (filament::View* offscreenView : mOffscreenViews) {
                 renderer->render(offscreenView);
             }
-            for (auto const& view: window->mViews) {
+            for (auto const& view : window->mViews) {
                 renderer->render(view->getView());
             }
             if (postRender) {
                 postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
             }
             renderer->endFrame();
-        } else {
+        }
+        else {
             ++mSkippedFrames;
         }
     }
@@ -529,7 +532,8 @@ void FilamentApp::loadIBL(std::string_view path) {
             mIBL.reset(nullptr);
             return;
         }
-    } else {
+    }
+    else {
         if (!mIBL->loadFromDirectory(iblPath)) {
             std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
             mIBL.reset(nullptr);
@@ -571,10 +575,10 @@ void FilamentApp::loadDirt(const Config& config) {
         assert(n == 3);
 
         mDirt = Texture::Builder()
-                .width(w)
-                .height(h)
-                .format(Texture::InternalFormat::RGB8)
-                .build(*mEngine);
+            .width(w)
+            .height(h)
+            .format(Texture::InternalFormat::RGB8)
+            .build(*mEngine);
 
         mDirt->setImage(*mEngine, 0, { data, size_t(w * h * 3),
                 Texture::Format::RGB, Texture::Type::UBYTE,
@@ -589,8 +593,8 @@ void FilamentApp::initSDL() {
 // ------------------------------------------------------------------------------------------------
 
 FilamentApp::Window::Window(FilamentApp* filamentApp,
-        const Config& config, std::string title, size_t w, size_t h)
-        : mFilamentApp(filamentApp), mConfig(config), mIsHeadless(config.headless) {
+    const Config& config, std::string title, size_t w, size_t h)
+    : mFilamentApp(filamentApp), mConfig(config), mIsHeadless(config.headless) {
     const int x = SDL_WINDOWPOS_CENTERED;
     const int y = SDL_WINDOWPOS_CENTERED;
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
@@ -604,19 +608,19 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // Even if we're in headless mode, we still need to create a window, otherwise SDL will not poll
     // events.
-    mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
+    mWindow = SDL_CreateWindow(title.c_str(), x, y, (int)w, (int)h, windowFlags);
 
     auto const createEngine = [&config, this]() {
         auto backend = config.backend;
 
         // This mirrors the logic for choosing a backend given compile-time flags and client having
         // provided DEFAULT as the backend (see PlatformFactory.cpp)
-        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(IOS) && \
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(IOS) && \
             !defined(__APPLE__) && defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            if (backend == Engine::Backend::DEFAULT) {
-                backend = Engine::Backend::VULKAN;
-            }
-        #endif
+        if (backend == Engine::Backend::DEFAULT) {
+            backend = Engine::Backend::VULKAN;
+        }
+#endif
 
         Engine::Config engineConfig = {};
         engineConfig.stereoscopicEyeCount = config.stereoscopicEyeCount;
@@ -629,30 +633,31 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 #endif
 
         if (backend == Engine::Backend::VULKAN) {
-            #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-                mFilamentApp->mVulkanPlatform =
-                        new FilamentAppVulkanPlatform(config.vulkanGPUHint.c_str());
-                return Engine::Builder()
-                        .backend(backend)
-                        .platform(mFilamentApp->mVulkanPlatform)
-                        .featureLevel(config.featureLevel)
-                        .config(&engineConfig)
-                        .build();
-            #endif
-        }
-        return Engine::Builder()
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+            mFilamentApp->mVulkanPlatform =
+                new FilamentAppVulkanPlatform(config.vulkanGPUHint.c_str());
+            return Engine::Builder()
                 .backend(backend)
+                .platform(mFilamentApp->mVulkanPlatform)
                 .featureLevel(config.featureLevel)
                 .config(&engineConfig)
                 .build();
-    };
+#endif
+        }
+        return Engine::Builder()
+            .backend(backend)
+            .featureLevel(config.featureLevel)
+            .config(&engineConfig)
+            .build();
+        };
 
     if (config.headless) {
         mFilamentApp->mEngine = createEngine();
-        mSwapChain = mFilamentApp->mEngine->createSwapChain((uint32_t) w, (uint32_t) h);
+        mSwapChain = mFilamentApp->mEngine->createSwapChain((uint32_t)w, (uint32_t)h);
         mWidth = w;
         mHeight = h;
-    } else {
+    }
+    else {
 
         void* nativeWindow = ::getNativeWindow(mWindow);
 
@@ -689,7 +694,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         config.featureLevel = mFilamentApp->mEngine->getActiveFeatureLevel();
 
         mSwapChain = mFilamentApp->mEngine->createSwapChain(
-                nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+            nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
 
     mRenderer = mFilamentApp->mEngine->createRenderer();
@@ -717,13 +722,13 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     // set-up the camera manipulators
     mMainCameraMan = CameraManipulator::Builder()
-            .targetPosition(0, 0, -4)
-            .flightMoveDamping(15.0)
-            .build(config.cameraMode);
+        .targetPosition(0, 0, -4)
+        .flightMoveDamping(15.0)
+        .build(config.cameraMode);
     mDebugCameraMan = CameraManipulator::Builder()
-            .targetPosition(0, 0, -4)
-            .flightMoveDamping(15.0)
-            .build(config.cameraMode);
+        .targetPosition(0, 0, -4)
+        .flightMoveDamping(15.0)
+        .build(config.cameraMode);
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
@@ -740,14 +745,14 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         // Ortho view obviously uses an ortho camera
         Camera const* debugDirectionalShadowCamera = mMainView->getView()->getDirectionalShadowCamera();
         if (debugDirectionalShadowCamera) {
-            mOrthoView->setCamera(const_cast<Camera *>(debugDirectionalShadowCamera));
+            mOrthoView->setCamera(const_cast<Camera*>(debugDirectionalShadowCamera));
         }
     }
 
     // configure the cameras
     configureCamerasForWindow();
 
-    mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
+    mMainCamera->lookAt({ 4, 0, -4 }, { 0, 0, -4 }, { 0, 1, 0 });
 }
 
 FilamentApp::Window::~Window() {
@@ -779,7 +784,8 @@ void FilamentApp::Window::mouseDown(int button, ssize_t x, ssize_t y) {
 void FilamentApp::Window::mouseWheel(ssize_t x) {
     if (mMouseEventTarget) {
         mMouseEventTarget->mouseWheel(x);
-    } else {
+    }
+    else {
         for (auto const& view : mViews) {
             if (view->intersects(mLastX, mLastY)) {
                 view->mouseWheel(x);
@@ -823,7 +829,8 @@ void FilamentApp::Window::keyDown(SDL_Scancode key) {
     CView* targetView = nullptr;
     if (mMouseEventTarget) {
         targetView = mMouseEventTarget;
-    } else {
+    }
+    else {
         for (auto const& view : mViews) {
             if (view->intersects(mLastX, mLastY)) {
                 targetView = view.get();
@@ -888,14 +895,14 @@ void FilamentApp::Window::configureCamerasForWindow() {
     // If the app is not headless, query the window for its physical & virtual sizes.
     if (!mIsHeadless) {
         uint32_t width, height;
-        SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
-        mWidth = (size_t) width;
-        mHeight = (size_t) height;
+        SDL_GL_GetDrawableSize(mWindow, (int*)&width, (int*)&height);
+        mWidth = (size_t)width;
+        mHeight = (size_t)height;
 
         int virtualWidth, virtualHeight;
         SDL_GetWindowSize(mWindow, &virtualWidth, &virtualHeight);
-        dpiScaleX = (float) width / virtualWidth;
-        dpiScaleY = (float) height / virtualHeight;
+        dpiScaleX = (float)width / virtualWidth;
+        dpiScaleY = (float)height / virtualHeight;
     }
 
     const uint32_t width = mWidth;
@@ -909,7 +916,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     // To trigger a floating-point exception, users could shrink the window to be smaller than
     // the sidebar. To prevent this we simply clamp the width of the main viewport.
-    const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
+    const uint32_t mainWidth = splitview ? width : std::max(1, (int)width - sidebar);
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
@@ -921,7 +928,8 @@ void FilamentApp::Window::configureCamerasForWindow() {
         projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, 1.0, near, far);
         projections[3] = projections[2];
         mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
-    } else {
+    }
+    else {
         mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
     }
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
@@ -931,17 +939,18 @@ void FilamentApp::Window::configureCamerasForWindow() {
         const int ec = mConfig.stereoscopicEyeCount;
         aspectRatio = double(mainWidth) / ec / height;
     }
-    mMainCamera->setScaling({1.0 / aspectRatio, 1.0});
+    mMainCamera->setScaling({ 1.0 / aspectRatio, 1.0 });
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {
         uint32_t vpw = width / 2;
         uint32_t vph = height / 2;
-        mMainView->setViewport ({            0,            0, vpw,         vph          });
-        mDepthView->setViewport({ int32_t(vpw),            0, width - vpw, vph          });
-        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), width - vpw, height - vph });
-        mOrthoView->setViewport({            0, int32_t(vph), vpw,         height - vph });
-    } else {
+        mMainView->setViewport({ 0,            0, vpw,         vph });
+        mDepthView->setViewport({ int32_t(vpw),            0, width - vpw, vph });
+        mGodView->setViewport({ int32_t(vpw), int32_t(vph), width - vpw, height - vph });
+        mOrthoView->setViewport({ 0, int32_t(vph), vpw,         height - vph });
+    }
+    else {
         mMainView->setViewport({ sidebar, 0, mainWidth, height });
     }
     mUiView->setViewport({ 0, 0, width, height });
@@ -950,7 +959,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
 // ------------------------------------------------------------------------------------------------
 
 FilamentApp::CView::CView(Renderer& renderer, std::string name)
-        : engine(*renderer.getEngine()), mName(name) {
+    : engine(*renderer.getEngine()), mName(name) {
     view = engine.createView();
     view->setName(name.c_str());
 }
@@ -993,26 +1002,26 @@ void FilamentApp::CView::mouseWheel(ssize_t x) {
 
 bool FilamentApp::manipulatorKeyFromKeycode(SDL_Scancode scancode, CameraManipulator::Key& key) {
     switch (scancode) {
-        case SDL_SCANCODE_W:
-            key = CameraManipulator::Key::FORWARD;
-            return true;
-        case SDL_SCANCODE_A:
-            key = CameraManipulator::Key::LEFT;
-            return true;
-        case SDL_SCANCODE_S:
-            key = CameraManipulator::Key::BACKWARD;
-            return true;
-        case SDL_SCANCODE_D:
-            key = CameraManipulator::Key::RIGHT;
-            return true;
-        case SDL_SCANCODE_E:
-            key = CameraManipulator::Key::UP;
-            return true;
-        case SDL_SCANCODE_Q:
-            key = CameraManipulator::Key::DOWN;
-            return true;
-        default:
-            return false;
+    case SDL_SCANCODE_W:
+        key = CameraManipulator::Key::FORWARD;
+        return true;
+    case SDL_SCANCODE_A:
+        key = CameraManipulator::Key::LEFT;
+        return true;
+    case SDL_SCANCODE_S:
+        key = CameraManipulator::Key::BACKWARD;
+        return true;
+    case SDL_SCANCODE_D:
+        key = CameraManipulator::Key::RIGHT;
+        return true;
+    case SDL_SCANCODE_E:
+        key = CameraManipulator::Key::UP;
+        return true;
+    case SDL_SCANCODE_Q:
+        key = CameraManipulator::Key::DOWN;
+        return true;
+    default:
+        return false;
     }
 }
 
