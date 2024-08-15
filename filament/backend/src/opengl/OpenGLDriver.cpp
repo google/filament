@@ -2211,7 +2211,7 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // ------------------------------------------------------------------------------------------------
 
 void OpenGLDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
-    mHandleAllocator.associate_handle(handleId, std::move(tag));
+    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
 }
 
 void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,

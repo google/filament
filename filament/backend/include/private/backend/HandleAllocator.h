@@ -174,10 +174,10 @@ public:
                 uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
                 auto const pNode = static_cast<typename Allocator::Node*>(p);
                 uint8_t const expectedAge = pNode[-1].age;
-                // get_handle_tag() is only called if the check fails.
+                // getHandleTag() is only called if the check fails.
                 FILAMENT_CHECK_POSTCONDITION(expectedAge == age)
                         << "use-after-free of Handle with id=" << handle.getId()
-                        << ", tag=" << get_handle_tag(handle.getId()).c_str_safe();
+                        << ", tag=" << getHandleTag(handle.getId()).c_str_safe();
             }
         }
 
@@ -204,7 +204,7 @@ public:
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
     }
 
-    void associate_handle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
+    void associateTagToHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
         // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
         // those
         if (isPoolHandle(id)) {
@@ -222,7 +222,7 @@ public:
         }
     }
 
-    utils::CString get_handle_tag(HandleBase::HandleId id) const noexcept {
+    utils::CString getHandleTag(HandleBase::HandleId id) const noexcept {
         if (!isPoolHandle(id)) {
             return "(no tag)";
         }

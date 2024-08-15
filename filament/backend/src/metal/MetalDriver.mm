@@ -2062,7 +2062,7 @@ void MetalDriver::resetState(int) {
 }
 
 void MetalDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
-    mHandleAllocator.associate_handle(handleId, std::move(tag));
+    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
 }
 
 void MetalDriver::runAtNextTick(const std::function<void()>& fn) noexcept {
