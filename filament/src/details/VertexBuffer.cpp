@@ -154,7 +154,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t len)
     if (!name) {
         return *this;
     }
-    size_t const length = std::min(len == 0 ? strlen(name) : len, size_t { 128u });
+    size_t const length = std::min(len, size_t { 128u });
     mImpl->mName = utils::CString(name, length);
     return *this;
 }

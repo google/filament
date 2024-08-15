@@ -80,10 +80,10 @@ public:
          * the function returns.
          *
          * @param name A string to identify this InstanceBuffer
-         * @param len Length of name, or 0 to compute the length if name is null-terminated
+         * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
          */
-        Builder& name(const char* UTILS_NONNULL name, size_t len = 0) noexcept;
+        Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
          * Creates the InstanceBuffer object and returns a pointer to it.
