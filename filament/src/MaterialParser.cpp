@@ -355,6 +355,12 @@ bool MaterialParser::getSpecularAntiAliasingThreshold(float* value) const noexce
     return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasingThreshold, value);
 }
 
+bool MaterialParser::getStereoscopicType(backend::StereoscopicType* value) const noexcept {
+    static_assert(sizeof(StereoscopicType) == sizeof(uint8_t),
+            "StereoscopicType expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialStereoscopicType, reinterpret_cast<uint8_t*>(value));
+}
+
 bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcept {
     uint32_t rawAttributes = 0;
     if (!mImpl.getFromSimpleChunk(ChunkType::MaterialRequiredAttributes, &rawAttributes)) {
