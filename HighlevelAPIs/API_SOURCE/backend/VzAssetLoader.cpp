@@ -111,14 +111,15 @@ namespace filament::gltfio {
         mMIMap[mi] = mi_vid;
     }
 
-    void AddTextureComponentToVzEngine(const MInstanceVID vidMI, const std::string& miMapName,
+    void AddTextureComponentToVzEngine(const MInstanceVID vidMI, const std::string& miMapName, 
         const cgltf_texture* srcTexture, const std::string& assetName, FFilamentAsset* fAsset,
         std::unordered_map<size_t, TextureVID>& mTextureMap)
     {
-        const size_t textureIndex = (size_t)(srcTexture - fAsset->mSourceAsset->hierarchy->textures);
+        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
+        const size_t textureIndex = (size_t)(srcTexture - srcAsset->textures);
         FFilamentAsset::TextureInfo& info = fAsset->mTextures[textureIndex];
 
-        const cgltf_sampler* srcSampler = fAsset->mSourceAsset->hierarchy->textures[textureIndex].sampler;
+        const cgltf_sampler* srcSampler = srcAsset->textures[textureIndex].sampler;
         TextureSampler sampler;
         if (srcSampler) {
             sampler.setWrapModeS(getWrapMode(srcSampler->wrap_s));
@@ -143,10 +144,32 @@ namespace filament::gltfio {
         auto it_tex = mTextureMap.find(textureIndex);
         if (it_tex == mTextureMap.end())
         {
-            tex_vid = gEngineApp.CreateTexture(assetName + "_" + std::to_string(textureIndex),
-                info.texture, nullptr, false)->GetVID();
+            std::string name = "";
+            if (srcAsset->images_count > 0)
+            {
+                assert(textureIndex < srcAsset->images_count && "textureIndex < srcAsset->images_count");
+                char* name_ptr = srcAsset->images[textureIndex].name;
+                if (name_ptr)
+                    name = name_ptr;
+                else if (name_ptr = srcAsset->images[textureIndex].uri)
+                {
+                    name = name_ptr;
+                }
+                else
+                {
+                    name = assetName + "_texture_" + std::to_string(textureIndex);
+                }
+            }
+            else
+            {
+                name = assetName + "_texture_" + std::to_string(textureIndex);
+            }
+
+            tex_vid = gEngineApp.CreateTexture(name, info.texture, nullptr, false)->GetVID();
             VzTextureRes* tex_res = gEngineApp.GetTextureRes(tex_vid);
             tex_res->sampler = sampler;
+            tex_res->fileName = name;
+            tex_res->isAsyncLocked = true;
             mTextureMap[textureIndex] = tex_vid;
         }
         else
@@ -155,6 +178,7 @@ namespace filament::gltfio {
         }
 
         VzMIRes* mi_res = gEngineApp.GetMIRes(vidMI);
+        
         assert(mi_res && tex_vid);
         mi_res->texMap[miMapName] = tex_vid;
     };

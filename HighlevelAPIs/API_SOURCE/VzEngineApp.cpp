@@ -1366,6 +1366,11 @@ namespace vzm
                     backlog::post("Texture (" + name + ") is asset(" + name_asset + ")-owned component, thereby preserved.", backlog::LogLevel::Warning);
                     return false;
                 }
+                else if (tex_res.isAsyncLocked)
+                {
+                    backlog::post("Texture (" + name + ") is under asynchronous loading, thereby preserved.", backlog::LogLevel::Warning);
+                    return false;
+                }
                 else
                 {
                     textureResMap_.erase(it_tx); // call destructor...
@@ -1604,6 +1609,16 @@ namespace vzm
     {
         // dummy call //
 
+        if (vGltfIo.resourceLoader)
+        {
+            vGltfIo.resourceLoader->asyncCancelLoad();
+
+            for (auto it = textureResMap_.begin(); it != textureResMap_.end(); it++)
+            {
+                it->second->isAsyncLocked = false;
+            }
+        }
+
         //std::unordered_map<SceneVID, filament::Scene*> scenes_;
         //// note a VzRenderPath involves a view that includes
         //// 1. camera and 2. scene
@@ -1647,6 +1662,7 @@ namespace vzm
                 fasset->detachFilamentComponents();
                 fasset->mVertexBuffers.clear();
                 fasset->mIndexBuffers.clear();
+                fasset->mTextures.clear();
                 //fasset->mBufferObjects.clear();
                 //fasset->mTextures.clear(); 
                 fasset->mMorphTargetBuffers.clear();

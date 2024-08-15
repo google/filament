@@ -665,6 +665,7 @@ namespace vzm
         VzAssetRes& asset_res = *gEngineApp.GetAssetRes(vid_asset);
         asset_res.animator = VzAsset::Animator(vid_asset);
         asset_res.asset = asset;
+        asset_res.asyncTextures = asset_loader->mTextureMap;
 
         for (auto& instance : fasset->mInstances)
         {
@@ -705,6 +706,8 @@ namespace vzm
             backlog::post("Unable to start loading resources for " + filename, backlog::LogLevel::Error);
             return nullptr;
         }
+
+        gEngineApp.activeAsyncAsset = vid_asset;
 
         //auto& rcm = gEngine->getRenderableManager();
         //auto& lcm = gEngine->getLightManager();

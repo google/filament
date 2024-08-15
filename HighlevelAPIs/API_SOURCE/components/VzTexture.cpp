@@ -13,9 +13,14 @@ extern vzm::VzEngineApp gEngineApp;
 using namespace image;
 namespace vzm
 {
+#define ASYNCCHECK if (tex_res->isAsyncLocked) { backlog::post("Texture (" + GetName() + ") is under asynchronuous loading, so not allowed be to update!", backlog::LogLevel::Error); return false; }
+
     bool VzTexture::ReadImage(const std::string& fileName, const bool generateMIPs)
     {
+        // need 'safe check'
+        // check if the texture is async texture
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
+        ASYNCCHECK;
 
         if (tex_res->texture) {
             gEngine->destroy(tex_res->texture);
@@ -120,7 +125,8 @@ namespace vzm
 
     bool VzTexture::GenerateMIPs()
     {
-        VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
+        VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID()); 
+        ASYNCCHECK;
 
         if (tex_res->texture == nullptr) {
             return false;

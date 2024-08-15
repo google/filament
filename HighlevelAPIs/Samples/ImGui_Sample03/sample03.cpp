@@ -131,11 +131,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             std::cout << it.first << ", " << (uint8_t)it.second.type << std::endl;
         }
+        std::cout << ">>>>> baseColorMap >>>>> " << mi->GetTexture("baseColorMap") << std::endl;
 
         vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
+
         texture->ReadImage("../assets/testimage.png");
-        //mi->SetTexture("baseColorMap", texture->GetVID());
+        mi->SetTexture("baseColorMap", texture->GetVID());
     }
+
     //std::vector<VID> vid_list;
     //vzm::GetVidsByName("DoorRearRight", vid_list);
     //vzm::VzBaseComp* base_comp = vzm::GetVzComponentByName("DoorRearRight");
@@ -280,6 +283,19 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     case WM_KEYDOWN:
         switch (wParam) {
+        case 'T': {
+            std::vector<vzm::VzBaseComp*> components;
+            if (vzm::GetVzComponentsByType("VzMI", components) > 0)
+            {
+                // vanguard_vanguard_diffuse_tga
+                vzm::VzTexture* texture = (vzm::VzTexture*)vzm::GetFirstVzComponentByName("my image");
+                texture->ReadImage("../assets/testimage1.png");
+                vzm::VzMI* mi = (vzm::VzMI*)components[0];
+                mi->SetTexture("baseColorMap", texture->GetVID());
+            }
+            //
+            break;
+        }
         case 'C': {
             VID lid = vzm::GetFirstVidByName("my light");
             vzm::VzLight* light = (vzm::VzLight*)vzm::GetVzComponent(lid);

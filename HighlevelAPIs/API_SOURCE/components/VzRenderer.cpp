@@ -1211,7 +1211,22 @@ namespace vzm
 
         ResourceLoader* resource_loader = gEngineApp.GetGltfResourceLoader();
         if (resource_loader)
+        {
             resource_loader->asyncUpdateLoad();
+
+            VzAssetRes* asset_res = gEngineApp.GetAssetRes(gEngineApp.activeAsyncAsset);
+            if (asset_res && resource_loader->asyncGetLoadProgress() >= 1.)
+            {
+                gEngineApp.activeAsyncAsset = INVALID_VID;
+                filament::gltfio::FFilamentAsset* fasset = downcast(asset_res->asset);
+                for (auto& it : asset_res->asyncTextures)
+                {
+                    VzTextureRes* tex_res = gEngineApp.GetTextureRes(it.second);
+                    tex_res->texture = fasset->mTextures[it.first].texture;
+                    tex_res->isAsyncLocked = false;
+                }
+            }
+        }
 
         std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>>& assetResMap = *gEngineApp.GetAssetResMap();
 

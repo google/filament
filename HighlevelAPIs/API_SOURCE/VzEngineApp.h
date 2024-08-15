@@ -193,6 +193,7 @@ namespace vzm
         Texture* texture = nullptr;
         std::string fileName;
         TextureSampler sampler;
+        bool isAsyncLocked = false;
         ~VzTextureRes();
     };
 
@@ -204,6 +205,8 @@ namespace vzm
         std::vector<SkeletonVID> skeletons;
 
         VzAsset::Animator animator = VzAsset::Animator(0);
+
+        std::unordered_map<size_t, TextureVID> asyncTextures; // fasset.mTextures
     };
     struct VzSkeletonRes
     {
@@ -364,6 +367,8 @@ namespace vzm
         void CancelAyncLoad();
         void Initialize();
         void Destroy();
+
+        AssetVID activeAsyncAsset = INVALID_VID;
     };
 }
 
