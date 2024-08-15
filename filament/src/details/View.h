@@ -576,7 +576,12 @@ private:
                                                     }};
 
 #ifndef NDEBUG
-    std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> mDebugFrameHistory;
+    struct DebugState {
+        std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> debugFrameHistory{};
+        bool owner = false;
+        bool active = false;
+    };
+    std::shared_ptr<DebugState> mDebugState{ new DebugState };
 #endif
 };
 

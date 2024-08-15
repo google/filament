@@ -101,11 +101,13 @@ public:
     }
 
     // registers a DataSource directly
-    void registerDataSource(std::string_view name, void const* data, size_t count) noexcept;
+    bool registerDataSource(std::string_view name, void const* data, size_t count) noexcept;
 
     // registers a DataSource lazily
-    void registerDataSource(std::string_view name,
+    bool registerDataSource(std::string_view name,
             utils::Invocable<DataSource()>&& creator) noexcept;
+
+    void unregisterDataSource(std::string_view name) noexcept;
 
 #if !defined(_MSC_VER)
 private:
