@@ -1,9 +1,6 @@
+#pragma once
 #include "../VzEngineApp.h"
 #include "VzAssetLoader.h"
-
-#include <codecvt>
-#include <locale>
-#include <memory>
 
 extern vzm::VzEngineApp gEngineApp;
 
@@ -27,58 +24,13 @@ namespace filament::gltfio {
         return LightManager::Type::DIRECTIONAL;
     }
 
-    static std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
-        auto const getNameImpl = [node, defaultNodeName]() -> char const* {
-            if (node->name) return node->name;
-            if (node->mesh && node->mesh->name) return node->mesh->name;
-            if (node->light && node->light->name) return node->light->name;
-            if (node->camera && node->camera->name) return node->camera->name;
-            if (defaultNodeName) return defaultNodeName;
-            return "<unknown>";
-            };
-
-        std::string strOrig(getNameImpl());
-
-        // We handle the potential case of escaped characters in the JSON which should be properly
-        // interpreted as unicode. See spec:
-        // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#json-encoding
-        // Also see spec for escaped strings in JSON (Section 2.5) https://www.ietf.org/rfc/rfc4627.txt
-
-        std::string strEscaped;
-        size_t cur = 0, idx = 0;
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-
-        auto const addUnencodedSubstr = [&](size_t cursor, size_t nextPoint) {
-            assert_invariant(nextPoint >= cursor);
-            if (cursor == nextPoint) {
-                return;
-            }
-            strEscaped += strOrig.substr(cursor, nextPoint - cursor);
-            };
-
-        while ((idx = strOrig.find("\\u", cur)) != std::string::npos) {
-            if (idx + 6 > strOrig.length()) {
-                utils::slog.w << "gltfio: Unable to interpret node name=" << strOrig
-                    << " as proper unicode encoding." << utils::io::endl;
-                return strOrig;
-            }
-
-            // Turns string of the form \u0062 to 0x0062
-            std::string const hexStr = strOrig.substr(idx + 2, 4);
-            if (hexStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
-                utils::slog.w << "gltfio: Unable to interpret node name=" << strOrig
-                    << " as proper unicode encoding." << utils::io::endl;
-                return strOrig;
-            }
-
-            addUnencodedSubstr(cur, idx);
-
-            strEscaped += conv.to_bytes((char32_t)std::stoul(hexStr, nullptr, 16));
-            cur = idx + 6;
-        }
-        addUnencodedSubstr(cur, strOrig.length());
-
-        return strEscaped;
+    static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName)
+    {
+        if (node->name) return node->name;
+        if (node->mesh && node->mesh->name) return node->mesh->name;
+        if (node->light && node->light->name) return node->light->name;
+        if (node->camera && node->camera->name) return node->camera->name;
+        return defaultNodeName;
     }
 
     static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
@@ -92,10 +44,18 @@ namespace filament::gltfio {
     }
 
     void AddMaterialComponentsToVzEngine(const MaterialInstance* mi,
+        std::vector<MInstanceVID>& mi_vids,
         std::unordered_map<const MaterialInstance*, MInstanceVID>& mMIMap,
         std::unordered_map<const Material*, MaterialVID>& mMaterialMap
     )
     {
+        auto it = mMIMap.find(mi);
+        if (it != mMIMap.end())
+        {
+            mi_vids.push_back(it->second);
+            return;
+        }
+
         const Material* m = mi->getMaterial();
         if (!mMaterialMap.contains(m))
         {
@@ -107,81 +67,22 @@ namespace filament::gltfio {
         // note:
         // gltf support the same material instance
         MInstanceVID mi_vid = gEngineApp.CreateMaterialInstance(mi->getName(), vid_m, mi)->GetVID();
+        mi_vids.push_back(mi_vid);
         //assert(!mMIMap.contains(mi));
         mMIMap[mi] = mi_vid;
     }
 
-    void AddTextureComponentToVzEngine(const MInstanceVID vidMI, const std::string& miMapName, 
-        const cgltf_texture* srcTexture, const std::string& assetName, FFilamentAsset* fAsset,
-        std::unordered_map<size_t, TextureVID>& mTextureMap)
-    {
-        const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
-        const size_t textureIndex = (size_t)(srcTexture - srcAsset->textures);
-        FFilamentAsset::TextureInfo& info = fAsset->mTextures[textureIndex];
-
-        const cgltf_sampler* srcSampler = srcAsset->textures[textureIndex].sampler;
-        TextureSampler sampler;
-        if (srcSampler) {
-            sampler.setWrapModeS(getWrapMode(srcSampler->wrap_s));
-            sampler.setWrapModeT(getWrapMode(srcSampler->wrap_t));
-            sampler.setMagFilter(getMagFilter(srcSampler->mag_filter));
-            sampler.setMinFilter(getMinFilter(srcSampler->min_filter));
-        }
-        else {
-            // These defaults are stipulated by the spec:
-            sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
-            sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
-
-            // These defaults are up to the implementation but since we try to provide mipmaps,
-            // we might as well use them. In practice the conformance models look awful without
-            // using mipmapping by default.
-            sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
-            sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
-        }
-
-        //static size_t count = 0;
-        TextureVID tex_vid = 0;
-        auto it_tex = mTextureMap.find(textureIndex);
-        if (it_tex == mTextureMap.end())
-        {
-            std::string name = "";
-            if (srcAsset->images_count > 0)
-            {
-                assert(textureIndex < srcAsset->images_count && "textureIndex < srcAsset->images_count");
-                char* name_ptr = srcAsset->images[textureIndex].name;
-                if (name_ptr)
-                    name = name_ptr;
-                else if (name_ptr = srcAsset->images[textureIndex].uri)
-                {
-                    name = name_ptr;
-                }
-                else
-                {
-                    name = assetName + "_texture_" + std::to_string(textureIndex);
-                }
-            }
-            else
-            {
-                name = assetName + "_texture_" + std::to_string(textureIndex);
-            }
-
-            tex_vid = gEngineApp.CreateTexture(name, info.texture, nullptr, false)->GetVID();
-            VzTextureRes* tex_res = gEngineApp.GetTextureRes(tex_vid);
-            tex_res->sampler = sampler;
-            tex_res->fileName = name;
-            tex_res->isAsyncLocked = true;
-            mTextureMap[textureIndex] = tex_vid;
-        }
-        else
-        {
-            tex_vid = it_tex->second;
-        }
-
-        VzMIRes* mi_res = gEngineApp.GetMIRes(vidMI);
-        
-        assert(mi_res && tex_vid);
-        mi_res->texMap[miMapName] = tex_vid;
-    };
+    // MaterialInstanceCache
+    // ---------------------
+    // Each glTF material definition corresponds to a single MaterialInstance, which are temporarily
+    // cached when loading a FilamentInstance. If a given glTF material is referenced by multiple
+    // glTF meshes, then their corresponding Filament primitives will share the same Filament
+    // MaterialInstance and UvMap. The UvMap is a mapping from each texcoord slot in glTF to one of
+    // Filament's 2 texcoord sets.
+    //
+    // Notes:
+    // - The Material objects (used to create instances) are cached in MaterialProvider, not here.
+    // - The cache is not responsible for destroying material instances.
 
     FFilamentAsset* VzAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
         FilamentInstance* instances;
@@ -266,9 +167,7 @@ namespace filament::gltfio {
 
         // Create a single root node with an identity transform as a convenience to the client.
         VID vid_gltf_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "gltf root")->GetVID();
-        //fAsset->mRoot = mEntityManager.create();
-        //mTransformManager.create(fAsset->mRoot);
-        fAsset->mRoot = Entity::import(vid_gltf_root);
+        fAsset->mRoot = Entity::import(vid_gltf_root); // mEntityManager
 
         // Check if the asset has an extras string.
         const cgltf_asset& asset = srcAsset->asset;
@@ -343,7 +242,8 @@ namespace filament::gltfio {
         //mTransformManager.create(instanceRoot, rootTransform);
         ActorVID vid_ins_root = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, "instance root")->GetVID();
         Entity instanceRoot = Entity::import(vid_ins_root);
-        
+        //mTransformManager.create(instanceRoot, rootTransform);
+
         mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
         // Create an instance object, which is a just a lightweight wrapper around a vector of
@@ -381,9 +281,9 @@ namespace filament::gltfio {
 
         return instance;
     }
+
     void VzAssetLoader::recursePrimitives(const cgltf_node* node, FFilamentAsset* fAsset) {
-        auto nameStr = getNodeName(node, mDefaultNodeName);
-        const char* name = nameStr.c_str();
+        const char* name = getNodeName(node, mDefaultNodeName);
         name = name ? name : "node";
 
         if (node->mesh) {
@@ -478,8 +378,7 @@ namespace filament::gltfio {
         instance->mEntities.push_back(entity);
         instance->mNodeMap[node - srcAsset->nodes] = entity;
 
-        auto nameStr = getNodeName(node, mDefaultNodeName);
-        const char* name = nameStr.c_str();
+        const char* name = getNodeName(node, mDefaultNodeName);
 
         if (name) {
             fAsset->mNameToEntity[name].push_back(entity);
@@ -493,6 +392,8 @@ namespace filament::gltfio {
         // If no name is provided in the glTF or AssetConfiguration, use "node" for error messages.
         name = name ? name : "node";
 
+        //std::string str_name = name; // for test
+
         // If the node has a mesh, then create a renderable component.
         if (node->mesh) {
             gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, name, entity.getId());
@@ -502,13 +403,11 @@ namespace filament::gltfio {
             }
             mRenderableActorMap[entity.getId()] = name;
         }
-
         if (node->light) {
             createLight(node->light, entity, fAsset);
             gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::LIGHT, name, entity.getId());
             mLightMap[entity.getId()] = name;
         }
-
         if (node->camera) {
             createCamera(node->camera, entity, fAsset);
             gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::CAMERA, name, entity.getId());
@@ -610,6 +509,7 @@ namespace filament::gltfio {
             CopyFPrim2VFrim(&outputPrim, &v_prim);
             v_prims.push_back(v_prim);
         }
+
         mGeometryMap[(cgltf_mesh*)(mesh - gltf->meshes)] = gEngineApp.CreateGeometry(name, v_prims)->GetVID();
 
         mat4f worldTransform;
@@ -657,7 +557,6 @@ namespace filament::gltfio {
 
             if (numMorphTargets != inputPrim->targets_count) {
                 post("Sister primitives must all have the same number of morph targets.", LogLevel::Warning);
-
                 mError = true;
                 continue;
             }
@@ -672,7 +571,8 @@ namespace filament::gltfio {
                 mError = true;
                 continue;
             }
-            mi_vids.push_back(mMIMap[mi]);
+
+            AddMaterialComponentsToVzEngine(mi, mi_vids, mMIMap, mMaterialMap);
 
             fAsset->mDependencyGraph.addEdge(entity, mi);
             builder.material(index, mi);
@@ -784,6 +684,7 @@ namespace filament::gltfio {
             box = Box().set(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max());
         }
 
+
         auto it = mGeometryMap.find((cgltf_mesh*)(mesh - srcAsset->meshes));
         assert(it != mGeometryMap.end());
         GeometryVID vid_geo = it->second;
@@ -800,7 +701,6 @@ namespace filament::gltfio {
         VzActorRes* actor_res = gEngineApp.GetActorRes(entity.getId());
         actor_res->SetGeometry(vid_geo);
         actor_res->SetMIs(mi_vids);
-
 
         builder
             .boundingBox(box)
@@ -845,13 +745,13 @@ namespace filament::gltfio {
                 MaterialInstance* mi =
                     createMaterialInstance(material, &uvmap, hasVertexColor, fAsset);
 
+                AddMaterialComponentsToVzEngine(mi, mi_vids, mMIMap, mMaterialMap);
+
                 assert_invariant(mi);
                 if (!mi) {
                     mError = true;
                     break;
                 }
-                mi_vids.push_back(mMIMap[mi]);
-
                 fAsset->mDependencyGraph.addEdge(entity, mi);
                 instance->mVariants[variantIndex].mappings.push_back({ entity, prim, mi });
             }
@@ -1412,10 +1312,6 @@ namespace filament::gltfio {
             return nullptr;
         }
 
-        AddMaterialComponentsToVzEngine(mi, mMIMap, mMaterialMap);
-        MInstanceVID vid_mi = mMIMap[mi];
-        assert(vid_mi != INVALID_VID);
-
         auto mrConfig = inputMat->pbr_metallic_roughness;
         auto sgConfig = inputMat->pbr_specular_glossiness;
         auto ccConfig = inputMat->clearcoat;
@@ -1453,13 +1349,8 @@ namespace filament::gltfio {
         const TextureProvider::TextureFlags sRGB = TextureProvider::TextureFlags::sRGB;
         const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;
 
-        MInstanceVID vidMI = mMIMap[mi];
-
         if (matkey.hasBaseColorTexture) {
             fAsset->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, sRGB);
-
-            AddTextureComponentToVzEngine(vid_mi, "baseColorMap", baseColorTexture.texture, mAssetName, fAsset, mTextureMap);
-
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = baseColorTexture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1474,9 +1365,6 @@ namespace filament::gltfio {
             // metallicRoughness is not sRGB.
             TextureProvider::TextureFlags srgb = inputMat->has_pbr_specular_glossiness ? sRGB : LINEAR;
             fAsset->addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
-
-            AddTextureComponentToVzEngine(vid_mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, mAssetName, fAsset, mTextureMap);
-
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1486,9 +1374,6 @@ namespace filament::gltfio {
 
         if (matkey.hasNormalTexture) {
             fAsset->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, LINEAR);
-
-            AddTextureComponentToVzEngine(vid_mi, "normalMap", inputMat->normal_texture.texture, mAssetName, fAsset, mTextureMap);
-
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = inputMat->normal_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1502,9 +1387,6 @@ namespace filament::gltfio {
 
         if (matkey.hasOcclusionTexture) {
             fAsset->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, LINEAR);
-
-            AddTextureComponentToVzEngine(vid_mi, "occlusionMap", inputMat->occlusion_texture.texture, mAssetName, fAsset, mTextureMap);
-
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = inputMat->occlusion_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1518,9 +1400,6 @@ namespace filament::gltfio {
 
         if (matkey.hasEmissiveTexture) {
             fAsset->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, sRGB);
-
-            AddTextureComponentToVzEngine(vid_mi, "emissiveMap", inputMat->emissive_texture.texture, mAssetName, fAsset, mTextureMap);
-
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = inputMat->emissive_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1535,9 +1414,6 @@ namespace filament::gltfio {
             if (matkey.hasClearCoatTexture) {
                 fAsset->addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture,
                     LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "clearCoatMap", ccConfig.clearcoat_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = ccConfig.clearcoat_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1547,9 +1423,6 @@ namespace filament::gltfio {
             if (matkey.hasClearCoatRoughnessTexture) {
                 fAsset->addTextureBinding(mi, "clearCoatRoughnessMap",
                     ccConfig.clearcoat_roughness_texture.texture, LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "clearCoatRoughnessMap", ccConfig.clearcoat_roughness_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1559,9 +1432,6 @@ namespace filament::gltfio {
             if (matkey.hasClearCoatNormalTexture) {
                 fAsset->addTextureBinding(mi, "clearCoatNormalMap",
                     ccConfig.clearcoat_normal_texture.texture, LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "clearCoatNormalMap", ccConfig.clearcoat_normal_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1579,9 +1449,6 @@ namespace filament::gltfio {
             if (matkey.hasSheenColorTexture) {
                 fAsset->addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture,
                     sRGB);
-
-                AddTextureComponentToVzEngine(vid_mi, "sheenColorMap", shConfig.sheen_color_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = shConfig.sheen_color_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1592,9 +1459,6 @@ namespace filament::gltfio {
                 bool sameTexture = shConfig.sheen_color_texture.texture == shConfig.sheen_roughness_texture.texture;
                 fAsset->addTextureBinding(mi, "sheenRoughnessMap",
                     shConfig.sheen_roughness_texture.texture, sameTexture ? sRGB : LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "sheenRoughnessMap", shConfig.sheen_roughness_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1616,9 +1480,6 @@ namespace filament::gltfio {
             if (matkey.hasVolumeThicknessTexture) {
                 fAsset->addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture,
                     LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "volumeThicknessMap", vlConfig.thickness_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1632,9 +1493,6 @@ namespace filament::gltfio {
             if (matkey.hasTransmissionTexture) {
                 fAsset->addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture,
                     LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "transmissionMap", trConfig.transmission_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform& uvt = trConfig.transmission_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1669,9 +1527,6 @@ namespace filament::gltfio {
 
             if (matkey.hasSpecularColorTexture) {
                 fAsset->addTextureBinding(mi, "specularColorMap", spConfig.specular_color_texture.texture, sRGB);
-
-                AddTextureComponentToVzEngine(vid_mi, "specularColorMap", spConfig.specular_color_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform uvt = spConfig.specular_color_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1681,9 +1536,6 @@ namespace filament::gltfio {
             if (matkey.hasSpecularTexture) {
                 bool sameTexture = spConfig.specular_color_texture.texture == spConfig.specular_texture.texture;
                 fAsset->addTextureBinding(mi, "specularMap", spConfig.specular_texture.texture, sameTexture ? sRGB : LINEAR);
-
-                AddTextureComponentToVzEngine(vid_mi, "specularMap", spConfig.specular_texture.texture, mAssetName, fAsset, mTextureMap);
-
                 if (matkey.hasTextureTransforms) {
                     const cgltf_texture_transform uvt = spConfig.specular_texture.transform;
                     auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1719,5 +1571,4 @@ namespace filament::gltfio {
             }
         }
     }
-
 }
