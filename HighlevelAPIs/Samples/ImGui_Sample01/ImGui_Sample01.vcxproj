@@ -152,6 +152,7 @@
     <ClCompile Include="..\imgui_common\imgui_tables.cpp" />
     <ClCompile Include="..\imgui_common\imgui_widgets.cpp" />
     <ClCompile Include="sample01.cpp" />
+    <ClCompile Include="savefileio.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui_common\glfw_vulkan\imgui_impl_glfw.h" />
@@ -162,7 +163,7 @@
     <ClInclude Include="..\imgui_common\imstb_rectpack.h" />
     <ClInclude Include="..\imgui_common\imstb_textedit.h" />
     <ClInclude Include="..\imgui_common\imstb_truetype.h" />
-    <ClInclude Include="settings.hpp" />
+    <ClInclude Include="savefileio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
