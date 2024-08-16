@@ -1043,9 +1043,6 @@ void RenderPass::Executor::execute(FEngine& engine,
                 if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;
                     driver.bindPipeline(pipeline);
-
-                    driver.setPushConstant(ShaderStage::VERTEX,
-                            +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }
 
                 if (UTILS_UNLIKELY(info.rph != currentPrimitiveHandle)) {
@@ -1062,6 +1059,11 @@ void RenderPass::Executor::execute(FEngine& engine,
                 driver.bindDescriptorSet(info.dsh,
                         +DescriptorSetBindingPoints::PER_RENDERABLE,
                         {{ offset, info.skinningOffset }, driver});
+
+                if (UTILS_UNLIKELY(info.hasMorphing)) {
+                    driver.setPushConstant(ShaderStage::VERTEX,
+                            +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
+                }
 
                 driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
             }
