@@ -167,11 +167,14 @@ struct VulkanTexture : public HwTexture, VulkanResource {
         return state->mSidecarMSAA.get();
     }
 
-    void transitionLayout(VulkanCommandBuffer* commands, const VkImageSubresourceRange& range,
+    bool transitionLayout(VulkanCommandBuffer* commands, const VkImageSubresourceRange& range,
             VulkanLayout newLayout);
 
-    void transitionLayout(VkCommandBuffer cmdbuf, std::shared_ptr<VulkanCmdFence> fence,
-            const VkImageSubresourceRange& range, VulkanLayout newLayout);
+    bool transitionLayout(VkCommandBuffer cmdbuf, std::shared_ptr<VulkanCmdFence> fence,
+            VkImageSubresourceRange const& range, VulkanLayout newLayout);
+
+    void attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
+            VkImageSubresourceRange const& range);
 
     // Returns the preferred data plane of interest for all image views.
     // For now this always returns either DEPTH or COLOR.
@@ -179,9 +182,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
 
     // For implicit transition like the end of a render pass, we need to be able to set the layout
     // manually (outside of calls to transitionLayout).
-    void setLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout);
-
-    void setPrimaryLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout);
+    void setLayout(VkImageSubresourceRange const& range, VulkanLayout newLayout);
 
     bool transitionReady() {
         VulkanTextureState* state = getSharedState();

@@ -140,9 +140,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
         // Validate that the format is actually sampleable.
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, mVkFormat, &props);
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, state->mVkFormat, &props);
         if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << mVkFormat << " is not "
+            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << state->mVkFormat << " is not "
                     "sampleable with optimal tiling." << utils::io::endl;
         }
 #endif
@@ -470,12 +470,12 @@ VkImageAspectFlags VulkanTexture::getImageAspect() const {
     return filament::backend::getImageAspect(state->mVkFormat);
 }
 
-void VulkanTexture::transitionLayout(VulkanCommandBuffer* commands,
+bool VulkanTexture::transitionLayout(VulkanCommandBuffer* commands,
         const VkImageSubresourceRange& range, VulkanLayout newLayout) {
-    transitionLayout(commands->buffer(), commands->fence, range, newLayout);
+    return transitionLayout(commands->buffer(), commands->fence, range, newLayout);
 }
 
-void VulkanTexture::transitionLayout(
+bool VulkanTexture::transitionLayout(
         VkCommandBuffer cmdbuf, std::shared_ptr<VulkanCmdFence> fence,
         const VkImageSubresourceRange& range,
         VulkanLayout newLayout) {
@@ -537,23 +537,45 @@ void VulkanTexture::transitionLayout(
         setLayout(range, newLayout);
 
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-        FVK_LOGD << "transition texture=" << mTextureImage << " (" << range.baseArrayLayer
-                       << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
-                       << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
-                       << " format=" << mVkFormat << " depth=" << isVkDepthFormat(mVkFormat)
-                       << " slice-by-slice=" << transitionSliceBySlice << utils::io::endl;
+        FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
+                 << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
+                 << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
+                 << " format=" << state->mVkFormat << " depth=" << isVkDepthFormat(state->mVkFormat)
+                 << " slice-by-slice=" << transitionSliceBySlice << utils::io::endl;
 #endif
     } else {
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-        FVK_LOGD << "transition texture=" << mTextureImage << " (" << range.baseArrayLayer
-                      << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
-                      << range.levelCount << ")" << " to=" << newLayout
-                      << " is skipped because of no change in layout" << utils::io::endl;
+        FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
+                 << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
+                 << range.levelCount << ")" << " to=" << newLayout
+                 << " is skipped because of no change in layout" << utils::io::endl;
 #endif
     }
+    return hasTransitions;
 }
 
-void VulkanTexture::setLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout) {
+void VulkanTexture::attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
+        VkImageSubresourceRange const& range) {
+    VkCommandBuffer const cmdbuf = commands->buffer();
+    auto* const state = mAllocator->handle_cast<VulkanTextureState*>(mState);
+    VkImageLayout const layout
+            = imgutil::getVkLayout(getLayout(range.baseArrayLayer, range.baseMipLevel));
+    VkImageMemoryBarrier barrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .oldLayout = layout,
+            .newLayout = layout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = state->mTextureImage,
+            .subresourceRange = range,
+    };
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void VulkanTexture::setLayout(VkImageSubresourceRange const& range, VulkanLayout newLayout) {
     auto* const state = mAllocator->handle_cast<VulkanTextureState*>(mState);
     uint32_t const firstLayer = range.baseArrayLayer;
     uint32_t const lastLayer = firstLayer + range.layerCount;
@@ -590,6 +612,7 @@ VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
 void VulkanTexture::print() const {
+    auto* const state = mAllocator->handle_cast<VulkanTextureState*>(mState);
     uint32_t const firstLayer = 0;
     uint32_t const lastLayer = firstLayer + mFullViewRange.layerCount;
     uint32_t const firstLevel = 0;
@@ -602,16 +625,16 @@ void VulkanTexture::print() const {
                 layer < (mPrimaryViewRange.baseArrayLayer + mPrimaryViewRange.layerCount) &&
                 level >= mPrimaryViewRange.baseMipLevel &&
                 level < (mPrimaryViewRange.baseMipLevel + mPrimaryViewRange.levelCount);
-            FVK_LOGD << "[" << mTextureImage << "]: (" << layer << "," << level
+            FVK_LOGD << "[" << state->mTextureImage << "]: (" << layer << "," << level
                           << ")=" << getLayout(layer, level)
                           << " primary=" << primary
                           << utils::io::endl;
         }
     }
 
-    for (auto view: mCachedImageViews) {
+    for (auto view: state->mCachedImageViews) {
         auto& range = view.first.range;
-        FVK_LOGD << "[" << mTextureImage << ", imageView=" << view.second << "]=>"
+        FVK_LOGD << "[" << state->mTextureImage << ", imageView=" << view.second << "]=>"
                       << " (" << range.baseArrayLayer << "," << range.baseMipLevel << ")"
                       << " count=(" << range.layerCount << "," << range.levelCount << ")"
                       << " aspect=" << range.aspectMask << " viewType=" << view.first.type

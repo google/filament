@@ -1510,21 +1510,22 @@ void VulkanDriver::endRenderPass(int) {
     assert_invariant(rt);
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
-    // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
-    // than an image barrier. If we were to use image barriers here, we would potentially need to
-    // issue several of them when considering MRT. This would be very complex to set up and would
-    // require more state tracking, so we've chosen to use a memory barrier for simplicity and
-    // correctness.
+    // pipeline barrier between framebuffer writes and shader reads.
     if (!rt->isSwapChain()) {
         for (auto& attachment: mRenderPassFboInfo.attachments) {
             auto const& range = attachment.getSubresourceRange();
             bool const isDepth = attachment.isDepth();
+            auto texture = attachment.texture;
             if (isDepth) {
-                attachment.texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_ATTACHMENT_LAYOUT);
-                attachment.texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER);
+                texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_ATTACHMENT_LAYOUT);
+                if (!texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
+                    texture->attachmentToSamplerBarrier(&commands, range);
+                }
             } else {
-                attachment.texture->setLayout(range, VulkanFboCache::FINAL_COLOR_ATTACHMENT_LAYOUT);
-                attachment.texture->transitionLayout(&commands, range, VulkanLayout::READ_WRITE);
+                texture->setLayout(range, VulkanFboCache::FINAL_COLOR_ATTACHMENT_LAYOUT);
+                if (!texture->transitionLayout(&commands, range, VulkanLayout::READ_WRITE)) {
+                    texture->attachmentToSamplerBarrier(&commands, range);
+                }
             }
         }
     }
