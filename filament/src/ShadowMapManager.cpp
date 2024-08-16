@@ -63,6 +63,9 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
+// do this only if depth-clamp is available
+static constexpr bool USE_DEPTH_CLAMP = false;
+
 ShadowMapManager::ShadowMapManager(FEngine& engine) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
@@ -627,8 +630,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // Compute scene-dependent values shared across all cascades
         ShadowMap::updateSceneInfoDirectional(MvAtOrigin, *scene, sceneInfo);
 
+        // we always do culling without depth clamp, because objects behind the camera
+        // must be rendered regardless
         shadowMap.updateDirectional(engine,
-                lightData, 0, cameraInfo, shadowMapInfo, sceneInfo);
+                lightData, 0, cameraInfo, shadowMapInfo, sceneInfo, false);
 
         hasVisibleShadows = shadowMap.hasVisibleShadows();
 
@@ -694,7 +699,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
 
             auto shaderParameters = shadowMap.updateDirectional(engine,
-                    lightData, 0, cameraInfo, shadowMapInfo, sceneInfo);
+                    lightData, 0, cameraInfo, shadowMapInfo, sceneInfo, USE_DEPTH_CLAMP);
 
             if (shadowMap.hasVisibleShadows()) {
                 const size_t shadowIndex = shadowMap.getShadowIndex();
