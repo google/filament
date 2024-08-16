@@ -74,7 +74,6 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
       depthStencilFormat(decideDepthStencilFormat(flags)),
       layer(nativeWindow),
       layerDrawableMutex(std::make_shared<std::mutex>()),
-      externalImage(context),
       type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
@@ -100,17 +99,15 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t hei
       depthStencilFormat(decideDepthStencilFormat(flags)),
       headlessWidth(width),
       headlessHeight(height),
-      externalImage(context),
       type(SwapChainType::HEADLESS) {}
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
     : context(context),
       depthStencilFormat(decideDepthStencilFormat(flags)),
-      externalImage(context),
+      externalImage(MetalExternalImage::createFromImage(context, pixelBuffer)),
       type(SwapChainType::CVPIXELBUFFERREF) {
     assert_invariant(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
     MetalExternalImage::assertWritableImage(pixelBuffer);
-    externalImage.set(pixelBuffer);
     assert_invariant(externalImage.isValid());
 }
 
@@ -121,7 +118,6 @@ MTLPixelFormat MetalSwapChain::decideDepthStencilFormat(uint64_t flags) {
 }
 
 MetalSwapChain::~MetalSwapChain() {
-    externalImage.set(nullptr);
 }
 
 NSUInteger MetalSwapChain::getSurfaceWidth() const {
@@ -171,7 +167,7 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
     }
 
     if (isPixelBuffer()) {
-        return externalImage.getMetalTextureForDraw();
+        return externalImage.getMtlTexture();
     }
 
     assert_invariant(isCaMetalLayer());
@@ -508,8 +504,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
         TextureSwizzle a) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
-        externalImage(context, r, g, b, a) {
+    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context) {
 
     devicePixelFormat = decidePixelFormat(&context, format);
     FILAMENT_CHECK_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid)
@@ -619,8 +614,7 @@ MetalTexture::MetalTexture(MetalContext& context,
         MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept
         : HwTexture(src->target, src->levels, src->samples,
                 src->width, src->height, src->depth, src->format, src->usage),
-          context(context),
-          externalImage(context) {
+          context(context) {
     texture = createTextureViewWithLodRange(
             src->getMtlTextureForRead(), baseLevel, baseLevel + levelCount - 1);
 }
@@ -628,24 +622,36 @@ MetalTexture::MetalTexture(MetalContext& context,
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         id<MTLTexture> metalTexture) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
-        externalImage(context) {
+    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context) {
     texture = metalTexture;
 }
+
+MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t width,
+        uint32_t height, TextureUsage usage, CVPixelBufferRef image) noexcept
+    : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage),
+      context(context),
+      externalImage(std::make_shared<MetalExternalImage>(
+              MetalExternalImage::createFromImage(context, image))) {}
+
+MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t width,
+        uint32_t height, TextureUsage usage, CVPixelBufferRef image, uint32_t plane) noexcept
+    : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage),
+      context(context),
+      externalImage(std::make_shared<MetalExternalImage>(
+              MetalExternalImage::createFromImagePlane(context, image, plane))) {}
 
 void MetalTexture::terminate() noexcept {
     texture = nil;
     swizzledTextureView = nil;
     msaaSidecar = nil;
-    externalImage.set(nullptr);
+    externalImage = nullptr;
     terminated = true;
 }
 
-MetalTexture::~MetalTexture() {
-    externalImage.set(nullptr);
-}
-
 id<MTLTexture> MetalTexture::getMtlTextureForRead() const noexcept {
+    if (target == SamplerType::SAMPLER_EXTERNAL) {
+        return externalImage->getMtlTexture();
+    }
     // TODO: get LODs to work correctly with swizzling
     return swizzledTextureView ? swizzledTextureView : texture;
 }

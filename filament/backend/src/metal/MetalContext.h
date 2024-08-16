@@ -126,8 +126,12 @@ struct MetalContext {
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
 
-    id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
-    id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
+    // The ID of pendingCommandBuffer (or the next command buffer, if pendingCommandBuffer is nil).
+    uint64_t pendingCommandBufferId = 1;
+    // read from driver thread, set from completion handlers
+    std::atomic<uint64_t> latestCompletedCommandBufferId = 0;
+    id<MTLCommandBuffer> pendingCommandBuffer = nil;
+    id<MTLRenderCommandEncoder> currentRenderPassEncoder = nil;
 
     std::atomic<bool> memorylessLimitsReached = false;
 

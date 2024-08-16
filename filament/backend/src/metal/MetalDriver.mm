@@ -235,6 +235,7 @@ MetalDriver::~MetalDriver() noexcept {
 
 void MetalDriver::tick(int) {
     executeTickOps();
+    executeDeferredOps();
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -350,12 +351,11 @@ void MetalDriver::updateDescriptorSetTexture(
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     auto* texture = handle_cast<MetalTexture>(th);
 
-    id<MTLTexture> mtlTexture = nil;
+    id<MTLTexture> mtlTexture = texture->getMtlTextureForRead();
     if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
-        // TODO: support Metal external images and descriptor sets
-        mtlTexture = getOrCreateEmptyTexture(mContext);
-    } else {
-        mtlTexture = texture->getMtlTextureForRead();
+        auto externalImage = texture->getExternalImage();
+        assert_invariant(externalImage != nil);
+        descriptorSet->externalImages.push_back(externalImage);
     }
     assert_invariant(mtlTexture != nil);
 
@@ -386,9 +386,13 @@ void MetalDriver::finish(int) {
             << "finish must be called outside of a render pass.";
     // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
     submitPendingCommands(mContext);
-    id<MTLCommandBuffer> oneOffBuffer = [mContext->commandQueue commandBuffer];
-    [oneOffBuffer commit];
+
+    id<MTLCommandBuffer> oneOffBuffer = getPendingCommandBuffer(mContext);
+    submitPendingCommands(mContext);
     [oneOffBuffer waitUntilCompleted];
+
+    executeTickOps();
+    executeDeferredOps();
 }
 
 void MetalDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
@@ -458,17 +462,21 @@ void MetalDriver::createTextureViewR(Handle<HwTexture> th,
 
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
-    createTextureR(
-            th, SamplerType::SAMPLER_EXTERNAL, 1, TextureFormat::RGBA8, 1, width, height, 1, usage);
-    setExternalImage(th, image);
+    mContext->textures.insert(construct_handle<MetalTexture>(
+            th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
+    // This release matches the retain call in setupExternalImage. The MetalTexture will have
+    // retained the buffer by now.
+    CVPixelBufferRelease((CVPixelBufferRef)image);
 }
 
 void MetalDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, uint32_t plane) {
-    createTextureR(
-            th, SamplerType::SAMPLER_EXTERNAL, 1, TextureFormat::RGBA8, 1, width, height, 1, usage);
-    setExternalImagePlane(th, image, plane);
+    mContext->textures.insert(construct_handle<MetalTexture>(
+            th, *mContext, format, width, height, usage, (CVPixelBufferRef)image, plane));
+    // This release matches the retain call in setupExternalImage. The MetalTexture will have
+    // retained the buffer by now.
+    CVPixelBufferRelease((CVPixelBufferRef)image);
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -570,6 +578,9 @@ void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, 
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
+        // This release matches the retain call in setupExternalImage. The MetalSwapchain will have
+        // retained the buffer by now.
+        CVPixelBufferRelease((CVPixelBufferRef)pixelBuffer);
     } else {
         auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, metalLayer, flags);
@@ -832,7 +843,16 @@ void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
-        destruct_handle<MetalSwapChain>(sch);
+        auto* swapChain = handle_cast<MetalSwapChain>(sch);
+        // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
+        // complete before destroying it. This is because pixel buffer SwapChains hold a
+        // MetalExternalImage that could still being rendered into.
+        if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
+            executeAfterCurrentCommandBufferCompletes(
+                    [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
+        } else {
+            destruct_handle<MetalSwapChain>(sch);
+        }
     }
 }
 
@@ -856,7 +876,8 @@ void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh)
 void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
     DEBUG_LOG("[DS] destroyDescriptorSet(dsh = %d)\n", dsh.getId());
     if (dsh) {
-        destruct_handle<MetalDescriptorSet>(dsh);
+        executeAfterCurrentCommandBufferCompletes(
+                [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
     }
 }
 
@@ -870,8 +891,6 @@ void MetalDriver::terminate() {
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();
-
-    executeTickOps();
 
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
@@ -1143,27 +1162,18 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
 }
 
 void MetalDriver::setupExternalImage(void* image) {
-    // This is called when passing in a CVPixelBuffer as either an external image or swap chain.
-    // Here we take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, when the texture is destroyed, or when the swap chain is
-    // destroyed.
+    // setupExternalImage is called on the Filament thread when creating a Texture or SwapChain from
+    // a CVPixelBuffer external image. Here we take ownership of the passed in buffer by calling
+    // CVPixelBufferRetain. This keeps the buffer alive until the driver thread processes it (inside
+    // createTextureExternalImage or createSwapChain), allowing the application to free their
+    // reference to the buffer.
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
 }
 
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "setExternalImage must be called outside of a render pass.";
-    auto texture = handle_cast<MetalTexture>(th);
-    texture->externalImage.set((CVPixelBufferRef) image);
-}
+void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
 
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "setExternalImagePlane must be called outside of a render pass.";
-    auto texture = handle_cast<MetalTexture>(th);
-    texture->externalImage.set((CVPixelBufferRef) image, plane);
-}
+void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
@@ -1800,6 +1810,8 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
 
         // External images
         if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+            continue;
+            /*
             if (texture->externalImage.isValid()) {
                 id<MTLTexture> mtlTexture = texture->externalImage.getMetalTextureForDraw();
                 assert_invariant(mtlTexture);
@@ -1809,6 +1821,7 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
                 newTextures[binding] = getOrCreateEmptyTexture(mContext);
             }
             continue;
+            */
         }
 
         newTextures[binding] = texture->getMtlTextureForRead();
@@ -2299,6 +2312,21 @@ void MetalDriver::executeTickOps() noexcept {
     mTickOpsLock.unlock();
     for (const auto& f : ops) {
         f();
+    }
+}
+
+void MetalDriver::executeAfterCurrentCommandBufferCompletes(utils::Invocable<void()>&& fn) noexcept {
+    mDeferredTasks.emplace_back(mContext->pendingCommandBufferId, std::move(fn));
+}
+
+void MetalDriver::executeDeferredOps() noexcept {
+    for (; !mDeferredTasks.empty(); mDeferredTasks.pop_front()) {
+        const auto& task = mDeferredTasks.front();
+        if (task.commandBufferId <= mContext->latestCompletedCommandBufferId) {
+            task.fn();
+        } else {
+            break;
+        }
     }
 }
 

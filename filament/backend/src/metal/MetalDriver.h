@@ -32,6 +32,7 @@
 #include <functional>
 #include <mutex>
 #include <vector>
+#include <deque>
 
 namespace filament {
 namespace backend {
@@ -78,6 +79,17 @@ private:
     void executeTickOps() noexcept;
     std::vector<std::function<void()>> mTickOps;
     std::mutex mTickOpsLock;
+
+    // Tasks regularly executed on the driver thread after a command buffer has completed
+    struct DeferredTask {
+        DeferredTask(uint64_t commandBufferId, utils::Invocable<void()>&& fn) noexcept
+            : commandBufferId(commandBufferId), fn(std::move(fn)) {}
+        uint64_t commandBufferId;     // after this command buffer completes
+        utils::Invocable<void()> fn;  // execute this task
+    };
+    void executeAfterCurrentCommandBufferCompletes(utils::Invocable<void()>&& fn) noexcept;
+    void executeDeferredOps() noexcept;
+    std::deque<DeferredTask> mDeferredTasks;
 
     /*
      * Driver interface

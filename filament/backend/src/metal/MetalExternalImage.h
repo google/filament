@@ -32,100 +32,75 @@ struct MetalContext;
  * texture.
  */
 class MetalExternalImage {
-
 public:
+    MetalExternalImage() = default;
 
-    MetalExternalImage(MetalContext& context,
-            TextureSwizzle r = TextureSwizzle::CHANNEL_0,
-            TextureSwizzle g = TextureSwizzle::CHANNEL_1,
-            TextureSwizzle b = TextureSwizzle::CHANNEL_2,
-            TextureSwizzle a = TextureSwizzle::CHANNEL_3) noexcept;
+    MetalExternalImage(MetalExternalImage&&);
+    MetalExternalImage& operator=(MetalExternalImage&&);
+    ~MetalExternalImage() noexcept;
+
+    MetalExternalImage(const MetalExternalImage&) = delete;
+    MetalExternalImage& operator=(const MetalExternalImage&) = delete;
 
     /**
-     * @return true, if this MetalExternalImage is holding a live external image. Returns false
-     * until set has been called with a valid CVPixelBuffer. The image can be cleared via
-     * set(nullptr), and isValid will return false again.
+     * While the texture is used for rendering, this MetalExternalImage must be kept alive.
      */
-    bool isValid() const noexcept;
+    id<MTLTexture> getMtlTexture() const noexcept;
+
+    bool isValid() const noexcept {
+        return mImage != nil || mRgbTexture != nullptr;
+    }
+
+    NSUInteger getWidth() const noexcept;
+    NSUInteger getHeight() const noexcept;
 
     /**
-     * Set this external image to the passed-in CVPixelBuffer. Future calls to
-     * getMetalTextureForDraw will return a texture backed by this CVPixelBuffer. Previous
-     * CVPixelBuffers and related resources will be released when all GPU work using them has
-     * finished.
+     * Create an external image with the passed-in CVPixelBuffer.
      *
-     * Calling set with a YCbCr image will encode a compute pass to convert the image from YCbCr to
-     * RGB.
+     * Ownership is taken of the CVPixelBuffer, which will be released when the returned
+     * MetalExternalImage is destroyed (or, in the case of a YCbCr image, after the conversion has
+     * completed).
+     *
+     * Calling set with a YCbCr image will encode a compute pass to convert the image from
+     * YCbCr to RGB.
      */
-    void set(CVPixelBufferRef image) noexcept;
+    static MetalExternalImage createFromImage(MetalContext& context, CVPixelBufferRef image);
 
     /**
-     * Set this external image to a specific plane of the passed-in CVPixelBuffer. Future calls to
-     * getMetalTextureForDraw will return a texture backed by a single plane of this CVPixelBuffer.
-     * Previous CVPixelBuffers and related resources will be released when all GPU work using them
-     * has finished.
+     * Create an external image with a specific plane of the passed-in CVPixelBuffer.
+     *
+     * Ownership is taken of the CVPixelBuffer, which will be released when the returned
+     * MetalExternalImage is destroyed.
      */
-    void set(CVPixelBufferRef image, size_t plane) noexcept;
+    static MetalExternalImage createFromImagePlane(
+            MetalContext& context, CVPixelBufferRef image, uint32_t plane);
 
-    /**
-     * Returns the width of the external image, or 0 if one is not set. For YCbCr images, returns
-     * the width of the luminance plane.
-     */
-    size_t getWidth() const noexcept { return mWidth; }
-
-    /**
-     * Returns the height of the external image, or 0 if one is not set. For YCbCr images, returns
-     * the height of the luminance plane.
-     */
-    size_t getHeight() const noexcept { return mHeight; }
-
-    /**
-     * Get a Metal texture used to draw this image and denote that it is used for the current frame.
-     * For future frames that use this external image, getMetalTextureForDraw must be called again.
-     */
-    id<MTLTexture> getMetalTextureForDraw() const noexcept;
+    static void assertWritableImage(CVPixelBufferRef image);
 
     /**
      * Free resources. Should be called at least once when no further calls to set will occur.
      */
     static void shutdown(MetalContext& context) noexcept;
 
-    static void assertWritableImage(CVPixelBufferRef image);
-
 private:
+    MetalExternalImage(CVPixelBufferRef image, CVMetalTextureRef texture) noexcept
+        : mImage(image), mTexture(texture) {}
+    explicit MetalExternalImage(id<MTLTexture> texture) noexcept : mRgbTexture(texture) {}
 
-    void unset();
-
-    CVMetalTextureRef createTextureFromImage(CVPixelBufferRef image, MTLPixelFormat format,
-            size_t plane);
-    id<MTLTexture> createRgbTexture(size_t width, size_t height);
-    id<MTLTexture> createSwizzledTextureView(id<MTLTexture> texture) const;
-    id<MTLTexture> createSwizzledTextureView(CVMetalTextureRef texture) const;
-    void ensureComputePipelineState();
-    id<MTLCommandBuffer> encodeColorConversionPass(id<MTLTexture> inYPlane, id<MTLTexture>
-            inCbCrTexture, id<MTLTexture> outTexture);
+    static id<MTLTexture> createRgbTexture(id<MTLDevice> device, size_t width, size_t height);
+    static CVMetalTextureRef createTextureFromImage(CVMetalTextureCacheRef textureCache,
+            CVPixelBufferRef image, MTLPixelFormat format, size_t plane);
+    static void ensureComputePipelineState(MetalContext& context);
+    static id<MTLCommandBuffer> encodeColorConversionPass(MetalContext& context,
+            id<MTLTexture> inYPlane, id<MTLTexture> inCbCrTexture, id<MTLTexture> outTexture);
 
     static constexpr size_t Y_PLANE = 0;
     static constexpr size_t CBCR_PLANE = 1;
 
-    MetalContext& mContext;
-
-    // If the external image has a single plane, mImage and mTexture hold references to the image
-    // and created Metal texture, respectively.
-    // mTextureView is a view of mTexture with any swizzling applied.
+    // TODO: this could probably be a union.
     CVPixelBufferRef mImage = nullptr;
     CVMetalTextureRef mTexture = nullptr;
-    id<MTLTexture> mTextureView = nullptr;
-    size_t mWidth = 0;
-    size_t mHeight = 0;
-
-    // If the external image is in the YCbCr format, this holds the result of the converted RGB
-    // texture.
     id<MTLTexture> mRgbTexture = nil;
-
-    struct {
-        TextureSwizzle r, g, b, a;
-    } mSwizzle;
 };
 
 } // namespace backend

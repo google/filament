@@ -149,6 +149,8 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     api.destroyProgram(program);
     api.destroyRenderTarget(defaultRenderTarget);
 
+    api.finish();
+
     executeCommands();
 }
 
@@ -189,15 +191,6 @@ TEST_F(BackendTest, RenderExternalImage) {
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
     const NativeView& view = getNativeView();
-    backend::Handle<HwTexture> texture = api.createTexture(
-                SamplerType::SAMPLER_EXTERNAL,      // target
-                1,                                  // levels
-                TextureFormat::RGBA8,               // format
-                1,                                  // samples
-                view.width,                         // width
-                view.height,                        // height
-                1,                                  // depth
-                usage);                             // usage
 
     // Create an external image.
     CFStringRef keys[4];
@@ -233,7 +226,8 @@ TEST_F(BackendTest, RenderExternalImage) {
     }
 
     api.setupExternalImage(pixBuffer);
-    api.setExternalImage(texture, pixBuffer);
+    backend::Handle<HwTexture> texture =
+            api.createTextureExternalImage(TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer);
 
     // We're now free to release the buffer.
     CVBufferRelease(pixBuffer);
@@ -266,6 +260,8 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
     api.endRenderPass();
 
+    readPixelsAndAssertHash("RenderExternalImage", 512, 512, defaultRenderTarget, 267229901, true);
+
     api.flush();
     api.commit(swapChain);
     api.endFrame(0);
@@ -280,6 +276,8 @@ TEST_F(BackendTest, RenderExternalImage) {
     // Destroy frame resources.
     api.destroyProgram(program);
     api.destroyRenderTarget(defaultRenderTarget);
+
+    api.finish();
 
     executeCommands();
 }

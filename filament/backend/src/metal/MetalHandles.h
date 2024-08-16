@@ -85,6 +85,8 @@ public:
     NSUInteger getSurfaceWidth() const;
     NSUInteger getSurfaceHeight() const;
 
+    bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
+
 private:
 
     enum class SwapChainType {
@@ -94,7 +96,6 @@ private:
     };
     bool isCaMetalLayer() const { return type == SwapChainType::CAMETALLAYER; }
     bool isHeadless() const { return type == SwapChainType::HEADLESS; }
-    bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
     void scheduleFrameScheduledCallback();
     void scheduleFrameCompletedCallback();
@@ -240,7 +241,11 @@ public:
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
             id<MTLTexture> texture) noexcept;
 
-    ~MetalTexture();
+    // Constructors for importing external images.
+    MetalTexture(MetalContext& context, TextureFormat format, uint32_t width, uint32_t height,
+            TextureUsage usage, CVPixelBufferRef image) noexcept;
+    MetalTexture(MetalContext& context, TextureFormat format, uint32_t width, uint32_t height,
+            TextureUsage usage, CVPixelBufferRef image, uint32_t plane) noexcept;
 
     // Returns an id<MTLTexture> suitable for reading in a shader, taking into account swizzle.
     id<MTLTexture> getMtlTextureForRead() const noexcept;
@@ -250,13 +255,14 @@ public:
         return texture;
     }
 
+    std::shared_ptr<MetalExternalImage> getExternalImage() const noexcept { return externalImage; }
+
     void loadImage(uint32_t level, MTLRegion region, PixelBufferDescriptor& p) noexcept;
     void generateMipmaps() noexcept;
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
     MetalContext& context;
-    MetalExternalImage externalImage;
 
     // A "sidecar" texture used to implement automatic MSAA resolve.
     // This is created by MetalRenderTarget and stored here so it can be used with multiple
@@ -294,6 +300,8 @@ private:
             const PixelBufferShape& shape);
 
     id<MTLTexture> texture = nil;
+
+    std::shared_ptr<MetalExternalImage> externalImage;
 
     // If non-nil, a swizzled texture view to use instead of "texture".
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
@@ -677,6 +685,8 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     std::vector<id<MTLResource>> vertexResources;
     std::vector<id<MTLResource>> fragmentResources;
+
+    std::vector<std::shared_ptr<MetalExternalImage>> externalImages;
 
     id<MTLBuffer> buffer = nil;
 };
