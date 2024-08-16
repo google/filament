@@ -154,7 +154,8 @@ public:
             const FScene::LightSoa& lightData, size_t index,
             filament::CameraInfo const& camera,
             ShadowMapInfo const& shadowMapInfo,
-            SceneInfo const& sceneInfo) noexcept;
+            SceneInfo const& sceneInfo,
+            bool useDepthClamp) noexcept;
 
     ShaderParameters updateSpot(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
@@ -244,7 +245,8 @@ private:
             math::float3 direction,
             FLightManager::ShadowParams params,
             filament::CameraInfo const& camera,
-            SceneInfo const& sceneInfo) noexcept;
+            SceneInfo const& sceneInfo,
+            bool useDepthClamp) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,

@@ -57,9 +57,6 @@ namespace filament {
 using namespace math;
 using namespace backend;
 
-// do this only if depth-clamp is available
-static constexpr bool USE_DEPTH_CLAMP = false;
-
 ShadowMap::ShadowMap(FEngine& engine) noexcept
         : mPerShadowMapUniforms(engine),
           mShadowType(ShadowType::DIRECTIONAL),
@@ -126,7 +123,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         FScene::LightSoa const& lightData, size_t index,
         filament::CameraInfo const& camera,
         ShadowMapInfo const& shadowMapInfo,
-        SceneInfo const& sceneInfo) noexcept {
+        SceneInfo const& sceneInfo,
+        bool useDepthClamp) noexcept {
 
     // reset the visible shadow status
     mHasVisibleShadows = false;
@@ -137,10 +135,17 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     const auto direction = lightData.elementAt<FScene::SHADOW_DIRECTION>(index);
 
-    auto [Mv, znear, zfar, lsClippedShadowVolume, vertexCount, visibleShadows] =
-            computeDirectionalShadowBounds(engine, direction, params, camera, sceneInfo);
+    auto const [Mv, znear, zfar, lsClippedShadowVolume, vertexCount, visibleShadows] =
+            computeDirectionalShadowBounds(engine, direction, params, camera, sceneInfo,
+                    useDepthClamp);
 
     if (UTILS_UNLIKELY(!visibleShadows)) {
+        return {};
+    }
+
+    // if the 2D bounds of the intersection is empty seen from the light, we have no shadow
+    Aabb const bounds = compute2DBounds(Mv, lsClippedShadowVolume.data(), vertexCount);
+    if (UTILS_UNLIKELY(!(bounds.min.x < bounds.max.x && bounds.min.y < bounds.max.y))) {
         return {};
     }
 
@@ -386,7 +391,8 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
         float3 const direction,
         FLightManager::ShadowParams params,
         filament::CameraInfo const& camera,
-        SceneInfo const& sceneInfo) noexcept {
+        SceneInfo const& sceneInfo,
+        bool useDepthClamp) noexcept {
 
     // we use aligned_storage<> here to avoid the default initialization of std::array<>
     using Storage = std::aligned_storage<sizeof(FrustumBoxIntersection)>::type;
@@ -457,27 +463,39 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
     }
 
     /*
-    * Adjust the scene's zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
-    * (near/far correspond to max/min because the light looks down the -z axis).
-    *  - The Near plane is set to the shadow casters max z (i.e. closest to the light)
-    *  - The Far plane is set to the closest of the farthest shadow casters and receivers
-    *    i.e.: shadow casters behind the last receivers can't cast any shadows
-    *
-    *  If "depth clamp" is supported, we can further tighten the near plane to the
-    *  shadow receiver.
-    *
-    *  Note: L has no influence here, since we're only interested in z values
-    *        (L is a rotation around z)
-    */
+     * Adjust the scene's zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
+     * (near/far correspond to max/min because the light looks down the -z axis).
+     *
+     *   - For the Far plane, the light frustum is already set to the closest of receivers and
+     *     casters (i.e.: shadow casters behind the last receivers can't cast any shadows).
+     *     But it can be moved closer up to the farthest point in the camera frustum & light
+     *     frustum intersection.
+     *
+     *  - The Near plane is already set to the shadow casters max z (i.e. closest to the light)
+     *
+     *  If "depth clamp" is supported, we can further tighten the near plane to the
+     *  shadow receiver (i.e. to the closest point of camera frustum & light frustum intersection).
+     *
+     *  Note: L has no influence here, since we're only interested in z values
+     *        (L is a rotation around z)
+     */
 
+    float lsClippedShadowVolumeFarthest = std::numeric_limits<float>::max();
+    float lsClippedShadowVolumeNearest = std::numeric_limits<float>::min();
     for (size_t i = 0; i < vertexCount; ++i) {
         float3 const v = lsClippedShadowVolume[i];
-        // far: figure out the farthest shadow receivers
-        lsLightFrustumBounds.min.z = min(lsLightFrustumBounds.min.z, v.z);
-        if constexpr (USE_DEPTH_CLAMP) {
-            lsLightFrustumBounds.max.z = max(lsLightFrustumBounds.max.z, v.z);
-        }
+        lsClippedShadowVolumeFarthest = std::min(lsClippedShadowVolumeFarthest, v.z);
+        lsClippedShadowVolumeNearest = std::max(lsClippedShadowVolumeNearest, v.z);
     }
+
+    lsLightFrustumBounds.min.z =
+            std::max(lsLightFrustumBounds.min.z, lsClippedShadowVolumeFarthest);
+
+    if (useDepthClamp) {
+        lsLightFrustumBounds.max.z =
+                std::min(lsLightFrustumBounds.max.z, lsClippedShadowVolumeNearest);
+    }
+
     if (engine.debug.shadowmap.far_uses_shadowcasters) {
         // far: closest of the farthest shadow casters and receivers
         lsLightFrustumBounds.min.z =
