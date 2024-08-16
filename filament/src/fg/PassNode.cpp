@@ -190,10 +190,10 @@ void RenderPassNode::resolve() noexcept {
                 minHeight = std::min(minHeight, h);
                 maxHeight = std::max(maxHeight, h);
             }
-            // additionally, clear implies discardStart
-            rt.backend.params.flags.discardStart |= (
-                    rt.descriptor.clearFlags & rt.targetBufferFlags);
         }
+        // additionally, clear implies discardStart
+        rt.backend.params.flags.discardStart |= (
+                rt.descriptor.clearFlags & rt.targetBufferFlags);
 
         assert_invariant(minWidth == maxWidth);
         assert_invariant(minHeight == maxHeight);
