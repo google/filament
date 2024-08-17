@@ -148,6 +148,9 @@ private:
 
     void terminate(FEngine& engine);
 
+    static void updateNearFarPlanes(math::mat4f* projection,
+            float nearDistance, float farDistance) noexcept;
+
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
@@ -186,27 +189,21 @@ private:
         constexpr static size_t SPLIT_COUNT = CONFIG_MAX_SHADOW_CASCADES + 1;
 
         struct Params {
-            math::mat4f proj;
             float near = 0.0f;
             float far = 0.0f;
-            size_t cascadeCount = 1;
+            uint32_t cascadeCount = 1;
             std::array<float, SPLIT_COUNT> splitPositions = { 0.0f };
         };
 
         explicit CascadeSplits(Params const& params) noexcept;
 
         // Split positions in world-space.
-        const float* beginWs() const { return mSplitsWs; }
-        const float* endWs() const { return mSplitsWs + mSplitCount; }
-
-        // Split positions in clip-space.
-        const float* beginCs() const { return mSplitsCs; }
-        const float* endCs() const { return mSplitsCs + mSplitCount; }
+        const float* begin() const { return mSplitsWs; }
+        const float* end() const { return mSplitsWs + mSplitCount; }
 
     private:
         float mSplitsWs[SPLIT_COUNT];
-        float mSplitsCs[SPLIT_COUNT];
-        size_t mSplitCount;
+        uint32_t mSplitCount;
     };
 
     // Atlas requirements, updated in ShadowMapManager::update(),

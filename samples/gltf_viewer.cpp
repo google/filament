@@ -894,6 +894,8 @@ int main(int argc, char** argv) {
                         debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
                 ImGui::Checkbox("Focus shadow casters",
                         debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+                ImGui::Checkbox("Disable light frustum alignment",
+                        debug.getPropertyAddress<bool>("d.shadowmap.disable_light_frustum_align"));
 
                 bool debugDirectionalShadowmap;
                 if (debug.getProperty("d.shadowmap.debug_directional_shadowmap",
