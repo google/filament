@@ -201,9 +201,9 @@ public:
 
     void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
-    FCamera const* getDirectionalShadowCamera() const noexcept {
-        if (!mShadowMapManager) return nullptr;
-        return mShadowMapManager->getDirectionalShadowCamera();
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept {
+        if (!mShadowMapManager) return {};
+        return mShadowMapManager->getDirectionalShadowCameras();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {

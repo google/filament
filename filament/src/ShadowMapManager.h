@@ -40,6 +40,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/debug.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -58,6 +59,7 @@
 
 namespace filament {
 
+class Camera;
 class FCamera;
 class FView;
 class FrameGraph;
@@ -138,10 +140,7 @@ public:
     bool hasSpotShadows() const { return !mSpotShadowMapCount; }
 
     // for debugging only
-    FCamera const* getDirectionalShadowCamera() const noexcept {
-        if (!mInitialized) return nullptr;
-        return getShadowMap(0).getDebugCamera();
-    }
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
 private:
     explicit ShadowMapManager(FEngine& engine);
@@ -245,8 +244,12 @@ private:
     }
 
     utils::Slice<ShadowMap> getCascadedShadowMap() noexcept {
-        ShadowMap* const p = &getShadowMap(0);
+        ShadowMap const* const p = &getShadowMap(0);
         return { p, mDirectionalShadowMapCount };
+    }
+
+    utils::Slice<ShadowMap> getCascadedShadowMap() const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getCascadedShadowMap();
     }
 
     utils::Slice<ShadowMap> getSpotShadowMaps() noexcept {

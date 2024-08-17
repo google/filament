@@ -1076,4 +1076,15 @@ void ShadowMapManager::updateNearFarPlanes(mat4f* projection,
     p[3].z = (sf * F.w - sn * N.w) * 0.5f;
 }
 
+utils::FixedCapacityVector<Camera const*>
+ShadowMapManager::getDirectionalShadowCameras() const noexcept {
+    if (!mInitialized) return {};
+    auto const csm = getCascadedShadowMap();
+    auto result = utils::FixedCapacityVector<Camera const*>::with_capacity(csm.size());
+    for (ShadowMap const& sm : csm) {
+        result.push_back(sm.hasVisibleShadows() ? sm.getDebugCamera() : nullptr);
+    }
+    return result;
+}
+
 } // namespace filament

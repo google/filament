@@ -1,4 +1,3 @@
-#include <memory>
 
 /*
  * Copyright (C) 2015 The Android Open Source Project
@@ -55,6 +54,13 @@
 #include <filamentapp/NativeWindowHelper.h>
 
 #include <stb_image.h>
+
+#include <algorithm>
+#include <cstdlib>
+#include <memory>
+#include <vector>
+
+#include <stdint.h>
 
 #include "generated/resources/filamentapp.h"
 
@@ -138,10 +144,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
             .build(*mEngine);
 
-    std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));
+    std::unique_ptr<Cube> cameraCube{ new Cube(*mEngine, mTransparentMaterial, { 1, 0, 0 }) };
+
     // we can't cull the light-frustum because it's not applied a rigid transform
     // and currently, filament assumes that for culling
-    std::unique_ptr<Cube> lightmapCube(new Cube(*mEngine, mTransparentMaterial, {0,1,0}, false));
+    std::vector<Cube> lightmapCubes;
+    lightmapCubes.reserve(4);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 1, 0 }, false);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 0, 1 }, false);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 1, 0 }, false);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 0, 0 }, false);
+
     mScene = mEngine->createScene();
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
@@ -151,16 +164,15 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()), 0x3, 0x2);
         rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, 0x2);
-
-        rcm.setLayerMask(rcm.getInstance(lightmapCube->getSolidRenderable()), 0x3, 0x2);
-        rcm.setLayerMask(rcm.getInstance(lightmapCube->getWireFrameRenderable()), 0x3, 0x2);
-
-        // Create the camera mesh
         mScene->addEntity(cameraCube->getWireFrameRenderable());
         mScene->addEntity(cameraCube->getSolidRenderable());
 
-        mScene->addEntity(lightmapCube->getWireFrameRenderable());
-        mScene->addEntity(lightmapCube->getSolidRenderable());
+        for (auto&& cube : lightmapCubes) {
+            rcm.setLayerMask(rcm.getInstance(cube.getSolidRenderable()), 0x3, 0x2);
+            rcm.setLayerMask(rcm.getInstance(cube.getWireFrameRenderable()), 0x3, 0x2);
+            mScene->addEntity(cube.getWireFrameRenderable());
+            mScene->addEntity(cube.getSolidRenderable());
+        }
 
         window->mDepthView->getView()->setVisibleLayers(0x4, 0x4);
         window->mGodView->getView()->setVisibleLayers(0x6, 0x6);
@@ -425,10 +437,26 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDebugCamera->lookAt(eye, center, up);
 
         // Update the cube distortion matrix used for frustum visualization.
-        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalShadowCamera();
-        if (lightmapCamera) {
-            lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        auto& rcm = mEngine->getRenderableManager();
+        auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
+        // show/hide the cascades
+        for (size_t i = 0 ; i < 4; i++) {
+            rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()), 0x3, 0x0);
+            rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()), 0x3, 0x0);
         }
+        if (!csm.empty()) {
+            for (size_t i = 0, c = csm.size(); i < c; i++) {
+                if (csm[i]) {
+                    lightmapCubes[i].mapFrustum(*mEngine, csm[i]);
+                }
+                uint8_t const layer = csm[i] ? 0x2 : 0x0;
+                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()),
+                        0x3, layer);
+                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()),
+                        0x3, layer);
+            }
+        }
+
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
         // Delay rendering for roughly one monitor refresh interval
@@ -452,11 +480,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         if (config.splitView) {
             if(!window->mOrthoView->getView()->hasCamera()) {
-                Camera const* debugDirectionalShadowCamera =
-                        window->mMainView->getView()->getDirectionalShadowCamera();
-                if (debugDirectionalShadowCamera) {
-                    window->mOrthoView->setCamera(
-                            const_cast<Camera*>(debugDirectionalShadowCamera));
+                auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
+                if (!csm.empty()) {
+                    // here we could choose the cascade
+                    Camera const* debugDirectionalShadowCamera = csm[0];
+                    if (debugDirectionalShadowCamera) {
+                        window->mOrthoView->setCamera(
+                                const_cast<Camera*>(debugDirectionalShadowCamera));
+                    }
                 }
             }
         }
@@ -484,7 +515,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     cleanupCallback(mEngine, window->mMainView->getView(), mScene);
 
     cameraCube.reset();
-    lightmapCube.reset();
+    lightmapCubes.clear();
     window.reset();
 
     mIBL.reset();
@@ -736,12 +767,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mGodView->setCamera(mMainCamera);
         mGodView->setGodCamera(mDebugCamera);
         mGodView->setCameraManipulator(mDebugCameraMan);
-
-        // Ortho view obviously uses an ortho camera
-        Camera const* debugDirectionalShadowCamera = mMainView->getView()->getDirectionalShadowCamera();
-        if (debugDirectionalShadowCamera) {
-            mOrthoView->setCamera(const_cast<Camera *>(debugDirectionalShadowCamera));
-        }
     }
 
     // configure the cameras
