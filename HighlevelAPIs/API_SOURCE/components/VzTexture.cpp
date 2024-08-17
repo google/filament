@@ -22,7 +22,9 @@ namespace vzm
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
         ASYNCCHECK;
 
+        bool isNew = false;
         if (tex_res->texture) {
+            isNew = true;
             gEngine->destroy(tex_res->texture);
             tex_res->texture = nullptr;
         }
@@ -79,10 +81,13 @@ namespace vzm
 
         tex_res->texture = texture;
 
-        tex_res->sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
-        tex_res->sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
-        tex_res->sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
-        tex_res->sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
+        if (isNew)
+        {
+            tex_res->sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
+            tex_res->sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
+            tex_res->sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
+            tex_res->sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
+        }
 
         UpdateTimeStamp();
         return true;
