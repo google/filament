@@ -302,6 +302,15 @@ namespace vzm
             m_res->isSystem = false;
         }
 
+        for (auto& it : vzmGeometries)
+        {
+            std::string name = ncm.GetName(utils::Entity::import(it));
+            vzm::backlog::post("geometry (" + name + ") has been system-unlocked.", backlog::LogLevel::Default);
+            VzGeometryRes* geo_res = gEngineApp.GetGeometryRes(it);
+            assert(geo_res);
+            geo_res->isSystem = false;
+        }
+
         gEngineApp.Destroy();
 
         if (gDummySwapChain) {
