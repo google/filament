@@ -89,11 +89,18 @@ namespace vzm
             tex_res->sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
         }
 
+        TextureVID tex_vid = GetVID();
         for (MInstanceVID mi_vid : tex_res->assignedMIs)
         {
             VzMIRes* mi_res = gEngineApp.GetMIRes(mi_vid);
             assert(mi_res);
-            mi->setParameter(name.c_str(), tex_res->texture, tex_res->sampler);
+            for (auto& tex_map_kv : mi_res->texMap)
+            {
+                if (tex_map_kv.second == tex_vid)
+                {
+                    mi_res->mi->setParameter(tex_map_kv.first.c_str(), tex_res->texture, tex_res->sampler);
+                }
+            }
         }
 
         UpdateTimeStamp();

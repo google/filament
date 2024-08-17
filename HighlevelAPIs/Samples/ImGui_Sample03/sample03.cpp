@@ -114,8 +114,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("", "my gltf asset");
-    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
-    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
+    vzm::VzAsset* asset = vzm::LoadFileIntoAsset("../assets/Soldier.glb", "my gltf asset");
+    //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/car_gltf/ioniq.gltf", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/show_car.glb", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom/show_car.gltf", "my gltf asset");
     //vzm::VzAsset* asset = vzm::LoadFileIntoAsset("D:/data/showroom1/car_action_08.gltf", "my gltf asset");
@@ -290,8 +290,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 // vanguard_vanguard_diffuse_tga
                 vzm::VzTexture* texture = (vzm::VzTexture*)vzm::GetFirstVzComponentByName("my image");
                 texture->ReadImage("../assets/testimage1.png");
-                vzm::VzMI* mi = (vzm::VzMI*)components[0];
-                mi->SetTexture("baseColorMap", texture->GetVID());
+                //vzm::VzMI* mi = (vzm::VzMI*)components[0];
+                //mi->SetTexture("baseColorMap", texture->GetVID());
             }
             //
             break;
