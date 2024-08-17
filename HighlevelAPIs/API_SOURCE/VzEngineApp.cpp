@@ -1459,6 +1459,12 @@ namespace vzm
                 }
                 else
                 {
+                    for (auto& it : textureResMap_)
+                    {
+                        VzTextureRes* tex_res = it.second.get();
+                        tex_res->assignedMIs.erase(it_mi->first);
+                    }
+
                     miResMap_.erase(it_mi); // call destructor...
                     isRenderableResource = true;
                     backlog::post("MI (" + name + ") has been removed", backlog::LogLevel::Default);

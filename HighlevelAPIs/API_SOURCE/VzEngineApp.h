@@ -188,12 +188,16 @@ namespace vzm
     };
     struct VzTextureRes
     {
+        // read only shader (e.g., SRV)
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
         Texture* texture = nullptr;
         std::string fileName;
         TextureSampler sampler;
         bool isAsyncLocked = false;
+
+        std::set<MInstanceVID> assignedMIs;
+
         ~VzTextureRes();
     };
 

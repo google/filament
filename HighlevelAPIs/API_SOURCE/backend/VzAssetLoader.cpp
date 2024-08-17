@@ -170,6 +170,7 @@ namespace filament::gltfio {
             tex_res->sampler = sampler;
             tex_res->fileName = name;
             tex_res->isAsyncLocked = true;
+            tex_res->assignedMIs.insert(vidMI);
             mTextureMap[textureIndex] = tex_vid;
         }
         else
