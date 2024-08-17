@@ -907,9 +907,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     const bool splitview = mViews.size() > 2;
 
-    // To trigger a floating-point exception, users could shrink the window to be smaller than
-    // the sidebar. To prevent this we simply clamp the width of the main viewport.
-    const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
+    const uint32_t mainWidth = std::max(2, (int) width - sidebar);
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
@@ -924,7 +922,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     } else {
         mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
     }
-    mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
+    mDebugCamera->setProjection(45.0, double(mainWidth) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
 
     auto aspectRatio = double(mainWidth) / height;
     if (mMainView->getView()->getStereoscopicOptions().enabled) {
@@ -935,12 +933,12 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {
-        uint32_t vpw = width / 2;
-        uint32_t vph = height / 2;
-        mMainView->setViewport ({            0,            0, vpw,         vph          });
-        mDepthView->setViewport({ int32_t(vpw),            0, width - vpw, vph          });
-        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), width - vpw, height - vph });
-        mOrthoView->setViewport({            0, int32_t(vph), vpw,         height - vph });
+        uint32_t const vpw = mainWidth / 2;
+        uint32_t const vph = height / 2;
+        mMainView->setViewport ({ sidebar +            0,            0, vpw, vph });
+        mDepthView->setViewport({ sidebar + int32_t(vpw),            0, vpw, vph });
+        mGodView->setViewport  ({ sidebar + int32_t(vpw), int32_t(vph), vpw, vph });
+        mOrthoView->setViewport({ sidebar +            0, int32_t(vph), vpw, vph });
     } else {
         mMainView->setViewport({ sidebar, 0, mainWidth, height });
     }
