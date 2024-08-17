@@ -145,9 +145,9 @@ namespace filament::gltfio {
         if (it_tex == mTextureMap.end())
         {
             std::string name = "";
-            if (srcAsset->images_count > 0)
+            if (srcAsset->images_count > 0 && textureIndex < srcAsset->images_count)
             {
-                assert(textureIndex < srcAsset->images_count && "textureIndex < srcAsset->images_count");
+                //assert(textureIndex < srcAsset->images_count && "textureIndex < srcAsset->images_count");
                 char* name_ptr = srcAsset->images[textureIndex].name;
                 if (name_ptr)
                     name = name_ptr;
