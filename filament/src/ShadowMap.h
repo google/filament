@@ -109,19 +109,12 @@ public:
     struct SceneInfo {
 
         SceneInfo() noexcept = default;
-        SceneInfo(FScene const& scene, uint8_t visibleLayers, math::mat4f const& viewMatrix) noexcept;
-
-        // scratch data: The near and far planes, in clip space, to use for this shadow map
-        math::float2 csNearFar = { -1.0f, 1.0f };
+        SceneInfo(FScene const& scene, uint8_t visibleLayers) noexcept;
 
         // scratch data: light's near/far expressed in light-space, calculated from the scene's
         // content assuming the light is at the origin.
         math::float2 lsCastersNearFar;
         math::float2 lsReceiversNearFar;
-
-        // Viewing camera's near/far expressed in view-space, calculated from the
-        // scene's content.
-        math::float2 vsNearFar;
 
         // World-space shadow-casters volume
         Aabb wsShadowCastersVolume;
@@ -262,7 +255,7 @@ private:
             math::mat4f const& LMpMv,
             math::mat4f const& WLMp,
             FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
-            filament::CameraInfo const& camera, math::float2 const& csNearFar,
+            filament::CameraInfo const& camera,
             float shadowFar, bool stable) noexcept;
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
@@ -273,8 +266,7 @@ private:
             SceneInfo const& sceneInfo,
             bool stable, bool focusShadowCasters, bool farUsesShadowCasters) noexcept;
 
-    static Corners computeFrustumCorners(const math::mat4f& projectionInverse,
-            math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
+    static Corners computeFrustumCorners(const math::mat4f& projectionInverse) noexcept;
 
     static inline math::float2 computeNearFar(math::mat4f const& view,
             math::float3 const* wsVertices, size_t count) noexcept;
@@ -309,7 +301,7 @@ private:
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,
-            math::mat4f const& projection, math::float2 const& csNearFar,
+            math::mat4f const& projection,
             Aabb const& box);
 
     static math::mat4f warpFrustum(float n, float f) noexcept;
