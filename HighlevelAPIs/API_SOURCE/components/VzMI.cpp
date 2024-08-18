@@ -127,6 +127,7 @@ namespace vzm
 
         mi->setParameter(name.c_str(), tex_res->texture, tex_res->sampler);
         mi_res->texMap[name] = vidTexture;
+        tex_res->assignedMIs.insert(GetVID());
         
         UpdateTimeStamp();
         return true;

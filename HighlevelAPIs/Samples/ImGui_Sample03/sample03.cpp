@@ -284,16 +284,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_KEYDOWN:
         switch (wParam) {
         case 'T': {
-            std::vector<vzm::VzBaseComp*> components;
-            if (vzm::GetVzComponentsByType("VzMI", components) > 0)
-            {
-                // vanguard_vanguard_diffuse_tga
-                vzm::VzTexture* texture = (vzm::VzTexture*)vzm::GetFirstVzComponentByName("my image");
-                texture->ReadImage("../assets/testimage1.png");
-                vzm::VzMI* mi = (vzm::VzMI*)components[0];
-                mi->SetTexture("baseColorMap", texture->GetVID());
-            }
-            //
+            vzm::VzTexture* texture = (vzm::VzTexture*)vzm::GetFirstVzComponentByName("my image");
+            texture->ReadImage("../assets/testimage1.png");
             break;
         }
         case 'C': {

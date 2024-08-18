@@ -22,7 +22,9 @@ namespace vzm
         VzTextureRes* tex_res = gEngineApp.GetTextureRes(GetVID());
         ASYNCCHECK;
 
+        bool isNew = false;
         if (tex_res->texture) {
+            isNew = true;
             gEngine->destroy(tex_res->texture);
             tex_res->texture = nullptr;
         }
@@ -79,10 +81,27 @@ namespace vzm
 
         tex_res->texture = texture;
 
-        tex_res->sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
-        tex_res->sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
-        tex_res->sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
-        tex_res->sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
+        if (isNew)
+        {
+            tex_res->sampler.setMagFilter(TextureSampler::MagFilter::LINEAR);
+            tex_res->sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
+            tex_res->sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
+            tex_res->sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
+        }
+
+        TextureVID tex_vid = GetVID();
+        for (MInstanceVID mi_vid : tex_res->assignedMIs)
+        {
+            VzMIRes* mi_res = gEngineApp.GetMIRes(mi_vid);
+            assert(mi_res);
+            for (auto& tex_map_kv : mi_res->texMap)
+            {
+                if (tex_map_kv.second == tex_vid)
+                {
+                    mi_res->mi->setParameter(tex_map_kv.first.c_str(), tex_res->texture, tex_res->sampler);
+                }
+            }
+        }
 
         UpdateTimeStamp();
         return true;

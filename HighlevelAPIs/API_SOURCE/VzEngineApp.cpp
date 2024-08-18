@@ -1373,6 +1373,23 @@ namespace vzm
                 }
                 else
                 {
+                    for (auto& it : miResMap_)
+                    {
+                        VzMIRes* mi_res = it.second.get();
+                        std::vector<std::string> delete_keys;
+                        for (auto& tex_map_kv : mi_res->texMap)
+                        {
+                            if (tex_map_kv.second == it_tx->first)
+                            {
+                                delete_keys.push_back(tex_map_kv.first);
+                            }
+                        }
+                        for (auto& del_key : delete_keys)
+                        {
+                            mi_res->texMap.erase(del_key);
+                        }
+                    }
+
                     textureResMap_.erase(it_tx); // call destructor...
                     isRenderableResource = true;
                     backlog::post("Texture (" + name + ") has been removed", backlog::LogLevel::Default);
@@ -1459,6 +1476,12 @@ namespace vzm
                 }
                 else
                 {
+                    for (auto& it : textureResMap_)
+                    {
+                        VzTextureRes* tex_res = it.second.get();
+                        tex_res->assignedMIs.erase(it_mi->first);
+                    }
+
                     miResMap_.erase(it_mi); // call destructor...
                     isRenderableResource = true;
                     backlog::post("MI (" + name + ") has been removed", backlog::LogLevel::Default);
