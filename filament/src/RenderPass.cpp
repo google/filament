@@ -610,7 +610,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         //   Here, objects close to the camera (but behind) will be drawn first.
         // An alternative that keeps the mathematical ordering is given here:
         //   distanceBits ^= ((int32_t(distanceBits) >> 31) | 0x80000000u);
-        float const distance = -dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward;
+        float const distance = -(dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward);
         uint32_t const distanceBits = reinterpret_cast<uint32_t const&>(distance);
 
         // calculate the per-primitive face winding order inversion
