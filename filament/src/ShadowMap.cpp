@@ -481,7 +481,7 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
      */
 
     float lsClippedShadowVolumeFarthest = std::numeric_limits<float>::max();
-    float lsClippedShadowVolumeNearest = std::numeric_limits<float>::min();
+    float lsClippedShadowVolumeNearest = std::numeric_limits<float>::lowest();
     for (size_t i = 0; i < vertexCount; ++i) {
         float3 const v = lsClippedShadowVolume[i];
         lsClippedShadowVolumeFarthest = std::min(lsClippedShadowVolumeFarthest, v.z);
