@@ -39,4 +39,100 @@ namespace vzm
         }
         return m_res->allowedParamters.size();
     }
-}
+
+    //MaterialKey VzMaterial::GetVzmMaterialKey() { 
+    //    COMP_MAT(material, m_res, );
+
+    //    bool unlit = material->getShading() == Shading::UNLIT;
+    //    
+    //    MaterialKey matkey {
+    //      .unlit = unlit,
+    //      .hasBaseColorTexture = material->hasParameter("baseColorMap"),
+    //      .hasNormalTexture = material->hasParameter("normalMap"),
+    //      .hasOcclusionTexture = material->hasParameter("occlusionMap"),
+    //      .hasEmissiveTexture = material->hasParameter("emissiveMap"),
+    //      .hasClearCoatTexture = material->hasParameter("clearCoatMap"),
+    //      .hasClearCoatRoughnessTexture = material->hasParameter("clearCoatRoughnessMap"),
+    //      .hasClearCoatNormalTexture = material->hasParameter("clearCoatNormalMap"),
+    //      .hasClearCoat = material->hasParameter("clearCoatFactor"),
+    //      .hasTransmission = material->hasParameter("transmissionFactor"),
+    //      .hasTextureTransforms = material->hasParameter("baseColorUvMatrix"),
+    //      .hasTransmissionTexture = material->hasParameter("transmissionMap"),
+    //      .hasSheenColorTexture = material->hasParameter("sheenColorMap"),
+    //      .hasSheenRoughnessTexture = material->hasParameter("sheenRoughnessMap"),
+    //      .hasVolumeThicknessTexture = material->hasParameter("volumeThicknessMap"),
+    //      .hasSheen = material->hasParameter("sheenColorFactor"),          
+    //      .hasIOR = material->hasParameter("ior"),
+    //      .hasVolume = material->hasParameter("volumeThicknessFactor"),
+    //      .hasSpecular =  material->hasParameter("specularColorFactor"),
+    //      .hasSpecularTexture =  material->hasParameter("specularMap"),
+    //      .hasSpecularColorTexture =  material->hasParameter("specularColorMap"),
+    //    };
+    //    
+    //    if (material->hasParameter("metallicRoughnessMap")) {
+    //      matkey.hasMetallicRoughnessTexture = true;
+    //    }
+    //    BlendingMode blending = material->getBlendingMode();
+    //    if (blending == BlendingMode::OPAQUE) {
+    //      matkey.alphaMode = AlphaMode::OPAQUE;
+    //    } else if (blending == BlendingMode::MASKED) {
+    //      matkey.alphaMode = AlphaMode::MASK;
+    //    } else{
+    //      matkey.alphaMode = AlphaMode::BLEND;
+    //    }
+
+    //    return matkey;
+    //}
+
+    vzm::VzMaterial::MaterialKey VzMaterial::GetVzmMaterialKey() {
+      MaterialKey tempkey{};
+      COMP_MAT(material, m_res, tempkey);
+
+        bool unlit = material->getShading() == Shading::UNLIT;
+
+        MaterialKey matkey{
+            .unlit = unlit,
+            .hasBaseColorTexture = material->hasParameter("baseColorMap"),
+            .hasNormalTexture = material->hasParameter("normalMap"),
+            .hasOcclusionTexture = material->hasParameter("occlusionMap"),
+            .hasEmissiveTexture = material->hasParameter("emissiveMap"),
+            .hasClearCoatTexture = material->hasParameter("clearCoatMap"),
+            .hasClearCoatRoughnessTexture =
+                material->hasParameter("clearCoatRoughnessMap"),
+            .hasClearCoatNormalTexture =
+                material->hasParameter("clearCoatNormalMap"),
+            .hasClearCoat = material->hasParameter("clearCoatFactor"),
+            .hasTransmission = material->hasParameter("transmissionFactor"),
+            .hasTextureTransforms = material->hasParameter("baseColorUvMatrix"),
+            .hasTransmissionTexture = material->hasParameter("transmissionMap"),
+            .hasSheenColorTexture = material->hasParameter("sheenColorMap"),
+            .hasSheenRoughnessTexture =
+                material->hasParameter("sheenRoughnessMap"),
+            .hasVolumeThicknessTexture =
+                material->hasParameter("volumeThicknessMap"),
+            .hasSheen = material->hasParameter("sheenColorFactor"),
+            .hasIOR = material->hasParameter("ior"),
+            .hasVolume = material->hasParameter("volumeThicknessFactor"),
+            .hasSpecular = material->hasParameter("specularColorFactor"),
+            .hasSpecularTexture = material->hasParameter("specularMap"),
+            .hasSpecularColorTexture =
+                material->hasParameter("specularColorMap"),
+        };
+
+        if (material->hasParameter("metallicRoughnessMap")) {
+          matkey.hasMetallicRoughnessTexture = true;
+        }
+        BlendingMode blending = material->getBlendingMode();
+        if (blending == BlendingMode::OPAQUE) {
+          matkey.alphaMode = AlphaMode::OPAQUE;
+        } else if (blending == BlendingMode::MASKED) {
+          matkey.alphaMode = AlphaMode::MASK;
+        } else {
+          matkey.alphaMode = AlphaMode::BLEND;
+        }
+
+        return matkey;
+    }
+    
+
+    }  // namespace vzm
