@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <stb_image.h>
 
 extern Engine* gEngine;
 extern vzm::VzEngineApp gEngineApp;
@@ -37,49 +38,83 @@ namespace vzm
 
         tex_res->fileName = fileName;
 
-        std::ifstream inputStream(file_name, std::ios::binary);
-        image::LinearImage* image = new LinearImage(ImageDecoder::decode(
-            inputStream, file_name, ImageDecoder::ColorSpace::SRGB));
+        if ((fileName.rfind(".jpg") != std::string::npos) ||
+            (fileName.rfind(".jpeg") != std::string::npos)) {
+            std::ifstream inputStream(file_name, std::ios::binary);
 
-        if (!image->isValid()) {
-            backlog::post("The input image is invalid:: " + fileName, backlog::LogLevel::Error);
-            return false;
+            std::vector<uint8_t> inputBuffer;
+            inputStream.seekg(0, std::ios::end);
+            inputBuffer.reserve((size_t)inputStream.tellg());
+            inputStream.seekg(0, std::ios::beg);
+            inputBuffer.assign((std::istreambuf_iterator<char>(inputStream)),
+                        std::istreambuf_iterator<char>());
+            int w, h, n;
+            unsigned char* data = stbi_load_from_memory(
+                  inputBuffer.data(), inputBuffer.size(), &w, &h, &n, 3);
+
+            inputStream.close();
+
+            Texture* texture = Texture::Builder()
+                                   .width(uint32_t(w))
+                                   .height(uint32_t(h))
+                                   .levels(0xff)
+                                   .format(Texture::InternalFormat::RGB8)
+                                   .sampler(Texture::Sampler::SAMPLER_2D)
+                                   .build(*gEngine);
+
+            Texture::PixelBufferDescriptor buffer(
+                data, size_t(w * h * 3), Texture::Format::RGB,
+                Texture::Type::UBYTE,
+                (Texture::PixelBufferDescriptor::Callback)&stbi_image_free);
+            texture->setImage(*gEngine, 0, std::move(buffer));
+  
+            tex_res->texture = texture;
+        } else {
+            std::ifstream inputStream(file_name, std::ios::binary);
+
+            image::LinearImage* image = new LinearImage(ImageDecoder::decode(
+                inputStream, file_name, ImageDecoder::ColorSpace::SRGB));
+
+            if (!image->isValid()) {
+                backlog::post("The input image is invalid:: " + fileName, backlog::LogLevel::Error);
+                return false;
+            }
+
+            inputStream.close();
+
+            uint32_t channels = image->getChannels();
+            uint32_t w = image->getWidth();
+            uint32_t h = image->getHeight();
+            Texture* texture = Texture::Builder()
+                .width(w)
+                .height(h)
+                .levels(0xff)
+                .format(channels == 3 ?
+                    Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
+                .sampler(Texture::Sampler::SAMPLER_2D)
+                .build(*gEngine);
+
+            Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
+                delete reinterpret_cast<LinearImage*>(data);
+                };
+
+            Texture::PixelBufferDescriptor buffer(
+                image->getPixelRef(),
+                size_t(w * h * channels * sizeof(float)),
+                channels == 3 ? Texture::Format::RGB : Texture::Format::RGBA,
+                Texture::Type::FLOAT,
+                freeCallback,
+                image
+            );
+
+            texture->setImage(*gEngine, 0, std::move(buffer));
+
+            tex_res->texture = texture;
         }
 
-        inputStream.close();
-
-        uint32_t channels = image->getChannels();
-        uint32_t w = image->getWidth();
-        uint32_t h = image->getHeight();
-        Texture* texture = Texture::Builder()
-            .width(w)
-            .height(h)
-            .levels(0xff)
-            .format(channels == 3 ?
-                Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
-            .sampler(Texture::Sampler::SAMPLER_2D)
-            .build(*gEngine);
-
-        Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
-            delete reinterpret_cast<LinearImage*>(data);
-            };
-
-        Texture::PixelBufferDescriptor buffer(
-            image->getPixelRef(),
-            size_t(w * h * channels * sizeof(float)),
-            channels == 3 ? Texture::Format::RGB : Texture::Format::RGBA,
-            Texture::Type::FLOAT,
-            freeCallback,
-            image
-        );
-
-        texture->setImage(*gEngine, 0, std::move(buffer));
-        if (generateMIPs)
-        {
-            texture->generateMipmaps(*gEngine);
+        if (generateMIPs) {
+          tex_res->texture->generateMipmaps(*gEngine);
         }
-
-        tex_res->texture = texture;
 
         if (isNew)
         {
