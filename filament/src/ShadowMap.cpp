@@ -166,12 +166,17 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     mat4f W, Wp, L;
     // We can't use LISPSM in stable mode
     const bool useLispsm = params.options.lispsm && !params.options.stable;
-    if (useLispsm) {
+
+    if (useLispsm ||
+            (!params.options.stable && !engine.debug.shadowmap.disable_light_frustum_align)) {
         // Orient the shadow map in the direction of the view vector by constructing a
         const float3 lsCameraFwd = Mv.upperLeft() * camera.getForwardVector();
         L = computeLightRotation(lsCameraFwd);
         LMp = L * Mp;
         LMpMv = LMp * Mv;
+    }
+
+    if (useLispsm) {
         W = applyLISPSM(Wp, camera, params,
                 LMp, Mv, LMpMv, lsClippedShadowVolume, vertexCount, direction);
     }
@@ -189,8 +194,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     //   In LiPSM mode, we're using the warped space here.
     float4 f = computeFocusParams(LMpMv, WLMp,
             lsClippedShadowVolume, vertexCount,
-            camera, sceneInfo.csNearFar,
-            params.options.shadowFar, params.options.stable);
+            camera, params.options.shadowFar, params.options.stable);
 
     if (params.options.stable) {
         const auto lsRef = lightData.elementAt<FScene::SHADOW_REF>(index);
@@ -454,9 +458,10 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
 
     // Compute the intersection of the view volume with the intersection of receivers and casters
     // in light space. This returns a set of points on the convex-hull of the intersection.
+    mat4f const projection = camera.cullingProjection *
+            (camera.view * FCamera::rigidTransformInverse(MvAtOrigin));
     size_t const vertexCount = intersectFrustumWithBox(lsClippedShadowVolume,
-            camera.cullingProjection * camera.view * FCamera::rigidTransformInverse(MvAtOrigin),
-            sceneInfo.csNearFar, lsLightFrustumBounds);
+            projection, lsLightFrustumBounds);
 
     if (UTILS_UNLIKELY(vertexCount < 4)) {
         return {};
@@ -629,7 +634,7 @@ math::float4 ShadowMap::computeFocusParams(
         mat4f const& LMpMv,
         mat4f const& WLMp,
         FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
-        filament::CameraInfo const& camera, float2 const& csNearFar,
+        filament::CameraInfo const& camera,
         float shadowFar, bool stable) noexcept {
     float2 s, o;
     if (stable) {
@@ -644,7 +649,7 @@ math::float4 ShadowMap::computeFocusParams(
                 return wsViewVolumeBoundingSphere;
             } else {
                 mat4f const viewFromClip = inverse(camera.cullingProjection);
-                Corners const wsFrustumVertices = computeFrustumCorners(viewFromClip, csNearFar);
+                Corners const wsFrustumVertices = computeFrustumCorners(viewFromClip);
                 float4 const wsViewVolumeBoundingSphere =
                         computeBoundingSphere(wsFrustumVertices.vertices, 8);
                 return wsViewVolumeBoundingSphere;
@@ -812,15 +817,14 @@ Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
 }
 
 ShadowMap::Corners ShadowMap::computeFrustumCorners(
-        mat4f const& projectionInverse,
-        float2 csNearFar) noexcept {
+        mat4f const& projectionInverse) noexcept {
 
     Corners out;
 
     // compute view frustum in world space (from its NDC)
     // matrix to convert: ndc -> camera -> world
-    float const near = csNearFar.x;
-    float const far  = csNearFar.y;
+    float const near = -1.0f;
+    float const far  =  1.0f;
 
     Corners const csViewFrustumCorners = {
             .vertices = {
@@ -913,11 +917,11 @@ void ShadowMap::snapLightFrustum(float2& s, float2& o,
 
 size_t ShadowMap::intersectFrustumWithBox(
         FrustumBoxIntersection& UTILS_RESTRICT outVertices,
-        mat4f const& UTILS_RESTRICT projection, math::float2 const& UTILS_RESTRICT csNearFar,
+        mat4f const& UTILS_RESTRICT projection,
         Aabb const& UTILS_RESTRICT box)
 {
     Frustum const frustum{ projection };
-    Corners const frustumVertices{ computeFrustumCorners(inverse(projection), csNearFar) };
+    Corners const frustumVertices{ computeFrustumCorners(inverse(projection)) };
 
     constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
     size_t vertexCount = 0;
@@ -1221,9 +1225,8 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
 }
 
 ShadowMap::SceneInfo::SceneInfo(
-        FScene const& scene, uint8_t visibleLayers, mat4f const& viewMatrix) noexcept
-        : vsNearFar(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max()),
-          visibleLayers(visibleLayers) {
+        FScene const& scene, uint8_t visibleLayers) noexcept
+        : visibleLayers(visibleLayers) {
 
     // the code below only works with affine transforms
     // Filament's API requires viewMatrix to be rigid (and thus affine).
@@ -1242,9 +1245,6 @@ ShadowMap::SceneInfo::SceneInfo(
             [&](Aabb receiver, Culler::result_type) {
                 wsShadowReceiversVolume.min = min(wsShadowReceiversVolume.min, receiver.min);
                 wsShadowReceiversVolume.max = max(wsShadowReceiversVolume.max, receiver.max);
-                auto r = Aabb::transform(viewMatrix.upperLeft(), viewMatrix[3].xyz, receiver);
-                vsNearFar.x = std::max(vsNearFar.x, r.max.z);
-                vsNearFar.y = std::min(vsNearFar.y, r.min.z);
             }
     );
 }

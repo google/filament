@@ -39,17 +39,20 @@
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
-#include <utils/FixedCapacityVector.h>
-#include <utils/Range.h>
-#include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/BitmaskEnum.h>
+#include <utils/Range.h>
+#include <utils/Slice.h>
 
 #include <math/half.h>
 #include <math/mat4.h>
 #include <math/vec4.h>
 #include <math/scalar.h>
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <new>
@@ -70,8 +73,8 @@ ShadowMapManager::ShadowMapManager(FEngine& engine) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
-    debugRegistry.registerProperty("d.shadowmap.tightly_bound_scene",
-            &engine.debug.shadowmap.tightly_bound_scene);
+    debugRegistry.registerProperty("d.shadowmap.disable_light_frustum_align",
+            &engine.debug.shadowmap.disable_light_frustum_align);
 }
 
 ShadowMapManager::~ShadowMapManager() {
@@ -150,7 +153,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
     calculateTextureRequirements(engine, view, lightData);
 
     // Compute scene-dependent values shared across all shadow maps
-    ShadowMap::SceneInfo const info{ *view.getScene(), view.getVisibleLayers(), cameraInfo.view };
+    ShadowMap::SceneInfo const info{ *view.getScene(), view.getVisibleLayers() };
 
     shadowTechnique |= updateCascadeShadowMaps(
             engine, view, cameraInfo, renderableData, lightData, info);
@@ -542,65 +545,9 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     FLightManager::ShadowParams const& params = lcm.getShadowParams(directionalLight);
 
     // Adjust the camera's projection for the light's shadowFar
-    cameraInfo.zf = params.options.shadowFar > 0.0f ? params.options.shadowFar : cameraInfo.zf;
     if (UTILS_UNLIKELY(params.options.shadowFar > 0.0f)) {
         cameraInfo.zf = params.options.shadowFar;
-        float const n = cameraInfo.zn;
-        float const f = cameraInfo.zf;
-
-        /*
-         *  Updating a projection matrix near and far planes:
-         *
-         *  We assume that the near and far plane equations are of the form:
-         *           N = { 0, 0,  1,  n }
-         *           F = { 0, 0, -1, -f }
-         *
-         *  We also assume that the lower-left 2x2 of the projection is all 0:
-         *       P =   A   0   C   0
-         *             0   B   D   0
-         *             0   0   E   F
-         *             0   0   G   H
-         *
-         *  It result that we need to calculate E and F while leaving all other parameter unchanged.
-         *
-         *  We know that:
-         *       with N, F the near/far normalized plane equation parameters
-         *            sn, sf arbitrary scale factors (they don't affect the planes)
-         *            m is the transpose of projection (see Frustum.cpp)
-         *
-         *       sn * N == -m[3] - m[2]
-         *       sf * F == -m[3] + m[2]
-         *
-         *       sn * N + sf * F == -2 * m[3]
-         *       sn * N - sf * F == -2 * m[2]
-         *
-         *       sn * N.z + sf * F.z == -2 * m[3].z
-         *       sn * N.w + sf * F.w == -2 * m[3].w
-         *       sn * N.z - sf * F.z == -2 * m[2].z
-         *       sn * N.w - sf * F.w == -2 * m[2].w
-         *
-         *       sn * N.z + sf * F.z == -2 * p[2].w
-         *       sn * N.w + sf * F.w == -2 * p[3].w
-         *       sn * N.z - sf * F.z == -2 * p[2].z
-         *       sn * N.w - sf * F.w == -2 * p[3].z
-         *
-         *  We now need to solve for { p[2].z, p[3].z, sn, sf } :
-         *
-         *       sn == -2 * (p[2].w * F.w - p[3].w * F.z) / (N.z * F.w - N.w * F.z)
-         *       sf == -2 * (p[2].w * N.w - p[3].w * N.z) / (F.z * N.w - F.w * N.z)
-         *   p[2].z == (sf * F.z - sn * N.z) / 2
-         *   p[3].z == (sf * F.w - sn * N.w) / 2
-         */
-        auto& p = cameraInfo.cullingProjection;
-        float4 const N = { 0, 0,  1,  n };  // near plane equation
-        float4 const F = { 0, 0, -1, -f };  // far plane equation
-        // near plane equation scale factor
-        float const sn = -2.0f * (p[2].w * F.w - p[3].w * F.z) / (N.z * F.w - N.w * F.z);
-        // far plane equation scale factor
-        float const sf = -2.0f * (p[2].w * N.w - p[3].w * N.z) / (F.z * N.w - F.w * N.z);
-        // New values for the projection
-        p[2].z = (sf * F.z - sn * N.z) * 0.5f;
-        p[3].z = (sf * F.w - sn * N.w) * 0.5f;
+        updateNearFarPlanes(&cameraInfo.cullingProjection, cameraInfo.zn, cameraInfo.zf);
     }
 
     const ShadowMap::ShadowMapInfo shadowMapInfo{
@@ -649,15 +596,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     uint32_t cascadeHasVisibleShadows = 0;
 
     if (hasVisibleShadows) {
-        // Adjust the near and far planes to tightly bound the scene.
-        float vsNear = -cameraInfo.zn;
-        float vsFar = -cameraInfo.zf;
-        if (engine.debug.shadowmap.tightly_bound_scene && !params.options.stable) {
-            vsNear = std::min(vsNear, sceneInfo.vsNearFar.x);
-            vsFar = std::max(vsFar, sceneInfo.vsNearFar.y);
-        }
-
-        const size_t cascadeCount = cascadedShadowMaps.size();
+        uint32_t const cascadeCount = cascadedShadowMaps.size();
 
         // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
         // The first split position is the near plane; the last split position is the far plane.
@@ -668,9 +607,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         }
 
         const CascadeSplits splits({
-                .proj = cameraInfo.cullingProjection,
-                .near = vsNear,
-                .far = vsFar,
+                .near = -cameraInfo.zn,
+                .far = -cameraInfo.zf,
                 .cascadeCount = cascadeCount,
                 .splitPositions = splitPercentages
         });
@@ -680,10 +618,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         static_assert(CONFIG_MAX_SHADOW_CASCADES <= 5,
                 "At most, a float4 can fit 4 split positions for 5 shadow cascades");
         float4 wsSplitPositionUniform{ -std::numeric_limits<float>::infinity() };
-        std::copy(splits.beginWs() + 1, splits.endWs(), &wsSplitPositionUniform[0]);
-
-        float csSplitPosition[CONFIG_MAX_SHADOW_CASCADES + 1];
-        std::copy(splits.beginCs(), splits.endCs(), csSplitPosition);
+        std::copy(splits.begin() + 1, splits.end(), &wsSplitPositionUniform[0]);
 
         mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
@@ -696,7 +631,11 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             ShadowMap& shadowMap = cascadedShadowMaps[i];
             assert_invariant(shadowMap.getLightIndex() == 0);
 
-            sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
+            // update cameraInfo culling projection for the cascade
+            float const* nearFarPlanes = splits.begin();
+            cameraInfo.zn = -nearFarPlanes[i];
+            cameraInfo.zf = -nearFarPlanes[i + 1];
+            updateNearFarPlanes(&cameraInfo.cullingProjection, cameraInfo.zn, cameraInfo.zf);
 
             auto shaderParameters = shadowMap.updateDirectional(engine,
                     lightData, 0, cameraInfo, shadowMapInfo, sceneInfo, USE_DEPTH_CLAMP);
@@ -1070,8 +1009,67 @@ ShadowMapManager::CascadeSplits::CascadeSplits(Params const& params) noexcept
         : mSplitCount(params.cascadeCount + 1) {
     for (size_t s = 0; s < mSplitCount; s++) {
         mSplitsWs[s] = params.near + (params.far - params.near) * params.splitPositions[s];
-        mSplitsCs[s] = mat4f::project(params.proj, float3(0.0f, 0.0f, mSplitsWs[s])).z;
     }
+}
+
+void ShadowMapManager::updateNearFarPlanes(mat4f* projection,
+        float nearDistance, float farDistance) noexcept {
+    float const n = nearDistance;
+    float const f = farDistance;
+
+    /*
+     *  Updating a projection matrix near and far planes:
+     *
+     *  We assume that the near and far plane equations are of the form:
+     *           N = { 0, 0,  1,  n }
+     *           F = { 0, 0, -1, -f }
+     *
+     *  We also assume that the lower-left 2x2 of the projection is all 0:
+     *       P =   A   0   C   0
+     *             0   B   D   0
+     *             0   0   E   F
+     *             0   0   G   H
+     *
+     *  It result that we need to calculate E and F while leaving all other parameter unchanged.
+     *
+     *  We know that:
+     *       with N, F the near/far normalized plane equation parameters
+     *            sn, sf arbitrary scale factors (they don't affect the planes)
+     *            m is the transpose of projection (see Frustum.cpp)
+     *
+     *       sn * N == -m[3] - m[2]
+     *       sf * F == -m[3] + m[2]
+     *
+     *       sn * N + sf * F == -2 * m[3]
+     *       sn * N - sf * F == -2 * m[2]
+     *
+     *       sn * N.z + sf * F.z == -2 * m[3].z
+     *       sn * N.w + sf * F.w == -2 * m[3].w
+     *       sn * N.z - sf * F.z == -2 * m[2].z
+     *       sn * N.w - sf * F.w == -2 * m[2].w
+     *
+     *       sn * N.z + sf * F.z == -2 * p[2].w
+     *       sn * N.w + sf * F.w == -2 * p[3].w
+     *       sn * N.z - sf * F.z == -2 * p[2].z
+     *       sn * N.w - sf * F.w == -2 * p[3].z
+     *
+     *  We now need to solve for { p[2].z, p[3].z, sn, sf } :
+     *
+     *       sn == -2 * (p[2].w * F.w - p[3].w * F.z) / (N.z * F.w - N.w * F.z)
+     *       sf == -2 * (p[2].w * N.w - p[3].w * N.z) / (F.z * N.w - F.w * N.z)
+     *   p[2].z == (sf * F.z - sn * N.z) / 2
+     *   p[3].z == (sf * F.w - sn * N.w) / 2
+     */
+    auto& p = *projection;
+    float4 const N = { 0, 0,  1,  n };  // near plane equation
+    float4 const F = { 0, 0, -1, -f };  // far plane equation
+    // near plane equation scale factor
+    float const sn = -2.0f * (p[2].w * F.w - p[3].w * F.z) / (N.z * F.w - N.w * F.z);
+    // far plane equation scale factor
+    float const sf = -2.0f * (p[2].w * N.w - p[3].w * N.z) / (F.z * N.w - F.w * N.z);
+    // New values for the projection
+    p[2].z = (sf * F.z - sn * N.z) * 0.5f;
+    p[3].z = (sf * F.w - sn * N.w) * 0.5f;
 }
 
 } // namespace filament
