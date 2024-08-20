@@ -111,5 +111,6 @@ namespace vzm
         size_t GetAllowedParameters(std::map<std::string, ParameterInfo>& paramters);
 
         MaterialKey GetVzmMaterialKey();
+        bool SetMaterialKey(MaterialKey materialKey);
     };
 }

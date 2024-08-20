@@ -4,6 +4,7 @@
 
 extern Engine* gEngine;
 extern vzm::VzEngineApp gEngineApp;
+extern gltfio::MaterialProvider* gMaterialProvider;
 
 namespace vzm
 {
@@ -134,5 +135,29 @@ namespace vzm
         return matkey;
     }
     
+    bool VzMaterial::SetMaterialKey(vzm::VzMaterial::MaterialKey materialKey) {
+      VzMaterialRes* mat_res = gEngineApp.GetMaterialRes(GetVID());
+      if (mat_res->material) {
+        gEngine->destroy(mat_res->material);
+        mat_res->material = nullptr;
+        mat_res->allowedParamters.clear();
+      }
+
+      UvMap uvmap;
+      Material* material = gMaterialProvider->getMaterial((filament::gltfio::MaterialKey*)&materialKey, &uvmap, GetName().c_str());
+      
+      std::vector<Material::ParameterInfo> params(material->getParameterCount());
+
+      material->getParameters(&params[0], params.size());
+      
+      for (auto& param : params) {
+        assert(!m_res.allowedParamters.contains(param.name));
+        mat_res->allowedParamters[param.name] = param;
+      }
+
+      mat_res->material = material;
+
+      return true;
+    }
 
     }  // namespace vzm
