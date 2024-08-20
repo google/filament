@@ -172,7 +172,7 @@ namespace vzm
             backlog::LogLevel::Default);
 
         gEngineConfig.stereoscopicEyeCount = gConfig.stereoscopicEyeCount;
-        gEngineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
+        gEngineConfig.stereoscopicType = Engine::StereoscopicType::INSTANCED;
         // to do : gConfig and gEngineConfig
         // using vzm::ParamMap<std::string>& argument
         //gConfig.headless = true;
