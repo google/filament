@@ -28,7 +28,13 @@
 
 class Cube {
 public:
+
     Cube(filament::Engine& engine, filament::Material const* material, filament::math::float3 linearColor, bool culling = true);
+
+    Cube(Cube const&) = delete;
+    Cube& operator=(Cube const&) = delete;
+
+    Cube(Cube&& rhs) noexcept;
 
     utils::Entity getSolidRenderable() {
         return mSolidRenderable;
@@ -55,8 +61,8 @@ private:
     filament::Material const* mMaterial = nullptr;
     filament::MaterialInstance* mMaterialInstanceSolid = nullptr;
     filament::MaterialInstance* mMaterialInstanceWireFrame = nullptr;
-    utils::Entity mSolidRenderable;
-    utils::Entity mWireFrameRenderable;
+    utils::Entity mSolidRenderable{};
+    utils::Entity mWireFrameRenderable{};
 };
 
 

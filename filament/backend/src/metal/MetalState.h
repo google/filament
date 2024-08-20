@@ -379,6 +379,7 @@ using SamplerStateCache = StateCache<SamplerState, id<MTLSamplerState>, SamplerS
 
 using CullModeStateTracker = StateTracker<MTLCullMode>;
 using WindingStateTracker = StateTracker<MTLWinding>;
+using DepthClampStateTracker = StateTracker<MTLDepthClipMode>;
 
 // Argument encoder
 

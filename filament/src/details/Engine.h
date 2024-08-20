@@ -617,6 +617,7 @@ public:
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;
             bool disable_light_frustum_align = false;
+            bool depth_clamp = true;
             float dzn = -1.0f;
             float dzf =  1.0f;
             float display_shadow_texture_scale = 0.25f;
