@@ -26,15 +26,27 @@
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
 #include <utils/Systrace.h>
 
+#include <array>
 #include <cctype>
 #include <chrono>
+#include <mutex>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <utility>
 #include <variant>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -476,6 +488,12 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
     // check status of program linking and shader compilation, logs error and free all resources
     // in case of error.
     bool const success = checkProgramStatus(token);
+
+    // Unless we have matdbg, we panic if a program is invalid. Otherwise, we'd get a UB.
+    // The compilation error has been logged to log.e by this point.
+    FILAMENT_CHECK_POSTCONDITION(FILAMENT_ENABLE_MATDBG || success)
+            << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
+
     if (UTILS_LIKELY(success)) {
         program = token->gl.program;
         // no need to keep the shaders around
@@ -572,16 +590,23 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
 
             // split shader source, so we can insert the specialization constants and the packing
             // functions
-            auto const [prolog, body] = splitShaderSource({ shader_src, shader_len });
+            auto [version, prolog, body] = splitShaderSource({ shader_src, shader_len });
 
-            const std::array<const char*, 4> sources = {
+            // enable ESSL 3.10 if available
+            if (context.isAtLeastGLES<3, 1>()) {
+                version = "#version 310 es\n";
+            }
+
+            const std::array<const char*, 5> sources = {
+                    version.data(),
                     prolog.data(),
                     specializationConstantString.c_str(),
                     packingFunctions.data(),
                     body.data()
             };
 
-            const std::array<GLint, 4> lengths = {
+            const std::array<GLint, 5> lengths = {
+                    (GLint)version.length(),
                     (GLint)prolog.length(),
                     (GLint)specializationConstantString.length(),
                     (GLint)packingFunctions.length(),
@@ -589,7 +614,24 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             };
 
             GLuint const shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+
+            if (UTILS_UNLIKELY(context.bugs.concatenate_shader_strings)) {
+                size_t totalSize = 0;
+                for (size_t i = 0; i < sources.size(); i++) {
+                    totalSize += lengths[i];
+                }
+                std::string concatenatedShaderSource;
+                concatenatedShaderSource.reserve(totalSize);
+                for (size_t i = 0; i < sources.size(); i++) {
+                    concatenatedShaderSource.append(sources[i], lengths[i]);
+                }
+                const GLchar* ptr = concatenatedShaderSource.c_str();
+                GLint length = concatenatedShaderSource.length();
+                glShaderSource(shaderId, 1, &ptr, &length);
+            } else {
+                glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+            }
+
             glCompileShader(shaderId);
 
 #ifndef NDEBUG
@@ -661,6 +703,7 @@ void ShaderCompilerService::process_OVR_multiview2(OpenGLContext& context,
 
 // Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 (appeared in 4.2) and
 // macOS doesn't support GL_ARB_shading_language_packing
+// Also GLES3.0 didn't have the full set of packing/unpacking functions
 std::string_view ShaderCompilerService::process_ARB_shading_language_packing(OpenGLContext& context) noexcept {
     using namespace std::literals;
 #ifdef BACKEND_OPENGL_VERSION_GL
@@ -700,31 +743,102 @@ highp uint packHalf2x16(vec2 v) {
     highp uint y = fp32tou16(v.y);
     return (y << 16u) | x;
 }
+highp uint packUnorm4x8(mediump vec4 v) {
+    v = round(clamp(v, 0.0, 1.0) * 255.0);
+    highp uint a = uint(v.x);
+    highp uint b = uint(v.y) <<  8;
+    highp uint c = uint(v.z) << 16;
+    highp uint d = uint(v.w) << 24;
+    return (a|b|c|d);
+}
+highp uint packSnorm4x8(mediump vec4 v) {
+    v = round(clamp(v, -1.0, 1.0) * 127.0);
+    highp uint a = uint((int(v.x) & 0xff));
+    highp uint b = uint((int(v.y) & 0xff)) <<  8;
+    highp uint c = uint((int(v.z) & 0xff)) << 16;
+    highp uint d = uint((int(v.w) & 0xff)) << 24;
+    return (a|b|c|d);
+}
+mediump vec4 unpackUnorm4x8(highp uint v) {
+    return vec4(float((v & 0x000000ffu)      ),
+                float((v & 0x0000ff00u) >>  8),
+                float((v & 0x00ff0000u) >> 16),
+                float((v & 0xff000000u) >> 24)) / 255.0;
+}
+mediump vec4 unpackSnorm4x8(highp uint v) {
+    int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
+    int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
+    int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
+    int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
+    return clamp(vec4(float(a), float(b), float(c), float(d)) / 127.0, -1.0, 1.0);
+}
 )"sv;
     }
 #endif // BACKEND_OPENGL_VERSION_GL
+
+#ifdef BACKEND_OPENGL_VERSION_GLES
+    if (!context.isES2() && !context.isAtLeastGLES<3, 1>()) {
+        return R"(
+
+highp uint packUnorm4x8(mediump vec4 v) {
+    v = round(clamp(v, 0.0, 1.0) * 255.0);
+    highp uint a = uint(v.x);
+    highp uint b = uint(v.y) <<  8;
+    highp uint c = uint(v.z) << 16;
+    highp uint d = uint(v.w) << 24;
+    return (a|b|c|d);
+}
+highp uint packSnorm4x8(mediump vec4 v) {
+    v = round(clamp(v, -1.0, 1.0) * 127.0);
+    highp uint a = uint((int(v.x) & 0xff));
+    highp uint b = uint((int(v.y) & 0xff)) <<  8;
+    highp uint c = uint((int(v.z) & 0xff)) << 16;
+    highp uint d = uint((int(v.w) & 0xff)) << 24;
+    return (a|b|c|d);
+}
+mediump vec4 unpackUnorm4x8(highp uint v) {
+    return vec4(float((v & 0x000000ffu)      ),
+                float((v & 0x0000ff00u) >>  8),
+                float((v & 0x00ff0000u) >> 16),
+                float((v & 0xff000000u) >> 24)) / 255.0;
+}
+mediump vec4 unpackSnorm4x8(highp uint v) {
+    int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
+    int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
+    int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
+    int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
+    return clamp(vec4(float(a), float(b), float(c), float(d)) / 127.0, -1.0, 1.0);
+}
+)"sv;
+    }
+#endif // BACKEND_OPENGL_VERSION_GLES
     return ""sv;
 }
 
-// split shader source code in two, the first section goes from the start to the line after the
-// last #extension, and the 2nd part goes from there to the end.
-std::array<std::string_view, 2> ShaderCompilerService::splitShaderSource(std::string_view source) noexcept {
-    auto start = source.find("#version");
-    assert_invariant(start != std::string_view::npos);
+// split shader source code in three:
+// - the version line
+// - extensions
+// - everything else
+std::array<std::string_view, 3> ShaderCompilerService::splitShaderSource(std::string_view source) noexcept {
+    auto version_start = source.find("#version");
+    assert_invariant(version_start != std::string_view::npos);
 
-    auto pos = source.rfind("\n#extension");
-    if (pos == std::string_view::npos) {
-        pos = start;
+    auto version_eol = source.find('\n', version_start) + 1;
+    assert_invariant(version_eol != std::string_view::npos);
+
+    auto prolog_start = version_eol;
+    auto prolog_eol = source.rfind("\n#extension"); // last #extension line
+    if (prolog_eol == std::string_view::npos) {
+        prolog_eol = prolog_start;
     } else {
-        ++pos;
+        prolog_eol = source.find('\n', prolog_eol + 1) + 1;
     }
+    auto body_start = prolog_eol;
 
-    auto eol = source.find('\n', pos) + 1;
-    assert_invariant(eol != std::string_view::npos);
-
-    std::string_view const version = source.substr(start, eol - start);
-    std::string_view const body = source.substr(version.length(), source.length() - version.length());
-    return { version, body };
+    std::string_view const version = source.substr(version_start, version_eol - version_start);
+    std::string_view const prolog = source.substr(prolog_start, prolog_eol - prolog_start);
+    std::string_view const body = source.substr(body_start, source.length() - body_start);
+    return { version, prolog, body };
 }
 
 /*

@@ -71,7 +71,7 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
-    static Config validateConfig(const Config* pConfig) noexcept;
+    static Config validateConfig(Config config) noexcept;
 };
 
 Engine* FEngine::create(Engine::Builder const& builder) {
@@ -1197,6 +1197,22 @@ bool FEngine::isValid(const FInstanceBuffer* p) const {
     return isValid(p, mInstanceBuffers);
 }
 
+size_t FEngine::getBufferObjectCount() const noexcept { return mBufferObjects.size(); }
+size_t FEngine::getViewCount() const noexcept { return mViews.size(); }
+size_t FEngine::getSceneCount() const noexcept { return mScenes.size(); }
+size_t FEngine::getSwapChainCount() const noexcept { return mSwapChains.size(); }
+size_t FEngine::getStreamCount() const noexcept { return mStreams.size(); }
+size_t FEngine::getIndexBufferCount() const noexcept { return mIndexBuffers.size(); }
+size_t FEngine::getSkinningBufferCount() const noexcept { return mSkinningBuffers.size(); }
+size_t FEngine::getMorphTargetBufferCount() const noexcept { return mMorphTargetBuffers.size(); }
+size_t FEngine::getInstanceBufferCount() const noexcept { return mInstanceBuffers.size(); }
+size_t FEngine::getVertexBufferCount() const noexcept { return mVertexBuffers.size(); }
+size_t FEngine::getIndirectLightCount() const noexcept { return mIndirectLights.size(); }
+size_t FEngine::getMaterialCount() const noexcept { return mMaterials.size(); }
+size_t FEngine::getTextureCount() const noexcept { return mTextures.size(); }
+size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
+size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
+size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
 void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     // we allow this only for small allocations
@@ -1286,7 +1302,7 @@ Engine::Builder& Engine::Builder::platform(Platform* platform) noexcept {
 }
 
 Engine::Builder& Engine::Builder::config(Engine::Config const* config) noexcept {
-    mImpl->mConfig = BuilderDetails::validateConfig(config);
+    mImpl->mConfig = config ? *config : Engine::Config{};
     return *this;
 }
 
@@ -1314,21 +1330,14 @@ void Engine::Builder::build(Invocable<void(void*)>&& callback) const {
 #endif
 
 Engine* Engine::Builder::build() const {
+    mImpl->mConfig = BuilderDetails::validateConfig(mImpl->mConfig);
     return FEngine::create(*this);
 }
 
-Engine::Config Engine::BuilderDetails::validateConfig(const Config* const pConfig) noexcept {
+Engine::Config Engine::BuilderDetails::validateConfig(Config config) noexcept {
     // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
     constexpr uint32_t COMMAND_ARENA_OVERHEAD = 1;
     constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
-
-    Config config;
-    if (!pConfig) {
-        return config;
-    }
-
-    // make sure to copy all the fields
-    config = *pConfig;
 
     // Use at least the defaults set by the build system
     config.minCommandBufferSizeMB = std::max(

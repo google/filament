@@ -344,9 +344,13 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     * to ignore the return value and render the frame anyway -- which is perfectly fine.
     * The remaining work will be done when the first render() call is made.
     */
-    auto beginFrameInternal = [this, appVsync]() {
+    auto beginFrameInternal = [this, appVsync, swapChain]() {
         FEngine& engine = mEngine;
         FEngine::DriverApi& driver = engine.getDriverApi();
+
+        // we need to re-set mSwapChain here because if a frame was marked as "skip" but the
+        // user ignored us, we'd still want mSwapChain to be set.
+        mSwapChain = swapChain;
 
         driver.beginFrame(
                 appVsync.time_since_epoch().count(),
@@ -375,6 +379,10 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // however, if we return false, the user is allowed to ignore us and render a frame anyway,
     // so we need to delay this work until that happens.
     mBeginFrameInternal = beginFrameInternal;
+
+    // clear mSwapChain because the frame should be skipped (it will be re-set if the user
+    // ignores the skip)
+    mSwapChain = nullptr;
 
     // we need to flush in this case, to make sure the tick() call is executed at some point
     engine.flush();
@@ -534,14 +542,15 @@ void FRenderer::renderStandaloneView(FView const* view) {
 void FRenderer::render(FView const* view) {
     SYSTRACE_CALL();
 
-    assert_invariant(mSwapChain);
-
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
         // this should not happen, the user should not call render() if we returned false from
         // beginFrame(). But because this is allowed, we handle it gracefully.
         mBeginFrameInternal();
         mBeginFrameInternal = {};
     }
+
+    // after beginFrame() is called, mSwapChain should be true
+    assert_invariant(mSwapChain);
 
     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
         if (mViewRenderedCount) {

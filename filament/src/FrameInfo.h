@@ -171,7 +171,8 @@ public:
     utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept;
 
 private:
-    void denoiseFrameTime(Config const& config) noexcept;
+    using FrameHistoryQueue = CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY>;
+    static void denoiseFrameTime(FrameHistoryQueue& history, Config const& config) noexcept;
     struct Query {
         backend::Handle<backend::HwTimerQuery> handle{};
         FrameInfoImpl* pInfo = nullptr;
@@ -180,7 +181,7 @@ private:
     uint32_t mIndex = 0;                // index of current query
     uint32_t mLast = 0;                 // index of oldest query still active
     FrameInfoImpl* pFront = nullptr;    // the most recent slot with a valid frame time
-    CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
+    FrameHistoryQueue mFrameTimeHistory;
 };
 
 
