@@ -40,6 +40,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/debug.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -58,6 +59,7 @@
 
 namespace filament {
 
+class Camera;
 class FCamera;
 class FView;
 class FrameGraph;
@@ -138,15 +140,15 @@ public:
     bool hasSpotShadows() const { return !mSpotShadowMapCount; }
 
     // for debugging only
-    FCamera const* getDirectionalShadowCamera() const noexcept {
-        if (!mInitialized) return nullptr;
-        return getShadowMap(0).getDebugCamera();
-    }
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
 private:
     explicit ShadowMapManager(FEngine& engine);
 
     void terminate(FEngine& engine);
+
+    static void updateNearFarPlanes(math::mat4f* projection,
+            float nearDistance, float farDistance) noexcept;
 
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
@@ -186,27 +188,21 @@ private:
         constexpr static size_t SPLIT_COUNT = CONFIG_MAX_SHADOW_CASCADES + 1;
 
         struct Params {
-            math::mat4f proj;
             float near = 0.0f;
             float far = 0.0f;
-            size_t cascadeCount = 1;
+            uint32_t cascadeCount = 1;
             std::array<float, SPLIT_COUNT> splitPositions = { 0.0f };
         };
 
         explicit CascadeSplits(Params const& params) noexcept;
 
         // Split positions in world-space.
-        const float* beginWs() const { return mSplitsWs; }
-        const float* endWs() const { return mSplitsWs + mSplitCount; }
-
-        // Split positions in clip-space.
-        const float* beginCs() const { return mSplitsCs; }
-        const float* endCs() const { return mSplitsCs + mSplitCount; }
+        const float* begin() const { return mSplitsWs; }
+        const float* end() const { return mSplitsWs + mSplitCount; }
 
     private:
         float mSplitsWs[SPLIT_COUNT];
-        float mSplitsCs[SPLIT_COUNT];
-        size_t mSplitCount;
+        uint32_t mSplitCount;
     };
 
     // Atlas requirements, updated in ShadowMapManager::update(),
@@ -236,6 +232,7 @@ private:
     ShadowMapCacheContainer mShadowMapCache;
     uint32_t mDirectionalShadowMapCount = 0;
     uint32_t mSpotShadowMapCount = 0;
+    bool const mIsDepthClampSupported;
     bool mInitialized = false;
 
     ShadowMap& getShadowMap(size_t index) noexcept {
@@ -248,8 +245,12 @@ private:
     }
 
     utils::Slice<ShadowMap> getCascadedShadowMap() noexcept {
-        ShadowMap* const p = &getShadowMap(0);
+        ShadowMap const* const p = &getShadowMap(0);
         return { p, mDirectionalShadowMapCount };
+    }
+
+    utils::Slice<ShadowMap> getCascadedShadowMap() const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getCascadedShadowMap();
     }
 
     utils::Slice<ShadowMap> getSpotShadowMaps() noexcept {

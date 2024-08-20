@@ -24,6 +24,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
 
@@ -727,7 +728,7 @@ public:
     void setDebugCamera(Camera* UTILS_NULLABLE camera) noexcept;
 
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
-    Camera const* UTILS_NULLABLE getDirectionalShadowCamera() const noexcept;
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
 
     /** Result of a picking query */

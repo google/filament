@@ -202,6 +202,10 @@ bool NoopDriver::isProtectedTexturesSupported() {
     return true;
 }
 
+bool NoopDriver::isDepthClampSupported() {
+    return false;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }

@@ -590,7 +590,8 @@ private:
     Config mConfig;
 
 public:
-    // these are the debug properties used by FDebug. They're accessed directly by modules who need them.
+    // These are the debug properties used by FDebug.
+    // They're accessed directly by modules who need them.
     struct {
         struct {
             bool debug_directional_shadowmap = false;
@@ -598,7 +599,8 @@ public:
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;
-            bool tightly_bound_scene = true;
+            bool disable_light_frustum_align = false;
+            bool depth_clamp = true;
             float dzn = -1.0f;
             float dzf =  1.0f;
             float display_shadow_texture_scale = 0.25f;
