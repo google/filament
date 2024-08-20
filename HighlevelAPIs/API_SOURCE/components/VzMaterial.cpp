@@ -107,7 +107,7 @@ namespace vzm
       material->getParameters(&params[0], params.size());
       
       for (auto& param : params) {
-        assert(!m_res.allowedParamters.contains(param.name));
+        assert(!mat_res->allowedParamters.contains(param.name));
         mat_res->allowedParamters[param.name] = param;
       }
 
