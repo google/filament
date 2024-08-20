@@ -1106,14 +1106,15 @@ namespace vzm
         m_res.assetOwner = (filament::gltfio::FilamentAsset*)assetOwner;
         m_res.isSystem = isSystem;
 
-        std::vector<Material::ParameterInfo> params(material->getParameterCount());
-        material->getParameters(&params[0], params.size());
-        for (auto& param : params)
-        {
-            assert(!m_res.allowedParamters.contains(param.name));
-            m_res.allowedParamters[param.name] = param;
+        if (material != nullptr) {        
+            std::vector<Material::ParameterInfo> params(material->getParameterCount());
+            material->getParameters(&params[0], params.size());
+            for (auto& param : params)
+            {
+                assert(!m_res.allowedParamters.contains(param.name));
+                m_res.allowedParamters[param.name] = param;
+            }
         }
-
         auto it = vzCompMap_.emplace(vid, std::make_unique<VzMaterial>(vid, "CreateMaterial"));
         return (VzMaterial*)it.first->second.get();
     }
