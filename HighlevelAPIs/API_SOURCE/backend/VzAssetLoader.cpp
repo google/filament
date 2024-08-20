@@ -117,6 +117,7 @@ namespace filament::gltfio {
     {
         const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
         const size_t textureIndex = (size_t)(srcTexture - srcAsset->textures);
+ 
         FFilamentAsset::TextureInfo& info = fAsset->mTextures[textureIndex];
 
         const cgltf_sampler* srcSampler = srcAsset->textures[textureIndex].sampler;
@@ -139,33 +140,57 @@ namespace filament::gltfio {
             sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
         }
 
+
+        //srcTexture->image
+
+        static std::map<size_t, TextureVID> image_tex_map;
+        static std::set<size_t> reg_images;
+        size_t image_index = 100000000;
+        bool isNewTexture = true;
+        for (size_t i = 0; i < srcAsset->images_count; i++)
+        {
+            if (srcTexture->image->name == srcAsset->images[i].name)
+            {
+                isNewTexture = reg_images.find(i) == reg_images.end();
+                if (isNewTexture) {
+                    reg_images.insert(i);
+                }
+                image_index = i;
+                break;
+            }
+        }
+        assert(image_index != 100000000);
+
         //static size_t count = 0;
         TextureVID tex_vid = 0;
-        auto it_tex = mTextureMap.find(textureIndex);
+        auto it_tex = mTextureMap.find(textureIndex); 
         if (it_tex == mTextureMap.end())
         {
             std::string name = "";
-            if (srcAsset->images_count > 0 && textureIndex < srcAsset->images_count)
+            //assert(textureIndex < srcAsset->images_count && "textureIndex < srcAsset->images_count");
+            char* name_ptr = srcAsset->images[image_index].name;
+            if (name_ptr)
+                name = name_ptr;
+            else if (name_ptr = srcAsset->images[image_index].uri)
             {
-                //assert(textureIndex < srcAsset->images_count && "textureIndex < srcAsset->images_count");
-                char* name_ptr = srcAsset->images[textureIndex].name;
-                if (name_ptr)
-                    name = name_ptr;
-                else if (name_ptr = srcAsset->images[textureIndex].uri)
-                {
-                    name = name_ptr;
-                }
-                else
-                {
-                    name = assetName + "_texture_" + std::to_string(textureIndex);
-                }
+                name = name_ptr;
             }
             else
             {
-                name = assetName + "_texture_" + std::to_string(textureIndex);
+                name = assetName + "_image_" + std::to_string(image_index);
             }
 
-            tex_vid = gEngineApp.CreateTexture(name, info.texture, nullptr, false)->GetVID();
+            if (isNewTexture)
+            {
+                tex_vid = gEngineApp.CreateTexture(name, info.texture, nullptr, false)->GetVID();
+                image_tex_map[image_index] = tex_vid;
+            }
+            else
+            {
+                auto it = image_tex_map.find(image_index);
+                assert(it != image_tex_map.end());
+                tex_vid = it->second;
+            }
             VzTextureRes* tex_res = gEngineApp.GetTextureRes(tex_vid);
             tex_res->sampler = sampler;
             tex_res->fileName = name;

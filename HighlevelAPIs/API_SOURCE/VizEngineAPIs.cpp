@@ -632,9 +632,15 @@ namespace vzm
 
         filament::gltfio::FFilamentAsset* fasset = downcast(asset);
         
+        std::set<TextureVID> tex_vids;
+        for (auto& it : asset_loader->mTextureMap)
+        {
+            tex_vids.insert(it.second);
+        }
+
         size_t num_m = asset_loader->mMaterialMap.size();
         size_t num_mi = asset_loader->mMIMap.size();
-        size_t num_tex = asset_loader->mTextureMap.size();
+        size_t num_tex = tex_vids.size();// asset_loader->mTextureMap.size();
         size_t num_geo = asset_loader->mGeometryMap.size();
         size_t num_renderable = asset_loader->mRenderableActorMap.size();
         size_t num_node = asset_loader->mNodeActorMap.size();

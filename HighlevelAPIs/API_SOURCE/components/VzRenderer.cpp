@@ -1214,9 +1214,11 @@ namespace vzm
         {
             resource_loader->asyncUpdateLoad();
 
+            //static std::set<Texture*> regTexMap;
             VzAssetRes* asset_res = gEngineApp.GetAssetRes(gEngineApp.activeAsyncAsset);
             if (asset_res && resource_loader->asyncGetLoadProgress() >= 1.)
             {
+                int count = 0;
                 gEngineApp.activeAsyncAsset = INVALID_VID;
                 filament::gltfio::FFilamentAsset* fasset = downcast(asset_res->asset);
                 for (auto& it : asset_res->asyncTextures)
@@ -1224,7 +1226,16 @@ namespace vzm
                     VzTextureRes* tex_res = gEngineApp.GetTextureRes(it.second);
                     tex_res->texture = fasset->mTextures[it.first].texture;
                     tex_res->isAsyncLocked = false;
+
+                    //if (regTexMap.find(tex_res->texture) != regTexMap.end())
+                    //{
+                    //    count++;
+                    //    //tex_res->texture->
+                    //}
+                    //regTexMap.insert(tex_res->texture);
                 }
+                //backlog::post("REDUNDANT TEXTURES : " + std::to_string(count), backlog::LogLevel::Default);
+                asset_res->asyncTextures.clear();
             }
         }
 
