@@ -141,6 +141,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
         texture->ReadImage("../assets/testimage.png");
+        sprite->SetGeometry(5, 5, 0.5, 0.5);
         sprite->SetTexture(texture->GetVID());
     }
 

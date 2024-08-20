@@ -129,6 +129,7 @@ namespace vzm
         GeometryVID vidGeo_ = INVALID_VID;
         std::vector<MInstanceVID> vidMIs_;
         std::vector<std::vector<MInstanceVID>> vidMIVariants_;
+
     public:
         bool isSprite = false;
         bool culling = true;
@@ -143,6 +144,12 @@ namespace vzm
         MInstanceVID GetMIVid(const int slot);
         std::vector<MInstanceVID>& GetMIVids();
         std::vector<std::vector<MInstanceVID>>& GetMIVariants();
+
+        // for sprite
+        VertexBuffer* intrinsicVB = nullptr;
+        IndexBuffer* intrinsicIB = nullptr;
+        std::vector<char> intrinsicCache;
+
         ~VzActorRes();
     };
     struct VzLightRes
@@ -160,6 +167,10 @@ namespace vzm
         static std::set<MorphTargetBuffer*> currentMTBs_;
 
         std::vector<VzPrimitive> primitives_;
+        
+        std::vector<char> cacheVB;
+        std::vector<char> cacheIB;
+        std::vector<char> cacheMTB;
     public:
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
@@ -174,6 +185,7 @@ namespace vzm
         bool isSystem = false;
         gltfio::FilamentAsset* assetOwner = nullptr; // has ownership
         Material* material = nullptr;
+        bool isStandardType = true;
         std::unordered_map<std::string, Material::ParameterInfo> allowedParamters;
         ~VzMaterialRes();
     };

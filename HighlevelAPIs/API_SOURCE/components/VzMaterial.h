@@ -7,10 +7,6 @@ namespace vzm
     {
         VzMaterial(const VID vid, const std::string& originFrom)
             : VzResource(vid, originFrom, "VzMaterial", RES_COMPONENT_TYPE::MATERIAL) {}
-        enum class MaterialType : uint8_t {
-            STANDARD = 0,
-            CUSTOM
-        };
         enum class LightingModel : uint8_t {
             UNLIT,                  //!< no lighting applied, emissive possible
             LIT,                    //!< default, standard lighting
@@ -101,8 +97,8 @@ namespace vzm
           uint8_t specularColorTextureUV;
           uint16_t padding2;
         };
-        void SetMaterialType(const MaterialType type);
-        MaterialType GetMaterialType() const;
+
+        bool IsStandardMaterial() const; // custom (user material) or standard (filament-built-in material)
 
         void SetLightingModel(const LightingModel model);
         LightingModel GetLightingModel() const;

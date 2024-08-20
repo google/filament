@@ -209,7 +209,13 @@ namespace vzm
         if (isSprite)
         {
             gEngineApp.RemoveComponent(vidMIs_[0]);
+            gEngine->destroy(intrinsicVB);
+            gEngine->destroy(intrinsicIB);
+            intrinsicVB = nullptr;
+            intrinsicIB = nullptr;
         }
+        assert(intrinsicVB == nullptr && intrinsicIB == nullptr);
+
     }
 #pragma endregion
 
@@ -901,69 +907,61 @@ namespace vzm
         switch (compType)
         {
         case SCENE_COMPONENT_TYPE::SPRITE_ACTOR:
+        {
+            actorSceneMap_[vid] = 0; // first creation
+            actorResMap_[vid] = std::make_unique<VzActorRes>();
+
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzSpriteActor>(vid, "CreateSceneComponent"));
+            v_comp = (VzSceneComp*)it.first->second.get();
+
+            VzActorRes* actor_res = actorResMap_[vid].get();
+            actor_res->isSprite = true;
+
+            actor_res->intrinsicCache.assign(80 + 12, 0);
+
+            MaterialVID vid_m = GetFirstVidByName("_PROVIDER_SPRITE_MATERIAL");
+            if (vid_m == INVALID_VID)
+            {
+                MaterialKey m_key = {};
+                m_key.alphaMode = AlphaMode::BLEND;
+                m_key.doubleSided = true;
+                m_key.hasBaseColorTexture = true;
+                m_key.unlit = true;
+                m_key.baseColorUV = 0;
+                UvMap uvmap;
+                Material* material = gMaterialProvider->getMaterial((filament::gltfio::MaterialKey*)&m_key, &uvmap, "_PROVIDER_SPRITE_MATERIAL");
+                vid_m = gEngineApp.CreateMaterial("_PROVIDER_SPRITE_MATERIAL", material, nullptr, true)->GetVID();
+                std::vector<Material::ParameterInfo> params(material->getParameterCount());
+                material->getParameters(&params[0], params.size());
+                for (auto& it : params)
+                {
+                    std::cout << it.name << ", " << (uint8_t)it.type << std::endl;
+                }
+            }
+
+            Material* m = materialResMap_[vid_m]->material;
+            MaterialInstance* mi = m->createInstance();
+
+            mi->setParameter("baseColorFactor", filament::RgbaType::LINEAR, filament::math::float4{ 1.0, 1.0, 1.0, 1.0 });
+            mi->setDoubleSided(true);
+            VzMI* v_mi = CreateMaterialInstance(name + "_mi", vid_m, mi);
+            actor_res->SetMIs({ v_mi->GetVID() });
+            actor_res->culling = false;
+            actor_res->castShadow = false;
+            actor_res->receiveShadow = false;
+
+            ((VzSpriteActor*)v_comp)->SetGeometry();
+
+            break;
+        }
         case SCENE_COMPONENT_TYPE::ACTOR:
         {
             // RenderableManager::Builder... with entity registers the entity in the renderableEntities
             actorSceneMap_[vid] = 0; // first creation
             actorResMap_[vid] = std::make_unique<VzActorRes>();
 
-            if (compType == SCENE_COMPONENT_TYPE::ACTOR)
-            {
-                auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent"));
-                v_comp = (VzSceneComp*)it.first->second.get();
-            }
-            else // if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
-            {
-                auto it = vzCompMap_.emplace(vid, std::make_unique<VzSpriteActor>(vid, "CreateSceneComponent"));
-                v_comp = (VzSceneComp*)it.first->second.get();
-            }
-
-            if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
-            {
-                VzActorRes* actor_res = actorResMap_[vid].get();
-                actor_res->isSprite = true;
-
-                GeometryVID vid_geo = GetFirstVidByName("_DEFAULT_QUAD_GEOMETRY");
-                actor_res->SetGeometry(vid_geo);
-
-                MaterialVID vid_m = GetFirstVidByName("_PROVIDER_SPRITE_MATERIAL");
-                if (vid_m == INVALID_VID)
-                {
-                    MaterialKey m_key = {};
-                    m_key.alphaMode = AlphaMode::BLEND;
-                    m_key.doubleSided = true;
-                    m_key.hasBaseColorTexture = true;
-                    m_key.unlit = true;
-                    m_key.baseColorUV = 0;
-                    UvMap uvmap;
-                    Material* material = gMaterialProvider->getMaterial((filament::gltfio::MaterialKey*)&m_key, &uvmap, "_PROVIDER_SPRITE_MATERIAL");
-                    vid_m = gEngineApp.CreateMaterial("_PROVIDER_SPRITE_MATERIAL", material, nullptr, true)->GetVID();
-                    std::vector<Material::ParameterInfo> params(material->getParameterCount());
-                    material->getParameters(&params[0], params.size());
-                    for (auto& it : params)
-                    {
-                        std::cout << it.name << ", " << (uint8_t)it.type << std::endl;
-                    }
-                }
-
-
-                //_DEFAULT_STANDARD_MATERIAL, _DEFAULT_UNLIT_MATERIAL
-                Material* m = materialResMap_[vid_m]->material;
-                MaterialInstance* mi = m->createInstance();
-
-                mi->setParameter("baseColorFactor", filament::RgbaType::LINEAR, filament::math::float4{ 1.0, 1.0, 1.0, 1.0});
-                //mi->setParameter("metallic", 1.0f);
-                //mi->setParameter("roughness", 0.4f);
-                //mi->setParameter("reflectance", 0.5f);
-                mi->setDoubleSided(true);
-                VzMI* v_mi = CreateMaterialInstance(name + "_mi", vid_m, mi);
-                actor_res->SetMIs({ v_mi->GetVID() });
-                actor_res->culling = false;
-                actor_res->castShadow = false;
-                actor_res->receiveShadow = false;
-
-                gEngineApp.BuildRenderable(vid);
-            }
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent"));
+            v_comp = (VzSceneComp*)it.first->second.get();
             break;
         }
         case SCENE_COMPONENT_TYPE::LIGHT:
@@ -1254,7 +1252,6 @@ namespace vzm
             }
         }
 
-        auto& rcm = gEngine->getRenderableManager();
         utils::Entity ett_actor = utils::Entity::import(vid);
 
         std::string name = VzNameCompManager::Get().GetName(ett_actor);

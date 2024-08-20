@@ -259,32 +259,29 @@ namespace vzm
             gMaterialTransparent = material;
         }
         // default geometries
-        {
-            //Vertex kQuadVertices[4] = { {{-1, 1, 0}, {0, 0, 1}}, {{1, 1, 0}, {0, 0, 1}}, {{-1, -1, 0}, {0, 0}}, {{1, -1, 0}, {1, 0}} };
-
-            // Create quad vertex buffer.
-            //static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
-            VertexBuffer* quadVb = VertexBuffer::Builder()
-                .vertexCount(4)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(Vertex))
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, sizeof(float3), sizeof(Vertex))
-                .build(*gEngine);
-            quadVb->setBufferAt(*gEngine, 0,
-                VertexBuffer::BufferDescriptor(kQuadVertices, sizeof(Vertex) * 4, nullptr));
-
-            // Create quad index buffer.
-            IndexBuffer* quadIb = IndexBuffer::Builder()
-                .indexCount(6)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*gEngine);
-            quadIb->setBuffer(*gEngine, IndexBuffer::BufferDescriptor(kQuadIndices, 12, nullptr));
-            Aabb aabb;
-            aabb.min = { -0.5, -0.5, -0.5 };
-            aabb.max = { 0.5, 0.5, 0.5 };
-            VzPrimitive prim = { .vertices = quadVb, .indices = quadIb, .aabb = aabb, .morphTargetOffset = 0};
-            vzmGeometries.push_back(gEngineApp.CreateGeometry("_DEFAULT_QUAD_GEOMETRY", { prim }, nullptr, true)->GetVID());
-        }
+        //{
+        //    // Create quad vertex buffer.
+        //    VertexBuffer* quadVb = VertexBuffer::Builder()
+        //        .vertexCount(4)
+        //        .bufferCount(1)
+        //        .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(Vertex))
+        //        .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, sizeof(float3), sizeof(Vertex))
+        //        .build(*gEngine);
+        //    quadVb->setBufferAt(*gEngine, 0,
+        //        VertexBuffer::BufferDescriptor(kQuadVertices, sizeof(Vertex) * 4, nullptr));
+        //
+        //    // Create quad index buffer.
+        //    IndexBuffer* quadIb = IndexBuffer::Builder()
+        //        .indexCount(6)
+        //        .bufferType(IndexBuffer::IndexType::USHORT)
+        //        .build(*gEngine);
+        //    quadIb->setBuffer(*gEngine, IndexBuffer::BufferDescriptor(kQuadIndices, 12, nullptr));
+        //    Aabb aabb;
+        //    aabb.min = { -0.5, -0.5, -0.5 };
+        //    aabb.max = { 0.5, 0.5, 0.5 };
+        //    VzPrimitive prim = { .vertices = quadVb, .indices = quadIb, .aabb = aabb, .morphTargetOffset = 0};
+        //    vzmGeometries.push_back(gEngineApp.CreateGeometry("_DEFAULT_QUAD_GEOMETRY", { prim }, nullptr, true)->GetVID());
+        //}
 
         auto& ncm = VzNameCompManager::Get();
         gEngineApp.Initialize();

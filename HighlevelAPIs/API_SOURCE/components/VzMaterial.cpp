@@ -8,15 +8,10 @@ extern gltfio::MaterialProvider* gMaterialProvider;
 
 namespace vzm
 {
-    void VzMaterial::SetMaterialType(const MaterialType type)
+    bool VzMaterial::IsStandardMaterial() const
     {
-        COMP_MAT(material, m_res, );
-
-
-        //std::vector<Material::ParameterInfo> p(material->getParameterCount());
-        //material->getParameters(&p[0], p.size());
-        //material->getParameters(filament::Material::ParameterInfo);
-        UpdateTimeStamp();
+        COMP_MAT(material, m_res, true);
+        return m_res->isStandardType;
     }
 
     size_t VzMaterial::GetAllowedParameters(std::map<std::string, ParameterInfo>& paramters)

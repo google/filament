@@ -31,8 +31,11 @@ namespace vzm
         // The sprite's anchor point, and the point around which the sprite rotates. 
         // A value of (0.5, 0.5) corresponds to the midpoint of the sprite. 
         // A value of (0, 0) corresponds to the lower left corner of the sprite. The default is (0.5, 0.5).
-        void SetAnchorPoint(const float u, const float v);
-        void SetSize(const float w, const float h);
+        // basic local frame is x:(1, 0, 0), y:(0, 1, 0), z:(0, 0, 1), sprite plane is defined on xy-plane
+        void SetGeometry(const float w = 1.f, const float h = 1.f, const float anchorU = 0.5f, const float anchorV = 0.5f);
+        void EnableBillboard(const bool billboardEnabled);
+        //void SetAnchorPoint(const float u = 0.5f, const float v = 0.5f);
+        //void SetSize(const float w = 1.f, const float h = 1.f);
         
         // material settings
         // 
