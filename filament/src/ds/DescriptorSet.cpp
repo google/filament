@@ -131,4 +131,12 @@ void DescriptorSet::setSampler(
     mValid.set(binding, (bool)th);
 }
 
+DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const noexcept {
+    DescriptorSet set{layout};
+    memcpy(set.mDescriptors.data(), mDescriptors.data(), mDescriptors.size() * sizeof(Desc));
+    set.mDirty = mDirty;
+    set.mValid = mValid;
+    return set;
+}
+
 } // namespace filament

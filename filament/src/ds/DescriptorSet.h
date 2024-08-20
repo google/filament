@@ -47,12 +47,13 @@ public:
     void terminate(backend::DriverApi& driver) noexcept;
 
     // update the descriptors if needed
-    void commit(DescriptorSetLayout const& layout,
-            backend::DriverApi& driver) noexcept {
+    void commit(DescriptorSetLayout const& layout, backend::DriverApi& driver) noexcept {
         if (UTILS_UNLIKELY(mDirty.any())) {
             commitSlow(layout, driver);
         }
     }
+
+    void commitSlow(DescriptorSetLayout const& layout, backend::DriverApi& driver) noexcept;
 
     // bind the descriptor set
     void bind(backend::DriverApi& driver, DescriptorSetBindingPoints set) const noexcept;
@@ -70,6 +71,9 @@ public:
             backend::Handle<backend::HwTexture> th,
             backend::SamplerParams params) noexcept;
 
+    // Used for duplicating material
+    DescriptorSet duplicate(DescriptorSetLayout const& layout) const noexcept;
+
     backend::DescriptorSetHandle getHandle() const noexcept {
         return mDescriptorSetHandle;
     }
@@ -79,8 +83,6 @@ public:
     }
 
 private:
-    void commitSlow(DescriptorSetLayout const& layout, backend::DriverApi& driver) noexcept;
-
     struct Desc {
         Desc() noexcept { }
         union {

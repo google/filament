@@ -113,7 +113,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 FMaterialInstance::FMaterialInstance(FEngine& engine,
         FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
-          mDescriptorSet(other->mMaterial->getDescriptorSetLayout()),
+          mTextureParameters(other->mTextureParameters),
+          mDescriptorSet(other->mDescriptorSet.duplicate(mMaterial->getDescriptorSetLayout())),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -157,6 +158,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    // If the original descriptor set has been commited, the copy needs to commit as well.
+    if (other->mDescriptorSet.getHandle()) {
+        mDescriptorSet.commitSlow(mMaterial->getDescriptorSetLayout(), driver);
+    }
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(
