@@ -316,12 +316,6 @@ public:
         // bugs or performance issues.
         bool force_feature_level0;
 
-        // Some drivers don't respect the length argument of glShaderSource() and (apparently)
-        // require each shader source string to be null-terminated. This works around the issue by
-        // concatenating the strings into a single null-terminated string before passing it to
-        // glShaderSource().
-        bool concatenate_shader_strings;
-
     } bugs = {};
 
     // state getters -- as needed.
@@ -567,9 +561,6 @@ private:
                     ""},
             {   bugs.force_feature_level0,
                     "force_feature_level0",
-                    ""},
-            {   bugs.concatenate_shader_strings,
-                    "concatenate_shader_strings",
                     ""},
     }};
 

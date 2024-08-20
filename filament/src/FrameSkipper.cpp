@@ -16,8 +16,14 @@
 
 #include "FrameSkipper.h"
 
-#include <utils/Log.h>
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
 #include <utils/debug.h>
+
+#include <algorithm>
+
+#include <stddef.h>
 
 namespace filament {
 
@@ -25,7 +31,7 @@ using namespace utils;
 using namespace backend;
 
 FrameSkipper::FrameSkipper(size_t latency) noexcept
-        : mLast(latency - 1) {
+        : mLast(std::max(latency, MAX_FRAME_LATENCY) - 1) {
     assert_invariant(latency <= MAX_FRAME_LATENCY);
 }
 
@@ -41,31 +47,32 @@ void FrameSkipper::terminate(DriverApi& driver) noexcept {
 
 bool FrameSkipper::beginFrame(DriverApi& driver) noexcept {
     auto& fences = mDelayedFences;
-    auto fence = fences.front();
-    if (fence) {
-        auto status = driver.getFenceStatus(fence);
-        if (status == FenceStatus::TIMEOUT_EXPIRED) {
-            // Sync not ready, skip frame
+    if (fences.front()) {
+        // Do we have a latency old fence?
+        auto status = driver.getFenceStatus(fences.front());
+        if (UTILS_UNLIKELY(status == FenceStatus::TIMEOUT_EXPIRED)) {
+            // The fence hasn't signaled yet, skip this frame
             return false;
         }
         assert_invariant(status == FenceStatus::CONDITION_SATISFIED);
-        driver.destroyFence(fence);
     }
-    // shift all fences down by 1
-    std::move(fences.begin() + 1, fences.end(), fences.begin());
-    fences.back() = {};
     return true;
 }
 
 void FrameSkipper::endFrame(DriverApi& driver) noexcept {
-    // If the user produced a new frame despite the fact that the previous one wasn't finished
-    // (i.e. FrameSkipper::beginFrame() returned false), we need to make sure to replace
-    // a fence that might be here already)
-    auto& fence = mDelayedFences[mLast];
-    if (fence) {
-        driver.destroyFence(fence);
+    auto& fences = mDelayedFences;
+    size_t const last = mLast;
+
+    // pop the oldest fence and advance the other ones
+    if (fences.front()) {
+        driver.destroyFence(fences.front());
     }
-    fence = driver.createFence();
+    std::move(fences.begin() + 1, fences.end(), fences.begin());
+
+    // add a new fence to the end
+    assert_invariant(!fences[last]);
+
+    fences[last] = driver.createFence();
 }
 
 } // namespace filament
