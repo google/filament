@@ -21,7 +21,7 @@ namespace vzm
 
     __dojostruct VzSpriteActor : VzSceneComp
     {
-        VzSpriteActor(const VID vid, const std::string & originFrom, const std::string & typeName, const SCENE_COMPONENT_TYPE scenecompType)
+        VzSpriteActor(const VID vid, const std::string & originFrom)
             : VzSceneComp(vid, originFrom, "VzSpriteActor", SCENE_COMPONENT_TYPE::SPRITE_ACTOR) {}
 
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);

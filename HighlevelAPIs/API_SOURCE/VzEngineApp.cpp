@@ -884,6 +884,18 @@ namespace vzm
             vid = ett.getId();
         }
 
+        auto& ncm = VzNameCompManager::Get();
+        auto& tcm = gEngine->getTransformManager();
+
+        if (!ncm.getInstance(ett).isValid())
+        {
+            ncm.CreateNameComp(ett, name);
+        }
+        if (!tcm.getInstance(ett).isValid())
+        {
+            tcm.create(ett);
+        }
+
         VzSceneComp* v_comp = nullptr;
 
         switch (compType)
@@ -895,8 +907,16 @@ namespace vzm
             actorSceneMap_[vid] = 0; // first creation
             actorResMap_[vid] = std::make_unique<VzActorRes>();
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent"));
-            v_comp = (VzSceneComp*)it.first->second.get();
+            if (compType == SCENE_COMPONENT_TYPE::ACTOR)
+            {
+                auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateSceneComponent"));
+                v_comp = (VzSceneComp*)it.first->second.get();
+            }
+            else // if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
+            {
+                auto it = vzCompMap_.emplace(vid, std::make_unique<VzSpriteActor>(vid, "CreateSceneComponent"));
+                v_comp = (VzSceneComp*)it.first->second.get();
+            }
 
             if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
             {
@@ -905,15 +925,42 @@ namespace vzm
 
                 GeometryVID vid_geo = GetFirstVidByName("_DEFAULT_QUAD_GEOMETRY");
                 actor_res->SetGeometry(vid_geo);
-                MaterialVID vid_m = GetFirstVidByName("_DEFAULT_STANDARD_MATERIAL");
+
+                MaterialVID vid_m = GetFirstVidByName("_PROVIDER_SPRITE_MATERIAL");
+                if (vid_m == INVALID_VID)
+                {
+                    MaterialKey m_key = {};
+                    m_key.alphaMode = AlphaMode::BLEND;
+                    m_key.doubleSided = true;
+                    m_key.hasBaseColorTexture = true;
+                    m_key.unlit = true;
+                    m_key.baseColorUV = 0;
+                    UvMap uvmap;
+                    Material* material = gMaterialProvider->getMaterial((filament::gltfio::MaterialKey*)&m_key, &uvmap, "_PROVIDER_SPRITE_MATERIAL");
+                    vid_m = gEngineApp.CreateMaterial("_PROVIDER_SPRITE_MATERIAL", material, nullptr, true)->GetVID();
+                    std::vector<Material::ParameterInfo> params(material->getParameterCount());
+                    material->getParameters(&params[0], params.size());
+                    for (auto& it : params)
+                    {
+                        std::cout << it.name << ", " << (uint8_t)it.type << std::endl;
+                    }
+                }
+
+
+                //_DEFAULT_STANDARD_MATERIAL, _DEFAULT_UNLIT_MATERIAL
                 Material* m = materialResMap_[vid_m]->material;
                 MaterialInstance* mi = m->createInstance();
-                mi->setParameter("baseColor", filament::RgbaType::LINEAR, filament::math::float4{ 1.0, 1.0, 1.0, 1.0 });
-                mi->setParameter("metallic", 1.0f);
-                mi->setParameter("roughness", 0.4f);
-                mi->setParameter("reflectance", 0.5f);
+
+                mi->setParameter("baseColorFactor", filament::RgbaType::LINEAR, filament::math::float4{ 1.0, 1.0, 1.0, 1.0});
+                //mi->setParameter("metallic", 1.0f);
+                //mi->setParameter("roughness", 0.4f);
+                //mi->setParameter("reflectance", 0.5f);
+                mi->setDoubleSided(true);
                 VzMI* v_mi = CreateMaterialInstance(name + "_mi", vid_m, mi);
                 actor_res->SetMIs({ v_mi->GetVID() });
+                actor_res->culling = false;
+                actor_res->castShadow = false;
+                actor_res->receiveShadow = false;
 
                 gEngineApp.BuildRenderable(vid);
             }
@@ -962,18 +1009,6 @@ namespace vzm
         }
         default:
             assert(0);
-        }
-        
-        auto& ncm = VzNameCompManager::Get();
-        auto& tcm = gEngine->getTransformManager();
-
-        if (!ncm.getInstance(ett).isValid())
-        {
-            ncm.CreateNameComp(ett, name);
-        }
-        if (!tcm.getInstance(ett).isValid())
-        {
-            tcm.create(ett);
         }
 
         mat4f localTransform = tcm.getTransform(tcm.getInstance(ett));
@@ -1188,14 +1223,12 @@ namespace vzm
             return;
         }
 
-        auto& rcm = gEngine->getRenderableManager();
-        utils::Entity ett_actor = utils::Entity::import(vid);
-        auto ins = rcm.getInstance(ett_actor);
-        if (ins.isValid())
-        {
-            ett_actor = gEngine->getEntityManager().create();
-            ins = rcm.getInstance(ett_actor);
-        }
+        //auto ins = rcm.getInstance(ett_actor);
+        //if (ins.isValid())
+        //{
+        //    ett_actor = gEngine->getEntityManager().create();
+        //    ins = rcm.getInstance(ett_actor);\
+        //}
         //assert(ins.isValid());
 
         std::vector<VzPrimitive>& primitives = *geo_res->Get();
@@ -1220,6 +1253,9 @@ namespace vzm
             }
         }
 
+        auto& rcm = gEngine->getRenderableManager();
+        utils::Entity ett_actor = utils::Entity::import(vid);
+
         std::string name = VzNameCompManager::Get().GetName(ett_actor);
         Box box = Box().set(geo_res->aabb.min, geo_res->aabb.max);
         if (box.isEmpty()) {
@@ -1229,9 +1265,9 @@ namespace vzm
 
         builder
             .boundingBox(box)
-            .culling(true)
-            .castShadows(true)
-            .receiveShadows(true)
+            .culling(actor_res->culling)
+            .castShadows(actor_res->castShadow)
+            .receiveShadows(actor_res->receiveShadow)
             .build(*gEngine, ett_actor);
     }
 

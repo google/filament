@@ -72,3 +72,23 @@ namespace vzm
     }
 
 }
+
+namespace vzm
+{
+    void VzSpriteActor::SetTexture(const VID vidTexture)
+    {
+        VzTextureRes* tex_res = gEngineApp.GetTextureRes(vidTexture);
+        if (tex_res->texture == nullptr) {
+            backlog::post("invalid texture!", backlog::LogLevel::Error);
+            return;
+        }
+
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
+        MaterialInstance* mi = gEngineApp.GetMIRes(actor_res->GetMIVid(0))->mi;
+        assert(mi);
+
+        mi->setParameter("baseColorMap", tex_res->texture, tex_res->sampler);
+        //mi->getMaterial()->get
+        tex_res->assignedMIs.insert(GetVID());
+    }
+}

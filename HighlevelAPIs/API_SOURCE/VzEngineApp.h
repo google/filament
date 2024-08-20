@@ -131,6 +131,9 @@ namespace vzm
         std::vector<std::vector<MInstanceVID>> vidMIVariants_;
     public:
         bool isSprite = false;
+        bool culling = true;
+        bool castShadow = true;
+        bool receiveShadow = true;
 
         void SetGeometry(const GeometryVID vid);
         void SetMIs(const std::vector<MInstanceVID>& vidMIs);

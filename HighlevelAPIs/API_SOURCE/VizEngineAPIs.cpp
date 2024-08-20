@@ -150,6 +150,15 @@ namespace vzm
     std::vector<MaterialVID> vzmMaterials;
     std::vector<GeometryVID> vzmGeometries;
 
+    struct Vertex {
+        float3 position;
+        float2 uv;
+    };
+    constexpr float half_size = 0.3f;
+    constexpr Vertex kQuadVertices[4] = { {{-half_size, half_size, 0}, {0, 1}},
+        {{half_size, half_size, 0}, {1, 1}}, {{-half_size, -half_size, 0}, {0, 0}}, {{half_size, -half_size, 0}, {1, 0}} };
+    static constexpr uint16_t kQuadIndices[6] = { 0, 1, 2, 3, 2, 1 };
+
     VZRESULT InitEngineLib(const vzm::ParamMap<std::string>& arguments)
     {
         if (gEngine)
@@ -220,6 +229,10 @@ namespace vzm
             safeReleaseChecker->destroyed = false;
         }
 
+        // optional... test later
+        // createUbershaderProvider(gEngine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+        gMaterialProvider = createJitShaderProvider(gEngine, OPTIMIZE_MATERIALS);
+
         // default resources
         {
             Material* material = Material::Builder()
@@ -228,10 +241,15 @@ namespace vzm
             vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_DEPTH_MATERIAL", material, nullptr, true)->GetVID());
 
             material = Material::Builder()
-                .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
-                //.package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
+                //.package(RESOURCES_SANDBOXUNLIT_DATA, RESOURCES_SANDBOXUNLIT_SIZE)
+                .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                 .build(*gEngine);
             vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_STANDARD_MATERIAL", material, nullptr, true)->GetVID());
+
+            material = Material::Builder()
+                .package(RESOURCES_SANDBOXUNLIT_DATA, RESOURCES_SANDBOXUNLIT_SIZE)
+                .build(*gEngine);
+            vzmMaterials.push_back(gEngineApp.CreateMaterial("_DEFAULT_UNLIT_MATERIAL", material, nullptr, true)->GetVID());
 
             material = Material::Builder()
                 .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
@@ -242,40 +260,31 @@ namespace vzm
         }
         // default geometries
         {
-            struct Vertex {
-                float3 position;
-                float2 uv;
-            };
-            Vertex kQuadVertices[4] = { {{-1, 1, 0}, {0, 1}}, {{1, 1, 0}, {1, 1}}, {{-1, -1, 0}, {0, 0}}, {{1, -1, 0}, {1, 0}} };
+            //Vertex kQuadVertices[4] = { {{-1, 1, 0}, {0, 0, 1}}, {{1, 1, 0}, {0, 0, 1}}, {{-1, -1, 0}, {0, 0}}, {{1, -1, 0}, {1, 0}} };
 
             // Create quad vertex buffer.
-            static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
+            //static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
             VertexBuffer* quadVb = VertexBuffer::Builder()
                 .vertexCount(4)
                 .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, 20)
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 12, 20)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(Vertex))
+                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, sizeof(float3), sizeof(Vertex))
                 .build(*gEngine);
             quadVb->setBufferAt(*gEngine, 0,
-                VertexBuffer::BufferDescriptor(kQuadVertices, 80, nullptr));
+                VertexBuffer::BufferDescriptor(kQuadVertices, sizeof(Vertex) * 4, nullptr));
 
             // Create quad index buffer.
-            static constexpr uint16_t kQuadIndices[6] = { 0, 1, 2, 3, 2, 1 };
             IndexBuffer* quadIb = IndexBuffer::Builder()
                 .indexCount(6)
                 .bufferType(IndexBuffer::IndexType::USHORT)
                 .build(*gEngine);
             quadIb->setBuffer(*gEngine, IndexBuffer::BufferDescriptor(kQuadIndices, 12, nullptr));
             Aabb aabb;
-            aabb.min = { -1, -1, -1 };
-            aabb.max = { 1, 1, 1 };
+            aabb.min = { -0.5, -0.5, -0.5 };
+            aabb.max = { 0.5, 0.5, 0.5 };
             VzPrimitive prim = { .vertices = quadVb, .indices = quadIb, .aabb = aabb, .morphTargetOffset = 0};
             vzmGeometries.push_back(gEngineApp.CreateGeometry("_DEFAULT_QUAD_GEOMETRY", { prim }, nullptr, true)->GetVID());
         }
-
-        // optional... test later
-        gMaterialProvider = createJitShaderProvider(gEngine, OPTIMIZE_MATERIALS);
-        // createUbershaderProvider(gEngine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
 
         auto& ncm = VzNameCompManager::Get();
         gEngineApp.Initialize();
