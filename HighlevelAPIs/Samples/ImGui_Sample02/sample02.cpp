@@ -251,9 +251,65 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             VID aid = vzm::GetFirstVidByName("my test model");
             vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
             VID miid = actor->GetMI();
+            vzm::VzMaterial::MaterialKey matkey{};
+
             vzm::VzMI* mi = (vzm::VzMI*)vzm::GetVzComponent(miid);
-            glm::fvec4 b_color(1, 1, 0, 1);
-            mi->SetParameter("baseColor", vzm::UniformType::FLOAT4, &b_color);
+            vzm::VzMaterial* material =
+                (vzm::VzMaterial*)vzm::GetVzComponent(mi->GetMaterial());
+            //vzm::VzMaterial* material = (vzm::VzMaterial*)vzm::NewResComponent(
+            //    vzm::RES_COMPONENT_TYPE::MATERIAL, "test Material");
+
+            // vzm::VzMI* mi = (vzm::VzMI*)vzm::NewResComponent(
+            //     vzm::RES_COMPONENT_TYPE::MATERIALINSTANCE, "test Material
+            //     instance");
+            material->SetMaterialKey(matkey);
+
+            mi->SetMaterial(material->GetVID());
+            actor->SetMI(mi->GetVID());
+            glm::fvec3 b_color(1, 0.5, 0);
+            mi->SetParameter("baseColorFactor", vzm::UniformType::FLOAT3, &b_color);
+            break;
+        }
+        case 'P': {
+            VID aid = vzm::GetFirstVidByName("my test model");
+            vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
+            VID miid = actor->GetMI();
+            vzm::VzMaterial::MaterialKey matkey{};
+
+            vzm::VzMaterial* material = (vzm::VzMaterial*)vzm::NewResComponent(
+                vzm::RES_COMPONENT_TYPE::MATERIAL, "test Material");
+
+             vzm::VzMI* mi = (vzm::VzMI*)vzm::NewResComponent(
+                 vzm::RES_COMPONENT_TYPE::MATERIALINSTANCE, "test Material instance");
+            material->SetMaterialKey(matkey);
+
+            mi->SetMaterial(material->GetVID());
+            actor->SetMI(mi->GetVID());
+            glm::fvec3 b_color(0.2, 0.5, 1);
+            mi->SetParameter("baseColorFactor", vzm::UniformType::FLOAT3, &b_color);
+            float metallic = 0.5;
+            mi->SetParameter("metallicFactor", vzm::UniformType::FLOAT, &metallic);
+            float roughness = 0.8;
+            mi->SetParameter("roughnessFactor", vzm::UniformType::FLOAT, &roughness);
+            break;
+        }
+        case 'U': {
+            VID aid = vzm::GetFirstVidByName("my test model");
+            vzm::VzActor* actor = (vzm::VzActor*)vzm::GetVzComponent(aid);
+            VID miid = actor->GetMI();
+            vzm::VzMaterial::MaterialKey matkey{.unlit = true};
+
+            vzm::VzMaterial* material = (vzm::VzMaterial*)vzm::NewResComponent(
+                vzm::RES_COMPONENT_TYPE::MATERIAL, "test Material");
+
+             vzm::VzMI* mi = (vzm::VzMI*)vzm::NewResComponent(
+                 vzm::RES_COMPONENT_TYPE::MATERIALINSTANCE, "test Material instance");
+            material->SetMaterialKey(matkey);
+
+            mi->SetMaterial(material->GetVID());
+            actor->SetMI(mi->GetVID());
+            glm::fvec3 b_color(1, 0.2, 0.6);
+            mi->SetParameter("baseColorFactor", vzm::UniformType::FLOAT3, &b_color);
             break;
         }
         default:

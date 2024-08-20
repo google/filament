@@ -27,5 +27,6 @@ namespace vzm
         VID GetTexture(const std::string& name);
 
         VID GetMaterial();
+        bool SetMaterial(const VID vidMaterial);
     };
 }

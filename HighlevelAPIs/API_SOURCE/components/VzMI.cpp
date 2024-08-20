@@ -149,4 +149,15 @@ namespace vzm
         COMP_MI(mi, mi_res, INVALID_VID);
         return mi_res->vidMaterial;
     }
+
+    bool VzMI::SetMaterial(const VID vidMaterial)
+    {
+      VzMaterialRes* mat_res = gEngineApp.GetMaterialRes(vidMaterial);
+      VzMIRes* mi_res = gEngineApp.GetMIRes(GetVID());
+      MaterialInstance* mi = mat_res->material->createInstance(GetName().c_str());
+      mi_res->vidMaterial = vidMaterial;
+      mi_res->mi = mi;
+      
+      return true;
+    }
 }
