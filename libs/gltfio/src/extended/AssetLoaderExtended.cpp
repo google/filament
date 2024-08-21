@@ -527,8 +527,10 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     if (!mCgltfBuffersLoaded) {
         mCgltfBuffersLoaded = utility::loadCgltfBuffers(gltf, mGltfPath.c_str(), mUriDataCache);
+        if (!mCgltfBuffersLoaded) {
+            return false;
+        }
         utility::decodeMeshoptCompression(gltf);
-        if (!mCgltfBuffersLoaded) return false;
     }
 
     utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
