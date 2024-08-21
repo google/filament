@@ -1288,7 +1288,7 @@ namespace vzm
 
         filament::Texture* fogColorTexture = gEngineApp.GetSceneRes(vidScene)->GetIBL()->getFogTexture();
         render_path->viewSettings.fog.skyColor = fogColorTexture;
-        render_path->applySettings();
+        render_path->ApplySettings();
 
         filament::SwapChain* sc = render_path->GetSwapChain();
         if (renderer->beginFrame(sc)) {
