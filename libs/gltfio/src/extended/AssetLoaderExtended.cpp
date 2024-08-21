@@ -527,11 +527,11 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
 
     if (!mCgltfBuffersLoaded) {
         mCgltfBuffersLoaded = utility::loadCgltfBuffers(gltf, mGltfPath.c_str(), mUriDataCache);
-        utility::decodeMeshoptCompression(gltf);
         if (!mCgltfBuffersLoaded) return false;
     }
 
     utility::decodeDracoMeshes(gltf, prim, input->dracoCache);
+    utility::decodeMeshoptCompression(gltf);
 
     auto slots = computeGeometries(prim, jobType, attributesMap, morphTargets, out->uvmap, mEngine);
 
