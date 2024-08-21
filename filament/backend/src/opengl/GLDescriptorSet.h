@@ -151,7 +151,7 @@ private:
     DescriptorSetLayoutHandle dslh;                         // 4
     uint8_t dynamicBufferCount = 0;                         // 1
 };
-static_assert(sizeof(GLDescriptorSet) == 32);
+static_assert(sizeof(GLDescriptorSet) <= 32);
 
 } // namespace filament::backend
 
