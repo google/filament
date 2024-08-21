@@ -157,10 +157,10 @@ namespace vzm
         lcm.setShadowOptions(ins, (LightManager::ShadowOptions const&) options);
         UpdateTimeStamp();
     }
-    VzLight::ShadowOptions const& VzLight::GetShadowOptions() const
+    VzLight::ShadowOptions const* VzLight::GetShadowOptions() const
     {
-        COMP_LIGHT(lcm, ett, ins, ShadowOptions());
-        return (VzLight::ShadowOptions const&) lcm.getShadowOptions(ins);
+        COMP_LIGHT(lcm, ett, ins, nullptr);
+        return (VzLight::ShadowOptions const*) &lcm.getShadowOptions(ins);
     }
     void VzLight::SetShadowCaster(bool shadowCaster)
     {

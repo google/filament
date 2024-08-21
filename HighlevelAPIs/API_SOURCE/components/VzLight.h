@@ -72,7 +72,7 @@ namespace vzm
             float transform[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
         };
         void SetShadowOptions(ShadowOptions const& options);
-        ShadowOptions const& GetShadowOptions() const;
+        ShadowOptions const* GetShadowOptions() const;
 
         void SetShadowCaster(bool shadowCaster);
         bool IsShadowCaster() const;
