@@ -573,6 +573,11 @@ namespace vzm
         return gEngineApp.CreateTestActor(modelName);
     }
 
+    VzActor* LoadModelFileIntoActors(const std::string& modelName, std::vector<VzActor*>& actors)
+    {
+        return nullptr;
+    }
+
     static std::ifstream::pos_type getFileSize(const char* filename) {
         std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
         return in.tellg();

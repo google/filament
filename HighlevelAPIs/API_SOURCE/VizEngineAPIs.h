@@ -42,9 +42,12 @@ namespace vzm
     // Get Component IDs in a scene
     //  - return # of scene Components 
     __dojostatic size_t GetSceneCompoenentVids(const SCENE_COMPONENT_TYPE compType, const VID sceneVid, std::vector<VID>& vids, const bool isRenderableOnly = false);	// Get CameraParams and return its pointer registered in renderer
-    // Load scene components into a new scene and return the actor ID
+    // Load a system actor and return the actor
     //  - return zero in case of failure
     __dojostatic VzActor* LoadTestModelIntoActor(const std::string& modelName);
+    // Load a mesh file (obj and stl) into actors and return the first actor
+    //  - return zero in case of failure
+    __dojostatic VzActor* LoadModelFileIntoActors(const std::string& modelName, std::vector<VzActor*>& actors);
     // Load gltf components into a new scene and return the asset ID
     //  - the lifespan of resComponents follows that of the associated asset (vidAsset) and cannot be deleted by the client
     //  - return zero in case of failure

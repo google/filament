@@ -364,6 +364,8 @@ namespace vzm
             return components.size();
         }
 
+        size_t LoadMeshFile(const std::string& filename, std::vector<VzActor*>& actors);
+
         gltfio::VzAssetLoader* GetGltfAssetLoader();
         gltfio::VzAssetExpoter* GetGltfAssetExpoter();
         gltfio::ResourceLoader* GetGltfResourceLoader();

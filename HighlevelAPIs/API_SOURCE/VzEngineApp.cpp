@@ -6,7 +6,8 @@
 
 #include "FIncludes.h"
 
-#include <iostream>>
+#include <filesystem>
+#include <iostream>
 
 extern Engine* gEngine;
 extern Material* gMaterialTransparent; // do not release
@@ -1073,7 +1074,7 @@ namespace vzm
         VzGeometry* geo = CreateGeometry(geo_name, std::vector<VzPrimitive>{VzPrimitive{
             .vertices = mesh.vertexBuffer,
             .indices = mesh.indexBuffer,
-            .aabb = box.getMin(),
+            .aabb = {.min = box.getMin(), .max = box.getMax() },
             } });
         VzActorRes& actor_res = *actorResMap_[vid].get();
         actor_res.SetGeometry(geo->GetVID());
@@ -1338,6 +1339,95 @@ namespace vzm
             }
         }
         return INVALID_VID;
+    }
+
+    size_t VzEngineApp::LoadMeshFile(const std::string& filename, std::vector<VzActor*>& actors)
+    {
+        /*
+        // Add geometry into the scene.
+        MeshAssimp* meshes = new MeshAssimp(*gEngine);
+        std::map<std::string, MaterialInstance*> materials;
+        meshes->addFromFile(filename, materials);
+
+        std::filesystem::path path_obj(filename);
+        std::string model_name = path_obj.filename().string();
+
+        auto& ncm = VzNameCompManager::Get();
+        auto& rcm = gEngine->getRenderableManager();
+        auto& tcm = gEngine->getTransformManager();
+
+        // note renderable has tcm
+        size_t count = 0;
+        for (auto renderable : meshes->getRenderables()) {
+            auto instance = rcm.getInstance(renderable);
+
+            VID vid = renderable.getId();
+            actorSceneMap_[vid] = 0;
+            actorResMap_[vid] = std::make_unique<VzActorRes>();
+
+            std::string actor_name = model_name;
+            if (meshes->getRenderables().size() > 1)
+            {
+                model_name += " [" + std::to_string(count) + "]";
+            }
+            auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "LoadMeshFile"));
+            VzActor* v_actor = (VzActor*)it.first->second.get();
+            actors.push_back(v_actor);
+
+            if (rcm.hasComponent(renderable)) {
+
+                VzActorRes& actor_res = *actorResMap_[vid].get();
+                VzGeometry* geo = CreateGeometry(model_name + "_geometry", std::vector<VzPrimitive>{VzPrimitive{
+                    .vertices = mesh.vertexBuffer,
+                    .indices = mesh.indexBuffer,
+                    .aabb = {.min = box.getMin(), .max = box.getMax() },
+                    } });
+                meshes->mIndexBuffer
+                //rcm.setCastShadows(instance, ENABLE_SHADOWS);
+                //rcm.setReceiveShadows(instance, false);
+                //scene->addEntity(renderable);
+            }
+        }
+
+        //MeshReader::Mesh mesh = MeshReader::loadMeshFromBuffer(gEngine, MONKEY_SUZANNE_DATA, nullptr, nullptr, mi);
+        
+        
+        ncm.CreateNameComp(mesh.renderable, modelName);
+        VID vid = mesh.renderable.getId();
+        actorSceneMap_[vid] = 0;
+        actorResMap_[vid] = std::make_unique<VzActorRes>();
+
+        auto ins = rcm.getInstance(mesh.renderable);
+        Box box = rcm.getAxisAlignedBoundingBox(ins);
+
+        VzGeometry* geo = CreateGeometry(geo_name, std::vector<VzPrimitive>{VzPrimitive{
+            .vertices = mesh.vertexBuffer,
+            .indices = mesh.indexBuffer,
+            .aabb = { .min = box.getMin(), .max = box.getMax() },
+            } });
+        VzActorRes& actor_res = *actorResMap_[vid].get();
+        actor_res.SetGeometry(geo->GetVID());
+        actor_res.SetMIs({ vid_mi });
+
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzActor>(vid, "CreateTestActor"));
+        VzActor* v_actor = (VzActor*)it.first->second.get();
+        return v_actor;
+
+
+
+
+        auto ti = tcm.getInstance(meshes->getRenderables()[0]);
+        app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } *tcm.getWorldTransform(ti);
+        for (auto renderable : app.meshes->getRenderables()) {
+            auto instance = rcm.getInstance(renderable);
+            if (rcm.hasComponent(renderable)) {
+                rcm.setCastShadows(instance, ENABLE_SHADOWS);
+                rcm.setReceiveShadows(instance, false);
+                scene->addEntity(renderable);
+            }
+        }
+        /**/
+        return 0;
     }
 
     VzAssetLoader* VzEngineApp::GetGltfAssetLoader()
