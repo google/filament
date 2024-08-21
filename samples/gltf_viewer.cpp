@@ -61,8 +61,10 @@
 #include <algorithm>
 #include <array>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <set>
+#include <sstream>
 #include <string>
 
 #include "generated/resources/gltf_demo.h"
@@ -137,6 +139,8 @@ struct App {
 
     AutomationSpec* automationSpec = nullptr;
     AutomationEngine* automationEngine = nullptr;
+    bool screenshot = false;
+    uint8_t screenshotSeq = 0;
 };
 
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
@@ -877,10 +881,15 @@ int main(int argc, char** argv) {
 
             if (ImGui::CollapsingHeader("Debug")) {
                 auto& debug = engine->getDebugRegistry();
-                if (ImGui::Button("Capture frame")) {
-                    bool* captureFrame =
-                            debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
-                    *captureFrame = true;
+                if (engine->getBackend() == Engine::Backend::METAL) {
+                    if (ImGui::Button("Capture frame")) {
+                        bool* captureFrame =
+                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                        *captureFrame = true;
+                    }
+                }
+                if (ImGui::Button("Screenshot")) {
+                    app.screenshot = true;
                 }
                 ImGui::Checkbox("Disable buffer padding",
                         debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
@@ -1138,6 +1147,14 @@ int main(int argc, char** argv) {
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene*, Renderer* renderer) {
+        if (app.screenshot) {
+            std::ostringstream stringStream;
+            stringStream << "screenshot" << std::setfill('0') << std::setw(2) << +app.screenshotSeq;
+            AutomationEngine::exportScreenshot(
+                    view, renderer, stringStream.str() + ".ppm", false, app.automationEngine);
+            ++app.screenshotSeq;
+            app.screenshot = false;
+        }
         if (app.automationEngine->shouldClose()) {
             FilamentApp::get().close();
             return;

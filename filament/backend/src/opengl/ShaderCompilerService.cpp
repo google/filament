@@ -597,40 +597,30 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
                 version = "#version 310 es\n";
             }
 
-            const std::array<const char*, 5> sources = {
-                    version.data(),
-                    prolog.data(),
-                    specializationConstantString.c_str(),
-                    packingFunctions.data(),
-                    body.data()
+            std::array<std::string_view, 5> sources = {
+                version,
+                prolog,
+                specializationConstantString,
+                packingFunctions,
+                { body.data(), body.size() - 1 }  // null-terminated
             };
 
-            const std::array<GLint, 5> lengths = {
-                    (GLint)version.length(),
-                    (GLint)prolog.length(),
-                    (GLint)specializationConstantString.length(),
-                    (GLint)packingFunctions.length(),
-                    (GLint)body.length() - 1 // null terminated
-            };
+            // Some of the sources may be zero-length. Remove them as to avoid passing lengths of
+            // zero to glShaderSource(). glShaderSource should work with lengths of zero, but some
+            // drivers instead interpret zero as a sentinel for a null-terminated string.
+            auto partitionPoint = std::stable_partition(
+                    sources.begin(), sources.end(), [](std::string_view s) { return !s.empty(); });
+            size_t count = std::distance(sources.begin(), partitionPoint);
+
+            std::array<const char*, 5> shaderStrings;
+            std::array<GLint, 5> lengths;
+            for (size_t i = 0; i < count; i++) {
+                shaderStrings[i] = sources[i].data();
+                lengths[i] = sources[i].size();
+            }
 
             GLuint const shaderId = glCreateShader(glShaderType);
-
-            if (UTILS_UNLIKELY(context.bugs.concatenate_shader_strings)) {
-                size_t totalSize = 0;
-                for (size_t i = 0; i < sources.size(); i++) {
-                    totalSize += lengths[i];
-                }
-                std::string concatenatedShaderSource;
-                concatenatedShaderSource.reserve(totalSize);
-                for (size_t i = 0; i < sources.size(); i++) {
-                    concatenatedShaderSource.append(sources[i], lengths[i]);
-                }
-                const GLchar* ptr = concatenatedShaderSource.c_str();
-                GLint length = concatenatedShaderSource.length();
-                glShaderSource(shaderId, 1, &ptr, &length);
-            } else {
-                glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
-            }
+            glShaderSource(shaderId, count, shaderStrings.data(), lengths.data());
 
             glCompileShader(shaderId);
 

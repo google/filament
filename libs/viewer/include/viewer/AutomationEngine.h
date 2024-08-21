@@ -224,6 +224,9 @@ public:
      */
     static void exportSettings(const Settings& settings, const char* filename);
 
+    static void exportScreenshot(View* view, Renderer* renderer, std::string filename,
+            bool autoclose, AutomationEngine* automationEngine);
+
     Options getOptions() const { return mOptions; }
     bool isRunning() const { return mIsRunning; }
     size_t currentTest() const { return mCurrentTest; }
