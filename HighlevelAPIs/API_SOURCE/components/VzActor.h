@@ -13,6 +13,9 @@ namespace vzm
         void SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs);
         void SetMI(const VID vidMI, const int slot = 0);
 
+        void SetCastShadows(const bool enabled);
+        void SetReceiveShadows(const bool enabled);
+
         std::vector<VID> GetMIs();
         VID GetMI(const int slot = 0);
         VID GetMaterial(const int slot = 0);

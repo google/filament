@@ -32,6 +32,16 @@ namespace vzm
         rcm.setMaterialInstanceAt(ins, slot, mi_res->mi);
         UpdateTimeStamp();
     }
+    void VzActor::SetCastShadows(const bool enabled)
+    {
+        COMP_ACTOR(rcm, ett, ins, );
+        rcm.setCastShadows(ins, enabled);
+    }
+    void VzActor::SetReceiveShadows(const bool enabled)
+    {
+        COMP_ACTOR(rcm, ett, ins, );
+        rcm.setReceiveShadows(ins, false);
+    }
     void VzActor::SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
