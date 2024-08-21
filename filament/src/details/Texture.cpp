@@ -233,6 +233,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
 
     if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
         // mHandle and mHandleForSampling will be created in setExternalImage()
+        // If this Texture is used for sampling before setExternalImage() is called,
+        // we'll lazily create a 1x1 placeholder texture.
         return;
     }
 
@@ -255,11 +257,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
 
 // frees driver resources, object becomes invalid
 void FTexture::terminate(FEngine& engine) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    if (mHandleForSampling != mHandle) {
-        driver.destroyTexture(mHandleForSampling);
-    }
-    driver.destroyTexture(mHandle);
+    setHandles({});
 }
 
 size_t FTexture::getWidth(size_t level) const noexcept {
@@ -442,12 +440,7 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     // external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
-    if (mHandle) {
-        api.destroyTexture(mHandle);
-        assert_invariant(mHandleForSampling == mHandle);
-    }
-    mHandle = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
-    mHandleForSampling = mHandle;
+    setHandles(api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image));
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
@@ -458,12 +451,7 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
     // the external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
-    if (mHandle) {
-        api.destroyTexture(mHandle);
-        assert_invariant(mHandleForSampling == mHandle);
-    }
-    mHandle = api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
-    mHandleForSampling = mHandle;
+    setHandles(api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane));
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
@@ -528,20 +516,53 @@ void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
     }
 }
 
+void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
+    assert_invariant(!mHandle || mHandleForSampling);
+    if (mHandle) {
+        mDriver->destroyTexture(mHandle);
+    }
+    if (mHandleForSampling != mHandle) {
+        mDriver->destroyTexture(mHandleForSampling);
+    }
+    mHandle = handle;
+    mHandleForSampling = handle;
+}
+
+backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
+        backend::Handle<backend::HwTexture> handle) const noexcept {
+    assert_invariant(!mHandle || mHandleForSampling);
+    if (mHandleForSampling && mHandleForSampling != mHandle) {
+        mDriver->destroyTexture(mHandleForSampling);
+    }
+    return mHandleForSampling = handle;
+}
+
+backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
+        backend::DriverApi& driver) noexcept {
+    auto handle = driver.createTexture(
+            Sampler::SAMPLER_2D, 1, InternalFormat::RGBA8, 1, 1, 1, 1, Usage::DEFAULT);
+    static uint8_t pixels[4] = { 0, 0, 0, 0 };
+    driver.update3DImage(handle, 0, 0, 0, 0, 1, 1, 1,
+            { (char*)&pixels[0], sizeof(pixels),
+                    Texture::PixelBufferDescriptor::PixelDataFormat::RGBA,
+                    Texture::PixelBufferDescriptor::PixelDataType::UBYTE });
+    return handle;
+}
+
 backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
+    if (UTILS_UNLIKELY(mTarget == SamplerType::SAMPLER_EXTERNAL && !mHandleForSampling)) {
+        return setHandleForSampling(createPlaceholderTexture(*mDriver));
+    }
+
     auto const& range = mLodRange;
     auto& activeRange = mActiveLodRange;
     if (UTILS_UNLIKELY(activeRange.first != range.first || activeRange.last != range.last)) {
         activeRange = range;
-        if (mHandleForSampling != mHandle) {
-            mDriver->destroyTexture(mHandleForSampling);
-        }
         if (range.empty()) {
-            mHandleForSampling = mHandle;
+            setHandleForSampling(mHandle);
         } else {
-            mHandleForSampling = mDriver->createTextureView(mHandle,
-                    range.first,
-                    range.last - range.first);
+            setHandleForSampling(
+                    mDriver->createTextureView(mHandle, range.first, range.last - range.first));
         }
     }
     return mHandleForSampling;
