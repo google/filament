@@ -517,7 +517,7 @@ void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
 }
 
 void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
-    assert_invariant(!(mHandle && !mHandleForSampling));
+    assert_invariant(!mHandle || mHandleForSampling);
     if (mHandle) {
         mDriver->destroyTexture(mHandle);
     }
@@ -528,12 +528,13 @@ void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
     mHandleForSampling = handle;
 }
 
-void FTexture::setHandleForSampling(backend::Handle<backend::HwTexture> handle) const noexcept {
-    assert_invariant(!(mHandle && !mHandleForSampling));
+backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
+        backend::Handle<backend::HwTexture> handle) const noexcept {
+    assert_invariant(!mHandle || mHandleForSampling);
     if (mHandleForSampling && mHandleForSampling != mHandle) {
         mDriver->destroyTexture(mHandleForSampling);
     }
-    mHandleForSampling = handle;
+    return mHandleForSampling = handle;
 }
 
 backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
@@ -550,8 +551,7 @@ backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
 
 backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
     if (UTILS_UNLIKELY(mTarget == SamplerType::SAMPLER_EXTERNAL && !mHandleForSampling)) {
-        setHandleForSampling(createPlaceholderTexture(*mDriver));
-        return mHandleForSampling;
+        return setHandleForSampling(createPlaceholderTexture(*mDriver));
     }
 
     auto const& range = mLodRange;

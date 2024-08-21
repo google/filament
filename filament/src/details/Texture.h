@@ -133,7 +133,8 @@ private:
     };
     void updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept;
     void setHandles(backend::Handle<backend::HwTexture> handle) noexcept;
-    void setHandleForSampling(backend::Handle<backend::HwTexture> handle) const noexcept;
+    backend::Handle<backend::HwTexture> setHandleForSampling(
+            backend::Handle<backend::HwTexture> handle) const noexcept;
     static backend::Handle<backend::HwTexture> createPlaceholderTexture(
             backend::DriverApi& driver) noexcept;
 
