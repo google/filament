@@ -36,13 +36,18 @@ namespace vzm
         return m_res->allowedParamters.size();
     }
 
-    vzm::VzMaterial::MaterialKey VzMaterial::GetVzmMaterialKey() {
-      MaterialKey tempkey{};
-      COMP_MAT(material, m_res, tempkey);
+    bool VzMaterial::GetStandardMaterialKey(MaterialKey& materialKey) {
+        COMP_MAT(material, m_res, false);
+
+        if (!m_res->isStandardType)
+        {
+            backlog::post("Material (" + GetName() + ") is NOT standard material!", backlog::LogLevel::Error);
+            return false;
+        }
 
         bool unlit = material->getShading() == Shading::UNLIT;
 
-        MaterialKey matkey{
+        materialKey = MaterialKey {
             .unlit = unlit,
             .hasBaseColorTexture = material->hasParameter("baseColorMap"),
             .hasNormalTexture = material->hasParameter("normalMap"),
@@ -72,21 +77,21 @@ namespace vzm
         };
 
         if (material->hasParameter("metallicRoughnessMap")) {
-          matkey.hasMetallicRoughnessTexture = true;
+            materialKey.hasMetallicRoughnessTexture = true;
         }
         BlendingMode blending = material->getBlendingMode();
         if (blending == BlendingMode::OPAQUE) {
-          matkey.alphaMode = AlphaMode::OPAQUE;
+            materialKey.alphaMode = AlphaMode::OPAQUE;
         } else if (blending == BlendingMode::MASKED) {
-          matkey.alphaMode = AlphaMode::MASK;
+            materialKey.alphaMode = AlphaMode::MASK;
         } else {
-          matkey.alphaMode = AlphaMode::BLEND;
+            materialKey.alphaMode = AlphaMode::BLEND;
         }
 
-        return matkey;
+        return true;
     }
     
-    bool VzMaterial::SetMaterialKey(vzm::VzMaterial::MaterialKey materialKey) {
+    bool VzMaterial::SetStandardMaterialByKey(const vzm::VzMaterial::MaterialKey& materialKey) {
       VzMaterialRes* mat_res = gEngineApp.GetMaterialRes(GetVID());
       if (mat_res->material) {
         gEngine->destroy(mat_res->material);

@@ -106,7 +106,7 @@ namespace vzm
         // TODO : 'Default' Setters and Getters for Material Instances
         size_t GetAllowedParameters(std::map<std::string, ParameterInfo>& paramters);
 
-        MaterialKey GetVzmMaterialKey();
-        bool SetMaterialKey(MaterialKey materialKey);
+        bool GetStandardMaterialKey(MaterialKey& materialKey);
+        bool SetStandardMaterialByKey(const MaterialKey& materialKey);
     };
 }
