@@ -94,11 +94,12 @@ public:
     }
 
     DescriptorSetLayout const& getPerViewDescriptorSetLayout(Variant variant) const noexcept {
-        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
         if (Variant::isValidDepthVariant(variant)) {
+            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
             return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
         }
         if (Variant::isSSRVariant(variant)) {
+            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
             return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
         }
         return mPerViewDescriptorSetLayout;
