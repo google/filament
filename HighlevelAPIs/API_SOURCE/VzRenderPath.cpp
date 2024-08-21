@@ -118,7 +118,7 @@ namespace vzm
 
     filament::Renderer* VzRenderPath::GetRenderer() { return renderer_; }
 
-    void VzRenderPath::applySettings() {
+    void VzRenderPath::ApplySettings() {
         if (any(dirtyFlags & DirtyFlags::ANTI_ALIASING))
             view_->setAntiAliasing(viewSettings.antiAliasing);
 

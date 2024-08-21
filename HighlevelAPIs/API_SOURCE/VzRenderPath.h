@@ -198,7 +198,7 @@ namespace vzm
         filament::View* GetView();
         filament::Renderer* GetRenderer();
 
-        void applySettings();
+        void ApplySettings();
     };
 }
 
