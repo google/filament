@@ -18,6 +18,7 @@
 #define TNT_UTILS_WORKSTEALINGDEQUEUE_H
 
 #include <atomic>
+#include <type_traits>
 
 #include <assert.h>
 #include <stddef.h>
@@ -92,9 +93,11 @@ void WorkStealingDequeue<TYPE, COUNT>::push(TYPE item) noexcept {
     index_t bottom = mBottom.load(std::memory_order_relaxed);
     setItemAt(bottom, item);
 
-    // std::memory_order_release is used because we release the item we just pushed to other
+    // Here we need std::memory_order_release because we release, the item we just pushed, to other
     // threads which are calling steal().
-    mBottom.store(bottom + 1, std::memory_order_release);
+    // However, generally seq_cst cannot be mixed with other memory orders. So we must use seq_cst.
+    // see: https://plv.mpi-sws.org/scfix/paper.pdf
+    mBottom.store(bottom + 1, std::memory_order_seq_cst);
 }
 
 /*
@@ -154,9 +157,11 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::pop() noexcept {
         assert(top - bottom == 1);
     }
 
-    // std::memory_order_relaxed used because we're not publishing any data.
+    // Here, we only need std::memory_order_relaxed because we're not publishing any data.
     // No concurrent writes to mBottom possible, it's always safe to write mBottom.
-    mBottom.store(top, std::memory_order_relaxed);
+    // However, generally seq_cst cannot be mixed with other memory orders. So we must use seq_cst.
+    // see: https://plv.mpi-sws.org/scfix/paper.pdf
+    mBottom.store(top, std::memory_order_seq_cst);
     return item;
 }
 

@@ -16,9 +16,10 @@
 
 #include <filament/Renderer.h>
 
-#include "details/Renderer.h"
+#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
+#include "details/Renderer.h"
 #include "details/View.h"
 
 #include <utils/FixedCapacityVector.h>
@@ -43,6 +44,10 @@ void Renderer::render(View const* view) {
 
 void Renderer::setPresentationTime(int64_t monotonic_clock_ns) {
     downcast(this)->setPresentationTime(monotonic_clock_ns);
+}
+
+void Renderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
+    downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
 }
 
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {

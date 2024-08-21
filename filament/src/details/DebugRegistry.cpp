@@ -28,12 +28,6 @@
 #include <string_view>
 #include <utility>
 
-#ifndef NDEBUG
-#   define DEBUG_PROPERTIES_WRITABLE true
-#else
-#   define DEBUG_PROPERTIES_WRITABLE false
-#endif
-
 using namespace filament::math;
 using namespace utils;
 
@@ -79,17 +73,15 @@ bool FDebugRegistry::hasProperty(const char* name) const noexcept {
 
 template<typename T>
 bool FDebugRegistry::setProperty(const char* name, T v) noexcept {
-    if constexpr (DEBUG_PROPERTIES_WRITABLE) {
-        auto info = getPropertyInfo(name);
-        T* const addr = static_cast<T*>(info.first);
-        if (addr) {
-            auto old = *addr;
-            *addr = v;
-            if (info.second && old != v) {
-                info.second();
-            }
-            return true;
+    auto info = getPropertyInfo(name);
+    T* const addr = static_cast<T*>(info.first);
+    if (addr) {
+        auto old = *addr;
+        *addr = v;
+        if (info.second && old != v) {
+            info.second();
         }
+        return true;
     }
     return false;
 }
@@ -118,18 +110,31 @@ template bool FDebugRegistry::getProperty<float2>(const char* name, float2* v) c
 template bool FDebugRegistry::getProperty<float3>(const char* name, float3* v) const noexcept;
 template bool FDebugRegistry::getProperty<float4>(const char* name, float4* v) const noexcept;
 
-void FDebugRegistry::registerDataSource(std::string_view name,
+bool FDebugRegistry::registerDataSource(std::string_view name,
         void const* data, size_t count) noexcept {
     auto& dataSourceMap = mDataSourceMap;
-    if (dataSourceMap.find(name) == dataSourceMap.end()) {
+    bool const found = dataSourceMap.find(name) == dataSourceMap.end();
+    if (found) {
         dataSourceMap[name] = { data, count };
     }
+    return found;
 }
 
-void FDebugRegistry::registerDataSource(std::string_view name,
+bool FDebugRegistry::registerDataSource(std::string_view name,
         utils::Invocable<DataSource()>&& creator) noexcept {
-    mDataSourceCreatorMap[name] = std::move(creator);
+    auto& dataSourceCreatorMap = mDataSourceCreatorMap;
+    bool const found = dataSourceCreatorMap.find(name) == dataSourceCreatorMap.end();
+    if (found) {
+        dataSourceCreatorMap[name] = std::move(creator);
+    }
+    return found;
 }
+
+void FDebugRegistry::unregisterDataSource(std::string_view name) noexcept {
+    mDataSourceCreatorMap.erase(name);
+    mDataSourceMap.erase(name);
+}
+
 
 DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
     std::string_view const key{ name };

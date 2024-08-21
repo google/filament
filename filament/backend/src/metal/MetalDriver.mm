@@ -53,14 +53,14 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
     //    MetalRenderPrimitive         :  24       many
     //    MetalVertexBuffer            :  32       moderate
     // -- less than or equal 32 bytes
-    //    MetalIndexBuffer             :  40       moderate
     //    MetalFence                   :  48       few
-    //    MetalBufferObject            :  48       many
-    // -- less than or equal 48 bytes
+    //    MetalIndexBuffer             :  56       moderate
+    //    MetalBufferObject            :  64       many
+    // -- less than or equal 64 bytes
     //    MetalSamplerGroup            : 112       few
     //    MetalProgram                 : 152       moderate
     //    MetalTexture                 : 152       moderate
-    //    MetalSwapChain               : 184       few
+    //    MetalSwapChain               : 208       few
     //    MetalRenderTarget            : 272       few
     //    MetalVertexBufferInfo        : 552       moderate
     // -- less than or equal to 552 bytes
@@ -162,8 +162,10 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         sc[s] = [mContext->device supportsTextureSampleCount:s] ? s : sc[s - 1];
     }
 
-    mContext->bugs.a8xStaticTextureTargetError =
-            [mContext->device.name containsString:@"Apple A8X GPU"];
+    mContext->bugs.staticTextureTargetError =
+            [mContext->device.name containsString:@"Apple A8X GPU"] ||
+            [mContext->device.name containsString:@"Apple A8 GPU"] ||
+            [mContext->device.name containsString:@"Apple A7 GPU"];
 
     mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
     mContext->pipelineStateCache.setDevice(mContext->device);
@@ -832,6 +834,10 @@ bool MetalDriver::isProtectedTexturesSupported() {
     return false;
 }
 
+bool MetalDriver::isDepthClampSupported() {
+    return true;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -840,8 +846,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return true;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return false;
-        case Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR:
-            return mContext->bugs.a8xStaticTextureTargetError;
+        case Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR:
+            return mContext->bugs.staticTextureTargetError;
         case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
             return false;
         default:
@@ -1747,6 +1753,13 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     mContext->windingState.updateState(winding);
     if (mContext->windingState.stateChanged()) {
         [mContext->currentRenderPassEncoder setFrontFacingWinding:winding];
+    }
+
+    // depth clip mode
+    MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
+    mContext->depthClampState.updateState(depthClipMode);
+    if (mContext->depthClampState.stateChanged()) {
+        [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
     }
 
     // Set the depth-stencil state, if a state change is needed.

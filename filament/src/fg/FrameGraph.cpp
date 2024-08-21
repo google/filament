@@ -24,6 +24,7 @@
 #include "FrameGraphPass.h"
 #include "FrameGraphRenderPass.h"
 #include "FrameGraphTexture.h"
+#include "ResourceAllocator.h"
 
 #include "details/Engine.h"
 

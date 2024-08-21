@@ -104,11 +104,23 @@ Cube::Cube(Engine& engine, filament::Material const* material, float3 linearColo
             .build(engine, mWireFrameRenderable);
 }
 
+Cube::Cube(Cube&& rhs) noexcept
+        : mEngine(rhs.mEngine) {
+    using std::swap;
+    swap(rhs.mVertexBuffer, mVertexBuffer);
+    swap(rhs.mIndexBuffer, mIndexBuffer);
+    swap(rhs.mMaterial, mMaterial);
+    swap(rhs.mMaterialInstanceSolid, mMaterialInstanceSolid);
+    swap(rhs.mMaterialInstanceWireFrame, mMaterialInstanceWireFrame);
+    swap(rhs.mSolidRenderable, mSolidRenderable);
+    swap(rhs.mWireFrameRenderable, mWireFrameRenderable);
+}
+
 void Cube::mapFrustum(filament::Engine& engine, Camera const* camera) {
     // the Camera far plane is at infinity, but we want it closer for display
     const mat4 vm(camera->getModelMatrix());
     mat4 p(vm * inverse(camera->getCullingProjectionMatrix()));
-    return mapFrustum(engine, p);
+    mapFrustum(engine, p);
 }
 
 void Cube::mapFrustum(filament::Engine& engine, filament::math::mat4 const& transform) {
@@ -122,7 +134,7 @@ void Cube::mapFrustum(filament::Engine& engine, filament::math::mat4 const& tran
 
 void Cube::mapAabb(filament::Engine& engine, filament::Box const& box) {
     mat4 p = mat4::translation(box.center) * mat4::scaling(box.halfExtent);
-    return mapFrustum(engine, p);
+    mapFrustum(engine, p);
 }
 
 Cube::~Cube() {

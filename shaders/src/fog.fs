@@ -7,6 +7,11 @@ vec4 fog(vec4 color, highp vec3 view) {
     // note: d can be +inf with the skybox
     highp float d = length(view);
 
+    // early exit for object "in front" of the fog
+    if (d < frameUniforms.fogStart) {
+        return color;
+    }
+
     // fogCutOffDistance is set to +inf to disable the cutoff distance
     if (d > frameUniforms.fogCutOffDistance) {
         return color;
