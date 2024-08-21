@@ -82,7 +82,6 @@ struct Texture::BuilderDetails {
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
-    std::optional<utils::CString> mName;
 };
 
 using BuilderType = Texture;
@@ -138,15 +137,6 @@ Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
 Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept {
     mImpl->mTextureIsSwizzled = true;
     mImpl->mSwizzle = { r, g, b, a };
-    return *this;
-}
-
-Texture::Builder& Texture::Builder::name(const char* name, size_t len) noexcept {
-    if (!name) {
-        return *this;
-    }
-    size_t const length = std::min(len, size_t { 128u });
-    mImpl->mName = utils::CString(name, length);
     return *this;
 }
 
@@ -253,8 +243,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
-    if (auto name = builder->mName) {
-        driver.setDebugTag(mHandle.getId(), std::move(*name));
+    if (auto name = builder.getName(); !name.empty()) {
+        driver.setDebugTag(mHandle.getId(), std::move(name));
     }
 }
 
