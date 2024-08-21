@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetExporter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzAssetLoader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzMeshAssimp.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzAsset.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzCamera.h" />
@@ -44,6 +45,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzMeshAssimp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzActor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzAsset.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzCamera.cpp" />
