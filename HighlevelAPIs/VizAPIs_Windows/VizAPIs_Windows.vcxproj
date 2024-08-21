@@ -116,7 +116,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Debug";GLTFIO_DRACO_SUPPORTED=1;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../third_party/stb;../../libs/filabridge/include;../../filament/backend/include;../../filament/src;../../third_party/cgltf;../../VisualStudio/install/$(Configuration)/include/;../../libs/bluevk/include;../../libs/utils/include;../../libs/filamentapp/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../third_party/libassimp/include;../../third_party/stb;../../libs/filabridge/include;../../filament/backend/include;../../filament/src;../../third_party/cgltf;../../VisualStudio/install/$(Configuration)/include/;../../libs/bluevk/include;../../libs/utils/include;../../libs/filamentapp/include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
@@ -143,7 +143,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_USE_MATH_DEFINES=1;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;FILAMENT_SUPPORTS_OPENGL;FILAMENT_DRIVER_SUPPORTS_VULKAN;FILAMENT_SAMPLES_STEREO_TYPE_INSTANCED;FILAMENT_DISABLE_MATOPT=1;FILAMENT_IBL_LITE=1;CMAKE_INTDIR="Release";GLTFIO_DRACO_SUPPORTED=1;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../third_party/stb;../../libs/filabridge/include;../../filament/backend/include;../../filament/src;../../third_party/cgltf;../../VisualStudio/install/$(Configuration)/include/;../../libs/bluevk/include;../../libs/utils/include;../../libs/filamentapp/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../third_party/libassimp/include;../../third_party/stb;../../libs/filabridge/include;../../filament/backend/include;../../filament/src;../../third_party/cgltf;../../VisualStudio/install/$(Configuration)/include/;../../libs/bluevk/include;../../libs/utils/include;../../libs/filamentapp/include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
