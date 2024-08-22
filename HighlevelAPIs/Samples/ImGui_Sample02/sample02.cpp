@@ -118,6 +118,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
     //vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
+    std::vector<vzm::VzActor*> loaded_actors;
+    vzm::VzActor* actor = vzm::LoadModelFileIntoActors("../assets/xyz.obj", loaded_actors);
     
     vzm::VzRenderer* renderer = vzm::NewRenderer("my renderer");
     renderer->SetCanvas(w, h, dpi, hwnd);
@@ -145,8 +147,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         sprite->SetTexture(texture->GetVID());
     }
 
-    vzm::AppendSceneCompTo(sprite, scene);
-    //vzm::AppendSceneCompTo(actor, scene);
+    //vzm::AppendSceneCompTo(sprite, scene);
+    vzm::AppendSceneCompTo(actor, scene);
     vzm::AppendSceneCompTo(light, scene);
     vzm::AppendSceneCompTo(cam, scene);
 
@@ -263,7 +265,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             // vzm::VzMI* mi = (vzm::VzMI*)vzm::NewResComponent(
             //     vzm::RES_COMPONENT_TYPE::MATERIALINSTANCE, "test Material
             //     instance");
-            material->SetMaterialKey(matkey);
+            material->SetStandardMaterialByKey(matkey);
 
             mi->SetMaterial(material->GetVID());
             actor->SetMI(mi->GetVID());
@@ -282,7 +284,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
              vzm::VzMI* mi = (vzm::VzMI*)vzm::NewResComponent(
                  vzm::RES_COMPONENT_TYPE::MATERIALINSTANCE, "test Material instance");
-            material->SetMaterialKey(matkey);
+            material->SetStandardMaterialByKey(matkey);
 
             mi->SetMaterial(material->GetVID());
             actor->SetMI(mi->GetVID());
@@ -305,7 +307,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
              vzm::VzMI* mi = (vzm::VzMI*)vzm::NewResComponent(
                  vzm::RES_COMPONENT_TYPE::MATERIALINSTANCE, "test Material instance");
-            material->SetMaterialKey(matkey);
+            material->SetStandardMaterialByKey(matkey);
 
             mi->SetMaterial(material->GetVID());
             actor->SetMI(mi->GetVID());

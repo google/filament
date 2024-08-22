@@ -27,12 +27,14 @@
 
 #include "../VzEngineApp.h"
 #include "VzMeshAssimp.h"
+#include "../VzNameComponents.hpp"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include <array>
 #include <iostream>
+#include <filesystem>
 
 #include <filament/Color.h>
 #include <filament/VertexBuffer.h>
@@ -64,6 +66,8 @@ using namespace filament;
 using namespace filamat;
 using namespace filament::math;
 using namespace utils;
+
+extern vzm::VzEngineApp gEngineApp;
 
 namespace filament::assimp {
     enum class AlphaMode : uint8_t {
@@ -257,51 +261,74 @@ namespace filament::assimp {
         }
     }
 
+    static MaterialVID vidMat = 0, vidMatTrans = 0;
+
     VzMeshAssimp::VzMeshAssimp(Engine& engine) : mEngine(engine) {
-        mDefaultMap = createOneByOneTexture(0xffffffff);
-        mDefaultNormalMap = createOneByOneTexture(0xffff8080);
+        //mDefaultMap = createOneByOneTexture(0xffffffff);
+        //mDefaultNormalMap = createOneByOneTexture(0xffff8080);
 
-        mDefaultColorMaterial = Material::Builder()
-            .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
-            .build(mEngine);
+        VzMaterialRes* mat_res = gEngineApp.GetMaterialRes(vidMat);
+        if (mat_res == nullptr)
+        {
+            mDefaultColorMaterial = Material::Builder()
+                .package(FILAMENTAPP_AIDEFAULTMAT_DATA, FILAMENTAPP_AIDEFAULTMAT_SIZE)
+                .build(mEngine);
 
-        mDefaultColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{ 0.8 });
-        mDefaultColorMaterial->setDefaultParameter("metallic", 0.0f);
-        mDefaultColorMaterial->setDefaultParameter("roughness", 0.4f);
-        mDefaultColorMaterial->setDefaultParameter("reflectance", 0.5f);
+            mDefaultColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{ 0.8 });
+            mDefaultColorMaterial->setDefaultParameter("metallic", 0.0f);
+            mDefaultColorMaterial->setDefaultParameter("roughness", 0.4f);
+            mDefaultColorMaterial->setDefaultParameter("reflectance", 0.5f);
 
-        mDefaultTransparentColorMaterial = Material::Builder()
-            .package(FILAMENTAPP_AIDEFAULTTRANS_DATA, FILAMENTAPP_AIDEFAULTTRANS_SIZE)
-            .build(mEngine);
+            vidMat = gEngineApp.CreateMaterial("Assimp Default Material", mDefaultColorMaterial, nullptr, false)->GetVID();
+        }
+        else
+        {
+            mDefaultColorMaterial = mat_res->material;
+        }
 
-        mDefaultTransparentColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{ 0.8 });
-        mDefaultTransparentColorMaterial->setDefaultParameter("metallic", 0.0f);
-        mDefaultTransparentColorMaterial->setDefaultParameter("roughness", 0.4f);
+        mat_res = gEngineApp.GetMaterialRes(vidMatTrans);
+        if (mat_res == nullptr)
+        {
+            mDefaultTransparentColorMaterial = Material::Builder()
+                .package(FILAMENTAPP_AIDEFAULTTRANS_DATA, FILAMENTAPP_AIDEFAULTTRANS_SIZE)
+                .build(mEngine);
+
+            mDefaultTransparentColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{ 0.8 });
+            mDefaultTransparentColorMaterial->setDefaultParameter("metallic", 0.0f);
+            mDefaultTransparentColorMaterial->setDefaultParameter("roughness", 0.4f);
+
+            vidMatTrans = gEngineApp.CreateMaterial("Assimp Transparent Material", mDefaultTransparentColorMaterial, nullptr, false)->GetVID();
+        }
+        else
+        {
+            mDefaultTransparentColorMaterial = mat_res->material;
+        }
     }
 
     VzMeshAssimp::~VzMeshAssimp() {
-        mEngine.destroy(mVertexBuffer);
-        mEngine.destroy(mIndexBuffer);
-        mEngine.destroy(mDefaultColorMaterial);
-        mEngine.destroy(mDefaultTransparentColorMaterial);
-        mEngine.destroy(mDefaultNormalMap);
-        mEngine.destroy(mDefaultMap);
+        //mEngine.destroy(mVertexBuffer);
+        //mEngine.destroy(mIndexBuffer);
+        //mEngine.destroy(mDefaultColorMaterial);
+        //mEngine.destroy(mDefaultTransparentColorMaterial);
+        //mEngine.destroy(mDefaultNormalMap);
+        //mEngine.destroy(mDefaultMap);
 
-        for (auto& item : mGltfMaterialCache) {
-            auto material = item.second;
-            mEngine.destroy(material);
-        }
+        //for (auto& item : mGltfMaterialCache) {
+        //    auto material = item.second;
+        //    mEngine.destroy(material);
+        //}
 
-        for (Entity renderable : mRenderables) {
-            mEngine.destroy(renderable);
-        }
+        //for (Entity renderable : mRenderables) {
+        //    mEngine.destroy(renderable);
+        //}
 
-        for (Texture* texture : mTextures) {
-            mEngine.destroy(texture);
-        }
+        //for (Texture* texture : mTextures) {
+        //    assert("DOJO TO DO : NOT YET IMPLEMENTED!!");
+        //    mEngine.destroy(texture);
+        //}
 
         // destroy the Entities itself
-        EntityManager::get().destroy(mRenderables.size(), mRenderables.data());
+        //EntityManager::get().destroy(mRenderables.size(), mRenderables.data());
     }
 
     template<typename T>
@@ -510,11 +537,16 @@ namespace filament::assimp {
         return Box().set(bmin, bmax);
     }
 
-    void VzMeshAssimp::addFromFile(const Path& path,
-        std::map<std::string, MaterialInstance*>& materials, bool overrideMaterial) {
+    void VzMeshAssimp::addFromFile(const Path& path, std::vector<ActorVID>& loadedActors) {
 
         Asset asset;
         asset.file = path;
+
+        auto& ncm = vzm::VzNameCompManager::Get();
+        auto& rcm = mEngine.getRenderableManager();
+        auto& tcm = mEngine.getTransformManager();
+
+        size_t count = 0;
 
         { // This scope to make sure we're not using std::move()'d objects later
 
@@ -523,123 +555,172 @@ namespace filament::assimp {
             // std::vectors here.
 
             //TODO: a lot of these method arguments should probably be class or global variables
+            std::map<std::string, MaterialInstance*> materials;
+
             if (!setFromFile(asset, materials)) {
                 return;
             }
 
-            VertexBuffer::Builder vertexBufferBuilder = VertexBuffer::Builder()
-                .vertexCount((uint32_t)asset.positions.size())
-                .bufferCount(4)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::HALF4)
-                .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
-                .normalized(VertexAttribute::TANGENTS);
+            std::filesystem::path path_obj(path.c_str());
+            std::string model_name = path_obj.filename().string();
 
-            if (asset.snormUV0) {
-                vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::SHORT2)
-                    .normalized(VertexAttribute::UV0);
+            std::vector<VzPrimitive> empty_prims;
+            //size_t vertex_offset = 0;
+            for (size_t k = 0, numk = asset.meshes.size(); k < numk; ++k)
+            {
+                Mesh& mesh = asset.meshes[k];
+                // here mesh refers to an actor
+                std::string actor_name = model_name;
+                if (k > 0)
+                {
+                    actor_name += " [" + std::to_string(count++) + "]";
+                }
+
+                ActorVID vid_actor = gEngineApp.CreateSceneComponent(SCENE_COMPONENT_TYPE::ACTOR, actor_name)->GetVID();
+                loadedActors.push_back(vid_actor);
+
+                utils::Entity ett_actor = utils::Entity::import(vid_actor);
+                auto ti = tcm.getInstance(ett_actor);
+                tcm.setTransform(ti, mesh.transform);
+
+                if (mesh.count > 0)
+                {
+                    GeometryVID vid_geo = gEngineApp.CreateGeometry(actor_name + " (Geometry)", empty_prims)->GetVID();
+                    VzActorRes* actor_res = gEngineApp.GetActorRes(vid_actor);
+
+                    std::vector<VzPrimitive> prims(mesh.parts.size());
+                    std::vector<MInstanceVID> mis(mesh.parts.size());
+                    for (size_t i = 0, n = mesh.parts.size(); i < n; ++i)
+                    {
+                        VzPrimitive& prim = prims[i];
+                        Part& part = mesh.parts[i];
+
+                        VertexBuffer::Builder vertexBufferBuilder = VertexBuffer::Builder()
+                            .vertexCount((uint32_t)part.vb_count)
+                            .bufferCount(4)
+                            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::HALF4)
+                            .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
+                            .normalized(VertexAttribute::TANGENTS);
+
+                        if (asset.snormUV0) {
+                            vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::SHORT2)
+                                .normalized(VertexAttribute::UV0);
+                        }
+                        else {
+                            vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::HALF2);
+                        }
+
+                        if (asset.snormUV1) {
+                            vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::SHORT2)
+                                .normalized(VertexAttribute::UV1);
+                        }
+                        else {
+                            vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::HALF2);
+                        }
+
+                        prim.vertices = vertexBufferBuilder.build(mEngine);
+
+                        //vertex_offset += mesh.vb_count;
+
+                        std::vector<half4> positions(asset.positions.begin() + part.vb_offset,
+                            asset.positions.begin() + part.vb_offset + part.vb_count);
+                        std::vector<short4> tangents(asset.tangents.begin() + part.vb_offset,
+                            asset.tangents.begin() + part.vb_offset + part.vb_count);
+                        std::vector<ushort2> texCoords0(asset.texCoords0.begin() + part.vb_offset,
+                            asset.texCoords0.begin() + part.vb_offset + part.vb_count);
+                        std::vector<ushort2> texCoords1(asset.texCoords1.begin() + part.vb_offset,
+                            asset.texCoords1.begin() + part.vb_offset + part.vb_count);
+
+                        auto ps = new State<half4>(std::move(positions));
+                        auto ns = new State<short4>(std::move(tangents));
+                        auto t0s = new State<ushort2>(std::move(texCoords0));
+                        auto t1s = new State<ushort2>(std::move(texCoords1));
+
+                        prim.vertices->setBufferAt(mEngine, 0,
+                            VertexBuffer::BufferDescriptor(ps->data(), ps->size(), State<half4>::free, ps));
+
+                        prim.vertices->setBufferAt(mEngine, 1,
+                            VertexBuffer::BufferDescriptor(ns->data(), ns->size(), State<short4>::free, ns));
+
+                        prim.vertices->setBufferAt(mEngine, 2,
+                            VertexBuffer::BufferDescriptor(t0s->data(), t0s->size(), State<ushort2>::free, t0s));
+
+                        prim.vertices->setBufferAt(mEngine, 3,
+                            VertexBuffer::BufferDescriptor(t1s->data(), t1s->size(), State<ushort2>::free, t1s));
+
+                        std::vector<uint32_t> indices(asset.indices.begin() + part.offset,
+                            asset.indices.begin() + part.offset + part.count);
+                        auto is = new State<uint32_t>(std::move(indices));
+
+
+                        prim.indices = IndexBuffer::Builder().indexCount(uint32_t(is->size())).build(mEngine);
+                        prim.indices->setBuffer(mEngine,
+                            IndexBuffer::BufferDescriptor(is->data(), is->size(), State<uint32_t>::free, is));
+
+                        prim.aabb = Aabb(mesh.aabb.getMin(), mesh.aabb.getMax());
+                        prim.ptype = PrimitiveType::TRIANGLES;
+
+                        std::string name_mi = n == 1? actor_name + " (MI)" : actor_name + " Part[" + std::to_string(i) + "] (MI)";
+                        MaterialInstance* mi = nullptr;
+                        MaterialVID vid_mat = INVALID_VID;
+                        if (part.opacity < 1.f)
+                        {
+                            mi = mDefaultTransparentColorMaterial->createInstance(name_mi.c_str());
+                            mi->setParameter("baseColor", RgbaType::sRGB, sRGBColorA{ part.baseColor, part.opacity });
+                            vid_mat = vidMatTrans;
+                        }
+                        else
+                        {
+                            mi = mDefaultColorMaterial->createInstance(name_mi.c_str());
+                            mi->setParameter("baseColor", RgbType::sRGB, part.baseColor);
+                            mi->setParameter("reflectance", part.reflectance);
+                            vid_mat = vidMat;
+                        }
+                        mi->setParameter("metallic", part.metallic);
+                        mi->setParameter("roughness", part.roughness);
+
+                        mis[i] = gEngineApp.CreateMaterialInstance(name_mi, vid_mat, mi)->GetVID();
+                    }
+
+                    VzGeometryRes* geo_res = gEngineApp.GetGeometryRes(vid_geo);
+                    geo_res->Set(prims);
+                    actor_res->SetGeometry(vid_geo);
+                    actor_res->SetMIs(mis);
+
+                    gEngineApp.BuildRenderable(vid_actor);
+                }
             }
-            else {
-                vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::HALF2);
+
+            for (size_t i = 0, n = asset.parents.size(); i < n; ++i)
+            {
+                int parent_index = asset.parents[i];
+                if (parent_index >= 0)
+                {
+                    ActorVID vid_child = loadedActors[i];
+                    ActorVID vid_parent = loadedActors[parent_index];
+                    Entity ett_child = Entity::import(vid_child);
+                    Entity ett_parent = Entity::import(vid_parent);
+                    tcm.setParent(tcm.getInstance(ett_child), tcm.getInstance(ett_parent));
+                }
             }
-
-            if (asset.snormUV1) {
-                vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::SHORT2)
-                    .normalized(VertexAttribute::UV1);
-            }
-            else {
-                vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::HALF2);
-            }
-
-            mVertexBuffer = vertexBufferBuilder.build(mEngine);
-
-            auto ps = new State<half4>(std::move(asset.positions));
-            auto ns = new State<short4>(std::move(asset.tangents));
-            auto t0s = new State<ushort2>(std::move(asset.texCoords0));
-            auto t1s = new State<ushort2>(std::move(asset.texCoords1));
-            auto is = new State<uint32_t>(std::move(asset.indices));
-
-            mVertexBuffer->setBufferAt(mEngine, 0,
-                VertexBuffer::BufferDescriptor(ps->data(), ps->size(), State<half4>::free, ps));
-
-            mVertexBuffer->setBufferAt(mEngine, 1,
-                VertexBuffer::BufferDescriptor(ns->data(), ns->size(), State<short4>::free, ns));
-
-            mVertexBuffer->setBufferAt(mEngine, 2,
-                VertexBuffer::BufferDescriptor(t0s->data(), t0s->size(), State<ushort2>::free, t0s));
-
-            mVertexBuffer->setBufferAt(mEngine, 3,
-                VertexBuffer::BufferDescriptor(t1s->data(), t1s->size(), State<ushort2>::free, t1s));
-
-            mIndexBuffer = IndexBuffer::Builder().indexCount(uint32_t(is->size())).build(mEngine);
-            mIndexBuffer->setBuffer(mEngine,
-                IndexBuffer::BufferDescriptor(is->data(), is->size(), State<uint32_t>::free, is));
         }
 
         // always add the DefaultMaterial (with its default parameters), so we don't pick-up
         // whatever defaults is used in mesh
-        if (materials.find(AI_DEFAULT_MATERIAL_NAME) == materials.end()) {
-            materials[AI_DEFAULT_MATERIAL_NAME] = mDefaultColorMaterial->createInstance();
-        }
+        //if (materials.find(AI_DEFAULT_MATERIAL_NAME) == materials.end()) {
+        //    materials[AI_DEFAULT_MATERIAL_NAME] = mDefaultColorMaterial->createInstance();
+        //}
 
-        size_t startIndex = mRenderables.size();
-        mRenderables.resize(startIndex + asset.meshes.size());
-        EntityManager::get().create(asset.meshes.size(), mRenderables.data() + startIndex);
-        EntityManager::get().create(1, &rootEntity);
+        //size_t startIndex = mRenderables.size();
+        //mRenderables.resize(startIndex + asset.meshes.size());
+        //EntityManager::get().create(asset.meshes.size(), mRenderables.data() + startIndex);
+        //EntityManager::get().create(1, &rootEntity);
 
-        TransformManager& tcm = mEngine.getTransformManager();
-        //Add root instance
-        tcm.create(rootEntity, TransformManager::Instance{}, mat4f());
+        rootEntity = Entity::import(loadedActors[0]);
 
-        for (auto& mesh : asset.meshes) {
-            RenderableManager::Builder builder(mesh.parts.size());
-            builder.boundingBox(mesh.aabb);
-            builder.screenSpaceContactShadows(true);
-
-            size_t partIndex = 0;
-            for (auto& part : mesh.parts) {
-                builder.geometry(partIndex, RenderableManager::PrimitiveType::TRIANGLES,
-                    mVertexBuffer, mIndexBuffer, part.offset, part.count);
-
-                if (overrideMaterial) {
-                    builder.material(partIndex, materials[AI_DEFAULT_MATERIAL_NAME]);
-                }
-                else {
-                    auto pos = materials.find(part.material);
-
-                    if (pos != materials.end()) {
-                        builder.material(partIndex, pos->second);
-                    }
-                    else {
-                        MaterialInstance* colorMaterial;
-                        if (part.opacity < 1.0f) {
-                            colorMaterial = mDefaultTransparentColorMaterial->createInstance();
-                            colorMaterial->setParameter("baseColor", RgbaType::sRGB,
-                                sRGBColorA{ part.baseColor, part.opacity });
-                        }
-                        else {
-                            colorMaterial = mDefaultColorMaterial->createInstance();
-                            colorMaterial->setParameter("baseColor", RgbType::sRGB, part.baseColor);
-                            colorMaterial->setParameter("reflectance", part.reflectance);
-                        }
-                        colorMaterial->setParameter("metallic", part.metallic);
-                        colorMaterial->setParameter("roughness", part.roughness);
-                        builder.material(partIndex, colorMaterial);
-                        materials[part.material] = colorMaterial;
-                    }
-                }
-                partIndex++;
-            }
-
-            const size_t meshIndex = &mesh - asset.meshes.data();
-            Entity entity = mRenderables[startIndex + meshIndex];
-            if (!mesh.parts.empty()) {
-                builder.build(mEngine, entity);
-            }
-            auto pindex = asset.parents[meshIndex];
-            TransformManager::Instance parent((pindex < 0) ?
-                tcm.getInstance(rootEntity) : tcm.getInstance(mRenderables[pindex]));
-            tcm.create(entity, parent, mesh.transform);
-        }
+        //TransformManager& tcm = mEngine.getTransformManager();
+        ////Add root instance
+        //tcm.create(rootEntity, TransformManager::Instance{}, mat4f());
     }
 
     using Assimp::Importer;
@@ -823,10 +904,12 @@ namespace filament::assimp {
         mat4f const& current = transpose(*reinterpret_cast<mat4f const*>(&node->mTransformation));
 
         size_t totalIndices = 0;
+        size_t totalVertices = 0;
         asset.parents.push_back(parentIndex);
         asset.meshes.push_back(Mesh{});
         asset.meshes.back().offset = asset.indices.size();
         asset.meshes.back().transform = current;
+        asset.meshes.back().vb_offset = asset.positions.size();
 
         mat4f parentTransform = parentIndex >= 0 ? asset.meshes[parentIndex].accTransform : mat4f();
         asset.meshes.back().accTransform = parentTransform * current;
@@ -882,12 +965,13 @@ namespace filament::assimp {
                     // asked assimp to perform triangulation.
                     size_t indicesCount = numFaces * faces[0].mNumIndices;
                     size_t indexBufferOffset = asset.indices.size();
-                    totalIndices += indicesCount;
 
                     for (size_t j = 0; j < numFaces; ++j) {
                         const aiFace& face = faces[j];
                         for (size_t k = 0; k < face.mNumIndices; ++k) {
-                            asset.indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
+                            //asset.indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
+                            // we use the original indices because we use the separated meshes
+                            asset.indices.push_back(uint32_t(face.mIndices[k]));
                         }
                     }
 
@@ -915,7 +999,8 @@ namespace filament::assimp {
 
                     if (isGLTF && outMaterials.find(materialName) == outMaterials.end()) {
                         std::string dirName = asset.file.getParent();
-                        processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
+                        assert("our assimp wrapper does not support GLTF!");
+                        //processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
                     }
 
                     aiColor3D color;
@@ -959,15 +1044,24 @@ namespace filament::assimp {
                     }
 
                     asset.meshes.back().parts.push_back({
-                            indexBufferOffset, indicesCount, materialName,
-                            baseColor, opacity, metallic, roughness, reflectance
+                            .offset = indexBufferOffset, .count = indicesCount,
+                            .vb_offset = indicesOffset, .vb_count = numVertices,
+                            .material = materialName,
+                            .baseColor = baseColor, 
+                            .opacity = opacity, 
+                            .metallic = metallic, 
+                            .roughness = roughness, 
+                            .reflectance = reflectance
                         });
+                    totalIndices += indicesCount;
+                    totalVertices += numVertices;
                 }
             }
         }
 
         if (node->mNumMeshes > 0) {
             asset.meshes.back().count = totalIndices;
+            asset.meshes.back().vb_count = totalVertices;
         }
 
         if (node->mNumChildren) {
@@ -979,167 +1073,6 @@ namespace filament::assimp {
                     isGLTF, deep, matCount, node->mChildren[i], parentIndex, depth);
             }
             deep--;
-        }
-    }
-
-    void VzMeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
-        const std::string& materialName, const std::string& dirName,
-        std::map<std::string, MaterialInstance*>& outMaterials) const {
-
-        aiString baseColorPath;
-        aiString AOPath;
-        aiString MRPath;
-        aiString normalPath;
-        aiString emissivePath;
-        aiTextureMapMode mapMode[3];
-        MaterialConfig matConfig;
-
-        material->Get(AI_MATKEY_TWOSIDED, matConfig.doubleSided);
-        material->Get(AI_MATKEY_GLTF_UNLIT, matConfig.unlit);
-
-        aiString alphaMode;
-        material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
-        if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-            matConfig.alphaMode = AlphaMode::TRANSPARENT;
-        }
-        else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-            matConfig.alphaMode = AlphaMode::MASKED;
-            float maskThreshold = 0.5;
-            material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
-            matConfig.maskThreshold = maskThreshold;
-        }
-
-        material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
-            matConfig.baseColorUV);
-        material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
-            matConfig.metallicRoughnessUV);
-        material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
-        material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_NORMALS, 0, matConfig.normalUV);
-        material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
-
-        uint64_t configHash = hashMaterialConfig(matConfig);
-
-        if (mGltfMaterialCache.find(configHash) == mGltfMaterialCache.end()) {
-            mGltfMaterialCache[configHash] = createMaterialFromConfig(mEngine, matConfig);
-        }
-
-        outMaterials[materialName] = mGltfMaterialCache[configHash]->createInstance();
-
-        // TODO: is there a way to use the same material for multiple mask threshold values?
-    //    if (matConfig.alphaMode == masked) {
-    //        float maskThreshold = 0.5;
-    //        material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
-    //        outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
-    //    }
-
-        // Load property values for gltf files
-        aiColor4D baseColorFactor;
-        aiColor3D emissiveFactor;
-        float metallicFactor = 1.0;
-        float roughnessFactor = 1.0;
-
-        // TODO: is occlusion strength available on Assimp now?
-
-        // Load texture images for gltf files
-        TextureSampler sampler(
-            TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-            TextureSampler::MagFilter::LINEAR,
-            TextureSampler::WrapMode::REPEAT);
-
-        if (material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &baseColorPath,
-            nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-            unsigned int minType = 0;
-            unsigned int magType = 0;
-            material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, minType);
-            material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, magType);
-
-            setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
-                materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
-        }
-        else {
-            outMaterials[materialName]->setParameter("baseColorMap", mDefaultMap, sampler);
-        }
-
-        if (material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &MRPath,
-            nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-            unsigned int minType = 0;
-            unsigned int magType = 0;
-            material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, minType);
-            material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, magType);
-
-            setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
-                dirName, mapMode, "metallicRoughnessMap", outMaterials, minType, magType);
-        }
-        else {
-            outMaterials[materialName]->setParameter("metallicRoughnessMap", mDefaultMap, sampler);
-            outMaterials[materialName]->setParameter("metallicFactor", mDefaultMetallic);
-            outMaterials[materialName]->setParameter("roughnessFactor", mDefaultRoughness);
-        }
-
-        if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
-            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-            unsigned int minType = 0;
-            unsigned int magType = 0;
-            material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
-            material->Get("$tex.mappingfiltermag", aiTextureType_LIGHTMAP, 0, magType);
-            setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
-                dirName, mapMode, "aoMap", outMaterials, minType, magType);
-        }
-        else {
-            outMaterials[materialName]->setParameter("aoMap", mDefaultMap, sampler);
-        }
-
-        if (material->GetTexture(aiTextureType_NORMALS, 0, &normalPath, nullptr,
-            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-            unsigned int minType = 0;
-            unsigned int magType = 0;
-            material->Get("$tex.mappingfiltermin", aiTextureType_NORMALS, 0, minType);
-            material->Get("$tex.mappingfiltermag", aiTextureType_NORMALS, 0, magType);
-            setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
-                dirName, mapMode, "normalMap", outMaterials, minType, magType);
-        }
-        else {
-            outMaterials[materialName]->setParameter("normalMap", mDefaultNormalMap, sampler);
-        }
-
-        if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissivePath, nullptr,
-            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-            unsigned int minType = 0;
-            unsigned int magType = 0;
-            material->Get("$tex.mappingfiltermin", aiTextureType_EMISSIVE, 0, minType);
-            material->Get("$tex.mappingfiltermag", aiTextureType_EMISSIVE, 0, magType);
-            setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName,
-                dirName, mapMode, "emissiveMap", outMaterials, minType, magType);
-        }
-        else {
-            outMaterials[materialName]->setParameter("emissiveMap", mDefaultMap, sampler);
-            outMaterials[materialName]->setParameter("emissiveFactor", mDefaultEmissive);
-        }
-
-        //If the gltf has texture factors, override the default factor values
-        if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, metallicFactor) == AI_SUCCESS) {
-            outMaterials[materialName]->setParameter("metallicFactor", metallicFactor);
-        }
-
-        if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, roughnessFactor) == AI_SUCCESS) {
-            outMaterials[materialName]->setParameter("roughnessFactor", roughnessFactor);
-        }
-
-        if (material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveFactor) == AI_SUCCESS) {
-            sRGBColor emissiveFactorCast = *reinterpret_cast<sRGBColor*>(&emissiveFactor);
-            outMaterials[materialName]->setParameter("emissiveFactor", emissiveFactorCast);
-        }
-
-        if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, baseColorFactor) == AI_SUCCESS) {
-            sRGBColorA baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
-            outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
-        }
-
-        aiBool isSpecularGlossiness = false;
-        if (material->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS, isSpecularGlossiness) == AI_SUCCESS) {
-            if (isSpecularGlossiness) {
-                std::cout << "Warning: pbrSpecularGlossiness textures are not currently supported" << std::endl;
-            }
         }
     }
 }

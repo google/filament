@@ -57,13 +57,7 @@ namespace filament::assimp {
         explicit VzMeshAssimp(filament::Engine& engine);
         ~VzMeshAssimp();
 
-        void addFromFile(const utils::Path& path,
-            std::map<std::string, filament::MaterialInstance*>& materials,
-            bool overrideMaterial = false);
-
-        const std::vector<utils::Entity> getRenderables() const noexcept {
-            return mRenderables;
-        }
+        void addFromFile(const utils::Path& path, std::vector<ActorVID>& loadedActors);
 
         //For use with normalizing coordinates
         filament::math::float3 minBound = filament::math::float3(1.0f);
@@ -72,19 +66,24 @@ namespace filament::assimp {
 
     private:
         struct Part {
-            size_t offset;
-            size_t count;
+            size_t offset;  // index
+            size_t count; // index
+            size_t vb_offset;
+            size_t vb_count;
             std::string material;
             filament::sRGBColor baseColor;
             float opacity;
             float metallic;
             float roughness;
             float reflectance;
+            filament::Box aabb;
         };
 
         struct Mesh {
-            size_t offset;
-            size_t count;
+            size_t offset;  // index
+            size_t count; // index
+            size_t vb_offset;
+            size_t vb_count;
             std::vector<Part> parts;
             filament::Box aabb;
             mat4f transform;
@@ -106,9 +105,9 @@ namespace filament::assimp {
 
         bool setFromFile(Asset& asset, std::map<std::string, filament::MaterialInstance*>& outMaterials);
 
-        void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
-            const std::string& materialName, const std::string& dirName,
-            std::map<std::string, filament::MaterialInstance*>& outMaterials) const;
+        //void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
+        //    const std::string& materialName, const std::string& dirName,
+        //    std::map<std::string, filament::MaterialInstance*>& outMaterials) const;
 
         template<bool SNORMUV0S, bool SNORMUV1S>
         void processNode(Asset& asset,
@@ -123,22 +122,22 @@ namespace filament::assimp {
 
         filament::Texture* createOneByOneTexture(uint32_t textureData);
         filament::Engine& mEngine;
-        filament::VertexBuffer* mVertexBuffer = nullptr;
-        filament::IndexBuffer* mIndexBuffer = nullptr;
+        //filament::VertexBuffer* mVertexBuffer = nullptr;
+        //filament::IndexBuffer* mIndexBuffer = nullptr;
 
         filament::Material* mDefaultColorMaterial = nullptr;
         filament::Material* mDefaultTransparentColorMaterial = nullptr;
 
-        mutable std::unordered_map<uint64_t, filament::Material*> mGltfMaterialCache;
-        filament::Texture* mDefaultMap = nullptr;
-        filament::Texture* mDefaultNormalMap = nullptr;
+        //mutable std::unordered_map<uint64_t, filament::Material*> mGltfMaterialCache;
+        //filament::Texture* mDefaultMap = nullptr;
+        //filament::Texture* mDefaultNormalMap = nullptr;
         float mDefaultMetallic = 0.0f;
         float mDefaultRoughness = 0.4f;
         filament::sRGBColor mDefaultEmissive = filament::sRGBColor({ 0.0f, 0.0f, 0.0f });
 
-        std::vector<utils::Entity> mRenderables;
+        //std::vector<utils::Entity> mRenderables;
 
-        std::vector<filament::Texture*> mTextures;
+        //std::vector<filament::Texture*> mTextures;
 
 
     };

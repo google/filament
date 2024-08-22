@@ -40,7 +40,12 @@ namespace vzm
     void VzActor::SetReceiveShadows(const bool enabled)
     {
         COMP_ACTOR(rcm, ett, ins, );
-        rcm.setReceiveShadows(ins, false);
+        rcm.setReceiveShadows(ins, enabled);
+    }
+    void VzActor::SetScreenSpaceContactShadows(const bool enabled)
+    {
+        COMP_ACTOR(rcm, ett, ins, );
+        rcm.setScreenSpaceContactShadows(ins, enabled);
     }
     void VzActor::SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs)
     {

@@ -15,6 +15,7 @@ namespace vzm
 
         void SetCastShadows(const bool enabled);
         void SetReceiveShadows(const bool enabled);
+        void SetScreenSpaceContactShadows(const bool enabled);
 
         std::vector<VID> GetMIs();
         VID GetMI(const int slot = 0);
