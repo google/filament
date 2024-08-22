@@ -1354,6 +1354,7 @@ namespace vzm
         {
             actors.push_back(gEngineApp.GetVzComponent<VzActor>(loaded_actors[i]));
         }
+        delete meshes;
         return loaded_actors.size();
     }
 

@@ -1253,19 +1253,17 @@ namespace vzm
 
         double3 v = camera->getForwardVector();
         double3 u = camera->getUpVector();
-        mat4 ws2cs = camera->getViewMatrix();
-
-        auto ToString = [](double3 v) -> std::string
-            {
-                using namespace std;
-                return "(" + to_string(v.x) + ", " + to_string(v.y) + ", " + to_string(v.z) + ")";
-            };
-        static size_t debug_count = 0;
-        if (debug_count++ % 50 == 0)
-        {
-            backlog::post("view : " + ToString(v), backlog::LogLevel::Default);
-            backlog::post("up   : " + ToString(u), backlog::LogLevel::Default);
-        }
+        //auto ToString = [](double3 v) -> std::string
+        //    {
+        //        using namespace std;
+        //        return "(" + to_string(v.x) + ", " + to_string(v.y) + ", " + to_string(v.z) + ")";
+        //    };
+        //static size_t debug_count = 0;
+        //if (debug_count++ % 50 == 0)
+        //{
+        //    backlog::post("view : " + ToString(v), backlog::LogLevel::Default);
+        //    backlog::post("up   : " + ToString(u), backlog::LogLevel::Default);
+        //}
 
         std::map<Entity, mat4f> restore_billboard_tr;
         scene->forEach([&tcm, &restore_billboard_tr, &u, &v](Entity ett) {

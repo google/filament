@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <windowsx.h>
+#include <random>
 
 #include <tchar.h>
 #include <shellscalingapi.h>
@@ -117,9 +118,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     vzm::VzScene* scene = vzm::NewScene("my scene");
     scene->LoadIBL("../../../VisualStudio/samples/assets/ibl/lightroom_14b");
 
-    vzm::VzActor* actor = vzm::LoadTestModelIntoActor("my test model");
-    glm::fvec3 euler(3.14 / 10, 3.14 / 7, 3.14 / 5);
-    actor->SetRotation(__FP euler);
     std::vector<vzm::VzActor*> loaded_actors;
     vzm::VzActor* actor_axis = vzm::LoadModelFileIntoActors("../assets/xyz.obj", loaded_actors);
     glm::fvec3 scale(3.f);
@@ -134,6 +132,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
+    //glm::fvec3 pp, att, uu;
+    //cam->GetWorldPose((float*)&pp, (float*)&att, (float*)&uu);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
     cam->SetMatrixAutoUpdate(false);
     vzm::VzCamera::Controller* cc = cam->GetController();
@@ -143,17 +143,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     vzm::VzLight* light = (vzm::VzLight*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::LIGHT, "my light");
 
-    vzm::VzSpriteActor* sprite = (vzm::VzSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::SPRITE_ACTOR, "my sprite");
+    vzm::VzTexture* texture1 = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image 1");
+    texture1->ReadImage("../assets/testimage.png");
+    vzm::VzTexture* texture2 = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image 2");
+    texture2->ReadImage("../assets/testimage1.png");
+
+    std::random_device rd;  
+    std::mt19937 gen(rd()); 
+    std::uniform_real_distribution<> dis(0.0, 1.0);
+    for (size_t i = 0; i < 10; ++i)
     {
-        vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
-        texture->ReadImage("../assets/testimage.png");
-        sprite->SetGeometry(3, 3, 0.5, 0.5);
-        sprite->SetTexture(texture->GetVID());
+        float randomValue1 = (float)dis(gen); // 0과 1 사이의 난수 생성
+        float randomValue2 = (float)dis(gen); // 0과 1 사이의 난수 생성
+        float randomValue3 = (float)dis(gen); // 0과 1 사이의 난수 생성
+        float randomValue4 = (float)dis(gen); // 0과 1 사이의 난수 생성
+
+        vzm::VzSpriteActor* sprite = 
+            (vzm::VzSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::SPRITE_ACTOR, "my sprite " + std::to_string(i));
+
+        sprite->SetGeometry(randomValue1 * 3.f, randomValue2 * 3.f, 0.5, 0.5);
+        sprite->SetTexture(randomValue4 > 0.5f ? texture1->GetVID() : texture2->GetVID());
+        glm::fvec3 sprite_p(randomValue1 - 0.5f, randomValue2 - 0.5f, randomValue3 - 0.5f);
+        sprite_p *= 7.f;
+        sprite->SetPosition(__FP sprite_p);
+        sprite->EnableBillboard(true);
+
+        vzm::AppendSceneCompTo(sprite, scene);
     }
 
-    vzm::AppendSceneCompTo(sprite, scene);
-    vzm::AppendSceneCompTo(actor, scene);
-    vzm::AppendSceneCompTo(actor_axis, actor);
+    vzm::AppendSceneCompTo(actor_axis, scene);
     vzm::AppendSceneCompTo(light, scene);
     vzm::AppendSceneCompTo(cam, scene);
 

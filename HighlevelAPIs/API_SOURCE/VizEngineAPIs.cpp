@@ -343,6 +343,7 @@ namespace vzm
         }
 
         safeReleaseChecker->destroyed = true;
+        safeReleaseChecker.reset();
         return VZ_OK;
     }
 
