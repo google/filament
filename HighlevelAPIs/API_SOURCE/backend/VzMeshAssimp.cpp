@@ -95,7 +95,7 @@ namespace filament::assimp {
 
     void appendBooleanToBitMask(uint64_t& bitmask, bool b) {
         bitmask <<= 1;
-        bitmask |= b;
+        bitmask |= (uint64_t)b;
     }
 
     uint64_t hashMaterialConfig(MaterialConfig config) {
@@ -432,7 +432,7 @@ namespace filament::assimp {
     int32_t getEmbeddedTextureId(const aiString& path) {
         const char* pathStr = path.C_Str();
         if (path.length >= 2 && pathStr[0] == '*') {
-            for (int i = 1; i < path.length; i++) {
+            for (ai_uint32 i = 1; i < path.length; i++) {
                 if (!isdigit(pathStr[i])) {
                     return -1;
                 }
