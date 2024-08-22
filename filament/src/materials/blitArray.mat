@@ -11,6 +11,10 @@ material {
             name : layerIndex
         },
         {
+            type : float,
+            name : levelOfDetail,
+        },
+        {
             type : float4,
             name : viewport,
             precision: high
@@ -33,6 +37,6 @@ vertex {
 
 fragment {
     void postProcess(inout PostProcessInputs postProcess) {
-        postProcess.color = textureLod(materialParams_color, vec3(variable_vertex.xy, materialParams.layerIndex), 0.0);
+        postProcess.color = textureLod(materialParams_color, vec3(variable_vertex.xy, materialParams.layerIndex), materialParams.levelOfDetail);
     }
 }
