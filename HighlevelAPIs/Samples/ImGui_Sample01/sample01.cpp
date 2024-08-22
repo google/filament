@@ -685,6 +685,60 @@ void resize(int width, int height) {
                                         (float)width / (float)height);
 }
 
+void setKeyboardButton(GLFWwindow* window, int key, int scancode, int action,
+                       int mods) {
+  if (!g_cam || g_cam != current_cam) {
+    return;
+  }
+
+  switch (action) {
+    case GLFW_PRESS:
+    case GLFW_REPEAT:
+      if (key == GLFW_KEY_W) {
+        g_cam->GetController()->KeyDown(
+            vzm::VzCamera::Controller::Key::FORWARD);
+      } else if (key == GLFW_KEY_A) {
+        g_cam->GetController()->KeyDown(vzm::VzCamera::Controller::Key::LEFT);
+      } else if (key == GLFW_KEY_S) {
+        g_cam->GetController()->KeyDown(
+            vzm::VzCamera::Controller::Key::BACKWARD);
+      } else if (key == GLFW_KEY_D) {
+        g_cam->GetController()->KeyDown(vzm::VzCamera::Controller::Key::RIGHT);
+      } else if (key == GLFW_KEY_Q) {
+        g_cam->GetController()->KeyDown(vzm::VzCamera::Controller::Key::UP);
+      } else if (key == GLFW_KEY_E) {
+        g_cam->GetController()->KeyDown(vzm::VzCamera::Controller::Key::DOWN);
+      } else if (key == GLFW_KEY_F) {
+        g_cam->GetController()->mode =
+            vzm::VzCamera::Controller::Mode::FREE_FLIGHT;
+        g_cam->GetController()->UpdateControllerSettings();
+      } else if (key == GLFW_KEY_R) {
+        g_cam->GetController()->mode =
+            vzm::VzCamera::Controller::Mode::ORBIT;
+        g_cam->GetController()->UpdateControllerSettings();
+      }
+      g_cam->GetController()->UpdateCamera(0.3);
+      break;
+    case GLFW_RELEASE:
+      if (key == GLFW_KEY_W) {
+        g_cam->GetController()->KeyUp(vzm::VzCamera::Controller::Key::FORWARD);
+      } else if (key == GLFW_KEY_A) {
+        g_cam->GetController()->KeyUp(vzm::VzCamera::Controller::Key::LEFT);
+      } else if (key == GLFW_KEY_S) {
+        g_cam->GetController()->KeyUp(vzm::VzCamera::Controller::Key::BACKWARD);
+      } else if (key == GLFW_KEY_D) {
+        g_cam->GetController()->KeyUp(vzm::VzCamera::Controller::Key::RIGHT);
+      } else if (key == GLFW_KEY_Q) {
+        g_cam->GetController()->KeyUp(vzm::VzCamera::Controller::Key::UP);
+      } else if (key == GLFW_KEY_E) {
+        g_cam->GetController()->KeyUp(vzm::VzCamera::Controller::Key::DOWN);
+      } 
+      break;
+    default:
+      break;
+  }
+}
+
 void setMouseButton(GLFWwindow* window, int button, int state,
                     int modifier_key) {
   if (!g_cam || g_cam != current_cam) {
@@ -878,6 +932,7 @@ int main(int, char**) {
       glfwCreateWindowSurface(g_Instance, window, g_Allocator, &surface);
   check_vk_result(err);
 
+  glfwSetKeyCallback(window, setKeyboardButton);
   glfwSetMouseButtonCallback(window, setMouseButton);
   glfwSetCursorPosCallback(window, setCursorPos);
   glfwSetScrollCallback(window, setMouseScroll);
