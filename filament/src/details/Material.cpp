@@ -194,8 +194,11 @@ Material* Material::Builder::build(Engine& engine) {
 
     // Print a warning if the material's stereo type doesn't align with the engine's setting.
     MaterialDomain materialDomain;
+    UserVariantFilterMask variantFilterMask;
     materialParser->getMaterialDomain(&materialDomain);
-    if (materialDomain == MaterialDomain::SURFACE) {
+    materialParser->getMaterialVariantFilterMask(&variantFilterMask);
+    bool const hasStereoVariants = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::STE));
+    if (materialDomain == MaterialDomain::SURFACE && hasStereoVariants) {
         StereoscopicType const engineStereoscopicType = engine.getConfig().stereoscopicType;
         // Default materials are always compiled with either 'instanced' or 'multiview'.
         // So, we only verify compatibility if the engine is set up for stereo.
