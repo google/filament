@@ -29,48 +29,43 @@ namespace vzm
         VID GetGeometry();
     };
 
-    __dojostruct VzSpriteActor : VzBaseActor
+    __dojostruct VzBaseSprite
+    {
+    private:
+        VzBaseActor* baseActor_;
+    public:
+        VzBaseSprite(VzBaseActor* baseActor) : baseActor_(baseActor) {};
+
+        void EnableBillboard(const bool billboardEnabled);
+
+        // The rotation of the sprite in degrees. Default is 0.
+        void SetRotatation(const float rotDeg);
+    };
+
+    __dojostruct VzSpriteActor : VzBaseActor, VzBaseSprite
     {
         VzSpriteActor(const VID vid, const std::string & originFrom)
-            : VzBaseActor(vid, originFrom, "VzSpriteActor", SCENE_COMPONENT_TYPE::SPRITE_ACTOR) {}
+            : VzBaseActor(vid, originFrom, "VzSpriteActor", SCENE_COMPONENT_TYPE::SPRITE_ACTOR), VzBaseSprite(this) {}
 
-        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
-
-        // use internal geometry (quad) and material (optimal shader for sprite rendering)
-        // 
         // The sprite's anchor point, and the point around which the sprite rotates. 
         // A value of (0.5, 0.5) corresponds to the midpoint of the sprite. 
         // A value of (0, 0) corresponds to the lower left corner of the sprite. The default is (0.5, 0.5).
         // basic local frame is x:(1, 0, 0), y:(0, 1, 0), z:(0, 0, 1), sprite plane is defined on xy-plane
         void SetGeometry(const float w = 1.f, const float h = 1.f, const float anchorU = 0.5f, const float anchorV = 0.5f);
-        void EnableBillboard(const bool billboardEnabled);
         //void SetAnchorPoint(const float u = 0.5f, const float v = 0.5f);
         //void SetSize(const float w = 1.f, const float h = 1.f);
-        
-        // The rotation of the sprite in degrees. Default is 0.
-        void SetRotatation(const float rotDeg);
         void SetTexture(const VID vidTexture);
     };
 
-    __dojostruct VzTextSpriteActor : VzBaseActor
+    __dojostruct VzTextSpriteActor : VzBaseActor, VzBaseSprite
     {
         VzTextSpriteActor(const VID vid, const std::string & originFrom)
-            : VzBaseActor(vid, originFrom, "VzTextSpriteActor", SCENE_COMPONENT_TYPE::TEXT_SPRITE_ACTOR) {}
+            : VzBaseActor(vid, originFrom, "VzTextSpriteActor", SCENE_COMPONENT_TYPE::TEXT_SPRITE_ACTOR), VzBaseSprite(this) {}
 
-        void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
-
-        // use internal geometry (quad) and material (optimal shader for sprite rendering)
-        // 
         // The sprite's anchor point, and the point around which the sprite rotates. 
         // A value of (0.5, 0.5) corresponds to the midpoint of the sprite. 
         // A value of (0, 0) corresponds to the lower left corner of the sprite. The default is (0.5, 0.5).
         // basic local frame is x:(1, 0, 0), y:(0, 1, 0), z:(0, 0, 1), sprite plane is defined on xy-plane
         void SetText(const std::string& text, const float anchorU = 0.5f, const float anchorV = 0.5f);
-        void EnableBillboard(const bool billboardEnabled);
-        //void SetAnchorPoint(const float u = 0.5f, const float v = 0.5f);
-        //void SetSize(const float w = 1.f, const float h = 1.f);
-
-        // The rotation of the sprite in degrees. Default is 0.
-        void SetRotatation(const float rotDeg);
     };
 }

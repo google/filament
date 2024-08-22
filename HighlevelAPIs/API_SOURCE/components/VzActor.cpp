@@ -92,13 +92,23 @@ namespace vzm
 
 }
 
+
 namespace vzm
 {
-    void VzSpriteActor::EnableBillboard(const bool billboardEnabled)
+    void VzBaseSprite::EnableBillboard(const bool billboardEnabled)
     {
-        // to do //
-        UpdateTimeStamp();
+        baseActor_->UpdateTimeStamp();
     }
+
+    void VzBaseSprite::SetRotatation(const float rotDeg)
+    {
+        // TO DO
+        baseActor_->UpdateTimeStamp();
+    }
+}
+
+namespace vzm
+{
     void VzSpriteActor::SetGeometry(const float w, const float h, const float anchorU, const float anchorV)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
