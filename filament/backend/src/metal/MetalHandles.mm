@@ -502,9 +502,9 @@ void MetalProgram::initialize() {
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-        TextureUsage usage, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
-        TextureSwizzle a) noexcept
+        TextureUsage usage) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context) {
+    assert_invariant(target != SamplerType::SAMPLER_EXTERNAL);
 
     devicePixelFormat = decidePixelFormat(&context, format);
     FILAMENT_CHECK_POSTCONDITION(devicePixelFormat != MTLPixelFormatInvalid)
@@ -590,16 +590,19 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
             << ", levels = " << int(levels) << ", MTLPixelFormat = " << int(devicePixelFormat)
             << ", width = " << width << ", height = " << height << ", depth = " << depth
             << "). Out of memory?";
+}
 
-    // If swizzling is set, set up a swizzled texture view that we'll use when sampling this texture.
-    const bool isDefaultSwizzle =
-            r == TextureSwizzle::CHANNEL_0 &&
-            g == TextureSwizzle::CHANNEL_1 &&
-            b == TextureSwizzle::CHANNEL_2 &&
-            a == TextureSwizzle::CHANNEL_3;
-    // If texture is nil, then it must be a SAMPLER_EXTERNAL texture.
-    // Swizzling for external textures is handled inside MetalExternalImage.
-    if (!isDefaultSwizzle && texture && context.supportsTextureSwizzling) {
+MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
+        uint8_t levelCount, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+        TextureSwizzle a) noexcept
+    : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+              src->format, src->usage),
+      context(context),
+      devicePixelFormat(src->devicePixelFormat),
+      externalImage(src->externalImage) {
+    texture = createTextureViewWithLodRange(
+            src->getMtlTextureForRead(), baseLevel, baseLevel + levelCount - 1);
+    if (context.supportsTextureSwizzling) {
         // Even though we've already checked context.supportsTextureSwizzling, we still need to
         // guard these calls with @availability, otherwise the API usage will generate compiler
         // warnings.
@@ -608,15 +611,6 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
                     createTextureViewWithSwizzle(texture, getSwizzleChannels(r, g, b, a));
         }
     }
-}
-
-MetalTexture::MetalTexture(MetalContext& context,
-        MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept
-        : HwTexture(src->target, src->levels, src->samples,
-                src->width, src->height, src->depth, src->format, src->usage),
-          context(context) {
-    texture = createTextureViewWithLodRange(
-            src->getMtlTextureForRead(), baseLevel, baseLevel + levelCount - 1);
 }
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
@@ -631,14 +625,18 @@ MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t
     : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage),
       context(context),
       externalImage(std::make_shared<MetalExternalImage>(
-              MetalExternalImage::createFromImage(context, image))) {}
+              MetalExternalImage::createFromImage(context, image))) {
+    texture = externalImage->getMtlTexture();
+}
 
 MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t width,
         uint32_t height, TextureUsage usage, CVPixelBufferRef image, uint32_t plane) noexcept
     : HwTexture(SamplerType::SAMPLER_EXTERNAL, 1, 1, width, height, 1, format, usage),
       context(context),
       externalImage(std::make_shared<MetalExternalImage>(
-              MetalExternalImage::createFromImagePlane(context, image, plane))) {}
+              MetalExternalImage::createFromImagePlane(context, image, plane))) {
+    texture = externalImage->getMtlTexture();
+}
 
 void MetalTexture::terminate() noexcept {
     texture = nil;
@@ -649,10 +647,6 @@ void MetalTexture::terminate() noexcept {
 }
 
 id<MTLTexture> MetalTexture::getMtlTextureForRead() const noexcept {
-    if (target == SamplerType::SAMPLER_EXTERNAL) {
-        return externalImage->getMtlTexture();
-    }
-    // TODO: get LODs to work correctly with swizzling
     return swizzledTextureView ? swizzledTextureView : texture;
 }
 

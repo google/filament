@@ -151,6 +151,10 @@ private:
     Sampler mTarget = Sampler::SAMPLER_2D;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
+    std::array<Swizzle, 4> mSwizzle = {
+           Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
+           Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
+    bool mTextureIsSwizzled;
 
     Usage mUsage = Usage::DEFAULT;
     // there is 7 bytes of padding here

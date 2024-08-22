@@ -230,7 +230,9 @@ TEST_F(BackendTest, FeedbackLoops) {
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = api.createTextureView(texture, sourceLevel, 1);
+                auto textureView = api.createTextureView(texture, sourceLevel, 1,
+                        backend::TextureSwizzle::CHANNEL_0, backend::TextureSwizzle::CHANNEL_1,
+                        backend::TextureSwizzle::CHANNEL_2, backend::TextureSwizzle::CHANNEL_3);
                 DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -260,7 +262,9 @@ TEST_F(BackendTest, FeedbackLoops) {
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
-                auto textureView = api.createTextureView(texture, sourceLevel, 1);
+                auto textureView = api.createTextureView(texture, sourceLevel, 1,
+                        backend::TextureSwizzle::CHANNEL_0, backend::TextureSwizzle::CHANNEL_1,
+                        backend::TextureSwizzle::CHANNEL_2, backend::TextureSwizzle::CHANNEL_3);
                 DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
                         .filterMag = SamplerMagFilter::LINEAR,

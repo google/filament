@@ -230,6 +230,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
+    mSwizzle = builder->mSwizzle;
+    mTextureIsSwizzled = builder->mTextureIsSwizzled;
 
     if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
         // mHandle and mHandleForSampling will be created in setExternalImage()
@@ -239,18 +241,17 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     }
 
     if (UTILS_LIKELY(builder->mImportedId == 0)) {
-        if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
-            mHandle = driver.createTexture(
-                    mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
-        } else {
-            mHandle = driver.createTextureSwizzled(
-                    mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
-                    builder->mSwizzle[0], builder->mSwizzle[1], builder->mSwizzle[2],
-                    builder->mSwizzle[3]);
-        }
+        mHandle = driver.createTexture(
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     } else {
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+    }
+    if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
+        auto swizzleView = driver.createTextureView(mHandle, 0, mLevelCount, builder->mSwizzle[0],
+                builder->mSwizzle[1], builder->mSwizzle[2], builder->mSwizzle[3]);
+        driver.destroyTexture(mHandle);
+        mHandle = swizzleView;
     }
     mHandleForSampling = mHandle;
 }
@@ -440,7 +441,17 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     // external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
-    setHandles(api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image));
+
+    auto texture = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
+
+    if (mTextureIsSwizzled) {
+        auto swizzleView = api.createTextureView(
+                texture, 0, mLevelCount, mSwizzle[0], mSwizzle[1], mSwizzle[2], mSwizzle[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
@@ -451,7 +462,18 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
     // the external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
-    setHandles(api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane));
+
+    auto texture =
+            api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
+
+    if (mTextureIsSwizzled) {
+        auto swizzleView = api.createTextureView(
+                texture, 0, mLevelCount, mSwizzle[0], mSwizzle[1], mSwizzle[2], mSwizzle[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
@@ -488,7 +510,6 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
 }
 
 bool FTexture::textureHandleCanMutate() const noexcept {
-    // TODO: this will eventually include swizzling
     return (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) ||
             mTarget == SamplerType::SAMPLER_EXTERNAL;
 }
@@ -561,8 +582,9 @@ backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noe
         if (range.empty()) {
             setHandleForSampling(mHandle);
         } else {
-            setHandleForSampling(
-                    mDriver->createTextureView(mHandle, range.first, range.last - range.first));
+            setHandleForSampling(mDriver->createTextureView(mHandle, range.first,
+                    range.last - range.first, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
+                    TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
         }
     }
     return mHandleForSampling;

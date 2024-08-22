@@ -425,10 +425,8 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
-            target, levels, format, samples, width, height, depth, usage,
-            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
+    mContext->textures.insert(construct_handle<MetalTexture>(
+            th, *mContext, target, levels, format, samples, width, height, depth, usage));
 
     DEBUG_LOG(
             "createTextureR(th = %d, target = %s, levels = %d, format = ?, samples = %d, width = "
@@ -440,24 +438,18 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage,
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    // Clamp sample count to what the device supports.
-    auto& sc = mContext->sampleCountLookup;
-    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
-
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
-            target, levels, format, samples, width, height, depth, usage, r, g, b, a));
-
-    DEBUG_LOG(
-            "createTextureSwizzledR(th = %d, target = %s, levels = %d, format = ?, samples = %d, "
-            "width = %d, height = %d, depth = %d, usage = %s, r = ?, g = ?, b = ?, a = ?)\n",
-            th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
+    auto texture = alloc_handle<MetalTexture>();
+    createTextureR(texture, target, levels, format, samples, width, height, depth, usage);
+    createTextureViewR(th, texture, 0, levels, r, g, b, a);
+    destroyTexture(texture);
 }
 
-void MetalDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+void MetalDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        uint8_t baseLevel, uint8_t levelCount,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     MetalTexture const* src = handle_cast<MetalTexture>(srch);
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
-            src, baseLevel, levelCount));
+    mContext->textures.insert(
+            construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount, r, g, b, a));
 }
 
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,

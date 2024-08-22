@@ -163,7 +163,9 @@ TEST_F(BackendTest, TextureViewLod) {
         // Level 1:   64x64 (green)             <-- base
         // Level 2:   32x32 (blue)              <--- white triangle rendered
         // Level 3:   16x16 (yellow)            <-- max
-        auto texture13 = api.createTextureView(texture, 1, 3);
+        auto texture13 = api.createTextureView(texture, 1, 3, backend::TextureSwizzle::CHANNEL_0,
+                backend::TextureSwizzle::CHANNEL_1, backend::TextureSwizzle::CHANNEL_2,
+                backend::TextureSwizzle::CHANNEL_3);
 
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
@@ -218,7 +220,9 @@ TEST_F(BackendTest, TextureViewLod) {
 
         // Adjust the base mip to 2.
         // Note that this is done without another call to updateSamplerGroup.
-        auto texture22 = api.createTextureView(texture, 2, 2);
+        auto texture22 = api.createTextureView(texture, 2, 2, backend::TextureSwizzle::CHANNEL_0,
+                backend::TextureSwizzle::CHANNEL_1, backend::TextureSwizzle::CHANNEL_2,
+                backend::TextureSwizzle::CHANNEL_3);
 
         api.updateDescriptorSetTexture(descriptorSet[1], 0, texture22, {
                 .filterMag = SamplerMagFilter::NEAREST,

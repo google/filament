@@ -958,7 +958,8 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
 }
 
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
 
@@ -993,6 +994,8 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     }
     t->gl.baseLevel = (int8_t)std::min(127, srcBaseLevel + baseLevel);
     t->gl.maxLevel  = (int8_t)std::min(127, srcBaseLevel + baseLevel + levelCount - 1);
+
+    // TODO: implement swizzle
 
     // increase reference count to this texture handle
     t->ref = src->ref;

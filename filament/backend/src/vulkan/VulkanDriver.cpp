@@ -573,7 +573,9 @@ void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targ
 }
 
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount,
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+    // TODO: implement swizzle
     VulkanTexture const* src = mResourceAllocator.handle_cast<VulkanTexture const*>(srch);
     auto vktexture = mResourceAllocator.construct<VulkanTexture>(th,
             mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands,

@@ -229,12 +229,13 @@ struct PixelBufferShape {
 class MetalTexture : public HwTexture {
 public:
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
-            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
-            TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept;
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+            TextureUsage usage) noexcept;
 
     // constructor for creating a texture view
-    MetalTexture(MetalContext& context,
-            MetalTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+    MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
+            uint8_t levelCount, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
+            TextureSwizzle a) noexcept;
 
     // Constructor for importing an id<MTLTexture> outside of Filament.
     MetalTexture(MetalContext& context, SamplerType target, uint8_t levels, TextureFormat format,
