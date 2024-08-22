@@ -1618,7 +1618,7 @@ int main(int, char**) {
               }
 
               vzm::VzLight::ShadowOptions sOpts =
-                  lightComponent->GetShadowOptions();
+                  *lightComponent->GetShadowOptions();
 
               ImGui::Indent();
               if (ImGui::CollapsingHeader("Shadow")) {
@@ -2162,7 +2162,7 @@ int main(int, char**) {
               }
             }
             if (ImGui::CollapsingHeader("Sunlight")) {
-              vzm::VzLight::ShadowOptions sOpts = g_light->GetShadowOptions();
+              vzm::VzLight::ShadowOptions sOpts = *(g_light->GetShadowOptions());
               float intensity = g_light->GetIntensity();
               float haloSize = g_light->GetSunHaloSize();
               float haloFallOff = g_light->GetSunHaloFalloff();
