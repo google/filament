@@ -3,7 +3,7 @@
 
 namespace vzm
 {
-    __dojostruct VzAsset : VzBaseComp
+    struct API_EXPORT VzAsset : VzBaseComp
     {
         VzAsset(const VID vid, const std::string& originFrom)
             : VzBaseComp(vid, originFrom, "VzAsset") {}
@@ -14,7 +14,7 @@ namespace vzm
         void ApplyMaterialvariant(int variantIndex);
 
         // Animator //
-        __dojostruct Animator{
+        struct API_EXPORT Animator{
         public:
             enum class PlayMode { INIT_POSE, PLAY, PAUSE, };
         private:

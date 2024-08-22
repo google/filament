@@ -3,7 +3,7 @@
 
 namespace vzm
 {
-    __dojostruct VzCamera : VzSceneComp
+    struct API_EXPORT VzCamera : VzSceneComp
     {
         VzCamera(const VID vid, const std::string& originFrom)
             : VzSceneComp(vid, originFrom, "VzCamera", SCENE_COMPONENT_TYPE::CAMERA) {}
@@ -30,7 +30,7 @@ namespace vzm
         void SetFocusDistance(float distance);
         float GetFocusDistance();
 
-        __dojostruct Controller{
+        struct API_EXPORT Controller{
         private:
             VID vidCam_ = INVALID_VID;
         public:

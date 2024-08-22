@@ -17,9 +17,6 @@
 #else
 #define API_EXPORT __attribute__((visibility("default")))
 #endif
-#define __dojostatic extern "C" API_EXPORT
-#define __dojoclass class API_EXPORT
-#define __dojostruct struct API_EXPORT
 
 #define __FP (float*)&
 #define VZRESULT int
@@ -141,7 +138,7 @@ namespace vzm
         TEXTURE,
     };
 
-    __dojostruct VzBaseComp
+    struct API_EXPORT VzBaseComp
     {
     private:
         VID componentVID_ = INVALID_VID;
@@ -166,7 +163,7 @@ namespace vzm
         std::string GetName();
         void SetName(const std::string& name);
     };
-    __dojostruct VzSceneComp : VzBaseComp
+    struct API_EXPORT VzSceneComp : VzBaseComp
     {
     public:
         enum class EULER_ORDER { XYZ,YXZ, ZXY, ZYX, YZX, XZY };
@@ -219,7 +216,7 @@ namespace vzm
 
         void UpdateMatrix();
     };
-    __dojostruct VzResource : VzBaseComp
+    struct API_EXPORT VzResource : VzBaseComp
     {
     private:
         RES_COMPONENT_TYPE resType_ = RES_COMPONENT_TYPE::RESOURCE;

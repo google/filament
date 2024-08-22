@@ -3,7 +3,7 @@
 
 namespace vzm 
 {
-    __dojostruct VzScene : VzBaseComp
+    struct API_EXPORT VzScene : VzBaseComp
     {
     private:
         float iblRotation_ = 0.0f;

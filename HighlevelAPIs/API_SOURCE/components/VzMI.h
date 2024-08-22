@@ -4,7 +4,7 @@
 
 namespace vzm
 {
-    __dojostruct VzMI : VzResource
+    struct API_EXPORT VzMI : VzResource
     {
         VzMI(const VID vid, const std::string& originFrom)
             : VzResource(vid, originFrom, "VzMI", RES_COMPONENT_TYPE::MATERIALINSTANCE) {}

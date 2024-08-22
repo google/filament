@@ -3,7 +3,7 @@
 
 namespace vzm
 {
-    __dojostruct VzRenderer : VzBaseComp
+    struct API_EXPORT VzRenderer : VzBaseComp
     {
         VzRenderer(const VID vid, const std::string& originFrom)
             : VzBaseComp(vid, originFrom, "VzRenderer") {}

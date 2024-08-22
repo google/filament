@@ -3,7 +3,7 @@
 
 namespace vzm
 {
-    __dojostruct VzBaseActor : VzSceneComp
+    struct API_EXPORT VzBaseActor : VzSceneComp
     {
         VzBaseActor(const VID vid, const std::string & originFrom, const std::string & typeName, const SCENE_COMPONENT_TYPE scenecompType)
             : VzSceneComp(vid, originFrom, typeName, scenecompType) {}
@@ -11,7 +11,7 @@ namespace vzm
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
     };
 
-    __dojostruct VzActor : VzBaseActor
+    struct API_EXPORT VzActor : VzBaseActor
     {
         VzActor(const VID vid, const std::string& originFrom)
             : VzBaseActor(vid, originFrom, "VzActor", SCENE_COMPONENT_TYPE::ACTOR) {}
@@ -29,7 +29,7 @@ namespace vzm
         VID GetGeometry();
     };
 
-    __dojostruct VzBaseSprite
+    struct API_EXPORT VzBaseSprite
     {
     private:
         VzBaseActor* baseActor_;
@@ -42,7 +42,7 @@ namespace vzm
         void SetRotatation(const float rotDeg);
     };
 
-    __dojostruct VzSpriteActor : VzBaseActor, VzBaseSprite
+    struct API_EXPORT VzSpriteActor : VzBaseActor, VzBaseSprite
     {
         VzSpriteActor(const VID vid, const std::string & originFrom)
             : VzBaseActor(vid, originFrom, "VzSpriteActor", SCENE_COMPONENT_TYPE::SPRITE_ACTOR), VzBaseSprite(this) {}
@@ -57,7 +57,7 @@ namespace vzm
         void SetTexture(const VID vidTexture);
     };
 
-    __dojostruct VzTextSpriteActor : VzBaseActor, VzBaseSprite
+    struct API_EXPORT VzTextSpriteActor : VzBaseActor, VzBaseSprite
     {
         VzTextSpriteActor(const VID vid, const std::string & originFrom)
             : VzBaseActor(vid, originFrom, "VzTextSpriteActor", SCENE_COMPONENT_TYPE::TEXT_SPRITE_ACTOR), VzBaseSprite(this) {}

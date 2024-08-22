@@ -3,7 +3,7 @@
 
 namespace vzm
 {
-    __dojostruct VzMaterial : VzResource
+    struct API_EXPORT VzMaterial : VzResource
     {
         VzMaterial(const VID vid, const std::string& originFrom)
             : VzResource(vid, originFrom, "VzMaterial", RES_COMPONENT_TYPE::MATERIAL) {}

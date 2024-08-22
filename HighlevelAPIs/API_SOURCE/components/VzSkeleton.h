@@ -3,7 +3,7 @@
 
 namespace vzm
 {
-    __dojostruct VzSkeleton : VzBaseComp
+    struct API_EXPORT VzSkeleton : VzBaseComp
     {
         VzSkeleton(const VID vid, const std::string& originFrom)
             : VzBaseComp(vid, originFrom, "VzSkeleton") {}
