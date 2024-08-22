@@ -597,6 +597,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
+//    bool hasFXAA = false;//view.getAntiAliasing() == AntiAliasing::FXAA;
     float2 scale = view.updateScale(engine, mFrameInfoManager.getLastFrameInfo(), mFrameRateOptions, mDisplayInfo);
     auto msaaOptions = view.getMultiSampleAntiAliasingOptions();
     auto dsrOptions = view.getDynamicResolutionOptions();
@@ -610,6 +611,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     auto guardBandOptions = view.getGuardBandOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
             engine.getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
+    utils::slog.e <<"hasFXAA=" <<hasFXAA << " view=" << &view << utils::io::endl;
     // FIXME: This is to override some settings that are not supported for multiview at the moment.
     // Remove this when all features are supported.
     if (isRenderingMultiview) {
@@ -703,6 +705,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const bool noBufferPadding = (colorGradingConfig.asSubpass && !hasFXAA && !scaled)
             || engine.debug.renderer.disable_buffer_padding;
 
+//    guardBandOptions.enabled = !noBufferPadding;    
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
     float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
 
@@ -719,13 +722,16 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       the SwapChain, and we might want to keep it this way.
 
         auto round = [](uint32_t x) {
-            constexpr uint32_t rounding = 16u;
+            constexpr uint32_t rounding = 256u;
             return (x + (rounding - 1u)) & ~(rounding - 1u);
         };
 
         // compute the new rendering width and height, multiple of 16.
         const float width  = float(round(svp.width )) + 2.0f * guardBand;
         const float height = float(round(svp.height)) + 2.0f * guardBand;
+
+        utils::slog.e << "new dim=" << width <<"x" << height <<
+                " old dim=" << svp.width << "x" << svp.height << utils::io::endl;
 
         // scale the field-of-view up, so it covers exactly the extra pixels
         const float3 clipSpaceScaling{
@@ -744,8 +750,13 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 1.0f - clipSpaceScaling.y - 2.0f * guardBand / height
         };
 
+        utils::slog.e <<"clipspace scaling=" << clipSpaceScaling << utils::io::endl;
+        utils::slog.e <<"clipspace translation=" << clipSpaceTranslation << utils::io::endl;        
+
         mat4f ts = mat4f::scaling(clipSpaceScaling);
         ts[3].xy = -clipSpaceTranslation;
+
+        utils::slog.e <<"mat=" << ts << utils::io::endl;
 
         // update the camera projection
         cameraInfo.projection = highPrecisionMultiply(ts, cameraInfo.projection);
@@ -759,6 +770,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         svp.height = uint32_t(height);
         xvp.left   = int32_t(guardBand);
         xvp.bottom = int32_t(guardBand);
+        utils::slog.e <<"xvp.left=" << int32_t(guardBand) << utils::io::endl;
     }
 
     view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
@@ -870,6 +882,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
+    utils::slog.e <<"padding=" << !noBufferPadding << " svp=" << svp << utils::io::endl;
+    utils::slog.e <<"padding=" << !noBufferPadding << " xvp=" << xvp << utils::io::endl;
+    
     // the clearFlags and clearColor specified below will only apply when rendering into the
     // temporary color buffer. In particular, they won't apply when rendering into the main
     // swapchain (imported render target above)
@@ -1074,6 +1089,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .format = config.hdrFormat
     };
 
+    utils::slog.e <<"color buffer output=" << colorBufferDesc.width <<"x" << colorBufferDesc.height
+                  << utils::io::endl;
+
     // Set the depth to the number of layers if we're rendering multiview.
     if (isRenderingMultiview) {
         colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
@@ -1227,11 +1245,13 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                         bloomOptions, vignetteOptions);
                 // the padded buffer is resolved now
                 xvp.left = xvp.bottom = 0;
+                utils::slog.e <<"color grading is resolved" << utils::io::endl;
                 svp = xvp;
             }
         }
 
         if (hasFXAA) {
+            utils::slog.e <<"fxaa=" << xvp << utils::io::endl;            
             input = ppm.fxaa(fg, input, xvp, colorGradingConfig.ldrFormat,
                     !hasColorGrading || needsAlphaChannel);
             // the padded buffer is resolved now
@@ -1245,6 +1265,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     .width = viewport.width, .height = viewport.height,
                     .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             xvp.left = xvp.bottom = 0;
+            utils::slog.e <<"scaled" << utils::io::endl;            
             svp = xvp;
         }
     }
@@ -1277,6 +1298,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const bool outputIsSwapChain =
             (input == colorPassOutput) && (viewRenderTarget == mRenderTargetHandle);
     if (mightNeedFinalBlit) {
+        utils::slog.e <<"inside might need final blit xvp!=svp=" << (xvp != svp) <<
+                " xvp=" << xvp << " svp=" << svp << 
+                utils::io::endl;
         if (blendModeTranslucent ||
             xvp != svp ||
             (outputIsSwapChain &&
@@ -1285,6 +1309,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     hasScreenSpaceRefraction ||
                     ssReflectionsOptions.enabled))) {
             assert_invariant(!scaled);
+            utils::slog.e <<"doing final blit " << svp << " " << xvp << utils::io::endl;
             input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
                             .width = vp.width, .height = vp.height,
                             .format = colorGradingConfig.ldrFormat },
@@ -1314,6 +1339,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     fg.forwardResource(fgViewRenderTarget, input);
 
+    utils::slog.e <<"present view=" << &view << " scaled=" << scaled << " mightNeedFinalBlit=" <<
+            mightNeedFinalBlit << 
+            utils::io::endl;
+    
     fg.present(fgViewRenderTarget);
 
     fg.compile();

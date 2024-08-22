@@ -2455,18 +2455,24 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 
                 const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
 
+                auto yy = float4{
+                        (float)vp.left   / input.width,
+                        (float)vp.bottom / input.height,
+                        (float)vp.width  / input.width,
+                        (float)vp.height / input.height
+                };
+                
                 mi->setParameter("dithering", colorGradingConfig.dithering);
                 mi->setParameter("bloom", bloomParameters);
                 mi->setParameter("vignette", vignetteParameters);
                 mi->setParameter("vignetteColor", vignetteOptions.color);
                 mi->setParameter("fxaa", colorGradingConfig.fxaa);
                 mi->setParameter("temporalNoise", temporalNoise);
-                mi->setParameter("viewport", float4{
-                        (float)vp.left   / input.width,
-                        (float)vp.bottom / input.height,
-                        (float)vp.width  / input.width,
-                        (float)vp.height / input.height
-                });
+                mi->setParameter("viewport", yy);
+
+                utils::slog.e <<"yy------------yy in=" <<
+                        input.width << "x" << input.height << " viewport=" << yy << utils::io::endl;
+                        
 
                 const uint8_t variant = uint8_t(colorGradingConfig.translucent ?
                             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
@@ -2508,6 +2514,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
+
+                auto xx = float4{
+                        (float)vp.left   / inDesc.width,
+                        (float)vp.bottom / inDesc.height,
+                        (float)vp.width  / inDesc.width,
+                        (float)vp.height / inDesc.height
+                };
+
+                utils::slog.e <<"xx-----------xx" <<
+                        "in=" << inDesc.width <<"x" << inDesc.height  << " vp=" << vp << " viewport=" << xx << utils::io::endl;
+                
                 mi->setParameter("viewport", float4{
                         (float)vp.left   / inDesc.width,
                         (float)vp.bottom / inDesc.height,

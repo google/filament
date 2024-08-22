@@ -34,6 +34,8 @@
 
 #include <math/mat4.h>
 
+#include <utils/Log.h>
+
 namespace filament {
 
 using namespace backend;
@@ -120,6 +122,8 @@ void PerViewUniforms::prepareViewport(
     s.resolution = { physical.zw, 1.0f / physical.zw };
     s.logicalViewportScale = physical.zw / logical.zw;
     s.logicalViewportOffset = -logical.xy / logical.zw;
+    utils::slog.e << "resolution=" << s.resolution << " logical=" <<
+            s.logicalViewportScale << " " << s.logicalViewportOffset << utils::io::endl;
 }
 
 void PerViewUniforms::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
