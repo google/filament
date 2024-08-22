@@ -7,12 +7,16 @@ extern vzm::VzEngineApp gEngineApp;
 
 namespace vzm
 {
-    void VzActor::SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
+    void VzBaseActor::SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits)
     {
         COMP_ACTOR(rcm, ett, ins, );
         rcm.setLayerMask(ins, layerBits, maskBits);
         UpdateTimeStamp();
     }
+}
+
+namespace vzm
+{
     void VzActor::SetMI(const VID vidMI, const int slot)
     {
         VzMIRes* mi_res = gEngineApp.GetMIRes(vidMI);

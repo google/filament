@@ -129,6 +129,7 @@ namespace vzm
         LIGHT,
         ACTOR,
         SPRITE_ACTOR,
+        TEXT_SPRITE_ACTOR,
     };
 
     enum class RES_COMPONENT_TYPE
