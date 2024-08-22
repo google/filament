@@ -153,23 +153,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     std::uniform_real_distribution<> dis(0.0, 1.0);
     for (size_t i = 0; i < 10; ++i)
     {
-        float randomValue1 = (float)dis(gen); // 0과 1 사이의 난수 생성
-        float randomValue2 = (float)dis(gen); // 0과 1 사이의 난수 생성
-        float randomValue3 = (float)dis(gen); // 0과 1 사이의 난수 생성
-        float randomValue4 = (float)dis(gen); // 0과 1 사이의 난수 생성
+        float randomValue1 = (float)dis(gen);
+        float randomValue2 = (float)dis(gen);
+        float randomValue3 = (float)dis(gen);
+        float randomValue4 = (float)dis(gen);
 
         vzm::VzSpriteActor* sprite = 
             (vzm::VzSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::SPRITE_ACTOR, "my sprite " + std::to_string(i));
 
-        sprite->SetGeometry(randomValue1 * 3.f, randomValue2 * 3.f, 0.5, 0.5);
-        sprite->SetTexture(randomValue4 > 0.5f ? texture1->GetVID() : texture2->GetVID());
-        glm::fvec3 sprite_p(randomValue1 - 0.5f, randomValue2 - 0.5f, randomValue3 - 0.5f);
-        sprite_p *= 7.f;
+        sprite->SetGeometry((randomValue1 + 0.5) * 3.f, (randomValue2 + 0.5f) * 3.f, 0.5, 0.5);
+        sprite->SetTexture(texture2->GetVID());
+        glm::fvec3 sprite_p = glm::fvec3(randomValue1 - 0.5f, randomValue2 - 0.5f, randomValue3 - 0.5f) * 7.f;
         sprite->SetPosition(__FP sprite_p);
         sprite->EnableBillboard(true);
 
         vzm::AppendSceneCompTo(sprite, scene);
     }
+
+    vzm::VzSpriteActor* sprite_on_cam =
+        (vzm::VzSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::SPRITE_ACTOR, "my sprite in front of cam");
+    sprite_on_cam->SetGeometry(2.f, 2.f, 0.5, 0.5);
+    sprite_on_cam->SetTexture(texture1->GetVID());
+    glm::fvec3 sprite_p2 = glm::fvec3(2.f, 1.f, -7.f);
+    sprite_on_cam->SetPosition(__FP sprite_p2);
+    //sprite->EnableBillboard(true);
+    vzm::AppendSceneCompTo(sprite_on_cam, cam); // parent is cam
 
     vzm::AppendSceneCompTo(actor_axis, scene);
     vzm::AppendSceneCompTo(light, scene);
