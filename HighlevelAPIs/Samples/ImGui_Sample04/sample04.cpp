@@ -156,7 +156,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         float randomValue1 = (float)dis(gen);
         float randomValue2 = (float)dis(gen);
         float randomValue3 = (float)dis(gen);
-        float randomValue4 = (float)dis(gen);
 
         vzm::VzSpriteActor* sprite = 
             (vzm::VzSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::SPRITE_ACTOR, "my sprite " + std::to_string(i));
