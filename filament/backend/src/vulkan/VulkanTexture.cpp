@@ -97,13 +97,11 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.extent.depth = 1;
     }
 
-    // Filament expects blit() to work with any texture, so we almost always set these usage flags.
-    // TODO: investigate performance implications of setting these flags.
-    constexpr VkImageUsageFlags blittable = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-            VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
-    if (any(usage & (TextureUsage::BLIT_DST | TextureUsage::BLIT_SRC))) {
-        imageInfo.usage |= blittable;
+    if (any(usage & TextureUsage::BLIT_SRC)) {
+        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+    if (any(usage & TextureUsage::BLIT_DST)) {
+        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     if (any(usage & TextureUsage::SAMPLEABLE)) {
@@ -121,7 +119,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | blittable;
+        imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if (any(usage & TextureUsage::SUBPASS_INPUT)) {
             imageInfo.usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
         }
@@ -130,10 +128,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
     if (any(usage & TextureUsage::UPLOADABLE)) {
-        imageInfo.usage |= blittable;
+        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        imageInfo.usage |= blittable;
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
         // Depth resolves uses a custom shader and therefore needs to be sampleable.
