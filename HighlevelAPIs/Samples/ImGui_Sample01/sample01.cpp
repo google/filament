@@ -1440,6 +1440,7 @@ int main(int, char**) {
               (vzm::VzSceneComp*)vzm::GetVzComponent(currentVID);
           vzm::SCENE_COMPONENT_TYPE type = component->GetSceneCompType();
           ImGui::Text(component->GetName().c_str());
+          ImGui::PushID(component->GetName().c_str());
           if (ImGui::CollapsingHeader(
                   "Transform",
                   ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -1755,7 +1756,7 @@ int main(int, char**) {
             }
             ImGui::Unindent();
           }
-
+          ImGui::PopID();
           break;
         }
         case 1:
