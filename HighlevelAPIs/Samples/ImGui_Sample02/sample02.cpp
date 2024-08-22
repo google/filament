@@ -130,6 +130,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     glm::fvec3 at(0, 0, -4);
     glm::fvec3 u(0, 1, 0);
     cam->SetWorldPose((float*)&p, (float*)&at, (float*)&u);
+    //glm::fvec3 pp, att, uu;
+    //cam->GetWorldPose((float*)&pp, (float*)&att, (float*)&uu);
     cam->SetPerspectiveProjection(0.1f, 1000.f, 45.f, (float)w / (float)h);
     cam->SetMatrixAutoUpdate(false);
     vzm::VzCamera::Controller* cc = cam->GetController();
@@ -143,11 +145,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         vzm::VzTexture* texture = (vzm::VzTexture*)vzm::NewResComponent(vzm::RES_COMPONENT_TYPE::TEXTURE, "my image");
         texture->ReadImage("../assets/testimage.png");
-        sprite->SetGeometry(5, 5, 0.5, 0.5);
+        sprite->SetGeometry(3, 3, 0.5, 0.5);
         sprite->SetTexture(texture->GetVID());
+
+        sprite->EnableBillboard(true);
     }
 
-    //vzm::AppendSceneCompTo(sprite, scene);
+    vzm::AppendSceneCompTo(sprite, scene);
     vzm::AppendSceneCompTo(actor, scene);
     vzm::AppendSceneCompTo(light, scene);
     vzm::AppendSceneCompTo(cam, scene);

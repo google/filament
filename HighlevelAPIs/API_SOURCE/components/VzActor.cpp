@@ -97,6 +97,8 @@ namespace vzm
 {
     void VzBaseSprite::EnableBillboard(const bool billboardEnabled)
     {
+        VzActorRes* actor_res = gEngineApp.GetActorRes(baseActor_->GetVID());
+        actor_res->isBillboard = billboardEnabled;
         baseActor_->UpdateTimeStamp();
     }
 

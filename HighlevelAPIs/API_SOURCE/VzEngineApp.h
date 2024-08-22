@@ -132,6 +132,7 @@ namespace vzm
 
     public:
         bool isSprite = false;
+        bool isBillboard = false;
         bool culling = true;
         bool castShadow = true;
         bool receiveShadow = true;

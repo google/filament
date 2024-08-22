@@ -7,6 +7,7 @@ namespace vzm
     {
         VzBaseActor(const VID vid, const std::string & originFrom, const std::string & typeName, const SCENE_COMPONENT_TYPE scenecompType)
             : VzSceneComp(vid, originFrom, typeName, scenecompType) {}
+
         void SetVisibleLayerMask(const uint8_t layerBits, const uint8_t maskBits);
     };
 
@@ -14,7 +15,6 @@ namespace vzm
     {
         VzActor(const VID vid, const std::string& originFrom)
             : VzBaseActor(vid, originFrom, "VzActor", SCENE_COMPONENT_TYPE::ACTOR) {}
-
 
         void SetRenderableRes(const VID vidGeo, const std::vector<VID>& vidMIs);
         void SetMI(const VID vidMI, const int slot = 0);

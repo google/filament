@@ -1226,13 +1226,6 @@ namespace vzm
                     VzTextureRes* tex_res = gEngineApp.GetTextureRes(it.second);
                     tex_res->texture = fasset->mTextures[it.first].texture;
                     tex_res->isAsyncLocked = false;
-
-                    //if (regTexMap.find(tex_res->texture) != regTexMap.end())
-                    //{
-                    //    count++;
-                    //    //tex_res->texture->
-                    //}
-                    //regTexMap.insert(tex_res->texture);
                 }
                 //backlog::post("REDUNDANT TEXTURES : " + std::to_string(count), backlog::LogLevel::Default);
                 asset_res->asyncTextures.clear();
@@ -1256,35 +1249,52 @@ namespace vzm
         Renderer* renderer = render_path->GetRenderer();
 
         auto& tcm = gEngine->getTransformManager();
-        scene->forEach([&tcm](Entity ett) {
+        tcm.commitLocalTransformTransaction();
+
+        double3 v = camera->getForwardVector();
+        double3 u = camera->getUpVector();
+        mat4 ws2cs = camera->getViewMatrix();
+
+        auto ToString = [](double3 v) -> std::string
+            {
+                using namespace std;
+                return "(" + to_string(v.x) + ", " + to_string(v.y) + ", " + to_string(v.z) + ")";
+            };
+        static size_t debug_count = 0;
+        if (debug_count++ % 50 == 0)
+        {
+            backlog::post("view : " + ToString(v), backlog::LogLevel::Default);
+            backlog::post("up   : " + ToString(u), backlog::LogLevel::Default);
+        }
+
+        std::map<Entity, mat4f> restore_billboard_tr;
+        scene->forEach([&tcm, &restore_billboard_tr, &u, &v](Entity ett) {
             VID vid = ett.getId();
+
             VzSceneComp* comp = gEngineApp.GetVzComponent<VzSceneComp>(vid);
             if (comp && comp->IsMatrixAutoUpdate())
             {
                 comp->UpdateMatrix();
             }
-        });
 
-        // setup
-        //if (preRender) {
-        //    preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
-        //}
+            VzActorRes* actor_res = gEngineApp.GetActorRes(vid);
+            if (actor_res && actor_res->isBillboard)
+            {
+                auto ti = tcm.getInstance(ett);
+                mat4f os2parent = tcm.getTransform(ti); // local
+                restore_billboard_tr[ett] = os2parent;
 
-        //if (mReconfigureCameras) {
-        //    window->configureCamerasForWindow();
-        //    mReconfigureCameras = false;
-        //}
+                mat4 os2ws = (mat4)tcm.getWorldTransform(ti);
+                mat4 parent2ws = os2ws * inverse(os2parent); // fixed
+                double4 p_ws_h = os2ws * double4(0, 0, 0, 1);
+                double3 p_ws = p_ws_h.xyz / p_ws_h.w; // fixed
 
-        //if (config.splitView) {
-        //    if (!window->mOrthoView->getView()->hasCamera()) {
-        //        Camera const* debugDirectionalShadowCamera =
-        //            window->mMainView->getView()->getDirectionalShadowCamera();
-        //        if (debugDirectionalShadowCamera) {
-        //            window->mOrthoView->setCamera(
-        //                const_cast<Camera*>(debugDirectionalShadowCamera));
-        //        }
-        //    }
-        //}
+                mat4 os2ws_new = mat4::lookTo(-v, p_ws, u);
+                mat4 os2parent_new = inverse(parent2ws) * os2ws_new;
+
+                tcm.setTransform(ti, os2parent_new);
+            }
+            });
 
         filament::Texture* fogColorTexture = gEngineApp.GetSceneRes(vidScene)->GetIBL()->getFogTexture();
         render_path->viewSettings.fog.skyColor = fogColorTexture;
@@ -1294,6 +1304,12 @@ namespace vzm
         if (renderer->beginFrame(sc)) {
             renderer->render(view);
             renderer->endFrame();
+        }
+
+        for (auto& it : restore_billboard_tr)
+        {
+            auto ti = tcm.getInstance(it.first);
+            tcm.setTransform(ti, it.second);
         }
 
         if (gEngine->getBackend() == Backend::OPENGL)
