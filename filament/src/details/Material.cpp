@@ -192,19 +192,24 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
+    // Print a warning if the material's stereo type doesn't align with the engine's setting.
     MaterialDomain materialDomain;
     materialParser->getMaterialDomain(&materialDomain);
     if (materialDomain == MaterialDomain::SURFACE) {
         StereoscopicType const engineStereoscopicType = engine.getConfig().stereoscopicType;
-        StereoscopicType materialStereoscopicType = StereoscopicType::NONE;
-        materialParser->getStereoscopicType(&materialStereoscopicType);
-        if (materialStereoscopicType != engineStereoscopicType) {
-            CString name;
-            materialParser->getName(&name);
-            slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
-                    << "' is " << (int)materialStereoscopicType
-                    << ", which is not compatiable with the engine's setting "
-                    << (int)engineStereoscopicType << "." << io::endl;
+        // Default materials are always compiled with either 'instanced' or 'multiview'.
+        // So, we only verify compatibility if the engine is set up for stereo.
+        if (engineStereoscopicType != StereoscopicType::NONE) {
+            StereoscopicType materialStereoscopicType = StereoscopicType::NONE;
+            materialParser->getStereoscopicType(&materialStereoscopicType);
+            if (materialStereoscopicType != engineStereoscopicType) {
+                CString name;
+                materialParser->getName(&name);
+                slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
+                        << "' is " << (int)materialStereoscopicType
+                        << ", which is not compatiable with the engine's setting "
+                        << (int)engineStereoscopicType << "." << io::endl;
+            }
         }
     }
 
