@@ -713,8 +713,8 @@ public:
 
     struct CustomVariable {
         utils::CString name;
-        Precision precision;
-        bool hasPrecision;
+        Precision precision = Precision::DEFAULT;
+        bool hasPrecision = false;
     };
 
     static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
