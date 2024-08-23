@@ -26,7 +26,6 @@ void builderMakeName(utils::CString& outName, const char* name, size_t len) noex
     }
     size_t const length = std::min(len, size_t { 128u });
     outName = utils::CString(name, length);
-    return;
 }
 
 } // namespace filament

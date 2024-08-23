@@ -65,7 +65,7 @@ public:
         return static_cast<Builder&>(*this);
     }
 
-    utils::CString getName() const noexcept { return mName; }
+    utils::CString const& getName() const noexcept { return mName; }
 
 private:
     utils::CString mName;
