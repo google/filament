@@ -178,6 +178,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     //sprite->EnableBillboard(true);
     vzm::AppendSceneCompTo(sprite_on_cam, cam); // parent is cam
 
+    vzm::VzTextSpriteActor* textsprite_on_cam =
+        (vzm::VzTextSpriteActor*)vzm::NewSceneComponent(vzm::SCENE_COMPONENT_TYPE::TEXT_SPRITE_ACTOR, "my text-sprite in front of cam");
+    textsprite_on_cam->SetText("Graphica Text", 1.f, 0.5f, 0.5f);
+    sprite_p2.x = -2.f;
+    textsprite_on_cam->SetPosition(__FP sprite_p2);
+    //sprite->EnableBillboard(true);
+    vzm::AppendSceneCompTo(textsprite_on_cam, cam); // parent is cam
+
     vzm::AppendSceneCompTo(actor_axis, scene);
     vzm::AppendSceneCompTo(light, scene);
     vzm::AppendSceneCompTo(cam, scene);

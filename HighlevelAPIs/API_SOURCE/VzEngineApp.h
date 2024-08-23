@@ -149,6 +149,7 @@ namespace vzm
         // for sprite
         VertexBuffer* intrinsicVB = nullptr;
         IndexBuffer* intrinsicIB = nullptr;
+        Texture* intrinsicTexture = nullptr;
         std::vector<char> intrinsicCache;
 
         ~VzActorRes();

@@ -213,10 +213,12 @@ namespace vzm
             gEngineApp.RemoveComponent(vidMIs_[0]);
             gEngine->destroy(intrinsicVB);
             gEngine->destroy(intrinsicIB);
+            gEngine->destroy(intrinsicTexture);
             intrinsicVB = nullptr;
             intrinsicIB = nullptr;
+            intrinsicTexture = nullptr;
         }
-        assert(intrinsicVB == nullptr && intrinsicIB == nullptr);
+        assert(intrinsicVB == nullptr && intrinsicIB == nullptr && intrinsicTexture == nullptr);
 
     }
 #pragma endregion
@@ -909,11 +911,14 @@ namespace vzm
         switch (compType)
         {
         case SCENE_COMPONENT_TYPE::SPRITE_ACTOR:
+        case SCENE_COMPONENT_TYPE::TEXT_SPRITE_ACTOR:
         {
             actorSceneMap_[vid] = 0; // first creation
             actorResMap_[vid] = std::make_unique<VzActorRes>();
 
-            auto it = vzCompMap_.emplace(vid, std::make_unique<VzSpriteActor>(vid, "CreateSceneComponent"));
+            auto it = compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR?
+                vzCompMap_.emplace(vid, std::make_unique<VzSpriteActor>(vid, "CreateSceneComponent")) :
+                vzCompMap_.emplace(vid, std::make_unique<VzTextSpriteActor>(vid, "CreateSceneComponent"));
             v_comp = (VzSceneComp*)it.first->second.get();
 
             VzActorRes* actor_res = actorResMap_[vid].get();
