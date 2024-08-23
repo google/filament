@@ -7,7 +7,9 @@ cmake_minimum_required(VERSION 3.19)
 # Project declaration
 # ==================================================================================================
 project(VizAPIs_Linux)
-
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+ set(CMAKE_HOST_SYSTEM_NAME "Windows") 
+ endif() 
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================
@@ -190,6 +192,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ../../libs/bluevk/include
     ../../libs/utils/include
     ../../libs/filamentapp/include
+    ../../third_party/stb
+    ../../third_party/libassimp/include
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX d)
