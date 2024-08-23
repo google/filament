@@ -588,8 +588,8 @@ void FRenderableManager::create(
             // full size of the UBO.
             instances.handle = driver.createBufferObject(sizeof(PerRenderableUib),
                     BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
-            if (auto name = instances.buffer->getName()) {
-                driver.setDebugTag(instances.handle.getId(), std::move(*name));
+            if (auto name = instances.buffer->getName(); !name.empty()) {
+                driver.setDebugTag(instances.handle.getId(), std::move(name));
             }
         }
 

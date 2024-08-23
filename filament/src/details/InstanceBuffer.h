@@ -28,8 +28,6 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
-#include <optional>
-
 namespace filament {
 
 class FEngine;
@@ -49,13 +47,13 @@ public:
     void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo,
             backend::Handle<backend::HwBufferObject> handle);
 
-    std::optional<utils::CString> const& getName() const noexcept { return mName; }
+    utils::CString const& getName() const noexcept { return mName; }
 
 private:
     friend class RenderableManager;
 
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
-    std::optional<utils::CString> mName;
+    utils::CString mName;
     size_t mInstanceCount;
 };
 

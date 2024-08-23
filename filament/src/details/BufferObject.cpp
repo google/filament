@@ -29,7 +29,6 @@ namespace filament {
 struct BufferObject::BuilderDetails {
     BindingType mBindingType = BindingType::VERTEX;
     uint32_t mByteCount = 0;
-    std::optional<utils::CString> mName;
 };
 
 using BuilderType = BufferObject;
@@ -50,15 +49,6 @@ BufferObject::Builder& BufferObject::Builder::bindingType(BindingType bindingTyp
     return *this;
 }
 
-BufferObject::Builder& BufferObject::Builder::name(const char* name, size_t len) noexcept {
-    if (!name) {
-        return *this;
-    }
-    size_t const length = std::min(len, size_t { 128u });
-    mImpl->mName = utils::CString(name, length);
-    return *this;
-}
-
 BufferObject* BufferObject::Builder::build(Engine& engine) {
     return downcast(engine).createBufferObject(*this);
 }
@@ -70,8 +60,8 @@ FBufferObject::FBufferObject(FEngine& engine, const BufferObject::Builder& build
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createBufferObject(builder->mByteCount, builder->mBindingType,
             backend::BufferUsage::STATIC);
-    if (auto name = builder->mName) {
-        driver.setDebugTag(mHandle.getId(), std::move(*name));
+    if (auto name = builder.getName(); !name.empty()) {
+        driver.setDebugTag(mHandle.getId(), std::move(name));
     }
 }
 

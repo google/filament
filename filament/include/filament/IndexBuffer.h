@@ -59,7 +59,7 @@ public:
         UINT = uint8_t(backend::ElementType::UINT),      //!< 32-bit indices
     };
 
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
     public:
         Builder() noexcept;
@@ -96,7 +96,7 @@ public:
          * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
          */
-        Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
+        // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
 
         /**
          * Creates the IndexBuffer object and returns a pointer to it. After creation, the index

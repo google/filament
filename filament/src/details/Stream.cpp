@@ -37,7 +37,6 @@ struct Stream::BuilderDetails {
     void* mStream = nullptr;
     uint32_t mWidth = 0;
     uint32_t mHeight = 0;
-    std::optional<utils::CString> mName;
 };
 
 using BuilderType = Stream;
@@ -64,15 +63,6 @@ Stream::Builder& Stream::Builder::height(uint32_t height) noexcept {
     return *this;
 }
 
-Stream::Builder& Stream::Builder::name(const char* name, size_t len) noexcept {
-    if (!name) {
-        return *this;
-    }
-    size_t const length = std::min(len, size_t { 128u });
-    mImpl->mName = utils::CString(name, length);
-    return *this;
-}
-
 Stream* Stream::Builder::build(Engine& engine) {
     return downcast(engine).createStream(*this);
 }
@@ -93,8 +83,8 @@ FStream::FStream(FEngine& engine, const Builder& builder) noexcept
         mStreamHandle = engine.getDriverApi().createStreamAcquired();
     }
 
-    if (auto name = builder->mName) {
-        engine.getDriverApi().setDebugTag(mStreamHandle.getId(), std::move(*name));
+    if (auto name = builder.getName(); !name.empty()) {
+        engine.getDriverApi().setDebugTag(mStreamHandle.getId(), std::move(name));
     }
 }
 

@@ -33,7 +33,6 @@ using namespace backend;
 struct InstanceBuffer::BuilderDetails {
     size_t mInstanceCount = 0;
     math::mat4f const* mLocalTransforms = nullptr;
-    std::optional<utils::CString> mName;
 };
 
 using BuilderType = InstanceBuffer;
@@ -53,15 +52,6 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
     return *this;
 }
 
-InstanceBuffer::Builder& InstanceBuffer::Builder::name(const char* name, size_t len) noexcept {
-    if (!name) {
-        return *this;
-    }
-    size_t const length = std::min(len, size_t { 128u });
-    mImpl->mName = utils::CString(name, length);
-    return *this;
-}
-
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount >= 1) << "instanceCount must be >= 1.";
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances())
@@ -74,7 +64,7 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
 // ------------------------------------------------------------------------------------------------
 
 FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
-    : mName(std::move(builder->mName)) {
+    : mName(builder.getName()) {
     mInstanceCount = builder->mInstanceCount;
 
     mLocalTransforms.reserve(mInstanceCount);
