@@ -655,16 +655,16 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
-                    hasColorGrading &&
                     msaaSampleCount <= 1 &&
-                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported() &&
+                    hasColorGrading &&
+                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     !engine.debug.renderer.disable_subpasses,
             .customResolve =
-                    msaaOptions.customResolve &&
                     msaaSampleCount > 1 &&
-                    hasColorGrading &&
                     driver.isFrameBufferFetchMultiSampleSupported() &&
+                    msaaOptions.customResolve &&
+                    hasColorGrading &&
                     !engine.debug.renderer.disable_subpasses,
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
@@ -672,6 +672,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .ldrFormat = (hasColorGrading && hasFXAA) ?
                     TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
     };
+
+    // by construction (msaaSampleCount) both asSubpass and customResolve can't be true
+    assert_invariant(colorGradingConfig.asSubpass + colorGradingConfig.customResolve < 2);
 
     // whether we're scaled at all
      bool scaled = any(notEqual(scale, float2(1.0f)));
@@ -1108,13 +1111,18 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
 
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
-        // this cancels the colorPass() call above if refraction is active.
-        // the color pass + refraction + color-grading as subpass if needed
+        // This cancels the colorPass() call above if refraction is active.
+        // The color pass + refraction + color-grading as subpass if needed
         const auto [output, enabled] = RendererUtils::refractionPass(fg, mEngine, view,
                 config, ssrConfig, colorGradingConfigForColor, pass);
-        colorPassOutput = output;
         hasScreenSpaceRefraction = enabled;
+        if (enabled) {
+            colorPassOutput = output;
+        }
     }
+
+    // Here, colorPassOutput can be either tonemapped or not; it's tonemapped if color gradding
+    // is done as a subpass.
 
     if (colorGradingConfig.customResolve) {
         // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
@@ -1122,6 +1130,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       efficient by using ARM_shader_framebuffer_fetch. We use a load/store (i.e.
         //       subpass) here because it's more convenient.
         colorPassOutput = ppm.customResolveUncompressPass(fg, colorPassOutput);
+        blackboard["color"] = colorPassOutput;
     }
 
     // export the color buffer if screen-space reflections are enabled
@@ -1137,7 +1146,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     // The "output" of this pass is going to be used during the next frame as
                     // an "import".
                     builder.sideEffect();
-                    data.history = builder.sample(colorPassOutput); // FIXME: an access must be declared for detach(), why?
+
+                    // we can't use colorPassOutput here because it could be tonemapped
+                    auto color = blackboard.get<FrameGraphTexture>("color");
+                    data.history = builder.sample(color); // FIXME: an access must be declared for detach(), why?
                 }, [&view, projection](FrameGraphResources const& resources, auto const& data,
                         backend::DriverApi&) {
                     auto& history = view.getFrameHistory();

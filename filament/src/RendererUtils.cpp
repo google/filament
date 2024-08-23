@@ -153,6 +153,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 }
 
                 if (colorGradingConfig.asSubpass) {
+                    assert_invariant(config.msaa <= 1);
+                    assert_invariant(colorBufferDesc.samples <= 1);
                     data.output = builder.createTexture("Tonemapped Buffer", {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
@@ -263,7 +265,9 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
     // when color grading is done as a subpass, the output of the color-pass is the ldr buffer
     auto output = colorGradingConfig.asSubpass ? colorPass->output : colorPass->color;
 
-    blackboard["color"] = output;
+    // linear color buffer
+    blackboard["color"] = colorPass->color;
+
     return output;
 }
 
@@ -275,7 +279,7 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
         RenderPass const& pass) noexcept {
 
     auto& blackboard = fg.getBlackboard();
-    auto input = blackboard.get<FrameGraphTexture>("color");
+
     FrameGraphId<FrameGraphTexture> output;
 
     // find the first refractive object in channel 2
@@ -295,13 +299,13 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
         PostProcessManager& ppm = engine.getPostProcessManager();
 
         // clear the color/depth buffers, which will orphan (and cull) the color pass
-        input.clear();
         blackboard.remove("color");
         blackboard.remove("depth");
 
         config.hasScreenSpaceReflectionsOrRefractions = true;
 
-        input = RendererUtils::colorPass(fg, "Color Pass (opaque)", engine, view, {
+        FrameGraphId<FrameGraphTexture> const input = RendererUtils::colorPass(fg,
+                "Color Pass (opaque)", engine, view, {
                         // When rendering the opaques, we need to conserve the sample buffer,
                         // so create a config that specifies the sample count.
                         .width = config.physicalViewport.width,
@@ -330,7 +334,8 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
         output = RendererUtils::colorPass(fg, "Color Pass (transparent)", engine, view, {
                         .width = config.physicalViewport.width,
                         .height = config.physicalViewport.height },
-                config, colorGradingConfig, pass.getExecutor(refraction, pass.end()));
+                config, colorGradingConfig,
+                pass.getExecutor(refraction, pass.end()));
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
             // We need to do a resolve here because later passes (such as color grading or DoF) will
@@ -339,8 +344,8 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
             // conserve the multi-sample buffer.
             output = ppm.resolve(fg, "Resolved Color Buffer", output, { .levels = 1 });
         }
-    } else {
-        output = input;
+        // this becomes the screen-space reflection history
+        blackboard["color"] = output;
     }
     return { output, hasScreenSpaceRefraction };
 }
