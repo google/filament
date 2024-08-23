@@ -3193,6 +3193,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                 assert_invariant(dst);
                 assert_invariant(srcDesc.format == dstDesc.format);
                 assert_invariant(srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height);
+                assert_invariant(srcDesc.samples > 1 && dstDesc.samples <= 1);
                 driver.resolve(
                         dst, dstSubDesc.level, dstSubDesc.layer,
                         src, srcSubDesc.level, srcSubDesc.layer);
