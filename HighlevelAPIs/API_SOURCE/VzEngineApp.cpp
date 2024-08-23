@@ -66,6 +66,204 @@ namespace vzm
 
 namespace vzm
 {
+#pragma region // VzTypesetter
+    void VzTypesetter::Measure()
+    {
+        if (isMeasured)
+        {
+            return;
+        }
+        FontVID font = textFormat.font;
+        VzFontRes* font_res = gEngineApp.GetFontRes(font);
+        if ((font == INVALID_VID) || (text.empty()))
+        {
+            return;
+        }
+        for (wchar_t glyph : text)
+        {
+            glyphCodes.emplace_back(glyph);
+        }
+        textWidth = MeasureLinesWidth(font);
+        int32_t numberOfLines = linesWidth.size();
+        textHeight = font_res->GetLineHeight() * numberOfLines;
+        textHeight += (numberOfLines - 1) * textFormat.leading;
+        isMeasured = true;
+    }
+    int32_t VzTypesetter::MeasureLinesWidth(FontVID font)
+    {
+        VzFontRes* font_res = gEngineApp.GetFontRes(font);
+        int32_t lineMaxWidth = 0;
+        int32_t lineWidth = 0;
+        int32_t wordWidth = 0;
+        int32_t kerning = textFormat.kerning;
+        for (uint32_t glyphCode : glyphCodes)
+        {
+            if (font_res->IsNewLine(glyphCode))
+            {
+                lineWidth = lineWidth - kerning;
+                lineMaxWidth = std::max(lineWidth, lineMaxWidth);
+                linesWidth.emplace_back(lineWidth);
+                lineWidth = 0;
+                wordWidth = 0;
+            }
+            else
+            {
+                int32_t advanceX = font_res->GetAdvanceX(glyphCode);
+                lineWidth += advanceX;
+                if (font_res->IsSpace(glyphCode))
+                {
+                    wordWidth = 0;
+                }
+                else
+                {
+                    wordWidth += advanceX;
+                }
+                if ((fixedWidth > 0) && (fixedWidth < lineWidth))
+                {
+                    if (lineWidth > wordWidth)
+                    {
+                        lineWidth -= wordWidth;
+                    }
+                    else
+                    {
+                        lineWidth -= advanceX;
+                        wordWidth = advanceX;
+                    }
+                    lineWidth = lineWidth - kerning;
+                    lineMaxWidth = std::max(lineWidth, lineMaxWidth);
+                    linesWidth.emplace_back(lineWidth);
+                    lineWidth = wordWidth;
+                }
+            }
+        }
+        lineWidth = lineWidth - kerning;
+        lineMaxWidth = std::max(lineWidth, lineMaxWidth);
+        if (lineWidth > 0)
+        {
+            linesWidth.emplace_back(lineWidth);
+        }
+        return lineMaxWidth;
+    }
+    void VzTypesetter::Typeset()
+    {
+        if (texture)
+        {
+            return;
+        }
+        Measure();
+        FontVID font = textFormat.font;
+        VzFontRes* font_res = gEngineApp.GetFontRes(font);
+        int32_t width = (fixedWidth > 0) ? fixedWidth : textWidth;
+        int32_t height = (fixedHeight > 0) ? fixedHeight : textHeight;
+        if ((font == INVALID_VID) || (width <= 0) || (height <= 0))
+        {
+            return;
+        }
+        uint8_t* pixels = new uint8_t[width * height];
+        TextAlign textAlign = textFormat.textAlign;
+        int32_t numberOfLines = linesWidth.size();
+        int32_t lineX = GetLeftBlankWidth(textAlign, linesWidth[0], width);
+        int32_t lineY = GetTopBlankHeight(textAlign, textHeight, height);
+        int32_t lineWidthStack = 0;
+        int32_t lineHeight = font_res->GetLineHeight();
+        int32_t lineIndex = 0;
+        int32_t baselineY = lineHeight * 3 / 4;
+        for (uint32_t glyphCode : glyphCodes)
+        {
+            if (font_res->IsNewLine(glyphCode))
+            {
+                continue;
+            }
+            int32_t bearingX = font_res->GetBearingX(glyphCode);
+            int32_t bearingY = baselineY - font_res->GetBearingY(glyphCode);
+            int32_t glyphWidth = font_res->GetGlyphWidth(glyphCode);
+            int32_t glyphHeight = font_res->GetGlyphHeight(glyphCode);
+            const uint8_t* glyphPixels = font_res->GetGlyphPixels(glyphCode);
+            for (int32_t glyphY = 0; glyphY < glyphHeight; glyphY++)
+            {
+                for (int32_t glyphX = 0; glyphX < glyphWidth; glyphX++)
+                {
+                    int32_t x = lineX + glyphX + bearingX;
+                    int32_t y = lineY + glyphY + bearingY;
+                    if ((x < 0) || (x >= width) || (y < 0) || (y >= height))
+                    {
+                        continue;
+                    }
+                    int32_t index = (y * width) + x;
+                    uint16_t pixel = pixels[index];
+                    pixel += glyphPixels[(glyphWidth * glyphY) + glyphX];
+                    pixel = (pixel < 0xff) ? pixel : 0xff;
+                    pixels[index] = (uint8_t) pixel;
+                }
+            }
+            int32_t advanceX = font_res->GetAdvanceX(glyphCode) + textFormat.kerning;
+            lineWidthStack += advanceX;
+            if (lineWidthStack < linesWidth[lineIndex])
+            {
+                lineX += advanceX;
+            }
+            else
+            {
+                lineWidthStack = 0;
+                lineIndex++;
+                if (lineIndex < numberOfLines)
+                {
+                    lineX = GetLeftBlankWidth(textAlign, linesWidth[lineIndex], width);
+                    lineY += lineHeight;
+                }
+            }
+        }
+        PixelBufferDescriptor buffer(
+            pixels, width * height,
+            PixelDataFormat::R,
+            PixelDataType::UBYTE,
+            [](void* data, size_t, void*) { delete[] reinterpret_cast<uint8_t*>(data); }
+        );
+        texture = Texture::Builder()
+            .width(width)
+            .height(height)
+            .levels(0xff)
+            .format(Texture::InternalFormat::R8)
+            .sampler(Texture::Sampler::SAMPLER_2D)
+            .build(*gEngine);
+        texture->setImage(*gEngine, 0, std::move(buffer));
+        texture->generateMipmaps(*gEngine);
+    }
+    int32_t VzTypesetter::GetLeftBlankWidth(const TextAlign textAlign, const int32_t lineWidth, const int32_t width)
+    {
+        switch (textAlign) {
+            case TextAlign::RIGHT:
+            case TextAlign::TOP_RIGHT:
+            case TextAlign::MIDDLE_RIGHT:
+            case TextAlign::BOTTOM_RIGHT:
+                return width - lineWidth;
+            case TextAlign::CENTER:
+            case TextAlign::TOP_CENTER:
+            case TextAlign::MIDDLE_CENTER:
+            case TextAlign::BOTTOM_CENTER:
+                return (width - lineWidth) / 2;
+            default:
+                return 0;
+        }
+    }
+    int32_t VzTypesetter::GetTopBlankHeight(const TextAlign textAlign, const int32_t textHeight, const int32_t height)
+    {
+        switch (textAlign)
+        {
+            case TextAlign::MIDDLE_LEFT:
+            case TextAlign::MIDDLE_CENTER:
+            case TextAlign::MIDDLE_RIGHT:
+                return (height - textHeight) / 2;
+            case TextAlign::BOTTOM_LEFT:
+            case TextAlign::BOTTOM_CENTER:
+            case TextAlign::BOTTOM_RIGHT:
+                return height - textHeight;
+            default:
+                return 0;
+        }
+    }
+#pragma endregion
+
 #pragma region // VzSceneRes
     VzSceneRes::VzSceneRes() { NewIBL(); };
     VzSceneRes::~VzSceneRes() { Destory(); };
@@ -305,6 +503,107 @@ namespace vzm
     }
 #pragma endregion
 }
+
+#pragma region // VzFontRes
+    VzFontRes::~VzFontRes()
+    {
+        if (ftFace_)
+        {
+            FT_Done_Face(ftFace_);
+            ftFace_ = nullptr;
+        }
+    }
+    bool vzm::VzFontRes::IsSpace(const uint32_t glyphCode)
+    {
+        return (glyphCode == 0x00000020U) || (glyphCode == 0x00000009U);
+    }
+    bool vzm::VzFontRes::IsNewLine(const uint32_t glyphCode)
+    {
+        return (glyphCode == 0x0000000AU);
+    }
+    int32_t vzm::VzFontRes::GetLineHeight() {
+        if (ftFace_) {
+            return ftFace_->size->metrics.height >> 6;
+        }
+        return 0;
+    }
+    int32_t vzm::VzFontRes::GetBearingX(const uint32_t glyphCode)
+    {
+        if (ftFace_) {
+            renderGlyph(glyphCode);
+            return ftFace_->glyph->bitmap_left;
+        }
+        return 0;
+    }
+    int32_t vzm::VzFontRes::GetBearingY(const uint32_t glyphCode)
+    {
+        if (ftFace_) {
+            renderGlyph(glyphCode);
+            return ftFace_->glyph->bitmap_top;
+        }
+        return 0;
+    }
+    int32_t vzm::VzFontRes::GetAdvanceX(const uint32_t glyphCode)
+    {
+        if (ftFace_) {
+            loadGlyph(glyphCode);
+            return ftFace_->glyph->advance.x >> 6;
+        }
+        return 0;
+    }
+    int32_t vzm::VzFontRes::GetGlyphWidth(const uint32_t glyphCode)
+    {
+        if (ftFace_) {
+            renderGlyph(glyphCode);
+            return ftFace_->glyph->bitmap.width;
+        }
+        return 0;
+    }
+    int32_t vzm::VzFontRes::GetGlyphHeight(const uint32_t glyphCode)
+    {
+        if (ftFace_) {
+            renderGlyph(glyphCode);
+            return ftFace_->glyph->bitmap.rows;
+        }
+        return 0;
+    }
+    const uint8_t* vzm::VzFontRes::GetGlyphPixels(const uint32_t glyphCode)
+    {
+        if (ftFace_) {
+            renderGlyph(glyphCode);
+            return ftFace_->glyph->bitmap.buffer;
+        }
+        return nullptr;
+    }
+    void vzm::VzFontRes::loadGlyph(const uint32_t glyphCode)
+    {
+        if ((!isLoaded_) || (glyphCode != glyphCode_)) {
+            uint32_t glyphIndex = FT_Get_Char_Index(ftFace_, glyphCode);
+            FT_Error ft_error = FT_Load_Glyph(ftFace_, glyphIndex, FT_LOAD_DEFAULT);
+            if (ft_error)
+            {
+                backlog::post("Failed to load glyph: " + std::to_string(glyphCode), backlog::LogLevel::Error);
+            }
+            glyphCode_ = glyphCode;
+            isLoaded_ = true;
+            isRendered_ = false;
+        }
+    }
+    void vzm::VzFontRes::renderGlyph(const uint32_t glyphCode)
+    {
+        if ((!isRendered_) || (glyphCode != glyphCode_)) {
+            uint32_t glyphIndex = FT_Get_Char_Index(ftFace_, glyphCode);
+            FT_Error ft_error = FT_Load_Glyph(ftFace_, glyphIndex, FT_LOAD_DEFAULT | FT_LOAD_RENDER);
+            if (ft_error)
+            {
+                backlog::post("Failed to render glyph: " + std::to_string(glyphCode), backlog::LogLevel::Error);
+            }
+            glyphCode_ = glyphCode;
+            isLoaded_ = true;
+            isRendered_ = true;
+        }
+    }
+#pragma endregion
 
 namespace vzm
 {
@@ -926,30 +1225,78 @@ namespace vzm
 
             actor_res->intrinsicCache.assign(80 + 12, 0);
 
-            MaterialVID vid_m = GetFirstVidByName("_PROVIDER_SPRITE_MATERIAL");
-            if (vid_m == INVALID_VID)
+            MaterialVID vid_m = INVALID_VID;
+            if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
             {
-                MaterialKey m_key = {};
-                m_key.alphaMode = AlphaMode::BLEND;
-                m_key.doubleSided = true;
-                m_key.hasBaseColorTexture = true;
-                m_key.unlit = true;
-                m_key.baseColorUV = 0;
-                UvMap uvmap;
-                Material* material = gMaterialProvider->getMaterial((filament::gltfio::MaterialKey*)&m_key, &uvmap, "_PROVIDER_SPRITE_MATERIAL");
-                vid_m = gEngineApp.CreateMaterial("_PROVIDER_SPRITE_MATERIAL", material, nullptr, true)->GetVID();
-                std::vector<Material::ParameterInfo> params(material->getParameterCount());
-                material->getParameters(&params[0], params.size());
-                for (auto& it : params)
+                vid_m = GetFirstVidByName("_PROVIDER_SPRITE_MATERIAL");
+                if (vid_m == INVALID_VID)
                 {
-                    std::cout << it.name << ", " << (uint8_t)it.type << std::endl;
+                    MaterialKey m_key = {};
+                    m_key.alphaMode = AlphaMode::BLEND;
+                    m_key.doubleSided = true;
+                    m_key.hasBaseColorTexture = true;
+                    m_key.unlit = true;
+                    m_key.baseColorUV = 0;
+                    UvMap uvmap;
+                    Material* material = gMaterialProvider->getMaterial((filament::gltfio::MaterialKey*)&m_key, &uvmap, "_PROVIDER_SPRITE_MATERIAL");
+                    vid_m = gEngineApp.CreateMaterial("_PROVIDER_SPRITE_MATERIAL", material, nullptr, true)->GetVID();
+                    std::vector<Material::ParameterInfo> params(material->getParameterCount());
+                    material->getParameters(&params[0], params.size());
+                    for (auto& it : params)
+                    {
+                        std::cout << it.name << ", " << (uint8_t)it.type << std::endl;
+                    }
+                }
+            }
+            else
+            {
+                vid_m = GetFirstVidByName("_TEXT_SPRITE_MATERIAL");
+                if (vid_m == INVALID_VID) {
+                    MaterialBuilder::init();
+                    const char* code = R"(
+                        void material(inout MaterialInputs material) {
+                            prepareMaterial(material);
+                            material.baseColor.rgb = materialParams.textColor;
+                            material.baseColor.a = texture(materialParams_textTexture, getUV0()).r;
+                        }
+                    )";
+                    MaterialBuilder builder;
+                    builder
+                        .name("TextSpriteMaterial")
+                        .shading(Shading::UNLIT)
+                        .blending(BlendingMode::TRANSPARENT)
+                        .parameter("textTexture",
+                                   (MaterialBuilder::SamplerType) SamplerType::SAMPLER_2D,
+                                   SamplerFormat::FLOAT,
+                                   (MaterialBuilder::Precision) Precision::MEDIUM)
+                        .parameter("textColor",
+                                   (MaterialBuilder::UniformType) UniformType::FLOAT3,
+                                   (MaterialBuilder::Precision) Precision::MEDIUM)
+                        .require(MaterialBuilder::VertexAttribute::UV0)
+                        .doubleSided(true)
+                        .flipUV(false)
+                        .material(code);
+                    Package result = builder.build(gEngine->getJobSystem());
+                    assert(result.isValid());
+                    Material* material = Material::Builder()
+                        .package(result.getData(), result.getSize())
+                        .build(*gEngine);
+                    vid_m = gEngineApp.CreateMaterial("_TEXT_SPRITE_MATERIAL", material, nullptr, true)->GetVID();
+                    std::vector<Material::ParameterInfo> params(material->getParameterCount());
+                    material->getParameters(&params[0], params.size());
+                    for (auto& it : params) {
+                        std::cout << it.name << ", " << (uint8_t) it.type << std::endl;
+                    }
                 }
             }
 
             Material* m = materialResMap_[vid_m]->material;
             MaterialInstance* mi = m->createInstance();
 
-            mi->setParameter("baseColorFactor", filament::RgbaType::LINEAR, filament::math::float4{ 1.0, 1.0, 1.0, 1.0 });
+            if (compType == SCENE_COMPONENT_TYPE::SPRITE_ACTOR)
+            {
+                mi->setParameter("baseColorFactor", filament::RgbaType::LINEAR, filament::math::float4{1.0, 1.0, 1.0, 1.0});
+            }
             mi->setDoubleSided(true);
             VzMI* v_mi = CreateMaterialInstance(name + "_mi", vid_m, mi);
             actor_res->SetMIs({ v_mi->GetVID() });
@@ -1213,6 +1560,20 @@ namespace vzm
         auto it = vzCompMap_.emplace(vid, std::make_unique<VzTexture>(vid, "CreateTexture"));
         return (VzTexture*)it.first->second.get();
     }
+    VzFont* VzEngineApp::CreateFont(const std::string& name)
+    {
+        auto& em = utils::EntityManager::get();
+        auto& ncm = VzNameCompManager::Get();
+
+        utils::Entity ett = em.create();
+        ncm.CreateNameComp(ett, name);
+
+        VID vid = ett.getId();
+        fontResMap_[vid] = std::make_unique<VzFontRes>();
+
+        auto it = vzCompMap_.emplace(vid, std::make_unique<VzFont>(vid, "CreateFont"));
+        return (VzFont*)it.first->second.get();
+    }
 
     void VzEngineApp::BuildRenderable(const ActorVID vid)
     {
@@ -1345,6 +1706,15 @@ namespace vzm
             }
         }
         return INVALID_VID;
+    }
+    VzFontRes* VzEngineApp::GetFontRes(const FontVID vidFont)
+    {
+        auto it = fontResMap_.find(vidFont);
+        if (it == fontResMap_.end())
+        {
+            return nullptr;
+        }
+        return it->second.get();
     }
 
     size_t VzEngineApp::LoadMeshFile(const std::string& filename, std::vector<VzActor*>& actors)
@@ -1569,6 +1939,12 @@ namespace vzm
                     backlog::post("Geometry (" + name + ") has been removed", backlog::LogLevel::Default);
                 }
             }
+            auto it_font = fontResMap_.find(vid);
+            if (it_font != fontResMap_.end())
+            {
+                fontResMap_.erase(it_font); // call destructor...
+                backlog::post("Font (" + name + ") has been removed", backlog::LogLevel::Default);
+            }
 
             if (isRenderableResource)
             {
@@ -1684,6 +2060,8 @@ namespace vzm
         auto& ncm = VzNameCompManager::Get();
         vGltfIo.assetLoader = new gltfio::VzAssetLoader({ gEngine, gMaterialProvider, (NameComponentManager*)&ncm });
         vGltfIo.assetExpoter = new gltfio::VzAssetExpoter();
+
+        FT_Init_FreeType(&ftLibrary);
     }
     void VzEngineApp::Destroy()
     {
@@ -1721,6 +2099,7 @@ namespace vzm
         destroyTarget(textureResMap_);
         destroyTarget(miResMap_);
         destroyTarget(materialResMap_);
+        destroyTarget(fontResMap_);
 
         if (assetResMap_.size() > 0) {
             for (auto& it : assetResMap_)
@@ -1759,6 +2138,8 @@ namespace vzm
         }
 
         vGltfIo.Destory();
+
+        FT_Done_FreeType(ftLibrary);
     }
 #pragma endregion
 }

@@ -56,6 +56,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)backend\VzMeshAssimp.cpp">
       <Filter>backend</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzFont.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)VizEngineAPIs.h" />
@@ -122,6 +123,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)backend\VzMeshAssimp.h">
       <Filter>backend</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzFont.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="components">

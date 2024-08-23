@@ -12,3 +12,4 @@
 #include "components/VzRenderer.h"
 #include "components/VzScene.h"
 #include "components/VzSkeleton.h"
+#include "components/VzFont.h"

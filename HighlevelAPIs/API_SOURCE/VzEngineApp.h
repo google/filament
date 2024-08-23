@@ -15,6 +15,9 @@
 
 #include <array>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 using SceneVID = VID;
 using RendererVID = VID;
 using CamVID = VID;
@@ -27,6 +30,7 @@ using MInstanceVID = VID;
 using AssetVID = VID;
 using SkeletonVID = VID;
 using BoneVID = VID;
+using FontVID = VID;
 
 namespace vzm::backlog
 {
@@ -67,6 +71,21 @@ namespace vzm
         TRIANGLE_STRIP = 5     //!< triangle strip
     };
 
+    enum class TextAlign : uint8_t {
+        LEFT = 1,
+        CENTER = 2,
+        RIGHT = 3,
+        TOP_LEFT = 4,
+        TOP_CENTER = 5,
+        TOP_RIGHT = 6,
+        MIDDLE_LEFT = 7,
+        MIDDLE_CENTER = 8,
+        MIDDLE_RIGHT = 9,
+        BOTTOM_LEFT = 10,
+        BOTTOM_CENTER = 11,
+        BOTTOM_RIGHT = 12
+    };
+
     using namespace filament;
     using namespace filament::gltfio;
 
@@ -84,6 +103,37 @@ namespace vzm
         std::vector<int> slotIndices;
 
         PrimitiveType ptype = PrimitiveType::TRIANGLES;
+    };
+
+    struct VzTextFormat {
+        FontVID font = INVALID_VID;
+        TextAlign textAlign = TextAlign::LEFT;
+        uint32_t kerning = 0;
+        uint32_t leading = 0;
+    };
+
+    struct VzTypesetter {
+        void Measure();
+        int32_t MeasureLinesWidth(FontVID font);
+        void Typeset();
+        int32_t GetLeftBlankWidth(const TextAlign textAlign, const int32_t lineWidth, const int32_t width);
+        int32_t GetTopBlankHeight(const TextAlign textAlign, const int32_t lineHeight, const int32_t height);
+
+        Texture* texture = nullptr;
+        std::wstring text;
+        std::vector<uint32_t> glyphCodes;
+        VzTextFormat textFormat;
+        int32_t fixedWidth = 0;
+        int32_t fixedHeight = 0;
+        std::vector<int32_t> linesWidth;
+        int32_t textWidth = 0;
+        int32_t textHeight = 0;
+        bool isMeasured = false;
+    };
+
+    struct VzTextField {
+        VzTypesetter typesetter;
+        float textColor[3] = { 0.0f, 0.0f, 0.0f };
     };
 
     struct VzSceneRes
@@ -145,6 +195,9 @@ namespace vzm
         MInstanceVID GetMIVid(const int slot);
         std::vector<MInstanceVID>& GetMIVids();
         std::vector<std::vector<MInstanceVID>>& GetMIVariants();
+
+        // for text sprite
+        VzTextField textField;
 
         // for sprite
         VertexBuffer* intrinsicVB = nullptr;
@@ -217,6 +270,31 @@ namespace vzm
 
         ~VzTextureRes();
     };
+    struct VzFontRes
+    {
+    private:
+        void loadGlyph(const uint32_t glyphCode);
+        void renderGlyph(const uint32_t glyphCode);
+    public:
+        ~VzFontRes();
+
+        bool IsSpace(const uint32_t glyphCode);
+        bool IsNewLine(const uint32_t glyphCode);
+        int32_t GetLineHeight();
+        int32_t GetBearingX(const uint32_t glyphCode);
+        int32_t GetBearingY(const uint32_t glyphCode);
+        int32_t GetAdvanceX(const uint32_t glyphCode);
+        int32_t GetGlyphWidth(const uint32_t glyphCode);
+        int32_t GetGlyphHeight(const uint32_t glyphCode);
+        const uint8_t* GetGlyphPixels(const uint32_t glyphCode);
+
+        FT_Face ftFace_ = nullptr;
+        std::string path_;
+        uint32_t size_ = 10;
+        uint32_t glyphCode_ = 0x00000000U;
+        bool isLoaded_ = false;
+        bool isRendered_ = false;
+    };
 
     struct VzAssetRes
     {
@@ -262,6 +340,7 @@ namespace vzm
         std::unordered_map<MaterialVID, std::unique_ptr<VzMaterialRes>> materialResMap_;
         std::unordered_map<MInstanceVID, std::unique_ptr<VzMIRes>> miResMap_;
         std::unordered_map<TextureVID, std::unique_ptr<VzTextureRes>> textureResMap_;
+        std::unordered_map<FontVID, std::unique_ptr<VzFontRes>> fontResMap_;
 
         // GLTF Asset
         std::unordered_map<AssetVID, std::unique_ptr<VzAssetRes>> assetResMap_;
@@ -330,6 +409,7 @@ namespace vzm
             const Texture* texture = nullptr,
             const filament::gltfio::FilamentAsset* assetOwner = nullptr,
             const bool isSystem = false);
+        VzFont* CreateFont(const std::string& name);
 
         void BuildRenderable(const ActorVID vid);
 
@@ -342,6 +422,8 @@ namespace vzm
 
         VzTextureRes* GetTextureRes(const TextureVID vidTex);
         TextureVID FindTextureVID(const filament::Texture* texture);
+
+        VzFontRes* GetFontRes(const FontVID vidFont);
 
         template <typename VZCOMP>
         VZCOMP* GetVzComponent(const VID vid)
@@ -392,6 +474,8 @@ namespace vzm
         void Destroy();
 
         AssetVID activeAsyncAsset = INVALID_VID;
+
+        FT_Library ftLibrary = nullptr;
     };
 }
 

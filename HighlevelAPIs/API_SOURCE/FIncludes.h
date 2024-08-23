@@ -42,6 +42,8 @@
 #include <gltfio/Animator.h>
 #include <gltfio/math.h>
 
+#include <filamat/MaterialBuilder.h>
+
 #include <filameshio/MeshReader.h>
 
 #include <filamentapp/Config.h>
@@ -72,3 +74,4 @@ using namespace filament::backend;
 using namespace filament::gltfio;
 using namespace utils;
 using namespace filament::color;
+using namespace filamat;

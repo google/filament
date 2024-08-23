@@ -122,14 +122,15 @@ namespace vzm
             float3 position;
             float2 uv;
         };
-        float half_size = w * 0.5f;
-        float offset_x = (0.5f - anchorU) * half_size;
-        float offset_y = (0.5f - anchorV) * half_size;
+        float half_width = w * 0.5f;
+        float half_height = h * 0.5f;
+        float offset_x = (0.5f - anchorU) * half_width;
+        float offset_y = (0.5f - anchorV) * half_height;
         SpriteVertex kQuadVertices[4] = {
-            {{-half_size + offset_x,  half_size + offset_y, 0}, {0, 0}},
-            {{ half_size + offset_x,  half_size + offset_y, 0}, {1, 0}},
-            {{-half_size + offset_x, -half_size + offset_y, 0}, {0, 1}},
-            {{ half_size + offset_x, -half_size + offset_y, 0}, {1, 1}} };
+            {{-half_width + offset_x,  half_height + offset_y, 0}, {0, 0}},
+            {{ half_width + offset_x,  half_height + offset_y, 0}, {1, 0}},
+            {{-half_width + offset_x, -half_height + offset_y, 0}, {0, 1}},
+            {{ half_width + offset_x, -half_height + offset_y, 0}, {1, 1}} };
         uint16_t kQuadIndices[6] = { 0, 2, 1, 1, 2, 3 };
 
         memcpy(&actor_res->intrinsicCache[0], kQuadVertices, 80);
@@ -151,8 +152,8 @@ namespace vzm
             .build(*gEngine);
         actor_res->intrinsicIB->setBuffer(*gEngine, IndexBuffer::BufferDescriptor(&actor_res->intrinsicCache[80], 12, nullptr));
         Aabb aabb;
-        aabb.min = { -half_size + offset_x, -half_size + offset_y, -0.5 };
-        aabb.max = { half_size + offset_x, half_size + offset_y, 0.5 };
+        aabb.min = { -half_width + offset_x, -half_height + offset_y, -0.5 };
+        aabb.max = { half_width + offset_x, half_height + offset_y, 0.5 };
 
         RenderableManager::Builder builder(1);
 
@@ -203,62 +204,46 @@ namespace vzm
 
 namespace vzm
 {
-    void VzTextSpriteActor::SetText(const std::string& text, const float fontHeight, const float anchorU, const float anchorV)
+    void VzTextSpriteActor::SetFont(const VID vidFont)
+    {
+        VzFontRes* font_res = gEngineApp.GetFontRes(vidFont);
+        if (font_res->ftFace_ == nullptr)
+        {
+            backlog::post("invalid font!", backlog::LogLevel::Error);
+            return;
+        }
+
+        VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
+        actor_res->textField.typesetter.textFormat.font = vidFont;
+
+        UpdateTimeStamp();
+    }
+
+    void VzTextSpriteActor::SetText(const std::wstring& text, const float fontHeight, const float anchorU, const float anchorV)
     {
         VzActorRes* actor_res = gEngineApp.GetActorRes(GetVID());
         assert(actor_res->isSprite);
         if (actor_res->intrinsicTexture) gEngine->destroy(actor_res->intrinsicTexture);
 
         size_t text_image_w = 0, text_image_h = 0;
-        unsigned char* text_image = nullptr;
+        
+        FontVID font = actor_res->textField.typesetter.textFormat.font;
+        VzFontRes* font_res = gEngineApp.GetFontRes(font);
+        if ((font == INVALID_VID) || (font_res->ftFace_ == nullptr))
         {
-            // TO DO //
-            // generate a text image (rgba, backgournd alpha is zero) from "text"
-            // this is supposed to update the following
-            //      * image width and height in pixels : text_image_w, text_image_h
-            //      * unsigned char* as image (rgba) buffer pointer (the allocation will be owned by VzTextSpriteActor)
-            using namespace image;
-            std::string test_file_name = "../assets/textimage.png";
-            std::ifstream inputStream(test_file_name, std::ios::binary);
-            image::LinearImage* image = new LinearImage(ImageDecoder::decode(
-                inputStream, test_file_name, ImageDecoder::ColorSpace::SRGB));
-            if (!image->isValid()) {
-                backlog::post("The input image is invalid:: " + test_file_name, backlog::LogLevel::Error);
-                return;
-            }
-            inputStream.close();
-
-            // channels must be 4 (due to alpha channel)
-            uint32_t channels = image->getChannels();
-            text_image_w = image->getWidth();
-            text_image_h = image->getHeight();
-            Texture* texture = Texture::Builder()
-                .width(text_image_w)
-                .height(text_image_h)
-                .levels(0xff)
-                .format(channels == 3 ?
-                    Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
-                .sampler(Texture::Sampler::SAMPLER_2D)
-                .build(*gEngine);
-
-            Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
-                delete reinterpret_cast<LinearImage*>(data);
-                };
-
-            Texture::PixelBufferDescriptor buffer(
-                image->getPixelRef(),
-                size_t(text_image_w * text_image_h * channels * sizeof(float)),
-                channels == 3 ? Texture::Format::RGB : Texture::Format::RGBA,
-                Texture::Type::FLOAT,
-                freeCallback,
-                image
-            );
-
-            texture->setImage(*gEngine, 0, std::move(buffer));
-            texture->generateMipmaps(*gEngine);
-
-            actor_res->intrinsicTexture = texture;
+            backlog::post("invalid font!", backlog::LogLevel::Error);
+            return;
         }
+        // TO DO //
+        // generate a text image (rgba, backgournd alpha is zero) from "text"
+        // this is supposed to update the following
+        //      * image width and height in pixels : text_image_w, text_image_h
+        //      * unsigned char* as image (rgba) buffer pointer (the allocation will be owned by VzTextSpriteActor)
+        VzTypesetter& typesetter = actor_res->textField.typesetter;
+        typesetter.text = text;
+        typesetter.isMeasured = false;
+        typesetter.Typeset();
+        actor_res->intrinsicTexture = typesetter.texture;
 
         MaterialInstance* mi = gEngineApp.GetMIRes(actor_res->GetMIVids()[0])->mi;
         TextureSampler sampler;
@@ -266,7 +251,13 @@ namespace vzm
         sampler.setMinFilter(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR);
         sampler.setWrapModeS(TextureSampler::WrapMode::REPEAT);
         sampler.setWrapModeT(TextureSampler::WrapMode::REPEAT);
-        mi->setParameter("baseColorMap", actor_res->intrinsicTexture, sampler);
+        auto& textColor = actor_res->textField.textColor;
+        float3 color = { textColor[0], textColor[1], textColor[2] };
+        mi->setParameter("textColor", (filament::RgbType) RgbType::LINEAR, color);
+        mi->setParameter("textTexture", actor_res->intrinsicTexture, sampler);
+
+        text_image_w = typesetter.texture->getWidth();
+        text_image_h = typesetter.texture->getHeight();
 
         const float w = fontHeight / (float)text_image_h * text_image_w;
         const float h = fontHeight;
@@ -275,5 +266,5 @@ namespace vzm
         buildQuadGeometry(GetVID(), w, h, anchorU, anchorV);
 
         UpdateTimeStamp();
-    }
+    }   
 }

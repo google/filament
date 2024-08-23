@@ -136,6 +136,7 @@ namespace vzm
         MATERIAL,
         MATERIALINSTANCE,
         TEXTURE,
+        FONT,
     };
 
     struct API_EXPORT VzBaseComp

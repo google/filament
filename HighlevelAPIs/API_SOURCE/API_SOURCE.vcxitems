@@ -20,6 +20,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzActor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzAsset.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzCamera.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)components\VzFont.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzGeometry.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzLight.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)components\VzMaterial.h" />
@@ -49,6 +50,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzActor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzAsset.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzCamera.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)components\VzFont.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzGeometry.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzLight.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)components\VzMaterial.cpp" />

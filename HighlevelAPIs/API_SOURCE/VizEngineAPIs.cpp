@@ -7,6 +7,7 @@
 #define OPTIMIZE_MATERIALS true
 #endif
 
+#define NOGDI
 #include <backend/platforms/VulkanPlatform.h>
 
 #include "VzRenderPath.h"
@@ -442,6 +443,8 @@ namespace vzm
             v_comp = gEngineApp.CreateMaterialInstance(compName, {}); break;
         case RES_COMPONENT_TYPE::TEXTURE:
             v_comp = gEngineApp.CreateTexture(compName, {}); break;
+        case RES_COMPONENT_TYPE::FONT:
+            v_comp = gEngineApp.CreateFont(compName); break;
         default:
             backlog::post("INVALID RESOURCE TYPE", backlog::LogLevel::Error);
         }
