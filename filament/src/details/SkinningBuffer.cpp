@@ -30,7 +30,6 @@
 #include <utils/CString.h>
 
 #include <cstring>
-#include <optional>
 
 namespace filament {
 

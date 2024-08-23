@@ -39,7 +39,6 @@
 #include <array>
 #include <iterator>
 #include <memory>
-#include <optional>
 #include <utility>
 
 #include <stddef.h>

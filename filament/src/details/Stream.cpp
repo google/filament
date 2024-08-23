@@ -27,8 +27,6 @@
 #include <utils/Panic.h>
 #include <filament/Stream.h>
 
-#include <optional>
-
 namespace filament {
 
 using namespace backend;

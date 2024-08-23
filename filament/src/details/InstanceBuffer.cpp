@@ -24,8 +24,6 @@
 #include <math/mat3.h>
 #include <math/vec3.h>
 
-#include <optional>
-
 namespace filament {
 
 using namespace backend;

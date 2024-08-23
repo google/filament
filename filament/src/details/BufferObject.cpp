@@ -22,8 +22,6 @@
 
 #include <utils/CString.h>
 
-#include <optional>
-
 namespace filament {
 
 struct BufferObject::BuilderDetails {
