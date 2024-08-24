@@ -80,6 +80,9 @@ HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size,
         bool disableUseAfterFreeCheck) noexcept
     : mHandleArena(name, size, disableUseAfterFreeCheck),
       mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck) {
+    // Reserve initial space for debug tags. This prevents excessive calls to malloc when the first
+    // few tags are set.
+    mDebugTags.reserve(512);
 }
 
 template <size_t P0, size_t P1, size_t P2>

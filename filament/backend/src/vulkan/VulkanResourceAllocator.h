@@ -105,6 +105,10 @@ public:
         mHandleAllocatorImpl.deallocate(handle, obj);
     }
 
+    inline void associateHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
+        mHandleAllocatorImpl.associateTagToHandle(id, std::move(tag));
+    }
+
 private:
     AllocatorImpl mHandleAllocatorImpl;
 
