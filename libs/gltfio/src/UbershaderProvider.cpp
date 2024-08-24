@@ -259,6 +259,24 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
     mi->setParameter("occlusionUvMatrix", identity);
     mi->setParameter("emissiveUvMatrix", identity);
 
+    // set to -1 all possibly optional parameters
+    for (auto const* param : {
+            "clearCoatIndex",
+            "clearCoatRoughnessIndex",
+            "clearCoatNormalIndex",
+            "sheenColorIndex",
+            "sheenRoughnessIndex",
+            "volumeThicknessUvMatrix",
+            "volumeThicknessIndex",
+            "transmissionIndex",
+            "specularIndex",
+            "specularColorIndex",
+    }) {
+        if (material->hasParameter(param)) {
+            mi->setParameter(param, -1);
+        }
+    }
+
     if (config->hasClearCoat) {
         mi->setParameter("clearCoatIndex",
                 getUvIndex(config->clearCoatUV, config->hasClearCoatTexture));
@@ -340,10 +358,10 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         mi->setParameter("sheenRoughnessMap", mDummyTexture, sampler);
     }
 
-    if (mi->getMaterial()->hasParameter("ior")) {
+    if (material->hasParameter("ior")) {
         mi->setParameter("ior", 1.5f);
     }
-    if (mi->getMaterial()->hasParameter("reflectance")) {
+    if (material->hasParameter("reflectance")) {
         mi->setParameter("reflectance", 0.5f);
     }
 
@@ -353,6 +371,14 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
 
     if (needsTexture("SpecularColorTexture")) {
         mi->setParameter("specularColorMap", mDummyTexture, sampler);
+    }
+
+    if (material->hasParameter("specularColorFactor")) {
+        mi->setParameter("specularColorFactor", float3(1.0f));
+    }
+
+    if (material->hasParameter("specularStrength")) {
+        mi->setParameter("specularStrength", 1.0f);
     }
 
     return mi;
