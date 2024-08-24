@@ -106,7 +106,7 @@ public:
 
     // generate declarations for custom interpolants
     static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderStage stage,
-            const utils::CString& name, size_t index);
+            const MaterialBuilder::CustomVariable& variable, size_t index);
 
     // generate declarations for non-custom "in" variables
     utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderStage type,

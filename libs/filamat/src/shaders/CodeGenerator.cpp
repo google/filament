@@ -453,15 +453,20 @@ io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStag
 }
 
 io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage,
-        const CString& name, size_t index) {
-
+        const MaterialBuilder::CustomVariable& variable, size_t index) {
+    auto const& name = variable.name;
+    const char* precisionString = getPrecisionQualifier(variable.precision);
     if (!name.empty()) {
         if (stage == ShaderStage::VERTEX) {
             out << "\n#define VARIABLE_CUSTOM" << index << " " << name.c_str() << "\n";
             out << "\n#define VARIABLE_CUSTOM_AT" << index << " variable_" << name.c_str() << "\n";
-            out << "LAYOUT_LOCATION(" << index << ") VARYING vec4 variable_" << name.c_str() << ";\n";
+            out << "LAYOUT_LOCATION(" << index << ") VARYING " << precisionString << " vec4 variable_" << name.c_str() << ";\n";
         } else if (stage == ShaderStage::FRAGMENT) {
-            out << "\nLAYOUT_LOCATION(" << index << ") VARYING highp vec4 variable_" << name.c_str() << ";\n";
+            if (!variable.hasPrecision && variable.precision == Precision::DEFAULT) {
+                // for backward compatibility
+                precisionString = "highp";
+            }
+            out << "\nLAYOUT_LOCATION(" << index << ") VARYING " << precisionString << " vec4 variable_" << name.c_str() << ";\n";
         }
     }
     return out;

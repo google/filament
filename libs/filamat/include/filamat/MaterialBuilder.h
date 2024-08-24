@@ -323,6 +323,9 @@ public:
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
 
+    MaterialBuilder& variable(Variable v, const char* name,
+            ParameterPrecision precision) noexcept;
+
     /**
      * Require a specified attribute.
      *
@@ -708,11 +711,17 @@ public:
         ShaderStage stage;
     };
 
+    struct CustomVariable {
+        utils::CString name;
+        Precision precision = Precision::DEFAULT;
+        bool hasPrecision = false;
+    };
+
     static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
     using Property = filament::Property;
 
     using PropertyList = bool[MATERIAL_PROPERTIES_COUNT];
-    using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];
+    using VariableList = CustomVariable[MATERIAL_VARIABLES_COUNT];
     using OutputList = std::vector<Output>;
 
     static constexpr size_t MAX_COLOR_OUTPUT = filament::backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
