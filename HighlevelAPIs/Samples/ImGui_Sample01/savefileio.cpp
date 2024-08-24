@@ -169,7 +169,7 @@ void ImportMaterials(const rapidjson::Value& jsonNode,
           lightNode["spotLightOuterCone"].GetFloat());
 
       lightComponent->SetShadowCaster(lightNode["shadowEnabled"].GetBool());
-      vzm::VzLight::ShadowOptions sOpts = *lightComponent->GetShadowOptions();
+      vzm::VzLight::ShadowOptions sOpts = lightComponent->GetShadowOptions();
       sOpts.mapSize = lightNode["mapSize"].GetInt();
       sOpts.stable = lightNode["stable"].GetBool();
       sOpts.lispsm = lightNode["lispsm"].GetBool();
@@ -398,7 +398,7 @@ void ExportMaterials(rapidjson::Value& jsonNode,
                               lightComponent->GetSpotLightOuterCone(),
                               allocator);
       // shadow
-      vzm::VzLight::ShadowOptions sOpts = *lightComponent->GetShadowOptions();
+      vzm::VzLight::ShadowOptions sOpts = lightComponent->GetShadowOptions();
 
       lightSettings.AddMember("shadowEnabled", lightComponent->IsShadowCaster(),
                               allocator);
@@ -556,8 +556,8 @@ void ImportGlobalSettings(const rapidjson::Value& globalSettings,
     g_renderer->SetDynamicResoultionSharpness(
         dynamicResolution["DynamicResoultionSharpness"].GetFloat());
   }
-  if(g_light){
-    vzm::VzLight::ShadowOptions sOpts = *g_light->GetShadowOptions();
+  {
+    vzm::VzLight::ShadowOptions sOpts = g_light->GetShadowOptions();
 
     const rapidjson::Value& LightSettings = globalSettings["LightSettings"];
     g_scene->SetIBLIntensity(LightSettings["IBLIntensity"].GetFloat());
@@ -828,7 +828,7 @@ void ExportGlobalSettings(rapidjson::Value& globalSettings,
                             allocator);
 
     // shadowsettings
-    vzm::VzLight::ShadowOptions sOpts = *g_light->GetShadowOptions();
+    vzm::VzLight::ShadowOptions sOpts = g_light->GetShadowOptions();
     LightSettings.AddMember("shadowEnabled", g_light->IsShadowCaster(),
                             allocator);
     LightSettings.AddMember("mapSize", sOpts.mapSize, allocator);

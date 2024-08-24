@@ -63,7 +63,7 @@
 #include "../../libs/gltfio/src/FTrsTransformManager.h"
 #include "../../libs/gltfio/src/GltfEnums.h"
 
-#include "../../filament/src/details/Engine.h"
+#include "../../filament/src/details/engine.h"
 #include "../../filament/src/ResourceAllocator.h"
 #include "../../filament/src/components/RenderableManager.h"
 
