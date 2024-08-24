@@ -162,6 +162,10 @@ DECL_DRIVER_API_0(finish)
 // reset state tracking, if the driver does any state tracking (e.g. GL)
 DECL_DRIVER_API_0(resetState)
 
+DECL_DRIVER_API_N(setDebugTag,
+        backend::HandleBase::HandleId, handleId,
+        utils::CString, tag)
+
 /*
  * Creating driver objects
  * -----------------------

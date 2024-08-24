@@ -112,7 +112,7 @@ public:
 
 
     //! Use Builder to construct a Texture object instance
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
     public:
         Builder() noexcept;
@@ -201,6 +201,21 @@ public:
          * @see Texture::isTextureSwizzleSupported()
          */
         Builder& swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept;
+
+        /**
+         * Associate an optional name with this Texture for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible. The name is
+         * truncated to a maximum of 128 characters.
+         *
+         * The name string is copied during this method so clients may free its memory after
+         * the function returns.
+         *
+         * @param name A string to identify this Texture
+         * @param len Length of name, should be less than or equal to 128
+         * @return This Builder, for chaining calls.
+         */
+         // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
 
         /**
          * Creates the Texture object and returns a pointer to it.
