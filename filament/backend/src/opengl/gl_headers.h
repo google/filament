@@ -201,12 +201,6 @@ using namespace glext;
 #   define GL_CLIP_DISTANCE1                        0x3001
 #endif
 
-#if defined(GL_EXT_depth_clamp)
-#   define GL_DEPTH_CLAMP                           GL_DEPTH_CLAMP_EXT
-#else
-#   define GL_DEPTH_CLAMP                           0x864F
-#endif
-
 #if defined(GL_KHR_debug)
 #   define GL_DEBUG_OUTPUT                          GL_DEBUG_OUTPUT_KHR
 #   define GL_DEBUG_OUTPUT_SYNCHRONOUS              GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR

@@ -184,7 +184,6 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     vkRaster.polygonMode = VK_POLYGON_MODE_FILL;
     vkRaster.cullMode = raster.cullMode;
     vkRaster.frontFace = raster.frontFace;
-    vkRaster.depthClampEnable = raster.depthClamp;
     vkRaster.depthBiasEnable = raster.depthBiasEnable;
     vkRaster.depthBiasConstantFactor = raster.depthBiasConstantFactor;
     vkRaster.depthBiasClamp = 0.0f;

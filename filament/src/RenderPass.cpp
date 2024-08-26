@@ -419,8 +419,7 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
 UTILS_ALWAYS_INLINE // This function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
-        FMaterialInstance const* const UTILS_RESTRICT mi,
-        bool inverseFrontFaces, bool hasDepthClamp) noexcept {
+        FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
@@ -461,7 +460,6 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     cmdDraw.info.rasterState.colorWrite = mi->isColorWriteEnabled();
     cmdDraw.info.rasterState.depthWrite = mi->isDepthWriteEnabled();
     cmdDraw.info.rasterState.depthFunc = mi->getDepthFunc();
-    cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
@@ -560,9 +558,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
     bool const hasInstancedStereo =
             renderFlags & IS_INSTANCED_STEREOSCOPIC;
 
-    bool const hasDepthClamp =
-            renderFlags & HAS_DEPTH_CLAMP;
-
     float const cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
@@ -582,7 +577,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmd.info.rasterState.depthWrite = true;
         cmd.info.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmd.info.rasterState.alphaToCoverage = false;
-        cmd.info.rasterState.depthClamp = hasDepthClamp;
     }
 
     for (uint32_t i = range.first; i < range.last; ++i) {
@@ -697,8 +691,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 
             if constexpr (isColorPass) {
-                RenderPass::setupColorCommand(cmd, renderableVariant, mi,
-                        inverseFrontFaces, hasDepthClamp);
+                RenderPass::setupColorCommand(cmd, renderableVariant, mi, inverseFrontFaces);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
                     // TODO: at least for transparent objects, AABB should be per primitive

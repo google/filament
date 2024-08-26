@@ -679,7 +679,6 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
 #ifndef __EMSCRIPTEN__
     ext->EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
 #endif
-    ext->EXT_depth_clamp = exts.has("GL_EXT_depth_clamp"sv);
     ext->EXT_discard_framebuffer = exts.has("GL_EXT_discard_framebuffer"sv);
 #ifndef __EMSCRIPTEN__
     ext->EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
@@ -750,7 +749,6 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->EXT_color_buffer_half_float = true;  // Assumes core profile.
     ext->EXT_clip_cull_distance = true;
     ext->EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
-    ext->EXT_depth_clamp = true;
     ext->EXT_discard_framebuffer = false;
     ext->EXT_disjoint_timer_query = true;
     ext->EXT_multisampled_render_to_texture = false;
