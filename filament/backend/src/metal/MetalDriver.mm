@@ -908,9 +908,6 @@ size_t MetalDriver::getMaxUniformBufferSize() {
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
-
-    mHandleAllocator.getHandleTag(ibh.getId());
-
     ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset);
     scheduleDestroy(std::move(data));
 }
@@ -2099,7 +2096,6 @@ void MetalDriver::resetState(int) {
 }
 
 void MetalDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
-    utils::slog.d << "Setting debug tag of " << handleId << " to " << tag.c_str_safe() << utils::io::endl;
     mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
 }
 
