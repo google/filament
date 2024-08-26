@@ -1058,7 +1058,7 @@ struct RasterState {
             bool inverseFrontFaces                      : 1;        // 31
 
             //! padding, must be 0
-            bool depthClamp                             : 1;        // 32
+            uint8_t padding                             : 1;        // 32
         };
         uint32_t u = 0;
     };
