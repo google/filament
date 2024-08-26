@@ -53,8 +53,8 @@ MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType,
         mBuffer = { [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate],
             TrackedMetalBuffer::Type::GENERIC };
     }
-    FILAMENT_CHECK_POSTCONDITION(mBuffer)
-            << "Could not allocate Metal buffer of size " << size << ".";
+    // mBuffer might fail to be allocated. Clients can check for this by calling
+    // wasAllocationSuccessful().
 }
 
 MetalBuffer::~MetalBuffer() {
