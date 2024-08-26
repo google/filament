@@ -371,13 +371,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     if (view.isFrontFaceWindingInverted()) {
                         renderPassFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
                     }
-
-                    bool const canUseDepthClamp =
-                            !view.hasVSM() &&
-                            mIsDepthClampSupported &&
-                            engine.debug.shadowmap.depth_clamp;
-
-                    if (canUseDepthClamp) {
+                    if (mIsDepthClampSupported && engine.debug.shadowmap.depth_clamp) {
                         renderPassFlags |= RenderPass::HAS_DEPTH_CLAMP;
                     }
 
@@ -656,14 +650,9 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             cameraInfo.zf = -nearFarPlanes[i + 1];
             updateNearFarPlanes(&cameraInfo.cullingProjection, cameraInfo.zn, cameraInfo.zf);
 
-            bool const canUseDepthClamp =
-                    !view.hasVSM() &&
-                    mIsDepthClampSupported &&
-                    engine.debug.shadowmap.depth_clamp;
-
             auto shaderParameters = shadowMap.updateDirectional(engine,
                     lightData, 0, cameraInfo, shadowMapInfo, sceneInfo,
-                    canUseDepthClamp);
+                    mIsDepthClampSupported && engine.debug.shadowmap.depth_clamp);
 
             if (shadowMap.hasVisibleShadows()) {
                 const size_t shadowIndex = shadowMap.getShadowIndex();
