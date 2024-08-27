@@ -199,7 +199,10 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTexture,
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureView,
         backend::TextureHandle, texture,
         uint8_t, baseLevel,
-        uint8_t, levelCount,
+        uint8_t, levelCount)
+
+DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
+        backend::TextureHandle, texture,
         backend::TextureSwizzle, r,
         backend::TextureSwizzle, g,
         backend::TextureSwizzle, b,

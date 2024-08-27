@@ -184,8 +184,8 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
             handle = mBackend.createTexture(
                     target, levels, format, samples, width, height, depth, usage);
             if (swizzle != defaultSwizzle) {
-                TextureHandle swizzledHandle = mBackend.createTextureView(
-                        handle, 0, levels, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+                TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
+                        handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
                 mBackend.destroyTexture(handle);
                 handle = swizzledHandle;
             }
@@ -195,8 +195,8 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         handle = mBackend.createTexture(
                 target, levels, format, samples, width, height, depth, usage);
         if (swizzle != defaultSwizzle) {
-            TextureHandle swizzledHandle = mBackend.createTextureView(
-                    handle, 0, levels, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+            TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
+                    handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
             mBackend.destroyTexture(handle);
             handle = swizzledHandle;
         }

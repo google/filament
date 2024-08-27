@@ -573,14 +573,18 @@ void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targ
 }
 
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    // TODO: implement swizzle
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
     VulkanTexture const* src = mResourceAllocator.handle_cast<VulkanTexture const*>(srch);
     auto vktexture = mResourceAllocator.construct<VulkanTexture>(th,
             mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands,
             &mResourceAllocator, src, baseLevel, levelCount, mStagePool);
     mResourceManager.acquire(vktexture);
+}
+
+void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
+    // TODO: implement swizzle
 }
 
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
@@ -781,6 +785,10 @@ Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
     return mResourceAllocator.allocHandle<VulkanTexture>();
 }
 

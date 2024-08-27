@@ -440,16 +440,22 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
         TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
     auto texture = alloc_handle<MetalTexture>();
     createTextureR(texture, target, levels, format, samples, width, height, depth, usage);
-    createTextureViewR(th, texture, 0, levels, r, g, b, a);
+    createTextureViewSwizzleR(th, texture, r, g, b, a);
     destroyTexture(texture);
 }
 
-void MetalDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
-        uint8_t baseLevel, uint8_t levelCount,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+void MetalDriver::createTextureViewR(
+        Handle<HwTexture> th, Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
     MetalTexture const* src = handle_cast<MetalTexture>(srch);
     mContext->textures.insert(
-            construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount, r, g, b, a));
+            construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount));
+}
+
+void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
+    MetalTexture const* src = handle_cast<MetalTexture>(srch);
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
@@ -677,6 +683,10 @@ Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureViewSwizzleS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 

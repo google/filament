@@ -560,6 +560,10 @@ Handle<HwTexture> OpenGLDriver::createTextureViewS() noexcept {
     return initHandle<GLTexture>();
 }
 
+Handle<HwTexture> OpenGLDriver::createTextureViewSwizzleS() noexcept {
+    return initHandle<GLTexture>();
+}
+
 Handle<HwTexture> OpenGLDriver::createTextureExternalImageS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -958,8 +962,7 @@ void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
 }
 
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
 
@@ -995,8 +998,6 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     t->gl.baseLevel = (int8_t)std::min(127, srcBaseLevel + baseLevel);
     t->gl.maxLevel  = (int8_t)std::min(127, srcBaseLevel + baseLevel + levelCount - 1);
 
-    // TODO: implement swizzle
-
     // increase reference count to this texture handle
     t->ref = src->ref;
     GLTextureRef* ref = handle_cast<GLTextureRef*>(t->ref);
@@ -1004,6 +1005,12 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     ref->count++;
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
+    // TODO: implement swizzle
 }
 
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,

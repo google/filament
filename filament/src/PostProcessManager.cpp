@@ -535,9 +535,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 // The first mip already exists, so we process n-1 lods
                 for (size_t level = 0; level < levelCount - 1; level++) {
                     auto out = resources.getRenderPassInfo(level);
-                    auto th = driver.createTextureView(in, level, 1, TextureSwizzle::CHANNEL_0,
-                            TextureSwizzle::CHANNEL_1, TextureSwizzle::CHANNEL_2,
-                            TextureSwizzle::CHANNEL_3);
+                    auto th = driver.createTextureView(in, level, 1);
                     mi->setParameter("depth", th, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     commitAndRender(out, material, driver);
                     driver.destroyTexture(th);
@@ -1652,12 +1650,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     const float w = FTexture::valueForLevel(level, desc.width);
                     const float h = FTexture::valueForLevel(level, desc.height);
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
-                    auto inColor = driver.createTextureView(inOutColor, level, 1,
-                            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-                            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
-                    auto inCoc = driver.createTextureView(inOutCoc, level, 1,
-                            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-                            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+                    auto inColor = driver.createTextureView(inOutColor, level, 1);
+                    auto inCoc = driver.createTextureView(inOutCoc, level, 1);
                     mi->setParameter("color", inColor, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("coc",   inCoc,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("weightScale", 0.5f / float(1u << level));   // FIXME: halfres?
@@ -2101,9 +2095,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     // 9 samples filter.
                     auto vp = resources.getRenderPassInfo(data.outRT[i-1]).params.viewport;
                     auto* const mi = (vp.width & 1 || vp.height & 1) ? mi13 : mi9;
-                    auto hwOutView = driver.createTextureView(hwOut, i - 1, 1,
-                            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-                            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+                    auto hwOutView = driver.createTextureView(hwOut, i - 1, 1);
                     mi->setParameter("source", hwOutView, {
                             .filterMag = SamplerMagFilter::LINEAR,
                             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
@@ -2146,9 +2138,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
                     auto w = FTexture::valueForLevel(i - 1, outDesc.width);
                     auto h = FTexture::valueForLevel(i - 1, outDesc.height);
-                    auto hwOutView = driver.createTextureView(hwOut, i, 1,
-                            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-                            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+                    auto hwOutView = driver.createTextureView(hwOut, i, 1);
                     mi->setParameter("resolution", float4{ w, h, 1.0f / w, 1.0f / h });
                     mi->setParameter("source", hwOutView, {
                             .filterMag = SamplerMagFilter::LINEAR,
@@ -3293,9 +3283,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1,
-                        TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-                        TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
+                auto in = driver.createTextureView(resources.getTexture(data.in), level, 1);
                 auto out = resources.getRenderPassInfo();
 
                 auto const& inDesc = resources.getDescriptor(data.in);

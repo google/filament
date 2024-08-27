@@ -593,8 +593,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
 }
 
 MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8_t baseLevel,
-        uint8_t levelCount, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
-        TextureSwizzle a) noexcept
+        uint8_t levelCount) noexcept
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
               src->format, src->usage),
       context(context),
@@ -602,6 +601,16 @@ MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, uint8
       externalImage(src->externalImage) {
     texture = createTextureViewWithLodRange(
             src->getMtlTextureForRead(), baseLevel, baseLevel + levelCount - 1);
+}
+
+MetalTexture::MetalTexture(MetalContext& context, MetalTexture const* src, TextureSwizzle r,
+        TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) noexcept
+    : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+              src->format, src->usage),
+      context(context),
+      devicePixelFormat(src->devicePixelFormat),
+      externalImage(src->externalImage) {
+    texture = src->getMtlTextureForRead();
     if (context.supportsTextureSwizzling) {
         // Even though we've already checked context.supportsTextureSwizzling, we still need to
         // guard these calls with @availability, otherwise the API usage will generate compiler

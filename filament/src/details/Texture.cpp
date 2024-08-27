@@ -248,8 +248,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
     if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
-        auto swizzleView = driver.createTextureView(mHandle, 0, mLevelCount, builder->mSwizzle[0],
-                builder->mSwizzle[1], builder->mSwizzle[2], builder->mSwizzle[3]);
+        auto const& s = builder->mSwizzle;
+        auto swizzleView = driver.createTextureViewSwizzle(mHandle, s[0], s[1], s[2], s[3]);
         driver.destroyTexture(mHandle);
         mHandle = swizzleView;
     }
@@ -445,8 +445,8 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     auto texture = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
 
     if (mTextureIsSwizzled) {
-        auto swizzleView = api.createTextureView(
-                texture, 0, mLevelCount, mSwizzle[0], mSwizzle[1], mSwizzle[2], mSwizzle[3]);
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
         api.destroyTexture(texture);
         texture = swizzleView;
     }
@@ -467,8 +467,8 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
             api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
 
     if (mTextureIsSwizzled) {
-        auto swizzleView = api.createTextureView(
-                texture, 0, mLevelCount, mSwizzle[0], mSwizzle[1], mSwizzle[2], mSwizzle[3]);
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
         api.destroyTexture(texture);
         texture = swizzleView;
     }
@@ -582,9 +582,8 @@ backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noe
         if (range.empty()) {
             setHandleForSampling(mHandle);
         } else {
-            setHandleForSampling(mDriver->createTextureView(mHandle, range.first,
-                    range.last - range.first, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-                    TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
+            setHandleForSampling(
+                    mDriver->createTextureView(mHandle, range.first, range.last - range.first));
         }
     }
     return mHandleForSampling;
