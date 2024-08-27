@@ -829,13 +829,13 @@ ShadowMap::Corners ShadowMap::computeFrustumCorners(
     Corners const csViewFrustumCorners = {
             .vertices = {
                     { -1, -1, far  },
-                    {  1, -1, far  },
-                    { -1,  1, far  },
-                    {  1,  1, far  },
+                    { 1,  -1, far  },
+                    { -1, 1,  far  },
+                    { 1,  1,  far  },
                     { -1, -1, near },
-                    {  1, -1, near },
-                    { -1,  1, near },
-                    {  1,  1, near },
+                    { 1,  -1, near },
+                    { -1, 1,  near },
+                    { 1,  1,  near },
             }
     };
 

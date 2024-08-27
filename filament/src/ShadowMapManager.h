@@ -232,7 +232,6 @@ private:
     ShadowMapCacheContainer mShadowMapCache;
     uint32_t mDirectionalShadowMapCount = 0;
     uint32_t mSpotShadowMapCount = 0;
-    bool const mIsDepthClampSupported;
     bool mInitialized = false;
 
     ShadowMap& getShadowMap(size_t index) noexcept {

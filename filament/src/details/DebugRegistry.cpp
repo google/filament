@@ -28,6 +28,12 @@
 #include <string_view>
 #include <utility>
 
+#ifndef NDEBUG
+#   define DEBUG_PROPERTIES_WRITABLE true
+#else
+#   define DEBUG_PROPERTIES_WRITABLE false
+#endif
+
 using namespace filament::math;
 using namespace utils;
 
@@ -73,15 +79,17 @@ bool FDebugRegistry::hasProperty(const char* name) const noexcept {
 
 template<typename T>
 bool FDebugRegistry::setProperty(const char* name, T v) noexcept {
-    auto info = getPropertyInfo(name);
-    T* const addr = static_cast<T*>(info.first);
-    if (addr) {
-        auto old = *addr;
-        *addr = v;
-        if (info.second && old != v) {
-            info.second();
+    if constexpr (DEBUG_PROPERTIES_WRITABLE) {
+        auto info = getPropertyInfo(name);
+        T* const addr = static_cast<T*>(info.first);
+        if (addr) {
+            auto old = *addr;
+            *addr = v;
+            if (info.second && old != v) {
+                info.second();
+            }
+            return true;
         }
-        return true;
     }
     return false;
 }

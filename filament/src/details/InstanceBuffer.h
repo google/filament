@@ -25,6 +25,7 @@
 
 #include <math/mat4.h>
 
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
 namespace filament {
@@ -46,10 +47,13 @@ public:
     void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo,
             backend::Handle<backend::HwBufferObject> handle);
 
+    utils::CString const& getName() const noexcept { return mName; }
+
 private:
     friend class RenderableManager;
 
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
+    utils::CString mName;
     size_t mInstanceCount;
 };
 

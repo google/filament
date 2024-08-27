@@ -615,14 +615,51 @@ static bool processVariables(MaterialBuilder& builder, const JsonishValue& value
     }
 
     for (size_t i = 0; i < elements.size(); i++) {
-        auto elementValue = elements[i];
+        ParameterPrecision precision = ParameterPrecision::DEFAULT;
         MaterialBuilder::Variable v = intToVariable(i);
-        if (elementValue->getType() != JsonishValue::Type::STRING) {
+        std::string nameString;
+
+        auto elementValue = elements[i];
+        if (elementValue->getType() == JsonishValue::Type::OBJECT) {
+
+            JsonishObject const& jsonObject = *elementValue->toJsonObject();
+
+            const JsonishValue* nameValue = jsonObject.getValue("name");
+            if (!nameValue) {
+                std::cerr << "variables: entry without 'name' key." << std::endl;
+                return false;
+            }
+            if (nameValue->getType() != JsonishValue::STRING) {
+                std::cerr << "variables: name value must be STRING." << std::endl;
+                return false;
+            }
+
+            const JsonishValue* precisionValue = jsonObject.getValue("precision");
+            if (precisionValue) {
+                if (precisionValue->getType() != JsonishValue::STRING) {
+                    std::cerr << "variables: precision must be a STRING." << std::endl;
+                    return false;
+                }
+                auto precisionString = precisionValue->toJsonString();
+                if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
+                    return logEnumIssue("variables", *precisionString, Enums::map<ParameterPrecision>());
+                }
+            }
+
+            nameString = nameValue->toJsonString()->getString();
+            if (precisionValue) {
+                precision = Enums::toEnum<ParameterPrecision>(
+                        precisionValue->toJsonString()->getString());
+            }
+            builder.variable(v, nameString.c_str(), precision);
+        } else if (elementValue->getType() == JsonishValue::Type::STRING) {
+            nameString = elementValue->toJsonString()->getString();
+            builder.variable(v, nameString.c_str());
+        } else {
             std::cerr << "variables: array index " << i << " is not a STRING. found:" <<
                     JsonishValue::typeToString(elementValue->getType()) << std::endl;
             return false;
         }
-        builder.variable(v, elementValue->toJsonString()->getString().c_str());
     }
 
     return true;

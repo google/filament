@@ -320,17 +320,40 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
         uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih) {
     MetalVertexBufferInfo const* const vbi = handle_cast<const MetalVertexBufferInfo>(vbih);
     construct_handle<MetalVertexBuffer>(vbh, *mContext, vertexCount, vbi->bufferCount, vbih);
+    // No actual GPU memory is allocated here, so no need to check for allocation success.
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
-    auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize, indexCount);
+    auto elementSize = (uint8_t)getElementTypeSize(elementType);
+    auto* indexBuffer =
+            construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize, indexCount);
+    auto& buffer = indexBuffer->buffer;
+    // If the allocation was not successful, postpone the error message until the next tick, to give
+    // Filament a chance to call setDebugTag on the handle; this way we get a nicer error message.
+    if (UTILS_UNLIKELY(!buffer.wasAllocationSuccessful())) {
+        const size_t byteCount = buffer.getSize();
+        runAtNextTick([byteCount, this, ibh]() {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Could not allocate Metal index buffer of size " << byteCount
+                    << ", tag=" << mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe();
+        });
+    }
 }
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
-    construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
+    auto* bufferObject =
+            construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
+    // If the allocation was not successful, postpone the error message until the next tick, to give
+    // Filament a chance to call setDebugTag on the handle; this way we get a nicer error message.
+    if (UTILS_UNLIKELY(!bufferObject->getBuffer()->wasAllocationSuccessful())) {
+        runAtNextTick([byteCount, this, boh]() {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Could not allocate Metal buffer of size " << byteCount
+                    << ", tag=" << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
+        });
+    }
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -832,10 +855,6 @@ bool MetalDriver::isDepthStencilBlitSupported(TextureFormat format) {
 
 bool MetalDriver::isProtectedTexturesSupported() {
     return false;
-}
-
-bool MetalDriver::isDepthClampSupported() {
-    return true;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1755,13 +1774,6 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
         [mContext->currentRenderPassEncoder setFrontFacingWinding:winding];
     }
 
-    // depth clip mode
-    MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
-    mContext->depthClampState.updateState(depthClipMode);
-    if (mContext->depthClampState.stateChanged()) {
-        [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
-    }
-
     // Set the depth-stencil state, if a state change is needed.
     DepthStencilState depthState;
     if (depthAttachment) {
@@ -2072,16 +2084,17 @@ void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
 void MetalDriver::resetState(int) {
 }
 
+void MetalDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
+}
+
 void MetalDriver::runAtNextTick(const std::function<void()>& fn) noexcept {
-    std::lock_guard<std::mutex> const lock(mTickOpsLock);
     mTickOps.push_back(fn);
 }
 
 void MetalDriver::executeTickOps() noexcept {
     std::vector<std::function<void()>> ops;
-    mTickOpsLock.lock();
     std::swap(ops, mTickOps);
-    mTickOpsLock.unlock();
     for (const auto& f : ops) {
         f();
     }

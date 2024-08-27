@@ -61,7 +61,8 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder) {
+FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
+    : mName(builder.getName()) {
     mInstanceCount = builder->mInstanceCount;
 
     mLocalTransforms.reserve(mInstanceCount);

@@ -655,16 +655,16 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
-                    hasColorGrading &&
                     msaaSampleCount <= 1 &&
-                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     driver.isFrameBufferFetchSupported() &&
+                    hasColorGrading &&
+                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     !engine.debug.renderer.disable_subpasses,
             .customResolve =
-                    msaaOptions.customResolve &&
                     msaaSampleCount > 1 &&
-                    hasColorGrading &&
                     driver.isFrameBufferFetchMultiSampleSupported() &&
+                    msaaOptions.customResolve &&
+                    hasColorGrading &&
                     !engine.debug.renderer.disable_subpasses,
             .translucent = needsAlphaChannel,
             .fxaa = hasFXAA,
@@ -672,6 +672,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .ldrFormat = (hasColorGrading && hasFXAA) ?
                     TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
     };
+
+    // by construction (msaaSampleCount) both asSubpass and customResolve can't be true
+    assert_invariant(colorGradingConfig.asSubpass + colorGradingConfig.customResolve < 2);
 
     // whether we're scaled at all
      bool scaled = any(notEqual(scale, float2(1.0f)));
@@ -951,7 +954,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
-    blackboard["structure"] = structure;
     const auto picking = picking_;
 
 
@@ -999,7 +1001,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
             view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
     config.ssrLodOffset = ssrConfig.lodOffset;
-    blackboard["ssr"] = ssrConfig.ssr;
 
     // --------------------------------------------------------------------------------------------
     // screen-space reflections pass
@@ -1103,24 +1104,39 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     );
 
     // the color pass itself + color-grading as subpass if needed
-    auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view,
+    auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
+                .shadows = blackboard.get<FrameGraphTexture>("shadows"),
+                .ssao = blackboard.get<FrameGraphTexture>("ssao"),
+                .ssr = ssrConfig.ssr,
+                .structure = structure
+            },
             colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
 
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
-        // this cancels the colorPass() call above if refraction is active.
-        // the color pass + refraction + color-grading as subpass if needed
-        const auto [output, enabled] = RendererUtils::refractionPass(fg, mEngine, view,
+        // This cancels the colorPass() call above if refraction is active.
+        // The color pass + refraction + color-grading as subpass if needed
+        auto const output = RendererUtils::refractionPass(fg, mEngine, view, {
+                        .shadows = blackboard.get<FrameGraphTexture>("shadows"),
+                        .ssao = blackboard.get<FrameGraphTexture>("ssao"),
+                        .ssr = ssrConfig.ssr,
+                        .structure = structure
+                },
                 config, ssrConfig, colorGradingConfigForColor, pass);
-        colorPassOutput = output;
-        hasScreenSpaceRefraction = enabled;
+
+        hasScreenSpaceRefraction = output.has_value();
+        if (hasScreenSpaceRefraction) {
+            colorPassOutput = output.value();
+        }
     }
 
     if (colorGradingConfig.customResolve) {
+        assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
         // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
         //       by many other passes (Bloom, TAA, DoF, etc...). We could make this more
         //       efficient by using ARM_shader_framebuffer_fetch. We use a load/store (i.e.
         //       subpass) here because it's more convenient.
-        colorPassOutput = ppm.customResolveUncompressPass(fg, colorPassOutput);
+        colorPassOutput.linearColor =
+                ppm.customResolveUncompressPass(fg, colorPassOutput.linearColor);
     }
 
     // export the color buffer if screen-space reflections are enabled
@@ -1136,7 +1152,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     // The "output" of this pass is going to be used during the next frame as
                     // an "import".
                     builder.sideEffect();
-                    data.history = builder.sample(colorPassOutput); // FIXME: an access must be declared for detach(), why?
+
+                    // we can't use colorPassOutput here because it could be tonemapped
+                    data.history = builder.sample(colorPassOutput.linearColor); // FIXME: an access must be declared for detach(), why?
                 }, [&view, projection](FrameGraphResources const& resources, auto const& data,
                         backend::DriverApi&) {
                     auto& history = view.getFrameHistory();
@@ -1146,7 +1164,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     }
 
-    FrameGraphId<FrameGraphTexture> input = colorPassOutput;
+    // this is the output of the color pass / input to post processing,
+    // this is only used later for comparing it with the output after post-processing
+    FrameGraphId<FrameGraphTexture> const postProcessInput = colorGradingConfig.asSubpass ?
+                                                           colorPassOutput.tonemappedColor :
+                                                           colorPassOutput.linearColor;
+
+    // input can change below
+    FrameGraphId<FrameGraphTexture> input = postProcessInput;
     fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
         // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
         view.cleanupRenderPasses();
@@ -1157,8 +1182,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // if the depth is not used below or if the depth is not MS (e.g. it could have been
     // auto-resolved).
     // In practice, this is used on Vulkan and older Metal devices.
-    auto depth = blackboard.get<FrameGraphTexture>("depth");
-    depth = ppm.resolve(fg, "Resolved Depth Buffer", depth, { .levels = 1 });
+    auto depth = ppm.resolve(fg, "Resolved Depth Buffer", colorPassOutput.depth, { .levels = 1 });
 
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
@@ -1274,7 +1298,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
 
     const bool outputIsSwapChain =
-            (input == colorPassOutput) && (viewRenderTarget == mRenderTargetHandle);
+            (input == postProcessInput) && (viewRenderTarget == mRenderTargetHandle);
     if (mightNeedFinalBlit) {
         if (blendModeTranslucent ||
             xvp != svp ||
