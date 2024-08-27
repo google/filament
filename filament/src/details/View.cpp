@@ -31,15 +31,17 @@
 #include "details/Skybox.h"
 
 #include <filament/Exposure.h>
+#include <filament/DebugRegistry.h>
 #include <filament/TextureSampler.h>
 #include <filament/View.h>
 
 #include <private/filament/UibStructs.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Profiler.h>
 #include <utils/Slice.h>
 #include <utils/Systrace.h>
-#include <utils/debug.h>
 #include <utils/Zip2Iterator.h>
 
 #include <math/scalar.h>
@@ -47,6 +49,7 @@
 
 #include <array>
 #include <memory>
+#include <tuple>
 
 using namespace utils;
 
@@ -78,21 +81,29 @@ FView::FView(FEngine& engine)
     mPidController.setOutputDeadBand(-0.01f, 0.05f);
 
 #ifndef NDEBUG
-    debugRegistry.registerDataSource("d.view.frame_info",
-            [this]() -> DebugRegistry::DataSource {
-                assert_invariant(!mDebugFrameHistory);
-                mDebugFrameHistory = std::make_unique<std::array<DebugRegistry::FrameHistory, 5*60>>();
-                return { mDebugFrameHistory->data(), mDebugFrameHistory->size() };
+    // This can fail if another view has already registered this data source
+    mDebugState->owner = debugRegistry.registerDataSource("d.view.frame_info",
+            [weak = std::weak_ptr<DebugState>(mDebugState)]() -> DebugRegistry::DataSource {
+                // the View could have been destroyed by the time we do this
+                auto const state = weak.lock();
+                if (!state) {
+                    return { nullptr, 0 };
+                }
+                // Lazily allocate the buffer for the debug data source, and mark this
+                // data source as active. It can never go back to inactive.
+                assert_invariant(!state->debugFrameHistory);
+                state->active = true;
+                state->debugFrameHistory =
+                        std::make_unique<std::array<DebugRegistry::FrameHistory, 5 * 60>>();
+                return { state->debugFrameHistory->data(), state->debugFrameHistory->size() };
             });
-    debugRegistry.registerProperty("d.view.pid.kp", &engine.debug.view.pid.kp);
-    debugRegistry.registerProperty("d.view.pid.ki", &engine.debug.view.pid.ki);
-    debugRegistry.registerProperty("d.view.pid.kd", &engine.debug.view.pid.kd);
-    // default parameters for debugging UI
-    engine.debug.view.pid.kp = 1.0f - std::exp(-1.0f / 8.0f);
-    engine.debug.view.pid.ki = PID_CONTROLLER_Ki;
-    engine.debug.view.pid.kd = PID_CONTROLLER_Kd;
-    mPidController.setParallelGains(
-            engine.debug.view.pid.kp, engine.debug.view.pid.ki, engine.debug.view.pid.kd);
+
+    if (UTILS_UNLIKELY(mDebugState->owner)) {
+        // publish the properties (they will be initialized in the main loop)
+        debugRegistry.registerProperty("d.view.pid.kp", &engine.debug.view.pid.kp);
+        debugRegistry.registerProperty("d.view.pid.ki", &engine.debug.view.pid.ki);
+        debugRegistry.registerProperty("d.view.pid.kd", &engine.debug.view.pid.kd);
+    }
 #endif
 
     // allocate UBOs
@@ -126,6 +137,12 @@ void FView::terminate(FEngine& engine) {
     mFroxelizer.terminate(driver);
 
     engine.getEntityManager().destroy(mFogEntity);
+
+#ifndef NDEBUG
+    if (UTILS_UNLIKELY(mDebugState->owner)) {
+        engine.getDebugRegistry().unregisterDataSource("d.view.frame_info");
+    }
+#endif
 }
 
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
@@ -166,6 +183,16 @@ float2 FView::updateScale(FEngine& engine,
         filament::details::FrameInfo const& info,
         Renderer::FrameRateOptions const& frameRateOptions,
         Renderer::DisplayInfo const& displayInfo) noexcept {
+
+#ifndef NDEBUG
+    if (UTILS_LIKELY(!mDebugState->active)) {
+        // if we're not active, update the debug properties with the normal values
+        // and use that for configuring the PID controller.
+        engine.debug.view.pid.kp = 1.0f - std::exp(-frameRateOptions.scaleRate);
+        engine.debug.view.pid.ki = PID_CONTROLLER_Ki;
+        engine.debug.view.pid.kd = PID_CONTROLLER_Kd;
+    }
+#endif
 
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
@@ -250,14 +277,15 @@ float2 FView::updateScale(FEngine& engine,
 
 #ifndef NDEBUG
     // only for debugging...
-    if (mDebugFrameHistory) {
+    if (UTILS_UNLIKELY(mDebugState->active && mDebugState->debugFrameHistory)) {
+        auto* const debugFrameHistory = mDebugState->debugFrameHistory.get();
         using namespace std::chrono;
         using duration_ms = duration<float, std::milli>;
         const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
         const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
-        std::move(mDebugFrameHistory->begin() + 1,
-                mDebugFrameHistory->end(), mDebugFrameHistory->begin());
-        mDebugFrameHistory->back() = {
+        std::move(debugFrameHistory->begin() + 1,
+                debugFrameHistory->end(), debugFrameHistory->begin());
+        debugFrameHistory->back() = {
                 .target             = target,
                 .targetWithHeadroom = targetWithHeadroom,
                 .frameTime          = duration_cast<duration_ms>(info.frameTime).count(),

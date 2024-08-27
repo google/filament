@@ -2032,6 +2032,10 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 void VulkanDriver::resetState(int) {
 }
 
+void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mResourceAllocator.associateHandle(handleId, std::move(tag));
+}
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<VulkanDriver>;
 

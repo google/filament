@@ -201,9 +201,9 @@ public:
 
     void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
-    FCamera const* getDirectionalShadowCamera() const noexcept {
-        if (!mShadowMapManager) return nullptr;
-        return mShadowMapManager->getDirectionalShadowCamera();
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept {
+        if (!mShadowMapManager) return {};
+        return mShadowMapManager->getDirectionalShadowCameras();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -576,7 +576,12 @@ private:
                                                     }};
 
 #ifndef NDEBUG
-    std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> mDebugFrameHistory;
+    struct DebugState {
+        std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> debugFrameHistory{};
+        bool owner = false;
+        bool active = false;
+    };
+    std::shared_ptr<DebugState> mDebugState{ new DebugState };
 #endif
 };
 
