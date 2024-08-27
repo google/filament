@@ -698,13 +698,12 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     CameraInfo cameraInfo = view.computeCameraInfo(engine);
 
-    // when colorgrading-as-subpass is active, we know that many other effects are disabled
-    // such as dof, bloom. Moreover, if fxaa and scaling are not enabled, we're essentially in
-    // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
-    // buffer padding (because there are no other pass that can do it as a side effect).
-    // In this case, it is better to skip the padding, which won't be helping much.
-    const bool noBufferPadding = (colorGradingConfig.asSubpass && !hasFXAA && !scaled)
-            || engine.debug.renderer.disable_buffer_padding;
+    // If fxaa and scaling are not enabled, we're essentially in a very fast rendering path -- in
+    // this case, we would need an extra blit to "resolve" the buffer padding (because there are no
+    // other pass that can do it as a side effect). In this case, it is better to skip the padding,
+    // which won't be helping much.
+    const bool noBufferPadding
+            = (!hasFXAA && !scaled) || engine.debug.renderer.disable_buffer_padding;
 
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
     float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
