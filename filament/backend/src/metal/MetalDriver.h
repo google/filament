@@ -58,7 +58,6 @@ class MetalDriver final : public DriverBase {
 
 public:
     static Driver* create(MetalPlatform* platform, const Platform::DriverConfig& driverConfig);
-    void runAtNextTick(const std::function<void()>& fn) noexcept;
 
 private:
 
@@ -75,10 +74,12 @@ private:
 
     /*
      * Tasks run regularly on the driver thread.
+     * Not thread-safe; tasks are run from the driver thead and must be enqueued from the driver
+     * thread.
      */
+    void runAtNextTick(const std::function<void()>& fn) noexcept;
     void executeTickOps() noexcept;
     std::vector<std::function<void()>> mTickOps;
-    std::mutex mTickOpsLock;
 
     // Tasks regularly executed on the driver thread after a command buffer has completed
     struct DeferredTask {

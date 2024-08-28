@@ -20,11 +20,12 @@
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
+#include <utils/CString.h>
 #include <utils/Log.h>
+#include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
 
 #include <tsl/robin_map.h>
 
@@ -173,8 +174,10 @@ public:
                 uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
                 auto const pNode = static_cast<typename Allocator::Node*>(p);
                 uint8_t const expectedAge = pNode[-1].age;
-                FILAMENT_CHECK_POSTCONDITION(expectedAge == age) <<
-                        "use-after-free of Handle with id=" << handle.getId();
+                // getHandleTag() is only called if the check fails.
+                FILAMENT_CHECK_POSTCONDITION(expectedAge == age)
+                        << "use-after-free of Handle with id=" << handle.getId()
+                        << ", tag=" << getHandleTag(handle.getId()).c_str_safe();
             }
         }
 
@@ -199,6 +202,34 @@ public:
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B> const& handle) {
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
+    }
+
+    void associateTagToHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
+        // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
+        // those
+        if (isPoolHandle(id)) {
+            // Truncate the tag's age to N bits.
+            constexpr uint8_t N = 2; // support a history of 4 tags
+            constexpr uint8_t mask = (1 << N) - 1;
+
+            uint8_t const age = (id & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+            uint8_t const newAge = age & mask;
+            uint32_t const key = (id & ~HANDLE_AGE_MASK) | (newAge << HANDLE_AGE_SHIFT);
+
+            // This line is the costly part. In the future, we could potentially use a custom
+            // allocator.
+            mDebugTags[key] = std::move(tag);
+        }
+    }
+
+    utils::CString getHandleTag(HandleBase::HandleId id) const noexcept {
+        if (!isPoolHandle(id)) {
+            return "(no tag)";
+        }
+        if (auto pos = mDebugTags.find(id); pos != mDebugTags.end()) {
+            return pos->second;
+        }
+        return "(no tag)";
     }
 
 private:
@@ -363,6 +394,7 @@ private:
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
+    tsl::robin_map<HandleBase::HandleId, utils::CString> mDebugTags;
     HandleBase::HandleId mId = 0;
     bool mUseAfterFreeCheckDisabled = false;
 };

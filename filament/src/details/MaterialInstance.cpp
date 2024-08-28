@@ -72,6 +72,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
         mUbHandle = driver.createBufferObject(mUniforms.getSize(),
                 BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
+        driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
     // set the UBO, always descriptor 0
@@ -136,6 +137,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         mUniforms.setUniforms(other->getUniformBuffer());
         mUbHandle = driver.createBufferObject(mUniforms.getSize(),
                 BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+        driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
     // set the UBO, always descriptor 0

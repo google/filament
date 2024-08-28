@@ -25,8 +25,9 @@
 #include <math/half.h>
 #include <math/mat4.h>
 
-#include <string.h>
+#include <utils/CString.h>
 
+#include <string.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -80,6 +81,11 @@ FSkinningBuffer::FSkinningBuffer(FEngine& engine, const Builder& builder)
             getPhysicalBoneCount(mBoneCount) * sizeof(PerRenderableBoneUib::BoneData),
             BufferObjectBinding::UNIFORM,
             BufferUsage::DYNAMIC);
+
+    if (auto name = builder.getName(); !name.empty()) {
+        // TODO: We should also tag the texture created inside createIndicesAndWeightsHandle.
+        driver.setDebugTag(mHandle.getId(), std::move(name));
+    }
 
     if (builder->mInitialize) {
         // initialize the bones to identity (before rounding up)

@@ -224,9 +224,8 @@ public:
         bool EXT_color_buffer_float;
         bool EXT_color_buffer_half_float;
         bool EXT_debug_marker;
-        bool EXT_depth_clamp;
-        bool EXT_discard_framebuffer;
         bool EXT_disjoint_timer_query;
+        bool EXT_discard_framebuffer;
         bool EXT_multisampled_render_to_texture2;
         bool EXT_multisampled_render_to_texture;
         bool EXT_protected_textures;
@@ -244,10 +243,10 @@ public:
         bool KHR_parallel_shader_compile;
         bool KHR_texture_compression_astc_hdr;
         bool KHR_texture_compression_astc_ldr;
-        bool OES_EGL_image_external_essl3;
-        bool OES_depth24;
         bool OES_depth_texture;
+        bool OES_depth24;
         bool OES_packed_depth_stencil;
+        bool OES_EGL_image_external_essl3;
         bool OES_rgb8_rgba8;
         bool OES_standard_derivatives;
         bool OES_texture_npot;
@@ -623,7 +622,6 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 #ifdef BACKEND_OPENGL_VERSION_GL
         case GL_PROGRAM_POINT_SIZE:             index = 10; break;
 #endif
-        case GL_DEPTH_CLAMP:                    index = 11; break;
         default: break;
     }
     assert_invariant(index < state.enables.caps.size());

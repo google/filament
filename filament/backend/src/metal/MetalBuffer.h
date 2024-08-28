@@ -160,6 +160,8 @@ public:
          size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
+    [[nodiscard]] bool wasAllocationSuccessful() const noexcept { return mBuffer || mCpuBuffer; }
+
     MetalBuffer(const MetalBuffer& rhs) = delete;
     MetalBuffer& operator=(const MetalBuffer& rhs) = delete;
 
