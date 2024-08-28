@@ -253,10 +253,6 @@ void MetalSwapChain::present() {
     }
 }
 
-#ifndef FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD
-#define FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD 1
-#endif
-
 class PresentDrawableData {
 public:
     PresentDrawableData() = delete;
@@ -275,14 +271,10 @@ public:
            [that->mDrawable present];
         }
 
-#if FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD == 1
         // mDrawable is acquired on the driver thread. Typically, we would release this object on
         // the same thread, but after receiving consistent crash reports from within
         // [CAMetalDrawable dealloc], we suspect this object requires releasing on the main thread.
         dispatch_async(dispatch_get_main_queue(), ^{ cleanupAndDestroy(that); });
-#else
-        that->mDriver->runAtNextTick([that]() { cleanupAndDestroy(that); });
-#endif
     }
 
 private:

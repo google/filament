@@ -247,13 +247,19 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
+
     if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
         auto const& s = builder->mSwizzle;
         auto swizzleView = driver.createTextureViewSwizzle(mHandle, s[0], s[1], s[2], s[3]);
         driver.destroyTexture(mHandle);
         mHandle = swizzleView;
     }
+
     mHandleForSampling = mHandle;
+
+    if (auto name = builder.getName(); !name.empty()) {
+        driver.setDebugTag(mHandle.getId(), std::move(name));
+    }
 }
 
 // frees driver resources, object becomes invalid

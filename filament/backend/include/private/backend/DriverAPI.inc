@@ -162,6 +162,10 @@ DECL_DRIVER_API_0(finish)
 // reset state tracking, if the driver does any state tracking (e.g. GL)
 DECL_DRIVER_API_0(resetState)
 
+DECL_DRIVER_API_N(setDebugTag,
+        backend::HandleBase::HandleId, handleId,
+        utils::CString, tag)
+
 /*
  * Creating driver objects
  * -----------------------
@@ -361,7 +365,6 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)

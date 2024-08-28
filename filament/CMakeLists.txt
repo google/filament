@@ -61,6 +61,7 @@ set(SRCS
         src/Engine.cpp
         src/Exposure.cpp
         src/Fence.cpp
+        src/FilamentBuilder.cpp
         src/FrameInfo.cpp
         src/FrameSkipper.cpp
         src/Froxelizer.cpp

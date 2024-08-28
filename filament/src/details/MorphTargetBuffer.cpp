@@ -25,6 +25,8 @@
 #include <math/mat4.h>
 #include <math/norm.h>
 
+#include <utils/CString.h>
+
 namespace filament {
 
 using namespace backend;
@@ -123,6 +125,11 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT);
+
+    if (auto name = builder.getName(); !name.empty()) {
+        driver.setDebugTag(mPbHandle.getId(), name);
+        driver.setDebugTag(mTbHandle.getId(), std::move(name));
+    }
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {

@@ -1048,10 +1048,6 @@ bool VulkanDriver::isProtectedTexturesSupported() {
     return false;
 }
 
-bool VulkanDriver::isDepthClampSupported() {
-    return mContext.isDepthClampSupported();
-}
-
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU: {
@@ -1837,8 +1833,6 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
         .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
         .rasterizationSamples = rt->getSamples(),
-        .depthClamp = rasterState.depthClamp,
-        .reserved = 0,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,
         .alphaBlendOp =  rasterState.blendEquationAlpha,
@@ -2028,6 +2022,10 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 }
 
 void VulkanDriver::resetState(int) {
+}
+
+void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mResourceAllocator.associateHandle(handleId, std::move(tag));
 }
 
 // explicit instantiation of the Dispatcher

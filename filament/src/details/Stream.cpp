@@ -23,9 +23,9 @@
 
 #include <backend/PixelBufferDescriptor.h>
 
+#include <utils/CString.h>
 #include <utils/Panic.h>
 #include <filament/Stream.h>
-
 
 namespace filament {
 
@@ -79,6 +79,10 @@ FStream::FStream(FEngine& engine, const Builder& builder) noexcept
         mStreamHandle = engine.getDriverApi().createStreamNative(mNativeStream);
     } else {
         mStreamHandle = engine.getDriverApi().createStreamAcquired();
+    }
+
+    if (auto name = builder.getName(); !name.empty()) {
+        engine.getDriverApi().setDebugTag(mStreamHandle.getId(), std::move(name));
     }
 }
 

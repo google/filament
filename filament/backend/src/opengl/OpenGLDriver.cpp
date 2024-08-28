@@ -462,14 +462,6 @@ void OpenGLDriver::setRasterState(RasterState rs) noexcept {
     } else {
         gl.disable(GL_SAMPLE_ALPHA_TO_COVERAGE);
     }
-
-    if (gl.ext.EXT_depth_clamp) {
-        if (rs.depthClamp) {
-            gl.enable(GL_DEPTH_CLAMP);
-        } else {
-            gl.disable(GL_DEPTH_CLAMP);
-        }
-    }
 }
 
 void OpenGLDriver::setStencilState(StencilState ss) noexcept {
@@ -2264,10 +2256,6 @@ bool OpenGLDriver::isProtectedTexturesSupported() {
     return getContext().ext.EXT_protected_textures;
 }
 
-bool OpenGLDriver::isDepthClampSupported() {
-    return getContext().ext.EXT_depth_clamp;
-}
-
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -2358,6 +2346,10 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // ------------------------------------------------------------------------------------------------
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
+
+void OpenGLDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
+}
 
 void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
         uint32_t index, Handle<HwBufferObject> boh) {

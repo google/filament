@@ -125,10 +125,6 @@ public:
         return mPhysicalDeviceFeatures.imageCubeArray == VK_TRUE;
     }
 
-    inline bool isDepthClampSupported() const noexcept {
-        return mPhysicalDeviceFeatures.depthClamp == VK_TRUE;
-    }
-
     inline bool isDebugMarkersSupported() const noexcept {
         return mDebugMarkersSupported;
     }

@@ -21,14 +21,19 @@
 #include "RenderPass.h"
 
 #include "fg/FrameGraphId.h"
+#include "fg/FrameGraphTexture.h"
+
+#include <filament/Viewport.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
+#include <math/vec2.h>
 #include <math/vec4.h>
 
 #include <stdint.h>
 
+#include <optional>
 #include <utility>
 
 namespace filament {
@@ -71,15 +76,32 @@ public:
         bool screenSpaceReflectionHistoryNotReady;
     };
 
-    static FrameGraphId<FrameGraphTexture> colorPass(
+    struct ColorPassInput {
+        FrameGraphId<FrameGraphTexture> linearColor;
+        FrameGraphId<FrameGraphTexture> tonemappedColor;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> shadows;
+        FrameGraphId<FrameGraphTexture> ssao;
+        FrameGraphId<FrameGraphTexture> ssr;
+        FrameGraphId<FrameGraphTexture> structure;
+    };
+    struct ColorPassOutput {
+        FrameGraphId<FrameGraphTexture> linearColor;
+        FrameGraphId<FrameGraphTexture> tonemappedColor;
+        FrameGraphId<FrameGraphTexture> depth;
+    };
+
+    static ColorPassOutput colorPass(
             FrameGraph& fg, const char* name, FEngine& engine, FView const& view,
+            ColorPassInput const& colorPassInput,
             FrameGraphTexture::Descriptor const& colorBufferDesc,
             ColorPassConfig const& config,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass::Executor passExecutor) noexcept;
 
-    static std::pair<FrameGraphId<FrameGraphTexture>, bool> refractionPass(
+    static std::optional<RendererUtils::ColorPassOutput> refractionPass(
             FrameGraph& fg, FEngine& engine, FView const& view,
+            ColorPassInput colorPassInput,
             ColorPassConfig config,
             PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
             PostProcessManager::ColorGradingConfig colorGradingConfig,

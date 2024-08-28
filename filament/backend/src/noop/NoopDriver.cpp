@@ -208,10 +208,6 @@ bool NoopDriver::isProtectedTexturesSupported() {
     return true;
 }
 
-bool NoopDriver::isDepthClampSupported() {
-    return false;
-}
-
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }
@@ -411,6 +407,9 @@ void NoopDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+}
+
+void NoopDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
 
 } // namespace filament

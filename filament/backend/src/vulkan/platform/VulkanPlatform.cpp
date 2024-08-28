@@ -325,7 +325,6 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     // We could simply enable all supported features, but since that may have performance
     // consequences let's just enable the features we need.
     VkPhysicalDeviceFeatures enabledFeatures{
-            .depthClamp = features.depthClamp,
             .samplerAnisotropy = features.samplerAnisotropy,
             .textureCompressionETC2 = features.textureCompressionETC2,
             .textureCompressionBC = features.textureCompressionBC,
