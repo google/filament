@@ -581,6 +581,12 @@ void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
     mResourceManager.acquire(vktexture);
 }
 
+void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
+    // TODO: implement swizzle
+}
+
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
 }
@@ -779,6 +785,10 @@ Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
     return mResourceAllocator.allocHandle<VulkanTexture>();
 }
 
