@@ -528,7 +528,9 @@ public:
     // like above but allows to set specific flags
     RenderPassBuilder& renderFlags(
             RenderPass::RenderFlags mask, RenderPass::RenderFlags value) noexcept {
-        mFlags = (mFlags & mask) | (value & mask);
+        value &= mask;
+        mFlags &= ~mask;
+        mFlags |= value;
         return *this;
     }
 
