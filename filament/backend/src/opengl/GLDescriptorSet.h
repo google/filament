@@ -31,6 +31,7 @@
 
 #include <math/half.h>
 
+#include <array>
 #include <variant>
 
 #include <stddef.h>
@@ -112,6 +113,12 @@ private:
         Handle<GLTextureRef> ref;               // 4
         int8_t baseLevel = 0x7f;                // 1
         int8_t maxLevel = -1;                   // 1
+        std::array<TextureSwizzle, 4> swizzle{  // 4
+                TextureSwizzle::CHANNEL_0,
+                TextureSwizzle::CHANNEL_1,
+                TextureSwizzle::CHANNEL_2,
+                TextureSwizzle::CHANNEL_3
+        };
     };
 
     struct SamplerWithAnisotropyWorkaround {
@@ -122,6 +129,12 @@ private:
         math::half anisotropy = 1.0f;           // 2
         int8_t baseLevel = 0x7f;                // 1
         int8_t maxLevel = -1;                   // 1
+        std::array<TextureSwizzle, 4> swizzle{  // 4
+                TextureSwizzle::CHANNEL_0,
+                TextureSwizzle::CHANNEL_1,
+                TextureSwizzle::CHANNEL_2,
+                TextureSwizzle::CHANNEL_3
+        };
     };
 
     // A sampler descriptor for ES2
@@ -143,7 +156,7 @@ private:
     static_assert(sizeof(Descriptor) <= 32);
 
     template<typename T>
-    static void updateTextureLod(OpenGLContext& gl,
+    static void updateTextureView(OpenGLContext& gl,
             HandleAllocatorGL& handleAllocator, GLuint unit, T const& desc) noexcept;
 
     utils::FixedCapacityVector<Descriptor> descriptors;     // 16

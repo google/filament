@@ -212,20 +212,6 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
         backend::TextureSwizzle, b,
         backend::TextureSwizzle, a)
 
-DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureSwizzled,
-        backend::SamplerType, target,
-        uint8_t, levels,
-        backend::TextureFormat, format,
-        uint8_t, samples,
-        uint32_t, width,
-        uint32_t, height,
-        uint32_t, depth,
-        backend::TextureUsage, usage,
-        backend::TextureSwizzle, r,
-        backend::TextureSwizzle, g,
-        backend::TextureSwizzle, b,
-        backend::TextureSwizzle, a)
-
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
         backend::TextureFormat, format,
         uint32_t, width,

@@ -457,16 +457,6 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
             th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
 }
 
-void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
-        uint32_t depth, TextureUsage usage,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    auto texture = alloc_handle<MetalTexture>();
-    createTextureR(texture, target, levels, format, samples, width, height, depth, usage);
-    createTextureViewSwizzleR(th, texture, r, g, b, a);
-    destroyTexture(texture);
-}
-
 void MetalDriver::createTextureViewR(
         Handle<HwTexture> th, Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
     MetalTexture const* src = handle_cast<MetalTexture>(srch);
@@ -698,10 +688,6 @@ Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
-    return alloc_handle<MetalTexture>();
-}
-
-Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 

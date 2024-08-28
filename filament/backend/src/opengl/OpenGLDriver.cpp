@@ -544,10 +544,6 @@ Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
     return initHandle<GLTexture>();
 }
 
-Handle<HwTexture> OpenGLDriver::createTextureSwizzledS() noexcept {
-    return initHandle<GLTexture>();
-}
-
 Handle<HwTexture> OpenGLDriver::createTextureViewS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -927,32 +923,6 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createTextureSwizzledR(Handle<HwTexture> th,
-        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t w, uint32_t h, uint32_t depth, TextureUsage usage,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    DEBUG_MARKER()
-
-    assert_invariant(uint8_t(usage) & uint8_t(TextureUsage::SAMPLEABLE));
-
-    createTextureR(th, target, levels, format, samples, w, h, depth, usage);
-
-    // WebGL does not support swizzling. We assert for this in the Texture builder,
-    // so it is probably fine to silently ignore the swizzle state here.
-#if !defined(__EMSCRIPTEN__)  && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
-    if (!mContext.isES2()) {
-        // the texture is still bound and active from createTextureR
-        GLTexture* t = handle_cast<GLTexture*>(th);
-        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_R, (GLint)getSwizzleChannel(r));
-        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_G, (GLint)getSwizzleChannel(g));
-        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, (GLint)getSwizzleChannel(b));
-        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, (GLint)getSwizzleChannel(a));
-    }
-#endif
-
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
         Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
     DEBUG_MARKER()
@@ -1002,7 +972,65 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
 void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a) {
-    // TODO: implement swizzle
+
+    DEBUG_MARKER()
+    GLTexture const* const src = handle_cast<GLTexture const*>(srch);
+
+    FILAMENT_CHECK_PRECONDITION(any(src->usage & TextureUsage::SAMPLEABLE))
+                    << "TextureView can only be created on a SAMPLEABLE texture";
+
+    FILAMENT_CHECK_PRECONDITION(!src->gl.imported)
+                    << "TextureView can't be created on imported textures";
+
+    if (!src->ref) {
+        // lazily create the ref handle, because most textures will never get a texture view
+        src->ref = initHandle<GLTextureRef>();
+    }
+
+    GLTexture* t = construct<GLTexture>(th,
+            src->target,
+            src->levels,
+            src->samples,
+            src->width, src->height, src->depth,
+            src->format,
+            src->usage);
+
+    t->gl = src->gl;
+    t->gl.baseLevel = src->gl.baseLevel;
+    t->gl.maxLevel = src->gl.maxLevel;
+    t->gl.sidecarRenderBufferMS = 0;
+    t->gl.sidecarSamples = 1;
+
+    auto getChannel = [&swizzle = src->gl.swizzle](TextureSwizzle ch) {
+        switch (ch) {
+            case TextureSwizzle::SUBSTITUTE_ZERO:
+            case TextureSwizzle::SUBSTITUTE_ONE:
+                return ch;
+            case TextureSwizzle::CHANNEL_0:
+                return swizzle[0];
+            case TextureSwizzle::CHANNEL_1:
+                return swizzle[1];
+            case TextureSwizzle::CHANNEL_2:
+                return swizzle[2];
+            case TextureSwizzle::CHANNEL_3:
+                return swizzle[3];
+        }
+    };
+
+    t->gl.swizzle = {
+            getChannel(r),
+            getChannel(g),
+            getChannel(b),
+            getChannel(a),
+    };
+
+    // increase reference count to this texture handle
+    t->ref = src->ref;
+    GLTextureRef* ref = handle_cast<GLTextureRef*>(t->ref);
+    assert_invariant(ref);
+    ref->count++;
+
+    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,

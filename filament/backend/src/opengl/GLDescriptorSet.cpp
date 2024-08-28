@@ -37,9 +37,10 @@
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-
 #include <algorithm>
+
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include <stddef.h>
@@ -50,7 +51,7 @@ namespace filament::backend {
 GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
         GLDescriptorSetLayout const* layout) noexcept
         : descriptors(layout->maxDescriptorBinding + 1),
-          dslh(dslh) {
+          dslh(std::move(dslh)) {
 
     // We have allocated enough storage for all descriptors. Now allocate the empty descriptor
     // themselves.
@@ -178,6 +179,7 @@ void GLDescriptorSet::update(OpenGLContext& gl,
                     arg.ref = t->ref;
                     arg.baseLevel = t->gl.baseLevel;
                     arg.maxLevel = t->gl.maxLevel;
+                    arg.swizzle = t->gl.swizzle;
                 }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
                 arg.sampler = gl.getSampler(params);
@@ -195,17 +197,17 @@ void GLDescriptorSet::update(OpenGLContext& gl,
 }
 
 template<typename T>
-void GLDescriptorSet::updateTextureLod(OpenGLContext& gl,
+void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
         HandleAllocatorGL& handleAllocator, GLuint unit, T const& desc) noexcept {
     // The common case is that we don't have a ref handle (we only have one if
-    // the texture ever had a View on it.
+    // the texture ever had a View on it).
+    assert_invariant(desc.ref);
     GLTextureRef* const ref = handleAllocator.handle_cast<GLTextureRef*>(desc.ref);
-    if (UTILS_UNLIKELY((desc.baseLevel != ref->baseLevel
-                        || desc.maxLevel != ref->maxLevel))) {
+    if (UTILS_UNLIKELY((desc.baseLevel != ref->baseLevel || desc.maxLevel != ref->maxLevel))) {
         // If we have views, then it's still uncommon that we'll switch often
         // handle the case where we reset to the original texture
-        GLint baseLevel = desc.baseLevel;
-        GLint maxLevel = desc.maxLevel;
+        GLint baseLevel = GLint(desc.baseLevel); // NOLINT(*-signed-char-misuse)
+        GLint maxLevel = GLint(desc.maxLevel); // NOLINT(*-signed-char-misuse)
         if (baseLevel > maxLevel) {
             baseLevel = 0;
             maxLevel = 1000; // per OpenGL spec
@@ -216,6 +218,15 @@ void GLDescriptorSet::updateTextureLod(OpenGLContext& gl,
         glTexParameteri(desc.target, GL_TEXTURE_MAX_LEVEL,  maxLevel);
         ref->baseLevel = desc.baseLevel;
         ref->maxLevel = desc.maxLevel;
+    }
+    if (UTILS_UNLIKELY(desc.swizzle != ref->swizzle)) {
+        using namespace GLUtils;
+        gl.activeTexture(unit);
+        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_R, (GLint)getSwizzleChannel(desc.swizzle[0]));
+        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_G, (GLint)getSwizzleChannel(desc.swizzle[1]));
+        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_B, (GLint)getSwizzleChannel(desc.swizzle[2]));
+        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_A, (GLint)getSwizzleChannel(desc.swizzle[3]));
+        ref->swizzle = desc.swizzle;
     }
 }
 
@@ -272,7 +283,7 @@ void GLDescriptorSet::bind(
                     gl.bindTexture(unit, arg.target, arg.id);
                     gl.bindSampler(unit, arg.sampler);
                     if (UTILS_UNLIKELY(arg.ref)) {
-                        updateTextureLod(gl, handleAllocator, unit, arg);
+                        updateTextureView(gl, handleAllocator, unit, arg);
                     }
                 } else {
                     gl.unbindTextureUnit(unit);
@@ -283,7 +294,7 @@ void GLDescriptorSet::bind(
                     gl.bindTexture(unit, arg.target, arg.id);
                     gl.bindSampler(unit, arg.sampler);
                     if (UTILS_UNLIKELY(arg.ref)) {
-                        updateTextureLod(gl, handleAllocator, unit, arg);
+                        updateTextureView(gl, handleAllocator, unit, arg);
                     }
 #if defined(GL_EXT_texture_filter_anisotropic)
                     // Driver claims to support anisotropic filtering, but it fails when set on

@@ -559,18 +559,18 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     mResourceManager.acquire(vktexture);
 }
 
-void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    TextureSwizzle swizzleArray[] = {r, g, b, a};
-    const VkComponentMapping swizzleMap = getSwizzleMap(swizzleArray);
-    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
-            target, levels, format, samples, w, h, depth, usage, mStagePool,
-            false /*heap allocated */, swizzleMap);
-    mResourceManager.acquire(vktexture);
-}
+//void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+//        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
+//        TextureUsage usage,
+//        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+//    TextureSwizzle swizzleArray[] = {r, g, b, a};
+//    const VkComponentMapping swizzleMap = getSwizzleMap(swizzleArray);
+//    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
+//            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
+//            target, levels, format, samples, w, h, depth, usage, mStagePool,
+//            false /*heap allocated */, swizzleMap);
+//    mResourceManager.acquire(vktexture);
+//}
 
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
         Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
@@ -777,10 +777,6 @@ Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
-    return mResourceAllocator.allocHandle<VulkanTexture>();
-}
-
-Handle<HwTexture> VulkanDriver::createTextureSwizzledS() noexcept {
     return mResourceAllocator.allocHandle<VulkanTexture>();
 }
 
