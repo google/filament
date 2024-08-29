@@ -572,19 +572,26 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 //    mResourceManager.acquire(vktexture);
 //}
 
-void VulkanDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        uint8_t baseLevel, uint8_t levelCount) {
     VulkanTexture const* src = mResourceAllocator.handle_cast<VulkanTexture const*>(srch);
-    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th,
-            mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands,
-            &mResourceAllocator, src, baseLevel, levelCount, mStagePool);
+    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
+            src, baseLevel, levelCount);
     mResourceManager.acquire(vktexture);
 }
 
 void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a) {
-    // TODO: implement swizzle
+    TextureSwizzle const swizzleArray[] = {r, g, b, a};
+    VkComponentMapping const swizzle = getSwizzleMap(swizzleArray);
+
+    VulkanTexture const* src = mResourceAllocator.handle_cast<VulkanTexture const*>(srch);
+    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
+            src, swizzle);
+    mResourceManager.acquire(vktexture);
 }
 
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
