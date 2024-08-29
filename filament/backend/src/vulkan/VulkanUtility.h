@@ -38,7 +38,7 @@ VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
 uint32_t getComponentCount(VkFormat format);
-VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
+VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]);
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
 
 bool equivalent(const VkRect2D& a, const VkRect2D& b);

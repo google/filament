@@ -35,7 +35,7 @@ class VulkanResourceAllocator;
 struct VulkanTextureState : public VulkanResource {
     VulkanTextureState(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
             VulkanStagePool& stagePool,
-            VkFormat format, VkImageViewType viewType, VkComponentMapping swizzle);
+            VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount);
 
     struct ImageViewKey {
         VkImageSubresourceRange range;  // 4 * 5 bytes
@@ -64,9 +64,10 @@ struct VulkanTextureState : public VulkanResource {
     std::unique_ptr<VulkanTexture> mSidecarMSAA;
     VkDeviceMemory mTextureImageMemory = VK_NULL_HANDLE;
 
-    const VkFormat mVkFormat;
-    const VkImageViewType mViewType;
-    const VkComponentMapping mSwizzle;
+    VkFormat const mVkFormat;
+    VkImageViewType const mViewType;
+    VkImageSubresourceRange const mFullViewRange;
+
     VkImage mTextureImage = VK_NULL_HANDLE;
 
     // Track the image layout of each subresource using a sparse range map.
@@ -88,8 +89,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
             VulkanResourceAllocator* handleAllocator,
             SamplerType target, uint8_t levels,
             TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-            TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated = false,
-            VkComponentMapping swizzle = {});
+            TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated = false);
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     // The texture will never destroy the given VkImage, but it does manages its subresources.
@@ -99,12 +99,17 @@ struct VulkanTexture : public HwTexture, VulkanResource {
             VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
             VulkanStagePool& stagePool, bool heapAllocated = false);
 
-    // constructor for creating a texture view
+    // Constructor for creating a texture view for wrt specific mip range
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
             VmaAllocator allocator, VulkanCommands* commands,
             VulkanResourceAllocator* handleAllocator,
-            VulkanTexture const* src, uint8_t baseLevel, uint8_t levelCount,
-            VulkanStagePool& stagePool);
+            VulkanTexture const* src, uint8_t baseLevel, uint8_t levelCount);
+
+    // Constructor for creating a texture view for swizzle.
+    VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
+            VmaAllocator allocator, VulkanCommands* commands,
+            VulkanResourceAllocator* handleAllocator,
+            VulkanTexture const* src, VkComponentMapping swizzle);
 
     ~VulkanTexture();
 
@@ -115,7 +120,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // Returns the primary image view, which is used for shader sampling.
     VkImageView getPrimaryImageView() {
         VulkanTextureState* state = getSharedState();
-        return getImageView(mPrimaryViewRange, state->mViewType, state->mSwizzle);
+        return getImageView(mPrimaryViewRange, state->mViewType, mSwizzle);
     }
 
     VkImageViewType getViewType() const {
@@ -124,8 +129,6 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     }
 
     VkImageSubresourceRange getPrimaryViewRange() const { return mPrimaryViewRange; }
-
-    VkImageSubresourceRange getFullViewRange() const { return mFullViewRange; }
 
     VulkanLayout getPrimaryImageLayout() const {
         return getLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
@@ -211,11 +214,11 @@ private:
 
     Handle<VulkanTextureState> mState;
 
-    VkImageSubresourceRange mFullViewRange;
-
     // Track the range of subresources that define the "primary" image view, which is the special
     // image view that gets bound to an actual texture sampler.
     VkImageSubresourceRange mPrimaryViewRange;
+
+    VkComponentMapping mSwizzle {};
 };
 
 } // namespace filament::backend
