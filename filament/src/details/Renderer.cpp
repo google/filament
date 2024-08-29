@@ -818,14 +818,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         blackboard["shadows"] = shadows;
     }
 
-    // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
+    // When we don't have a custom RenderTarget, customRenderTarget below is nullptr and is
     // recorded in the list of targets already rendered into -- this ensures that
     // initializeClearFlags() is called only once for the default RenderTarget.
     auto& previousRenderTargets = mPreviousRenderTargets;
-    FRenderTarget* const currentRenderTarget = downcast(view.getRenderTarget());
+    FRenderTarget* const customRenderTarget = downcast(view.getRenderTarget());
     if (UTILS_LIKELY(
-            previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
-        previousRenderTargets.insert(currentRenderTarget);
+            previousRenderTargets.find(customRenderTarget) == previousRenderTargets.end())) {
+        previousRenderTargets.insert(customRenderTarget);
         initializeClearFlags();
     }
 
@@ -842,10 +842,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
     TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
 
-    if (currentRenderTarget) {
+    if (customRenderTarget) {
         // For custom RenderTarget, we look at each attachment flag and if they have their
         // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
-        keepOverrideEndFlags |= currentRenderTarget->getSampleableAttachmentsMask();
+        keepOverrideEndFlags |= customRenderTarget->getSampleableAttachmentsMask();
     }
 
     // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),
