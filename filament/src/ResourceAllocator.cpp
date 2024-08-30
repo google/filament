@@ -170,9 +170,9 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
 
     // do we have a suitable texture in the cache?
     TextureHandle handle;
+    TextureKey const key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
     if constexpr (mEnabled) {
         auto& textureCache = mTextureCache;
-        const TextureKey key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
         auto it = textureCache.find(key);
         if (UTILS_LIKELY(it != textureCache.end())) {
             // we do, move the entry to the in-use list, and remove from the cache
@@ -190,7 +190,6 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
                         swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
             }
         }
-        mDisposer->checkout(handle, key);
     } else {
         if (swizzle == defaultSwizzle) {
             handle = mBackend.createTexture(
@@ -201,12 +200,13 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
                     swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
         }
     }
+    mDisposer->checkout(handle, key);
     return handle;
 }
 
 void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
+    auto const key = mDisposer->checkin(h);
     if constexpr (mEnabled) {
-        auto const key = mDisposer->checkin(h);
         if (UTILS_LIKELY(key.has_value())) {
             uint32_t const size = key.value().getSize();
             mTextureCache.emplace(key.value(), TextureCachePayload{ h, mAge, size });
