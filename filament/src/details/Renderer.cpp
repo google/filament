@@ -652,7 +652,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const bool isProtectedContent =  mSwapChain && mSwapChain->isProtected();
 
     // Conditions to meet to be able to use the sub-pass rendering path. This is regardless of
-    // whether the backend supports subpasses (or if they are disabled but the debugRegistry)
+    // whether the backend supports subpasses (or if they are disabled in the debugRegistry).
     const bool isSubpassPossible =
              msaaSampleCount <= 1 &&
              hasColorGrading &&
