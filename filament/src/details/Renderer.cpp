@@ -698,13 +698,12 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     CameraInfo cameraInfo = view.computeCameraInfo(engine);
 
-    // when colorgrading-as-subpass is active, we know that many other effects are disabled
-    // such as dof, bloom. Moreover, if fxaa and scaling are not enabled, we're essentially in
-    // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
-    // buffer padding (because there are no other pass that can do it as a side effect).
-    // In this case, it is better to skip the padding, which won't be helping much.
-    const bool noBufferPadding = (colorGradingConfig.asSubpass && !hasFXAA && !scaled)
-            || engine.debug.renderer.disable_buffer_padding;
+    // If fxaa and scaling are not enabled, we're essentially in a very fast rendering path -- in
+    // this case, we would need an extra blit to "resolve" the buffer padding (because there are no
+    // other pass that can do it as a side effect). In this case, it is better to skip the padding,
+    // which won't be helping much.
+    const bool noBufferPadding
+            = (!hasFXAA && !scaled) || engine.debug.renderer.disable_buffer_padding;
 
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
     float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
@@ -819,14 +818,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         blackboard["shadows"] = shadows;
     }
 
-    // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
+    // When we don't have a custom RenderTarget, customRenderTarget below is nullptr and is
     // recorded in the list of targets already rendered into -- this ensures that
     // initializeClearFlags() is called only once for the default RenderTarget.
     auto& previousRenderTargets = mPreviousRenderTargets;
-    FRenderTarget* const currentRenderTarget = downcast(view.getRenderTarget());
+    FRenderTarget* const customRenderTarget = downcast(view.getRenderTarget());
     if (UTILS_LIKELY(
-            previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
-        previousRenderTargets.insert(currentRenderTarget);
+            previousRenderTargets.find(customRenderTarget) == previousRenderTargets.end())) {
+        previousRenderTargets.insert(customRenderTarget);
         initializeClearFlags();
     }
 
@@ -843,10 +842,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
     TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
 
-    if (currentRenderTarget) {
+    if (customRenderTarget) {
         // For custom RenderTarget, we look at each attachment flag and if they have their
         // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
-        keepOverrideEndFlags |= currentRenderTarget->getSampleableAttachmentsMask();
+        keepOverrideEndFlags |= customRenderTarget->getSampleableAttachmentsMask();
     }
 
     // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),

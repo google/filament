@@ -284,6 +284,7 @@ public:
     static constexpr RenderFlags HAS_SHADOWING             = 0x01;
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES   = 0x02;
     static constexpr RenderFlags IS_INSTANCED_STEREOSCOPIC = 0x04;
+    static constexpr RenderFlags HAS_DEPTH_CLAMP           = 0x08;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -444,7 +445,7 @@ private:
             uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant,
-            FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
+            FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp) noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
@@ -528,7 +529,9 @@ public:
     // like above but allows to set specific flags
     RenderPassBuilder& renderFlags(
             RenderPass::RenderFlags mask, RenderPass::RenderFlags value) noexcept {
-        mFlags = (mFlags & mask) | (value & mask);
+        value &= mask;
+        mFlags &= ~mask;
+        mFlags |= value;
         return *this;
     }
 

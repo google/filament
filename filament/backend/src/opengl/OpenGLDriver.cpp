@@ -451,6 +451,14 @@ void OpenGLDriver::setRasterState(RasterState rs) noexcept {
     } else {
         gl.disable(GL_SAMPLE_ALPHA_TO_COVERAGE);
     }
+
+    if (gl.ext.EXT_depth_clamp) {
+        if (rs.depthClamp) {
+            gl.enable(GL_DEPTH_CLAMP);
+        } else {
+            gl.disable(GL_DEPTH_CLAMP);
+        }
+    }
 }
 
 void OpenGLDriver::setStencilState(StencilState ss) noexcept {
@@ -2119,6 +2127,10 @@ bool OpenGLDriver::isProtectedTexturesSupported() {
     return getContext().ext.EXT_protected_textures;
 }
 
+bool OpenGLDriver::isDepthClampSupported() {
+    return getContext().ext.EXT_depth_clamp;
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -3184,23 +3196,23 @@ void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
+void OpenGLDriver::insertEventMarker(char const* string) {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (gl.ext.EXT_debug_marker) {
-        glInsertEventMarkerEXT(GLsizei(len ? len : strlen(string)), string);
+        glInsertEventMarkerEXT(GLsizei(strlen(string)), string);
     }
 #endif
 #endif
 }
 
-void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
+void OpenGLDriver::pushGroupMarker(char const* string) {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_OPENGL
     if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
-        glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
+        glPushGroupMarkerEXT(GLsizei(strlen(string)), string);
     }
 #endif
 #endif
