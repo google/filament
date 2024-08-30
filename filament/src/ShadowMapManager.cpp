@@ -66,15 +66,15 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-// do this only if depth-clamp is available
-static constexpr bool USE_DEPTH_CLAMP = false;
-
-ShadowMapManager::ShadowMapManager(FEngine& engine) {
+ShadowMapManager::ShadowMapManager(FEngine& engine)
+    : mIsDepthClampSupported(engine.getDriverApi().isDepthClampSupported()) {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
     debugRegistry.registerProperty("d.shadowmap.disable_light_frustum_align",
             &engine.debug.shadowmap.disable_light_frustum_align);
+    debugRegistry.registerProperty("d.shadowmap.depth_clamp",
+            &engine.debug.shadowmap.depth_clamp);
 }
 
 ShadowMapManager::~ShadowMapManager() {
@@ -367,7 +367,20 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                     // generate and sort the commands for rendering the shadow map
 
+                    RenderPass::RenderFlags renderPassFlags{};
+
+                    bool const canUseDepthClamp =
+                            shadowMap.getShadowType() == ShadowType::DIRECTIONAL &&
+                            !view.hasVSM() &&
+                            mIsDepthClampSupported &&
+                            engine.debug.shadowmap.depth_clamp;
+
+                    if (canUseDepthClamp) {
+                        renderPassFlags |= RenderPass::HAS_DEPTH_CLAMP;
+                    }
+
                     RenderPass const pass = passBuilder
+                            .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
                             .camera(cameraInfo)
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
@@ -637,8 +650,14 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             cameraInfo.zf = -nearFarPlanes[i + 1];
             updateNearFarPlanes(&cameraInfo.cullingProjection, cameraInfo.zn, cameraInfo.zf);
 
+            bool const canUseDepthClamp =
+                    !view.hasVSM() &&
+                    mIsDepthClampSupported &&
+                    engine.debug.shadowmap.depth_clamp;
+
             auto shaderParameters = shadowMap.updateDirectional(engine,
-                    lightData, 0, cameraInfo, shadowMapInfo, sceneInfo, USE_DEPTH_CLAMP);
+                    lightData, 0, cameraInfo, shadowMapInfo, sceneInfo,
+                    canUseDepthClamp);
 
             if (shadowMap.hasVisibleShadows()) {
                 const size_t shadowIndex = shadowMap.getShadowIndex();
