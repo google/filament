@@ -245,6 +245,8 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     }
     if (auto name = builder.getName(); !name.empty()) {
         driver.setDebugTag(mHandle.getId(), std::move(name));
+    } else {
+        driver.setDebugTag(mHandle.getId(), CString{"FTexture"});
     }
 }
 

@@ -143,12 +143,14 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(const char*,
+RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, uint8_t layerCount, MRT color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {
-    return mBackend.createRenderTarget(targetBufferFlags,
+    auto handle = mBackend.createRenderTarget(targetBufferFlags,
             width, height, samples ? samples : 1u, layerCount, color, depth, stencil);
+    mBackend.setDebugTag(handle.getId(), CString{ name });
+    return handle;
 }
 
 void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
@@ -201,6 +203,7 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         }
     }
     mDisposer->checkout(handle, key);
+    mBackend.setDebugTag(handle.getId(), CString{ name });
     return handle;
 }
 
