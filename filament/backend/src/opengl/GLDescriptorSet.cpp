@@ -222,10 +222,12 @@ void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
     if (UTILS_UNLIKELY(desc.swizzle != ref->swizzle)) {
         using namespace GLUtils;
         gl.activeTexture(unit);
+#if !defined(__EMSCRIPTEN__)  && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
         glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_R, (GLint)getSwizzleChannel(desc.swizzle[0]));
         glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_G, (GLint)getSwizzleChannel(desc.swizzle[1]));
         glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_B, (GLint)getSwizzleChannel(desc.swizzle[2]));
         glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_A, (GLint)getSwizzleChannel(desc.swizzle[3]));
+#endif
         ref->swizzle = desc.swizzle;
     }
 }
