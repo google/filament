@@ -652,14 +652,19 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     const bool isProtectedContent =  mSwapChain && mSwapChain->isProtected();
 
+    // Conditions to meet to be able to use the sub-pass rendering path. This is regardless of
+    // whether the backend supports subpasses (or if they are disabled in the debugRegistry).
+    const bool isSubpassPossible =
+             msaaSampleCount <= 1 &&
+             hasColorGrading &&
+             !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled;
+
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
-                    msaaSampleCount <= 1 &&
+                    isSubpassPossible &&
                     driver.isFrameBufferFetchSupported() &&
-                    hasColorGrading &&
-                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     !engine.debug.renderer.disable_subpasses,
             .customResolve =
                     msaaSampleCount > 1 &&
@@ -703,8 +708,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // this case, we would need an extra blit to "resolve" the buffer padding (because there are no
     // other pass that can do it as a side effect). In this case, it is better to skip the padding,
     // which won't be helping much.
-    const bool noBufferPadding
-            = (!hasFXAA && !scaled) || engine.debug.renderer.disable_buffer_padding;
+    const bool noBufferPadding = (isSubpassPossible &&
+            !hasFXAA && !scaled) || engine.debug.renderer.disable_buffer_padding;
 
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
     float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
@@ -1016,6 +1021,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {
+            fg.addTrivialSideEffectPass("SSR Cleanup", [&view](DriverApi& driver) {
+                view.getPerViewUniforms().prepareStructure({});
+                view.commitUniforms(driver);
+            });
             // generate the mipchain
             PostProcessManager::generateMipmapSSR(ppm, fg,
                     reflections, ssrConfig.reflection, false, ssrConfig);
@@ -1132,6 +1141,12 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             colorPassOutput = output.value();
         }
     }
+
+    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
+        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
+        view.cleanupRenderPasses();
+        view.commitUniforms(driver);
+    });
 
     if (colorGradingConfig.customResolve) {
         assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);

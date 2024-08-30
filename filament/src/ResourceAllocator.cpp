@@ -143,12 +143,14 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(const char*,
+RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, uint8_t layerCount, MRT color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {
-    return mBackend.createRenderTarget(targetBufferFlags,
+    auto handle = mBackend.createRenderTarget(targetBufferFlags,
             width, height, samples ? samples : 1u, layerCount, color, depth, stencil);
+    mBackend.setDebugTag(handle.getId(), CString{ name });
+    return handle;
 }
 
 void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
@@ -170,9 +172,9 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
 
     // do we have a suitable texture in the cache?
     TextureHandle handle;
+    TextureKey const key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
     if constexpr (mEnabled) {
         auto& textureCache = mTextureCache;
-        const TextureKey key{ name, target, levels, format, samples, width, height, depth, usage, swizzle };
         auto it = textureCache.find(key);
         if (UTILS_LIKELY(it != textureCache.end())) {
             // we do, move the entry to the in-use list, and remove from the cache
@@ -190,7 +192,6 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
                 handle = swizzledHandle;
             }
         }
-        mDisposer->checkout(handle, key);
     } else {
         handle = mBackend.createTexture(
                 target, levels, format, samples, width, height, depth, usage);
@@ -201,12 +202,14 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
             handle = swizzledHandle;
         }
     }
+    mDisposer->checkout(handle, key);
+    mBackend.setDebugTag(handle.getId(), CString{ name });
     return handle;
 }
 
 void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
+    auto const key = mDisposer->checkin(h);
     if constexpr (mEnabled) {
-        auto const key = mDisposer->checkin(h);
         if (UTILS_LIKELY(key.has_value())) {
             uint32_t const size = key.value().getSize();
             mTextureCache.emplace(key.value(), TextureCachePayload{ h, mAge, size });

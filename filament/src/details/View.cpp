@@ -1088,10 +1088,8 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
     auto& frameHistory = mFrameHistory;
 
     FrameHistoryEntry& last = frameHistory.back();
-    disposer.destroy(last.taa.color.handle);
-    disposer.destroy(last.ssr.color.handle);
-    last.taa.color.handle.clear();
-    last.ssr.color.handle.clear();
+    disposer.destroy(std::move(last.taa.color.handle));
+    disposer.destroy(std::move(last.ssr.color.handle));
 
     // and then push the new history entry to the history stack
     frameHistory.commit();
@@ -1103,10 +1101,8 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
     auto& frameHistory = mFrameHistory;
     for (size_t i = 0; i < frameHistory.size(); ++i) {
         FrameHistoryEntry& last = frameHistory[i];
-        disposer.destroy(last.taa.color.handle);
-        disposer.destroy(last.ssr.color.handle);
-        last.taa.color.handle.clear();
-        last.ssr.color.handle.clear();
+        disposer.destroy(std::move(last.taa.color.handle));
+        disposer.destroy(std::move(last.ssr.color.handle));
     }
 }
 
