@@ -1302,11 +1302,11 @@ void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
     pushConstants.setPushConstant(value, index);
 }
 
-void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
+void MetalDriver::insertEventMarker(const char* string) {
 
 }
 
-void MetalDriver::pushGroupMarker(const char* string, uint32_t len) {
+void MetalDriver::pushGroupMarker(const char* string) {
     mContext->groupMarkers.push(string);
 }
 

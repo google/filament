@@ -3196,23 +3196,23 @@ void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
+void OpenGLDriver::insertEventMarker(char const* string) {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (gl.ext.EXT_debug_marker) {
-        glInsertEventMarkerEXT(GLsizei(len ? len : strlen(string)), string);
+        glInsertEventMarkerEXT(GLsizei(strlen(string)), string);
     }
 #endif
 #endif
 }
 
-void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
+void OpenGLDriver::pushGroupMarker(char const* string) {
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_OPENGL
     if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
-        glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
+        glPushGroupMarkerEXT(GLsizei(strlen(string)), string);
     }
 #endif
 #endif

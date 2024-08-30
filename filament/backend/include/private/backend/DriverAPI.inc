@@ -444,12 +444,10 @@ DECL_DRIVER_API_N(setPushConstant,
         backend::PushConstantVariant, value)
 
 DECL_DRIVER_API_N(insertEventMarker,
-        const char*, string,
-        uint32_t, len = 0)
+        const char*, string)
 
 DECL_DRIVER_API_N(pushGroupMarker,
-        const char*, string,
-        uint32_t, len = 0)
+        const char*, string)
 
 DECL_DRIVER_API_0(popGroupMarker)
 
