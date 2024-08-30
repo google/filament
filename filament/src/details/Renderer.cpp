@@ -1014,6 +1014,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {
+            fg.addTrivialSideEffectPass("SSR Cleanup", [&view](DriverApi& driver) {
+                view.getPerViewUniforms().prepareStructure({});
+                view.commitUniforms(driver);
+            });
             // generate the mipchain
             PostProcessManager::generateMipmapSSR(ppm, fg,
                     reflections, ssrConfig.reflection, false, ssrConfig);
@@ -1129,6 +1133,12 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         }
     }
 
+    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
+        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
+        view.cleanupRenderPasses();
+        view.commitUniforms(driver);
+    });
+
     if (colorGradingConfig.customResolve) {
         assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
         // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
@@ -1167,16 +1177,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // this is the output of the color pass / input to post processing,
     // this is only used later for comparing it with the output after post-processing
     FrameGraphId<FrameGraphTexture> const postProcessInput = colorGradingConfig.asSubpass ?
-                                                           colorPassOutput.tonemappedColor :
-                                                           colorPassOutput.linearColor;
+                                                             colorPassOutput.tonemappedColor :
+                                                             colorPassOutput.linearColor;
 
     // input can change below
     FrameGraphId<FrameGraphTexture> input = postProcessInput;
-    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
-        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
-        view.cleanupRenderPasses();
-        view.commitUniforms(driver);
-    });
 
     // Resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
     // if the depth is not used below or if the depth is not MS (e.g. it could have been

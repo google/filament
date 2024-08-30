@@ -459,10 +459,12 @@ void PerViewUniforms::bind(backend::DriverApi& driver) noexcept {
 
 void PerViewUniforms::unbindSamplers() noexcept {
     auto& samplerGroup = mSamplers;
+    samplerGroup.clearSampler(PerViewSib::SHADOW_MAP);
+    samplerGroup.clearSampler(PerViewSib::IBL_SPECULAR);
     samplerGroup.clearSampler(PerViewSib::SSAO);
     samplerGroup.clearSampler(PerViewSib::SSR);
     samplerGroup.clearSampler(PerViewSib::STRUCTURE);
-    samplerGroup.clearSampler(PerViewSib::SHADOW_MAP);
+    samplerGroup.clearSampler(PerViewSib::FOG);
 }
 
 } // namespace filament
