@@ -46,6 +46,57 @@ inline uint8_t getLayerCount(SamplerType const target, uint32_t const depth) {
     }
 }
 
+VkComponentMapping composeSwizzle(VkComponentMapping const& prev, VkComponentMapping const& next) {
+    static constexpr VkComponentSwizzle IDENTITY[] = {
+        VK_COMPONENT_SWIZZLE_R,
+        VK_COMPONENT_SWIZZLE_G,
+        VK_COMPONENT_SWIZZLE_B,
+        VK_COMPONENT_SWIZZLE_A,
+    };
+
+    auto const compose = [](VkComponentSwizzle out, VkComponentMapping const& prev,
+                                 uint8_t channelIndex) {
+        // We need to first change all identities to its equivalent channel.
+        if (out == VK_COMPONENT_SWIZZLE_IDENTITY) {
+            out = IDENTITY[channelIndex];
+        }
+        switch (out) {
+            case VK_COMPONENT_SWIZZLE_R:
+                out = prev.r;
+                break;
+            case VK_COMPONENT_SWIZZLE_G:
+                out = prev.g;
+                break;
+            case VK_COMPONENT_SWIZZLE_B:
+                out = prev.b;
+                break;
+            case VK_COMPONENT_SWIZZLE_A:
+                out = prev.a;
+                break;
+            case VK_COMPONENT_SWIZZLE_IDENTITY:
+            case VK_COMPONENT_SWIZZLE_ZERO:
+            case VK_COMPONENT_SWIZZLE_ONE:
+                return out;
+            // Below is not exposed in Vulkan's API, but needs to be there for compilation.
+            case VK_COMPONENT_SWIZZLE_MAX_ENUM:
+                break;
+        }
+        // If the result correctly corresponds to the identity, just return identity.
+        if (IDENTITY[channelIndex] == out) {
+            return VK_COMPONENT_SWIZZLE_IDENTITY;
+        }
+        return out;
+    };
+
+    // Note that the channel index corresponds to the VkComponentMapping struct layout.
+    return {
+        compose(next.r, prev, 0),
+        compose(next.g, prev, 1),
+        compose(next.b, prev, 2),
+        compose(next.a, prev, 3),
+    };
+}
+
 } // anonymous namespace
 
 VulkanTextureState::VulkanTextureState(
@@ -275,7 +326,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     auto* state = getSharedState();
     state->refs++;
     mPrimaryViewRange = src->mPrimaryViewRange;
-    mSwizzle = swizzle;
+    mSwizzle = composeSwizzle(src->mSwizzle, swizzle);
 }
 
 VulkanTexture::~VulkanTexture() {
