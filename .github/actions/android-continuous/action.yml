@@ -1,0 +1,17 @@
+name: 'Android Continuous'
+inputs:
+  build-abi:
+    description: 'The target platform ABI'
+    required: true
+    default: 'armeabi-v7a'
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    - name: Run build script
+      run: |
+        cd build/android && printf "y" | ./build.sh continuous ${{ inputs.build-abi }}
+      shell: bash
