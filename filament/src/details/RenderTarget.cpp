@@ -34,7 +34,7 @@ struct RenderTarget::BuilderDetails {
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
-    uint8_t mLayerCount = 0;// currently not settable in the public facing API
+    uint8_t mLayerCount = 0;
 };
 
 using BuilderType = RenderTarget;
@@ -91,14 +91,19 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     uint32_t maxWidth = 0;
     uint32_t minHeight = std::numeric_limits<uint32_t>::max();
     uint32_t maxHeight = 0;
+    uint32_t minDepth = std::numeric_limits<uint32_t>::max();
+    uint32_t maxDepth = 0;
     for (auto const& attachment : mImpl->mAttachments) {
         if (attachment.texture) {
             const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
             const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
+            const uint32_t d = attachment.texture->getDepth(attachment.mipLevel);
             minWidth  = std::min(minWidth, w);
             minHeight = std::min(minHeight, h);
+            minDepth = std::min(minDepth, d);
             maxWidth  = std::max(maxWidth, w);
             maxHeight = std::max(maxHeight, h);
+            maxDepth = std::max(maxDepth, d);
         }
     }
 
@@ -107,6 +112,7 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
+    mImpl->mLayerCount = minDepth;
     return downcast(engine).createRenderTarget(*this);
 }
 
