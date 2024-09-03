@@ -1021,10 +1021,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {
-            fg.addTrivialSideEffectPass("SSR Cleanup", [&view](DriverApi& driver) {
-                view.getPerViewUniforms().prepareStructure({});
-                view.commitUniforms(driver);
-            });
             // generate the mipchain
             PostProcessManager::generateMipmapSSR(ppm, fg,
                     reflections, ssrConfig.reflection, false, ssrConfig);
@@ -1141,12 +1137,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             colorPassOutput = output.value();
         }
     }
-
-    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
-        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
-        view.cleanupRenderPasses();
-        view.commitUniforms(driver);
-    });
 
     if (colorGradingConfig.customResolve) {
         assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
