@@ -55,7 +55,8 @@ public:
 template<typename T>
 using BuilderBase = utils::PrivateImplementation<T>;
 
-void builderMakeName(utils::CString& outName, const char* name, size_t len) noexcept;
+// This needs to be public because it is used in the following template.
+UTILS_PUBLIC void builderMakeName(utils::CString& outName, const char* name, size_t len) noexcept;
 
 template <typename Builder>
 class UTILS_PUBLIC BuilderNameMixin {
