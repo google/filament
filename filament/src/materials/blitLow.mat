@@ -10,6 +10,10 @@ material {
             type : float4,
             name : viewport,
             precision: high
+        },
+        {
+            type : float,
+            name : levelOfDetail,
         }
     ],
     variables : [
@@ -33,7 +37,7 @@ fragment {
 #if FILAMENT_EFFECTIVE_VERSION == 100
         postProcess.color = texture2D(materialParams_color, variable_vertex.xy);
 #else
-        postProcess.color = textureLod(materialParams_color, variable_vertex.xy, 0.0);
+        postProcess.color = textureLod(materialParams_color, variable_vertex.xy, materialParams.levelOfDetail);
 #endif
     }
 }

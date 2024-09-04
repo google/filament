@@ -22,6 +22,9 @@
 
 #include <array>
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace filament {
 
 /*
@@ -60,7 +63,7 @@ public:
 private:
     using Container = std::array<backend::Handle<backend::HwFence>, MAX_FRAME_LATENCY>;
     mutable Container mDelayedFences{};
-    size_t mLast;
+    uint8_t const mLast;
 };
 
 } // namespace filament

@@ -1308,7 +1308,12 @@ Description
       declare a variable called `eyeDirection` you can access it in the fragment shader using
       `variable_eyeDirection`. In the vertex shader, the interpolant name is simply a member of
       the `MaterialVertexInputs` structure (`material.eyeDirection` in your example). Each
-      interpolant is of type `float4` (`vec4`) in the shaders.
+      interpolant is of type `float4` (`vec4`) in the shaders. By default the precision of the
+      interpolant is `highp` in *both* the vertex and fragment shaders.
+      An alternate syntax can be used to specify both the name and precision of the interpolant.
+      In this case the specified precision is used as-is in both fragment and vertex stages, in
+      particular if `default` is specified the default precision is used is the fragment shader
+      (`mediump`) and in the vertex shader (`highp`).
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1320,7 +1325,11 @@ material {
         }
     ],
     variables : [
-         eyeDirection
+         eyeDirection,
+         {
+            name : eyeColor,
+            precision : medium
+         }
     ],
     vertexDomain : device,
     depthWrite : false,

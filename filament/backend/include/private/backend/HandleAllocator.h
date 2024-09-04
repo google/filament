@@ -208,14 +208,8 @@ public:
         // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
         // those
         if (isPoolHandle(id)) {
-            // Truncate the tag's age to N bits.
-            constexpr uint8_t N = 2; // support a history of 4 tags
-            constexpr uint8_t mask = (1 << N) - 1;
-
-            uint8_t const age = (id & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
-            uint8_t const newAge = age & mask;
-            uint32_t const key = (id & ~HANDLE_AGE_MASK) | (newAge << HANDLE_AGE_SHIFT);
-
+            // Truncate the age to get the debug tag
+            uint32_t const key = id & ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
             // This line is the costly part. In the future, we could potentially use a custom
             // allocator.
             mDebugTags[key] = std::move(tag);
@@ -226,7 +220,8 @@ public:
         if (!isPoolHandle(id)) {
             return "(no tag)";
         }
-        if (auto pos = mDebugTags.find(id); pos != mDebugTags.end()) {
+        uint32_t const key = id & ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
+        if (auto pos = mDebugTags.find(key); pos != mDebugTags.end()) {
             return pos->second;
         }
         return "(no tag)";
@@ -349,12 +344,24 @@ private:
         }
     }
 
-    // we handle a 4 bits age per address
-    static constexpr uint32_t HANDLE_HEAP_FLAG      = 0x80000000u;      // pool vs heap handle
-    static constexpr uint32_t HANDLE_AGE_MASK       = 0x78000000u;      // handle's age
-    static constexpr uint32_t HANDLE_INDEX_MASK     = 0x07FFFFFFu;      // handle index
-    static constexpr uint32_t HANDLE_TAG_MASK       = HANDLE_AGE_MASK;
-    static constexpr uint32_t HANDLE_AGE_SHIFT      = 27;
+    // number if bits allotted to the handle's age (currently 4 max)
+    static constexpr uint32_t HANDLE_AGE_BIT_COUNT = 4;
+    // number if bits allotted to the handle's debug tag (HANDLE_AGE_BIT_COUNT max)
+    static constexpr uint32_t HANDLE_DEBUG_TAG_BIT_COUNT = 2;
+    // bit shift for both the age and debug tag
+    static constexpr uint32_t HANDLE_AGE_SHIFT = 27;
+    // mask for the heap (vs pool) flag
+    static constexpr uint32_t HANDLE_HEAP_FLAG = 0x80000000u;
+    // mask for the age
+    static constexpr uint32_t HANDLE_AGE_MASK =
+            ((1 << HANDLE_AGE_BIT_COUNT) - 1) << HANDLE_AGE_SHIFT;
+    // mask for the debug tag
+    static constexpr uint32_t HANDLE_DEBUG_TAG_MASK =
+            ((1 << HANDLE_DEBUG_TAG_BIT_COUNT) - 1) << HANDLE_AGE_SHIFT;
+    // mask for the index
+    static constexpr uint32_t HANDLE_INDEX_MASK = 0x07FFFFFFu;
+
+    static_assert(HANDLE_DEBUG_TAG_BIT_COUNT <= HANDLE_AGE_BIT_COUNT);
 
     static bool isPoolHandle(HandleBase::HandleId id) noexcept {
         return (id & HANDLE_HEAP_FLAG) == 0u;
@@ -369,7 +376,7 @@ private:
         // a non-pool handle.
         if (UTILS_LIKELY(isPoolHandle(id))) {
             char* const base = (char*)mHandleArena.getArea().begin();
-            uint32_t const tag = id & HANDLE_TAG_MASK;
+            uint32_t const tag = id & HANDLE_AGE_MASK;
             size_t const offset = (id & HANDLE_INDEX_MASK) * Allocator::getAlignment();
             return { static_cast<void*>(base + offset), tag };
         }
@@ -384,7 +391,7 @@ private:
         size_t const offset = (char*)p - base;
         assert_invariant((offset % Allocator::getAlignment()) == 0);
         auto id = HandleBase::HandleId(offset / Allocator::getAlignment());
-        id |= tag & HANDLE_TAG_MASK;
+        id |= tag & HANDLE_AGE_MASK;
         assert_invariant((id & HANDLE_HEAP_FLAG) == 0);
         return id;
     }

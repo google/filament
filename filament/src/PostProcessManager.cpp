@@ -2945,6 +2945,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                                     1.0f / outputDesc.height});
                     }
 
+                    if (blitterNames[index] == "blitLow") {
+                        mi->setParameter("levelOfDetail", 0.0f);
+                    }
+
                     mi->setParameter("viewport", float4{
                             (float)vp.left   / inputDesc.width,
                             (float)vp.bottom / inputDesc.height,
@@ -3003,9 +3007,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
         SamplerMagFilter filterMag,
         SamplerMinFilter filterMin) noexcept {
 
-    // TODO: add support for sub-resources
-    assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
-    assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
+    uint32_t const layer = fg.getSubResourceDescriptor(input).layer;
+    float const levelOfDetail = fg.getSubResourceDescriptor(input).level;
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -3031,7 +3034,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
                 // --------------------------------------------------------------------------------
                 // set uniforms
 
-                PostProcessMaterial const& material = getPostProcessMaterial("blitLow");
+                PostProcessMaterial const& material =
+                        getPostProcessMaterial(layer ? "blitArray" : "blitLow");
                 auto* mi = material.getMaterialInstance(mEngine);
                 mi->setParameter("color", color, {
                         .filterMag = filterMag,
@@ -3043,6 +3047,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
                         float(vp.width)  / inputDesc.width,
                         float(vp.height) / inputDesc.height
                 });
+                mi->setParameter("levelOfDetail", levelOfDetail);
+                if (layer) {
+                    mi->setParameter("layerIndex", layer);
+                }
                 mi->commit(driver);
                 mi->use(driver);
 
@@ -3185,6 +3193,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                 assert_invariant(dst);
                 assert_invariant(srcDesc.format == dstDesc.format);
                 assert_invariant(srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height);
+                assert_invariant(srcDesc.samples > 1 && dstDesc.samples <= 1);
                 driver.resolve(
                         dst, dstSubDesc.level, dstSubDesc.layer,
                         src, srcSubDesc.level, srcSubDesc.layer);
