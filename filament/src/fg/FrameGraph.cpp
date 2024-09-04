@@ -195,12 +195,11 @@ FrameGraph& FrameGraph::compile() noexcept {
 
 void FrameGraph::execute(backend::DriverApi& driver) noexcept {
 
-    SYSTRACE_CALL();
-
     bool const useProtectedMemory = mMode == Mode::PROTECTED;
     auto const& passNodes = mPassNodes;
     auto& resourceAllocator = mResourceAllocator;
 
+    SYSTRACE_NAME("FrameGraph");
     driver.pushGroupMarker("FrameGraph");
 
     auto first = passNodes.begin();
@@ -211,7 +210,6 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
         assert_invariant(!node->isCulled());
 
         SYSTRACE_NAME(node->getName());
-
         driver.pushGroupMarker(node->getName());
 
         // devirtualize resourcesList
@@ -229,7 +227,6 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
             assert_invariant(resource->last == node);
             resource->destroy(resourceAllocator);
         }
-
         driver.popGroupMarker();
     }
     driver.popGroupMarker();
