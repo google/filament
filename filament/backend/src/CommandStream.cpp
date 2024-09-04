@@ -20,11 +20,16 @@
 #include <utils/CallStack.h>
 #endif
 
+#include <utils/compiler.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
 #include <utils/Profiler.h>
 #include <utils/Systrace.h>
 
+#include <cstddef>
 #include <functional>
+#include <string>
+#include <utility>
 
 #ifdef __ANDROID__
 #include <sys/system_properties.h>
@@ -74,8 +79,8 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
 }
 
 void CommandStream::execute(void* buffer) {
-    SYSTRACE_CALL();
-    SYSTRACE_CONTEXT();
+    // NOTE: we can't use SYSTRACE_CALL() or similar here because, execute() below, also
+    // uses systrace BEGIN/END and the END is not guaranteed to be happening in this scope.
 
     Profiler profiler;
 
@@ -100,6 +105,7 @@ void CommandStream::execute(void* buffer) {
             // we want to remove all this when tracing is completely disabled
             profiler.stop();
             UTILS_UNUSED Profiler::Counters const counters = profiler.readCounters();
+            SYSTRACE_CONTEXT();
             SYSTRACE_VALUE32("GLThread (I)", counters.getInstructions());
             SYSTRACE_VALUE32("GLThread (C)", counters.getCpuCycles());
             SYSTRACE_VALUE32("GLThread (CPI x10)", counters.getCPI() * 10);
