@@ -39,6 +39,7 @@ set(MATERIAL_SRCS
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
+        materials/iconTest.mat
 )
 
 if (CMAKE_CROSSCOMPILING)
@@ -270,6 +271,7 @@ if (NOT ANDROID)
     add_demo(viewtest)
 
     # Sample app specific
+    target_link_libraries(hellotriangle PRIVATE gltf-demo-resources uberarchive gltfio)
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)

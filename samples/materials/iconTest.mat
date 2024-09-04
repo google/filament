@@ -1,0 +1,26 @@
+material {
+    name : Icon,
+    shadingModel : unlit,
+    requires : [
+        uv0
+    ],
+    parameters : [
+        {
+            type : sampler2d,
+            name : tex
+        },
+        {
+            type : float3,
+            name : multiplier
+        }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material); 
+        vec3 m = materialParams.multiplier;
+        vec3 rgb = texture(materialParams_tex, getUV0()).rgb * m;
+        material.baseColor = vec4(rgb, 1.0);
+    }
+}

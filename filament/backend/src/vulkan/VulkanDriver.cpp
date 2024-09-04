@@ -530,6 +530,8 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, target, levels,
             format, samples, w, h, depth, usage, mStagePool);
+//    FVK_LOGE <<"created texture: " << vktexture->getVkImage() << " dim=" <<
+//            vktexture->width << "x" << vktexture->height << utils::io::endl;
     mResourceManager.acquire(vktexture);
 }
 

@@ -165,14 +165,14 @@ constexpr static const int FVK_REQUIRED_VERSION_MINOR = 1;
 // buffers that have been submitted but have not yet finished rendering. Note that Filament can
 // issue multiple commit calls in a single frame, and that we use a triple buffered swap chain on
 // some platforms.
-constexpr static const int FVK_MAX_COMMAND_BUFFERS = 10;
+constexpr static const int FVK_MAX_COMMAND_BUFFERS = 3;
 
 // Number of command buffer submissions that should occur before an unused pipeline is removed
 // from the cache.
 //
 // If this number is low, VkPipeline construction will occur frequently, which can
 // be extremely slow. If this number is high, the memory footprint will be large.
-constexpr static const int FVK_MAX_PIPELINE_AGE = 10;
+constexpr static const int FVK_MAX_PIPELINE_AGE = 3;
 
 // VulkanPipelineCache does not track which command buffers contain references to which pipelines,
 // instead it simply waits for at least FVK_MAX_COMMAND_BUFFERS submissions to occur before
