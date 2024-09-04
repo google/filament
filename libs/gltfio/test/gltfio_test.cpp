@@ -228,7 +228,7 @@ TEST_F(glTFIOTest, AnimatedMorphCubeRenderables) {
     EXPECT_EQ(renderableManager.getMorphTargetCount(inst), 2u);
 
     // The 0-th MorphTargetBuffer holds both of the targets
-    auto const morphTargetBuffer = renderableManager.getMorphTargetBufferAt(inst, 0, 0);
+    auto const morphTargetBuffer = renderableManager.getMorphTargetBuffer(inst);
     EXPECT_EQ(morphTargetBuffer->getCount(), 2u);
 
     // The number of vertices for the morph target should be the face vertices in a cube =>

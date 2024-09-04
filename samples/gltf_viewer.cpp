@@ -58,10 +58,13 @@
 
 #include <cgltf.h>
 
+#include <algorithm>
 #include <array>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <set>
+#include <sstream>
 #include <string>
 
 #include "generated/resources/gltf_demo.h"
@@ -136,6 +139,8 @@ struct App {
 
     AutomationSpec* automationSpec = nullptr;
     AutomationEngine* automationEngine = nullptr;
+    bool screenshot = false;
+    uint8_t screenshotSeq = 0;
 };
 
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
@@ -508,30 +513,55 @@ static void onClick(App& app, View* view, ImVec2 pos) {
     });
 }
 
-static utils::Path getPathForAsset(std::string_view string) {
+static utils::Path getPathForIBLAsset(std::string_view string) {
+    auto isIBL = [] (utils::Path file) -> bool {
+        return file.getExtension() == "ktx" || file.getExtension() == "hdr";
+    };
+
     utils::Path filename{ string };
     if (!filename.exists()) {
         std::cerr << "file " << filename << " not found!" << std::endl;
         return {};
     }
+
     if (filename.isDirectory()) {
-        auto files = filename.listContents();
-        for (const auto& file: files) {
-            if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
-                filename = file;
-                break;
-            }
-        }
-        if (filename.isDirectory()) {
-            std::cerr << "no glTF file found in " << filename << std::endl;
+        std::vector<Path> files = filename.listContents();
+        if (std::none_of(files.cbegin(), files.cend(), isIBL)) {
             return {};
         }
+    } else if (!isIBL(filename)) {
+        return {};
     }
+
     return filename;
 }
 
+static utils::Path getPathForGLTFAsset(std::string_view string) {
+    auto isGLTF = [] (utils::Path file) -> bool {
+        return file.getExtension() == "gltf" || file.getExtension() == "glb";
+    };
 
-static bool checkAsset(const utils::Path& filename) {
+    utils::Path filename{ string };
+    if (!filename.exists()) {
+        std::cerr << "file " << filename << " not found!" << std::endl;
+        return {};
+    }
+
+    if (filename.isDirectory()) {
+        std::vector<Path> files = filename.listContents();
+        auto it = std::find_if(files.cbegin(), files.cend(), isGLTF);
+        if (it == files.end()) {
+            return {};
+        }
+        filename = *it;
+    } else if (!isGLTF(filename)) {
+        return {};
+    }
+
+    return filename;
+}
+
+static bool checkGLTFAsset(const utils::Path& filename) {
     // Peek at the file size to allow pre-allocation.
     long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
     if (contentSize <= 0) {
@@ -571,8 +601,9 @@ int main(int argc, char** argv) {
     utils::Path filename;
     int const num_args = argc - optionIndex;
     if (num_args >= 1) {
-        filename = getPathForAsset(argv[optionIndex]);
+        filename = getPathForGLTFAsset(argv[optionIndex]);
         if (filename.isEmpty()) {
+            std::cerr << "no glTF file found in " << filename << std::endl;
             return 1;
         }
     }
@@ -850,10 +881,15 @@ int main(int argc, char** argv) {
 
             if (ImGui::CollapsingHeader("Debug")) {
                 auto& debug = engine->getDebugRegistry();
-                if (ImGui::Button("Capture frame")) {
-                    bool* captureFrame =
-                            debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
-                    *captureFrame = true;
+                if (engine->getBackend() == Engine::Backend::METAL) {
+                    if (ImGui::Button("Capture frame")) {
+                        bool* captureFrame =
+                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                        *captureFrame = true;
+                    }
+                }
+                if (ImGui::Button("Screenshot")) {
+                    app.screenshot = true;
                 }
                 ImGui::Checkbox("Disable buffer padding",
                         debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
@@ -867,6 +903,10 @@ int main(int argc, char** argv) {
                         debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
                 ImGui::Checkbox("Focus shadow casters",
                         debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+                ImGui::Checkbox("Disable light frustum alignment",
+                        debug.getPropertyAddress<bool>("d.shadowmap.disable_light_frustum_align"));
+                ImGui::Checkbox("Depth clamp",
+                        debug.getPropertyAddress<bool>("d.shadowmap.depth_clamp"));
 
                 bool debugDirectionalShadowmap;
                 if (debug.getProperty("d.shadowmap.debug_directional_shadowmap",
@@ -1107,6 +1147,14 @@ int main(int argc, char** argv) {
     };
 
     auto postRender = [&app](Engine* engine, View* view, Scene*, Renderer* renderer) {
+        if (app.screenshot) {
+            std::ostringstream stringStream;
+            stringStream << "screenshot" << std::setfill('0') << std::setw(2) << +app.screenshotSeq;
+            AutomationEngine::exportScreenshot(
+                    view, renderer, stringStream.str() + ".ppm", false, app.automationEngine);
+            ++app.screenshotSeq;
+            app.screenshot = false;
+        }
         if (app.automationEngine->shouldClose()) {
             FilamentApp::get().close();
             return;
@@ -1125,9 +1173,9 @@ int main(int argc, char** argv) {
     filamentApp.resize(resize);
 
     filamentApp.setDropHandler([&](std::string_view path) {
-        utils::Path const filename = getPathForAsset(path);
+        utils::Path filename = getPathForGLTFAsset(path);
         if (!filename.isEmpty()) {
-            if (checkAsset(filename)) {
+            if (checkGLTFAsset(filename)) {
                 app.resourceLoader->asyncCancelLoad();
                 app.resourceLoader->evictResourceData();
                 app.viewer->removeAsset();
@@ -1136,6 +1184,13 @@ int main(int argc, char** argv) {
                 loadResources(filename);
                 app.viewer->setAsset(app.asset, app.instance);
             }
+            return;
+        }
+
+        filename = getPathForIBLAsset(path);
+        if (!filename.isEmpty()) {
+            FilamentApp::get().loadIBL(path);
+            return;
         }
     });
 

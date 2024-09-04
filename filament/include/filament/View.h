@@ -24,6 +24,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
 
@@ -40,6 +41,7 @@ class CallbackHandler;
 
 class Camera;
 class ColorGrading;
+class Engine;
 class MaterialInstance;
 class RenderTarget;
 class Scene;
@@ -726,7 +728,7 @@ public:
     void setDebugCamera(Camera* UTILS_NULLABLE camera) noexcept;
 
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
-    Camera const* UTILS_NULLABLE getDirectionalShadowCamera() const noexcept;
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
 
     /** Result of a picking query */
@@ -877,6 +879,17 @@ public:
      * @return an Entity representing the large scale fog object.
      */
     utils::Entity getFogEntity() const noexcept;
+
+
+    /**
+     * When certain temporal features are used (e.g.: TAA or Screen-space reflections), the view
+     * keeps a history of previous frame renders associated with the Renderer the view was last
+     * used with. When switching Renderer, it may be necessary to clear that history by calling
+     * this method. Similarly, if the whole content of the screen change, like when a cut-scene
+     * starts, clearing the history might be needed to avoid artifacts due to the previous frame
+     * being very different.
+     */
+    void clearFrameHistory(Engine& engine) noexcept;
 
     /**
      * List of available ambient occlusion techniques

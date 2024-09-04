@@ -595,6 +595,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             colorTargets[i] = {
                 .texture = mResourceAllocator.handle_cast<VulkanTexture*>(color[i].handle),
                 .level = color[i].level,
+                .baseViewIndex = color[i].baseViewIndex,
+                .layerCount = layerCount,
                 .layer = color[i].layer,
             };
             UTILS_UNUSED_IN_RELEASE VkExtent2D extent = colorTargets[i].getExtent2D();
@@ -609,6 +611,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[0] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(depth.handle),
             .level = depth.level,
+            .baseViewIndex = depth.baseViewIndex,
+            .layerCount = layerCount,
             .layer = depth.layer,
         };
         UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[0].getExtent2D();
@@ -621,6 +625,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[1] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(stencil.handle),
             .level = stencil.level,
+            .baseViewIndex = stencil.baseViewIndex,
+            .layerCount = layerCount,
             .layer = stencil.layer,
         };
         UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[1].getExtent2D();
@@ -637,7 +643,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     auto renderTarget = mResourceAllocator.construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, width, height,
-            samples, colorTargets, depthStencil, mStagePool);
+            samples, colorTargets, depthStencil, mStagePool, layerCount);
     mResourceManager.acquire(renderTarget);
 }
 
@@ -938,6 +944,10 @@ bool VulkanDriver::isProtectedTexturesSupported() {
     return false;
 }
 
+bool VulkanDriver::isDepthClampSupported() {
+    return mContext.isDepthClampSupported();
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU: {
@@ -986,15 +996,15 @@ FeatureLevel VulkanDriver::getFeatureLevel() {
 
     // If the max sampler counts do not meet FL2 standards, then this is an FL1 device.
     const auto& fl2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
-    if (fl2.MAX_VERTEX_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers ||
-        fl2.MAX_FRAGMENT_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers) {
+    if (limits.maxPerStageDescriptorSamplers < fl2.MAX_VERTEX_SAMPLER_COUNT  ||
+        limits.maxPerStageDescriptorSamplers < fl2.MAX_FRAGMENT_SAMPLER_COUNT) {
         return FeatureLevel::FEATURE_LEVEL_1;
     }
 
     // If the max sampler counts do not meet FL3 standards, then this is an FL2 device.
     const auto& fl3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
-    if (fl3.MAX_VERTEX_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers ||
-        fl3.MAX_FRAGMENT_SAMPLER_COUNT < limits.maxPerStageDescriptorSamplers) {
+    if (limits.maxPerStageDescriptorSamplers < fl3.MAX_VERTEX_SAMPLER_COUNT||
+        limits.maxPerStageDescriptorSamplers < fl3.MAX_FRAGMENT_SAMPLER_COUNT) {
         return FeatureLevel::FEATURE_LEVEL_2;
     }
 
@@ -1267,6 +1277,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
     }
 
+    uint8_t const renderTargetLayerCount = rt->getLayerCount();
+
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
         .initialColorLayoutMask = 0,
@@ -1277,10 +1289,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .discardEnd = discardEndVal,
         .samples = rt->getSamples(),
         .subpassMask = uint8_t(params.subpassMask),
+        .viewCount = renderTargetLayerCount,
     };
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const VulkanAttachment& info = rt->getColor(i);
         if (info.texture) {
+            assert_invariant(info.layerCount == renderTargetLayerCount);
             rpkey.initialColorLayoutMask |= 1 << i;
             rpkey.colorFormat[i] = info.getFormat();
             if (rpkey.samples > 1 && info.texture->samples == 1) {
@@ -1592,13 +1606,13 @@ void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
             value);
 }
 
-void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
+void VulkanDriver::insertEventMarker(char const* string) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    mCommands.insertEventMarker(string, len);
+    mCommands.insertEventMarker(string, strlen(string));
 #endif
 }
 
-void VulkanDriver::pushGroupMarker(char const* string, uint32_t) {
+void VulkanDriver::pushGroupMarker(char const* string) {
     // Turns out all the markers are 0-terminated, so we can just pass it without len.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.pushGroupMarker(string);
@@ -1806,6 +1820,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
         .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
         .rasterizationSamples = rt->getSamples(),
+        .depthClamp = rasterState.depthClamp,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,
         .alphaBlendOp =  rasterState.blendEquationAlpha,
@@ -2020,6 +2035,10 @@ void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, cons
 }
 
 void VulkanDriver::resetState(int) {
+}
+
+void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mResourceAllocator.associateHandle(handleId, std::move(tag));
 }
 
 // explicit instantiation of the Dispatcher

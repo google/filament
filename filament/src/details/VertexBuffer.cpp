@@ -29,6 +29,7 @@
 
 #include <utils/bitset.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
@@ -259,7 +260,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             mBufferCount, mDeclaredAttributes.count(), mAttributes);
 
     mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle);
-
+    if (auto name = builder.getName(); !name.empty()) {
+        driver.setDebugTag(mHandle.getId(), name);
+    }
 
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
@@ -287,6 +290,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
                 if (!mBufferObjects[i]) {
                     BufferObjectHandle bo = driver.createBufferObject(bufferSizes[i],
                             backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+                    if (auto name = builder.getName(); !name.empty()) {
+                        driver.setDebugTag(bo.getId(), name);
+                    }
                     driver.setVertexBufferObject(mHandle, i, bo);
                     mBufferObjects[i] = bo;
                 }
@@ -303,6 +309,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
                 if (!mBufferObjects[i]) {
                     BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                             backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+                    if (auto name = builder.getName(); !name.empty()) {
+                        driver.setDebugTag(bo.getId(), name);
+                    }
                     driver.setVertexBufferObject(mHandle, i, bo);
                     mBufferObjects[i] = bo;
                 }

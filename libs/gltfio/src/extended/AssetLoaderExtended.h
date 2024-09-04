@@ -70,7 +70,8 @@ struct AssetLoaderExtended {
         : mEngine(engine),
           mGltfPath(config.gltfPath),
           mMaterials(materials),
-          mUriDataCache(std::make_shared<UriDataCache>()) {}
+          mUriDataCache(std::make_shared<UriDataCache>()),
+          mCgltfBuffersLoaded(false) {}
 
     ~AssetLoaderExtended() = default;
 
@@ -83,6 +84,7 @@ private:
     std::string mGltfPath;
     MaterialProvider& mMaterials;
     UriDataCacheHandle mUriDataCache;
+    bool mCgltfBuffersLoaded;
 };
 
 } // namespace filament::gltfio

@@ -53,14 +53,14 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
     //    MetalRenderPrimitive         :  24       many
     //    MetalVertexBuffer            :  32       moderate
     // -- less than or equal 32 bytes
-    //    MetalIndexBuffer             :  40       moderate
     //    MetalFence                   :  48       few
-    //    MetalBufferObject            :  48       many
-    // -- less than or equal 48 bytes
+    //    MetalIndexBuffer             :  56       moderate
+    //    MetalBufferObject            :  64       many
+    // -- less than or equal 64 bytes
     //    MetalSamplerGroup            : 112       few
     //    MetalProgram                 : 152       moderate
     //    MetalTexture                 : 152       moderate
-    //    MetalSwapChain               : 184       few
+    //    MetalSwapChain               : 208       few
     //    MetalRenderTarget            : 272       few
     //    MetalVertexBufferInfo        : 552       moderate
     // -- less than or equal to 552 bytes
@@ -162,8 +162,10 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         sc[s] = [mContext->device supportsTextureSampleCount:s] ? s : sc[s - 1];
     }
 
-    mContext->bugs.a8xStaticTextureTargetError =
-            [mContext->device.name containsString:@"Apple A8X GPU"];
+    mContext->bugs.staticTextureTargetError =
+            [mContext->device.name containsString:@"Apple A8X GPU"] ||
+            [mContext->device.name containsString:@"Apple A8 GPU"] ||
+            [mContext->device.name containsString:@"Apple A7 GPU"];
 
     mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
     mContext->pipelineStateCache.setDevice(mContext->device);
@@ -318,17 +320,40 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
         uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih) {
     MetalVertexBufferInfo const* const vbi = handle_cast<const MetalVertexBufferInfo>(vbih);
     construct_handle<MetalVertexBuffer>(vbh, *mContext, vertexCount, vbi->bufferCount, vbih);
+    // No actual GPU memory is allocated here, so no need to check for allocation success.
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
-    auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize, indexCount);
+    auto elementSize = (uint8_t)getElementTypeSize(elementType);
+    auto* indexBuffer =
+            construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize, indexCount);
+    auto& buffer = indexBuffer->buffer;
+    // If the allocation was not successful, postpone the error message until the next tick, to give
+    // Filament a chance to call setDebugTag on the handle; this way we get a nicer error message.
+    if (UTILS_UNLIKELY(!buffer.wasAllocationSuccessful())) {
+        const size_t byteCount = buffer.getSize();
+        runAtNextTick([byteCount, this, ibh]() {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Could not allocate Metal index buffer of size " << byteCount
+                    << ", tag=" << mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe();
+        });
+    }
 }
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
-    construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
+    auto* bufferObject =
+            construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
+    // If the allocation was not successful, postpone the error message until the next tick, to give
+    // Filament a chance to call setDebugTag on the handle; this way we get a nicer error message.
+    if (UTILS_UNLIKELY(!bufferObject->getBuffer()->wasAllocationSuccessful())) {
+        runAtNextTick([byteCount, this, boh]() {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Could not allocate Metal buffer of size " << byteCount
+                    << ", tag=" << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
+        });
+    }
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -832,6 +857,10 @@ bool MetalDriver::isProtectedTexturesSupported() {
     return false;
 }
 
+bool MetalDriver::isDepthClampSupported() {
+    return true;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -840,8 +869,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return true;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return false;
-        case Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR:
-            return mContext->bugs.a8xStaticTextureTargetError;
+        case Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR:
+            return mContext->bugs.staticTextureTargetError;
         case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
             return false;
         default:
@@ -1273,11 +1302,11 @@ void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
     pushConstants.setPushConstant(value, index);
 }
 
-void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
+void MetalDriver::insertEventMarker(const char* string) {
 
 }
 
-void MetalDriver::pushGroupMarker(const char* string, uint32_t len) {
+void MetalDriver::pushGroupMarker(const char* string) {
     mContext->groupMarkers.push(string);
 }
 
@@ -1749,6 +1778,13 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
         [mContext->currentRenderPassEncoder setFrontFacingWinding:winding];
     }
 
+    // depth clip mode
+    MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
+    mContext->depthClampState.updateState(depthClipMode);
+    if (mContext->depthClampState.stateChanged()) {
+        [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
+    }
+
     // Set the depth-stencil state, if a state change is needed.
     DepthStencilState depthState;
     if (depthAttachment) {
@@ -2059,16 +2095,17 @@ void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
 void MetalDriver::resetState(int) {
 }
 
+void MetalDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
+    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
+}
+
 void MetalDriver::runAtNextTick(const std::function<void()>& fn) noexcept {
-    std::lock_guard<std::mutex> const lock(mTickOpsLock);
     mTickOps.push_back(fn);
 }
 
 void MetalDriver::executeTickOps() noexcept {
     std::vector<std::function<void()>> ops;
-    mTickOpsLock.lock();
     std::swap(ops, mTickOps);
-    mTickOpsLock.unlock();
     for (const auto& f : ops) {
         f();
     }

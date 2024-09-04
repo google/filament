@@ -192,6 +192,30 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
+    // Print a warning if the material's stereo type doesn't align with the engine's setting.
+    MaterialDomain materialDomain;
+    UserVariantFilterMask variantFilterMask;
+    materialParser->getMaterialDomain(&materialDomain);
+    materialParser->getMaterialVariantFilterMask(&variantFilterMask);
+    bool const hasStereoVariants = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::STE));
+    if (materialDomain == MaterialDomain::SURFACE && hasStereoVariants) {
+        StereoscopicType const engineStereoscopicType = engine.getConfig().stereoscopicType;
+        // Default materials are always compiled with either 'instanced' or 'multiview'.
+        // So, we only verify compatibility if the engine is set up for stereo.
+        if (engineStereoscopicType != StereoscopicType::NONE) {
+            StereoscopicType materialStereoscopicType = StereoscopicType::NONE;
+            materialParser->getStereoscopicType(&materialStereoscopicType);
+            if (materialStereoscopicType != engineStereoscopicType) {
+                CString name;
+                materialParser->getName(&name);
+                slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
+                        << "' is " << (int)materialStereoscopicType
+                        << ", which is not compatiable with the engine's setting "
+                        << (int)engineStereoscopicType << "." << io::endl;
+            }
+        }
+    }
+
     return downcast(engine).createMaterial(*this, std::move(materialParser));
 }
 
@@ -200,8 +224,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
         : mIsDefaultMaterial(builder->mDefaultMaterial),
           mEngine(engine),
           mMaterialId(engine.getMaterialId()),
-          mMaterialParser(std::move(materialParser))
-{
+          mMaterialParser(std::move(materialParser)) {
     MaterialParser* const parser = mMaterialParser.get();
 
     UTILS_UNUSED_IN_RELEASE bool const nameOk = parser->getName(&mName);
@@ -595,6 +618,7 @@ Program FMaterial::getProgramWithVariants(
 
 void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
     auto program = mEngine.getDriverApi().createProgram(std::move(p));
+    mEngine.getDriverApi().setDebugTag(program.getId(), mName);
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 }
@@ -873,7 +897,7 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
             engine.getDriverApi().getMaxUniformBufferSize() / 16u);
 
     bool const staticTextureWorkaround =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
     bool const powerVrShaderWorkarounds =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);

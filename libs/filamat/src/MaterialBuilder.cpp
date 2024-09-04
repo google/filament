@@ -57,7 +57,7 @@
 #include <atomic>
 #include <utility>
 #include <vector>
-
+#include <fstream>
 
 namespace filamat {
 
@@ -234,7 +234,21 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
             assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
-            mVariables[size_t(v)] = CString(name);
+            mVariables[size_t(v)] = { CString(name), Precision::DEFAULT, false };
+            break;
+    }
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::variable(Variable v,
+        const char* name, ParameterPrecision precision) noexcept {
+    switch (v) {
+        case Variable::CUSTOM0:
+        case Variable::CUSTOM1:
+        case Variable::CUSTOM2:
+        case Variable::CUSTOM3:
+            assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
+            mVariables[size_t(v)] = { CString(name), precision, true };
             break;
     }
     return *this;
@@ -544,6 +558,11 @@ MaterialBuilder& MaterialBuilder::optimization(Optimization optimization) noexce
 
 MaterialBuilder& MaterialBuilder::printShaders(bool printShaders) noexcept {
     mPrintShaders = printShaders;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::saveRawVariants(bool saveRawVariants) noexcept {
+    mSaveRawVariants = saveRawVariants;
     return *this;
 }
 
@@ -916,6 +935,30 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 } else if (v.stage == backend::ShaderStage::COMPUTE) {
                     shader = sg.createComputeProgram(
                             shaderModel, targetApi, targetLanguage, featureLevel, info);
+                }
+
+                // Write the variant to a file.
+                if (mSaveRawVariants) {
+                    int variantKey = v.variant.key;
+                    auto getExtension = [](backend::ShaderStage stage) {
+                        switch (stage) {
+                            case backend::ShaderStage::VERTEX:
+                                return "vert";
+                            case backend::ShaderStage::FRAGMENT:
+                                return "frag";
+                            case backend::ShaderStage::COMPUTE:
+                                return "comp";
+                        }
+                    };
+                    char filename[256];
+                    snprintf(filename, sizeof(filename), "%s_0x%02x.%s", mMaterialName.c_str_safe(),
+                            variantKey, getExtension(v.stage));
+                    printf("Writing variant 0x%02x to %s\n", variantKey, filename);
+                    std::ofstream file(filename);
+                    if (file.is_open()) {
+                        file << shader;
+                        file.close();
+                    }
                 }
 
                 std::string* pGlsl = nullptr;
@@ -1354,7 +1397,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
 
 bool MaterialBuilder::hasCustomVaryings() const noexcept {
     for (const auto& variable : mVariables) {
-        if (!variable.empty()) {
+        if (!variable.name.empty()) {
             return true;
         }
     }
@@ -1580,6 +1623,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
             }
         }
         container.emplace<uint64_t>(ChunkType::MaterialProperties, properties);
+        container.emplace<uint8_t>(ChunkType::MaterialStereoscopicType, static_cast<uint8_t>(mStereoscopicType));
     }
 
     // create a unique material id

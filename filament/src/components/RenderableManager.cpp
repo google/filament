@@ -281,19 +281,13 @@ RenderableManager::Builder& RenderableManager::Builder::morphing(
     return *this;
 }
 
-RenderableManager::Builder& RenderableManager::Builder::morphing(
-        uint8_t level, size_t primitiveIndex, size_t offset, size_t count) noexcept {
-    return morphing(level, primitiveIndex, mImpl->mMorphTargetBuffer, offset, count);
-}
-
-RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t, size_t primitiveIndex,
-        MorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) noexcept {
-    std::vector<Entry>& entries = mImpl->mEntries;
+RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level,
+        size_t primitiveIndex, size_t offset) noexcept {
+    // the last parameter "count" is unused, because it must be equal to the primitive's vertex count
+    std::vector<BuilderDetails::Entry>& entries = mImpl->mEntries;
     if (primitiveIndex < entries.size()) {
         auto& morphing = entries[primitiveIndex].morphing;
-        morphing.buffer = morphTargetBuffer;
-        morphing.offset = offset;
-        morphing.count = count;
+        morphing.offset = uint32_t(offset);
     }
     return *this;
 }
@@ -449,10 +443,10 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             << ") instances when supplying transforms via an InstanceBuffer.";
 
     if (mImpl->mGeometryType == GeometryType::STATIC) {
-        FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount > 0)
+        FILAMENT_CHECK_PRECONDITION(mImpl->mSkinningBoneCount == 0)
                 << "Skinning can't be used with STATIC geometry";
 
-        FILAMENT_CHECK_PRECONDITION(mImpl->mMorphTargetCount > 0)
+        FILAMENT_CHECK_PRECONDITION(mImpl->mMorphTargetCount == 0)
                 << "Morphing can't be used with STATIC geometry";
     }
 
@@ -594,6 +588,9 @@ void FRenderableManager::create(
             // full size of the UBO.
             instances.handle = driver.createBufferObject(sizeof(PerRenderableUib),
                     BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+            if (auto name = instances.buffer->getName(); !name.empty()) {
+                driver.setDebugTag(instances.handle.getId(), std::move(name));
+            }
         }
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
@@ -668,13 +665,6 @@ void FRenderableManager::create(
         if (morphTargetBuffer == nullptr) {
             morphTargetBuffer = mEngine.getDummyMorphTargetBuffer();
         }
-        MorphTargets* const morphTargets = new MorphTargets[entryCount];
-        std::generate_n(morphTargets, entryCount,
-                [morphTargetBuffer]() -> MorphTargets {
-                    return { morphTargetBuffer, 0, 0 };
-                });
-
-        mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
 
         // Always create skinning and morphing resources if one of them is enabled because
         // the shader always handles both. See Variant::SKINNING_OR_MORPHING.
@@ -700,13 +690,13 @@ void FRenderableManager::create(
                         backend::BufferUsage::DYNAMIC),
                 .count = targetCount };
 
-            for (size_t i = 0; i < entryCount; ++i) {
-                const auto& morphing = builder->mEntries[i].morphing;
-                if (!morphing.buffer) {
-                    continue;
+            Slice<FRenderPrimitive>& primitives = mManager[ci].primitives;
+            mManager[ci].morphTargetBuffer = morphTargetBuffer;
+            if (builder->mMorphTargetBuffer) {
+                for (size_t i = 0; i < entryCount; ++i) {
+                    const auto& morphing = builder->mEntries[i].morphing;
+                    primitives[i].setMorphingBufferOffset(morphing.offset);
                 }
-                morphTargets[i] = { downcast(morphing.buffer), (uint32_t)morphing.offset,
-                                    (uint32_t)morphing.count };
             }
             
             // When targetCount equal 0, boneCount>0 in this case, do an initialization for the
@@ -762,7 +752,6 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
 
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(mHwRenderPrimitiveFactory, driver, manager[ci].primitives);
-    destroyComponentMorphTargets(engine, manager[ci].morphTargets);
 
     // destroy the bones structures if any
     Bones const& bones = manager[ci].bones;
@@ -793,11 +782,6 @@ void FRenderableManager::destroyComponentPrimitives(
         primitive.terminate(factory, driver);
     }
     delete[] primitives.data();
-}
-
-void FRenderableManager::destroyComponentMorphTargets(FEngine&,
-        utils::Slice<MorphTargets>& morphTargets) noexcept {
-    delete[] morphTargets.data();
 }
 
 void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
@@ -968,42 +952,21 @@ void FRenderableManager::setMorphWeights(Instance instance, float const* weights
     }
 }
 
-void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex, FMorphTargetBuffer* morphTargetBuffer, size_t offset, size_t count) {
+void FRenderableManager::setMorphTargetBufferOffsetAt(Instance instance, uint8_t level,
+        size_t primitiveIndex,
+        size_t offset) {
     if (instance) {
-        assert_invariant(morphTargetBuffer);
-
-        MorphWeights const& morphWeights = mManager[instance].morphWeights;
-        FILAMENT_CHECK_PRECONDITION(morphWeights.count == count)
-                << "Only " << morphWeights.count << " morph targets can be set (count=" << count
-                << ")";
-
-        Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
-        if (primitiveIndex < morphTargets.size()) {
-            morphTargets[primitiveIndex] = { morphTargetBuffer, (uint32_t)offset,
-                                             (uint32_t)count };
+        assert_invariant(mManager[instance].morphTargetBuffer);
+        Slice<FRenderPrimitive>& primitives = mManager[instance].primitives;
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].setMorphingBufferOffset(offset);
         }
     }
 }
 
-void FRenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex, size_t offset, size_t count) {
+MorphTargetBuffer* FRenderableManager::getMorphTargetBuffer(Instance instance) const noexcept {
     if (instance) {
-        Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
-        if (primitiveIndex < morphTargets.size()) {
-            setMorphTargetBufferAt(instance, level,
-                    primitiveIndex, morphTargets[primitiveIndex].buffer, offset, count);
-        }
-    }
-}
-
-MorphTargetBuffer* FRenderableManager::getMorphTargetBufferAt(Instance instance, uint8_t level,
-        size_t primitiveIndex) const noexcept {
-    if (instance) {
-        const Slice<MorphTargets>& morphTargets = getMorphTargets(instance, level);
-        if (primitiveIndex < morphTargets.size()) {
-            return morphTargets[primitiveIndex].buffer;
-        }
+        return mManager[instance].morphTargetBuffer;
     }
     return nullptr;
 }

@@ -38,6 +38,7 @@
 #include <backend/PipelineState.h>
 
 #include "private/backend/CircularBuffer.h"
+#include "private/backend/CommandStream.h"
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -117,10 +118,11 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     uint32_t const customCommandCount =
             builder.mCustomCommands.has_value() ? builder.mCustomCommands->size() : 0;
 
-    Command* const curr = builder.mArena.alloc<Command>(commandCount + customCommandCount);
-    assert_invariant(curr);
+    Command* const commandBegin = builder.mArena.alloc<Command>(commandCount + customCommandCount);
+    Command* commandEnd = commandBegin + (commandCount + customCommandCount);
+    assert_invariant(commandBegin);
 
-    if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(curr))) {
+    if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(commandBegin))) {
         static bool sLogOnce = true;
         if (UTILS_UNLIKELY(sLogOnce)) {
             sLogOnce = false;
@@ -129,10 +131,7 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
         }
     }
 
-    mCommandBegin = curr;
-    mCommandEnd = curr + commandCount + customCommandCount;
-
-    appendCommands(engine, { curr, commandCount },
+    appendCommands(engine, { commandBegin, commandCount },
             builder.mUboHandle,
             builder.mVisibleRenderables,
             builder.mCommandTypeFlags,
@@ -143,33 +142,36 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
             builder.mCameraForwardVector);
 
     if (builder.mCustomCommands.has_value()) {
-        Command* p = curr + commandCount;
+        Command* p = commandBegin + commandCount;
         for (auto [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
             appendCustomCommand(p++, channel, passId, command, order, fn);
         }
     }
 
     // sort commands once we're done adding commands
-    sortCommands(builder.mArena);
+    commandEnd = resize(builder.mArena,
+            RenderPass::sortCommands(commandBegin, commandEnd));
 
     if (engine.isAutomaticInstancingEnabled()) {
-        uint32_t stereoscopicEyeCount = 1;
+        int32_t stereoscopicEyeCount = 1;
         if (builder.mFlags & IS_INSTANCED_STEREOSCOPIC) {
             stereoscopicEyeCount *= engine.getConfig().stereoscopicEyeCount;
         }
-        instanceify(engine, builder.mArena, stereoscopicEyeCount);
+        commandEnd = resize(builder.mArena,
+                instanceify(engine, commandBegin, commandEnd, stereoscopicEyeCount));
     }
+
+    // these are `const` from this point on...
+    mCommandBegin = commandBegin;
+    mCommandEnd = commandEnd;
 }
 
 // this destructor is actually heavy because it inlines ~vector<>
-RenderPass::~RenderPass() noexcept {
-}
+RenderPass::~RenderPass() noexcept = default;
 
-void RenderPass::resize(Arena& arena, size_t count) noexcept {
-    if (mCommandBegin) {
-        mCommandEnd = mCommandBegin + count;
-        arena.rewind(mCommandEnd);
-    }
+RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexcept {
+    arena.rewind(last);
+    return last;
 }
 
 void RenderPass::appendCommands(FEngine& engine,
@@ -221,7 +223,7 @@ void RenderPass::appendCommands(FEngine& engine,
         work(vr.first, vr.size());
     } else {
         auto* jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
-                std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 5>());
+                std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT>());
         js.runAndWait(jobCommandsParallel);
     }
 
@@ -260,18 +262,19 @@ void RenderPass::appendCustomCommand(Command* commands,
     commands->key = cmd;
 }
 
-void RenderPass::sortCommands(Arena& arena) noexcept {
-    SYSTRACE_NAME("sort and trim commands");
+RenderPass::Command* RenderPass::sortCommands(
+        Command* const begin, Command* const end) noexcept {
+    SYSTRACE_NAME("sort commands");
 
-    std::sort(mCommandBegin, mCommandEnd);
+    std::sort(begin, end);
 
     // find the last command
-    Command const* const last = std::partition_point(mCommandBegin, mCommandEnd,
+    Command* const last = std::partition_point(begin, end,
             [](Command const& c) {
                 return c.key != uint64_t(Pass::SENTINEL);
             });
 
-    resize(arena, uint32_t(last - mCommandBegin));
+    return last;
 }
 
 void RenderPass::execute(RenderPass const& pass,
@@ -284,7 +287,9 @@ void RenderPass::execute(RenderPass const& pass,
     driver.endRenderPass();
 }
 
-void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept {
+RenderPass::Command* RenderPass::instanceify(FEngine& engine,
+        Command* curr, Command* const last,
+        int32_t eyeCount) const noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -297,14 +302,12 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
 
     UTILS_UNUSED uint32_t drawCallsSavedCount = 0;
 
-    Command* curr = mCommandBegin;
-    Command* const last = mCommandEnd;
-
     Command* firstSentinel = nullptr;
     PerRenderableData const* uboData = nullptr;
     PerRenderableData* stagingBuffer = nullptr;
     uint32_t stagingBufferSize = 0;
     uint32_t instancedPrimitiveOffset = 0;
+    size_t const count = last - curr;
 
     // TODO: for the case of instancing we could actually use 128 instead of 64 instances
     constexpr size_t maxInstanceCount = CONFIG_MAX_INSTANCES;
@@ -343,7 +346,6 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
             if (UTILS_UNLIKELY(!stagingBuffer)) {
 
                 // create a temporary UBO for instancing
-                size_t const count = mCommandEnd - mCommandBegin;
                 mInstancedUboHandle = BufferObjectSharedHandle{
                         engine.getDriverApi().createBufferObject(
                                 count * sizeof(PerRenderableData) + sizeof(PerRenderableUib),
@@ -385,7 +387,7 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
 
     if (UTILS_UNLIKELY(firstSentinel)) {
         //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-        //       << mCommandEnd - mCommandBegin << io::endl;
+        //       << count << io::endl;
 
         // we have instanced primitives
         DriverApi& driver = engine.getDriverApi();
@@ -401,14 +403,15 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
         stagingBuffer = nullptr;
 
         // remove all the canceled commands
-        auto lastCommand = std::remove_if(firstSentinel, mCommandEnd, [](auto const& command) {
+        auto lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
             return command.key == uint64_t(Pass::SENTINEL);
         });
 
-        resize(arena, uint32_t(lastCommand - mCommandBegin));
+        return lastCommand;
     }
 
     assert_invariant(stagingBuffer == nullptr);
+    return last;
 }
 
 
@@ -416,7 +419,8 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) no
 UTILS_ALWAYS_INLINE // This function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
-        FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
+        FMaterialInstance const* const UTILS_RESTRICT mi,
+        bool inverseFrontFaces, bool hasDepthClamp) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
@@ -457,6 +461,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     cmdDraw.info.rasterState.colorWrite = mi->isColorWriteEnabled();
     cmdDraw.info.rasterState.depthWrite = mi->isDepthWriteEnabled();
     cmdDraw.info.rasterState.depthFunc = mi->getDepthFunc();
+    cmdDraw.info.rasterState.depthClamp = hasDepthClamp;
     cmdDraw.info.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
@@ -555,6 +560,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
     bool const hasInstancedStereo =
             renderFlags & IS_INSTANCED_STEREOSCOPIC;
 
+    bool const hasDepthClamp =
+            renderFlags & HAS_DEPTH_CLAMP;
+
     float const cameraPositionDotCameraForward = dot(cameraPosition, cameraForward);
 
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
@@ -574,6 +582,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmd.info.rasterState.depthWrite = true;
         cmd.info.rasterState.depthFunc = RasterState::DepthFunc::GE;
         cmd.info.rasterState.alphaToCoverage = false;
+        cmd.info.rasterState.depthClamp = hasDepthClamp;
     }
 
     for (uint32_t i = range.first; i < range.last; ++i) {
@@ -607,7 +616,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         //   Here, objects close to the camera (but behind) will be drawn first.
         // An alternative that keeps the mathematical ordering is given here:
         //   distanceBits ^= ((int32_t(distanceBits) >> 31) | 0x80000000u);
-        float const distance = -dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward;
+        float const distance = -(dot(soaWorldAABBCenter[i], cameraForward) - cameraPositionDotCameraForward);
         uint32_t const distanceBits = reinterpret_cast<uint32_t const&>(distance);
 
         // calculate the per-primitive face winding order inversion
@@ -671,7 +680,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
          */
         for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
             auto const& primitive = primitives[pi];
-            auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
 
@@ -684,11 +692,13 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.indexOffset = primitive.getIndexOffset();
             cmd.info.indexCount = primitive.getIndexCount();
             cmd.info.type = primitive.getPrimitiveType();
-            cmd.info.morphTargetBuffer = morphTargets.buffer->getHwHandle();
-            cmd.info.morphingOffset = morphTargets.offset;
+            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
+                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
+            cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
 
             if constexpr (isColorPass) {
-                RenderPass::setupColorCommand(cmd, renderableVariant, mi, inverseFrontFaces);
+                RenderPass::setupColorCommand(cmd, renderableVariant, mi,
+                        inverseFrontFaces, hasDepthClamp);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
                     // TODO: at least for transparent objects, AABB should be per primitive
@@ -885,14 +895,31 @@ void RenderPass::Executor::execute(FEngine& engine,
 
         // Maximum space occupied in the CircularBuffer by a single `Command`. This must be
         // reevaluated when the inner loop below adds DriverApi commands or when we change the
-        // CommandStream protocol. Currently, the maximum is 240 bytes, and we use 256 to be on
-        // the safer side.
-        size_t const maxCommandSizeInBytes = 256;
+        // CommandStream protocol. Currently, the maximum is 320 bytes.
+        // The batch size is calculated by adding the size of all commands that can possibly be
+        // emitted per draw call:
+        constexpr size_t const maxCommandSizeInBytes =
+                sizeof(CustomCommand) +
+                sizeof(COMMAND_TYPE(scissor)) +
+                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindBufferRange)) +
+                sizeof(COMMAND_TYPE(bindBufferRange)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindPipeline)) +
+                sizeof(COMMAND_TYPE(setPushConstant)) +
+                sizeof(COMMAND_TYPE(bindRenderPrimitive)) +
+                sizeof(COMMAND_TYPE(draw2));
+
 
         // Number of Commands that can be issued and guaranteed to fit in the current
         // CircularBuffer allocation. In practice, we'll have tons of headroom especially if
         // skinning and morphing aren't used. With a 2 MiB buffer (the default) a batch is
-        // 8192 commands (i.e. draw calls).
+        // 6553 commands (i.e. draw calls).
         size_t const batchCommandCount = capacity / maxCommandSizeInBytes;
         while(first != last) {
             Command const* const batchLast = std::min(first + batchCommandCount, last);

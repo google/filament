@@ -38,7 +38,7 @@ class UTILS_PUBLIC InstanceBuffer : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
 
     public:
@@ -69,6 +69,21 @@ public:
          *                        valid until after build() is called
          */
         Builder& localTransforms(math::mat4f const* UTILS_NULLABLE localTransforms) noexcept;
+
+        /**
+         * Associate an optional name with this InstanceBuffer for debugging purposes.
+         *
+         * name will show in error messages and should be kept as short as possible. The name is
+         * truncated to a maximum of 128 characters.
+         *
+         * The name string is copied during this method so clients may free its memory after
+         * the function returns.
+         *
+         * @param name A string to identify this InstanceBuffer
+         * @param len Length of name, should be less than or equal to 128
+         * @return This Builder, for chaining calls.
+         */
+        // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
 
         /**
          * Creates the InstanceBuffer object and returns a pointer to it.

@@ -72,7 +72,7 @@ vec3 Irradiance_RoughnessOne(const vec3 n) {
 //------------------------------------------------------------------------------
 
 vec3 diffuseIrradiance(const vec3 n) {
-    // On Metal devices with an A8X chipset, this light_iblSpecular texture sample must be pulled
+    // On Metal devices with certain chipsets, this light_iblSpecular texture sample must be pulled
     // outside the frameUniforms.iblSH check. This is to avoid a Metal pipeline compilation error
     // with the message: "Could not statically determine the target of a texture".
     // The reason for this is unknown, and is possibly a bug that exhibits only on these devices.

@@ -43,6 +43,8 @@ struct VulkanCommandBuffer;
 struct VulkanAttachment {
     VulkanTexture* texture = nullptr;
     uint8_t level = 0;
+    uint8_t baseViewIndex = 0;
+    uint8_t layerCount = 1;
     uint16_t layer = 0;
 
     bool isDepth() const;
@@ -121,6 +123,10 @@ public:
 
     inline bool isImageCubeArraySupported() const noexcept {
         return mPhysicalDeviceFeatures.imageCubeArray == VK_TRUE;
+    }
+
+    inline bool isDepthClampSupported() const noexcept {
+        return mPhysicalDeviceFeatures.depthClamp == VK_TRUE;
     }
 
     inline bool isDebugMarkersSupported() const noexcept {

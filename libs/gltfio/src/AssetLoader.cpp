@@ -58,6 +58,8 @@
 
 #include "downcast.h"
 
+#include <codecvt>
+#include <locale>
 #include <memory>
 
 using namespace filament;
@@ -88,12 +90,58 @@ static constexpr cgltf_material kDefaultMat = {
     },
 };
 
-static const char* getNodeName(const cgltf_node* node, const char* defaultNodeName) {
-    if (node->name) return node->name;
-    if (node->mesh && node->mesh->name) return node->mesh->name;
-    if (node->light && node->light->name) return node->light->name;
-    if (node->camera && node->camera->name) return node->camera->name;
-    return defaultNodeName;
+static std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
+    auto const getNameImpl = [node, defaultNodeName]() -> char const* {
+        if (node->name) return node->name;
+        if (node->mesh && node->mesh->name) return node->mesh->name;
+        if (node->light && node->light->name) return node->light->name;
+        if (node->camera && node->camera->name) return node->camera->name;
+        if (defaultNodeName) return defaultNodeName;
+        return "<unknown>";
+    };
+
+    std::string strOrig(getNameImpl());
+
+    // We handle the potential case of escaped characters in the JSON which should be properly
+    // interpreted as unicode. See spec:
+    // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#json-encoding
+    // Also see spec for escaped strings in JSON (Section 2.5) https://www.ietf.org/rfc/rfc4627.txt
+
+    std::string strEscaped;
+    size_t cur = 0, idx = 0;
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+
+    auto const addUnencodedSubstr = [&](size_t cursor, size_t nextPoint) {
+        assert_invariant(nextPoint >= cursor);
+        if (cursor == nextPoint) {
+            return;
+        }
+        strEscaped += strOrig.substr(cursor, nextPoint - cursor);
+    };
+
+    while ((idx = strOrig.find("\\u", cur)) != std::string::npos) {
+        if (idx + 6 > strOrig.length()) {
+            utils::slog.w << "gltfio: Unable to interpret node name=" << strOrig
+                          << " as proper unicode encoding." << utils::io::endl;
+            return strOrig;
+        }
+
+        // Turns string of the form \u0062 to 0x0062
+        std::string const hexStr = strOrig.substr(idx + 2, 4);
+        if (hexStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
+            utils::slog.w << "gltfio: Unable to interpret node name=" << strOrig
+                          << " as proper unicode encoding." << utils::io::endl;
+            return strOrig;
+        }
+
+        addUnencodedSubstr(cur, idx);
+
+        strEscaped += conv.to_bytes((char32_t) std::stoul(hexStr, nullptr, 16));
+        cur = idx + 6;
+    }
+    addUnencodedSubstr(cur, strOrig.length());
+
+    return strEscaped;
 }
 
 static bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
@@ -504,7 +552,8 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
 }
 
 void FAssetLoader::recursePrimitives(const cgltf_node* node, FFilamentAsset* fAsset) {
-    const char* name = getNodeName(node, mDefaultNodeName);
+    auto nameStr = getNodeName(node, mDefaultNodeName);
+    const char* name = nameStr.c_str();
     name = name ? name : "node";
 
     if (node->mesh) {
@@ -573,7 +622,8 @@ void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Ent
     instance->mEntities.push_back(entity);
     instance->mNodeMap[node - srcAsset->nodes] = entity;
 
-    const char* name = getNodeName(node, mDefaultNodeName);
+    auto nameStr = getNodeName(node, mDefaultNodeName);
+    const char* name = nameStr.c_str();
 
     if (name) {
         fAsset->mNameToEntity[name].push_back(entity);
@@ -650,9 +700,6 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
                     if (outputPrim.indices) {
                         fAsset->mIndexBuffers.push_back(outputPrim.indices);
                     }
-                    if (outputPrim.targets) {
-                        fAsset->mMorphTargetBuffers.push_back(outputPrim.targets);
-                    }
                 }
             } else {
                 // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't
@@ -695,11 +742,11 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     // glTF spec says that all primitives must have the same number of morph targets.
     const cgltf_size numMorphTargets = inputPrim ? inputPrim->targets_count : 0;
     RenderableManager::Builder builder(primitiveCount);
-    builder.morphing(numMorphTargets);
 
     // For each prim, create a Filament VertexBuffer, IndexBuffer, and MaterialInstance.
     // The VertexBuffer and IndexBuffer objects are cached for possible re-use, but MaterialInstance
     // is not.
+    size_t morphingVertexCount = 0;
     for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
         RenderableManager::PrimitiveType primType;
         if (!getPrimitiveType(inputPrim->type, &primType)) {
@@ -740,8 +787,78 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
         builder.geometry(index, primType, outputPrim->vertices, outputPrim->indices);
 
         if (numMorphTargets) {
-            assert_invariant(outputPrim->targets);
-            builder.morphing(0, index, outputPrim->targets);
+            outputPrim->morphTargetOffset = morphingVertexCount;    // FIXME: can I do that here?
+            builder.morphing(0, index, morphingVertexCount);
+            morphingVertexCount += outputPrim->vertices->getVertexCount();
+        }
+    }
+
+    if (numMorphTargets) {
+        MorphTargetBuffer* morphTargetBuffer = MorphTargetBuffer::Builder()
+                .count(numMorphTargets)
+                .vertexCount(morphingVertexCount)
+                .build(mEngine);
+
+        fAsset->mMorphTargetBuffers.push_back(morphTargetBuffer);
+
+        builder.morphing(morphTargetBuffer);
+
+        outputPrim = prims.data();
+        inputPrim = &mesh->primitives[0];
+        for (cgltf_size index = 0; index < primitiveCount; ++index, ++outputPrim, ++inputPrim) {
+            outputPrim->morphTargetBuffer = morphTargetBuffer;
+
+            UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
+            for (int tindex = 0; tindex < numMorphTargets; ++tindex) {
+                const cgltf_morph_target& inTarget = inputPrim->targets[tindex];
+                for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
+                    const cgltf_attribute& attribute = inTarget.attributes[aindex];
+                    const cgltf_accessor* accessor = attribute.data;
+                    const cgltf_attribute_type atype = attribute.type;
+                    if (atype == cgltf_attribute_type_position) {
+                        // All position attributes must have the same number of components.
+                        assert_invariant(!previous || previous->type == accessor->type);
+                        previous = accessor;
+
+                        assert_invariant(outputPrim->morphTargetBuffer);
+
+                        if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
+                                fAsset->mResourceInfo)) {
+                            using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
+                            auto& slots = std::get<FFilamentAsset::ResourceInfo>(
+                                    fAsset->mResourceInfo).mBufferSlots;
+                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                            assert_invariant(!slot.vertexBuffer);
+                            assert_invariant(!slot.indexBuffer);
+
+                            slot.morphTargetBuffer = outputPrim->morphTargetBuffer;
+                            slot.morphTargetOffset = outputPrim->morphTargetOffset;
+                            slot.morphTargetCount = outputPrim->vertices->getVertexCount();
+                            slot.bufferIndex = tindex;
+                        }
+                        else if (std::holds_alternative<FFilamentAsset::ResourceInfoExtended>(
+                                fAsset->mResourceInfo))
+                        {
+                            using BufferSlot = FFilamentAsset::ResourceInfoExtended::BufferSlot;
+                            auto& slots = std::get<FFilamentAsset::ResourceInfoExtended>(
+                                    fAsset->mResourceInfo).slots;
+
+                            BufferSlot& slot = slots[outputPrim->slotIndices[tindex]];
+
+                            assert_invariant(slot.slot == tindex);
+                            assert_invariant(!slot.vertices);
+                            assert_invariant(!slot.indices);
+
+                            slot.target = outputPrim->morphTargetBuffer;
+                            slot.offset = outputPrim->morphTargetOffset;
+                            slot.count = outputPrim->vertices->getVertexCount();
+                        }
+
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -753,7 +870,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
     nm.setMorphTargetNames(nm.getInstance(entity), std::move(morphTargetNames));
 
     if (node->skin) {
-       builder.skinning(node->skin->joints_count);
+        builder.skinning(node->skin->joints_count);
     }
 
     // Per the spec, glTF models must have valid mix / max annotations for position attributes.
@@ -825,7 +942,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     // request from Google.
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
-    auto slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
+    auto* const slots = &std::get<FFilamentAsset::ResourceInfo>(fAsset->mResourceInfo).mBufferSlots;
     auto addBufferSlot = [slots](FFilamentAsset::ResourceInfo::BufferSlot entry) {
         slots->push_back(entry);
     };
@@ -1096,13 +1213,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     }
 
     if (targetsCount > 0) {
-        MorphTargetBuffer* targets = MorphTargetBuffer::Builder()
-                .vertexCount(vertexCount)
-                .count(targetsCount)
-                .build(mEngine);
-        outPrim->targets = targets;
-        fAsset->mMorphTargetBuffers.push_back(targets);
         UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
+        outPrim->slotIndices.resize(targetsCount);
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
             for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {
@@ -1114,8 +1226,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                     assert_invariant(!previous || previous->type == accessor->type);
                     previous = accessor;
                     BufferSlot slot = { accessor };
-                    slot.morphTargetBuffer = targets;
-                    slot.bufferIndex = tindex;
+                    outPrim->slotIndices[tindex] = slots->size();
                     addBufferSlot(slot);
                     break;
                 }

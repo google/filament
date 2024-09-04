@@ -26,15 +26,27 @@
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
 #include <utils/Systrace.h>
 
+#include <array>
 #include <cctype>
 #include <chrono>
+#include <mutex>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <utility>
 #include <variant>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -476,6 +488,12 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
     // check status of program linking and shader compilation, logs error and free all resources
     // in case of error.
     bool const success = checkProgramStatus(token);
+
+    // Unless we have matdbg, we panic if a program is invalid. Otherwise, we'd get a UB.
+    // The compilation error has been logged to log.e by this point.
+    FILAMENT_CHECK_POSTCONDITION(FILAMENT_ENABLE_MATDBG || success)
+            << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
+
     if (UTILS_LIKELY(success)) {
         program = token->gl.program;
         // no need to keep the shaders around
@@ -579,24 +597,31 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
                 version = "#version 310 es\n";
             }
 
-            const std::array<const char*, 5> sources = {
-                    version.data(),
-                    prolog.data(),
-                    specializationConstantString.c_str(),
-                    packingFunctions.data(),
-                    body.data()
+            std::array<std::string_view, 5> sources = {
+                version,
+                prolog,
+                specializationConstantString,
+                packingFunctions,
+                { body.data(), body.size() - 1 }  // null-terminated
             };
 
-            const std::array<GLint, 5> lengths = {
-                    (GLint)version.length(),
-                    (GLint)prolog.length(),
-                    (GLint)specializationConstantString.length(),
-                    (GLint)packingFunctions.length(),
-                    (GLint)body.length() - 1 // null terminated
-            };
+            // Some of the sources may be zero-length. Remove them as to avoid passing lengths of
+            // zero to glShaderSource(). glShaderSource should work with lengths of zero, but some
+            // drivers instead interpret zero as a sentinel for a null-terminated string.
+            auto partitionPoint = std::stable_partition(
+                    sources.begin(), sources.end(), [](std::string_view s) { return !s.empty(); });
+            size_t count = std::distance(sources.begin(), partitionPoint);
+
+            std::array<const char*, 5> shaderStrings;
+            std::array<GLint, 5> lengths;
+            for (size_t i = 0; i < count; i++) {
+                shaderStrings[i] = sources[i].data();
+                lengths[i] = sources[i].size();
+            }
 
             GLuint const shaderId = glCreateShader(glShaderType);
-            glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
+            glShaderSource(shaderId, count, shaderStrings.data(), lengths.data());
+
             glCompileShader(shaderId);
 
 #ifndef NDEBUG
@@ -785,25 +810,24 @@ mediump vec4 unpackSnorm4x8(highp uint v) {
 // - extensions
 // - everything else
 std::array<std::string_view, 3> ShaderCompilerService::splitShaderSource(std::string_view source) noexcept {
-    auto start = source.find("#version");
-    assert_invariant(start != std::string_view::npos);
+    auto version_start = source.find("#version");
+    assert_invariant(version_start != std::string_view::npos);
 
-    auto version_eol = source.find('\n', start) + 1;
+    auto version_eol = source.find('\n', version_start) + 1;
     assert_invariant(version_eol != std::string_view::npos);
 
-    auto pos = source.rfind("\n#extension");
-    if (pos == std::string_view::npos) {
-        pos = version_eol;
+    auto prolog_start = version_eol;
+    auto prolog_eol = source.rfind("\n#extension"); // last #extension line
+    if (prolog_eol == std::string_view::npos) {
+        prolog_eol = prolog_start;
     } else {
-        ++pos;
+        prolog_eol = source.find('\n', prolog_eol + 1) + 1;
     }
+    auto body_start = prolog_eol;
 
-    auto eol = source.find('\n', pos) + 1;
-    assert_invariant(eol != std::string_view::npos);
-
-    std::string_view const version = source.substr(start, version_eol - start);
-    std::string_view const prolog = source.substr(version_eol, eol - version_eol);
-    std::string_view const body = source.substr(eol, source.length() - eol);
+    std::string_view const version = source.substr(version_start, version_eol - version_start);
+    std::string_view const prolog = source.substr(prolog_start, prolog_eol - prolog_start);
+    std::string_view const body = source.substr(body_start, source.length() - body_start);
     return { version, prolog, body };
 }
 

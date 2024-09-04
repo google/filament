@@ -1,4 +1,3 @@
-#include <memory>
 
 /*
  * Copyright (C) 2015 The Android Open Source Project
@@ -55,6 +54,13 @@
 #include <filamentapp/NativeWindowHelper.h>
 
 #include <stb_image.h>
+
+#include <algorithm>
+#include <cstdlib>
+#include <memory>
+#include <vector>
+
+#include <stdint.h>
 
 #include "generated/resources/filamentapp.h"
 
@@ -138,10 +144,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             .package(FILAMENTAPP_TRANSPARENTCOLOR_DATA, FILAMENTAPP_TRANSPARENTCOLOR_SIZE)
             .build(*mEngine);
 
-    std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));
+    std::unique_ptr<Cube> cameraCube{ new Cube(*mEngine, mTransparentMaterial, { 1, 0, 0 }) };
+
     // we can't cull the light-frustum because it's not applied a rigid transform
     // and currently, filament assumes that for culling
-    std::unique_ptr<Cube> lightmapCube(new Cube(*mEngine, mTransparentMaterial, {0,1,0}, false));
+    std::vector<Cube> lightmapCubes;
+    lightmapCubes.reserve(4);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 1, 0 }, false);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 0, 0, 1 }, false);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 1, 0 }, false);
+    lightmapCubes.emplace_back(*mEngine, mTransparentMaterial, float3{ 1, 0, 0 }, false);
+
     mScene = mEngine->createScene();
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
@@ -151,16 +164,15 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()), 0x3, 0x2);
         rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, 0x2);
-
-        rcm.setLayerMask(rcm.getInstance(lightmapCube->getSolidRenderable()), 0x3, 0x2);
-        rcm.setLayerMask(rcm.getInstance(lightmapCube->getWireFrameRenderable()), 0x3, 0x2);
-
-        // Create the camera mesh
         mScene->addEntity(cameraCube->getWireFrameRenderable());
         mScene->addEntity(cameraCube->getSolidRenderable());
 
-        mScene->addEntity(lightmapCube->getWireFrameRenderable());
-        mScene->addEntity(lightmapCube->getSolidRenderable());
+        for (auto&& cube : lightmapCubes) {
+            rcm.setLayerMask(rcm.getInstance(cube.getSolidRenderable()), 0x3, 0x2);
+            rcm.setLayerMask(rcm.getInstance(cube.getWireFrameRenderable()), 0x3, 0x2);
+            mScene->addEntity(cube.getWireFrameRenderable());
+            mScene->addEntity(cube.getSolidRenderable());
+        }
 
         window->mDepthView->getView()->setVisibleLayers(0x4, 0x4);
         window->mGodView->getView()->setVisibleLayers(0x6, 0x6);
@@ -174,11 +186,6 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     loadDirt(config);
     loadIBL(config);
-    if (mIBL != nullptr) {
-        mIBL->getSkybox()->setLayerMask(0x7, 0x4);
-        mScene->setSkybox(mIBL->getSkybox());
-        mScene->setIndirectLight(mIBL->getIndirectLight());
-    }
 
     for (auto& view : window->mViews) {
         if (view.get() != window->mUiView) {
@@ -196,7 +203,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             SDL_SysWMinfo wmInfo;
             SDL_VERSION(&wmInfo.version);
             SDL_GetWindowWMInfo(window->getSDLWindow(), &wmInfo);
-            io.ImeWindowHandle = wmInfo.info.win.window;
+            ImGui::GetMainViewport()->PlatformHandleRaw = wmInfo.info.win.window;
         #endif
         io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
         io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
@@ -430,10 +437,26 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDebugCamera->lookAt(eye, center, up);
 
         // Update the cube distortion matrix used for frustum visualization.
-        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalShadowCamera();
-        if (lightmapCamera) {
-            lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        auto& rcm = mEngine->getRenderableManager();
+        auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
+        // show/hide the cascades
+        for (size_t i = 0 ; i < 4; i++) {
+            rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()), 0x3, 0x0);
+            rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()), 0x3, 0x0);
         }
+        if (!csm.empty()) {
+            for (size_t i = 0, c = csm.size(); i < c; i++) {
+                if (csm[i]) {
+                    lightmapCubes[i].mapFrustum(*mEngine, csm[i]);
+                }
+                uint8_t const layer = csm[i] ? 0x2 : 0x0;
+                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()),
+                        0x3, layer);
+                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()),
+                        0x3, layer);
+            }
+        }
+
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
         // Delay rendering for roughly one monitor refresh interval
@@ -457,11 +480,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
         if (config.splitView) {
             if(!window->mOrthoView->getView()->hasCamera()) {
-                Camera const* debugDirectionalShadowCamera =
-                        window->mMainView->getView()->getDirectionalShadowCamera();
-                if (debugDirectionalShadowCamera) {
-                    window->mOrthoView->setCamera(
-                            const_cast<Camera*>(debugDirectionalShadowCamera));
+                auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
+                if (!csm.empty()) {
+                    // here we could choose the cascade
+                    Camera const* debugDirectionalShadowCamera = csm[0];
+                    if (debugDirectionalShadowCamera) {
+                        window->mOrthoView->setCamera(
+                                const_cast<Camera*>(debugDirectionalShadowCamera));
+                    }
                 }
             }
         }
@@ -489,7 +515,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     cleanupCallback(mEngine, window->mMainView->getView(), mScene);
 
     cameraCube.reset();
-    lightmapCube.reset();
+    lightmapCubes.clear();
     window.reset();
 
     mIBL.reset();
@@ -519,31 +545,41 @@ const utils::Path& FilamentApp::getRootAssetsPath() {
     return root;
 }
 
-void FilamentApp::loadIBL(const Config& config) {
-    if (!config.iblDirectory.empty()) {
-        Path iblPath(config.iblDirectory);
+void FilamentApp::loadIBL(std::string_view path) {
+    Path iblPath(path);
+    if (!iblPath.exists()) {
+        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+        return;
+    }
 
-        if (!iblPath.exists()) {
-            std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+    mIBL = std::make_unique<IBL>(*mEngine);
+
+    if (!iblPath.isDirectory()) {
+        if (!mIBL->loadFromEquirect(iblPath)) {
+            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+            mIBL.reset(nullptr);
             return;
         }
-
-        mIBL = std::make_unique<IBL>(*mEngine);
-
-        if (!iblPath.isDirectory()) {
-            if (!mIBL->loadFromEquirect(iblPath)) {
-                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-                mIBL.reset(nullptr);
-                return;
-            }
-        } else {
-            if (!mIBL->loadFromDirectory(iblPath)) {
-                std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
-                mIBL.reset(nullptr);
-                return;
-            }
+    } else {
+        if (!mIBL->loadFromDirectory(iblPath)) {
+            std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+            mIBL.reset(nullptr);
+            return;
         }
     }
+
+    if (mIBL != nullptr) {
+        mIBL->getSkybox()->setLayerMask(0x7, 0x4);
+        mScene->setSkybox(mIBL->getSkybox());
+        mScene->setIndirectLight(mIBL->getIndirectLight());
+    }
+}
+
+void FilamentApp::loadIBL(const Config& config) {
+    if (config.iblDirectory.empty()) {
+        return;
+    }
+    loadIBL(config.iblDirectory);
 }
 
 void FilamentApp::loadDirt(const Config& config) {
@@ -731,12 +767,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mGodView->setCamera(mMainCamera);
         mGodView->setGodCamera(mDebugCamera);
         mGodView->setCameraManipulator(mDebugCameraMan);
-
-        // Ortho view obviously uses an ortho camera
-        Camera const* debugDirectionalShadowCamera = mMainView->getView()->getDirectionalShadowCamera();
-        if (debugDirectionalShadowCamera) {
-            mOrthoView->setCamera(const_cast<Camera *>(debugDirectionalShadowCamera));
-        }
     }
 
     // configure the cameras
@@ -902,9 +932,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     const bool splitview = mViews.size() > 2;
 
-    // To trigger a floating-point exception, users could shrink the window to be smaller than
-    // the sidebar. To prevent this we simply clamp the width of the main viewport.
-    const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
+    const uint32_t mainWidth = std::max(2, (int) width - sidebar);
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
@@ -919,7 +947,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     } else {
         mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
     }
-    mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
+    mDebugCamera->setProjection(45.0, double(mainWidth) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
 
     auto aspectRatio = double(mainWidth) / height;
     if (mMainView->getView()->getStereoscopicOptions().enabled) {
@@ -930,12 +958,12 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {
-        uint32_t vpw = width / 2;
-        uint32_t vph = height / 2;
-        mMainView->setViewport ({            0,            0, vpw,         vph          });
-        mDepthView->setViewport({ int32_t(vpw),            0, width - vpw, vph          });
-        mGodView->setViewport  ({ int32_t(vpw), int32_t(vph), width - vpw, height - vph });
-        mOrthoView->setViewport({            0, int32_t(vph), vpw,         height - vph });
+        uint32_t const vpw = mainWidth / 2;
+        uint32_t const vph = height / 2;
+        mMainView->setViewport ({ sidebar +            0,            0, vpw, vph });
+        mDepthView->setViewport({ sidebar + int32_t(vpw),            0, vpw, vph });
+        mGodView->setViewport  ({ sidebar + int32_t(vpw), int32_t(vph), vpw, vph });
+        mOrthoView->setViewport({ sidebar +            0, int32_t(vph), vpw, vph });
     } else {
         mMainView->setViewport({ sidebar, 0, mainWidth, height });
     }

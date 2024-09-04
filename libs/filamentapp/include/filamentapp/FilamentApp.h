@@ -104,6 +104,8 @@ public:
 
     size_t getSkippedFrameCount() const { return mSkippedFrames; }
 
+    void loadIBL(std::string_view path);
+
     FilamentApp(const FilamentApp& rhs) = delete;
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
@@ -209,11 +211,11 @@ private:
         filament::Camera* mOrthoCamera;
 
         std::vector<std::unique_ptr<CView>> mViews;
-        CView* mMainView;
-        CView* mUiView;
+        CView* mMainView;   // well, the main view
+        CView* mUiView;     // the imgui ui
         CView* mDepthView;
-        GodView* mGodView;
-        CView* mOrthoView;
+        GodView* mGodView;  // the debug view with "god" camera
+        CView* mOrthoView;  // directional shadow map view
 
         size_t mWidth = 0;
         size_t mHeight = 0;

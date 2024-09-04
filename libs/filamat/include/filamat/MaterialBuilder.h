@@ -134,6 +134,7 @@ protected:
     TargetApi mTargetApi = (TargetApi) 0;
     Optimization mOptimization = Optimization::PERFORMANCE;
     bool mPrintShaders = false;
+    bool mSaveRawVariants = false;
     bool mGenerateDebugInfo = false;
     bool mIncludeEssl1 = true;
     utils::bitset32 mShaderModels;
@@ -321,6 +322,9 @@ public:
 
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
+
+    MaterialBuilder& variable(Variable v, const char* name,
+            ParameterPrecision precision) noexcept;
 
     /**
      * Require a specified attribute.
@@ -586,6 +590,14 @@ public:
     //! If true, will output the generated GLSL shader code to stdout.
     MaterialBuilder& printShaders(bool printShaders) noexcept;
 
+    /**
+     * If true, this will write the raw generated GLSL for each variant to a text file in the
+     * current directory. The file will be named after the material name and the variant name. Its
+     * extension will be derived from the shader stage. For example, mymaterial_0x0e.frag,
+     * mymaterial_0x18.vert, etc.
+     */
+    MaterialBuilder& saveRawVariants(bool saveVariants) noexcept;
+
     //! If true, will include debugging information in generated SPIRV.
     MaterialBuilder& generateDebugInfo(bool generateDebugInfo) noexcept;
 
@@ -699,11 +711,17 @@ public:
         ShaderStage stage;
     };
 
+    struct CustomVariable {
+        utils::CString name;
+        Precision precision = Precision::DEFAULT;
+        bool hasPrecision = false;
+    };
+
     static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
     using Property = filament::Property;
 
     using PropertyList = bool[MATERIAL_PROPERTIES_COUNT];
-    using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];
+    using VariableList = CustomVariable[MATERIAL_VARIABLES_COUNT];
     using OutputList = std::vector<Output>;
 
     static constexpr size_t MAX_COLOR_OUTPUT = filament::backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
