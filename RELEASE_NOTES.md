@@ -7,6 +7,9 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.54.3
+
+
 ## v1.54.2
 
 - Add a `name` API to Filament objects for debugging handle use-after-free assertions
