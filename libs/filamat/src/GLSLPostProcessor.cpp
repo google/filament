@@ -387,8 +387,9 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
 }
 
 void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
-        filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
-        const DescriptorSets& descriptorSets, const ShaderMinifier* minifier) {
+        filament::backend::ShaderStage stage, filament::backend::ShaderModel shaderModel,
+        bool useFramebufferFetch, const DescriptorSets& descriptorSets,
+        const ShaderMinifier* minifier) {
     using namespace msl;
 
     CompilerMSL mslCompiler(*spirv);
@@ -556,6 +557,13 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                 "spvDescriptorSetBuffer" + std::to_string(int(setIndex)));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
+            if (!hasShaderType(info.stageFlags, stage)) {
+                if (any(info.flags & DescriptorFlags::DYNAMIC_OFFSET)) {
+                    // We still need to increment the dynamic offset index
+                    dynamicOffsetsBufferIndex++;
+                }
+                continue;
+            }
             switch (info.type) {
                 case DescriptorType::INPUT_ATTACHMENT:
                     // TODO: Handle INPUT_ATTACHMENT case
@@ -707,7 +715,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                     msl::prettyPrintDescriptorSetInfoVector(descriptors);
 #endif
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
-                            config.shaderModel, config.hasFramebufferFetch, descriptors,
+                            config.shaderType, config.shaderModel, config.hasFramebufferFetch, descriptors,
                             mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
                 }
             } else {
@@ -798,8 +806,8 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 #if DEBUG_LOG_DESCRIPTOR_SETS == 1
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
 #endif
-        spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
-                config.hasFramebufferFetch, descriptors,
+        spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderType,
+                config.shaderModel, config.hasFramebufferFetch, descriptors,
                 mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
 
@@ -842,8 +850,9 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 #if DEBUG_LOG_DESCRIPTOR_SETS == 1
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
 #endif
-        spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
-                descriptors, mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+        spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderType, config.shaderModel,
+                config.hasFramebufferFetch, descriptors,
+                mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
 
     // Transpile back to GLSL

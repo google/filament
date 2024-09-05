@@ -1329,25 +1329,30 @@ MetalDescriptorSetLayout::MetalDescriptorSetLayout(DescriptorSetLayout&& l) noex
     mDynamicOffsetCount = dynamicBindings;
 }
 
-id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderForTextureTypes(
-        id<MTLDevice> device,
+id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoder(id<MTLDevice> device, ShaderStage stage,
         utils::FixedCapacityVector<MTLTextureType> const& textureTypes) {
-    if (mCachedArgumentEncoder &&
-            std::equal(textureTypes.begin(), textureTypes.end(), mCachedTextureTypes.begin())) {
-        return mCachedArgumentEncoder;
+    auto const index = static_cast<int>(stage);
+    assert_invariant(index < 3);
+    if (mCachedArgumentEncoder[index] &&
+            std::equal(
+                    textureTypes.begin(), textureTypes.end(), mCachedTextureTypes[index].begin())) {
+        return mCachedArgumentEncoder[index];
     }
-    mCachedArgumentEncoder = getArgumentEncoderForTextureTypesSlow(device, textureTypes);
-    mCachedTextureTypes = textureTypes;
-    return mCachedArgumentEncoder;
+    mCachedArgumentEncoder[index] = getArgumentEncoderSlow(device, stage, textureTypes);
+    mCachedTextureTypes[index] = textureTypes;
+    return mCachedArgumentEncoder[index];
 }
 
-id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderForTextureTypesSlow(
-        id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes) {
+id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDevice> device,
+        ShaderStage stage, utils::FixedCapacityVector<MTLTextureType> const& textureTypes) {
     auto const& bindings = getBindings();
     NSMutableArray<MTLArgumentDescriptor*>* arguments = [NSMutableArray new];
     // important! the bindings must be sorted by binding number
     size_t textureIndex = 0;
     for (auto const& binding : bindings) {
+        if (!hasShaderType(binding.stageFlags, stage)) {
+            continue;
+        }
         switch (binding.type) {
             case DescriptorType::UNIFORM_BUFFER:
             case DescriptorType::SHADER_STORAGE_BUFFER: {

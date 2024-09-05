@@ -416,7 +416,7 @@ struct ArgumentEncoderCreator {
 using ArgumentEncoderCache = StateCache<ArgumentEncoderState, id<MTLArgumentEncoder>,
         ArgumentEncoderCreator, ArgumentEncoderHasher>;
 
-template <NSUInteger N>
+template <NSUInteger N, ShaderStage stage>
 class MetalBufferBindings {
 public:
     MetalBufferBindings() { invalidate(); }

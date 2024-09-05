@@ -85,8 +85,9 @@ public:
 
     // public so backend_test can also use it
     static void spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
-            filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
-            const DescriptorSets& descriptorSets, const ShaderMinifier* minifier);
+            filament::backend::ShaderStage stage, filament::backend::ShaderModel shaderModel,
+            bool useFramebufferFetch, const DescriptorSets& descriptorSets,
+            const ShaderMinifier* minifier);
 
 private:
     struct InternalConfig {

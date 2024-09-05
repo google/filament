@@ -208,8 +208,8 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
     return [device newArgumentEncoderWithArguments:arguments];
 }
 
-template <NSUInteger N>
-void MetalBufferBindings<N>::setBuffer(const id<MTLBuffer> buffer, NSUInteger offset, NSUInteger index) {
+template <NSUInteger N, ShaderStage stage>
+void MetalBufferBindings<N, stage>::setBuffer(const id<MTLBuffer> buffer, NSUInteger offset, NSUInteger index) {
     assert_invariant(offset + 1 <= N);
 
     if (mBuffers[index] != buffer) {
@@ -223,33 +223,50 @@ void MetalBufferBindings<N>::setBuffer(const id<MTLBuffer> buffer, NSUInteger of
     }
 }
 
-template <NSUInteger N>
-void MetalBufferBindings<N>::bindBuffers(id<MTLCommandEncoder> encoder, NSUInteger startIndex) {
+template <NSUInteger N, ShaderStage stage>
+void MetalBufferBindings<N, stage>::bindBuffers(
+        id<MTLCommandEncoder> encoder, NSUInteger startIndex) {
     if (mDirtyBuffers.none() && mDirtyOffsets.none()) {
         return;
     }
 
     utils::bitset8 onlyOffsetDirty = mDirtyOffsets & ~mDirtyBuffers;
     onlyOffsetDirty.forEachSetBit([&](size_t i) {
-        [(id<MTLRenderCommandEncoder>)encoder setFragmentBufferOffset:mOffsets[i]
-                                                              atIndex:i + startIndex];
-        [(id<MTLRenderCommandEncoder>)encoder setVertexBufferOffset:mOffsets[i]
-                                                            atIndex:i + startIndex];
+        if constexpr (stage == ShaderStage::VERTEX) {
+            [(id<MTLRenderCommandEncoder>)encoder setVertexBufferOffset:mOffsets[i]
+                                                                atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::FRAGMENT) {
+            [(id<MTLRenderCommandEncoder>)encoder setFragmentBufferOffset:mOffsets[i]
+                                                                  atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::COMPUTE) {
+            [(id<MTLComputeCommandEncoder>)encoder setBufferOffset:mOffsets[i]
+                                                           atIndex:i + startIndex];
+        }
     });
     mDirtyOffsets.reset();
 
     mDirtyBuffers.forEachSetBit([&](size_t i) {
-        [(id<MTLRenderCommandEncoder>)encoder setFragmentBuffer:mBuffers[i]
-                                                         offset:mOffsets[i]
-                                                        atIndex:i + startIndex];
-        [(id<MTLRenderCommandEncoder>)encoder setVertexBuffer:mBuffers[i]
-                                                       offset:mOffsets[i]
-                                                      atIndex:i + startIndex];
+        if constexpr (stage == ShaderStage::VERTEX) {
+            [(id<MTLRenderCommandEncoder>)encoder setVertexBuffer:mBuffers[i]
+                                                           offset:mOffsets[i]
+                                                          atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::FRAGMENT) {
+            [(id<MTLRenderCommandEncoder>)encoder setFragmentBuffer:mBuffers[i]
+                                                             offset:mOffsets[i]
+                                                            atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::COMPUTE) {
+            [(id<MTLComputeCommandEncoder>)encoder setBuffer:mBuffers[i]
+                                                      offset:mOffsets[i]
+                                                     atIndex:i + startIndex];
+        }
     });
     mDirtyBuffers.reset();
 }
 
-template class MetalBufferBindings<4>;
+// TODO: don't use constant 4
+template class MetalBufferBindings<4, ShaderStage::VERTEX>;
+template class MetalBufferBindings<4, ShaderStage::FRAGMENT>;
+template class MetalBufferBindings<4, ShaderStage::COMPUTE>;
 
 } // namespace backend
 } // namespace filament

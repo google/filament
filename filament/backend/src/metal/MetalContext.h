@@ -185,7 +185,9 @@ struct MetalContext {
     tsl::robin_set<MetalSamplerGroup*> finalizedSamplerGroups;
     tsl::robin_set<MetalDescriptorSet*> finalizedDescriptorSets;
     std::array<MetalDescriptorSet*, MAX_DESCRIPTOR_SET_COUNT> currentDescriptorSets = {};
-    MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT> descriptorBindings;
+    MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::VERTEX> vertexDescriptorBindings;
+    MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::FRAGMENT> fragmentDescriptorBindings;
+    MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::COMPUTE> computeDescriptorBindings;
     MetalDynamicOffsets dynamicOffsets;
 
     // Keeps track of all alive sampler groups, textures.

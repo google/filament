@@ -161,7 +161,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::METAL) {
         const auto sm = isMobile ? ShaderModel::MOBILE : ShaderModel::DESKTOP;
-        filamat::GLSLPostProcessor::spirvToMsl(&spirv, &result, sm, false, descriptorSets, nullptr);
+        filamat::GLSLPostProcessor::spirvToMsl(
+                &spirv, &result, stage, sm, false, descriptorSets, nullptr);
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::VULKAN) {
         return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };

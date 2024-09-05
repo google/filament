@@ -554,17 +554,21 @@ public:
 
     size_t getDynamicOffsetCount() const noexcept { return mDynamicOffsetCount; }
 
-    id<MTLArgumentEncoder> getArgumentEncoderForTextureTypes(
-            id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
+    /**
+     * Get an argument encoder for this descriptor set and shader stage.
+     * textureTypes should only include the textures present in the corresponding shader stage.
+     */
+    id<MTLArgumentEncoder> getArgumentEncoder(id<MTLDevice> device, ShaderStage stage,
+            utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
 
 private:
-    id<MTLArgumentEncoder> getArgumentEncoderForTextureTypesSlow(
-            id<MTLDevice> device, utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
+    id<MTLArgumentEncoder> getArgumentEncoderSlow(id<MTLDevice> device, ShaderStage stage,
+            utils::FixedCapacityVector<MTLTextureType> const& textureTypes);
 
     DescriptorSetLayout mLayout;
     size_t mDynamicOffsetCount = 0;
-    id<MTLArgumentEncoder> mCachedArgumentEncoder = nil;
-    utils::FixedCapacityVector<MTLTextureType> mCachedTextureTypes;
+    std::array<id<MTLArgumentEncoder>, 3> mCachedArgumentEncoder = { nil };
+    std::array<utils::FixedCapacityVector<MTLTextureType>, 3> mCachedTextureTypes;
 };
 
 struct MetalDescriptorSet : public HwDescriptorSet {
@@ -596,15 +600,23 @@ struct MetalDescriptorSet : public HwDescriptorSet {
         }
     }
 
-    id<MTLBuffer> finalizeAndGetBuffer(MetalDriver* driver) {
+    id<MTLBuffer> finalizeAndGetBuffer(MetalDriver* driver, ShaderStage stage) {
+        auto const index = static_cast<int>(stage);
+        assert_invariant(index < 3);
+        auto& buffer = cachedBuffer[index];
+
         if (buffer) {
             return buffer;
         }
 
         // Map all the texture bindings to their respective texture types.
         auto const& bindings = layout->getBindings();
-        auto textureTypes = utils::FixedCapacityVector<MTLTextureType>::with_capacity(bindings.size());
+        auto textureTypes =
+                utils::FixedCapacityVector<MTLTextureType>::with_capacity(bindings.size());
         for (auto const& binding : bindings) {
+            if (!hasShaderType(binding.stageFlags, stage)) {
+                continue;
+            }
             MTLTextureType textureType = MTLTextureType2D;
             if (auto found = textures.find(binding.binding); found != textures.end()) {
                 auto const& textureBinding = textures[binding.binding];
@@ -616,13 +628,16 @@ struct MetalDescriptorSet : public HwDescriptorSet {
         MetalContext const& context = *driver->mContext;
 
         id<MTLArgumentEncoder> encoder =
-                layout->getArgumentEncoderForTextureTypes(context.device, textureTypes);
+                layout->getArgumentEncoder(context.device, stage, textureTypes);
 
         buffer = [context.device newBufferWithLength:encoder.encodedLength
                                              options:MTLResourceStorageModeShared];
         [encoder setArgumentBuffer:buffer offset:0];
 
         for (auto const& binding : bindings) {
+            if (!hasShaderType(binding.stageFlags, stage)) {
+                continue;
+            }
             switch (binding.type) {
                 case DescriptorType::UNIFORM_BUFFER:
                 case DescriptorType::SHADER_STORAGE_BUFFER: {
@@ -657,7 +672,8 @@ struct MetalDescriptorSet : public HwDescriptorSet {
                     SamplerState samplerState {
                             .samplerParams = textureBinding.sampler
                     };
-                    id<MTLSamplerState> sampler = driver->mContext->samplerStateCache.getOrCreateState(samplerState);
+                    id<MTLSamplerState> sampler =
+                            driver->mContext->samplerStateCache.getOrCreateState(samplerState);
                     [encoder setSamplerState:sampler
                                      atIndex:binding.binding * 2 + 1];
                     break;
@@ -690,7 +706,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     std::vector<std::shared_ptr<MetalExternalImage>> externalImages;
 
-    id<MTLBuffer> buffer = nil;
+    std::array<id<MTLBuffer>, 3> cachedBuffer = { nil };
 };
 
 } // namespace backend

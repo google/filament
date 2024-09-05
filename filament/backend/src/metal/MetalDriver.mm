@@ -1351,7 +1351,9 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mContext->finalizedSamplerGroups.clear();
     mContext->finalizedDescriptorSets.clear();
-    mContext->descriptorBindings.invalidate();
+    mContext->vertexDescriptorBindings.invalidate();
+    mContext->fragmentDescriptorBindings.invalidate();
+    mContext->computeDescriptorBindings.invalidate();
     mContext->dynamicOffsets.setDirty(true);
 
     // Finalize any descriptor sets that were bound before the render pass.
@@ -1365,7 +1367,8 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     }
 
     // Bind descriptor sets.
-    mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+    mContext->vertexDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+    mContext->fragmentDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
 
     for (auto& pc : mContext->currentPushConstants) {
         pc.clear();
@@ -2115,7 +2118,10 @@ void MetalDriver::bindDescriptorSet(
 
     // Bind the descriptor set.
     mContext->currentDescriptorSets[set] = descriptorSet;
-    mContext->descriptorBindings.setBuffer(descriptorSet->finalizeAndGetBuffer(this), 0, set);
+    mContext->vertexDescriptorBindings.setBuffer(
+            descriptorSet->finalizeAndGetBuffer(this, ShaderStage::VERTEX), 0, set);
+    mContext->fragmentDescriptorBindings.setBuffer(
+            descriptorSet->finalizeAndGetBuffer(this, ShaderStage::FRAGMENT), 0, set);
     mContext->dynamicOffsets.setOffsets(set, offsets.data(), dynamicBindings);
 
     // If we're inside a render pass, we should also finalize the descriptor set and update the
@@ -2126,7 +2132,8 @@ void MetalDriver::bindDescriptorSet(
             descriptorSet->finalize(this);
             mContext->finalizedDescriptorSets.insert(descriptorSet);
         }
-        mContext->descriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+        mContext->vertexDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+        mContext->fragmentDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
     }
 }
 
