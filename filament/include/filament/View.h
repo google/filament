@@ -571,6 +571,13 @@ public:
     void setShadowType(ShadowType shadow) noexcept;
 
     /**
+     * Returns the shadow mapping technique used by this View.
+     *
+     * @return value set by setShadowType().
+     */
+    ShadowType getShadowType() const noexcept;
+
+    /**
      * Sets VSM shadowing options that apply across the entire View.
      *
      * Additional light-specific VSM options can be set with LightManager::setShadowOptions.

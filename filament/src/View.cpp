@@ -193,6 +193,10 @@ void View::setShadowType(View::ShadowType shadow) noexcept {
     downcast(this)->setShadowType(shadow);
 }
 
+View::ShadowType View::getShadowType() const noexcept {
+    return downcast(this)->getShadowType();
+}
+
 void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
     downcast(this)->setVsmShadowOptions(options);
 }
