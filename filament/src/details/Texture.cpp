@@ -243,6 +243,11 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
+    if (auto name = builder.getName(); !name.empty()) {
+        driver.setDebugTag(mHandle.getId(), std::move(name));
+    } else {
+        driver.setDebugTag(mHandle.getId(), CString{"FTexture"});
+    }
 }
 
 // frees driver resources, object becomes invalid

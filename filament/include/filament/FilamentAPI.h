@@ -19,6 +19,7 @@
 
 #include <utils/compiler.h>
 #include <utils/PrivateImplementation.h>
+#include <utils/CString.h>
 
 #include <stddef.h>
 
@@ -53,6 +54,23 @@ public:
 
 template<typename T>
 using BuilderBase = utils::PrivateImplementation<T>;
+
+// This needs to be public because it is used in the following template.
+UTILS_PUBLIC void builderMakeName(utils::CString& outName, const char* name, size_t len) noexcept;
+
+template <typename Builder>
+class UTILS_PUBLIC BuilderNameMixin {
+public:
+    Builder& name(const char* name, size_t len) noexcept {
+        builderMakeName(mName, name, len);
+        return static_cast<Builder&>(*this);
+    }
+
+    utils::CString const& getName() const noexcept { return mName; }
+
+private:
+    utils::CString mName;
+};
 
 } // namespace filament
 

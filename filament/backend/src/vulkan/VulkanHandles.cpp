@@ -16,7 +16,6 @@
 
 #include "VulkanHandles.h"
 
-#include "VulkanDriver.h"
 #include "VulkanConstants.h"
 #include "VulkanDriver.h"
 #include "VulkanMemory.h"
@@ -323,11 +322,12 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
         uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-        VulkanAttachment depthStencil[2], VulkanStagePool& stagePool)
+        VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
-      mSamples(samples) {
+      mSamples(samples),
+      mLayerCount(layerCount) {
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         mColor[index] = color[index];
     }

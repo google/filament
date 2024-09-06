@@ -284,6 +284,7 @@ public:
     static constexpr RenderFlags HAS_SHADOWING             = 0x01;
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES   = 0x02;
     static constexpr RenderFlags IS_INSTANCED_STEREOSCOPIC = 0x04;
+    static constexpr RenderFlags HAS_DEPTH_CLAMP           = 0x08;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -408,16 +409,19 @@ private:
             uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
             Executor::CustomCommandFn command);
 
-    void resize(Arena& arena, size_t count) noexcept;
+    static Command* resize(Arena& arena, Command* const last) noexcept;
 
     // sorts commands then trims sentinels
-    void sortCommands(Arena& arena) noexcept;
+    static Command* sortCommands(
+            Command* begin, Command* end) noexcept;
 
     // instanceify commands then trims sentinels
-    void instanceify(FEngine& engine, Arena& arena, int32_t eyeCount) noexcept;
+    RenderPass::Command* instanceify(FEngine& engine,
+            Command* begin, Command* end,
+            int32_t eyeCount) const noexcept;
 
     // We choose the command count per job to minimize JobSystem overhead.
-    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 1024;
+    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 128;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
 
@@ -441,17 +445,17 @@ private:
             uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant,
-            FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
+            FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp) noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
 
     FScene::RenderableSoa const& mRenderableSoa;
     backend::Viewport const mScissorViewport;
-    Command* mCommandBegin = nullptr;   // Pointer to the first command
-    Command* mCommandEnd = nullptr;     // Pointer to one past the last command
+    Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
+    Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
     // a UBO for instanced primitives
-    BufferObjectSharedHandle mInstancedUboHandle;
+    mutable BufferObjectSharedHandle mInstancedUboHandle;
     // a vector for our custom commands
     using CustomCommandVector = std::vector<Executor::CustomCommandFn,
             utils::STLAllocator<Executor::CustomCommandFn, LinearAllocatorArena>>;
@@ -525,7 +529,9 @@ public:
     // like above but allows to set specific flags
     RenderPassBuilder& renderFlags(
             RenderPass::RenderFlags mask, RenderPass::RenderFlags value) noexcept {
-        mFlags = (mFlags & mask) | (value & mask);
+        value &= mask;
+        mFlags &= ~mask;
+        mFlags |= value;
         return *this;
     }
 

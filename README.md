@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.53.2'
+    implementation 'com.google.android.filament:filament-android:1.54.2'
 }
 ```
 
@@ -51,18 +51,8 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.53.2'
+pod 'Filament', '~> 1.54.2'
 ```
-
-### Snapshots
-
-If you prefer to live on the edge, you can download a continuous build by following the following
-steps:
-
-1. Find the [commit](https://github.com/google/filament/commits/main) you're interested in.
-2. Click the green check mark under the commit message.
-3. Click on the _Details_ link for the platform you're interested in.
-4. On the top left click _Summary_, then in the _Artifacts_ section choose the desired artifact.
 
 ## Documentation
 

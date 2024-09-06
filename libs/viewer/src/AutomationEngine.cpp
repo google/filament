@@ -56,7 +56,7 @@ static void convertRGBAtoRGB(void* buffer, uint32_t width, uint32_t height) {
     }
 }
 
-static void exportScreenshot(View* view, Renderer* renderer, std::string filename,
+void AutomationEngine::exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
     const Viewport& vp = view->getViewport();
     const size_t byteCount = vp.width * vp.height * 4;
@@ -244,7 +244,8 @@ void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float 
     }
 
     if (mOptions.exportScreenshots) {
-        exportScreenshot(content.view, content.renderer, prefix + ".ppm", isLastTest, this);
+        AutomationEngine::exportScreenshot(
+                content.view, content.renderer, prefix + ".ppm", isLastTest, this);
     }
 
     if (isLastTest) {

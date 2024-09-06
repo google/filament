@@ -18,6 +18,7 @@
 #define TNT_UTILS_WORKSTEALINGDEQUEUE_H
 
 #include <atomic>
+#include <type_traits>
 
 #include <assert.h>
 #include <stddef.h>
@@ -35,7 +36,13 @@ namespace utils {
  *    steal()                      push(), pop()
  *  any thread                     main thread
  *
- *
+ * References:
+ * - This code is largely inspired from
+ *   https://blog.molecular-matters.com/2015/09/25/job-system-2-0-lock-free-work-stealing-part-3-going-lock-free/
+ * - other implementations
+ *   https://github.com/ConorWilliams/ConcurrentDeque/blob/main/include/riften/deque.hpp
+ *   https://github.com/ssbl/concurrent-deque/blob/master/include/deque.hpp
+ *   https://github.com/taskflow/work-stealing-queue/blob/master/wsq.hpp
  */
 template <typename TYPE, size_t COUNT>
 class WorkStealingDequeue {
@@ -86,9 +93,11 @@ void WorkStealingDequeue<TYPE, COUNT>::push(TYPE item) noexcept {
     index_t bottom = mBottom.load(std::memory_order_relaxed);
     setItemAt(bottom, item);
 
-    // std::memory_order_release is used because we release the item we just pushed to other
+    // Here we need std::memory_order_release because we release, the item we just pushed, to other
     // threads which are calling steal().
-    mBottom.store(bottom + 1, std::memory_order_release);
+    // However, generally seq_cst cannot be mixed with other memory orders. So we must use seq_cst.
+    // see: https://plv.mpi-sws.org/scfix/paper.pdf
+    mBottom.store(bottom + 1, std::memory_order_seq_cst);
 }
 
 /*
@@ -117,7 +126,7 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::pop() noexcept {
     index_t top = mTop.load(std::memory_order_seq_cst);
 
     if (top < bottom) {
-        // Queue isn't empty and it's not the last item, just return it, this is the common case.
+        // Queue isn't empty, and it's not the last item, just return it, this is the common case.
         return getItemAt(bottom);
     }
 
@@ -132,13 +141,13 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::pop() noexcept {
         if (mTop.compare_exchange_strong(top, top + 1,
                 std::memory_order_seq_cst,
                 std::memory_order_relaxed)) {
-            // success: we stole our last item from ourself, meaning that a concurrent steal()
+            // Success: we stole our last item from ourselves, meaning that a concurrent steal()
             //          would have failed.
             // mTop now equals top + 1, we adjust top to make the queue empty.
             top++;
         } else {
-            // failure: mTop was not equal to top, which means the item was stolen under our feet.
-            // top now equals to mTop. Simply discard the item we just popped.
+            // Failure: mTop was not equal to top, which means the item was stolen under our feet.
+            // `top` now equals to mTop. Simply discard the item we just popped.
             // The queue is now empty.
             item = TYPE();
         }
@@ -148,9 +157,11 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::pop() noexcept {
         assert(top - bottom == 1);
     }
 
-    // std::memory_order_relaxed used because we're not publishing any data.
-    // no concurrent writes to mBottom possible, it's always safe to write mBottom.
-    mBottom.store(top, std::memory_order_relaxed);
+    // Here, we only need std::memory_order_relaxed because we're not publishing any data.
+    // No concurrent writes to mBottom possible, it's always safe to write mBottom.
+    // However, generally seq_cst cannot be mixed with other memory orders. So we must use seq_cst.
+    // see: https://plv.mpi-sws.org/scfix/paper.pdf
+    mBottom.store(top, std::memory_order_seq_cst);
     return item;
 }
 
@@ -194,6 +205,8 @@ TYPE WorkStealingDequeue<TYPE, COUNT>::steal() noexcept {
         }
         // failure: the item we just tried to steal was pop()'ed under our feet,
         // simply discard it; nothing to do -- it's okay to try again.
+        // However, item might be corrupted, so it must be trivially destructible
+        static_assert(std::is_trivially_destructible_v<TYPE>);
     }
 }
 

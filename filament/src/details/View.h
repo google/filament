@@ -201,9 +201,9 @@ public:
 
     void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
-    FCamera const* getDirectionalShadowCamera() const noexcept {
-        if (!mShadowMapManager) return nullptr;
-        return mShadowMapManager->getDirectionalShadowCamera();
+    utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept {
+        if (!mShadowMapManager) return {};
+        return mShadowMapManager->getDirectionalShadowCameras();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -422,6 +422,10 @@ public:
     // (e.g.: after the FrameGraph execution).
     void commitFrameHistory(FEngine& engine) noexcept;
 
+    // Clean-up the whole history, free all resources. This is typically called when the View is
+    // being terminated. Or we're changing Renderer.
+    void clearFrameHistory(FEngine& engine) noexcept;
+
     // create the picking query
     View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
             View::PickingQueryResultCallback callback) noexcept;
@@ -484,10 +488,6 @@ private:
             FRenderableManager::Visibility const* visibility,
             Culler::result_type* visibleMask,
             size_t count);
-
-    // Clean-up the whole history, free all resources. This is typically called when the View is
-    // being terminated.
-    void drainFrameHistory(FEngine& engine) noexcept;
 
     // we don't inline this one, because the function is quite large and there is not much to
     // gain from inlining.
@@ -576,7 +576,12 @@ private:
                                                     }};
 
 #ifndef NDEBUG
-    std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> mDebugFrameHistory;
+    struct DebugState {
+        std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> debugFrameHistory{};
+        bool owner = false;
+        bool active = false;
+    };
+    std::shared_ptr<DebugState> mDebugState{ new DebugState };
 #endif
 };
 

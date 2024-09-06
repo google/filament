@@ -234,7 +234,21 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
             assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
-            mVariables[size_t(v)] = CString(name);
+            mVariables[size_t(v)] = { CString(name), Precision::DEFAULT, false };
+            break;
+    }
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::variable(Variable v,
+        const char* name, ParameterPrecision precision) noexcept {
+    switch (v) {
+        case Variable::CUSTOM0:
+        case Variable::CUSTOM1:
+        case Variable::CUSTOM2:
+        case Variable::CUSTOM3:
+            assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
+            mVariables[size_t(v)] = { CString(name), precision, true };
             break;
     }
     return *this;
@@ -1383,7 +1397,7 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
 
 bool MaterialBuilder::hasCustomVaryings() const noexcept {
     for (const auto& variable : mVariables) {
-        if (!variable.empty()) {
+        if (!variable.name.empty()) {
             return true;
         }
     }
@@ -1609,6 +1623,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
             }
         }
         container.emplace<uint64_t>(ChunkType::MaterialProperties, properties);
+        container.emplace<uint8_t>(ChunkType::MaterialStereoscopicType, static_cast<uint8_t>(mStereoscopicType));
     }
 
     // create a unique material id

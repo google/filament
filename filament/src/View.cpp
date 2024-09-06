@@ -15,6 +15,8 @@
  */
 
 #include "details/View.h"
+#include "filament/View.h"
+
 
 namespace filament {
 
@@ -71,8 +73,8 @@ const char* View::getName() const noexcept {
     return downcast(this)->getName();
 }
 
-Camera const* View::getDirectionalShadowCamera() const noexcept {
-    return downcast(this)->getDirectionalShadowCamera();
+utils::FixedCapacityVector<Camera const*> View::getDirectionalShadowCameras() const noexcept {
+    return downcast(this)->getDirectionalShadowCameras();
 }
 
 void View::setShadowingEnabled(bool enabled) noexcept {
@@ -189,6 +191,10 @@ void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept
 
 void View::setShadowType(View::ShadowType shadow) noexcept {
     downcast(this)->setShadowType(shadow);
+}
+
+View::ShadowType View::getShadowType() const noexcept {
+    return downcast(this)->getShadowType();
 }
 
 void View::setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
@@ -310,6 +316,10 @@ math::float4 View::getMaterialGlobal(uint32_t index) const {
 
 utils::Entity View::getFogEntity() const noexcept {
     return downcast(this)->getFogEntity();
+}
+
+void View::clearFrameHistory(Engine& engine) noexcept {
+    downcast(this)->clearFrameHistory(downcast(engine));
 }
 
 } // namespace filament
