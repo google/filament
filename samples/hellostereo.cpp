@@ -45,6 +45,10 @@
 #include "generated/resources/resources.h"
 #include "generated/resources/monkey.h"
 
+#if !defined FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW
+#error This sample only works with multiview enabled
+#endif
+
 using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
