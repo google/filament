@@ -122,7 +122,7 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
 
-    mContext->emptyBuffer = [mContext->device newBufferWithLength:4 * 1024
+    mContext->emptyBuffer = [mContext->device newBufferWithLength:16
                                                           options:MTLResourceStorageModePrivate];
 
     initializeSupportedGpuFamilies(mContext);
