@@ -45,10 +45,6 @@
 #include "generated/resources/resources.h"
 #include "generated/resources/monkey.h"
 
-#if !defined FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW
-#error This sample only works with multiview enabled
-#endif
-
 using namespace filament;
 using namespace filamesh;
 using namespace filament::math;
@@ -137,11 +133,12 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 try {
                     eyeCount = std::stoi(arg);
                 } catch (std::invalid_argument &e) { }
-                if (eyeCount >= 1 && eyeCount <= CONFIG_MAX_STEREOSCOPIC_EYES) {
+                if (eyeCount >= 2 && eyeCount <= CONFIG_MAX_STEREOSCOPIC_EYES) {
                     app->config.stereoscopicEyeCount = eyeCount;
                 } else {
-                    std::cerr << "Eye count must be between 1 and CONFIG_MAX_STEREOSCOPIC_EYES ("
+                    std::cerr << "Eye count must be between 2 and CONFIG_MAX_STEREOSCOPIC_EYES ("
                               << (int)CONFIG_MAX_STEREOSCOPIC_EYES << ") (inclusive).\n";
+                    exit(1);
                 }
                 break;
             }
@@ -151,6 +148,12 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 }
 
 int main(int argc, char** argv) {
+
+#if !defined(FILAMENT_SAMPLES_STEREO_TYPE_MULTIVIEW)
+    std::cerr << "This sample only works with multiview enabled.\n";
+    exit(1);
+#endif
+
     App app{};
     app.config.title = "stereoscopic rendering";
     handleCommandLineArguments(argc, argv, &app);
@@ -234,17 +237,21 @@ int main(int argc, char** argv) {
         constexpr double projFar = 100;
 
         mat4 projections[CONFIG_MAX_STEREOSCOPIC_EYES];
-        static_assert(CONFIG_MAX_STEREOSCOPIC_EYES == 4, "Update projections");
+        mat4 eyeModels[CONFIG_MAX_STEREOSCOPIC_EYES];
+        static_assert(CONFIG_MAX_STEREOSCOPIC_EYES == 4, "Update matrices");
         projections[0] = Camera::projection(24, 1.0, projNear, projFar);
         projections[1] = Camera::projection(70, 1.0, projNear, projFar);
         projections[2] = Camera::projection(50, 1.0, projNear, projFar);
         projections[3] = Camera::projection(35, 1.0, projNear, projFar);
         app.stereoCamera->setCustomEyeProjection(projections, 4, projections[0], projNear, projFar);
 
-        app.stereoCamera->setEyeModelMatrix(0, mat4::lookAt(float3{-4, 0, 0}, monkeyPosition, upVector));
-        app.stereoCamera->setEyeModelMatrix(1, mat4::lookAt(float3{4, 0, 0}, monkeyPosition, upVector));
-        app.stereoCamera->setEyeModelMatrix(2, mat4::lookAt(float3{0, 3, 0}, monkeyPosition, upVector));
-        app.stereoCamera->setEyeModelMatrix(3, mat4::lookAt(float3{0, -3, 0}, monkeyPosition, upVector));
+        eyeModels[0] = mat4::lookAt(float3{ -4, 0, 0 }, monkeyPosition, upVector);
+        eyeModels[1] = mat4::lookAt(float3{ 4, 0, 0 }, monkeyPosition, upVector);
+        eyeModels[2] = mat4::lookAt(float3{ 0, 3, 0 }, monkeyPosition, upVector);
+        eyeModels[3] = mat4::lookAt(float3{ 0, -3, 0 }, monkeyPosition, upVector);
+        for (int i = 0; i < eyeCount; ++i) {
+            app.stereoCamera->setEyeModelMatrix(i, eyeModels[i]);
+        }
 
         // Create a vertex buffer and an index buffer for a quad. This will be used to display the contents
         // of each layer of the stereo texture.
