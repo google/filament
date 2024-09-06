@@ -34,7 +34,7 @@ struct RenderTarget::BuilderDetails {
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
-    uint8_t mLayerCount = 0;
+    uint8_t mLayerCount = 1;
 };
 
 using BuilderType = RenderTarget;
