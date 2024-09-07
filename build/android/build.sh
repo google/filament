@@ -60,13 +60,7 @@ if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
     yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses
     ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION"
 fi
-
-# Only build 1 64 bit target during presubmit to cut down build times during presubmit
-# Continuous builds will build everything
 ANDROID_ABIS=
-if [[ "$TARGET" == "presubmit" ]]; then
-  ANDROID_ABIS="-q arm64-v8a"
-fi
 
 # Build the Android sample-gltf-viewer APK during release.
 BUILD_SAMPLES=
@@ -74,5 +68,19 @@ if [[ "$TARGET" == "release" ]]; then
     BUILD_SAMPLES="-k sample-gltf-viewer"
 fi
 
+function build_android() {
+    local ABI=$1
+
+    # Do the following in two steps so that we do not run out of space
+    if [[ -n "${BUILD_DEBUG}" ]]; then
+        FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android -q ${ABI} -c ${BUILD_SAMPLES} ${GENERATE_ARCHIVES} ${BUILD_DEBUG}
+        rm -rf out/cmake-android-debug-*
+    fi
+    if [[ -n "${BUILD_RELEASE}" ]]; then
+        FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android -q ${ABI} -c ${BUILD_SAMPLES} ${GENERATE_ARCHIVES} ${BUILD_RELEASE}
+        rm -rf out/cmake-android-release-*
+    fi
+}
+
 pushd `dirname $0`/../.. > /dev/null
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION} ./build.sh -p android $ANDROID_ABIS -c $BUILD_SAMPLES $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+build_android $2
