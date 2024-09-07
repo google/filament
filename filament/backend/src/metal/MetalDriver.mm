@@ -41,12 +41,12 @@
 
 #include <algorithm>
 
-#ifndef DEBUG_LOG_DESCRIPTOR_SETS
-#define DEBUG_LOG_DESCRIPTOR_SETS 0
+#ifndef FILAMENT_METAL_DEBUG_LOG
+#define FILAMENT_METAL_DEBUG_LOG 0
 #endif
 
-#if DEBUG_LOG_DESCRIPTOR_SETS == 1
-#define DEBUG_LOG(...) printf(__VA_ARGS__)
+#if FILAMENT_METAL_DEBUG_LOG == 1
+#define DEBUG_LOG(x, ...) printf("[METAL DEBUG] " x, ##__VA_ARGS__)
 #else
 #define DEBUG_LOG(...)
 #endif
@@ -240,8 +240,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
-    DEBUG_LOG(
-            "[DS] beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
+    DEBUG_LOG("beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
             monotonic_clock_ns, refreshIntervalNs, frameId);
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
@@ -279,7 +278,7 @@ void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {
-    DEBUG_LOG("[DS] endFrame(frameId = %d)\n", frameId);
+    DEBUG_LOG("endFrame(frameId = %d)\n", frameId);
     // If we haven't committed the command buffer (if the frame was canceled), do it now. There may
     // be commands in it (like fence signaling) that need to execute.
     submitPendingCommands(mContext);
@@ -321,7 +320,7 @@ void MetalDriver::updateDescriptorSetBuffer(
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "updateDescriptorSetBuffer must be called outside of a render pass.");
     DEBUG_LOG(
-            "[DS] updateDescriptorSetBuffer(dsh = %d, binding = %d, boh = %d, offset = %d, size = "
+            "updateDescriptorSetBuffer(dsh = %d, binding = %d, boh = %d, offset = %d, size = "
             "%d)\n",
             dsh.getId(), binding, boh.getId(), offset, size);
 
@@ -345,7 +344,7 @@ void MetalDriver::updateDescriptorSetTexture(
         SamplerParams params) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "updateDescriptorSetTexture must be called outside of a render pass.");
-    DEBUG_LOG("[DS] updateDescriptorSetTexture(dsh = %d, binding = %d, th = %d, params = {...})\n",
+    DEBUG_LOG("updateDescriptorSetTexture(dsh = %d, binding = %d, th = %d, params = {...})\n",
             dsh.getId(), binding, th.getId());
 
     auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
@@ -650,7 +649,7 @@ const char* prettyDescriptorFlags(DescriptorFlags flags) {
 
 void MetalDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info) {
-    DEBUG_LOG("[DS] createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
+    DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
     for (size_t i = 0; i < info.bindings.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s}",
                 info.bindings[i].binding, prettyDescriptorType(info.bindings[i].type),
@@ -666,7 +665,7 @@ void MetalDriver::createDescriptorSetLayoutR(
 
 void MetalDriver::createDescriptorSetR(
         Handle<HwDescriptorSet> dsh, Handle<HwDescriptorSetLayout> dslh) {
-    DEBUG_LOG("[DS] createDescriptorSetR(dsh = %d, dslh = %d)\n", dsh.getId(), dslh.getId());
+    DEBUG_LOG("createDescriptorSetR(dsh = %d, dslh = %d)\n", dsh.getId(), dslh.getId());
     MetalDescriptorSetLayout* layout = handle_cast<MetalDescriptorSetLayout>(dslh);
     construct_handle<MetalDescriptorSet>(dsh, layout);
 }
@@ -878,14 +877,14 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh) {
-    DEBUG_LOG("[DS] destroyDescriptorSetLayout(dslh = %d)\n", dslh.getId());
+    DEBUG_LOG("destroyDescriptorSetLayout(dslh = %d)\n", dslh.getId());
     if (dslh) {
         destruct_handle<MetalDescriptorSetLayout>(dslh);
     }
 }
 
 void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
-    DEBUG_LOG("[DS] destroyDescriptorSet(dsh = %d)\n", dsh.getId());
+    DEBUG_LOG("destroyDescriptorSet(dsh = %d)\n", dsh.getId());
     if (dsh) {
         executeAfterCurrentCommandBufferCompletes(
                 [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
@@ -1307,7 +1306,7 @@ void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
-    DEBUG_LOG("[DS] beginRenderPass(rth = %d, params = {...})\n", rth.getId());
+    DEBUG_LOG("beginRenderPass(rth = %d, params = {...})\n", rth.getId());
 
 #if defined(FILAMENT_METAL_PROFILING)
     const char* renderPassName = "Unknown";
@@ -1378,7 +1377,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 void MetalDriver::nextSubpass(int dummy) {}
 
 void MetalDriver::endRenderPass(int dummy) {
-    DEBUG_LOG("[DS] endRenderPass()\n");
+    DEBUG_LOG("endRenderPass()\n");
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, OS_SIGNPOST_ID_EXCLUSIVE, "Render pass");
 #endif
@@ -2105,7 +2104,7 @@ void MetalDriver::bindDescriptorSet(
     auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
     utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
-    DEBUG_LOG("[DS] bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
+    DEBUG_LOG("bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
     for (size_t i = 0; i < dynamicBindings; i++) {
         DEBUG_LOG("%d", offsets[i]);
         if (i < dynamicBindings - 1) {
@@ -2140,7 +2139,7 @@ void MetalDriver::bindDescriptorSet(
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
-    DEBUG_LOG("[DS] draw2(...)\n");
+    DEBUG_LOG("draw2(...)\n");
 
     // Bind the offset data.
     if (mContext->dynamicOffsets.isDirty()) {
