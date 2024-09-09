@@ -68,10 +68,8 @@ static constexpr uint32_t ZERO_VERTEX_BUFFER_BINDING = 0u;
 static constexpr uint32_t USER_VERTEX_BUFFER_BINDING_START = 1u;
 
 // These constants must match the equivalent in CodeGenerator.h.
-// TODO: deprecate these
-static constexpr uint32_t UNIFORM_BUFFER_BINDING_START = 17u;
-static constexpr uint32_t SSBO_BINDING_START = 0u;
-static constexpr uint32_t SAMPLER_GROUP_BINDING_START = 27u;
+static constexpr uint32_t DESCRIPTOR_SET_BINDING_START = 21u;
+static constexpr uint32_t DYNAMIC_OFFSET_BINDING = 25u;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);

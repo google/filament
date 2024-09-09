@@ -58,79 +58,24 @@ namespace msl {  // this is only used for MSL
 
 using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 
-// I want to know:
-
-// 0. DescriptorSetBindingPoint::PER_VIEW
-// which Ubos (there may be more than 1)? ~and which are in use~ (we assume all are in use)
-// for each UBO (which needs to be in order):
-//   what's the name of the pointer
-//   what's the type of Struct it points to?
-// for example:
-//    frameUniforms, FrameUniforms
-//    shadowUniforms, ShadowUniforms
-//    etc
-// which Sibs (there is only ever 1)
-//   what's the name of the sampler
-//   what's the type of the sampler
-
-// 1. DescriptorSetBindingPoint::PER_RENDERABLE
-// which Ubos (there may be more than 1) and which are in use?
-// which Sibs (there is only ever 1)
-
-// 2. DescriptorSetBindingPoint::PER_MATERIAL
-// which Ubos (there may be more than 1) and which are in use?
-// which Sibs (there is only ever 1)
-
-// In order to get the ubos, I can do:
-// descriptor_sets = {} // automatically add set key to empty [] array if key/value pair doesn't exist
-// for each ubo inside Ubo:
-//    binding = getBinding(ubo)
-//    interface_block = get(ubo)
-//    descriptor_set[binding.set].push_back((binding.binding, interface_block))
-// for each descriptor_set inside descriptor_sets:
-//    sort the descriptor_set by binding
-//    for each (binding, interface_block) in descriptor_set:
-//       type_name = interface_block.getName() # e.g., FrameUniforms
-//       entry_name = type_name.first_letter_lowercase()
-
-// When Filament goes to create an arg buffer, will it create one that only contains the uniforms in use?
-
-//static void collectSibs(const GLSLPostProcessor::Config& config, SibVector& sibs) {
-//    switch (config.domain) {
-//        case MaterialDomain::SURFACE:
-//            UTILS_NOUNROLL
-//            for (uint8_t blockIndex = 0; blockIndex < CONFIG_SAMPLER_BINDING_COUNT; blockIndex++) {
-//                if (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
-//                    continue;
-//                }
-//                auto const* sib =
-//                        SibGenerator::getSib((SamplerBindingPoints)blockIndex, config.variant);
-//                if (sib && hasShaderType(sib->getStageFlags(), config.shaderType)) {
-//                    sibs.emplace_back(blockIndex, sib);
-//                }
-//            }
-//        case MaterialDomain::POST_PROCESS:
-//        case MaterialDomain::COMPUTE:
-//            break;
-//    }
-//    sibs.emplace_back((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-//            &config.materialInfo->sib);
-//}
-
 #ifndef DEBUG_LOG_DESCRIPTOR_SETS
 #define DEBUG_LOG_DESCRIPTOR_SETS 0
 #endif
 
-const char* prettyDescriptorType(DescriptorType type) {
+const char* toString(DescriptorType type) {
     switch (type) {
-        case DescriptorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
-        case DescriptorType::SHADER_STORAGE_BUFFER: return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::SAMPLER: return "SAMPLER";
-        case DescriptorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
+        case DescriptorType::UNIFORM_BUFFER:
+            return "UNIFORM_BUFFER";
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+            return "SHADER_STORAGE_BUFFER";
+        case DescriptorType::SAMPLER:
+            return "SAMPLER";
+        case DescriptorType::INPUT_ATTACHMENT:
+            return "INPUT_ATTACHMENT";
     }
 }
 
-const char* prettyShaderStageFlags(ShaderStageFlags flags) {
+const char* toString(ShaderStageFlags flags) {
     std::vector<const char*> stages;
     if (any(flags & ShaderStageFlags::VERTEX)) {
         stages.push_back("VERTEX");
@@ -164,12 +109,18 @@ const char* prettyDescriptorFlags(DescriptorFlags flags) {
 
 const char* prettyPrintSamplerType(SamplerType type) {
     switch (type) {
-        case SamplerType::SAMPLER_2D: return "SAMPLER_2D";
-        case SamplerType::SAMPLER_2D_ARRAY: return "SAMPLER_2D_ARRAY";
-        case SamplerType::SAMPLER_CUBEMAP: return "SAMPLER_CUBEMAP";
-        case SamplerType::SAMPLER_EXTERNAL: return "SAMPLER_EXTERNAL";
-        case SamplerType::SAMPLER_3D: return "SAMPLER_3D";
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "SAMPLER_CUBEMAP_ARRAY";
+        case SamplerType::SAMPLER_2D:
+            return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D:
+            return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "SAMPLER_CUBEMAP_ARRAY";
     }
 }
 
@@ -268,6 +219,10 @@ static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
             descriptors.emplace_back(name, info.bindings[i], std::nullopt);
         }
     }
+
+    std::sort(descriptors.begin(), descriptors.end(), [](const auto& a, const auto& b) {
+        return std::get<1>(a).binding < std::get<1>(b).binding;
+    });
 }
 
 void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
@@ -292,15 +247,14 @@ void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
                 assert_invariant(sampler.has_value());
                 printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
                        "%s, samplerType = %s}",
-                        name.c_str_safe(), info.binding, prettyDescriptorType(info.type),
-                        info.count, prettyShaderStageFlags(info.stageFlags),
-                        prettyDescriptorFlags(info.flags), prettyPrintSamplerType(sampler->type));
+                        name.c_str_safe(), info.binding, toString(info.type), info.count,
+                        toString(info.stageFlags), prettyDescriptorFlags(info.flags),
+                        prettyPrintSamplerType(sampler->type));
             } else {
                 printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
                        "%s}",
-                        name.c_str_safe(), info.binding, prettyDescriptorType(info.type),
-                        info.count, prettyShaderStageFlags(info.stageFlags),
-                        prettyDescriptorFlags(info.flags));
+                        name.c_str_safe(), info.binding, toString(info.type), info.count,
+                        toString(info.stageFlags), prettyDescriptorFlags(info.flags));
             }
             printf(",\n");
         }
@@ -308,8 +262,7 @@ void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
     }
 }
 
-// TODO: maybe rename to collectDescriptorSets
-static void collectDescriptors(const GLSLPostProcessor::Config& config, DescriptorSets& sets) {
+static void collectDescriptorSets(const GLSLPostProcessor::Config& config, DescriptorSets& sets) {
     auto perViewDescriptors = DescriptorSetInfo::with_capacity(MAX_DESCRIPTOR_COUNT);
     collectDescriptorsForSet(DescriptorSetBindingPoints::PER_VIEW, config, perViewDescriptors);
     sets[+DescriptorSetBindingPoints::PER_VIEW] = std::move(perViewDescriptors);
@@ -424,88 +377,6 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
 
     auto executionModel = mslCompiler.get_execution_model();
 
-    // Metal Descriptor Sets
-    // Descriptor set       Name                    Binding
-    // ----------------------------------------------------------------------
-    // 0                    Uniforms                Individual bindings
-    // 1-4                  Sampler groups          [[buffer(27-30)]]
-    // 5-7                  Unused
-    //
-    // Here we enumerate each sampler in each sampler group and map it to a Metal resource. Each
-    // sampler group is its own descriptor set, and each descriptor set becomes an argument buffer.
-    //
-    // For example, in GLSL, we might have the following:
-    // layout( set = 1, binding = 0 ) uniform sampler2D textureA;
-    // layout( set = 1, binding = 1 ) uniform sampler2D textureB;
-    //
-    // This becomes the following MSL argument buffer:
-    // struct spvDescriptorSetBuffer1 {
-    //     texture2d<float> textureA [[id(0)]];
-    //     sampler textureASmplr [[id(1)]];
-    //     texture2d<float> textureB [[id(2)]];
-    //     sampler textureBSmplr [[id(3)]];
-    // };
-    //
-    // Which is then bound to the vertex/fragment functions:
-    // constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(27)]]
-//    for (auto [bindingPoint, sib] : sibs) {
-//        const auto& infoList = sib->getSamplerInfoList();
-//
-//        // bindingPoint + 1, because the first descriptor set is for uniforms
-//        auto argBufferBuilder = MetalArgumentBuffer::Builder()
-//                .name("spvDescriptorSetBuffer" + std::to_string(int(bindingPoint + 1)));
-//
-//        for (const auto& info: infoList) {
-//            const std::string name = info.uniformName.c_str();
-//            argBufferBuilder
-//                    .texture(info.offset * 2, name, info.type, info.format, info.multisample)
-//                    .sampler(info.offset * 2 + 1, name + "Smplr");
-//        }
-//
-//        argumentBuffers.push_back(argBufferBuilder.build());
-//
-//        // This MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
-//        // buffer itself;
-//        MSLResourceBinding argBufferBinding;
-//        // the baseType doesn't matter, but can't be UNKNOWN
-//        argBufferBinding.basetype = SPIRType::BaseType::Float;
-//        argBufferBinding.stage = executionModel;
-//        argBufferBinding.desc_set = bindingPoint + 1;
-//        argBufferBinding.binding = kArgumentBufferBinding;
-//        argBufferBinding.count = 1;
-//        argBufferBinding.msl_buffer =
-//                CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
-//        mslCompiler.add_msl_resource_binding(argBufferBinding);
-//    }
-//
-//    auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
-//        auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-//        auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
-//        MSLResourceBinding newBinding;
-//        newBinding.basetype = SPIRType::BaseType::Void;
-//        newBinding.stage = executionModel;
-//        newBinding.desc_set = set;
-//        newBinding.binding = binding;
-//        newBinding.count = 1;
-//        newBinding.msl_texture =
-//        newBinding.msl_sampler =
-//        newBinding.msl_buffer = binding;
-//        mslCompiler.add_msl_resource_binding(newBinding);
-//    };
-//
-//    auto uniformResources = mslCompiler.get_shader_resources();
-//    for (const auto& resource : uniformResources.uniform_buffers) {
-//        updateResourceBindingDefault(resource);
-//    }
-//    auto ssboResources = mslCompiler.get_shader_resources();
-//    for (const auto& resource : ssboResources.storage_buffers) {
-//        updateResourceBindingDefault(resource);
-//    }
-
-    // Descriptor set 0 is uniforms. The add_discrete_descriptor_set call here prevents the uniforms
-    // from becoming argument buffers.
-//    mslCompiler.add_discrete_descriptor_set(0);
-
     // Map each descriptor set (argument buffer) to a [[buffer(n)]] binding.
     // For example, mapDescriptorSet(0, 21) says "map descriptor set 0 to [[buffer(21)]]"
     auto mapDescriptorSet = [&mslCompiler](uint32_t set, uint32_t buffer) {
@@ -518,10 +389,9 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
         argBufferBinding.msl_buffer = buffer;
         mslCompiler.add_msl_resource_binding(argBufferBinding);
     };
-    mapDescriptorSet(0, 21);
-    mapDescriptorSet(1, 22);
-    mapDescriptorSet(2, 23);
-    mapDescriptorSet(3, 24);
+    for (int i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        mapDescriptorSet(i, CodeGenerator::METAL_DESCRIPTOR_SET_BINDING_START + i);
+    }
 
     auto resources = mslCompiler.get_shader_resources();
 
@@ -576,8 +446,8 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                     argBufferBuilder
                             .buffer(info.binding * 2 + 0, name.c_str(), lowercasedName);
                     if (any(info.flags & DescriptorFlags::DYNAMIC_OFFSET)) {
-                        // TODO: this requires that the sets and descriptors are sorted (at least
-                        // the uniforms)
+                        // Note: this requires that the sets and descriptors are sorted (at least
+                        // the uniforms).
                         mslCompiler.add_dynamic_buffer(
                                 setIndex, info.binding * 2 + 0, dynamicOffsetsBufferIndex++);
                     }
@@ -710,7 +580,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 if (internalConfig.mslOutput) {
                     auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
                     DescriptorSets descriptors {};
-                    msl::collectDescriptors(config, descriptors);
+                    msl::collectDescriptorSets(config, descriptors);
 #if DEBUG_LOG_DESCRIPTOR_SETS == 1
                     msl::prettyPrintDescriptorSetInfoVector(descriptors);
 #endif
@@ -802,7 +672,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
     if (internalConfig.mslOutput) {
         DescriptorSets descriptors {};
-        msl::collectDescriptors(config, descriptors);
+        msl::collectDescriptorSets(config, descriptors);
 #if DEBUG_LOG_DESCRIPTOR_SETS == 1
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
 #endif
@@ -846,7 +716,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
     if (internalConfig.mslOutput) {
         DescriptorSets descriptors {};
-        msl::collectDescriptors(config, descriptors);
+        msl::collectDescriptorSets(config, descriptors);
 #if DEBUG_LOG_DESCRIPTOR_SETS == 1
         msl::prettyPrintDescriptorSetInfoVector(descriptors);
 #endif

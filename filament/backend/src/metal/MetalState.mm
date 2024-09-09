@@ -263,10 +263,9 @@ void MetalBufferBindings<N, stage>::bindBuffers(
     mDirtyBuffers.reset();
 }
 
-// TODO: don't use constant 4
-template class MetalBufferBindings<4, ShaderStage::VERTEX>;
-template class MetalBufferBindings<4, ShaderStage::FRAGMENT>;
-template class MetalBufferBindings<4, ShaderStage::COMPUTE>;
+template class MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::VERTEX>;
+template class MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::FRAGMENT>;
+template class MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::COMPUTE>;
 
 } // namespace backend
 } // namespace filament

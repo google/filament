@@ -1236,8 +1236,10 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     }
 
     // Bind descriptor sets.
-    mContext->vertexDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
-    mContext->fragmentDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+    mContext->vertexDescriptorBindings.bindBuffers(
+            mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
+    mContext->fragmentDescriptorBindings.bindBuffers(
+            mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
 
     for (auto& pc : mContext->currentPushConstants) {
         pc.clear();
@@ -1810,8 +1812,10 @@ void MetalDriver::bindDescriptorSet(
             descriptorSet->finalize(this);
             mContext->finalizedDescriptorSets.insert(descriptorSet);
         }
-        mContext->vertexDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
-        mContext->fragmentDescriptorBindings.bindBuffers(mContext->currentRenderPassEncoder, 21);
+        mContext->vertexDescriptorBindings.bindBuffers(
+                mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
+        mContext->fragmentDescriptorBindings.bindBuffers(
+                mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
     }
 }
 
@@ -1825,10 +1829,10 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
         const auto [size, data] = mContext->dynamicOffsets.getOffsets();
         [mContext->currentRenderPassEncoder setFragmentBytes:data
                                                       length:size * sizeof(uint32_t)
-                                                     atIndex:25];
+                                                     atIndex:DYNAMIC_OFFSET_BINDING];
         [mContext->currentRenderPassEncoder setVertexBytes:data
                                                     length:size * sizeof(uint32_t)
-                                                   atIndex:25];
+                                                   atIndex:DYNAMIC_OFFSET_BINDING];
         mContext->dynamicOffsets.setDirty(false);
     }
 
