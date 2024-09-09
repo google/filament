@@ -1265,7 +1265,8 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
         ShaderStage stage, utils::FixedCapacityVector<MTLTextureType> const& textureTypes) {
     auto const& bindings = getBindings();
     NSMutableArray<MTLArgumentDescriptor*>* arguments = [NSMutableArray new];
-    // important! the bindings must be sorted by binding number
+    // Important! The bindings must be sorted by binding number. This has already been done inside
+    // createDescriptorSetLayout.
     size_t textureIndex = 0;
     for (auto const& binding : bindings) {
         if (!hasShaderType(binding.stageFlags, stage)) {
