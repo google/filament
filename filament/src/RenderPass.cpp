@@ -935,15 +935,6 @@ void RenderPass::Executor::execute(FEngine& engine,
         constexpr size_t const maxCommandSizeInBytes =
                 sizeof(CustomCommand) +
                 sizeof(COMMAND_TYPE(scissor)) +
-                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindBufferRange)) +
-                sizeof(COMMAND_TYPE(bindBufferRange)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
                 sizeof(COMMAND_TYPE(bindPipeline)) +
                 sizeof(COMMAND_TYPE(setPushConstant)) +
                 sizeof(COMMAND_TYPE(bindRenderPrimitive)) +

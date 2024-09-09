@@ -140,12 +140,6 @@ public:
     void updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
 
-    // Tracks which uniform/ssbo buffers this buffer object is bound into.
-    static_assert(Program::UNIFORM_BINDING_COUNT <= 32);
-    static_assert(MAX_SSBO_COUNT <= 32);
-    utils::bitset32 boundUniformBuffers;
-    utils::bitset32 boundSsbos;
-
 private:
     MetalBuffer buffer;
 };

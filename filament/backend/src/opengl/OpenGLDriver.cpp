@@ -543,11 +543,6 @@ Handle<HwProgram> OpenGLDriver::createProgramS() noexcept {
     return initHandle<OpenGLProgram>();
 }
 
-Handle<HwSamplerGroup> OpenGLDriver::createSamplerGroupS() noexcept {
-    // TODO: goes away
-    return {};
-}
-
 Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -729,11 +724,6 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
 
     construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR(utils::slog.e)
-}
-
-void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size,
-        utils::FixedSizeString<32>) {
-    // TODO: goes away
 }
 
 UTILS_NOINLINE
@@ -1788,10 +1778,6 @@ void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     }
 }
 
-void OpenGLDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
-    // TODO: goes away
-}
-
 void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
@@ -2529,10 +2515,6 @@ void OpenGLDriver::resetBufferObject(Handle<HwBufferObject> boh) {
     }
 }
 
-void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescriptor&& data) {
-    // TODO: goes away
-}
-
 void OpenGLDriver::update3DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
@@ -3150,19 +3132,6 @@ void OpenGLDriver::setScissor(Viewport const& scissor) noexcept {
 // ------------------------------------------------------------------------------------------------
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------
-
-void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
-    // TODO: goes away
-}
-
-void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
-        Handle<HwBufferObject> ubh, uint32_t offset, uint32_t size) {
-    // TODO: goes away
-}
-
-void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
-    // TODO: goes away
-}
 
 void OpenGLDriver::insertEventMarker(char const* string) {
 #ifndef __EMSCRIPTEN__

@@ -238,9 +238,6 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
         uint32_t, depth,
         backend::TextureUsage, usage)
 
-DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
-        uint32_t, size, utils::FixedSizeString<32>, debugName)
-
 DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
         backend::VertexBufferHandle, vbh,
         backend::IndexBufferHandle, ibh,
@@ -313,7 +310,6 @@ DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
 DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, ibh)
 DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
 DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
-DECL_DRIVER_API_N(destroySamplerGroup,          backend::SamplerGroupHandle, sbh)
 DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
 DECL_DRIVER_API_N(destroyRenderTarget,          backend::RenderTargetHandle, rth)
 DECL_DRIVER_API_N(destroySwapChain,             backend::SwapChainHandle, sch)
@@ -388,10 +384,6 @@ DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
 DECL_DRIVER_API_N(resetBufferObject,
         backend::BufferObjectHandle, ibh)
 
-DECL_DRIVER_API_N(updateSamplerGroup,
-        backend::SamplerGroupHandle, ubh,
-        backend::BufferDescriptor&&, data)
-
 DECL_DRIVER_API_N(update3DImage,
         backend::TextureHandle, th,
         uint32_t, level,
@@ -457,21 +449,6 @@ DECL_DRIVER_API_N(commit,
  * Setting rendering state
  * -----------------------
  */
-
-DECL_DRIVER_API_N(bindUniformBuffer,
-        uint32_t, index,
-        backend::BufferObjectHandle, ubh)
-
-DECL_DRIVER_API_N(bindBufferRange,
-        BufferObjectBinding, bindingType,
-        uint32_t, index,
-        backend::BufferObjectHandle, ubh,
-        uint32_t, offset,
-        uint32_t, size)
-
-DECL_DRIVER_API_N(bindSamplers,
-        uint32_t, index,
-        backend::SamplerGroupHandle, sbh)
 
 DECL_DRIVER_API_N(setPushConstant,
         backend::ShaderStage, stage,

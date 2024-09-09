@@ -99,9 +99,6 @@ void NoopDriver::destroyProgram(Handle<HwProgram> ph) {
 void NoopDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
-void NoopDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
-}
-
 void NoopDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
@@ -279,11 +276,6 @@ void NoopDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 
 void NoopDriver::generateMipmaps(Handle<HwTexture> th) { }
 
-void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        BufferDescriptor&& data) {
-    scheduleDestroy(std::move(data));
-}
-
 void NoopDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
@@ -304,16 +296,6 @@ void NoopDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> re
 }
 
 void NoopDriver::commit(Handle<HwSwapChain> sch) {
-}
-
-void NoopDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
-}
-
-void NoopDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
-        Handle<HwBufferObject> ubh, uint32_t offset, uint32_t size) {
-}
-
-void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
 void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,

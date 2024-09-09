@@ -466,11 +466,6 @@ void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count,
-        utils::FixedSizeString<32> debugName) {
-    PANIC_PRECONDITION("Sampler Group is deprecated");
-}
-
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         PrimitiveType pt) {
@@ -807,10 +802,6 @@ Handle<HwTexture> VulkanDriver::importTextureS() noexcept {
     return mResourceAllocator.allocHandle<VulkanTexture>();
 }
 
-Handle<HwSamplerGroup> VulkanDriver::createSamplerGroupS() noexcept {
-    return mResourceAllocator.allocHandle<VulkanSamplerGroup>();
-}
-
 Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveS() noexcept {
     return mResourceAllocator.allocHandle<VulkanRenderPrimitive>();
 }
@@ -855,23 +846,6 @@ Handle<HwDescriptorSetLayout> VulkanDriver::createDescriptorSetLayoutS() noexcep
 
 Handle<HwDescriptorSet> VulkanDriver::createDescriptorSetS() noexcept {
     return mResourceAllocator.allocHandle<VulkanDescriptorSet>();
-}
-
-void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
-    if (!sbh) {
-        return;
-    }
-    // Unlike most of the other "Hw" handles, the sampler buffer is an abstract concept and does
-    // not map to any Vulkan objects. To handle destruction, the only thing we need to do is
-    // ensure that the next draw call doesn't try to access a zombie sampler buffer. Therefore,
-    // simply replace all weak references with null.
-    auto* hwsb = mResourceAllocator.handle_cast<VulkanSamplerGroup*>(sbh);
-    for (auto& binding : mSamplerBindings) {
-        if (binding == hwsb) {
-            binding = nullptr;
-        }
-    }
-    mResourceManager.release(hwsb);
 }
 
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
@@ -1272,11 +1246,6 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
     } while ((srcw > 1 || srch > 1) && level < t->levels);
 }
 
-void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        BufferDescriptor&& data) {
-    PANIC_PRECONDITION("Sampler Group is deprecated");
-}
-
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
@@ -1604,18 +1573,6 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     // Present the backbuffer after the most recent command buffer submission has finished.
     swapChain->present();
     FVK_SYSTRACE_END();
-}
-
-void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
-}
-
-void VulkanDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
-        Handle<HwBufferObject> boh, uint32_t offset, uint32_t size) {
-}
-
-void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
-    auto* hwsb = mResourceAllocator.handle_cast<VulkanSamplerGroup*>(sbh);
-    mSamplerBindings[index] = hwsb;
 }
 
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
