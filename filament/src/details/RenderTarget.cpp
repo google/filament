@@ -107,8 +107,8 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
         }
     }
 
-    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight)
-            << "All attachments dimensions must match";
+    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight
+            && minDepth == maxDepth) << "All attachments dimensions must match";
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
