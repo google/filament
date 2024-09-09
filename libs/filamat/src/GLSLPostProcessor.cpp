@@ -671,15 +671,13 @@ void GLSLPostProcessor::fixupClipDistance(
 // - triggers a crash on some Adreno drivers (b/291140208, b/289401984, b/289393290)
 // However Metal requires this pass in order to correctly generate half-precision MSL
 //
-// Note: CreateSimplificationPass() used to creates a lot of problems:
+// CreateSimplificationPass() creates a lot of problems:
 // - Adreno GPU show artifacts after running simplification passes (Vulkan)
 // - spirv-cross fails generating working glsl
 //      (https://github.com/KhronosGroup/SPIRV-Cross/issues/2162)
-//
-// However this problem was addressed in spirv-cross here:
-//      https://github.com/KhronosGroup/SPIRV-Cross/pull/2163
-//
-// The simplification passes below are necessary when targeting Metal, otherwise the
+// - generally it makes the code more complicated, e.g.: replacing for loops with
+//   while-if-break, unclear if it helps for anything.
+// However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
 
 
@@ -712,11 +710,11 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateRedundancyEliminationPass());
     RegisterPass(CreateCombineAccessChainsPass());
-    RegisterPass(CreateSimplificationPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateVectorDCEPass());
     RegisterPass(CreateDeadInsertElimPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateSimplificationPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateIfConversionPass());
     RegisterPass(CreateCopyPropagateArraysPass());
     RegisterPass(CreateReduceLoadSizePass());
@@ -725,7 +723,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateRedundancyEliminationPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
-    RegisterPass(CreateSimplificationPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
