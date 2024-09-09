@@ -32,7 +32,18 @@ namespace filament {
  * outrun the GPU.
  */
 class FrameSkipper {
-    static constexpr size_t MAX_FRAME_LATENCY = 3;
+    /*
+     * The maximum frame latency acceptable on ANDROID is 2 because higher latencies will be
+     * throttled anyway is BufferQueueProducer::dequeueBuffer(), because ANDROID is generally
+     * triple-buffered no more; that case is actually pretty bad because the GL thread can block
+     * anywhere (usually inside the first draw command that touches the swapchain).
+     *
+     * A frame latency of 1 has the benefit of reducing render latency,
+     * but the drawback of preventing CPU / GPU overlap.
+     *
+     * Generally a frame latency of 2 is the best compromise.
+     */
+    static constexpr size_t MAX_FRAME_LATENCY = 2;
 public:
     /*
      * The latency parameter defines how many unfinished frames we want to accept before we start
