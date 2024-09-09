@@ -202,12 +202,10 @@ public:
     MetalProgram(MetalContext& context, Program&& program) noexcept;
 
     const MetalShaderCompiler::MetalFunctionBundle& getFunctions();
-//    const Program::SamplerGroupInfo& getSamplerGroupInfo() { return samplerGroupInfo; }
 
 private:
     void initialize();
 
-//    Program::SamplerGroupInfo samplerGroupInfo;
     MetalContext& mContext;
     MetalShaderCompiler::MetalFunctionBundle mFunctionBundle;
     MetalShaderCompiler::program_token_t mToken;
@@ -311,85 +309,6 @@ private:
     id<MTLTexture> swizzledTextureView = nil;
 
     bool terminated = false;
-};
-
-class MetalSamplerGroup : public HwSamplerGroup {
-public:
-    explicit MetalSamplerGroup(size_t size, utils::FixedSizeString<32> name) noexcept
-        : size(size),
-          debugName(name),
-          textureHandles(size, Handle<HwTexture>()),
-          textures(size, nil),
-          samplers(size, nil) {}
-
-    inline void setTextureHandle(size_t index, Handle<HwTexture> th) {
-        assert_invariant(!finalized);
-        textureHandles[index] = th;
-    }
-
-    // This method is only used for debugging, to ensure all texture handles are alive.
-    const auto& getTextureHandles() const {
-        return textureHandles;
-    }
-
-    // Encode a MTLTexture into this SamplerGroup at the given index.
-    inline void setFinalizedTexture(size_t index, id<MTLTexture> t) {
-        assert_invariant(!finalized);
-        textures[index] = t;
-    }
-
-    // Encode a MTLSamplerState into this SamplerGroup at the given index.
-    inline void setFinalizedSampler(size_t index, id<MTLSamplerState> s) {
-        assert_invariant(!finalized);
-        samplers[index] = s;
-    }
-
-    // A SamplerGroup is "finalized" when all of its textures have been set and is ready for use in
-    // a draw call.
-    // Once a SamplerGroup is finalized, it must be reset or mutated to be written into again.
-    void finalize();
-    bool isFinalized() const noexcept { return finalized; }
-
-    // Both of these methods "unfinalize" a SamplerGroup, allowing it to be updated via calls to
-    // setFinalizedTexture or setFinalizedSampler. The difference is that when reset is called, all
-    // the samplers/textures must be rebound. The MTLArgumentEncoder must be specified, in case
-    // the texture types have changed.
-    // Mutate re-encodes the current set of samplers/textures into the new argument
-    // buffer.
-    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e, id<MTLDevice> device);
-    void mutate(id<MTLCommandBuffer> cmdBuffer);
-
-    id<MTLBuffer> getArgumentBuffer() const {
-        assert_invariant(finalized);
-        return argBuffer->getCurrentAllocation().first;
-    }
-
-    NSUInteger getArgumentBufferOffset() const {
-        return argBuffer->getCurrentAllocation().second;
-    }
-
-    inline std::pair<Handle<HwTexture>, id<MTLTexture>> getFinalizedTexture(size_t index) {
-        return {textureHandles[index], textures[index]};
-    }
-
-    // Calls the Metal useResource:usage:stages: method for all the textures in this SamplerGroup.
-    void useResources(id<MTLRenderCommandEncoder> renderPassEncoder);
-
-    size_t size;
-    utils::FixedSizeString<32> debugName;
-
-public:
-
-    // These vectors are kept in sync with one another.
-    utils::FixedCapacityVector<Handle<HwTexture>> textureHandles;
-    utils::FixedCapacityVector<id<MTLTexture>> textures;
-    utils::FixedCapacityVector<id<MTLSamplerState>> samplers;
-
-    id<MTLArgumentEncoder> encoder;
-
-    std::unique_ptr<MetalRingBuffer> argBuffer = nullptr;
-
-    bool finalized = false;
 };
 
 class MetalRenderTarget : public HwRenderTarget {

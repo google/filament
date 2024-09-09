@@ -470,11 +470,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
 
 MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
     : HwProgram(program.getName()), mContext(context) {
-
-    // Save this program's SamplerGroupInfo, it's used during draw calls to bind sampler groups to
-    // the appropriate stage(s).
-//    samplerGroupInfo = program.getSamplerGroupInfo();
-
     mToken = context.shaderCompiler->createProgram(program.getName(), std::move(program));
     assert_invariant(mToken);
 }
@@ -894,83 +889,6 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     args.destination.region = region;
     args.destination.texture = destinationTexture;
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
-}
-
-void MetalSamplerGroup::finalize() {
-    assert_invariant(encoder);
-    // TODO: we should be able to encode textures and samplers inside setFinalizedTexture and
-    // setFinalizedSampler as they become available, but Metal doesn't seem to like this; the arg
-    // buffer gets encoded incorrectly. This warrants more investigation.
-
-    auto [buffer, offset] = argBuffer->getCurrentAllocation();
-    [encoder setArgumentBuffer:buffer offset:offset];
-
-    // Encode all textures and samplers.
-    for (size_t s = 0; s < size; s++) {
-        [encoder setTexture:textures[s] atIndex:(s * 2 + 0)];
-        [encoder setSamplerState:samplers[s] atIndex:(s * 2 + 1)];
-    }
-
-    finalized = true;
-}
-
-void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e,
-        id<MTLDevice> device) {
-    encoder = e;
-
-    // The number of slots in the ring buffer we use to manage argument buffer allocations.
-    // This number was chosen to avoid running out of slots and having to allocate a "fallback"
-    // buffer when SamplerGroups are updated multiple times a frame. This value can reduced after
-    // auditing Filament's calls to updateSamplerGroup, which should be as few times as possible.
-    // For example, the bloom downsample pass should be refactored to maintain two separate
-    // MaterialInstances instead of "ping ponging" between two texture bindings, which causes a
-    // single SamplerGroup to be updated many times a frame.
-    static constexpr auto METAL_ARGUMENT_BUFFER_SLOTS = 32;
-
-    MTLSizeAndAlign argBufferLayout;
-    argBufferLayout.size = encoder.encodedLength;
-    argBufferLayout.align = encoder.alignment;
-    // Chances are, even though the MTLArgumentEncoder might change, the required size and alignment
-    // probably won't. So we can re-use the previous ring buffer.
-    if (UTILS_UNLIKELY(!argBuffer || !argBuffer->canAccomodateLayout(argBufferLayout))) {
-        argBuffer = std::make_unique<MetalRingBuffer>(device, MTLResourceStorageModeShared,
-                argBufferLayout, METAL_ARGUMENT_BUFFER_SLOTS);
-    } else {
-        argBuffer->createNewAllocation(cmdBuffer);
-    }
-
-    // Clear all textures and samplers.
-    assert_invariant(textureHandles.size() == textures.size());
-    assert_invariant(textures.size() == samplers.size());
-    for (size_t s = 0; s < textureHandles.size(); s++) {
-        textureHandles[s] = {};
-        textures[s] = nil;
-        samplers[s] = nil;
-    }
-
-    finalized = false;
-}
-
-void MetalSamplerGroup::mutate(id<MTLCommandBuffer> cmdBuffer) {
-    assert_invariant(finalized);    // only makes sense to mutate if this sampler group is finalized
-    assert_invariant(argBuffer);
-    argBuffer->createNewAllocation(cmdBuffer);
-    finalized = false;
-}
-
-void MetalSamplerGroup::useResources(id<MTLRenderCommandEncoder> renderPassEncoder) {
-    assert_invariant(finalized);
-    if (@available(iOS 13, *)) {
-        // TODO: pass only the appropriate stages to useResources.
-        [renderPassEncoder useResources:textures.data()
-                                  count:textures.size()
-                                  usage:MTLResourceUsageRead | MTLResourceUsageSample
-                                 stages:MTLRenderStageFragment | MTLRenderStageVertex];
-    } else {
-        [renderPassEncoder useResources:textures.data()
-                                  count:textures.size()
-                                  usage:MTLResourceUsageRead | MTLResourceUsageSample];
-    }
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,

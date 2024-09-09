@@ -48,7 +48,6 @@ class MetalBlitter;
 class MetalBufferPool;
 class MetalBumpAllocator;
 class MetalRenderTarget;
-class MetalSamplerGroup;
 class MetalSwapChain;
 class MetalTexture;
 class MetalTimerQueryInterface;
@@ -179,10 +178,7 @@ struct MetalContext {
 
     std::array<MetalPushConstantBuffer, Program::SHADER_TYPE_COUNT> currentPushConstants;
 
-    MetalSamplerGroup* samplerBindings[Program::SAMPLER_BINDING_COUNT] = {};
-
-    // Keeps track of sampler groups we've finalized for the current render pass.
-    tsl::robin_set<MetalSamplerGroup*> finalizedSamplerGroups;
+    // Keeps track of descriptor sets we've finalized for the current render pass.
     tsl::robin_set<MetalDescriptorSet*> finalizedDescriptorSets;
     std::array<MetalDescriptorSet*, MAX_DESCRIPTOR_SET_COUNT> currentDescriptorSets = {};
     MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::VERTEX> vertexDescriptorBindings;
@@ -190,8 +186,7 @@ struct MetalContext {
     MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::COMPUTE> computeDescriptorBindings;
     MetalDynamicOffsets dynamicOffsets;
 
-    // Keeps track of all alive sampler groups, textures.
-    tsl::robin_set<MetalSamplerGroup*> samplerGroups;
+    // Keeps track of all alive textures.
     tsl::robin_set<MetalTexture*> textures;
 
     // This circular buffer implements delayed destruction for Metal texture handles. It keeps a

@@ -151,7 +151,6 @@ private:
     inline void setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
             Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh);
 
-    void finalizeSamplerGroup(MetalSamplerGroup* sg);
     void enumerateBoundBuffers(BufferObjectBinding bindingType,
             const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f);
 
