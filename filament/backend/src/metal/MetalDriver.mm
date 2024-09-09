@@ -599,16 +599,20 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
 
-const char* prettyDescriptorType(DescriptorType type) {
+const char* toString(DescriptorType type) {
     switch (type) {
-        case DescriptorType::UNIFORM_BUFFER: return "UNIFORM_BUFFER";
-        case DescriptorType::SHADER_STORAGE_BUFFER: return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::SAMPLER: return "SAMPLER";
-        case DescriptorType::INPUT_ATTACHMENT: return "INPUT_ATTACHMENT";
+        case DescriptorType::UNIFORM_BUFFER:
+            return "UNIFORM_BUFFER";
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+            return "SHADER_STORAGE_BUFFER";
+        case DescriptorType::SAMPLER:
+            return "SAMPLER";
+        case DescriptorType::INPUT_ATTACHMENT:
+            return "INPUT_ATTACHMENT";
     }
 }
 
-const char* prettyShaderStageFlags(ShaderStageFlags flags) {
+const char* toString(ShaderStageFlags flags) {
     std::vector<const char*> stages;
     if (any(flags & ShaderStageFlags::VERTEX)) {
         stages.push_back("VERTEX");
@@ -633,7 +637,7 @@ const char* prettyShaderStageFlags(ShaderStageFlags flags) {
     return buffer;
 }
 
-const char* prettyDescriptorFlags(DescriptorFlags flags) {
+const char* toString(DescriptorFlags flags) {
     if (flags == DescriptorFlags::DYNAMIC_OFFSET) {
         return "DYNAMIC_OFFSET";
     }
@@ -645,9 +649,8 @@ void MetalDriver::createDescriptorSetLayoutR(
     DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
     for (size_t i = 0; i < info.bindings.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s}",
-                info.bindings[i].binding, prettyDescriptorType(info.bindings[i].type),
-                info.bindings[i].count, prettyShaderStageFlags(info.bindings[i].stageFlags),
-                prettyDescriptorFlags(info.bindings[i].flags));
+                info.bindings[i].binding, toString(info.bindings[i].type), info.bindings[i].count,
+                toString(info.bindings[i].stageFlags), toString(info.bindings[i].flags));
         DEBUG_LOG(",\n");
     }
     DEBUG_LOG("})\n");
