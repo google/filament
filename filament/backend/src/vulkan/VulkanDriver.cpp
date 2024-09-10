@@ -944,6 +944,10 @@ bool VulkanDriver::isProtectedTexturesSupported() {
     return false;
 }
 
+bool VulkanDriver::isDepthClampSupported() {
+    return mContext.isDepthClampSupported();
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU: {
@@ -1602,13 +1606,13 @@ void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
             value);
 }
 
-void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
+void VulkanDriver::insertEventMarker(char const* string) {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    mCommands.insertEventMarker(string, len);
+    mCommands.insertEventMarker(string, strlen(string));
 #endif
 }
 
-void VulkanDriver::pushGroupMarker(char const* string, uint32_t) {
+void VulkanDriver::pushGroupMarker(char const* string) {
     // Turns out all the markers are 0-terminated, so we can just pass it without len.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.pushGroupMarker(string);
@@ -1816,6 +1820,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
         .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
         .rasterizationSamples = rt->getSamples(),
+        .depthClamp = rasterState.depthClamp,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,
         .alphaBlendOp =  rasterState.blendEquationAlpha,

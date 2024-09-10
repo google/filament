@@ -651,14 +651,19 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     const bool isProtectedContent =  mSwapChain && mSwapChain->isProtected();
 
+    // Conditions to meet to be able to use the sub-pass rendering path. This is regardless of
+    // whether the backend supports subpasses (or if they are disabled in the debugRegistry).
+    const bool isSubpassPossible =
+             msaaSampleCount <= 1 &&
+             hasColorGrading &&
+             !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled;
+
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
             .asSubpass =
-                    msaaSampleCount <= 1 &&
+                    isSubpassPossible &&
                     driver.isFrameBufferFetchSupported() &&
-                    hasColorGrading &&
-                    !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled &&
                     !engine.debug.renderer.disable_subpasses,
             .customResolve =
                     msaaSampleCount > 1 &&
@@ -702,8 +707,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // this case, we would need an extra blit to "resolve" the buffer padding (because there are no
     // other pass that can do it as a side effect). In this case, it is better to skip the padding,
     // which won't be helping much.
-    const bool noBufferPadding
-            = (!hasFXAA && !scaled) || engine.debug.renderer.disable_buffer_padding;
+    const bool noBufferPadding = (isSubpassPossible &&
+            !hasFXAA && !scaled) || engine.debug.renderer.disable_buffer_padding;
 
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
     float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
@@ -818,14 +823,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         blackboard["shadows"] = shadows;
     }
 
-    // When we don't have a custom RenderTarget, currentRenderTarget below is nullptr and is
+    // When we don't have a custom RenderTarget, customRenderTarget below is nullptr and is
     // recorded in the list of targets already rendered into -- this ensures that
     // initializeClearFlags() is called only once for the default RenderTarget.
     auto& previousRenderTargets = mPreviousRenderTargets;
-    FRenderTarget* const currentRenderTarget = downcast(view.getRenderTarget());
+    FRenderTarget* const customRenderTarget = downcast(view.getRenderTarget());
     if (UTILS_LIKELY(
-            previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
-        previousRenderTargets.insert(currentRenderTarget);
+            previousRenderTargets.find(customRenderTarget) == previousRenderTargets.end())) {
+        previousRenderTargets.insert(customRenderTarget);
         initializeClearFlags();
     }
 
@@ -842,10 +847,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
     TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
 
-    if (currentRenderTarget) {
+    if (customRenderTarget) {
         // For custom RenderTarget, we look at each attachment flag and if they have their
         // SAMPLEABLE usage bit set, we assume they must not be discarded after the render pass.
-        keepOverrideEndFlags |= currentRenderTarget->getSampleableAttachmentsMask();
+        keepOverrideEndFlags |= customRenderTarget->getSampleableAttachmentsMask();
     }
 
     // Renderer's ClearOptions apply once at the beginning of the frame (not for each View),
@@ -1014,6 +1019,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {
+            fg.addTrivialSideEffectPass("SSR Cleanup", [&view](DriverApi& driver) {
+                view.getPerViewUniforms().prepareStructure({});
+                view.commitUniforms(driver);
+            });
             // generate the mipchain
             PostProcessManager::generateMipmapSSR(ppm, fg,
                     reflections, ssrConfig.reflection, false, ssrConfig);
@@ -1129,6 +1138,12 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         }
     }
 
+    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
+        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
+        view.cleanupRenderPasses();
+        view.commitUniforms(driver);
+    });
+
     if (colorGradingConfig.customResolve) {
         assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
         // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
@@ -1167,16 +1182,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // this is the output of the color pass / input to post processing,
     // this is only used later for comparing it with the output after post-processing
     FrameGraphId<FrameGraphTexture> const postProcessInput = colorGradingConfig.asSubpass ?
-                                                           colorPassOutput.tonemappedColor :
-                                                           colorPassOutput.linearColor;
+                                                             colorPassOutput.tonemappedColor :
+                                                             colorPassOutput.linearColor;
 
     // input can change below
     FrameGraphId<FrameGraphTexture> input = postProcessInput;
-    fg.addTrivialSideEffectPass("Finish Color Passes", [&view](DriverApi& driver) {
-        // Unbind SSAO sampler, b/c the FrameGraph will delete the texture at the end of the pass.
-        view.cleanupRenderPasses();
-        view.commitUniforms(driver);
-    });
 
     // Resolve depth -- which might be needed because of TAA or DoF. This pass will be culled
     // if the depth is not used below or if the depth is not MS (e.g. it could have been

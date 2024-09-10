@@ -202,6 +202,10 @@ bool NoopDriver::isProtectedTexturesSupported() {
     return true;
 }
 
+bool NoopDriver::isDepthClampSupported() {
+    return false;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }
@@ -316,10 +320,10 @@ void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
 }
 
-void NoopDriver::insertEventMarker(char const* string, uint32_t len) {
+void NoopDriver::insertEventMarker(char const* string) {
 }
 
-void NoopDriver::pushGroupMarker(char const* string,  uint32_t len) {
+void NoopDriver::pushGroupMarker(char const* string) {
 }
 
 void NoopDriver::popGroupMarker(int) {

@@ -309,6 +309,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
@@ -443,12 +444,10 @@ DECL_DRIVER_API_N(setPushConstant,
         backend::PushConstantVariant, value)
 
 DECL_DRIVER_API_N(insertEventMarker,
-        const char*, string,
-        uint32_t, len = 0)
+        const char*, string)
 
 DECL_DRIVER_API_N(pushGroupMarker,
-        const char*, string,
-        uint32_t, len = 0)
+        const char*, string)
 
 DECL_DRIVER_API_0(popGroupMarker)
 

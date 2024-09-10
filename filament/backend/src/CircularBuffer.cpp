@@ -24,7 +24,7 @@
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
-#if !defined(WIN32) && !defined(__EMSCRIPTEN__) && !defined(IOS)
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #    include <sys/mman.h>
 #    include <unistd.h>
 #    define HAS_MMAP 1

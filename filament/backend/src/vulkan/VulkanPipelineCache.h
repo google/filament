@@ -90,7 +90,8 @@ public:
         VkBlendFactor         srcAlphaBlendFactor : 5;
         VkBlendFactor         dstAlphaBlendFactor : 5;
         VkColorComponentFlags colorWriteMask : 4;
-        uint8_t               rasterizationSamples;    // offset = 4 bytes
+        uint8_t               rasterizationSamples : 4;// offset = 4 bytes
+        uint8_t               depthClamp : 4;
         uint8_t               colorTargetCount;        // offset = 5 bytes
         BlendEquation         colorBlendOp : 4;        // offset = 6 bytes
         BlendEquation         alphaBlendOp : 4;

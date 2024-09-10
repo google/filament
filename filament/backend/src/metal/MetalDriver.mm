@@ -857,6 +857,10 @@ bool MetalDriver::isProtectedTexturesSupported() {
     return false;
 }
 
+bool MetalDriver::isDepthClampSupported() {
+    return true;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -1298,11 +1302,11 @@ void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
     pushConstants.setPushConstant(value, index);
 }
 
-void MetalDriver::insertEventMarker(const char* string, uint32_t len) {
+void MetalDriver::insertEventMarker(const char* string) {
 
 }
 
-void MetalDriver::pushGroupMarker(const char* string, uint32_t len) {
+void MetalDriver::pushGroupMarker(const char* string) {
     mContext->groupMarkers.push(string);
 }
 
@@ -1772,6 +1776,13 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     mContext->windingState.updateState(winding);
     if (mContext->windingState.stateChanged()) {
         [mContext->currentRenderPassEncoder setFrontFacingWinding:winding];
+    }
+
+    // depth clip mode
+    MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
+    mContext->depthClampState.updateState(depthClipMode);
+    if (mContext->depthClampState.stateChanged()) {
+        [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
     }
 
     // Set the depth-stencil state, if a state change is needed.
