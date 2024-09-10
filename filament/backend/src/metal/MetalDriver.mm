@@ -646,6 +646,8 @@ const char* toString(DescriptorFlags flags) {
 
 void MetalDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info) {
+    std::sort(info.bindings.begin(), info.bindings.end(),
+            [](const auto& a, const auto& b) { return a.binding < b.binding; });
     DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
     for (size_t i = 0; i < info.bindings.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s}",
@@ -654,8 +656,6 @@ void MetalDriver::createDescriptorSetLayoutR(
         DEBUG_LOG(",\n");
     }
     DEBUG_LOG("})\n");
-    std::sort(info.bindings.begin(), info.bindings.end(),
-            [](const auto& a, const auto& b) { return a.binding < b.binding; });
     construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
 }
 
@@ -788,6 +788,7 @@ void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
+    DEBUG_LOG("destroyTexture(th = %d)\n", th.getId());
     if (!th) {
         return;
     }
@@ -1785,16 +1786,18 @@ void MetalDriver::bindDescriptorSet(
     auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
     utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
+#if FILAMENT_METAL_DEBUG_LOG == 1
     DEBUG_LOG("bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
     for (size_t i = 0; i < dynamicBindings; i++) {
-        DEBUG_LOG("%d", offsets[i]);
+        printf("%d", offsets[i]);
         if (i < dynamicBindings - 1) {
-            DEBUG_LOG(", ");
+            printf(", ");
         }
 
         offsetsVector[i] = offsets[i];
     }
     DEBUG_LOG("])\n");
+#endif
 
     // Bind the descriptor set.
     mContext->currentDescriptorSets[set] = descriptorSet;
