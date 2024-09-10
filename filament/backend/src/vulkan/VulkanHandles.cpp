@@ -136,9 +136,9 @@ inline VkDescriptorSetLayoutCreateInfo getLayoutCreateInfo(DescriptorSetLayout c
     return dlinfo;
 }
 
-using Bitmask = VulkanDescriptorSetLayout::Bitmask;
-Bitmask fromBackendLayout(DescriptorSetLayout const& layout) {
-    Bitmask mask;
+using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
+BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
+    BitmaskGroup mask;
     for (auto const& binding: layout.bindings) {
         switch (binding.type) {
             case DescriptorType::UNIFORM_BUFFER: {

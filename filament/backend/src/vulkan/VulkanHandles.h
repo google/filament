@@ -49,20 +49,18 @@ struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout 
 
     // The bitmask representation of a set layout.
     struct Bitmask {
-        UniformBufferBitmask ubo = 0;         // 4 bytes
-        UniformBufferBitmask dynamicUbo = 0;  // 4 bytes
+        // TODO: better utiltize the space below and use bitset instead.
+        UniformBufferBitmask ubo = 0;         // 8 bytes
+        UniformBufferBitmask dynamicUbo = 0;  // 8 bytes
         SamplerBitmask sampler = 0;           // 8 bytes
-        InputAttachmentBitmask inputAttachment = 0; // 1 bytes
-
-        // Because we're using this struct as hash key, must make it's 8-bytes aligned, with no
-        // unaccounted bytes.
-        uint8_t padding[7] = {}; // 7 bytes
+        InputAttachmentBitmask inputAttachment = 0; // 8 bytes
 
         bool operator==(Bitmask const& right) const {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
                    inputAttachment == right.inputAttachment;
         }
     };
+    static_assert(sizeof(Bitmask) == 32);
 
     // This is a convenience struct to quickly check layout compatibility in terms of descriptor set
     // pools.
