@@ -34,7 +34,7 @@ namespace filament {
 class FrameSkipper {
     /*
      * The maximum frame latency acceptable on ANDROID is 2 because higher latencies will be
-     * throttled anyway is BufferQueueProducer::dequeueBuffer(), because ANDROID is generally
+     * throttled anyway in BufferQueueProducer::dequeueBuffer(), because ANDROID is generally
      * triple-buffered no more; that case is actually pretty bad because the GL thread can block
      * anywhere (usually inside the first draw command that touches the swapchain).
      *
