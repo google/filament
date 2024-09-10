@@ -17,6 +17,7 @@
 #ifndef TNT_UTILS_MEMALIGN_H
 #define TNT_UTILS_MEMALIGN_H
 
+#include <cstddef>
 #include <type_traits>
 
 #include <assert.h>
