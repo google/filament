@@ -22,6 +22,7 @@ set(MATERIAL_SRCS
         materials/bakedTexture.mat
         materials/pointSprites.mat
         materials/aoPreview.mat
+        materials/arrayTexture.mat
         materials/groundShadow.mat
         materials/heightfield.mat
         materials/image.mat
@@ -252,6 +253,7 @@ if (NOT ANDROID)
     add_demo(helloskinning)
     add_demo(helloskinningbuffer)
     add_demo(helloskinningbuffer_morebones)
+    add_demo(hellostereo)
     add_demo(image_viewer)
     add_demo(lightbulb)
     add_demo(material_sandbox)
@@ -274,6 +276,7 @@ if (NOT ANDROID)
     target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
+    target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
     target_link_libraries(image_viewer PRIVATE viewer imageio)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
