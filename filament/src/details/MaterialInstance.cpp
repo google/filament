@@ -190,6 +190,10 @@ void FMaterialInstance::commit(DriverApi& driver) const {
     if (!mTextureParameters.empty()) {
         for (auto const& [binding, p]: mTextureParameters) {
             assert_invariant(p.texture);
+            // TODO: figure out a way to do this more efficiently (isValid() is a hashmap lookup)
+            FEngine& engine = mMaterial->getEngine();
+            FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
+                    << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
             Handle<HwTexture> handle = p.texture->getHwHandleForSampling();
             assert_invariant(handle);
             mDescriptorSet.setSampler(binding, handle, p.params);
