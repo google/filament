@@ -185,6 +185,7 @@ public:
     // These constants must match the equivalent in MetalState.h.
     // These values represent the starting index for uniform, ssbo, and sampler group [[buffer(n)]]
     // bindings. See the chart at the top of MetalState.h.
+    static constexpr uint32_t METAL_PUSH_CONSTANT_BUFFER_INDEX = 20u;
     static constexpr uint32_t METAL_DESCRIPTOR_SET_BINDING_START = 21u;
     static constexpr uint32_t METAL_DYNAMIC_OFFSET_BINDING = 25u;
 

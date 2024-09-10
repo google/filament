@@ -67,7 +67,9 @@ static constexpr uint32_t ZERO_VERTEX_BUFFER_BINDING = 0u;
 
 static constexpr uint32_t USER_VERTEX_BUFFER_BINDING_START = 1u;
 
+
 // These constants must match the equivalent in CodeGenerator.h.
+static constexpr uint32_t PUSH_CONSTANT_BUFFER_INDEX = 20u;
 static constexpr uint32_t DESCRIPTOR_SET_BINDING_START = 21u;
 static constexpr uint32_t DYNAMIC_OFFSET_BINDING = 25u;
 

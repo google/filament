@@ -476,7 +476,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
     pushConstantBinding.desc_set = kPushConstDescSet;
     pushConstantBinding.binding = kPushConstBinding;
     pushConstantBinding.count = 1;
-    pushConstantBinding.msl_buffer = 20;
+    pushConstantBinding.msl_buffer = CodeGenerator::METAL_PUSH_CONSTANT_BUFFER_INDEX;
     mslCompiler.add_msl_resource_binding(pushConstantBinding);
 
     *outMsl = mslCompiler.compile();

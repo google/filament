@@ -480,8 +480,9 @@ private:
 
     DescriptorSetLayout mLayout;
     size_t mDynamicOffsetCount = 0;
-    std::array<id<MTLArgumentEncoder>, 3> mCachedArgumentEncoder = { nil };
-    std::array<utils::FixedCapacityVector<MTLTextureType>, 3> mCachedTextureTypes;
+    std::array<id<MTLArgumentEncoder>, Program::SHADER_TYPE_COUNT> mCachedArgumentEncoder = { nil };
+    std::array<utils::FixedCapacityVector<MTLTextureType>, Program::SHADER_TYPE_COUNT>
+            mCachedTextureTypes;
 };
 
 struct MetalDescriptorSet : public HwDescriptorSet {
@@ -510,7 +511,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     std::vector<std::shared_ptr<MetalExternalImage>> externalImages;
 
-    std::array<id<MTLBuffer>, 3> cachedBuffer = { nil };
+    std::array<id<MTLBuffer>, Program::SHADER_TYPE_COUNT> cachedBuffer = { nil };
 };
 
 } // namespace backend

@@ -1249,8 +1249,8 @@ MetalDescriptorSetLayout::MetalDescriptorSetLayout(DescriptorSetLayout&& l) noex
 
 id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoder(id<MTLDevice> device, ShaderStage stage,
         utils::FixedCapacityVector<MTLTextureType> const& textureTypes) {
-    auto const index = static_cast<int>(stage);
-    assert_invariant(index < 3);
+    auto const index = static_cast<size_t>(stage);
+    assert_invariant(index < mCachedArgumentEncoder.size());
     if (mCachedArgumentEncoder[index] &&
             std::equal(
                     textureTypes.begin(), textureTypes.end(), mCachedTextureTypes[index].begin())) {
@@ -1302,7 +1302,7 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                 break;
             }
             case DescriptorType::INPUT_ATTACHMENT:
-                // TODO: what to do here?
+                // TODO: support INPUT_ATTACHMENT
                 assert_invariant(false);
                 break;
         }
@@ -1340,8 +1340,8 @@ void MetalDescriptorSet::finalize(MetalDriver* driver) {
 }
 
 id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, ShaderStage stage) {
-    auto const index = static_cast<int>(stage);
-    assert_invariant(index < 3);
+    auto const index = static_cast<size_t>(stage);
+    assert_invariant(index < cachedBuffer.size());
     auto& buffer = cachedBuffer[index];
 
     if (buffer) {
