@@ -29,13 +29,27 @@
 #include <private/backend/SamplerGroup.h>
 #include <backend/Program.h>
 
+#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
 
 namespace filament::backend {
 
-using namespace descset;
+namespace {
+// Counts the total number of descriptors for both vertex and fragment stages.
+template<typename Bitmask>
+inline uint8_t collapsedCount(Bitmask const& mask) {
+    static_assert(sizeof(mask) <= 64);
+    constexpr uint64_t VERTEX_MASK = (1ULL << getVertexStageShift<Bitmask>()) - 1ULL;
+    constexpr uint64_t FRAGMENT_MASK = (1ULL << getFragmentStageShift<Bitmask>()) - 1ULL;
+    uint64_t val = mask.getValue();
+    val = ((val | VERTEX_MASK) >> getVertexStageShift<Bitmask>()) |
+        ((val | FRAGMENT_MASK) >> getFragmentStageShift<Bitmask>());
+    return (uint8_t) Bitmask(val).count();
+}
+
+} // anonymous namespace
 
 class VulkanTimestamps;
 struct VulkanBufferObject;
@@ -50,10 +64,10 @@ struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout 
     // The bitmask representation of a set layout.
     struct Bitmask {
         // TODO: better utiltize the space below and use bitset instead.
-        UniformBufferBitmask ubo = 0;         // 8 bytes
-        UniformBufferBitmask dynamicUbo = 0;  // 8 bytes
-        SamplerBitmask sampler = 0;           // 8 bytes
-        InputAttachmentBitmask inputAttachment = 0; // 8 bytes
+        UniformBufferBitmask ubo;         // 8 bytes
+        UniformBufferBitmask dynamicUbo;  // 8 bytes
+        SamplerBitmask sampler;           // 8 bytes
+        InputAttachmentBitmask inputAttachment; // 8 bytes
 
         bool operator==(Bitmask const& right) const {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
@@ -81,10 +95,10 @@ struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout 
 
         static inline Count fromLayoutBitmask(Bitmask const& mask) {
             return {
-                    .ubo = countBits(collapseStages(mask.ubo)),
-                    .dynamicUbo = countBits(collapseStages(mask.dynamicUbo)),
-                    .sampler = countBits(collapseStages(mask.sampler)),
-                    .inputAttachment = countBits(collapseStages(mask.inputAttachment)),
+                .ubo = collapsedCount(mask.ubo),
+                .dynamicUbo = collapsedCount(mask.dynamicUbo),
+                .sampler = collapsedCount(mask.sampler),
+                .inputAttachment = collapsedCount(mask.inputAttachment),
             };
         }
 
@@ -100,8 +114,6 @@ struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout 
         }
     };
 
-    static_assert(sizeof(Bitmask) % 8 == 0);
-
     VulkanDescriptorSetLayout(VkDevice device, DescriptorSetLayout const& layout);
 
     ~VulkanDescriptorSetLayout();
@@ -109,44 +121,7 @@ struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout 
     VkDevice const mDevice;
     VkDescriptorSetLayout const vklayout;
     Bitmask const bitmask;
-
-    // This is a convenience struct so that we don't have to iterate through all the bits of the
-    // bitmask (which correspondings to binding indices).
-    struct _Bindings {
-        utils::FixedCapacityVector<uint8_t> const ubo;
-        utils::FixedCapacityVector<uint8_t> const dynamicUbo;
-        utils::FixedCapacityVector<uint8_t> const sampler;
-        utils::FixedCapacityVector<uint8_t> const inputAttachment;
-    } bindings;
-
     Count const count;
-
-private:
-
-    template <typename MaskType>
-    utils::FixedCapacityVector<uint8_t> bits(MaskType mask) {
-        utils::FixedCapacityVector<uint8_t> ret =
-                utils::FixedCapacityVector<uint8_t>::with_capacity(countBits(mask));
-        for (uint8_t i = 0; i < sizeof(mask) * 4; ++i) {
-            if (mask & (1 << i)) {
-                ret.push_back(i);
-            }
-        }
-        return ret;
-    }
-
-    _Bindings getBindings(Bitmask const& bitmask) {
-        auto const uboCollapsed = collapseStages(bitmask.ubo);
-        auto const dynamicUboCollapsed = collapseStages(bitmask.dynamicUbo);
-        auto const samplerCollapsed = collapseStages(bitmask.sampler);
-        auto const inputAttachmentCollapsed = collapseStages(bitmask.inputAttachment);
-        return {
-            bits(uboCollapsed),
-            bits(dynamicUboCollapsed),
-            bits(samplerCollapsed),
-            bits(inputAttachmentCollapsed),
-        };
-    }
 };
 
 struct VulkanDescriptorSet : public VulkanResource, HwDescriptorSet {

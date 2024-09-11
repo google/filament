@@ -1839,7 +1839,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     mBoundPipeline = {
         .program = program,
         .pipelineLayout = pipelineLayout,
-        .descriptorSetMask = descriptorSetMaskTable[layoutCount],
+        .descriptorSetMask = DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
     };
 
     mPipelineCache.bindLayout(pipelineLayout);

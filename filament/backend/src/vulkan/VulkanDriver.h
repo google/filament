@@ -163,7 +163,7 @@ private:
     struct BoundPipeline {
         VulkanProgram* program;
         VkPipelineLayout pipelineLayout;
-        uint8_t descriptorSetMask;
+        DescriptorSetMask descriptorSetMask;
     };
     BoundPipeline mBoundPipeline = {};
     RenderPassFboBundle mRenderPassFboInfo;

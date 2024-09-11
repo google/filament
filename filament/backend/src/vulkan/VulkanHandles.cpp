@@ -52,15 +52,14 @@ void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeight) {
 }
 
 template<typename Bitmask>
-static constexpr Bitmask fromStageFlags(ShaderStageFlags flags, uint8_t binding) {
-    Bitmask ret = 0;
-    if ((flags & ShaderStageFlags::VERTEX) != ShaderStageFlags::NONE) {
-        ret |= (getVertexStage<Bitmask>() << binding);
+inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t binding,
+        Bitmask& mask) {
+    if ((bool) (stage & ShaderStageFlags::VERTEX)) {
+        mask.set(binding + getVertexStageShift<Bitmask>());
     }
-    if ((flags & ShaderStageFlags::FRAGMENT) != ShaderStageFlags::NONE) {
-        ret |= (getFragmentStage<Bitmask>() << binding);
+    if ((bool) (stage & ShaderStageFlags::FRAGMENT)) {
+        mask.set(binding + getFragmentStageShift<Bitmask>());
     }
-    return ret;
 }
 
 inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
@@ -143,21 +142,18 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
         switch (binding.type) {
             case DescriptorType::UNIFORM_BUFFER: {
                 if ((binding.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE) {
-                    mask.dynamicUbo |= fromStageFlags<UniformBufferBitmask>(binding.stageFlags,
-                            binding.binding);
+                    fromStageFlags(binding.stageFlags, binding.binding, mask.dynamicUbo);
                 } else {
-                    mask.ubo |= fromStageFlags<UniformBufferBitmask>(binding.stageFlags,
-                            binding.binding);
+                    fromStageFlags(binding.stageFlags, binding.binding, mask.ubo);
                 }
                 break;
             }
             case DescriptorType::SAMPLER: {
-                mask.sampler |= fromStageFlags<SamplerBitmask>(binding.stageFlags, binding.binding);
+                fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
                 break;
             }
             case DescriptorType::INPUT_ATTACHMENT: {
-                mask.inputAttachment |=
-                        fromStageFlags<InputAttachmentBitmask>(binding.stageFlags, binding.binding);
+                fromStageFlags(binding.stageFlags, binding.binding, mask.inputAttachment);
                 break;
             }
             case DescriptorType::SHADER_STORAGE_BUFFER:
@@ -174,7 +170,7 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device,
         DescriptorSetLayout const& layout)
     : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT), mDevice(device),
       vklayout(createDescriptorSetLayout(device, getLayoutCreateInfo(layout))),
-      bitmask(fromBackendLayout(layout)), bindings(getBindings(bitmask)),
+      bitmask(fromBackendLayout(layout)),
       count(Count::fromLayoutBitmask(bitmask)) {
 }
 
