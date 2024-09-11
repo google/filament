@@ -251,8 +251,6 @@ struct Equal {
 
 class VulkanDescriptorSetManager::Impl {
 private:
-    using DescriptorSetArray = std::array<VkDescriptorSet, UNIQUE_DESCRIPTOR_SET_COUNT>;
-
     struct DescriptorSetHistory {
     private:
         using TextureBundle = std::pair<VulkanTexture*, VkImageSubresourceRange>;
@@ -312,10 +310,13 @@ private:
         bool mBound = false;
     };
 
+    using DescriptorSetHistoryArray =
+            std::array<DescriptorSetHistory*, UNIQUE_DESCRIPTOR_SET_COUNT>;
+
     struct BoundInfo {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         DescriptorSetMask setMask;
-        DescriptorSetArray boundSets = {};
+        DescriptorSetHistoryArray boundSets;
 
         bool operator==(BoundInfo const& info) const {
             if (pipelineLayout != info.pipelineLayout || setMask != info.setMask) {
@@ -344,28 +345,23 @@ public:
         auto& history = mHistory[set->vkSet];
         history.setOffsets(std::move(offsets));
 
-        auto const lastSet = mStashedSets[setIndex];
-        if (lastSet != VK_NULL_HANDLE) {
-            assert_invariant(mHistory.find(lastSet) != mHistory.end());
-            mHistory[lastSet].unbind();
+        auto lastHistory = mStashedSets[setIndex];
+        if (lastHistory) {
+            lastHistory->unbind();
         }
-        mStashedSets[setIndex] = set->vkSet;
+        mStashedSets[setIndex] = &history;
     }
 
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
             DescriptorSetMask const& setMask) {
-        std::array<DescriptorSetHistory*, UNIQUE_DESCRIPTOR_SET_COUNT> updateSets = {nullptr};
-        auto const& historyEnd = mHistory.end();
+        DescriptorSetHistoryArray& updateSets = mStashedSets;
 
         // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
         // actual set of sets that *needs* to be bound.
         DescriptorSetMask curMask = setMask;
 
         setMask.forEachSetBit([&](size_t index) {
-            auto const vkset = mStashedSets[index];
-            if (auto itr = mHistory.find(vkset); itr != historyEnd && !itr->second.bound()) {
-                updateSets[index] = &itr->second;
-            } else {
+            if (!updateSets[index] || updateSets[index]->bound()) {
                 curMask.unset(index);
             }
         });
@@ -373,7 +369,7 @@ public:
         BoundInfo nextInfo = {
             pipelineLayout,
             setMask,
-            mStashedSets,
+            updateSets,
         };
         if (curMask.none() && mLastBoundInfo == nextInfo) {
             return;
@@ -480,10 +476,12 @@ public:
 
     void destroySet(Handle<HwDescriptorSet> handle) {
         VulkanDescriptorSet* set = mResourceAllocator->handle_cast<VulkanDescriptorSet*>(handle);
+        DescriptorSetHistory* history = &mHistory[set->vkSet];
         mHistory.erase(set->vkSet);
+
         for (uint8_t i = 0; i < mStashedSets.size(); ++i) {
-            if (mStashedSets[i] == set->vkSet) {
-                mStashedSets[i] = VK_NULL_HANDLE;
+            if (mStashedSets[i] == history) {
+                mStashedSets[i] = nullptr;
             }
         }
     }
@@ -495,7 +493,7 @@ private:
     DescriptorInfinitePool mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
     std::unordered_map<VkDescriptorSet, DescriptorSetHistory> mHistory;
-    DescriptorSetArray mStashedSets = { VK_NULL_HANDLE };
+    DescriptorSetHistoryArray mStashedSets;
 
     BoundInfo mLastBoundInfo;
 
