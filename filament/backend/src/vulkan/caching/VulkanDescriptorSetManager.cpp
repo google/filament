@@ -34,12 +34,12 @@ namespace filament::backend {
 
 namespace {
 
-using Bitmask = VulkanDescriptorSetLayout::Bitmask;
+using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
 using DescriptorCount = VulkanDescriptorSetLayout::Count;
 using DescriptorSetLayoutArray = VulkanDescriptorSetManager::DescriptorSetLayoutArray;
-using BitmaskHashFn = utils::hash::MurmurHashFn<Bitmask>;
-struct BitmaskEqual {
-    bool operator()(Bitmask const& k1, Bitmask const& k2) const {
+using BitmaskGroupHashFn = utils::hash::MurmurHashFn<BitmaskGroup>;
+struct BitmaskGroupEqual {
+    bool operator()(BitmaskGroup const& k1, BitmaskGroup const& k2) const {
         return k1 == k2;
     }
 };
@@ -154,7 +154,7 @@ public:
         return vkSet;
     }
 
-    void recycle(Bitmask const& layoutMask, VkDescriptorSet vkSet) {
+    void recycle(BitmaskGroup const& layoutMask, VkDescriptorSet vkSet) {
         // We are recycling - release the set back into the pool. Note that the
         // vk handle has not changed, but we need to change the backend handle to allow
         // for proper refcounting of resources referenced in this set.
@@ -178,8 +178,8 @@ private:
     uint16_t mUnusedCount;
 
     // This maps a layout ot a list of descriptor sets allocated for that layout.
-    using UnusedSetMap =
-            std::unordered_map<Bitmask, std::vector<VkDescriptorSet>, BitmaskHashFn, BitmaskEqual>;
+    using UnusedSetMap = std::unordered_map<BitmaskGroup, std::vector<VkDescriptorSet>,
+            BitmaskGroupHashFn, BitmaskGroupEqual>;
     UnusedSetMap mUnused;
 };
 
@@ -224,7 +224,8 @@ public:
         return ret;
     }
 
-    void recycle(DescriptorCount const& count, Bitmask const& layoutMask, VkDescriptorSet vkSet) {
+    void recycle(DescriptorCount const& count, BitmaskGroup const& layoutMask,
+            VkDescriptorSet vkSet) {
         for (auto& pool: mPools) {
             if (!pool->canAllocate(count)) {
                 continue;
@@ -258,33 +259,20 @@ private:
     public:
         DescriptorSetHistory() : mResources(nullptr) {}
 
-        DescriptorSetHistory(Bitmask const& mask, DescriptorCount const& count,
-                VkDescriptorSetLayout layout, VulkanResourceAllocator* allocator,
+        DescriptorSetHistory(BitmaskGroup const& mask, VulkanResourceAllocator* allocator,
                 VulkanDescriptorSet* set)
-            : mResources(allocator),
+            : dynamicUboMask(mask.dynamicUbo),
+              mResources(allocator),
               mSet(set),
-              mMask(mask),
-              mLayout(layout),
-              mCount(count),
-              mMaxIndex(0),
-              mWritten(0),
               mBound(false) {
-            assert_invariant(mCount.total() < sizeof(mWritten) * 8);
             // initial state is unbound.
+            mResources.acquire(mSet);
             unbind();
-
-            for (uint8_t i = 0; i < 32; ++i) {
-                if ((mMask.ubo | mMask.dynamicUbo | mMask.sampler | mMask.inputAttachment) &
-                        (1LL < i)) {
-                    mMaxIndex = i;
-                }
-            }
         }
 
         ~DescriptorSetHistory() {
-            if (mSet) {
-                mResources.clear();
-            }
+            assert_invariant(mSet);
+            mResources.clear();
         }
 
         void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
@@ -293,20 +281,14 @@ private:
         }
 
         void write(uint8_t binding) noexcept {
-            mWritten |= (1LL << binding);
             mBound = false;
-        }
-
-        void write(uint8_t binding, VkImageSubresourceRange const& range, VulkanTexture* texture) noexcept {
-            write(binding);
-            mTextures.insert({texture, range});
         }
 
         // Ownership will be transfered to the commandbuffer.
         void bind(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout, uint8_t index) noexcept {
             VkCommandBuffer const cmdbuffer = commands->buffer();
-            vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, index, 1,
-                    &mSet->vkSet, mCount.dynamicUbo, mOffsets.data());
+            vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+                    index, 1, &mSet->vkSet, (uint32_t) dynamicUboMask.count(), mOffsets.data());
 
             commands->acquire(mSet);
             mResources.clear();
@@ -319,41 +301,33 @@ private:
         }
 
         bool bound() const noexcept { return mBound; }
-        bool written(uint8_t binding) const noexcept { return mWritten & (1LL << binding); }
-        VkDescriptorSetLayout layout() const noexcept { return mLayout; }
-        Bitmask const& mask() const noexcept { return mMask; }
-        uint8_t maxIndex() const noexcept { return mMaxIndex; }
+
+        UniformBufferBitmask const dynamicUboMask;
 
     private:
         FixedSizeVulkanResourceManager<1> mResources;
         VulkanDescriptorSet* mSet = nullptr;
 
-        CappedArray<TextureBundle, 32> mTextures;
-
         backend::DescriptorSetOffsetArray mOffsets;
-        Bitmask mMask = {};
-        VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
-        DescriptorCount mCount = {};
-        uint8_t mMaxIndex = 0;
-        uint64_t mWritten = 0;
         bool mBound = false;
     };
 
     struct BoundInfo {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-        uint8_t setMask = 0;
+        DescriptorSetMask setMask;
         DescriptorSetArray boundSets = {};
 
         bool operator==(BoundInfo const& info) const {
             if (pipelineLayout != info.pipelineLayout || setMask != info.setMask) {
                 return false;
             }
-            for (uint8_t i = 0; i < UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
-                if ((bool) (setMask & (1LL << i)) && boundSets[i] != info.boundSets[i]) {
-                    return false;
+            bool equal = true;
+            setMask.forEachSetBit([&](size_t i) {
+                if (boundSets[i] != info.boundSets[i]) {
+                    equal = false;
                 }
-            }
-            return true;
+            });
+            return equal;
         }
     };
 
@@ -378,36 +352,36 @@ public:
         mStashedSets[setIndex] = set->vkSet;
     }
 
-    void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout, uint8_t setMask) {
-        using iter_type = decltype(mHistory)::iterator;
-        std::array<iter_type, UNIQUE_DESCRIPTOR_SET_COUNT> iterators = {mHistory.end()};
-        bool allBound = true;
+    void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
+            DescriptorSetMask const& setMask) {
+        std::array<DescriptorSetHistory*, UNIQUE_DESCRIPTOR_SET_COUNT> updateSets = {nullptr};
+        auto const& historyEnd = mHistory.end();
 
-        for (uint8_t i = 0; i < UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
-            if ((setMask & (1LL << i))  == 0) {
-                continue;
+        // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
+        // actual set of sets that *needs* to be bound.
+        DescriptorSetMask curMask = setMask;
+
+        setMask.forEachSetBit([&](size_t index) {
+            auto const vkset = mStashedSets[index];
+            if (auto itr = mHistory.find(vkset); itr != historyEnd && !itr->second.bound()) {
+                updateSets[index] = &itr->second;
+            } else {
+                curMask.unset(index);
             }
-            auto const vkset = mStashedSets[i];
-            if (auto itr = mHistory.find(vkset); itr != mHistory.end() && !itr->second.bound()) {
-                allBound = false;
-                iterators[i] = itr;
-            }
-        }
+        });
+
         BoundInfo nextInfo = {
             pipelineLayout,
             setMask,
             mStashedSets,
         };
-        if (allBound && mLastBoundInfo == nextInfo) {
+        if (curMask.none() && mLastBoundInfo == nextInfo) {
             return;
         }
 
-        for (uint8_t i = 0; i < UNIQUE_DESCRIPTOR_SET_COUNT; ++i) {
-            auto& itr = iterators[i];
-            if (itr != mHistory.end()) {
-                itr->second.bind(commands, pipelineLayout, i);
-            }
-        }
+        curMask.forEachSetBit([&updateSets, commands, pipelineLayout](size_t index) {
+            updateSets[index]->bind(commands, pipelineLayout, index);
+        });
         mLastBoundInfo = nextInfo;
     }
 
@@ -422,7 +396,7 @@ public:
         VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         auto& history = mHistory[set->vkSet];
 
-        if (history.mask().dynamicUbo & (1LL << binding)) {
+        if (history.dynamicUboMask.test(binding)) {
             type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         }
         VkWriteDescriptorSet const descriptorWrite = {
@@ -468,7 +442,7 @@ public:
         };
         vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
         set->acquire(texture);
-        mHistory[set->vkSet].write(binding, range, texture);
+        mHistory[set->vkSet].write(binding);
     }
 
     void updateInputAttachment(VulkanDescriptorSet* set, VulkanAttachment attachment) noexcept {
@@ -501,7 +475,7 @@ public:
         mHistory.emplace(
                 std::piecewise_construct,
                 std::forward_as_tuple(vkSet),
-                std::forward_as_tuple(layout->bitmask, layout->count, layout->vklayout, mResourceAllocator, set));
+                std::forward_as_tuple(layout->bitmask, mResourceAllocator, set));
     }
 
     void destroySet(Handle<HwDescriptorSet> handle) {
@@ -565,7 +539,7 @@ void VulkanDescriptorSetManager::bind(uint8_t setIndex, VulkanDescriptorSet* set
 }
 
 void VulkanDescriptorSetManager::commit(VulkanCommandBuffer* commands,
-        VkPipelineLayout pipelineLayout, uint8_t setMask) {
+        VkPipelineLayout pipelineLayout, DescriptorSetMask const& setMask) {
     mImpl->commit(commands, pipelineLayout, setMask);
 }
 

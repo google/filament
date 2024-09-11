@@ -32,8 +32,6 @@
 
 namespace filament::backend {
 
-using namespace descset;
-
 // [GDSR]: Great-Descriptor-Set-Refactor: As of 03/20/24, the Filament frontend is planning to
 // introduce descriptor set. This PR will arrive before that change is complete. As such, some of
 // the methods introduced here will be obsolete, and certain logic will be generalized.
@@ -60,7 +58,8 @@ public:
 
     void bind(uint8_t setIndex, VulkanDescriptorSet* set, backend::DescriptorSetOffsetArray&& offsets);
 
-    void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout, uint8_t setMask);
+    void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
+            DescriptorSetMask const& setMask);
 
     void setPlaceHolders(VkSampler sampler, VulkanTexture* texture,
             VulkanBufferObject* bufferObject) noexcept;

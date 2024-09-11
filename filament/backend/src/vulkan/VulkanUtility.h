@@ -19,6 +19,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <bluevk/BlueVK.h>
@@ -527,94 +528,28 @@ private:
     uint32_t mInd = 0;
 };
 
-// TODO: ok to remove once Filament-side API is complete
-namespace descset {
-
-using UniformBufferBitmask = uint64_t;
-using SamplerBitmask = uint64_t;
+using UniformBufferBitmask = utils::bitset64;
+using SamplerBitmask = utils::bitset64;
 
 // We only have at most one input attachment, so this bitmask exists only to make the code more
 // general.
-using InputAttachmentBitmask = uint64_t;
-
-constexpr UniformBufferBitmask UBO_VERTEX_STAGE = 0x1;
-constexpr UniformBufferBitmask UBO_FRAGMENT_STAGE = (0x1ULL << (sizeof(UniformBufferBitmask) * 4));
-constexpr SamplerBitmask SAMPLER_VERTEX_STAGE = 0x1;
-constexpr SamplerBitmask SAMPLER_FRAGMENT_STAGE = (0x1ULL << (sizeof(SamplerBitmask) * 4));
-constexpr InputAttachmentBitmask INPUT_ATTACHMENT_VERTEX_STAGE = 0x1;
-constexpr InputAttachmentBitmask INPUT_ATTACHMENT_FRAGMENT_STAGE =
-        (0x1ULL << (sizeof(InputAttachmentBitmask) * 4));
-
+using InputAttachmentBitmask = utils::bitset64;
 
 template<typename Bitmask>
-static constexpr Bitmask getVertexStage() noexcept {
-    if constexpr (std::is_same_v<Bitmask, UniformBufferBitmask>) {
-        return UBO_VERTEX_STAGE;
-    }
-    if constexpr (std::is_same_v<Bitmask, SamplerBitmask>) {
-        return SAMPLER_VERTEX_STAGE;
-    }
-    if constexpr (std::is_same_v<Bitmask, InputAttachmentBitmask>) {
-        return INPUT_ATTACHMENT_VERTEX_STAGE;
-    }
+static constexpr uint8_t getVertexStageShift() noexcept {
+    // We assume the bottom half of bits are for vertex stages.
+    return 0;
 }
 
 template<typename Bitmask>
-static constexpr Bitmask getFragmentStage() noexcept {
-    if constexpr (std::is_same_v<Bitmask, UniformBufferBitmask>) {
-        return UBO_FRAGMENT_STAGE;
-    }
-    if constexpr (std::is_same_v<Bitmask, SamplerBitmask>) {
-        return SAMPLER_FRAGMENT_STAGE;
-    }
-    if constexpr (std::is_same_v<Bitmask, InputAttachmentBitmask>) {
-        return INPUT_ATTACHMENT_FRAGMENT_STAGE;
-    }
+static constexpr uint8_t getFragmentStageShift() noexcept {
+    // We assume the top half of bits are for fragment stages.
+    return sizeof(Bitmask) * 4;
 }
 
-} // namespace descset
+// We have at most 4 descriptor sets. This is to indicate which ones are active.
+using DescriptorSetMask = utils::bitset8;
 
-namespace {
-// Use constexpr to statically generate a bit count table for 8-bit numbers.
-struct _BitCountHelper {
-    constexpr _BitCountHelper() : data{} {
-        for (uint16_t i = 0; i < 256; ++i) {
-            data[i] = 0;
-            for (auto j = i; j > 0; j /= 2) {
-                if (j & 1) {
-                    data[i]++;
-                }
-            }
-        }
-    }
-
-    template<typename MaskType>
-    constexpr uint8_t count(MaskType num) {
-        uint8_t count = 0;
-        for (uint8_t i = 0; i < sizeof(MaskType) * 8; i+=8) {
-            count += data[(num >> i) & 0xFF];
-        }
-        return count;
-    }
-
-private:
-    uint8_t data[256];
-};
-} // namespace anonymous
-
-template<typename MaskType>
-inline uint8_t countBits(MaskType num) {
-    static _BitCountHelper BitCounter = {};
-    return BitCounter.count(num);
-}
-
-// This is useful for counting the total number of descriptors for both vertex and fragment stages.
-template<typename MaskType>
-inline MaskType collapseStages(MaskType mask) {
-    constexpr uint8_t NBITS_DIV_2 = sizeof(MaskType) * 4;
-    // First zero out the top-half and then or the bottom-half against the original top-half.
-    return ((mask << NBITS_DIV_2) >> NBITS_DIV_2) | (mask >> NBITS_DIV_2);
-}
 
 } // namespace filament::backend
 
