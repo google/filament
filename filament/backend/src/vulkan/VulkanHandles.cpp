@@ -62,13 +62,6 @@ inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t
     }
 }
 
-inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
-        VkDescriptorSetLayoutCreateInfo const& info) {
-    VkDescriptorSetLayout layout;
-    vkCreateDescriptorSetLayout(device, &info, VKALLOC, &layout);
-    return layout;
-}
-
 inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
     switch(stage) {
         case backend::ShaderStage::VERTEX:
@@ -78,61 +71,6 @@ inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
         case backend::ShaderStage::COMPUTE:
             PANIC_POSTCONDITION("Unsupported stage");
     }
-}
-
-inline VkDescriptorSetLayoutCreateInfo getLayoutCreateInfo(DescriptorSetLayout const& layout) {
-    // Note that the following *needs* to be static so that VkDescriptorSetLayoutCreateInfo will not
-    // refer to stack memory.
-    static VkDescriptorSetLayoutBinding toBind[VulkanDescriptorSetLayout::MAX_BINDINGS];
-    uint32_t count = 0;
-
-    for (auto const& binding: layout.bindings) {
-        VkShaderStageFlags stages = 0;
-        VkDescriptorType type;
-
-        if ((binding.stageFlags & ShaderStageFlags::VERTEX) != ShaderStageFlags::NONE) {
-            stages |= VK_SHADER_STAGE_VERTEX_BIT;
-        }
-        if ((binding.stageFlags & ShaderStageFlags::FRAGMENT) != ShaderStageFlags::NONE) {
-            stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
-        }
-        assert_invariant(stages != 0);
-
-        switch (binding.type) {
-            case DescriptorType::UNIFORM_BUFFER: {
-                type = (binding.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE
-                               ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
-                               : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                break;
-            }
-            case DescriptorType::SAMPLER: {
-                type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                break;
-            }
-            case DescriptorType::INPUT_ATTACHMENT: {
-                type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-                break;
-            }
-            case DescriptorType::SHADER_STORAGE_BUFFER:
-                PANIC_POSTCONDITION("Shader storage is not supported.");
-                break;
-        }
-        toBind[count++] = {
-                .binding = binding.binding,
-                .descriptorType = type,
-                .descriptorCount = 1,
-                .stageFlags = stages,
-        };
-    }
-
-    assert_invariant(count != 0 && "Need at least one binding for descriptor set layout.");
-    VkDescriptorSetLayoutCreateInfo dlinfo = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .pNext = nullptr,
-            .bindingCount = count,
-            .pBindings = toBind,
-    };
-    return dlinfo;
 }
 
 using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
@@ -166,17 +104,10 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
 
 } // anonymous namespace
 
-VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device,
-        DescriptorSetLayout const& layout)
-    : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT), mDevice(device),
-      vklayout(createDescriptorSetLayout(device, getLayoutCreateInfo(layout))),
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout const& layout)
+    : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
       bitmask(fromBackendLayout(layout)),
-      count(Count::fromLayoutBitmask(bitmask)) {
-}
-
-VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
-    vkDestroyDescriptorSetLayout(mDevice, vklayout, VKALLOC);
-}
+      count(Count::fromLayoutBitmask(bitmask)) {}
 
 void VulkanDescriptorSet::acquire(VulkanTexture* texture) {
     mResources.acquire(texture);
