@@ -68,6 +68,8 @@ public:
 
     void destroySet(Handle<HwDescriptorSet> handle);
 
+    void initVkLayout(VulkanDescriptorSetLayout* layout);
+
 private:
     class Impl;
     Impl* mImpl;

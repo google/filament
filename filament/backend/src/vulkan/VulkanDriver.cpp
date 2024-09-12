@@ -749,7 +749,10 @@ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 void VulkanDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
     VulkanDescriptorSetLayout* layout = mResourceAllocator.construct<VulkanDescriptorSetLayout>(
-            dslh, mPlatform->getDevice(), info);
+            dslh, info);
+
+    // This will create a VkDescriptorSetLayout (which is cached) for this object.
+    mDescriptorSetManager.initVkLayout(layout);
     mResourceManager.acquire(layout);
 }
 
@@ -1830,7 +1833,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
                 }
                 auto layout = mResourceAllocator.handle_cast<VulkanDescriptorSetLayout*>(handle);
                 layoutCount++;
-                return layout->vklayout;
+                return layout->getVkLayout();
             });
     auto pipelineLayout = mPipelineLayoutCache.getLayout(layoutList, program);
 

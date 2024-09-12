@@ -41,11 +41,11 @@ namespace {
 template<typename Bitmask>
 inline uint8_t collapsedCount(Bitmask const& mask) {
     static_assert(sizeof(mask) <= 64);
-    constexpr uint64_t VERTEX_MASK = (1ULL << getVertexStageShift<Bitmask>()) - 1ULL;
-    constexpr uint64_t FRAGMENT_MASK = (1ULL << getFragmentStageShift<Bitmask>()) - 1ULL;
+    constexpr uint64_t VERTEX_MASK = (1ULL << getFragmentStageShift<Bitmask>()) - 1ULL;
+    constexpr uint64_t FRAGMENT_MASK = (VERTEX_MASK << getFragmentStageShift<Bitmask>());
     uint64_t val = mask.getValue();
-    val = ((val | VERTEX_MASK) >> getVertexStageShift<Bitmask>()) |
-        ((val | FRAGMENT_MASK) >> getFragmentStageShift<Bitmask>());
+    val = ((val & VERTEX_MASK) >> getVertexStageShift<Bitmask>()) |
+        ((val & FRAGMENT_MASK) >> getFragmentStageShift<Bitmask>());
     return (uint8_t) Bitmask(val).count();
 }
 
@@ -114,21 +114,25 @@ struct VulkanDescriptorSetLayout : public VulkanResource, HwDescriptorSetLayout 
         }
     };
 
-    VulkanDescriptorSetLayout(VkDevice device, DescriptorSetLayout const& layout);
+    VulkanDescriptorSetLayout(DescriptorSetLayout const& layout);
 
-    ~VulkanDescriptorSetLayout();
+    ~VulkanDescriptorSetLayout() = default;
 
-    VkDevice const mDevice;
-    VkDescriptorSetLayout const vklayout;
+    VkDescriptorSetLayout getVkLayout() const { return mVkLayout; }
+    void setVkLayout(VkDescriptorSetLayout vklayout) { mVkLayout = vklayout; }
+
     Bitmask const bitmask;
     Count const count;
+
+private:
+    VkDescriptorSetLayout mVkLayout = VK_NULL_HANDLE;
 };
 
 struct VulkanDescriptorSet : public VulkanResource, HwDescriptorSet {
 public:
     // Because we need to recycle descriptor sets not used, we allow for a callback that the "Pool"
     // can use to repackage the vk handle.
-    using OnRecycle = std::function<void()>;
+    using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
     VulkanDescriptorSet(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
             OnRecycle&& onRecycleFn)
@@ -139,7 +143,7 @@ public:
 
     ~VulkanDescriptorSet() {
         if (mOnRecycleFn) {
-            mOnRecycleFn();
+            mOnRecycleFn(this);
         }
     }
 
