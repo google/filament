@@ -2284,6 +2284,9 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     // the UBO has been set and committed in colorGradingPrepareSubpass()
     FMaterialInstance* mi = material.getMaterialInstance(mEngine);
     mi->use(driver);
+
+    bindPostProcessDescriptorSet(driver);
+
     const Variant::type_t variant = Variant::type_t(colorGradingConfig.translucent ?
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
