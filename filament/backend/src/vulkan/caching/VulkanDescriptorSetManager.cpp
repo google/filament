@@ -26,6 +26,7 @@
 
 #include <math.h>
 
+#include <algorithm>
 #include <memory>
 #include <type_traits>
 #include <vector>
@@ -121,8 +122,9 @@ public:
         return count == mCount;
     }
 
-    VkDescriptorSet obtainSet(VulkanDescriptorSetLayout* layout) {
-        if (UnusedSetMap::iterator itr = mUnused.find(layout->bitmask); itr != mUnused.end()) {
+    VkDescriptorSet obtainSet(VkDescriptorSetLayout vklayout) {
+        auto itr = findSets(vklayout);
+        if (itr != mUnused.end()) {
             // If we don't have any unused, then just return an empty handle.
             if (itr->second.empty()) {
                 return VK_NULL_HANDLE;
@@ -137,7 +139,7 @@ public:
             return VK_NULL_HANDLE;
         }
         // Creating a new set
-        VkDescriptorSetLayout layouts[1] = {layout->vklayout};
+        VkDescriptorSetLayout layouts[1] = {vklayout};
         VkDescriptorSetAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             .pNext = nullptr,
@@ -154,19 +156,29 @@ public:
         return vkSet;
     }
 
-    void recycle(BitmaskGroup const& layoutMask, VkDescriptorSet vkSet) {
+    void recycle(VkDescriptorSetLayout vklayout, VkDescriptorSet vkSet) {
         // We are recycling - release the set back into the pool. Note that the
         // vk handle has not changed, but we need to change the backend handle to allow
         // for proper refcounting of resources referenced in this set.
-        if (auto itr = mUnused.find(layoutMask); itr != mUnused.end()) {
+        auto itr = findSets(vklayout);
+        if (itr != mUnused.end()) {
             itr->second.push_back(vkSet);
         } else {
-            mUnused[layoutMask].push_back(vkSet);
+            mUnused.push_back(std::make_pair(vklayout, std::vector<VkDescriptorSet> {vkSet}));
         }
         mUnusedCount++;
     }
 
 private:
+    using UnusedSets = std::pair<VkDescriptorSetLayout, std::vector<VkDescriptorSet>>;
+    using UnusedSetMap = std::vector<UnusedSets>;
+
+    inline UnusedSetMap::iterator findSets(VkDescriptorSetLayout vklayout) {
+        return std::find_if(mUnused.begin(), mUnused.end(), [vklayout](auto const& value) {
+            return value.first == vklayout;
+        });
+    }
+
     VkDevice mDevice;
     VkDescriptorPool mPool;
     DescriptorCount const mCount;
@@ -177,9 +189,7 @@ private:
     // Tracks  the number of in-use descriptor sets.
     uint16_t mUnusedCount;
 
-    // This maps a layout ot a list of descriptor sets allocated for that layout.
-    using UnusedSetMap = std::unordered_map<BitmaskGroup, std::vector<VkDescriptorSet>,
-            BitmaskGroupHashFn, BitmaskGroupEqual>;
+    // This maps a layout to a list of descriptor sets allocated for that layout.
     UnusedSetMap mUnused;
 };
 
@@ -196,12 +206,13 @@ public:
         : mDevice(device) {}
 
     VkDescriptorSet obtainSet(VulkanDescriptorSetLayout* layout) {
+        auto const vklayout = layout->getVkLayout();
         DescriptorPool* sameTypePool = nullptr;
         for (auto& pool: mPools) {
             if (!pool->canAllocate(layout->count)) {
                 continue;
             }
-            if (auto set = pool->obtainSet(layout); set != VK_NULL_HANDLE) {
+            if (auto set = pool->obtainSet(vklayout); set != VK_NULL_HANDLE) {
                 return set;
             }
             if (!sameTypePool || sameTypePool->capacity() < pool->capacity()) {
@@ -219,18 +230,18 @@ public:
         mPools.push_back(std::make_unique<DescriptorPool>(mDevice,
                 DescriptorCount::fromLayoutBitmask(layout->bitmask), capacity));
         auto& pool = mPools.back();
-        auto ret = pool->obtainSet(layout);
+        auto ret = pool->obtainSet(vklayout);
         assert_invariant(ret != VK_NULL_HANDLE && "failed to obtain a set?");
         return ret;
     }
 
-    void recycle(DescriptorCount const& count, BitmaskGroup const& layoutMask,
+    void recycle(DescriptorCount const& count, VkDescriptorSetLayout vklayout,
             VkDescriptorSet vkSet) {
         for (auto& pool: mPools) {
             if (!pool->canAllocate(count)) {
                 continue;
             }
-            pool->recycle(layoutMask, vkSet);
+            pool->recycle(vklayout, vkSet);
             break;
         }
     }
@@ -247,6 +258,93 @@ struct Equal {
     }
 };
 
+template<typename Bitmask>
+uint32_t createBindings(VkDescriptorSetLayoutBinding* toBind, uint32_t count, VkDescriptorType type,
+        Bitmask const& mask) {
+    Bitmask alreadySeen;
+    mask.forEachSetBit([&](size_t index) {
+        VkShaderStageFlags stages = 0;
+        uint32_t binding = 0;
+        if (index < getFragmentStageShift<Bitmask>()) {
+            binding = (uint32_t) index;
+            stages |= VK_SHADER_STAGE_VERTEX_BIT;
+            auto fragIndex = index + getFragmentStageShift<Bitmask>();
+            if (mask.test(fragIndex)) {
+                stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+                alreadySeen.set(fragIndex);
+            }
+        } else if (!alreadySeen.test(index)) {
+            // We are in fragment stage bits
+            binding = (uint32_t) (index - getFragmentStageShift<Bitmask>());
+            stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        }
+
+        if (stages) {
+            toBind[count++] = {
+                .binding = binding,
+                .descriptorType = type,
+                .descriptorCount = 1,
+                .stageFlags = stages,
+            };
+        }
+    });
+    return count;
+}
+
+inline VkDescriptorSetLayout createLayout(VkDevice device, BitmaskGroup const& bitmaskGroup) {
+    // Note that the following *needs* to be static so that VkDescriptorSetLayoutCreateInfo will not
+    // refer to stack memory.
+    VkDescriptorSetLayoutBinding toBind[VulkanDescriptorSetLayout::MAX_BINDINGS];
+    uint32_t count = 0;
+
+    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            bitmaskGroup.dynamicUbo);
+    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, bitmaskGroup.ubo);
+    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            bitmaskGroup.sampler);
+    count = createBindings(toBind, count, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+            bitmaskGroup.inputAttachment);
+
+    assert_invariant(count != 0 && "Need at least one binding for descriptor set layout.");
+    VkDescriptorSetLayoutCreateInfo dlinfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .bindingCount = count,
+            .pBindings = toBind,
+    };
+
+    VkDescriptorSetLayout layout;
+    vkCreateDescriptorSetLayout(device, &dlinfo, VKALLOC, &layout);
+    return layout;
+}
+
+class DescriptorSetLayoutManager {
+public:
+    DescriptorSetLayoutManager(VkDevice device)
+        : mDevice(device) {}
+
+    VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout* layout) {
+        auto const& bitmasks = layout->bitmask;
+        if (auto itr = mVkLayouts.find(bitmasks); itr != mVkLayouts.end()) {
+            return itr->second;
+        }
+        auto vklayout = createLayout(mDevice, layout->bitmask);
+        mVkLayouts[layout->bitmask] = vklayout;
+        return vklayout;
+    }
+
+    ~DescriptorSetLayoutManager() {
+        for (auto& itr: mVkLayouts) {
+            vkDestroyDescriptorSetLayout(mDevice, itr.second, VKALLOC);
+        }
+    }
+
+private:
+    VkDevice mDevice;
+    tsl::robin_map<BitmaskGroup, VkDescriptorSetLayout, BitmaskGroupHashFn, BitmaskGroupEqual>
+            mVkLayouts;
+};
+
 } // anonymous namespace
 
 class VulkanDescriptorSetManager::Impl {
@@ -255,22 +353,27 @@ private:
     private:
         using TextureBundle = std::pair<VulkanTexture*, VkImageSubresourceRange>;
     public:
-        DescriptorSetHistory() : mResources(nullptr) {}
+        DescriptorSetHistory()
+            : dynamicUboCount(0),
+              mResources(nullptr) {}
 
-        DescriptorSetHistory(BitmaskGroup const& mask, VulkanResourceAllocator* allocator,
-                VulkanDescriptorSet* set)
-            : dynamicUboMask(mask.dynamicUbo),
+        DescriptorSetHistory(UniformBufferBitmask const& dynamicUbo, uint8_t uniqueDynamicUboCount,
+                VulkanResourceAllocator* allocator, VulkanDescriptorSet* set)
+            : dynamicUboMask(dynamicUbo),
+              dynamicUboCount(uniqueDynamicUboCount),
               mResources(allocator),
               mSet(set),
               mBound(false) {
+            assert_invariant(set);
             // initial state is unbound.
             mResources.acquire(mSet);
             unbind();
         }
 
         ~DescriptorSetHistory() {
-            assert_invariant(mSet);
-            mResources.clear();
+            if (mSet) {
+                mResources.clear();
+            }
         }
 
         void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
@@ -286,7 +389,7 @@ private:
         void bind(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout, uint8_t index) noexcept {
             VkCommandBuffer const cmdbuffer = commands->buffer();
             vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-                    index, 1, &mSet->vkSet, (uint32_t) dynamicUboMask.count(), mOffsets.data());
+                    index, 1, &mSet->vkSet, dynamicUboCount, mOffsets.data());
 
             commands->acquire(mSet);
             mResources.clear();
@@ -301,6 +404,7 @@ private:
         bool bound() const noexcept { return mBound; }
 
         UniformBufferBitmask const dynamicUboMask;
+        uint8_t const dynamicUboCount;
 
     private:
         FixedSizeVulkanResourceManager<1> mResources;
@@ -336,13 +440,14 @@ public:
     Impl(VkDevice device, VulkanResourceAllocator* resourceAllocator)
         : mDevice(device),
           mResourceAllocator(resourceAllocator),
+          mLayoutManager(device),
           mDescriptorPool(device) {}
 
     // bind() is not really binding the set but just stashing until we have all the info
     // (pipelinelayout).
     void bind(uint8_t setIndex, VulkanDescriptorSet* set,
             backend::DescriptorSetOffsetArray&& offsets) {
-        auto& history = mHistory[set->vkSet];
+        auto& history = mHistory[set];
         history.setOffsets(std::move(offsets));
 
         auto lastHistory = mStashedSets[setIndex];
@@ -390,7 +495,7 @@ public:
         };
 
         VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        auto& history = mHistory[set->vkSet];
+        auto& history = mHistory[set];
 
         if (history.dynamicUboMask.test(binding)) {
             type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -438,7 +543,7 @@ public:
         };
         vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
         set->acquire(texture);
-        mHistory[set->vkSet].write(binding);
+        mHistory[set].write(binding);
     }
 
     void updateInputAttachment(VulkanDescriptorSet* set, VulkanAttachment attachment) noexcept {
@@ -462,22 +567,33 @@ public:
     void createSet(Handle<HwDescriptorSet> handle, VulkanDescriptorSetLayout* layout) {
         auto const vkSet = mDescriptorPool.obtainSet(layout);
         auto const& count = layout->count;
-        auto const& layoutMask = layout->bitmask;
-        auto set = mResourceAllocator->construct<VulkanDescriptorSet>(handle, mResourceAllocator,
-                vkSet, [vkSet, count, layoutMask, this]() {
-                    mHistory.erase(vkSet);
-                    mDescriptorPool.recycle(count, layoutMask, vkSet);
-                });
+        auto const vklayout = layout->getVkLayout();
+        VulkanDescriptorSet* set =
+                mResourceAllocator->construct<VulkanDescriptorSet>(handle, mResourceAllocator,
+                        vkSet, [vkSet, count, vklayout, this](VulkanDescriptorSet* set) {
+                            eraseSetFromHistory(set);
+                            mDescriptorPool.recycle(count, vklayout, vkSet);
+                        });
         mHistory.emplace(
-                std::piecewise_construct,
-                std::forward_as_tuple(vkSet),
-                std::forward_as_tuple(layout->bitmask, mResourceAllocator, set));
+            std::piecewise_construct,
+            std::forward_as_tuple(set),
+            std::forward_as_tuple(layout->bitmask.dynamicUbo, layout->count.dynamicUbo,
+                                  mResourceAllocator, set));
     }
 
     void destroySet(Handle<HwDescriptorSet> handle) {
         VulkanDescriptorSet* set = mResourceAllocator->handle_cast<VulkanDescriptorSet*>(handle);
-        DescriptorSetHistory* history = &mHistory[set->vkSet];
-        mHistory.erase(set->vkSet);
+        eraseSetFromHistory(set);
+    }
+
+    void initVkLayout(VulkanDescriptorSetLayout* layout) {
+        layout->setVkLayout(mLayoutManager.getVkLayout(layout));
+    }
+
+private:
+    inline void eraseSetFromHistory(VulkanDescriptorSet* set) {
+        DescriptorSetHistory* history = &mHistory[set];
+        mHistory.erase(set);
 
         for (uint8_t i = 0; i < mStashedSets.size(); ++i) {
             if (mStashedSets[i] == history) {
@@ -486,14 +602,13 @@ public:
         }
     }
 
-private:
-
     VkDevice mDevice;
     VulkanResourceAllocator* mResourceAllocator;
+    DescriptorSetLayoutManager mLayoutManager;
     DescriptorInfinitePool mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
-    std::unordered_map<VkDescriptorSet, DescriptorSetHistory> mHistory;
-    DescriptorSetHistoryArray mStashedSets;
+    std::unordered_map<VulkanDescriptorSet*, DescriptorSetHistory> mHistory;
+    DescriptorSetHistoryArray mStashedSets = {};
 
     BoundInfo mLastBoundInfo;
 
@@ -548,6 +663,10 @@ void VulkanDescriptorSetManager::createSet(Handle<HwDescriptorSet> handle,
 
 void VulkanDescriptorSetManager::destroySet(Handle<HwDescriptorSet> handle) {
     mImpl->destroySet(handle);
+}
+
+void VulkanDescriptorSetManager::initVkLayout(VulkanDescriptorSetLayout* layout) {
+    mImpl->initVkLayout(layout);
 }
 
 
