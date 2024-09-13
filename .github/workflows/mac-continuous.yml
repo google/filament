@@ -17,7 +17,7 @@ jobs:
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh continuous
-      - uses: actions/upload-artifact@v1.0.0
+      - uses: actions/upload-artifact@v4
         with:
           name: filament-mac
           path: out/filament-release-darwin.tgz
