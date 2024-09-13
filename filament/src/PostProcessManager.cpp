@@ -250,6 +250,16 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
 
 PostProcessManager::~PostProcessManager() noexcept = default;
 
+void PostProcessManager::setFrameUniforms(backend::DriverApi& driver,
+        TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
+    mPostProcessDescriptorSet.setFrameUniforms(driver, uniforms);
+    mSsrPassDescriptorSet.setFrameUniforms(uniforms);
+}
+
+void PostProcessManager::bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept {
+    mPostProcessDescriptorSet.bind(driver);
+}
+
 UTILS_NOINLINE
 void PostProcessManager::registerPostProcessMaterial(std::string_view name,
         MaterialInfo const& info) {
@@ -612,10 +622,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     userViewMatrix = cameraInfo.getUserViewMatrix(), uvFromClipMatrix, historyProjection,
                     options, passBuilder = passBuilder]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
-                // set our frame uniforms in our descriptor-set
-                assert_invariant(mFrameUniforms);
-                mSsrPassDescriptorSet.setFrameUniforms(*mFrameUniforms);
-
                 // set structure sampler
                 mSsrPassDescriptorSet.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
