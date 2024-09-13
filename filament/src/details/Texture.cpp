@@ -534,10 +534,6 @@ void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
                 range.first = std::min(range.first, baseLevel);
                 range.last = std::max(range.last, last);
             }
-            if (range.first == 0 && range.last == mLevelCount) {
-                // the whole range lod range is used, we don't need the view anymore
-                range.first = range.last = 0;
-            }
             // We defer the creation of the texture view to getHwHandleForSampling() because it
             // is a common case that by then, the view won't be needed. Creating the first view on a
             // texture has a backend cost.
@@ -582,16 +578,15 @@ backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noe
     if (UTILS_UNLIKELY(mTarget == SamplerType::SAMPLER_EXTERNAL && !mHandleForSampling)) {
         return setHandleForSampling(createPlaceholderTexture(*mDriver));
     }
-
     auto const& range = mLodRange;
     auto& activeRange = mActiveLodRange;
-    if (UTILS_UNLIKELY(activeRange.first != range.first || activeRange.last != range.last)) {
+    bool const lodRangeChanged = activeRange.first != range.first || activeRange.last != range.last;
+    if (UTILS_UNLIKELY(lodRangeChanged)) {
         activeRange = range;
-        if (range.empty()) {
+        if (range.empty() || hasAllLods(range)) {
             setHandleForSampling(mHandle);
         } else {
-            setHandleForSampling(
-                    mDriver->createTextureView(mHandle, range.first, range.last - range.first));
+            setHandleForSampling(mDriver->createTextureView(mHandle, range.first, range.size()));
         }
     }
     return mHandleForSampling;
