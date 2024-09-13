@@ -47,6 +47,7 @@ set(LIBS
         geometry
         getopt
         image
+        imageio
         imgui
         ktxreader
         math

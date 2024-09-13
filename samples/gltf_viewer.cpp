@@ -515,7 +515,9 @@ static void onClick(App& app, View* view, ImVec2 pos) {
 
 static utils::Path getPathForIBLAsset(std::string_view string) {
     auto isIBL = [] (utils::Path file) -> bool {
-        return file.getExtension() == "ktx" || file.getExtension() == "hdr";
+        return file.getExtension() == "ktx" || file.getExtension() == "hdr" ||
+            file.getExtension() == "exr";
+
     };
 
     utils::Path filename{ string };
