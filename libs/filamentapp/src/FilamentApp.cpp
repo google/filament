@@ -552,6 +552,9 @@ void FilamentApp::loadIBL(std::string_view path) {
         return;
     }
 
+    // Note that IBL holds a skybox, and Scene also holds a reference.  We cannot release IBL's
+    // skybox until after new skybox has been set in the scene.
+    std::unique_ptr<IBL> oldIBL = std::move(mIBL);
     mIBL = std::make_unique<IBL>(*mEngine);
 
     if (!iblPath.isDirectory()) {
