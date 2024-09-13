@@ -130,7 +130,13 @@ private:
         uint8_t first = 0;  // first lod
         uint8_t last = 0;   // 1 past last lod
         bool empty() const noexcept { return first == last; }
+        size_t size() const noexcept { return last - first; }
     };
+
+    bool hasAllLods(LodRange const range) const noexcept {
+        return range.first == 0 && range.last == mLevelCount;
+    }
+
     void updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept;
     void setHandles(backend::Handle<backend::HwTexture> handle) noexcept;
     backend::Handle<backend::HwTexture> setHandleForSampling(
