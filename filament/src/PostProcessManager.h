@@ -103,14 +103,6 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
-    void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept {
-        assert_invariant(mFrameUniforms);
-        if (mFrameUniforms) {
-            mPostProcessDescriptorSet.setFrameUniforms(driver, *mFrameUniforms);
-            mPostProcessDescriptorSet.bind(driver);
-        }
-    }
-
     void configureTemporalAntiAliasingMaterial(
             TemporalAntiAliasingOptions const& taaOptions) noexcept;
 
@@ -381,16 +373,16 @@ public:
         render(out, combo.first, combo.second, driver);
     }
 
-    void setFrameUniforms(TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
-        mFrameUniforms = std::addressof(uniforms);
-    }
+    void setFrameUniforms(backend::DriverApi& driver,
+            TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
+
+    void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
 private:
     FEngine& mEngine;
 
     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
-    TypedUniformBuffer<PerViewUib>* mFrameUniforms = nullptr;
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;

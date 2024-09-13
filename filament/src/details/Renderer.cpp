@@ -588,7 +588,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
     PostProcessManager& ppm = engine.getPostProcessManager();
-    ppm.setFrameUniforms(view.getFrameUniforms());
+    ppm.setFrameUniforms(driver, view.getFrameUniforms());
 
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     driver.debugThreading();
