@@ -10,7 +10,7 @@ on:
 jobs:
   build-windows:
     name: build-windows
-    runs-on: windows-2019
+    runs-on: windows-2019-32core
 
     steps:
       - uses: actions/checkout@v4.1.6
