@@ -10,7 +10,7 @@ on:
 jobs:
   build-linux:
     name: build-linux
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-16core
 
     steps:
       - uses: actions/checkout@v4.1.6

@@ -8,35 +8,15 @@ on:
       - rc/**
 
 jobs:
-  build-android-armv7:
+  build-android:
     name: build-android-armv7
-    runs-on: macos-14
+    # We intentially use a larger runner here to enable larger disk space
+    # (standard linux runner will fail on disk space and faster build time).
+    runs-on: ubuntu-22.04-32core
 
     steps:
       - uses: actions/checkout@v4.1.6
       - name: Run Android Continuous
         uses: ./.github/actions/android-continuous
         with:
-          build-abi: armeabi-v7a
-
-  build-android-armv8a:
-    name: build-android-armv8a
-    runs-on: macos-14
-
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - name: Run Android Continuous
-        uses: ./.github/actions/android-continuous
-        with:
-          build-abi: arm64-v8a
-
-  build-android-x86_64:
-    name: build-android-x86_64
-    runs-on: macos-14
-
-    steps:
-      - uses: actions/checkout@v4.1.6
-      - name: Run Android Continuous
-        uses: ./.github/actions/android-continuous
-        with:
-          build-abi: x86_64
+          build-abi: armeabi-v7a,arm64-v8a,x86_64
