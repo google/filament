@@ -1794,6 +1794,8 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     if (stencilAttachment) {
         const auto& ss = ps.stencilState;
 
+        // Ben test
+
         auto& front = depthState.front;
         front.stencilCompare = getMetalCompareFunction(ss.front.stencilFunc);
         front.stencilOperationStencilFail = getMetalStencilOperation(ss.front.stencilOpStencilFail);
