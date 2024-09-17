@@ -193,11 +193,11 @@ public:
     using Transaction = ShadowMapDescriptorSet::Transaction;
 
     static void prepareCamera(Transaction const& transaction,
-            FEngine& engine, const CameraInfo& cameraInfo) noexcept;
+            backend::DriverApi& driver, const CameraInfo& cameraInfo) noexcept;
     static void prepareViewport(Transaction const& transaction,
             backend::Viewport const& viewport) noexcept;
     static void prepareTime(Transaction const& transaction,
-            FEngine& engine, math::float4 const& userTime) noexcept;
+            FEngine const& engine, math::float4 const& userTime) noexcept;
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
     static ShadowMapDescriptorSet::Transaction open(backend::DriverApi& driver) noexcept;
