@@ -1065,8 +1065,8 @@ inline void FView::computeLightCameraDistances(
     }
 }
 
-void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
-        FScene::RenderableSoa& renderableData, Range visible) noexcept {
+void FView::updatePrimitivesLod(FScene::RenderableSoa& renderableData,
+        FEngine const& engine, CameraInfo const&, Range visible) noexcept {
     FRenderableManager const& rcm = engine.getRenderableManager();
     for (uint32_t const index : visible) {
         uint8_t const level = 0; // TODO: pick the proper level of detail
