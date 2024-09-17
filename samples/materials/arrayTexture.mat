@@ -1,0 +1,39 @@
+material {
+    name : ArrayTexture,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : image
+        },
+        {
+            type : int,
+            name : layerIndex
+        },
+        {
+            type : bool,
+            name : borderEffect
+        }
+    ],
+    requires : [
+        uv0
+    ],
+    shadingModel : unlit,
+    culling : none
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float3 v = texture(materialParams_image, vec3(getUV0(), materialParams.layerIndex)).rgb;
+        material.baseColor.rgb = v;
+
+        // Add black border effect.
+        if (materialParams.borderEffect) {
+            vec2 st = getUV0();
+            float minDist0 = min(st.x, st.y);
+            float minDist1 = min(1.0 - st.x, 1.0 - st.y);
+            float minDist = min(minDist0, minDist1);
+            material.baseColor.rgb *= smoothstep(0.0, 0.1, minDist);
+        }
+    }
+}

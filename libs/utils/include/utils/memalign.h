@@ -73,8 +73,8 @@ public:
     using const_pointer = const TYPE*;
     using reference = TYPE&;
     using const_reference = const TYPE&;
-    using size_type = std::size_t;
-    using difference_type = std::ptrdiff_t;
+    using size_type = ::size_t;
+    using difference_type = ::ptrdiff_t;
     using propagate_on_container_move_assignment = std::true_type;
     using is_always_equal = std::true_type;
 
