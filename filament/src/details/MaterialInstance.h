@@ -207,6 +207,9 @@ public:
         }
     }
 
+    // Called by the engine to ensure that unset samplers are initialized with placedholders.
+    void fixMissingSamplers(FEngine::DriverApi& driver) const;
+
     const char* getName() const noexcept;
 
     void setParameter(std::string_view name,

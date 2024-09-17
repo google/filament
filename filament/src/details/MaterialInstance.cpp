@@ -317,12 +317,14 @@ const char* FMaterialInstance::getName() const noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
+}
 
+void FMaterialInstance::fixMissingSamplers(FEngine::DriverApi& driver) const {
     // Here we check that all declared sampler parameters are set, this is required by
     // Vulkan and Metal; GL is more permissive. If a sampler parameter is not set, we will
     // log a warning once per MaterialInstance in the system log and patch-in a dummy
     // texture.
-
     auto const& layout = mMaterial->getDescriptorSetLayout();
     auto const samplersDescriptors = layout.getSamplerDescriptors();
     auto const validDescriptors = mDescriptorSet.getValidDescriptors();
@@ -380,10 +382,8 @@ void FMaterialInstance::use(FEngine::DriverApi& driver) const {
                 }
             }
         });
-        mDescriptorSet.commit(layout, driver);
     }
-
-    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
 }
+
 
 } // namespace filament
