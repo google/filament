@@ -207,9 +207,6 @@ public:
         }
     }
 
-    // Called by the engine to ensure that unset samplers are initialized with placedholders.
-    void fixMissingSamplers(FEngine::DriverApi& driver) const;
-
     const char* getName() const noexcept;
 
     void setParameter(std::string_view name,
@@ -242,6 +239,9 @@ private:
     // initialize the default instance
     FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept;
 
+    // To ensure that unset samplers are initialized with placedholders.
+    void fixMissingSamplers(FEngine::DriverApi& driver) const;
+
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
 
@@ -253,6 +253,7 @@ private:
     backend::Handle<backend::HwBufferObject> mUbHandle;
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable filament::DescriptorSet mDescriptorSet;
+    mutable utils::bitset64 mMissingSamplerDescriptors;
     UniformBuffer mUniforms;
 
     backend::PolygonOffset mPolygonOffset{};

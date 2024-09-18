@@ -116,6 +116,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         : mMaterial(other->mMaterial),
           mTextureParameters(other->mTextureParameters),
           mDescriptorSet(other->mDescriptorSet.duplicate(mMaterial->getDescriptorSetLayout())),
+          mMissingSamplerDescriptors(other->mMissingSamplerDescriptors),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -199,6 +200,8 @@ void FMaterialInstance::commit(DriverApi& driver) const {
             mDescriptorSet.setSampler(binding, handle, p.params);
         }
     }
+    fixMissingSamplers(driver);
+
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
 }
@@ -317,6 +320,24 @@ const char* FMaterialInstance::getName() const noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+    if (mMissingSamplerDescriptors.any()) {
+        auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
+        std::call_once(mMissingSamplersFlag, [this, &list]() {
+            slog.w << "sampler parameters not set in MaterialInstance \"" << mName.c_str_safe()
+                   << "\" or Material \"" << mMaterial->getName().c_str_safe() << "\":\n";
+
+            mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
+                auto pos = std::find_if(list.begin(), list.end(),
+                        [binding](const auto& item) { return item.binding == binding; });
+                // just safety-check, should never fail
+                if (UTILS_LIKELY(pos != list.end())) {
+                    slog.w << "[" << +binding << "] " << pos->name.c_str() << '\n';
+                }
+            });
+            flush(slog.w);
+        });
+    }
+
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
 }
 
@@ -331,26 +352,9 @@ void FMaterialInstance::fixMissingSamplers(FEngine::DriverApi& driver) const {
     auto const missingSamplerDescriptors =
             (validDescriptors & samplersDescriptors) ^ samplersDescriptors;
 
+
     if (UTILS_UNLIKELY(missingSamplerDescriptors.any())) {
         auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
-        std::call_once(mMissingSamplersFlag, [this, missingSamplerDescriptors, &list]() {
-
-            slog.w << "sampler parameters not set in MaterialInstance \""
-                   << mName.c_str_safe() << "\" or Material \""
-                   << mMaterial->getName().c_str_safe() << "\":\n";
-
-            missingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
-                auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
-                    return item.binding == binding;
-                });
-                // just safety-check, should never fail
-                if (UTILS_LIKELY(pos != list.end())) {
-                    slog.w << "[" << +binding << "] " << pos->name.c_str() << '\n';
-                }
-            });
-            flush(slog.w);
-        });
-
         // here we need to set the samplers that are missing
         missingSamplerDescriptors.forEachSetBit([this, &list](descriptor_binding_t binding) {
             auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
@@ -382,6 +386,9 @@ void FMaterialInstance::fixMissingSamplers(FEngine::DriverApi& driver) const {
                 }
             }
         });
+
+        // We keep these bits for printing out a warning in use().
+        mMissingSamplerDescriptors = missingSamplerDescriptors;
     }
 }
 
