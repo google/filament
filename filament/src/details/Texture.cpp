@@ -485,15 +485,29 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
-    if (stream) {
-        FILAMENT_CHECK_PRECONDITION(mTarget == Sampler::SAMPLER_EXTERNAL)
-                << "Texture target must be SAMPLER_EXTERNAL";
+    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
+        return;
+    }
 
+    auto& api = engine.getDriverApi();
+    auto texture = api.createTexture(
+            mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+
+    if (mTextureIsSwizzled) {
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
+
+    if (stream) {
         mStream = stream;
-        engine.getDriverApi().setExternalStream(mHandle, stream->getHandle());
+        api.setExternalStream(mHandle, stream->getHandle());
     } else {
         mStream = nullptr;
-        engine.getDriverApi().setExternalStream(mHandle, backend::Handle<backend::HwStream>());
+        api.setExternalStream(mHandle, backend::Handle<backend::HwStream>());
     }
 }
 
