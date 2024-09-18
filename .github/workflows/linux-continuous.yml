@@ -17,7 +17,7 @@ jobs:
       - name: Run build script
         run: |
           cd build/linux && printf "y" | ./build.sh continuous
-      - uses: actions/upload-artifact@v1.0.0
+      - uses: actions/upload-artifact@v4
         with:
           name: filament-linux
           path: out/filament-release-linux.tgz

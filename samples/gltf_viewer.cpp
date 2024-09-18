@@ -515,7 +515,9 @@ static void onClick(App& app, View* view, ImVec2 pos) {
 
 static utils::Path getPathForIBLAsset(std::string_view string) {
     auto isIBL = [] (utils::Path file) -> bool {
-        return file.getExtension() == "ktx" || file.getExtension() == "hdr";
+        return file.getExtension() == "ktx" || file.getExtension() == "hdr" ||
+            file.getExtension() == "exr";
+
     };
 
     utils::Path filename{ string };
@@ -671,7 +673,15 @@ int main(int argc, char** argv) {
         buffer.shrink_to_fit();
     };
 
-    auto loadResources = [&app] (const utils::Path& filename) {
+    auto setupIBL = [&app]() {
+        auto ibl = FilamentApp::get().getIBL();
+        if (ibl) {
+            app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
+            app.viewer->getSettings().view.fogSettings.fogColorTexture = ibl->getFogTexture();
+        }
+    };
+
+    auto loadResources = [&app, &setupIBL] (const utils::Path& filename) {
         // Load external textures and buffers.
         std::string const gltfPath = filename.getAbsolutePath();
         ResourceConfiguration configuration = {};
@@ -708,12 +718,7 @@ int main(int argc, char** argv) {
             instances[mi]->setStencilWrite(true);
             instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
         }
-
-        auto ibl = FilamentApp::get().getIBL();
-        if (ibl) {
-            app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
-            app.viewer->getSettings().view.fogSettings.fogColorTexture = ibl->getFogTexture();
-        }
+        setupIBL();
     };
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
@@ -1190,7 +1195,7 @@ int main(int argc, char** argv) {
         filename = getPathForIBLAsset(path);
         if (!filename.isEmpty()) {
             FilamentApp::get().loadIBL(path);
-            return;
+            setupIBL();
         }
     });
 

@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-14-xlarge, ubuntu-22.04-16core]
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -29,7 +29,7 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2019
+    runs-on: windows-2019-32core
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -40,7 +40,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-14
+    runs-on: ubuntu-22.04-16core
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -56,7 +56,7 @@ jobs:
 
   build-ios:
     name: build-iOS
-    runs-on: macos-14
+    runs-on: macos-14-xlarge
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -69,7 +69,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-14
+    runs-on: ubuntu-22.04-16core
 
     steps:
       - uses: actions/checkout@v4.1.6
