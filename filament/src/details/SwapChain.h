@@ -78,8 +78,7 @@ public:
       return mHwSwapChain;
     }
 
-    void setFrameScheduledCallback(
-            backend::CallbackHandler* handler, FrameScheduledCallback&& callback);
+    void setFrameScheduledCallback(FrameScheduledCallback&& callback);
 
     bool isFrameScheduledCallbackSet() const noexcept;
 

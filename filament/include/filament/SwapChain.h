@@ -288,6 +288,9 @@ public:
      * Engine::shutdown. This is necessary to ensure the Filament Engine has had a chance to clean
      * up all memory related to frame presentation.
      *
+     * The FrameScheduledCallback is always called on an arbitrary background thread, never on the
+     * main Filament thread.
+     *
      * @param handler     Handler to dispatch the callback or nullptr for the default handler.
      * @param callback    Callback called when the frame is scheduled.
      *
@@ -297,8 +300,7 @@ public:
      * @see CallbackHandler
      * @see PresentCallable
      */
-    void setFrameScheduledCallback(backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
-            FrameScheduledCallback&& callback = {});
+    void setFrameScheduledCallback(FrameScheduledCallback&& callback = {});
 
     /**
      * Returns whether or not this SwapChain currently has a FrameScheduledCallback set.

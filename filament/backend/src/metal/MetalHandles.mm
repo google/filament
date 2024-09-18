@@ -232,9 +232,7 @@ void MetalSwapChain::ensureDepthStencilTexture() {
     depthStencilTexture = [context.device newTextureWithDescriptor:descriptor];
 }
 
-void MetalSwapChain::setFrameScheduledCallback(
-        CallbackHandler* handler, FrameScheduledCallback&& callback) {
-    frameScheduled.handler = handler;
+void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback&& callback) {
     frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
 }
 
@@ -275,10 +273,7 @@ public:
            [that->mDrawable present];
         }
 
-        // mDrawable is acquired on the driver thread. Typically, we would release this object on
-        // the same thread, but after receiving consistent crash reports from within
-        // [CAMetalDrawable dealloc], we suspect this object requires releasing on the main thread.
-        dispatch_async(dispatch_get_main_queue(), ^{ cleanupAndDestroy(that); });
+        cleanupAndDestroy(that);
     }
 
 private:
@@ -315,30 +310,22 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     struct Callback {
         Callback(std::shared_ptr<FrameScheduledCallback> callback, id<CAMetalDrawable> drawable,
-                 std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver)
+                std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver)
             : f(callback), data(PresentDrawableData::create(drawable, drawableMutex, driver)) {}
         std::shared_ptr<FrameScheduledCallback> f;
         // PresentDrawableData* is destroyed by maybePresentAndDestroyAsync() later.
         std::unique_ptr<PresentDrawableData> data;
-        static void func(void* user) {
-            auto* const c = reinterpret_cast<Callback*>(user);
-            PresentDrawableData* presentDrawableData = c->data.release();
-            PresentCallable presentCallable(presentDrawable, presentDrawableData);
-            c->f->operator()(presentCallable);
-            delete c;
-        }
     };
 
     // This callback pointer will be captured by the block. Even if the scheduled handler is never
     // called, the unique_ptr will still ensure we don't leak memory.
     __block auto callback = std::make_unique<Callback>(
-        frameScheduled.callback, drawable, layerDrawableMutex, context.driver);
+            frameScheduled.callback, drawable, layerDrawableMutex, context.driver);
 
-    backend::CallbackHandler* handler = frameScheduled.handler;
-    MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-        Callback* user = callback.release();
-        driver->scheduleCallback(handler, user, &Callback::func);
+        PresentDrawableData* presentDrawableData = callback->data.release();
+        PresentCallable presentCallable(presentDrawable, presentDrawableData);
+        callback->f->operator()(presentCallable);
     }];
 }
 
