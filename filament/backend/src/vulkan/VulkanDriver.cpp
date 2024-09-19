@@ -1519,7 +1519,7 @@ void VulkanDriver::endRenderPass(int) {
         }
     }
 
-    mRenderPassFboInfo.clear();
+    mRenderPassFboInfo = {};
     mCurrentRenderPass.renderTarget = nullptr;
     mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
     FVK_SYSTRACE_END();
@@ -1848,10 +1848,12 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     mPipelineCache.bindLayout(pipelineLayout);
     mPipelineCache.bindPipeline(commands);
 
-    // Since we don't statically define scissor as part of the pipeline, we need to call scissor at
-    // least once. Context: VUID-vkCmdDrawIndexed-None-07832.
-    auto const& extent = rt->getExtent();
-    scissor({0, 0, extent.width, extent.height});
+    if (!mRenderPassFboInfo.hasScissorSet) {
+        // Since we don't statically define scissor as part of the pipeline, we need to call scissor
+        // at least once. Context: VUID-vkCmdDrawIndexed-None-07832.
+        auto const& extent = rt->getExtent();
+        scissor({0, 0, extent.width, extent.height});
+    }
 
     FVK_SYSTRACE_END();
 }
@@ -1952,6 +1954,8 @@ void VulkanDriver::scissor(Viewport scissorBox) {
     VulkanRenderTarget const* rt = mCurrentRenderPass.renderTarget;
     rt->transformClientRectToPlatform(&scissor);
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
+
+    mRenderPassFboInfo.hasScissorSet = true;
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
