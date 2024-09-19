@@ -517,6 +517,11 @@ void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
+#if FILAMENT_METAL_DEBUG_LOG
+    auto handleId = rph.getId();
+    DEBUG_LOG("createProgramR(rph = %d, program = ", handleId);
+    utils::slog.d << program << utils::io::endl;
+#endif
     construct_handle<MetalProgram>(rph, *mContext, std::move(program));
 }
 
@@ -650,10 +655,9 @@ void MetalDriver::createDescriptorSetLayoutR(
             [](const auto& a, const auto& b) { return a.binding < b.binding; });
     DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
     for (size_t i = 0; i < info.bindings.size(); i++) {
-        DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s}",
+        DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
                 info.bindings[i].binding, toString(info.bindings[i].type), info.bindings[i].count,
                 toString(info.bindings[i].stageFlags), toString(info.bindings[i].flags));
-        DEBUG_LOG(",\n");
     }
     DEBUG_LOG("})\n");
     construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
@@ -1596,6 +1600,7 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
 void MetalDriver::bindPipeline(PipelineState const& ps) {
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "bindPipeline() without a valid command encoder.";
+    DEBUG_LOG("bindPipeline(ps = { program = %d }))\n", ps.program.getId());
 
     MetalVertexBufferInfo const* const vbi =
             handle_cast<MetalVertexBufferInfo>(ps.vertexBufferInfo);
@@ -1787,7 +1792,7 @@ void MetalDriver::bindDescriptorSet(
     const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
     utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
 #if FILAMENT_METAL_DEBUG_LOG == 1
-    DEBUG_LOG("bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
+    printf("[METAL DEBUG] bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
     for (size_t i = 0; i < dynamicBindings; i++) {
         printf("%d", offsets[i]);
         if (i < dynamicBindings - 1) {
@@ -1796,7 +1801,7 @@ void MetalDriver::bindDescriptorSet(
 
         offsetsVector[i] = offsets[i];
     }
-    DEBUG_LOG("])\n");
+    printf("])\n");
 #endif
 
     // Bind the descriptor set.

@@ -579,12 +579,15 @@ Program FMaterial::getProgramWithVariants(
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
-           .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
-           .shaderLanguage(mMaterialParser->getShaderLanguage())
-           .diagnostics(mName,
-                    [this, variant](io::ostream& out) -> io::ostream& {
-                        return out << mName.c_str_safe()
-                                   << ", variant=(" << io::hex << variant.key << io::dec << ")";
+            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+            .shaderLanguage(mMaterialParser->getShaderLanguage())
+            .diagnostics(mName,
+                    [this, variant, vertexVariant, fragmentVariant](
+                            io::ostream& out) -> io::ostream& {
+                        return out << mName.c_str_safe() << ", variant=(" << io::hex
+                                   << (int)variant.key << io::dec << "), vertexVariant=(" << io::hex
+                                   << (int)vertexVariant.key << io::dec << "), fragmentVariant=("
+                                   << io::hex << (int)fragmentVariant.key << io::dec << ")";
                     });
 
     if (UTILS_UNLIKELY(mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
