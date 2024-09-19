@@ -155,10 +155,6 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
     ext.egl.KHR_surfaceless_context = extensions.has("EGL_KHR_surfaceless_context");
     ext.egl.EXT_protected_content = extensions.has("EGL_EXT_protected_content");
-    if (ext.egl.KHR_create_context) {
-        // KHR_create_context implies KHR_surfaceless_context for ES3.x contexts
-        ext.egl.KHR_surfaceless_context = true;
-    }
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
