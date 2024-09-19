@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-android:
-    name: build-android-armv7
+    name: build-android
     # We intentially use a larger runner here to enable larger disk space
     # (standard linux runner will fail on disk space and faster build time).
     runs-on: ubuntu-22.04-32core

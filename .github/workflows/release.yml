@@ -205,6 +205,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
           build\windows\build-github.bat release
+          echo on
           move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
         shell: cmd
       - uses: actions/github-script@v6
