@@ -99,8 +99,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints set,
 
     static std::unordered_map<descriptor_binding_t, std::string_view> const set0{{
         { +PerViewBindingPoints::FRAME_UNIFORMS, "FrameUniforms"sv },
-        { +PerViewBindingPoints::SHADOWS,        "LightsUniforms"sv },
-        { +PerViewBindingPoints::LIGHTS,         "ShadowUniforms"sv },
+        { +PerViewBindingPoints::SHADOWS,        "ShadowUniforms"sv },
+        { +PerViewBindingPoints::LIGHTS,         "LightsUniforms"sv },
         { +PerViewBindingPoints::RECORD_BUFFER,  "FroxelRecordUniforms"sv },
         { +PerViewBindingPoints::FROXEL_BUFFER,  "FroxelsUniforms"sv },
         { +PerViewBindingPoints::STRUCTURE,      "sampler0_structure"sv },
