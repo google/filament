@@ -66,6 +66,7 @@ public:
 private:
     TypedUniformBuffer<PerViewUib>* mUniforms = nullptr;
     DescriptorSet mDescriptorSet;
+    backend::BufferObjectHandle mShadowUbh;
 };
 
 } // namespace filament

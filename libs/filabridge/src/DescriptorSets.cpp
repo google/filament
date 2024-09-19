@@ -26,69 +26,55 @@
 #include <utils/debug.h>
 
 #include <algorithm>
+#include <unordered_map>
 #include <string_view>
 
 namespace filament::descriptor_sets {
 
 using namespace backend;
 
-static DescriptorSetLayout const postProcessDescriptorSetLayout{
-        {{
-                 DescriptorType::UNIFORM_BUFFER,
-                 ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
-                 +PerViewBindingPoints::FRAME_UNIFORMS,
-                 DescriptorFlags::NONE, 0 },
-        }};
-
-static DescriptorSetLayout const depthVariantDescriptorSetLayout{
-        {{
-                 DescriptorType::UNIFORM_BUFFER,
-                 ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
-                 +PerViewBindingPoints::FRAME_UNIFORMS,
-                 DescriptorFlags::NONE, 0 },
-        }};
-
-static DescriptorSetLayout const ssrVariantDescriptorSetLayout{
-        {{
-                 DescriptorType::UNIFORM_BUFFER,
-                 ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
-                 +PerViewBindingPoints::FRAME_UNIFORMS,
-                 DescriptorFlags::NONE, 0 },
-         {
-                 DescriptorType::SAMPLER,
-                 ShaderStageFlags::FRAGMENT,
-                 +PerViewBindingPoints::SSR,
-                 DescriptorFlags::NONE, 0 },
-         {
-                 DescriptorType::SAMPLER,
-                 ShaderStageFlags::FRAGMENT,
-                 +PerViewBindingPoints::STRUCTURE,
-                 DescriptorFlags::NONE, 0 },
-        }};
-
-static DescriptorSetLayout perViewDescriptorSetLayout = {{
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS, DescriptorFlags::NONE, 0 },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS,         DescriptorFlags::NONE, 0 },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS,        DescriptorFlags::NONE, 0 },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RECORD_BUFFER,  DescriptorFlags::NONE, 0 },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FROXEL_BUFFER,  DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOW_MAP,     DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE,      DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO,           DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_DFG_LUT,    DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR,   DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR,            DescriptorFlags::NONE, 0 },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG,            DescriptorFlags::NONE, 0 },
+static DescriptorSetLayout const postProcessDescriptorSetLayout{{
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 }};
 
+static DescriptorSetLayout const depthVariantDescriptorSetLayout{{
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
+}};
+
+// ssrVariantDescriptorSetLayout must match perViewDescriptorSetLayout's vertex stage. This is
+// because the SSR variant is always using the "standard" vertex shader (i.e. there is no
+// dedicated SSR vertex shader), which uses perViewDescriptorSetLayout.
+// This means that PerViewBindingPoints::SHADOWS must be in the layout even though it's not used
+// by the SSR variant.
+static DescriptorSetLayout const ssrVariantDescriptorSetLayout{{
+   { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
+   { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
+   { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+   { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+}};
+
+static DescriptorSetLayout perViewDescriptorSetLayout = {{
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
+    { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS         },
+    { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RECORD_BUFFER  },
+    { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FROXEL_BUFFER  },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOW_MAP     },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_DFG_LUT    },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR   },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
+}};
 
 static DescriptorSetLayout perRenderableDescriptorSetLayout = {{
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS,             DescriptorFlags::DYNAMIC_OFFSET, 0 },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,              DescriptorFlags::DYNAMIC_OFFSET, 0 },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS,           DescriptorFlags::NONE,           0 },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,      DescriptorFlags::NONE,           0 },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,       DescriptorFlags::NONE,           0 },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,   DescriptorFlags::NONE,           0 },
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
+    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
+    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS    },
+    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
+    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
 }};
 
 DescriptorSetLayout const& getPostProcessLayout() noexcept {
@@ -110,39 +96,41 @@ DescriptorSetLayout const& getPerRenderableLayout() noexcept {
 utils::CString getDescriptorName(DescriptorSetBindingPoints set,
         descriptor_binding_t binding) noexcept {
     using namespace std::literals;
-    constexpr const std::string_view set0[] = {
-            "FrameUniforms"sv,
-            "LightsUniforms"sv,
-            "ShadowUniforms"sv,
-            "FroxelRecordUniforms"sv,
-            "FroxelsUniforms"sv,
-            "sampler0_shadowMap"sv,
-            "sampler0_iblDFG"sv,
-            "sampler0_iblSpecular"sv,
-            "sampler0_ssao"sv,
-            "sampler0_ssr"sv,
-            "sampler0_structure"sv,
-            "sampler0_fog"sv,
-    };
-    constexpr const std::string_view set1[] = {
-            "ObjectUniforms"sv,
-            "BonesUniforms"sv,
-            "MorphingUniforms"sv,
-            "sampler1_positions"sv,
-            "sampler1_tangents"sv,
-            "sampler1_indicesAndWeights"sv,
-    };
+
+    static std::unordered_map<descriptor_binding_t, std::string_view> const set0{{
+        { +PerViewBindingPoints::FRAME_UNIFORMS, "FrameUniforms"sv },
+        { +PerViewBindingPoints::SHADOWS,        "LightsUniforms"sv },
+        { +PerViewBindingPoints::LIGHTS,         "ShadowUniforms"sv },
+        { +PerViewBindingPoints::RECORD_BUFFER,  "FroxelRecordUniforms"sv },
+        { +PerViewBindingPoints::FROXEL_BUFFER,  "FroxelsUniforms"sv },
+        { +PerViewBindingPoints::STRUCTURE,      "sampler0_structure"sv },
+        { +PerViewBindingPoints::SHADOW_MAP,     "sampler0_shadowMap"sv },
+        { +PerViewBindingPoints::IBL_DFG_LUT,    "sampler0_iblDFG"sv },
+        { +PerViewBindingPoints::IBL_SPECULAR,   "sampler0_iblSpecular"sv },
+        { +PerViewBindingPoints::SSAO,           "sampler0_ssao"sv },
+        { +PerViewBindingPoints::SSR,            "sampler0_ssr"sv },
+        { +PerViewBindingPoints::FOG,            "sampler0_fog"sv },
+    }};
+
+    static std::unordered_map<descriptor_binding_t, std::string_view> const set1{{
+        { +PerRenderableBindingPoints::OBJECT_UNIFORMS,             "ObjectUniforms"sv },
+        { +PerRenderableBindingPoints::BONES_UNIFORMS,              "BonesUniforms"sv },
+        { +PerRenderableBindingPoints::MORPHING_UNIFORMS,           "MorphingUniforms"sv },
+        { +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,      "sampler1_positions"sv },
+        { +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,       "sampler1_tangents"sv },
+        { +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,   "sampler1_indicesAndWeights"sv },
+    }};
 
     switch (set) {
         case DescriptorSetBindingPoints::PER_VIEW: {
-            assert_invariant(binding < perViewDescriptorSetLayout.bindings.size());
-            std::string_view const& s = set0[binding];
-            return { s.data(), s.size() };
+            auto pos = set0.find(binding);
+            assert_invariant(pos != set0.end());
+            return { pos->second.data(), pos->second.size() };
         }
         case DescriptorSetBindingPoints::PER_RENDERABLE: {
-            assert_invariant(binding < perRenderableDescriptorSetLayout.bindings.size());
-            std::string_view const& s = set1[binding];
-            return { s.data(), s.size() };
+            auto pos = set1.find(binding);
+            assert_invariant(pos != set1.end());
+            return { pos->second.data(), pos->second.size() };
         }
         case DescriptorSetBindingPoints::PER_MATERIAL: {
             assert_invariant(binding < 1);

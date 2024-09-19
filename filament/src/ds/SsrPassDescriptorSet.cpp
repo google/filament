@@ -42,16 +42,26 @@ SsrPassDescriptorSet::SsrPassDescriptorSet() noexcept = default;
 void SsrPassDescriptorSet::init(FEngine& engine) noexcept {
     // create the descriptor-set from the layout
     mDescriptorSet = DescriptorSet{ engine.getPerViewDescriptorSetLayoutSsrVariant() };
+
+    // create a dummy Shadow UBO (see comment in setFrameUniforms() below)
+    mShadowUbh = engine.getDriverApi().createBufferObject(sizeof(ShadowUib),
+            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
 }
 
 void SsrPassDescriptorSet::terminate(DriverApi& driver) {
     mDescriptorSet.terminate(driver);
+    driver.destroyBufferObject(mShadowUbh);
 }
 
 void SsrPassDescriptorSet::setFrameUniforms(TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
     // initialize the descriptor-set
     mDescriptorSet.setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
             uniforms.getUboHandle(), 0, uniforms.getSize());
+
+    // This is actually not used for the SSR variants, but the descriptor-set layout needs
+    // to have this UBO because the fragment shader used is the "generic" one. Both Metal
+    // and GL would be okay without this, but Vulkan's validation layer would complain.
+    mDescriptorSet.setBuffer(+PerViewBindingPoints::SHADOWS, mShadowUbh, 0, sizeof(ShadowUib));
 
     mUniforms = std::addressof(uniforms);
 }

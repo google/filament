@@ -952,7 +952,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
                 // Write the variant to a file.
                 if (mSaveRawVariants) {
-                    int variantKey = v.variant.key;
+                    int const variantKey = v.variant.key;
                     auto getExtension = [](backend::ShaderStage stage) {
                         switch (stage) {
                             case backend::ShaderStage::VERTEX:
