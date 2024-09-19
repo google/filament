@@ -47,6 +47,7 @@
 #include <cmath>
 #include <mutex>
 #include <string_view>
+#include <utility>
 
 using namespace filament::math;
 using namespace utils;
@@ -199,6 +200,10 @@ void FMaterialInstance::commit(DriverApi& driver) const {
             mDescriptorSet.setSampler(binding, handle, p.params);
         }
     }
+
+    // TODO: eventually we should remove this in RELEASE builds
+    fixMissingSamplers();
+
     // Commit descriptors if needed (e.g. when textures are updated,or the first time)
     mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
 }
@@ -317,29 +322,14 @@ const char* FMaterialInstance::getName() const noexcept {
 // ------------------------------------------------------------------------------------------------
 
 void FMaterialInstance::use(FEngine::DriverApi& driver) const {
-    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
-}
 
-void FMaterialInstance::fixMissingSamplers(FEngine::DriverApi& driver) const {
-    // Here we check that all declared sampler parameters are set, this is required by
-    // Vulkan and Metal; GL is more permissive. If a sampler parameter is not set, we will
-    // log a warning once per MaterialInstance in the system log and patch-in a dummy
-    // texture.
-    auto const& layout = mMaterial->getDescriptorSetLayout();
-    auto const samplersDescriptors = layout.getSamplerDescriptors();
-    auto const validDescriptors = mDescriptorSet.getValidDescriptors();
-    auto const missingSamplerDescriptors =
-            (validDescriptors & samplersDescriptors) ^ samplersDescriptors;
-
-    if (UTILS_UNLIKELY(missingSamplerDescriptors.any())) {
-        auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
-        std::call_once(mMissingSamplersFlag, [this, missingSamplerDescriptors, &list]() {
-
+    if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
+        std::call_once(mMissingSamplersFlag, [this]() {
+            auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
             slog.w << "sampler parameters not set in MaterialInstance \""
                    << mName.c_str_safe() << "\" or Material \""
                    << mMaterial->getName().c_str_safe() << "\":\n";
-
-            missingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
+            mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
                 auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                     return item.binding == binding;
                 });
@@ -350,8 +340,29 @@ void FMaterialInstance::fixMissingSamplers(FEngine::DriverApi& driver) const {
             });
             flush(slog.w);
         });
+        mMissingSamplerDescriptors.clear();
+    }
 
+    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
+}
+
+void FMaterialInstance::fixMissingSamplers() const {
+    // Here we check that all declared sampler parameters are set, this is required by
+    // Vulkan and Metal; GL is more permissive. If a sampler parameter is not set, we will
+    // log a warning once per MaterialInstance in the system log and patch-in a dummy
+    // texture.
+    auto const& layout = mMaterial->getDescriptorSetLayout();
+    auto const samplersDescriptors = layout.getSamplerDescriptors();
+    auto const validDescriptors = mDescriptorSet.getValidDescriptors();
+    auto const missingSamplerDescriptors =
+            (validDescriptors & samplersDescriptors) ^ samplersDescriptors;
+
+    // always record the missing samplers state at commit() time
+    mMissingSamplerDescriptors = missingSamplerDescriptors;
+
+    if (UTILS_UNLIKELY(missingSamplerDescriptors.any())) {
         // here we need to set the samplers that are missing
+        auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
         missingSamplerDescriptors.forEachSetBit([this, &list](descriptor_binding_t binding) {
             auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                 return item.binding == binding;
@@ -384,6 +395,5 @@ void FMaterialInstance::fixMissingSamplers(FEngine::DriverApi& driver) const {
         });
     }
 }
-
 
 } // namespace filament

@@ -582,7 +582,6 @@ void FEngine::prepare() {
 
     for (auto& materialInstanceList: mMaterialInstances) {
         materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
-            item->fixMissingSamplers(driver);
             item->commit(driver);
         });
     }

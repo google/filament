@@ -33,6 +33,7 @@
 #include <backend/Handle.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/bitset.h>
 #include <utils/CString.h>
 
 #include <tsl/robin_map.h>
@@ -208,7 +209,7 @@ public:
     }
 
     // Called by the engine to ensure that unset samplers are initialized with placedholders.
-    void fixMissingSamplers(FEngine::DriverApi& driver) const;
+    void fixMissingSamplers() const;
 
     const char* getName() const noexcept;
 
@@ -279,6 +280,7 @@ private:
     };
 
     utils::CString mName;
+    mutable utils::bitset64 mMissingSamplerDescriptors{};
     mutable std::once_flag mMissingSamplersFlag;
 };
 
