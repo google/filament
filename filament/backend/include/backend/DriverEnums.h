@@ -242,8 +242,8 @@ struct DescriptorSetLayoutBinding {
     DescriptorType type;
     ShaderStageFlags stageFlags;
     descriptor_binding_t binding;
-    DescriptorFlags flags;
-    uint16_t count;
+    DescriptorFlags flags = DescriptorFlags::NONE;
+    uint16_t count = 0;
 };
 
 struct DescriptorSetLayout {

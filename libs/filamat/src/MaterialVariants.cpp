@@ -16,7 +16,24 @@
 
 #include "MaterialVariants.h"
 
+#include "shaders/ShaderGenerator.h"
+
 #include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
+
+#include <backend/DriverEnums.h>
+
+#include <filament/MaterialEnums.h>
+
+#include <utils/compiler.h>
+#include <utils/Panic.h>
+#include <utils/Log.h>
+
+#include <algorithm>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filamat {
 
@@ -36,13 +53,65 @@ std::vector<Variant> determineSurfaceVariants(
         filteredVariant = filament::Variant::filterVariant(
                 filteredVariant, isLit || shadowMultiplier);
 
-        if (filament::Variant::filterVariantVertex(filteredVariant) == variant) {
+        auto const vertexVariant = filament::Variant::filterVariantVertex(filteredVariant);
+        if (vertexVariant == variant) {
             variants.emplace_back(variant, filament::backend::ShaderStage::VERTEX);
         }
 
-        if (filament::Variant::filterVariantFragment(filteredVariant) == variant) {
+        auto const fragmentVariant = filament::Variant::filterVariantFragment(filteredVariant);
+        if (fragmentVariant == variant) {
             variants.emplace_back(variant, filament::backend::ShaderStage::FRAGMENT);
         }
+
+        // Here we make sure that the combination of vertex and fragment variants have compatible
+        // PER_VIEW descriptor-set layouts. This could actually be a static/compile-time check
+        // because it is entirely decided in DescriptorSets.cpp. Unfortunately it's not possible
+        // to write this entirely as a constexpr.
+
+        if (UTILS_UNLIKELY(vertexVariant != fragmentVariant)) {
+            // fragment and vertex variants are different, we need to check the layouts are
+            // compatible.
+            using filament::ReflectionMode;
+            using filament::RefractionMode;
+            using filament::backend::ShaderStage;
+
+            // And we need to do that for all configurations of the "PER_VIEW" descriptor set
+            // layouts (there are eight).
+            // See ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant.
+            for (auto reflection: {
+                    ReflectionMode::SCREEN_SPACE,
+                    ReflectionMode::DEFAULT }) {
+                for (auto refraction: {
+                        RefractionMode::SCREEN_SPACE,
+                        RefractionMode::CUBEMAP,
+                        RefractionMode::NONE }) {
+                    auto const vdsl = ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
+                            vertexVariant, userVariantFilter, isLit, reflection, refraction);
+                    auto const fdsl = ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
+                            fragmentVariant, userVariantFilter, isLit, reflection, refraction);
+                    // Check that all bindings present in the vertex shader DescriptorSetLayout
+                    // are also present in the fragment shader DescriptorSetLayout.
+                    for (auto const& r: vdsl.bindings) {
+                        if (!hasShaderType(r.stageFlags, ShaderStage::VERTEX)) {
+                            // ignore descriptors that are of the fragment stage only
+                            continue;
+                        }
+                        auto const pos = std::find_if(fdsl.bindings.begin(), fdsl.bindings.end(),
+                                [r](auto const& l) {
+                                    return l.count == r.count && l.type == r.type &&
+                                           l.binding == r.binding && l.flags == r.flags &&
+                                           l.stageFlags == r.stageFlags;
+                                });
+
+                        // A mismatch is fatal. The material is ill-formed. This typically
+                        // mean a bug / inconsistency in DescriptorsSets.cpp
+                        FILAMENT_CHECK_POSTCONDITION(pos != fdsl.bindings.end())
+                                << "Variant " << +k << " has mismatched descriptorset layouts";
+                    }
+                }
+            }
+        }
+
     }
     return variants;
 }

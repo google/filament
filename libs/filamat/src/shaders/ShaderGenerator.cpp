@@ -606,25 +606,6 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
 
-        auto getPerViewDescriptorSetLayoutWithVariant = [](
-                filament::Variant variant,
-                UserVariantFilterMask variantFilter,
-                bool isLit,
-                ReflectionMode reflectionMode,
-                RefractionMode refractionMode) -> backend::DescriptorSetLayout {
-
-            if (filament::Variant::isValidDepthVariant(variant)) {
-                return descriptor_sets::getDepthVariantLayout();
-            }
-            if (filament::Variant::isSSRVariant(variant)) {
-                return descriptor_sets::getSsrVariantLayout();
-            }
-            // We need to filter out all the descriptors not included in the "resolved" layout below
-            return descriptor_sets::getPerViewDescriptorSetLayout(
-                    MaterialDomain::SURFACE, variantFilter,
-                    isLit, reflectionMode, refractionMode);
-        };
-
         auto const perViewDescriptorSetLayout = getPerViewDescriptorSetLayoutWithVariant(
                 variant, variantFilter,
                 material.isLit, material.reflectionMode, material.refractionMode);
@@ -855,6 +836,24 @@ bool ShaderGenerator::hasStereo(
             // HACK(exv): Ignore stereo variant when targeting ESSL 1.0. We should properly build a
             // system in matc which allows the set of included variants to differ per-feature level.
             && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
+}
+
+backend::DescriptorSetLayout ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
+        filament::Variant variant,
+        UserVariantFilterMask variantFilter,
+        bool isLit,
+        ReflectionMode reflectionMode,
+        RefractionMode refractionMode) {
+    if (filament::Variant::isValidDepthVariant(variant)) {
+        return descriptor_sets::getDepthVariantLayout();
+    }
+    if (filament::Variant::isSSRVariant(variant)) {
+        return descriptor_sets::getSsrVariantLayout();
+    }
+    // We need to filter out all the descriptors not included in the "resolved" layout below
+    return descriptor_sets::getPerViewDescriptorSetLayout(
+            MaterialDomain::SURFACE, variantFilter,
+            isLit, reflectionMode, refractionMode);
 }
 
 } // namespace filament

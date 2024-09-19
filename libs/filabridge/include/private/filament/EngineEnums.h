@@ -45,16 +45,16 @@ enum class DescriptorSetBindingPoints : uint8_t {
 // binding point for the "per-view" descriptor set
 enum class PerViewBindingPoints : uint8_t  {
     FRAME_UNIFORMS  =  0,   // uniforms updated per view
-    LIGHTS          =  1,   // lights data array
-    SHADOWS         =  2,   // punctual shadow data
+    SHADOWS         =  1,   // punctual shadow data
+    LIGHTS          =  2,   // lights data array
     RECORD_BUFFER   =  3,   // froxel record buffer
     FROXEL_BUFFER   =  4,   // froxel buffer
-    SHADOW_MAP      =  5,   // user defined (1024x1024) DEPTH, array
-    IBL_DFG_LUT     =  6,   // user defined (128x128), RGB16F
-    IBL_SPECULAR    =  7,   // user defined, user defined, CUBEMAP
-    SSAO            =  8,   // variable, RGB8 {AO, [depth]}
-    SSR             =  9,   // variable, RGB_11_11_10, mipmapped
-    STRUCTURE       = 10,   // variable, DEPTH
+    STRUCTURE       =  5,   // variable, DEPTH
+    SHADOW_MAP      =  6,   // user defined (1024x1024) DEPTH, array
+    IBL_DFG_LUT     =  7,   // user defined (128x128), RGB16F
+    IBL_SPECULAR    =  8,   // user defined, user defined, CUBEMAP
+    SSAO            =  9,   // variable, RGB8 {AO, [depth]}
+    SSR             = 10,   // variable, RGB_11_11_10, mipmapped
     FOG             = 11    // variable, user defined, CUBEMAP
 };
 
