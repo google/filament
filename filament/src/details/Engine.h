@@ -298,8 +298,11 @@ public:
     void createLight(const LightManager::Builder& builder, utils::Entity entity);
 
     FRenderer* createRenderer() noexcept;
+
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
+
+    FMaterialInstance* createMaterialInstance(const FMaterial* material) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;

@@ -327,9 +327,6 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
     processDepthVariants(engine, parser);
     processDescriptorSets(engine, parser);
 
-    // we can only initialize the default instance once we're initialized ourselves
-    new(&mDefaultInstanceStorage) FMaterialInstance(engine, this);
-
     mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(
             mIsVariantLit,
             mReflectionMode == ReflectionMode::SCREEN_SPACE ||
@@ -346,9 +343,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 #endif
 }
 
-FMaterial::~FMaterial() noexcept {
-    std::destroy_at(getDefaultInstance());
-}
+FMaterial::~FMaterial() noexcept = default;
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     if (mMaterialDomain == MaterialDomain::SURFACE) {
@@ -407,7 +402,11 @@ void FMaterial::terminate(FEngine& engine) {
 
     destroyPrograms(engine);
 
-    getDefaultInstance()->terminate(engine);
+    if (mDefaultMaterialInstance) {
+        mDefaultMaterialInstance->setDefaultInstance(false);
+        engine.destroy(mDefaultMaterialInstance);
+        mDefaultMaterialInstance = nullptr;
+    }
 
     mPerViewDescriptorSetLayout.terminate(engine.getDriverApi());
     mDescriptorSetLayout.terminate(engine.getDriverApi());
@@ -456,7 +455,21 @@ void FMaterial::compile(CompilerPriorityQueue priority,
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    return FMaterialInstance::duplicate(getDefaultInstance(), name);
+    if (mDefaultMaterialInstance) {
+        // if we have a default instance, use it to create a new one
+        return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
+    } else {
+        // but if we don't, just create an instance with all the default parameters
+        return mEngine.createMaterialInstance(this);
+    }
+}
+
+FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
+    if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this);
+        mDefaultMaterialInstance->setDefaultInstance(true);
+    }
+    return mDefaultMaterialInstance;
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {

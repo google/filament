@@ -127,9 +127,7 @@ public:
         return const_cast<FMaterial*>(this)->getDefaultInstance();
     }
 
-    FMaterialInstance* getDefaultInstance() noexcept {
-        return std::launder(reinterpret_cast<FMaterialInstance*>(&mDefaultInstanceStorage));
-    }
+    FMaterialInstance* getDefaultInstance() noexcept;
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
@@ -328,8 +326,7 @@ private:
     bool mSpecularAntiAliasing = false;
 
     // reserve some space to construct the default material instance
-    std::aligned_storage<sizeof(FMaterialInstance), alignof(FMaterialInstance)>::type mDefaultInstanceStorage;
-    static_assert(sizeof(mDefaultInstanceStorage) >= sizeof(FMaterialInstance));
+    mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     BufferInterfaceBlock mUniformInterfaceBlock;

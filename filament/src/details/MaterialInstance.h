@@ -53,6 +53,7 @@ class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
+    FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
@@ -208,6 +209,14 @@ public:
         }
     }
 
+    void setDefaultInstance(bool value) noexcept {
+        mIsDefaultInstance = value;
+    }
+
+    bool isDefaultInstance() const noexcept {
+        return mIsDefaultInstance;
+    }
+
     // Called by the engine to ensure that unset samplers are initialized with placedholders.
     void fixMissingSamplers() const;
 
@@ -240,9 +249,6 @@ private:
     template<typename T>
     T getParameterImpl(std::string_view name) const;
 
-    // initialize the default instance
-    FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept;
-
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
 
@@ -269,6 +275,7 @@ private:
     bool mDepthWrite : 1;
     bool mHasScissor : 1;
     bool mIsDoubleSided : 1;
+    bool mIsDefaultInstance : 1;
     TransparencyMode mTransparencyMode : 2;
 
     uint64_t mMaterialSortingKey = 0;
