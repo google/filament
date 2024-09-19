@@ -59,7 +59,7 @@ void SsrPassDescriptorSet::setFrameUniforms(TypedUniformBuffer<PerViewUib>& unif
             uniforms.getUboHandle(), 0, uniforms.getSize());
 
     // This is actually not used for the SSR variants, but the descriptor-set layout needs
-    // to have this UBO because the fragment's shader used is the "generic" one. Both Metal
+    // to have this UBO because the fragment shader used is the "generic" one. Both Metal
     // and GL would be okay without this, but Vulkan's validation layer would complain.
     mDescriptorSet.setBuffer(+PerViewBindingPoints::SHADOWS, mShadowUbh, 0, sizeof(ShadowUib));
 
