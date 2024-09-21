@@ -345,14 +345,17 @@ void FEngine::init() {
 
 
     mPerViewDescriptorSetLayoutSsrVariant = {
+            mHwDescriptorSetLayoutFactory,
             driverApi,
             descriptor_sets::getSsrVariantLayout() };
 
     mPerViewDescriptorSetLayoutDepthVariant = {
+            mHwDescriptorSetLayoutFactory,
             driverApi,
             descriptor_sets::getDepthVariantLayout() };
 
     mPerRenderableDescriptorSetLayout = {
+            mHwDescriptorSetLayoutFactory,
             driverApi,
             descriptor_sets::getPerRenderableLayout() };
 
@@ -483,9 +486,9 @@ void FEngine::shutdown() {
     mLightManager.terminate();              // free-up all lights
     mCameraManager.terminate(*this);        // free-up all cameras
 
-    mPerViewDescriptorSetLayoutDepthVariant.terminate(driver);
-    mPerViewDescriptorSetLayoutSsrVariant.terminate(driver);
-    mPerRenderableDescriptorSetLayout.terminate(driver);
+    mPerViewDescriptorSetLayoutDepthVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
+    mPerViewDescriptorSetLayoutSsrVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
+    mPerRenderableDescriptorSetLayout.terminate(mHwDescriptorSetLayoutFactory, driver);
 
     driver.destroyRenderPrimitive(mFullScreenTriangleRph);
 

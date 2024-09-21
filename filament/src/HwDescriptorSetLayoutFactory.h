@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
-#define TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
+#ifndef TNT_FILAMENT_HWDESCRIPTORSETLAYOUTFACTORY_H
+#define TNT_FILAMENT_HWDESCRIPTORSETLAYOUTFACTORY_H
 
 #include "Bimap.h"
 
@@ -34,38 +34,33 @@ namespace filament {
 
 class FEngine;
 
-class HwRenderPrimitiveFactory {
+class HwDescriptorSetLayoutFactory {
 public:
-    using Handle = backend::RenderPrimitiveHandle;
+    using Handle = backend::DescriptorSetLayoutHandle;
 
-    HwRenderPrimitiveFactory();
-    ~HwRenderPrimitiveFactory() noexcept;
+    HwDescriptorSetLayoutFactory();
+    ~HwDescriptorSetLayoutFactory() noexcept;
 
-    HwRenderPrimitiveFactory(HwRenderPrimitiveFactory const& rhs) = delete;
-    HwRenderPrimitiveFactory(HwRenderPrimitiveFactory&& rhs) noexcept = delete;
-    HwRenderPrimitiveFactory& operator=(HwRenderPrimitiveFactory const& rhs) = delete;
-    HwRenderPrimitiveFactory& operator=(HwRenderPrimitiveFactory&& rhs) noexcept = delete;
+    HwDescriptorSetLayoutFactory(HwDescriptorSetLayoutFactory const& rhs) = delete;
+    HwDescriptorSetLayoutFactory(HwDescriptorSetLayoutFactory&& rhs) noexcept = delete;
+    HwDescriptorSetLayoutFactory& operator=(HwDescriptorSetLayoutFactory const& rhs) = delete;
+    HwDescriptorSetLayoutFactory& operator=(HwDescriptorSetLayoutFactory&& rhs) noexcept = delete;
 
     void terminate(backend::DriverApi& driver) noexcept;
 
-    struct Parameters { // 12 bytes
-        backend::VertexBufferHandle vbh;            // 4
-        backend::IndexBufferHandle ibh;             // 4
-        backend::PrimitiveType type;                // 4
+    struct Parameters { // 16 bytes + heap allocations
+        backend::DescriptorSetLayout dsl;
         size_t hash() const noexcept;
     };
 
     friend bool operator==(Parameters const& lhs, Parameters const& rhs) noexcept;
 
-    Handle create(backend::DriverApi& driver,
-            backend::VertexBufferHandle vbh,
-            backend::IndexBufferHandle ibh,
-            backend::PrimitiveType type) noexcept;
+    Handle create(backend::DriverApi& driver, backend::DescriptorSetLayout dsl) noexcept;
 
     void destroy(backend::DriverApi& driver, Handle handle) noexcept;
 
 private:
-    struct Key { // 16 bytes
+    struct Key { // 24 bytes
         // The key should not be copyable, unfortunately due to how the Bimap works we have
         // to copy-construct it once.
         Key(Key const&) = default;
@@ -100,8 +95,8 @@ private:
     }
 
     // Size of the arena used for the "set" part of the bimap
-    // about ~65K entry before fall back to heap
-    static constexpr size_t SET_ARENA_SIZE = 1 * 1024 * 1024;
+    // about ~1K entries before fall back to heap
+    static constexpr size_t SET_ARENA_SIZE = 24 * 1024;
 
     // Arena for the set<>, using a pool allocator inside a heap area.
     using PoolAllocatorArena = utils::Arena<
@@ -121,4 +116,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
+#endif // TNT_FILAMENT_HWDESCRIPTORSETLAYOUTFACTORY_H

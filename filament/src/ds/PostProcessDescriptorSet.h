@@ -30,6 +30,7 @@
 namespace filament {
 
 class FEngine;
+class HwDescriptorSetLayoutFactory;
 
 class PostProcessDescriptorSet {
 public:
@@ -37,7 +38,7 @@ public:
 
     void init(FEngine& engine) noexcept;
 
-    void terminate(backend::DriverApi& driver);
+    void terminate(HwDescriptorSetLayoutFactory& factory, backend::DriverApi& driver);
 
     void setFrameUniforms(backend::DriverApi& driver,
             TypedUniformBuffer<PerViewUib>& uniforms) noexcept;

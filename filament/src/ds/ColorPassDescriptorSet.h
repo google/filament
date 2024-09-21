@@ -43,6 +43,7 @@
 namespace filament {
 
 class DescriptorSetLayout;
+class HwDescriptorSetLayoutFactory;
 
 struct AmbientOcclusionOptions;
 struct DynamicResolutionOptions;
@@ -88,7 +89,7 @@ public:
             backend::BufferObjectHandle recordBuffer,
             backend::BufferObjectHandle froxelBuffer) noexcept;
 
-    void terminate(backend::DriverApi& driver);
+    void terminate(HwDescriptorSetLayoutFactory& factory, backend::DriverApi& driver);
 
     void prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept;
     void prepareLodBias(float bias, math::float2 derivativesScale) noexcept;

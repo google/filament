@@ -16,6 +16,8 @@
 
 #include "DescriptorSetLayout.h"
 
+#include "HwDescriptorSetLayoutFactory.h"
+
 #include "details/Engine.h"
 
 #include <backend/DriverEnums.h>
@@ -27,7 +29,9 @@ namespace filament {
 
 DescriptorSetLayout::DescriptorSetLayout() noexcept = default;
 
-DescriptorSetLayout::DescriptorSetLayout(backend::DriverApi& driver,
+DescriptorSetLayout::DescriptorSetLayout(
+        HwDescriptorSetLayoutFactory& factory,
+        backend::DriverApi& driver,
         backend::DescriptorSetLayout descriptorSetLayout) noexcept  {
     for (auto&& desc : descriptorSetLayout.bindings) {
         mMaxDescriptorBinding = std::max(mMaxDescriptorBinding, desc.binding);
@@ -35,13 +39,15 @@ DescriptorSetLayout::DescriptorSetLayout(backend::DriverApi& driver,
         mUniformBuffers.set(desc.binding, desc.type == backend::DescriptorType::UNIFORM_BUFFER);
     }
 
-    mDescriptorSetLayoutHandle = driver.createDescriptorSetLayout(
+    mDescriptorSetLayoutHandle = factory.create(driver,
             std::move(descriptorSetLayout));
 }
 
-void DescriptorSetLayout::terminate(backend::DriverApi& driver) noexcept {
+void DescriptorSetLayout::terminate(
+        HwDescriptorSetLayoutFactory& factory,
+        backend::DriverApi& driver) noexcept {
     if (mDescriptorSetLayoutHandle) {
-        driver.destroyDescriptorSetLayout(mDescriptorSetLayoutHandle);
+        factory.destroy(driver, mDescriptorSetLayoutHandle);
     }
 }
 

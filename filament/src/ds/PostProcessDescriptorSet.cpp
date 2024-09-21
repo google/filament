@@ -16,6 +16,7 @@
 
 #include "PostProcessDescriptorSet.h"
 
+#include "HwDescriptorSetLayoutFactory.h"
 #include "TypedUniformBuffer.h"
 
 #include "details/Engine.h"
@@ -37,15 +38,16 @@ void PostProcessDescriptorSet::init(FEngine& engine) noexcept {
 
     // create the descriptor-set layout
     mDescriptorSetLayout = filament::DescriptorSetLayout{
+            engine.getDescriptorSetLayoutFactory(),
             engine.getDriverApi(), descriptor_sets::getPostProcessLayout() };
 
     // create the descriptor-set from the layout
     mDescriptorSet = DescriptorSet{ mDescriptorSetLayout };
 }
 
-void PostProcessDescriptorSet::terminate(DriverApi& driver) {
+void PostProcessDescriptorSet::terminate(HwDescriptorSetLayoutFactory& factory, DriverApi& driver) {
     mDescriptorSet.terminate(driver);
-    mDescriptorSetLayout.terminate(driver);
+    mDescriptorSetLayout.terminate(factory, driver);
 }
 
 void PostProcessDescriptorSet::setFrameUniforms(DriverApi& driver,

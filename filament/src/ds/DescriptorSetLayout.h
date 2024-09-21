@@ -29,10 +29,14 @@
 
 namespace filament {
 
+class HwDescriptorSetLayoutFactory;
+
 class DescriptorSetLayout {
 public:
     DescriptorSetLayout() noexcept;
-    DescriptorSetLayout(backend::DriverApi& driver,
+    DescriptorSetLayout(
+            HwDescriptorSetLayoutFactory& factory,
+            backend::DriverApi& driver,
             backend::DescriptorSetLayout descriptorSetLayout) noexcept;
 
     DescriptorSetLayout(DescriptorSetLayout const&) = delete;
@@ -40,7 +44,9 @@ public:
     DescriptorSetLayout& operator=(DescriptorSetLayout const&) = delete;
     DescriptorSetLayout& operator=(DescriptorSetLayout&& rhs) noexcept;
 
-    void terminate(backend::DriverApi& driver) noexcept;
+    void terminate(
+            HwDescriptorSetLayoutFactory& factory,
+            backend::DriverApi& driver) noexcept;
 
     backend::DescriptorSetLayoutHandle getHandle() const noexcept {
         return mDescriptorSetLayoutHandle;
