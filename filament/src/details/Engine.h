@@ -23,6 +23,7 @@
 #include "DFG.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
+#include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
 
 #include "components/CameraManager.h"
@@ -447,6 +448,10 @@ public:
         return mHwVertexBufferInfoFactory;
     }
 
+    HwDescriptorSetLayoutFactory& getDescriptorSetLayoutFactory() noexcept {
+        return mHwDescriptorSetLayoutFactory;
+    }
+
     DescriptorSetLayout const& getPerViewDescriptorSetLayoutDepthVariant() const noexcept {
         return mPerViewDescriptorSetLayoutDepthVariant;
     }
@@ -528,6 +533,7 @@ private:
     FCameraManager mCameraManager;
     std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
+    HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;
     DescriptorSetLayout mPerViewDescriptorSetLayoutDepthVariant;
     DescriptorSetLayout mPerViewDescriptorSetLayoutSsrVariant;
     DescriptorSetLayout mPerRenderableDescriptorSetLayout;

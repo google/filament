@@ -391,7 +391,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
         ++first;
     }
 
-    mPostProcessDescriptorSet.terminate(driver);
+    mPostProcessDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mSsrPassDescriptorSet.terminate(driver);
 }
 

@@ -17,6 +17,7 @@
 #include "ColorPassDescriptorSet.h"
 
 #include "Froxelizer.h"
+#include "HwDescriptorSetLayoutFactory.h"
 #include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
 
@@ -100,6 +101,7 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
             for (bool const fog: { false, true }) {
                 auto index = ColorPassDescriptorSet::getIndex(lit, ssr, fog);
                 mDescriptorSetLayout[index] = {
+                        engine.getDescriptorSetLayoutFactory(),
                         engine.getDriverApi(),
                         descriptor_sets::getPerViewDescriptorSetLayout(
                                 MaterialDomain::SURFACE,
@@ -137,12 +139,12 @@ void ColorPassDescriptorSet::init(
     }
 }
 
-void ColorPassDescriptorSet::terminate(DriverApi& driver) {
+void ColorPassDescriptorSet::terminate(HwDescriptorSetLayoutFactory& factory, DriverApi& driver) {
     for (auto&& entry : mDescriptorSet) {
         entry.terminate(driver);
     }
     for (auto&& entry : mDescriptorSetLayout) {
-        entry.terminate(driver);
+        entry.terminate(factory, driver);
     }
 }
 

@@ -142,7 +142,7 @@ void FView::terminate(FEngine& engine) {
 
     ShadowMapManager::terminate(engine, mShadowMapManager);
     mUniforms.terminate(driver);
-    mColorPassDescriptorSet.terminate(driver);
+    mColorPassDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mFroxelizer.terminate(driver);
     mCommonRenderableDescriptorSet.terminate(driver);
 

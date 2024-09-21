@@ -66,6 +66,7 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/HwDescriptorSetLayoutFactory.cpp
         src/HwRenderPrimitiveFactory.cpp
         src/HwVertexBufferInfoFactory.cpp
         src/IndexBuffer.cpp
@@ -153,6 +154,7 @@ set(PRIVATE_HDRS
         src/FrameInfo.h
         src/FrameSkipper.h
         src/Froxelizer.h
+        src/HwDescriptorSetLayoutFactory.h
         src/HwRenderPrimitiveFactory.h
         src/HwVertexBufferInfoFactory.h
         src/Intersections.h

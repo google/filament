@@ -409,8 +409,10 @@ void FMaterial::terminate(FEngine& engine) {
 
     getDefaultInstance()->terminate(engine);
 
-    mPerViewDescriptorSetLayout.terminate(engine.getDriverApi());
-    mDescriptorSetLayout.terminate(engine.getDriverApi());
+    mPerViewDescriptorSetLayout.terminate(
+            engine.getDescriptorSetLayoutFactory(), engine.getDriverApi());
+    mDescriptorSetLayout.terminate(
+            engine.getDescriptorSetLayoutFactory(), engine.getDriverApi());
 }
 
 void FMaterial::compile(CompilerPriorityQueue priority,
@@ -1042,9 +1044,13 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
 
-    mDescriptorSetLayout = { engine.getDriverApi(), std::move(descriptorSetLayout[0]) };
+    mDescriptorSetLayout = {
+            engine.getDescriptorSetLayoutFactory(),
+            engine.getDriverApi(), std::move(descriptorSetLayout[0]) };
 
-    mPerViewDescriptorSetLayout = { engine.getDriverApi(), std::move(descriptorSetLayout[1]) };
+    mPerViewDescriptorSetLayout = {
+            engine.getDescriptorSetLayoutFactory(),
+            engine.getDriverApi(), std::move(descriptorSetLayout[1]) };
 }
 
 backend::descriptor_binding_t FMaterial::getSamplerBinding(
