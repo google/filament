@@ -21,8 +21,18 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <utils/Panic.h>
 #include <filament/RenderTarget.h>
+
+#include <utils/compiler.h>
+#include <utils/BitmaskEnum.h>
+#include <utils/Panic.h>
+
+#include <algorithm>
+#include <iterator>
+#include <limits>
+
+#include <stdint.h>
+#include <stddef.h>
 
 
 namespace filament {
@@ -34,7 +44,7 @@ struct RenderTarget::BuilderDetails {
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
-    uint8_t mLayerCount = 0;// currently not settable in the public facing API
+    uint8_t mLayerCount = 1;
 };
 
 using BuilderType = RenderTarget;
@@ -73,11 +83,15 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     if (color.texture) {
         FILAMENT_CHECK_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT)
                 << "Texture usage must contain COLOR_ATTACHMENT";
+        FILAMENT_CHECK_PRECONDITION(color.texture->getTarget() != Texture::Sampler::SAMPLER_EXTERNAL)
+                << "Color attachment can't be an external texture";
     }
 
     if (depth.texture) {
         FILAMENT_CHECK_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT)
                 << "Texture usage must contain DEPTH_ATTACHMENT";
+        FILAMENT_CHECK_PRECONDITION(depth.texture->getTarget() != Texture::Sampler::SAMPLER_EXTERNAL)
+                        << "Depth attachment can't be an external texture";
     }
 
     const size_t maxDrawBuffers = downcast(engine).getDriverApi().getMaxDrawBuffers();
@@ -91,22 +105,28 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     uint32_t maxWidth = 0;
     uint32_t minHeight = std::numeric_limits<uint32_t>::max();
     uint32_t maxHeight = 0;
+    uint32_t minDepth = std::numeric_limits<uint32_t>::max();
+    uint32_t maxDepth = 0;
     for (auto const& attachment : mImpl->mAttachments) {
         if (attachment.texture) {
             const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
             const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
+            const uint32_t d = attachment.texture->getDepth(attachment.mipLevel);
             minWidth  = std::min(minWidth, w);
             minHeight = std::min(minHeight, h);
+            minDepth = std::min(minDepth, d);
             maxWidth  = std::max(maxWidth, w);
             maxHeight = std::max(maxHeight, h);
+            maxDepth = std::max(maxDepth, d);
         }
     }
 
-    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight)
-            << "All attachments dimensions must match";
+    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight
+            && minDepth == maxDepth) << "All attachments dimensions must match";
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
+    mImpl->mLayerCount = minDepth;
     return downcast(engine).createRenderTarget(*this);
 }
 

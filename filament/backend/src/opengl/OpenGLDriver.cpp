@@ -1148,6 +1148,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
     if (any(t->usage & TextureUsage::SAMPLEABLE)) {
         switch (t->target) {
             case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_3D:
             case SamplerType::SAMPLER_2D_ARRAY:
             case SamplerType::SAMPLER_CUBEMAP_ARRAY:
                 // this could be GL_TEXTURE_2D_MULTISAMPLE or GL_TEXTURE_2D_ARRAY
@@ -1158,7 +1159,9 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                 target = getCubemapTarget(binfo.layer);
                 // note: cubemaps can't be multi-sampled
                 break;
-            default:
+            case SamplerType::SAMPLER_EXTERNAL:
+                // This is an error. We have asserted in debug build.
+                target = t->gl.target;
                 break;
         }
     }
@@ -1176,7 +1179,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 
     if (rt->gl.samples <= 1 ||
         (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
-        // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
+        // On GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
         // If multisampled textures are not supported and we end-up here, things should
         // still work, albeit without MSAA.
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
@@ -1200,6 +1203,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                             GL_RENDERBUFFER, t->gl.id);
                 }
                 break;
+            case GL_TEXTURE_3D:
             case GL_TEXTURE_2D_ARRAY:
             case GL_TEXTURE_CUBE_MAP_ARRAY:
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
@@ -1313,6 +1317,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                             GL_RENDERBUFFER, t->gl.id);
                 }
                 break;
+            case GL_TEXTURE_3D:
             case GL_TEXTURE_2D_ARRAY:
             case GL_TEXTURE_CUBE_MAP_ARRAY:
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
@@ -2379,9 +2384,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     GLSamplerGroup* const sb = handle_cast<GLSamplerGroup *>(sbh);
     assert_invariant(sb->textureUnitEntries.size() == data.size / sizeof(SamplerDescriptor));
 
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     bool const es2 = context.isES2();
-#endif
 
     auto const* const pSamplers = (SamplerDescriptor const*)data.buffer;
     for (size_t i = 0, c = sb->textureUnitEntries.size(); i < c; i++) {

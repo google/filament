@@ -115,17 +115,23 @@ cmake ..\.. ^
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
     || exit /b
 
+set build_flags=-j %NUMBER_OF_PROCESSORS%
+
+@echo on
+
+:: we've upgraded the windows machines, so the following are no longer accurate as of 09/19/24, but
+:: keeping around the comment for record.
+
 :: Attempt to fix "error C1060: compiler is out of heap space" seen on CI.
 :: Some resource libraries require significant heap space to compile, so first compile them serially.
-@echo on
-cmake --build . --target filagui --config %config% || exit /b
-cmake --build . --target uberarchive --config %config% || exit /b
-cmake --build . --target gltf-demo-resources --config %config% || exit /b
-cmake --build . --target filamentapp-resources --config %config% || exit /b
-cmake --build . --target sample-resources --config %config% || exit /b
-cmake --build . --target suzanne-resources --config %config% || exit /b
+:: cmake --build . --target filagui --config %config% %build_flags% || exit /b
+:: cmake --build . --target uberarchive --config %config% %build_flags% || exit /b
+:: cmake --build . --target gltf-demo-resources --config %config% %build_flags% || exit /b
+:: cmake --build . --target filamentapp-resources --config %config% %build_flags% || exit /b
+:: cmake --build . --target sample-resources --config %config% %build_flags% || exit /b
+:: cmake --build . --target suzanne-resources --config %config% %build_flags% || exit /b
 
-cmake --build . %INSTALL% --config %config% -- /m || exit /b
+cmake --build . %INSTALL% --config %config% %build_flags% -- /m || exit /b
 @echo off
 
 echo Disk info after building variant: %variant%

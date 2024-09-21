@@ -536,6 +536,12 @@ void FRenderer::renderStandaloneView(FView const* view) {
         renderInternal(view);
 
         driver.endFrame(mFrameId);
+
+        // This is a workaround for internal bug b/361822355.
+        // TODO: properly address the bug and remove this workaround.
+        if (engine.getBackend() == backend::Backend::VULKAN) {
+            engine.flushAndWait();
+        }
     }
 }
 

@@ -31,7 +31,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-14-xlarge, ubuntu-22.04-32core]
 
     steps:
       - name: Decide Git ref
@@ -65,7 +65,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-14
+    runs-on: ubuntu-22.04-16core
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:
@@ -98,7 +98,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-14
+    runs-on: ubuntu-22.04-16core
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
 
     steps:
@@ -120,7 +120,7 @@ jobs:
         env:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
-          cd build/android && printf "y" | ./build.sh release
+          cd build/android && printf "y" | ./build.sh release armeabi-v7a,arm64-v8a,x86,x86_64
           cd ../..
           mv out/filament-android-release.aar out/filament-${TAG}-android.aar
           mv out/filamat-android-release.aar out/filamat-${TAG}-android.aar
@@ -152,7 +152,7 @@ jobs:
 
   build-ios:
     name: build-ios
-    runs-on: macos-14
+    runs-on: macos-14-xlarge
     if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
 
     steps:
@@ -185,7 +185,7 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2019
+    runs-on: windows-2019-32core
     if: github.event_name == 'release' || github.event.inputs.platform == 'windows'
 
     steps:
@@ -205,6 +205,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
           build\windows\build-github.bat release
+          echo on
           move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
         shell: cmd
       - uses: actions/github-script@v6

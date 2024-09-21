@@ -22,6 +22,7 @@
 #include <math/vec3.h>
 
 #include <string>
+#include <sstream>
 
 namespace filament {
 class Engine;

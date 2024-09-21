@@ -10,14 +10,14 @@ on:
 jobs:
   build-mac:
     name: build-mac
-    runs-on: macos-14
+    runs-on: macos-14-xlarge
 
     steps:
       - uses: actions/checkout@v4.1.6
       - name: Run build script
         run: |
           cd build/mac && printf "y" | ./build.sh continuous
-      - uses: actions/upload-artifact@v1.0.0
+      - uses: actions/upload-artifact@v4
         with:
           name: filament-mac
           path: out/filament-release-darwin.tgz

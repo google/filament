@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-14-xlarge, ubuntu-22.04-16core]
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -29,7 +29,7 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2019
+    runs-on: win-2019-16core
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -40,7 +40,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-14
+    runs-on: ubuntu-22.04-16core
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -49,12 +49,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Run build script
+        # Only build 1 64 bit target during presubmit to cut down build times during presubmit
+        # Continuous builds will build everything
         run: |
-          cd build/android && printf "y" | ./build.sh presubmit
+          cd build/android && printf "y" | ./build.sh presubmit arm64-v8a
 
   build-ios:
     name: build-iOS
-    runs-on: macos-14
+    runs-on: macos-14-xlarge
 
     steps:
       - uses: actions/checkout@v4.1.6
@@ -67,7 +69,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-14
+    runs-on: ubuntu-22.04-16core
 
     steps:
       - uses: actions/checkout@v4.1.6
