@@ -52,7 +52,8 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
                     { "ssao",        +PerViewBindingPoints::SSAO,           Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "ssr",         +PerViewBindingPoints::SSR,            Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "structure",   +PerViewBindingPoints::STRUCTURE,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH   },
-                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM }}
+                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM },
+                    { "ltc",         +PerViewBindingPoints::LTC_LUT,        Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM }}
             )
             .build() };
 
@@ -65,7 +66,8 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
                     { "ssao",        +PerViewBindingPoints::SSAO,           Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "ssr",         +PerViewBindingPoints::SSR,            Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
                     { "structure",   +PerViewBindingPoints::STRUCTURE,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH   },
-                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM }}
+                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM },
+                    { "ltc",         +PerViewBindingPoints::LTC_LUT,        Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM }}
             )
             .build() };
 

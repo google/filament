@@ -79,6 +79,7 @@ static DescriptorSetLayout perViewDescriptorSetLayout = {{
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR,   DescriptorFlags::NONE, 0 },
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR,            DescriptorFlags::NONE, 0 },
     { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG,            DescriptorFlags::NONE, 0 },
+    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LTC_LUT,        DescriptorFlags::NONE, 0 },
 }};
 
 
@@ -123,6 +124,7 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints set,
             "sampler0_ssr"sv,
             "sampler0_structure"sv,
             "sampler0_fog"sv,
+            "sampler0_ltc"sv,
     };
     constexpr const std::string_view set1[] = {
             "ObjectUniforms"sv,

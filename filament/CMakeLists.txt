@@ -72,6 +72,7 @@ set(SRCS
         src/IndirectLight.cpp
         src/InstanceBuffer.cpp
         src/LightManager.cpp
+        src/LTC.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
@@ -156,6 +157,8 @@ set(PRIVATE_HDRS
         src/HwRenderPrimitiveFactory.h
         src/HwVertexBufferInfoFactory.h
         src/Intersections.h
+        src/LTC.h
+        src/ltc.inc
         src/MaterialParser.h
         src/PIDController.h
         src/PostProcessManager.h

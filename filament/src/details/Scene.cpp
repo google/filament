@@ -475,13 +475,13 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
         auto li = instances[i];
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp[gpuIndex].direction            = directions[i];
-        lp[gpuIndex].reserved1            = {};
+        lp[gpuIndex].width                = lcm.getWidth(li);
         lp[gpuIndex].colorIES             = { lcm.getColor(li), 0.0f };
         lp[gpuIndex].spotScaleOffset      = lcm.getSpotParams(li).scaleOffset;
-        lp[gpuIndex].reserved3            = {};
+        lp[gpuIndex].height               = lcm.getHeight(li);
         lp[gpuIndex].intensity            = lcm.getIntensity(li);
         lp[gpuIndex].typeShadow           = LightsUib::packTypeShadow(
-                lcm.isPointLight(li) ? 0u : 1u,
+                lcm.isPointLight(li) ? 0u : (lcm.isSpotLight(li) ? 1u : 2u),
                 shadowInfo[i].contactShadows,
                 shadowInfo[i].index);
         lp[gpuIndex].channels             = LightsUib::packChannels(
