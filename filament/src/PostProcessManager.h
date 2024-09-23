@@ -21,10 +21,11 @@
 
 #include "FrameHistory.h"
 
-#include "ds/DescriptorSetLayout.h"
 #include "ds/PostProcessDescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
+
+#include <private/filament/Variant.h>
 
 #include <fg/FrameGraphId.h>
 #include <fg/FrameGraphResources.h>
@@ -37,21 +38,17 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 
-#include <private/filament/Variant.h>
-
 #include <math/vec2.h>
 #include <math/vec4.h>
 
-#include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
+#include <utils/Slice.h>
 
 #include <tsl/robin_map.h>
 
 #include <array>
-#include <memory>
+#include <initializer_list>
 #include <random>
 #include <string_view>
-#include <utility>
 #include <variant>
 
 #include <stddef.h>
@@ -71,16 +68,19 @@ struct CameraInfo;
 class PostProcessManager {
 public:
 
-    struct ConstantInfo {
-        std::string_view name;
-        std::variant<int32_t, float, bool> value;
-    };
 
-    struct MaterialInfo {
+    // This is intended to be used only to hold the static material data
+    struct StaticMaterialInfo {
+        struct ConstantInfo {
+            std::string_view name;
+            std::variant<int32_t, float, bool> value;
+        };
         std::string_view name;
         uint8_t const* data;
-        int size;
-        utils::FixedCapacityVector<ConstantInfo> constants = {};
+        size_t size;
+        // the life-time of objects pointed to by this initializer_list<> is extended to the
+        // life-time of the initializer_list
+        std::initializer_list<ConstantInfo> constants;
     };
 
     struct ColorGradingConfig {
@@ -320,8 +320,7 @@ public:
 
     class PostProcessMaterial {
     public:
-        PostProcessMaterial() noexcept;
-        PostProcessMaterial(MaterialInfo const& info) noexcept;
+        explicit PostProcessMaterial(StaticMaterialInfo const& info) noexcept;
 
         PostProcessMaterial(PostProcessMaterial const& rhs) = delete;
         PostProcessMaterial& operator=(PostProcessMaterial const& rhs) = delete;
@@ -329,7 +328,7 @@ public:
         PostProcessMaterial(PostProcessMaterial&& rhs) noexcept;
         PostProcessMaterial& operator=(PostProcessMaterial&& rhs) noexcept;
 
-        ~PostProcessMaterial();
+        ~PostProcessMaterial() noexcept;
 
         void terminate(FEngine& engine) noexcept;
 
@@ -346,12 +345,13 @@ public:
             mutable FMaterial* mMaterial;
             uint8_t const* mData;
         };
-        uint32_t mSize{};
-        mutable bool mHasMaterial{};
-        utils::FixedCapacityVector<ConstantInfo> mConstants{};
+        // mSize == 0 if mMaterial is valid, otherwise mSize > 0
+        mutable uint32_t mSize{};
+        // the objects' must outlive the Slice<>
+        utils::Slice<StaticMaterialInfo::ConstantInfo> mConstants{};
     };
 
-    void registerPostProcessMaterial(std::string_view name, MaterialInfo const& info);
+    void registerPostProcessMaterial(std::string_view name, StaticMaterialInfo const& info);
 
     PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
 

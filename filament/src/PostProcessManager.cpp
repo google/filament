@@ -79,6 +79,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <string_view>
 #include <variant>
@@ -111,26 +112,18 @@ constexpr static float halton(unsigned int i, unsigned int b) noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
-    mMaterial = nullptr; // aliased to mData
-    mData = nullptr;
-}
-
-PostProcessManager::PostProcessMaterial::PostProcessMaterial(MaterialInfo const& info) noexcept
-        : PostProcessMaterial() {
+PostProcessManager::PostProcessMaterial::PostProcessMaterial(StaticMaterialInfo const& info) noexcept
+    : mConstants(info.constants.begin(), info.constants.size()) {
     mData = info.data; // aliased to mMaterial
     mSize = info.size;
-    mConstants = info.constants;
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(
         PostProcessManager::PostProcessMaterial&& rhs) noexcept
-        : PostProcessMaterial() {
+        : mData(nullptr), mSize(0), mConstants(rhs.mConstants) {
     using namespace std;
     swap(mData, rhs.mData); // aliased to mMaterial
     swap(mSize, rhs.mSize);
-    swap(mHasMaterial, rhs.mHasMaterial);
-    swap(mConstants, rhs.mConstants);
 }
 
 PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial::operator=(
@@ -139,26 +132,19 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial
         using namespace std;
         swap(mData, rhs.mData); // aliased to mMaterial
         swap(mSize, rhs.mSize);
-        swap(mHasMaterial, rhs.mHasMaterial);
         swap(mConstants, rhs.mConstants);
     }
     return *this;
 }
 
-PostProcessManager::PostProcessMaterial::~PostProcessMaterial() {
-    assert_invariant(!mHasMaterial || mMaterial == nullptr);
+PostProcessManager::PostProcessMaterial::~PostProcessMaterial() noexcept {
+    assert_invariant((!mSize && !mMaterial) || (mSize && mData));
 }
 
 void PostProcessManager::PostProcessMaterial::terminate(FEngine& engine) noexcept {
-    if (mHasMaterial) {
+    if (!mSize) {
         engine.destroy(mMaterial);
-// this is only needed for validation in the dtor in debug builds
-#ifndef NDEBUG
         mMaterial = nullptr;
-        mHasMaterial = false;
-    } else {
-        mData = nullptr;
-#endif
     }
 }
 
@@ -166,7 +152,6 @@ UTILS_NOINLINE
 void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) const noexcept {
     // TODO: After all materials using this class have been converted to the post-process material
     //       domain, load both OPAQUE and TRANSPARENT variants here.
-    mHasMaterial = true;
     auto builder = Material::Builder();
     builder.package(mData, mSize);
     for (auto const& constant: mConstants) {
@@ -175,11 +160,12 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
         }, constant.value);
     }
     mMaterial = downcast(builder.build(engine));
+    mSize = 0; // material loaded
 }
 
 UTILS_NOINLINE
 FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine) const noexcept {
-    if (UTILS_UNLIKELY(!mHasMaterial)) {
+    if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
     return mMaterial;
@@ -228,7 +214,7 @@ const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 =
 }}};
 
 template<size_t COUNT>
-constexpr auto halton() {
+static constexpr auto halton() {
     std::array<float2, COUNT> h;
     for (size_t i = 0; i < COUNT; i++) {
         h[i] = {
@@ -262,24 +248,29 @@ void PostProcessManager::bindPostProcessDescriptorSet(backend::DriverApi& driver
 
 UTILS_NOINLINE
 void PostProcessManager::registerPostProcessMaterial(std::string_view name,
-        MaterialInfo const& info) {
+        StaticMaterialInfo const& info) {
     mMaterialRegistry.try_emplace(name, info);
 }
 
 UTILS_NOINLINE
 PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(
         std::string_view name) noexcept {
-    assert_invariant(mMaterialRegistry.find(name) != mMaterialRegistry.end());
-    return mMaterialRegistry[name];
+    auto pos = mMaterialRegistry.find(name);
+    assert_invariant(pos != mMaterialRegistry.end());
+    return pos.value();
 }
 
-#define MATERIAL(n) MATERIALS_ ## n ## _DATA, MATERIALS_ ## n ## _SIZE
+// StaticMaterialInfo::ConstantInfo destructor is called during shut-down, to avoid side-effect
+// we ensure it's trivially destructible
+static_assert(std::is_trivially_destructible_v<PostProcessManager::StaticMaterialInfo::ConstantInfo>);
 
-static const PostProcessManager::MaterialInfo sMaterialListFeatureLevel0[] = {
+#define MATERIAL(n) MATERIALS_ ## n ## _DATA, size_t(MATERIALS_ ## n ## _SIZE)
+
+static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[] = {
         { "blitLow",                    MATERIAL(BLITLOW) },
 };
 
-static const PostProcessManager::MaterialInfo sMaterialList[] = {
+static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
         { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
         { "blitArray",                  MATERIAL(BLITARRAY) },
@@ -350,13 +341,13 @@ void PostProcessManager::init() noexcept {
     mWorkaroundAllowReadOnlyAncillaryFeedbackLoop =
             driver.isWorkaroundNeeded(Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP);
 
-    #pragma nounroll
+    UTILS_NOUNROLL
     for (auto const& info: sMaterialListFeatureLevel0) {
         registerPostProcessMaterial(info.name, info);
     }
 
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
-        #pragma nounroll
+        UTILS_NOUNROLL
         for (auto const& info: sMaterialList) {
             registerPostProcessMaterial(info.name, info);
         }
@@ -2713,7 +2704,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
                 // this doesn't get vectorized (probably because of exp()), so don't bother
                 // unrolling it.
-                #pragma nounroll
+                UTILS_NOUNROLL
                 for (size_t i = 0; i < 9; i++) {
                     float2 const o = sampleOffsets[i];
                     for (size_t j = 0; j < 4; j++) {
@@ -3484,6 +3475,5 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
     }
     return input;
 }
-
 
 } // namespace filament
