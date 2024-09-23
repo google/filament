@@ -76,3 +76,18 @@ jobs:
       - name: Run build script
         run: |
           cd build/web && printf "y" | ./build.sh presubmit
+
+  test-renderdiff:
+    name: test-renderdiff
+    runs-on: ubuntu-22.04-32core
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - uses: ./.github/actions/ubuntu-apt-add-src
+      - name: Run script
+        run: |
+          source ./build/linux/ci-common.sh && bash test/renderdiff_tests.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: presubmit-renderdiff-result
+          path: ./out/renderdiff_tests
