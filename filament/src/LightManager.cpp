@@ -139,6 +139,22 @@ float LightManager::getSunHaloFalloff(Instance i) const noexcept {
     return downcast(this)->getSunHaloFalloff(i);
 }
 
+void LightManager::setWidth(Instance i, float width) noexcept {
+    downcast(this)->setWidth(i, width);
+}
+
+float LightManager::getWidth(Instance i) const noexcept {
+    return downcast(this)->getWidth(i);
+}
+
+void LightManager::setHeight(Instance i, float height) noexcept {
+    downcast(this)->setHeight(i, height);
+}
+
+float LightManager::getHeight(Instance i) const noexcept {
+    return downcast(this)->getHeight(i);
+}
+
 LightManager::Type LightManager::getType(LightManager::Instance i) const noexcept {
     return downcast(this)->getType(i);
 }

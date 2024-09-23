@@ -50,6 +50,8 @@ struct LightManager::BuilderDetails {
     float mSunAngle = 0.00951f; // 0.545° in radians
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
+    float mWidth = 1.0f;
+    float mHeight = 1.0f;
     ShadowOptions mShadowOptions;
 
     explicit BuilderDetails(Type type) noexcept : mType(type) { }
@@ -138,6 +140,16 @@ LightManager::Builder& LightManager::Builder::sunHaloFalloff(float haloFalloff) 
     return *this;
 }
 
+LightManager::Builder& LightManager::Builder::width(float width) noexcept {
+    mImpl->mWidth = width;
+    return *this;
+}
+
+LightManager::Builder& LightManager::Builder::height(float height) noexcept {
+    mImpl->mHeight = height;
+    return *this;
+}
+
 LightManager::Builder& LightManager::Builder::lightChannel(unsigned int channel, bool enable) noexcept {
     if (channel < 8) {
         const uint8_t mask = 1u << channel;
@@ -200,6 +212,9 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
         setSunAngularRadius(i, builder->mSunAngle);
         setSunHaloSize(i, builder->mSunHaloSize);
         setSunHaloFalloff(i, builder->mSunHaloFalloff);
+
+        setWidth(i, builder->mWidth);
+        setHeight(i, builder->mHeight);
     }
 }
 
@@ -330,6 +345,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
                 break;
             }
             case Type::SPOT:
+            case Type::AREA:
                 if (unit == IntensityUnit::LUMEN_LUX) {
                     // li = lp / pi
                     luminousIntensity = luminousPower * f::ONE_OVER_PI;
@@ -403,6 +419,20 @@ void FLightManager::setSunHaloSize(Instance i, float haloSize) noexcept {
 void FLightManager::setSunHaloFalloff(Instance i, float haloFalloff) noexcept {
     if (i && isSunLight(i)) {
         mManager[i].sunHaloFalloff = haloFalloff;
+    }
+}
+
+void FLightManager::setWidth(Instance i, float width) noexcept {
+    if (i && isAreaLight(i)) {
+        width = max(width, 1e-5f);
+        mManager[i].width = width;
+    }
+}
+
+void FLightManager::setHeight(Instance i, float height) noexcept {
+    if (i && isAreaLight(i)) {
+        height = max(height, 1e-5f);
+        mManager[i].height = height;
     }
 }
 

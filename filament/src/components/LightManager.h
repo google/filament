@@ -115,6 +115,8 @@ public:
     UTILS_NOINLINE void setSunAngularRadius(Instance i, float angularRadius) noexcept;
     UTILS_NOINLINE void setSunHaloSize(Instance i, float haloSize) noexcept;
     UTILS_NOINLINE void setSunHaloFalloff(Instance i, float haloFalloff) noexcept;
+    UTILS_NOINLINE void setWidth(Instance i, float width) noexcept;
+    UTILS_NOINLINE void setHeight(Instance i, float height) noexcept;
 
     UTILS_NOINLINE bool getLightChannel(Instance i, unsigned int channel) const noexcept;
 
@@ -150,6 +152,10 @@ public:
 
     bool isIESLight(Instance i) const noexcept {
         return false;   // TODO: change this when we support IES lights
+    }
+
+    bool isAreaLight(Instance i) const noexcept {
+        return getType(i) == Type::AREA;
     }
 
     bool isSunLight(Instance i) const noexcept {
@@ -222,6 +228,14 @@ public:
         return getSpotParams(i).radius;
     }
 
+    float getWidth(Instance i) const noexcept {
+        return mManager[i].width;
+    }
+
+    float getHeight(Instance i) const noexcept {
+        return mManager[i].height;
+    }
+
     uint8_t getLightChannels(Instance i) const noexcept {
         return mManager[i].channels;
     }
@@ -250,6 +264,8 @@ private:
         COLOR,              // color
         SHADOW_PARAMS,      // state needed for shadowing
         SPOT_PARAMS,        // state needed for spotlights
+        WIDTH,              // state for the area light
+        HEIGHT,             // state for the area light
         SUN_ANGULAR_RADIUS, // state for the directional light sun
         SUN_HALO_SIZE,      // state for the directional light sun
         SUN_HALO_FALLOFF,   // state for the directional light sun
@@ -258,13 +274,15 @@ private:
         CHANNELS,
     };
 
-    using Base = utils::SingleInstanceComponentManager<  // 120 bytes
+    using Base = utils::SingleInstanceComponentManager<  // 128 bytes
             LightType,      //  1
             math::float3,   // 12
             math::float3,   // 12
             math::float3,   // 12
             ShadowParams,   // 12
             SpotParams,     // 24
+            float,          //  4
+            float,          //  4
             float,          //  4
             float,          //  4
             float,          //  4
@@ -291,6 +309,8 @@ private:
                 Field<COLOR>                color;
                 Field<SHADOW_PARAMS>        shadowParams;
                 Field<SPOT_PARAMS>          spotParams;
+                Field<WIDTH>                width;
+                Field<HEIGHT>               height;
                 Field<SUN_ANGULAR_RADIUS>   sunAngularRadius;
                 Field<SUN_HALO_SIZE>        sunHaloSize;
                 Field<SUN_HALO_FALLOFF>     sunHaloFalloff;

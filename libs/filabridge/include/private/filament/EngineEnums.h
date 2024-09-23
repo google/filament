@@ -55,7 +55,8 @@ enum class PerViewBindingPoints : uint8_t  {
     SSAO            =  8,   // variable, RGB8 {AO, [depth]}
     SSR             =  9,   // variable, RGB_11_11_10, mipmapped
     STRUCTURE       = 10,   // variable, DEPTH
-    FOG             = 11    // variable, user defined, CUBEMAP
+    FOG             = 11,   // variable, user defined, CUBEMAP
+    LTC_LUT         = 12
 };
 
 enum class PerRenderableBindingPoints : uint8_t  {

@@ -242,6 +242,7 @@ endfunction()
 
 if (NOT ANDROID)
     add_demo(animation)
+    add_demo(arealight)
     add_demo(depthtesting)
     add_demo(frame_generator)
     add_demo(gltf_viewer)
@@ -272,6 +273,7 @@ if (NOT ANDROID)
     add_demo(viewtest)
 
     # Sample app specific
+    target_link_libraries(arealight PRIVATE filameshio suzanne-resources)
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)

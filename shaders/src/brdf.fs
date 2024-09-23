@@ -262,3 +262,71 @@ float diffuse(float roughness, float NoV, float NoL, float LoH) {
     return Fd_Burley(roughness, NoV, NoL, LoH);
 #endif
 }
+
+vec2 LTC_Uv(float NoV, float roughness) {
+    const float LUT_SIZE = 64.0;
+    const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
+    const float LUT_BIAS = 0.5 / LUT_SIZE;
+
+    vec2 uv = vec2(roughness, sqrt(1.0 - NoV));
+
+    uv = uv * LUT_SCALE + LUT_BIAS;
+
+    return uv;
+}
+
+float LTC_ClippedSphereFormFactor(const vec3 f) {
+    float l = length(f);
+
+    return max((l * l + f.z) / (l + 1.0), 0.0);
+}
+
+vec3 LTC_EdgeVectorFormFactor(const vec3 v1, const vec3 v2) {
+    float x = dot(v1, v2);
+
+    float y = abs(x);
+
+    float a = 0.8543985 + (0.4965155 + 0.0145206 * y) * y;
+    float b = 3.4175940 + (4.1616724 + y) * y;
+    float v = a / b;
+
+    float theta_sintheta = (x > 0.0) ? v : 0.5 * inversesqrt(max(1.0 - x * x, 1e-7)) - v;
+
+    return cross(v1, v2) * theta_sintheta;
+}
+
+vec3 LTC_Evaluate(const vec3 N, const vec3 V, const vec3 P, const mat3 mInv,
+        const vec3 rectCoords[4]) {
+    vec3 v1 = rectCoords[1] - rectCoords[0];
+    vec3 v2 = rectCoords[3] - rectCoords[0];
+    vec3 lightNormal = cross(v1, v2);
+
+    if (dot(lightNormal, P - rectCoords[0]) < 0.0) return vec3(0.0);
+
+    vec3 T1, T2;
+    T1 = normalize(V - N * dot(V, N));
+    T2 = -cross(N, T1);
+
+    mat3 mat = mInv * transpose(mat3(T1, T2, N));
+
+    vec3 coords[4];
+    coords[0] = mat * (rectCoords[0] - P);
+    coords[1] = mat * (rectCoords[1] - P);
+    coords[2] = mat * (rectCoords[2] - P);
+    coords[3] = mat * (rectCoords[3] - P);
+
+    coords[0] = normalize(coords[0]);
+    coords[1] = normalize(coords[1]);
+    coords[2] = normalize(coords[2]);
+    coords[3] = normalize(coords[3]);
+
+    vec3 vectorFormFactor = vec3(0.0);
+    vectorFormFactor += LTC_EdgeVectorFormFactor(coords[0], coords[1]);
+    vectorFormFactor += LTC_EdgeVectorFormFactor(coords[1], coords[2]);
+    vectorFormFactor += LTC_EdgeVectorFormFactor(coords[2], coords[3]);
+    vectorFormFactor += LTC_EdgeVectorFormFactor(coords[3], coords[0]);
+
+    float result = LTC_ClippedSphereFormFactor(vectorFormFactor);
+
+    return vec3(result);
+}

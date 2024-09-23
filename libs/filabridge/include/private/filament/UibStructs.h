@@ -258,12 +258,12 @@ struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "LightsUniforms" };
     math::float4 positionFalloff;     // { float3(pos), 1/falloff^2 }
     math::float3 direction;           // dir
-    float reserved1;                  // 0
+    float width;                      // float
     math::half4 colorIES;             // { half3(col),  IES index   }
     math::float2 spotScaleOffset;     // { scale, offset }
-    float reserved3;                  // 0
+    float height;                     // float
     float intensity;                  // float
-    uint32_t typeShadow;              // 0x00.00.ii.ct (t: 0=point, 1=spot, c:contact, ii: index)
+    uint32_t typeShadow;              // 0x00.00.ii.ct (t: 0=point, 1=spot, 2=area, c:contact, ii: index)
     uint32_t channels;                // 0x000c00ll (ll: light channels, c: caster)
 
     static uint32_t packTypeShadow(uint8_t type, bool contactShadow, uint8_t index) noexcept {

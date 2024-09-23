@@ -121,6 +121,12 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
         setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
                 engine.getDFG().getTexture(), sampler.getSamplerParams());
     }
+
+    if (engine.getLTC().isValid()) {
+        TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
+        setSampler(+PerViewBindingPoints::LTC_LUT,
+                engine.getLTC().getTexture(), sampler.getSamplerParams());
+    }
 }
 
 void ColorPassDescriptorSet::init(

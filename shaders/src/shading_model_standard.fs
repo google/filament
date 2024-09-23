@@ -109,8 +109,40 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float NoH = saturate(dot(shading_normal, h));
     float LoH = saturate(dot(light.l, h));
 
-    vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
-    vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
+    vec3 Fr = vec3(0.0);
+    vec3 Fd = vec3(0.0);
+    if (light.width == 0.0 || light.height == 0.0) {
+        Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
+        Fd = diffuseLobe(pixel, NoV, NoL, LoH);
+    } else {
+        vec3 up = abs(light.direction.y) < 0.9999 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0);
+        vec3 t = normalize(cross(light.direction, up));
+        vec3 b = cross(t, light.direction);
+
+        vec3 halfWidth = t * 0.5 * light.width;
+        vec3 halfHeight = b * 0.5 * light.height;
+
+        vec3 rectCoords[4];
+        rectCoords[0] = light.worldPosition + halfWidth - halfHeight;
+        rectCoords[1] = light.worldPosition - halfWidth - halfHeight;
+        rectCoords[2] = light.worldPosition - halfWidth + halfHeight;
+        rectCoords[3] = light.worldPosition + halfWidth + halfHeight;
+
+        vec2 uv = LTC_Uv(NoV, pixel.roughness);
+
+        vec4 t1 = textureLod(sampler0_ltc, vec3(uv, 0.0), 0.0);
+        vec4 t2 = textureLod(sampler0_ltc, vec3(uv, 1.0), 0.0);
+
+        mat3 mInv = mat3(vec3(t1.x, 0, t1.y), vec3(0, 1, 0), vec3(t1.z, 0, t1.w));
+
+        vec3 fresnel = (pixel.f0 * t2.x + (vec3(1.0) - pixel.f0) * t2.y);
+
+        Fr = fresnel *
+                LTC_Evaluate(shading_normal, shading_view, shading_position, mInv, rectCoords);
+
+        Fd = pixel.diffuseColor *
+                LTC_Evaluate(shading_normal, shading_view, shading_position, mat3(1.0), rectCoords);
+    }
 #if defined(MATERIAL_HAS_REFRACTION)
     Fd *= (1.0 - pixel.transmission);
 #endif
