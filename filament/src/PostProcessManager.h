@@ -34,6 +34,8 @@
 #include <filament/Options.h>
 #include <filament/Viewport.h>
 
+#include <private/filament/EngineEnums.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
@@ -332,11 +334,17 @@ public:
 
         void terminate(FEngine& engine) noexcept;
 
-        FMaterial* getMaterial(FEngine& engine) const noexcept;
-        FMaterialInstance* getMaterialInstance(FEngine& engine) const noexcept;
+        FMaterial* getMaterial(FEngine& engine,
+                PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
 
-        std::pair<backend::PipelineState, backend::Viewport> getPipelineState(FEngine& engine,
-                Variant::type_t variantKey = 0u) const noexcept;
+        // Helper to get a MaterialInstance from a FMaterial
+        // This currently just call FMaterial::getDefaultInstance().
+        static FMaterialInstance* getMaterialInstance(FMaterial const* ma) noexcept;
+
+        // Helper to get a MaterialInstance from a PostProcessMaterial.
+        static FMaterialInstance* getMaterialInstance(FEngine& engine,
+                PostProcessMaterial const& material,
+                PostProcessVariant variant = PostProcessVariant::OPAQUE) noexcept;
 
     private:
         void loadMaterial(FEngine& engine) const noexcept;
@@ -355,30 +363,36 @@ public:
 
     PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
 
-    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
-            PostProcessMaterial const& material, uint8_t variant,
-            backend::DriverApi& driver) const noexcept;
-
-    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
-            PostProcessMaterial const& material,
-            backend::DriverApi& driver) const noexcept;
-
-    void render(FrameGraphResources::RenderPassInfo const& out,
-            backend::PipelineState const& pipeline, backend::Viewport const& scissor,
-            backend::DriverApi& driver) const noexcept;
-
-    void render(FrameGraphResources::RenderPassInfo const& out,
-            std::pair<backend::PipelineState, backend::Viewport> const& combo,
-            backend::DriverApi& driver) const noexcept {
-        render(out, combo.first, combo.second, driver);
-    }
-
     void setFrameUniforms(backend::DriverApi& driver,
             TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
 
     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
 
+    backend::PipelineState getPipelineState(
+            FMaterial const* ma,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
+
+    void renderFullScreenQuad(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline,
+            backend::DriverApi& driver) const noexcept;
+
+    void renderFullScreenQuadWithScissor(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline,
+            backend::Viewport scissor,
+            backend::DriverApi& driver) const noexcept;
+
+    // Helper for a common case. Don't use in a loop because retrieving the PipelineState
+    // from FMaterialInstance is not trivial.
+    void commitAndRenderFullScreenQuad(backend::DriverApi& driver,
+            FrameGraphResources::RenderPassInfo const& out,
+            FMaterialInstance const* mi,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
+
 private:
+    backend::RenderPrimitiveHandle mFullScreenQuadRph;
+    backend::VertexBufferInfoHandle mFullScreenQuadVbih;
+    backend::DescriptorSetLayoutHandle mPerRenderableDslh;
+
     FEngine& mEngine;
 
     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
