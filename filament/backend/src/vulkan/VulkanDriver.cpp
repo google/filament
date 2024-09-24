@@ -1312,7 +1312,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
-        .initialColorLayoutMask = 0,
         .initialDepthLayout = currentDepthLayout,
         .depthFormat = depth.getFormat(),
         .clear = clearVal,
@@ -1326,7 +1325,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         VulkanAttachment const& info = rt->getColor(i);
         if (info.texture) {
             assert_invariant(info.layerCount == renderTargetLayerCount);
-            rpkey.initialColorLayoutMask |= 1 << i;
             rpkey.colorFormat[i] = info.getFormat();
             if (rpkey.samples > 1 && info.texture->samples == 1) {
                 rpkey.needsResolveMask |= (1 << i);
@@ -1358,9 +1356,15 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
         if (fbkey.samples == 1) {
             auto const& range = attachment.getSubresourceRange();
-            attachment.texture->transitionLayout(&commands,
-                    range, VulkanLayout::COLOR_ATTACHMENT);
+            auto tex = attachment.texture;
+            if (tex->getLayout(range.baseMipLevel, range.baseArrayLayer) !=
+                            VulkanLayout::COLOR_ATTACHMENT &&
+                    !tex->transitionLayout(&commands, range, VulkanLayout::COLOR_ATTACHMENT)) {
+                // If the layout transition did not emit a barrier, we do it manually here.
+                tex->samplerToAttachmentBarrier(&commands, range);
+            }
             renderPassAttachments.insert(attachment);
+
             fbkey.color[i] = attachment.getImageView();
             fbkey.resolve[i] = VK_NULL_HANDLE;
             assert_invariant(fbkey.color[i]);

@@ -17,6 +17,10 @@
 #include "VulkanHandles.h"
 
 #include "VulkanConstants.h"
+
+// TODO: remove this by moving DebugUtils out of VulkanDriver
+#include "VulkanDriver.h"
+
 #include "VulkanMemory.h"
 #include "VulkanResourceAllocator.h"
 #include "VulkanUtility.h"

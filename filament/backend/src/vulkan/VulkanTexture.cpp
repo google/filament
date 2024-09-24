@@ -581,9 +581,12 @@ bool VulkanTexture::transitionLayout(
         });
     }
 
+    // Even if we didn't carry out the transition, we should assume that the new layout is defined
+    // through this call.
+    setLayout(range, newLayout);
+
     if (hasTransitions) {
         state->mTransitionFence = fence;
-        setLayout(range, newLayout);
 
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
         FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
@@ -601,6 +604,30 @@ bool VulkanTexture::transitionLayout(
 #endif
     }
     return hasTransitions;
+}
+
+void VulkanTexture::samplerToAttachmentBarrier(VulkanCommandBuffer* commands,
+        VkImageSubresourceRange const& range) {
+    VkCommandBuffer const cmdbuf = commands->buffer();
+    auto* const state = getSharedState();
+    VkImageLayout const layout =
+            imgutil::getVkLayout(getLayout(range.baseArrayLayer, range.baseMipLevel));
+    VkImageMemoryBarrier barrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .dstAccessMask =
+                    VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .oldLayout = layout,
+            .newLayout = layout,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = state->mTextureImage,
+            .subresourceRange = range,
+    };
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void VulkanTexture::attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
@@ -663,9 +690,9 @@ VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
 void VulkanTexture::print() const {
     auto* const state = getSharedState();
     uint32_t const firstLayer = 0;
-    uint32_t const lastLayer = firstLayer + mFullViewRange.layerCount;
+    uint32_t const lastLayer = firstLayer + state->mFullViewRange.layerCount;
     uint32_t const firstLevel = 0;
-    uint32_t const lastLevel = firstLevel + mFullViewRange.levelCount;
+    uint32_t const lastLevel = firstLevel + state->mFullViewRange.levelCount;
 
     for (uint32_t layer = firstLayer; layer < lastLayer; ++layer) {
         for (uint32_t level = firstLevel; level < lastLevel; ++level) {
