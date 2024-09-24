@@ -1213,7 +1213,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                 if (layerCount > 1) {
                     // if layerCount > 1, it means we use the multiview extension.
                     glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
-                        t->gl.id, 0, binfo.baseViewIndex, layerCount);
+                        t->gl.id, 0, binfo.layer, layerCount);
                 } else
 #endif // !defined(__EMSCRIPTEN__) && !defined(IOS)
                 {

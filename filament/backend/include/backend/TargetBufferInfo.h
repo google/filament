@@ -30,10 +30,6 @@ namespace filament::backend {
 
 struct TargetBufferInfo {
     // note: the parameters of this constructor are not in the order of this structure's fields
-    TargetBufferInfo(Handle<HwTexture> handle, uint8_t level, uint16_t layer, uint8_t baseViewIndex) noexcept
-        : handle(handle), baseViewIndex(baseViewIndex), level(level), layer(layer) {
-    }
-
     TargetBufferInfo(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
             : handle(handle), level(level), layer(layer) {
     }
@@ -51,14 +47,15 @@ struct TargetBufferInfo {
     // texture to be used as render target
     Handle<HwTexture> handle;
 
-    // Starting layer index for multiview. This value is only used when the `layerCount` for the
-    // render target is greater than 1.
-    uint8_t baseViewIndex = 0;
-
     // level to be used
     uint8_t level = 0;
 
-    // For cubemaps and 3D textures. See TextureCubemapFace for the face->layer mapping
+    // - For cubemap textures, this indicates the face of the cubemap. See TextureCubemapFace for
+    //   the face->layer mapping)
+    // - For 2d array, cubemap array, and 3d textures, this indicates an index of a single layer of
+    //   them.
+    // - For multiview textures (i.e., layerCount for the RenderTarget is greater than 1), this
+    //   indicates a starting layer index of the current 2d array texture for multiview.
     uint16_t layer = 0;
 };
 
@@ -103,7 +100,7 @@ public:
 
     // this is here for backward compatibility
     MRT(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
-            : mInfos{{ handle, level, layer, 0 }} {
+            : mInfos{{ handle, level, layer }} {
     }
 };
 
