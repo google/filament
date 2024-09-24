@@ -45,10 +45,9 @@ struct RenderTarget::BuilderDetails {
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
     // The number of layers for the render target. The value should be 1 except for multiview.
-    // If `mMultiview` is true, this value is appropriately updated based on the depth of textures.
-    // Hence, #>1 means using multiview
+    // If multiview is enabled, this value is appropriately updated based on the layerCount value
+    // from each attachment. Hence, #>1 means using multiview
     uint8_t mLayerCount = 1;
-    bool mMultiview = false;
 };
 
 using BuilderType = RenderTarget;
@@ -79,9 +78,10 @@ RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t baseLayer/*= 0*/) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t layerCount,
+        uint8_t baseLayer/*= 0*/) noexcept {
     mImpl->mAttachments[(size_t)pt].layer = baseLayer;
-    mImpl->mMultiview = true;
+    mImpl->mAttachments[(size_t)pt].layerCount = layerCount;
     return *this;
 }
 
@@ -116,36 +116,41 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     uint32_t maxWidth = 0;
     uint32_t minHeight = std::numeric_limits<uint32_t>::max();
     uint32_t maxHeight = 0;
-    uint32_t minDepth = std::numeric_limits<uint32_t>::max();
-    uint32_t maxDepth = 0;
+    uint32_t layerCountMultiview = 0;
     for (auto const& attachment : mImpl->mAttachments) {
         if (attachment.texture) {
             const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
             const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
             const uint32_t d = attachment.texture->getDepth(attachment.mipLevel);
-            const Texture::Sampler s = attachment.texture->getTarget();
-            if (mImpl->mMultiview) {
-                FILAMENT_CHECK_PRECONDITION(s == Texture::Sampler::SAMPLER_2D_ARRAY)
+            if (attachment.layerCount) {
+                FILAMENT_CHECK_PRECONDITION(
+                        attachment.texture->getTarget() == Texture::Sampler::SAMPLER_2D_ARRAY)
                         << "Texture sampler must be of 2d array for multiview";
+                FILAMENT_CHECK_PRECONDITION(attachment.layer + attachment.layerCount <= d)
+                        << "For multiview, layer + layerCount cannot exceed the number of depth";
+                if (layerCountMultiview) {
+                    FILAMENT_CHECK_PRECONDITION(layerCountMultiview == attachment.layerCount)
+                            << "layerCount for multiview should match";
+                } else {
+                    layerCountMultiview = attachment.layerCount;
+                }
             }
             minWidth  = std::min(minWidth, w);
             minHeight = std::min(minHeight, h);
-            minDepth = std::min(minDepth, d);
             maxWidth  = std::max(maxWidth, w);
             maxHeight = std::max(maxHeight, h);
-            maxDepth = std::max(maxDepth, d);
         }
     }
 
-    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight
-            && minDepth == maxDepth) << "All attachments dimensions must match";
+    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight)
+            << "All attachments dimensions must match";
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
-    if (mImpl->mMultiview) {
+    if (layerCountMultiview) {
         // mLayerCount should be 1 except for multiview use where we update this variable
-        // to the number of depth of 2d array textures.
-        mImpl->mLayerCount = minDepth;
+        // to the number of layerCount for multiview.
+        mImpl->mLayerCount = layerCountMultiview;
     }
     return downcast(engine).createRenderTarget(*this);
 }

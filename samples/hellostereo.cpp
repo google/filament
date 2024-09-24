@@ -224,8 +224,8 @@ int main(int argc, char** argv) {
         app.stereoRenderTarget = RenderTarget::Builder()
                 .texture(RenderTarget::AttachmentPoint::COLOR, app.stereoColorTexture)
                 .texture(RenderTarget::AttachmentPoint::DEPTH, app.stereoDepthTexture)
-                .multiview(RenderTarget::AttachmentPoint::COLOR, 0)
-                .multiview(RenderTarget::AttachmentPoint::DEPTH, 0)
+                .multiview(RenderTarget::AttachmentPoint::COLOR, eyeCount, 0)
+                .multiview(RenderTarget::AttachmentPoint::DEPTH, eyeCount, 0)
                 .build(*engine);
         app.stereoView->setRenderTarget(app.stereoRenderTarget);
         app.stereoView->setViewport({0, 0, vp.width, vp.height});

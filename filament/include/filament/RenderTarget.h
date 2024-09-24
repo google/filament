@@ -147,10 +147,11 @@ public:
          * This requires COLOR and DEPTH attachments (if set) to be of 2D array textures.
          *
          * @param attachment The attachment point.
+         * @param layerCount The number of layers used for multiview, starting from baseLayer.
          * @param baseLayer The starting index of the 2d array texture.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& multiview(AttachmentPoint attachment, uint8_t baseLayer = 0) noexcept;
+        Builder& multiview(AttachmentPoint attachment, uint8_t layerCount, uint8_t baseLayer = 0) noexcept;
 
         /**
          * Creates the RenderTarget object and returns a pointer to it.
