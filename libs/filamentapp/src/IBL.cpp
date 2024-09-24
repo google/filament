@@ -25,6 +25,8 @@
 
 #include <ktxreader/Ktx1Reader.h>
 
+#include <imageio/ImageDecoder.h>
+
 #include <filament-iblprefilter/IBLPrefilterContext.h>
 
 #include <stb_image.h>
@@ -36,6 +38,8 @@
 #include <string>
 
 #include <string.h>
+
+#include <utils/Log.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -60,26 +64,51 @@ bool IBL::loadFromEquirect(Path const& path) {
         return false;
     }
 
-    int w, h;
-    stbi_info(path.getAbsolutePath().c_str(), &w, &h, nullptr);
-    if (w != h * 2) {
-        std::cerr << "not an equirectangular image!" << std::endl;
+    int w = 0, h = 0;
+    int n = 0;
+    size_t size = 0;
+    void* data = nullptr;
+    void* user = nullptr;
+    Texture::PixelBufferDescriptor::Callback destroyer{};
+
+    if (path.getExtension() == "exr") {
+        std::ifstream in_stream(path.getAbsolutePath().c_str(), std::ios::binary);
+        image::LinearImage* image = new image::LinearImage(
+                image::ImageDecoder::decode(in_stream, path.getAbsolutePath().c_str()));
+        w = image->getWidth();
+        h = image->getHeight();
+        n = image->getChannels();
+        size = w * h * n * sizeof(float);
+        data = image->getPixelRef();
+        user = image;
+        destroyer = [](void*, size_t, void* user) {
+            delete reinterpret_cast<image::LinearImage*>(user);
+        };
+    } else {
+        stbi_info(path.getAbsolutePath().c_str(), &w, &h, nullptr);
+        // load image as float
+        size = w * h * sizeof(float3);
+        data = (float3*)stbi_loadf(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
+        destroyer = [](void* data, size_t, void*) {
+            stbi_image_free(data);
+        };
+    }
+
+    if (data == nullptr || n != 3) {
+        std::cerr << "Could not decode image " << std::endl;
+        destroyer(data, size, user);
         return false;
     }
 
-    // load image as float
-    int n;
-    const size_t size = w * h * sizeof(float3);
-    float3* const data = (float3*)stbi_loadf(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
-    if (data == nullptr || n != 3) {
-        std::cerr << "Could not decode image " << std::endl;
+    if (w != h * 2) {
+        std::cerr << "not an equirectangular image!" << std::endl;
+        destroyer(data, size, user);
         return false;
     }
 
     // now load texture
     Texture::PixelBufferDescriptor buffer(
-            data, size,Texture::Format::RGB, Texture::Type::FLOAT,
-            [](void* buffer, size_t size, void* user) { stbi_image_free(buffer); });
+            data, size,Texture::Format::RGB, Texture::Type::FLOAT, destroyer, user);
 
     Texture* const equirect = Texture::Builder()
             .width((uint32_t)w)
@@ -102,7 +131,7 @@ bool IBL::loadFromEquirect(Path const& path) {
 
     mTexture = specularFilter(mSkyboxTexture);
 
-    mFogTexture = irradianceFilter({ .generateMipmap=false }, mSkyboxTexture);
+    mFogTexture = irradianceFilter({ .generateMipmap = false }, mSkyboxTexture);
     mFogTexture->generateMipmaps(mEngine);
 
     mIndirectLight = IndirectLight::Builder()

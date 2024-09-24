@@ -21,8 +21,18 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <utils/Panic.h>
 #include <filament/RenderTarget.h>
+
+#include <utils/compiler.h>
+#include <utils/BitmaskEnum.h>
+#include <utils/Panic.h>
+
+#include <algorithm>
+#include <iterator>
+#include <limits>
+
+#include <stdint.h>
+#include <stddef.h>
 
 
 namespace filament {
@@ -73,11 +83,15 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     if (color.texture) {
         FILAMENT_CHECK_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT)
                 << "Texture usage must contain COLOR_ATTACHMENT";
+        FILAMENT_CHECK_PRECONDITION(color.texture->getTarget() != Texture::Sampler::SAMPLER_EXTERNAL)
+                << "Color attachment can't be an external texture";
     }
 
     if (depth.texture) {
         FILAMENT_CHECK_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT)
                 << "Texture usage must contain DEPTH_ATTACHMENT";
+        FILAMENT_CHECK_PRECONDITION(depth.texture->getTarget() != Texture::Sampler::SAMPLER_EXTERNAL)
+                        << "Depth attachment can't be an external texture";
     }
 
     const size_t maxDrawBuffers = downcast(engine).getDriverApi().getMaxDrawBuffers();
