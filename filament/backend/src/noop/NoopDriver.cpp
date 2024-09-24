@@ -53,8 +53,8 @@ void NoopDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
 }
 
-void NoopDriver::setFrameScheduledCallback(
-        Handle<HwSwapChain> sch, FrameScheduledCallback&& callback) {
+void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
+        CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
 
 }
 

@@ -73,7 +73,8 @@ public:
 
     void releaseDrawable();
 
-    void setFrameScheduledCallback(FrameScheduledCallback&& callback);
+    void setFrameScheduledCallback(
+            CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags);
     void setFrameCompletedCallback(
             CallbackHandler* handler, utils::Invocable<void(void)>&& callback);
 
@@ -119,7 +120,9 @@ private:
     // Instead, clients bear the responsibility of presenting the frame by calling the
     // PresentCallable object.
     struct {
+        CallbackHandler* handler = nullptr;
         std::shared_ptr<FrameScheduledCallback> callback = nullptr;
+        uint64_t flags = 0;
     } frameScheduled;
 
     struct {

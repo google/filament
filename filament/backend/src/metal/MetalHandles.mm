@@ -232,8 +232,11 @@ void MetalSwapChain::ensureDepthStencilTexture() {
     depthStencilTexture = [context.device newTextureWithDescriptor:descriptor];
 }
 
-void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback&& callback) {
+void MetalSwapChain::setFrameScheduledCallback(
+        CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
+    frameScheduled.handler = handler;
     frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    frameScheduled.flags = flags;
 }
 
 void MetalSwapChain::setFrameCompletedCallback(
@@ -262,10 +265,10 @@ public:
     PresentDrawableData& operator=(const PresentDrawableData&) = delete;
 
     static PresentDrawableData* create(id<CAMetalDrawable> drawable,
-            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver) {
+            std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags) {
         assert_invariant(drawableMutex);
         assert_invariant(driver);
-        return new PresentDrawableData(drawable, drawableMutex, driver);
+        return new PresentDrawableData(drawable, drawableMutex, driver, flags);
     }
 
     static void maybePresentAndDestroyAsync(PresentDrawableData* that, bool shouldPresent) {
@@ -273,13 +276,23 @@ public:
            [that->mDrawable present];
         }
 
-        cleanupAndDestroy(that);
+        if (that->mFlags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
+            cleanupAndDestroy(that);
+        } else {
+            // mDrawable is acquired on the driver thread. Typically, we would release this object
+            // on the same thread, but after receiving consistent crash reports from within
+            // [CAMetalDrawable dealloc], we suspect this object requires releasing on the main
+            // thread.
+            dispatch_async(dispatch_get_main_queue(), ^{
+                cleanupAndDestroy(that);
+            });
+        }
     }
 
 private:
     PresentDrawableData(id<CAMetalDrawable> drawable, std::shared_ptr<std::mutex> drawableMutex,
-            MetalDriver* driver)
-        : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver) {}
+            MetalDriver* driver, uint64_t flags)
+        : mDrawable(drawable), mDrawableMutex(drawableMutex), mDriver(driver), mFlags(flags) {}
 
     static void cleanupAndDestroy(PresentDrawableData *that) {
         if (that->mDrawable) {
@@ -294,6 +307,7 @@ private:
     id<CAMetalDrawable> mDrawable;
     std::shared_ptr<std::mutex> mDrawableMutex;
     MetalDriver* mDriver = nullptr;
+    uint64_t mFlags = 0;
 };
 
 void presentDrawable(bool presentFrame, void* user) {
@@ -310,22 +324,35 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     struct Callback {
         Callback(std::shared_ptr<FrameScheduledCallback> callback, id<CAMetalDrawable> drawable,
-                std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver)
-            : f(callback), data(PresentDrawableData::create(drawable, drawableMutex, driver)) {}
+                 std::shared_ptr<std::mutex> drawableMutex, MetalDriver* driver, uint64_t flags)
+            : f(callback), data(PresentDrawableData::create(drawable, drawableMutex, driver, flags)) {}
         std::shared_ptr<FrameScheduledCallback> f;
         // PresentDrawableData* is destroyed by maybePresentAndDestroyAsync() later.
         std::unique_ptr<PresentDrawableData> data;
+        static void func(void* user) {
+            auto* const c = reinterpret_cast<Callback*>(user);
+            PresentDrawableData* presentDrawableData = c->data.release();
+            PresentCallable presentCallable(presentDrawable, presentDrawableData);
+            c->f->operator()(presentCallable);
+            delete c;
+        }
     };
 
     // This callback pointer will be captured by the block. Even if the scheduled handler is never
     // called, the unique_ptr will still ensure we don't leak memory.
+    uint64_t const flags = frameScheduled.flags;
     __block auto callback = std::make_unique<Callback>(
-            frameScheduled.callback, drawable, layerDrawableMutex, context.driver);
+            frameScheduled.callback, drawable, layerDrawableMutex, context.driver, flags);
 
+    backend::CallbackHandler* handler = frameScheduled.handler;
+    MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-        PresentDrawableData* presentDrawableData = callback->data.release();
-        PresentCallable presentCallable(presentDrawable, presentDrawableData);
-        callback->f->operator()(presentCallable);
+        Callback* user = callback.release();
+        if (flags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
+            Callback::func(user);
+        } else {
+            driver->scheduleCallback(handler, user, &Callback::func);
+        }
     }];
 }
 

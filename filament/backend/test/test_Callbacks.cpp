@@ -32,7 +32,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
     Handle<HwRenderTarget> renderTarget = api.createDefaultRenderTarget();
 
     int callbackCountA = 0;
-    api.setFrameScheduledCallback(swapChain, [&callbackCountA](PresentCallable callable) {
+    api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
         callable();
         callbackCountA++;
     });
@@ -55,7 +55,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
 
     // Now switch out the callback.
     int callbackCountB = 0;
-    api.setFrameScheduledCallback(swapChain, [&callbackCountB](PresentCallable callable) {
+    api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountB](PresentCallable callable) {
         callable();
         callbackCountB++;
     });
