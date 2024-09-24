@@ -179,6 +179,9 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     void attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
             VkImageSubresourceRange const& range);
 
+    void samplerToAttachmentBarrier(VulkanCommandBuffer* commands,
+            VkImageSubresourceRange const& range);
+
     // Returns the preferred data plane of interest for all image views.
     // For now this always returns either DEPTH or COLOR.
     VkImageAspectFlags getImageAspect() const;
