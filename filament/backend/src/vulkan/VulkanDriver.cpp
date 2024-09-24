@@ -1291,6 +1291,12 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // the non-sampling case.
     VulkanCommandBuffer& commands = mCommands.get();
     VkCommandBuffer const cmdbuffer = commands.buffer();
+
+    // Scissor is reset with each render pass
+    // This also takes care of VUID-vkCmdDrawIndexed-None-07832.
+    VkRect2D const scissor{ .offset = { 0, 0 }, .extent = extent };
+    vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
+
     VulkanLayout currentDepthLayout = depth.getLayout();
 
     TargetBufferFlags clearVal = params.flags.clear;
@@ -1848,13 +1854,6 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     mPipelineCache.bindLayout(pipelineLayout);
     mPipelineCache.bindPipeline(commands);
 
-    if (!mRenderPassFboInfo.hasScissorSet) {
-        // Since we don't statically define scissor as part of the pipeline, we need to call scissor
-        // at least once. Context: VUID-vkCmdDrawIndexed-None-07832.
-        auto const& extent = rt->getExtent();
-        scissor({0, 0, extent.width, extent.height});
-    }
-
     FVK_SYSTRACE_END();
 }
 
@@ -1933,6 +1932,9 @@ void VulkanDriver::scissor(Viewport scissorBox) {
     VulkanCommandBuffer& commands = mCommands.get();
     VkCommandBuffer cmdbuffer = commands.buffer();
 
+    // TODO: it's a common case that scissor() is called with (0, 0, maxint, maxint)
+    //       we should maybe have a fast path for this and avoid vkCmdSetScissor() if possible
+
     // Set scissoring.
     // clamp left-bottom to 0,0 and avoid overflows
     constexpr int32_t maxvali  = std::numeric_limits<int32_t>::max();
@@ -1954,8 +1956,6 @@ void VulkanDriver::scissor(Viewport scissorBox) {
     VulkanRenderTarget const* rt = mCurrentRenderPass.renderTarget;
     rt->transformClientRectToPlatform(&scissor);
     vkCmdSetScissor(cmdbuffer, 0, 1, &scissor);
-
-    mRenderPassFboInfo.hasScissorSet = true;
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

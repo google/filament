@@ -157,7 +157,6 @@ private:
         using AttachmentArray = CappedArray<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
         AttachmentArray attachments;
         bool hasColorResolve = false;
-        bool hasScissorSet = false;
     } mRenderPassFboInfo = {};
 
     bool const mIsSRGBSwapChainSupported;
