@@ -44,7 +44,11 @@ struct RenderTarget::BuilderDetails {
     uint32_t mWidth{};
     uint32_t mHeight{};
     uint8_t mSamples = 1;   // currently not settable in the public facing API
+    // The number of layers for the render target. The value should be 1 except for multiview.
+    // If `mMultiview` is true, this value is appropriately updated based on the depth of textures.
+    // Hence, #>1 means using multiview
     uint8_t mLayerCount = 1;
+    bool mMultiview = false;
 };
 
 using BuilderType = RenderTarget;
@@ -74,6 +78,13 @@ RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t
     mImpl->mAttachments[(size_t)pt].layer = layer;
     return *this;
 }
+
+RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t baseLayer/*= 0*/) noexcept {
+    mImpl->mAttachments[(size_t)pt].layer = baseLayer;
+    mImpl->mMultiview = true;
+    return *this;
+}
+
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     using backend::TextureUsage;
@@ -112,6 +123,11 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
             const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
             const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
             const uint32_t d = attachment.texture->getDepth(attachment.mipLevel);
+            const Texture::Sampler s = attachment.texture->getTarget();
+            if (mImpl->mMultiview) {
+                FILAMENT_CHECK_PRECONDITION(s == Texture::Sampler::SAMPLER_2D_ARRAY)
+                        << "Texture sampler must be of 2d array for multiview";
+            }
             minWidth  = std::min(minWidth, w);
             minHeight = std::min(minHeight, h);
             minDepth = std::min(minDepth, d);
@@ -126,7 +142,11 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
-    mImpl->mLayerCount = minDepth;
+    if (mImpl->mMultiview) {
+        // mLayerCount should be 1 except for multiview use where we update this variable
+        // to the number of depth of 2d array textures.
+        mImpl->mLayerCount = minDepth;
+    }
     return downcast(engine).createRenderTarget(*this);
 }
 
@@ -141,7 +161,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
     backend::MRT mrt{};
     TargetBufferInfo dinfo{};
 
-    auto setAttachment = [this](TargetBufferInfo& info, AttachmentPoint attachmentPoint) {
+    auto setAttachment = [&](TargetBufferInfo& info, AttachmentPoint attachmentPoint) {
         Attachment const& attachment = mAttachments[(size_t)attachmentPoint];
         auto t = downcast(attachment.texture);
         info.handle = t->getHwHandle();

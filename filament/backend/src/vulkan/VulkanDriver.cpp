@@ -595,7 +595,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             colorTargets[i] = {
                 .texture = mResourceAllocator.handle_cast<VulkanTexture*>(color[i].handle),
                 .level = color[i].level,
-                .baseViewIndex = color[i].baseViewIndex,
                 .layerCount = layerCount,
                 .layer = color[i].layer,
             };
@@ -611,7 +610,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[0] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(depth.handle),
             .level = depth.level,
-            .baseViewIndex = depth.baseViewIndex,
             .layerCount = layerCount,
             .layer = depth.layer,
         };
@@ -625,7 +623,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthStencil[1] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(stencil.handle),
             .level = stencil.level,
-            .baseViewIndex = stencil.baseViewIndex,
             .layerCount = layerCount,
             .layer = stencil.layer,
         };
