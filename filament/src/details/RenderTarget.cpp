@@ -116,41 +116,39 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     uint32_t maxWidth = 0;
     uint32_t minHeight = std::numeric_limits<uint32_t>::max();
     uint32_t maxHeight = 0;
-    uint32_t layerCountMultiview = 0;
+    uint32_t minLayerCount = std::numeric_limits<uint32_t>::max();
+    uint32_t maxLayerCount = 0;
     for (auto const& attachment : mImpl->mAttachments) {
         if (attachment.texture) {
             const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
             const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
             const uint32_t d = attachment.texture->getDepth(attachment.mipLevel);
-            if (attachment.layerCount) {
+            const uint32_t l = attachment.layerCount;
+            if (l > 0) {
                 FILAMENT_CHECK_PRECONDITION(
                         attachment.texture->getTarget() == Texture::Sampler::SAMPLER_2D_ARRAY)
                         << "Texture sampler must be of 2d array for multiview";
-                FILAMENT_CHECK_PRECONDITION(attachment.layer + attachment.layerCount <= d)
-                        << "For multiview, layer + layerCount cannot exceed the number of depth";
-                if (layerCountMultiview) {
-                    FILAMENT_CHECK_PRECONDITION(layerCountMultiview == attachment.layerCount)
-                            << "layerCount for multiview should match";
-                } else {
-                    layerCountMultiview = attachment.layerCount;
-                }
             }
+            FILAMENT_CHECK_PRECONDITION(attachment.layer + l <= d)
+                    << "layer + layerCount cannot exceed the number of depth";
             minWidth  = std::min(minWidth, w);
             minHeight = std::min(minHeight, h);
+            minLayerCount = std::min(minLayerCount, l);
             maxWidth  = std::max(maxWidth, w);
             maxHeight = std::max(maxHeight, h);
+            maxLayerCount = std::max(maxLayerCount, l);
         }
     }
 
-    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight)
-            << "All attachments dimensions must match";
+    FILAMENT_CHECK_PRECONDITION(minWidth == maxWidth && minHeight == maxHeight
+            && minLayerCount == maxLayerCount) << "All attachments dimensions must match";
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
-    if (layerCountMultiview) {
+    if (minLayerCount > 0) {
         // mLayerCount should be 1 except for multiview use where we update this variable
         // to the number of layerCount for multiview.
-        mImpl->mLayerCount = layerCountMultiview;
+        mImpl->mLayerCount = minLayerCount;
     }
     return downcast(engine).createRenderTarget(*this);
 }
