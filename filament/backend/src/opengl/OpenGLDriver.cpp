@@ -2917,6 +2917,9 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     GLuint const fbo = gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
 
+    // each render-pass starts with a disabled scissor
+    gl.disable(GL_SCISSOR_TEST);
+
     if (gl.ext.EXT_discard_framebuffer
             && !gl.bugs.disable_invalidate_framebuffer) {
         AttachmentArray attachments; // NOLINT
@@ -2929,7 +2932,6 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // It's important to clear the framebuffer before drawing, as it resets
         // the fb to a known state (resets fb compression and possibly other things).
         // So we use glClear instead of glInvalidateFramebuffer
-        gl.disable(GL_SCISSOR_TEST);
         clearWithRasterPipe(discardFlags & ~clearFlags, { 0.0f }, 0.0f, 0);
     }
 
@@ -2945,7 +2947,6 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     }
 
     if (any(clearFlags)) {
-        gl.disable(GL_SCISSOR_TEST);
         clearWithRasterPipe(clearFlags,
                 params.clearColor, (GLfloat)params.clearDepth, (GLint)params.clearStencil);
     }
@@ -2964,7 +2965,6 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
 #ifndef NDEBUG
     // clear the discarded (but not the cleared ones) buffers in debug builds
-    gl.disable(GL_SCISSOR_TEST);
     clearWithRasterPipe(discardFlags & ~clearFlags,
             { 1, 0, 0, 1 }, 1.0, 0);
 #endif
