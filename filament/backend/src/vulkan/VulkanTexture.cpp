@@ -88,12 +88,28 @@ VkComponentMapping composeSwizzle(VkComponentMapping const& prev, VkComponentMap
         return out;
     };
 
+    auto const identityToChannel = [](VkComponentSwizzle val, uint8_t channelIndex) {
+        if (val != VK_COMPONENT_SWIZZLE_IDENTITY) {
+            return val;
+        }
+        return IDENTITY[channelIndex];
+    };
+
+    // We make sure all all identities are mapped into respective channels so that actual channel
+    // mapping will be passed onto the output.
+    VkComponentMapping const prevExplicit = {
+            identityToChannel(prev.r, 0),
+            identityToChannel(prev.g, 1),
+            identityToChannel(prev.b, 2),
+            identityToChannel(prev.a, 3),
+    };
+
     // Note that the channel index corresponds to the VkComponentMapping struct layout.
     return {
-        compose(next.r, prev, 0),
-        compose(next.g, prev, 1),
-        compose(next.b, prev, 2),
-        compose(next.a, prev, 3),
+        compose(next.r, prevExplicit, 0),
+        compose(next.g, prevExplicit, 1),
+        compose(next.b, prevExplicit, 2),
+        compose(next.a, prevExplicit, 3),
     };
 }
 
