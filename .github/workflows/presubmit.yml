@@ -29,7 +29,7 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2019-32core
+    runs-on: win-2019-16core
 
     steps:
       - uses: actions/checkout@v4.1.6
