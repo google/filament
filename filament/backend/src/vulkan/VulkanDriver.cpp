@@ -403,8 +403,8 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t flags) {
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,

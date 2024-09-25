@@ -29,8 +29,8 @@ void* SwapChain::getNativeWindow() const noexcept {
 }
 
 void SwapChain::setFrameScheduledCallback(
-        backend::CallbackHandler* handler, FrameScheduledCallback&& callback) {
-    downcast(this)->setFrameScheduledCallback(handler, std::move(callback));
+        backend::CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
+    downcast(this)->setFrameScheduledCallback(handler, std::move(callback), flags);
 }
 
 bool SwapChain::isFrameScheduledCallbackSet() const noexcept {

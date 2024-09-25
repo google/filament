@@ -19,6 +19,8 @@
 #include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
+#include <filament/SwapChain.h>
+
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
 #include "MetalContext.h"
@@ -240,10 +242,14 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(
-        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t flags) {
+    // Turn off the CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER flag if a custom handler is provided.
+    if (handler) {
+        flags &= ~SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER;
+    }
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(handler, std::move(callback));
+    swapChain->setFrameScheduledCallback(handler, std::move(callback), flags);
 }
 
 void MetalDriver::setFrameCompletedCallback(

@@ -73,7 +73,8 @@ public:
 
     void releaseDrawable();
 
-    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback);
+    void setFrameScheduledCallback(
+            CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags);
     void setFrameCompletedCallback(
             CallbackHandler* handler, utils::Invocable<void(void)>&& callback);
 
@@ -121,6 +122,7 @@ private:
     struct {
         CallbackHandler* handler = nullptr;
         std::shared_ptr<FrameScheduledCallback> callback = nullptr;
+        uint64_t flags = 0;
     } frameScheduled;
 
     struct {
