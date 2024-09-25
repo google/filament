@@ -114,6 +114,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
         elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
             list(APPEND SRCS src/opengl/platforms/PlatformEGLHeadless.cpp)
+        elseif (FILAMENT_SUPPORTS_OSMESA)
+            list(APPEND SRCS src/opengl/platforms/PlatformOSMesa.cpp)
         endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
@@ -361,6 +363,15 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
         -Wl,--exclude-libs,bluegl
 )
 
+if (LINUX AND FILAMENT_SUPPORTS_OSMESA)
+    set(OSMESA_COMPILE_FLAGS
+        -I${FILAMENT_OSMESA_PATH}/include/GL)
+    set(OSMESA_LINKER_FLAGS
+        -Wl,-L${FILAMENT_OSMESA_PATH}/lib/x86_64-linux-gnu/
+        -lOSMesa
+    )
+endif()
+
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
 else()
@@ -381,6 +392,7 @@ endif()
 
 target_compile_options(${TARGET} PRIVATE
         ${FILAMENT_WARNINGS}
+        ${OSMESA_COMPILE_FLAGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
 )
@@ -390,6 +402,7 @@ if (FILAMENT_SUPPORTS_METAL)
 endif()
 
 target_link_libraries(${TARGET} PRIVATE
+        ${OSMESA_LINKER_FLAGS}
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )
 

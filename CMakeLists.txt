@@ -45,6 +45,8 @@ option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
+option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -71,6 +73,10 @@ set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
 
 set(FILAMENT_BACKEND_DEBUG_FLAG "" CACHE STRING
     "A debug flag meant for enabling/disabling backend debugging paths"
+)
+
+set(FILAMENT_OSMESA_PATH "" CACHE STRING
+    "Path to the OSMesa header and lib"
 )
 
 # Enable exceptions by default in spirv-cross.
@@ -132,12 +138,22 @@ else()
 endif()
 
 if (LINUX)
+    if (NOT FILAMENT_OSMESA_PATH STREQUAL "")
+        if (NOT EXISTS ${FILAMENT_OSMESA_PATH}/)
+            message(FATAL_ERROR "Cannot find specified OSMesa build directory: ${FILAMENT_OSMESA_PATH}")
+        endif()
+        set(FILAMENT_SUPPORTS_OSMESA TRUE)
+    endif()
+
     if (FILAMENT_SUPPORTS_WAYLAND)
         add_definitions(-DFILAMENT_SUPPORTS_WAYLAND)
         set(FILAMENT_SUPPORTS_X11 FALSE)
     elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
         add_definitions(-DFILAMENT_SUPPORTS_EGL_ON_LINUX)
         set(FILAMENT_SUPPORTS_X11 FALSE)
+    elseif (FILAMENT_SUPPORTS_OSMESA)
+        set(FILAMENT_SUPPORTS_X11 FALSE)
+        add_definitions(-DFILAMENT_SUPPORTS_OSMESA)
     else ()
         if (FILAMENT_SUPPORTS_XCB)
             add_definitions(-DFILAMENT_SUPPORTS_XCB)
