@@ -41,6 +41,10 @@
         #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
             #include "backend/platforms/PlatformEGLHeadless.h"
         #endif
+    #elif defined(FILAMENT_SUPPORTS_OSMESA)
+        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
+            #include "backend/platforms/PlatformOSMesa.h"
+        #endif
     #endif
 #elif defined(WIN32)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
@@ -124,6 +128,8 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
                 return new PlatformGLX();
             #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
                 return new PlatformEGLHeadless();
+            #elif defined(FILAMENT_SUPPORTS_OSMESA)
+                return new PlatformOSMesa();
             #else
                 return nullptr;
             #endif
