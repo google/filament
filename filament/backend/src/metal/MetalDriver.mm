@@ -251,6 +251,8 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
                 TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::RING));
         mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging",
                 TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::STAGING));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.descriptor_set",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::DESCRIPTOR_SET));
     }
 }
 
