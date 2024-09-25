@@ -511,7 +511,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     std::vector<std::shared_ptr<MetalExternalImage>> externalImages;
 
-    std::array<id<MTLBuffer>, Program::SHADER_TYPE_COUNT> cachedBuffer = { nil };
+    std::array<TrackedMetalBuffer, Program::SHADER_TYPE_COUNT> cachedBuffer = { nil };
 };
 
 } // namespace backend

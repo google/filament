@@ -1345,7 +1345,7 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
     auto& buffer = cachedBuffer[index];
 
     if (buffer) {
-        return buffer;
+        return buffer.get();
     }
 
     // Map all the texture bindings to their respective texture types.
@@ -1368,9 +1368,13 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
     id<MTLArgumentEncoder> encoder =
             layout->getArgumentEncoder(context.device, stage, textureTypes);
 
-    buffer = [context.device newBufferWithLength:encoder.encodedLength
-                                         options:MTLResourceStorageModeShared];
-    [encoder setArgumentBuffer:buffer offset:0];
+    {
+        ScopedAllocationTimer timer("descriptor_set");
+        buffer = { [context.device newBufferWithLength:encoder.encodedLength
+                                               options:MTLResourceStorageModeShared],
+            TrackedMetalBuffer::Type::DESCRIPTOR_SET };
+    }
+    [encoder setArgumentBuffer:buffer.get() offset:0];
 
     for (auto const& binding : bindings) {
         if (!hasShaderType(binding.stageFlags, stage)) {
@@ -1417,7 +1421,7 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
         }
     }
 
-    return buffer;
+    return buffer.get();
 }
 
 } // namespace backend
