@@ -34,7 +34,7 @@ struct OSMesaSwapchain {
     OSMesaSwapchain(uint32_t width, uint32_t height)
         : width(width),
           height(height),
-          buffer(new uint8_t[width * height * 4 * sizeof(BACKING_GL_TYPE)]) {}
+          buffer(new uint8_t[width * height * 4 * sizeof(BackingType)]) {}
 
     uint32_t width = 0;
     uint32_t height = 0;
