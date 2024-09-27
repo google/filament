@@ -17,11 +17,14 @@
 #include "VulkanHandles.h"
 
 #include "VulkanConstants.h"
+
+// TODO: remove this by moving DebugUtils out of VulkanDriver
 #include "VulkanDriver.h"
+
 #include "VulkanMemory.h"
+#include "VulkanResourceAllocator.h"
 #include "VulkanUtility.h"
 #include "spirv/VulkanSpirvUtils.h"
-#include "utils/Log.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -53,62 +56,14 @@ void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeight) {
 }
 
 template<typename Bitmask>
-static constexpr Bitmask fromStageFlags(ShaderStageFlags2 flags, uint8_t binding) {
-    Bitmask ret = 0;
-    if (flags & ShaderStageFlags2::VERTEX) {
-        ret |= (getVertexStage<Bitmask>() << binding);
+inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t binding,
+        Bitmask& mask) {
+    if ((bool) (stage & ShaderStageFlags::VERTEX)) {
+        mask.set(binding + getVertexStageShift<Bitmask>());
     }
-    if (flags & ShaderStageFlags2::FRAGMENT) {
-        ret |= (getFragmentStage<Bitmask>() << binding);
+    if ((bool) (stage & ShaderStageFlags::FRAGMENT)) {
+        mask.set(binding + getFragmentStageShift<Bitmask>());
     }
-    return ret;
-}
-
-constexpr decltype(VulkanProgram::MAX_SHADER_MODULES) MAX_SHADER_MODULES =
-        VulkanProgram::MAX_SHADER_MODULES;
-
-using LayoutDescriptionList = VulkanProgram::LayoutDescriptionList;
-
-template<typename Bitmask>
-void addDescriptors(Bitmask mask,
-        utils::FixedCapacityVector<DescriptorSetLayoutBinding>& outputList) {
-    constexpr uint8_t MODULE_OFFSET = (sizeof(Bitmask) * 8) / MAX_SHADER_MODULES;
-    for (uint8_t i = 0; i < MODULE_OFFSET; ++i) {
-        bool const hasVertex = (mask & (1ULL << i)) != 0;
-        bool const hasFragment = (mask & (1ULL << (MODULE_OFFSET + i))) != 0;
-        if (!hasVertex && !hasFragment) {
-            continue;
-        }
-
-        DescriptorSetLayoutBinding binding{
-            .binding = i,
-            .flags = DescriptorFlags::NONE,
-            .count = 0,// This is always 0 for now as we pass the size of the UBOs in the Driver API
-                       // instead.
-        };
-        if (hasVertex) {
-            binding.stageFlags = ShaderStageFlags2::VERTEX;
-        }
-        if (hasFragment) {
-            binding.stageFlags = static_cast<ShaderStageFlags2>(
-                    binding.stageFlags | ShaderStageFlags2::FRAGMENT);
-        }
-        if constexpr (std::is_same_v<Bitmask, UniformBufferBitmask>) {
-            binding.type = DescriptorType::UNIFORM_BUFFER;
-        } else if constexpr (std::is_same_v<Bitmask, SamplerBitmask>) {
-            binding.type = DescriptorType::SAMPLER;
-        } else if constexpr (std::is_same_v<Bitmask, InputAttachmentBitmask>) {
-            binding.type = DescriptorType::INPUT_ATTACHMENT;
-        }
-        outputList.push_back(binding);
-    }
-}
-
-inline VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device,
-        VkDescriptorSetLayoutCreateInfo const& info) {
-    VkDescriptorSetLayout layout;
-    vkCreateDescriptorSetLayout(device, &info, VKALLOC, &layout);
-    return layout;
 }
 
 inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
@@ -122,20 +77,49 @@ inline VkShaderStageFlags getVkStage(backend::ShaderStage stage) {
     }
 }
 
+using BitmaskGroup = VulkanDescriptorSetLayout::Bitmask;
+BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
+    BitmaskGroup mask;
+    for (auto const& binding: layout.bindings) {
+        switch (binding.type) {
+            case DescriptorType::UNIFORM_BUFFER: {
+                if ((binding.flags & DescriptorFlags::DYNAMIC_OFFSET) != DescriptorFlags::NONE) {
+                    fromStageFlags(binding.stageFlags, binding.binding, mask.dynamicUbo);
+                } else {
+                    fromStageFlags(binding.stageFlags, binding.binding, mask.ubo);
+                }
+                break;
+            }
+            case DescriptorType::SAMPLER: {
+                fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
+                break;
+            }
+            case DescriptorType::INPUT_ATTACHMENT: {
+                fromStageFlags(binding.stageFlags, binding.binding, mask.inputAttachment);
+                break;
+            }
+            case DescriptorType::SHADER_STORAGE_BUFFER:
+                PANIC_POSTCONDITION("Shader storage is not supported");
+                break;
+        }
+    }
+    return mask;
+}
+
 } // anonymous namespace
 
-
-VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device,
-        VkDescriptorSetLayoutCreateInfo const& info, Bitmask const& bitmask)
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout const& layout)
     : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
-      mDevice(device),
-      vklayout(createDescriptorSetLayout(device, info)),
-      bitmask(bitmask),
-      bindings(getBindings(bitmask)),
+      bitmask(fromBackendLayout(layout)),
       count(Count::fromLayoutBitmask(bitmask)) {}
 
-VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
-    vkDestroyDescriptorSetLayout(mDevice, vklayout, VKALLOC);
+void VulkanDescriptorSet::acquire(VulkanTexture* texture) {
+    mResources.acquire(texture);
+    mTextures[mTextureCount++] = texture;
+}
+
+void VulkanDescriptorSet::acquire(VulkanBufferObject* bufferObject) {
+    mResources.acquire(bufferObject);
 }
 
 PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
@@ -189,23 +173,10 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
       mInfo(new(std::nothrow) PipelineInfo(builder)),
       mDevice(device) {
 
-    constexpr uint8_t UBO_MODULE_OFFSET = (sizeof(UniformBufferBitmask) * 8) / MAX_SHADER_MODULES;
-    constexpr uint8_t SAMPLER_MODULE_OFFSET = (sizeof(SamplerBitmask) * 8) / MAX_SHADER_MODULES;
-    constexpr uint8_t INPUT_ATTACHMENT_MODULE_OFFSET =
-            (sizeof(InputAttachmentBitmask) * 8) / MAX_SHADER_MODULES;
-
     Program::ShaderSource const& blobs = builder.getShadersSource();
     auto& modules = mInfo->shaders;
-
     auto const& specializationConstants = builder.getSpecializationConstants();
-
     std::vector<uint32_t> shader;
-
-    // TODO: this will be moved out of the shader as the descriptor set layout will be provided by
-    // Filament instead of parsed from the shaders. See [GDSR] in VulkanDescriptorSetManager.h
-    UniformBufferBitmask uboMask = 0;
-    SamplerBitmask samplerMask = 0;
-    InputAttachmentBitmask inputAttachmentMask = 0;
 
     static_assert(static_cast<ShaderStage>(0) == ShaderStage::VERTEX &&
             static_cast<ShaderStage>(1) == ShaderStage::FRAGMENT &&
@@ -222,12 +193,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             data = (uint32_t*) shader.data();
             dataSize = shader.size() * 4;
         }
-
-        auto const [ubo, sampler, inputAttachment] = getProgramBindings(blob);
-        uboMask |= (static_cast<UniformBufferBitmask>(ubo) << (UBO_MODULE_OFFSET * i));
-        samplerMask |= (static_cast<SamplerBitmask>(sampler) << (SAMPLER_MODULE_OFFSET * i));
-        inputAttachmentMask |= (static_cast<InputAttachmentBitmask>(inputAttachment)
-                                << (INPUT_ATTACHMENT_MODULE_OFFSET * i));
 
         VkShaderModule& module = modules[i];
         VkShaderModuleCreateInfo moduleInfo = {
@@ -254,40 +219,6 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
         VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
                 reinterpret_cast<uint64_t>(module), name.c_str());
 #endif
-    }
-
-    LayoutDescriptionList& layouts = mInfo->layouts;
-    layouts[0].bindings = utils::FixedCapacityVector<DescriptorSetLayoutBinding>::with_capacity(
-            countBits(collapseStages(uboMask)));
-    layouts[1].bindings = utils::FixedCapacityVector<DescriptorSetLayoutBinding>::with_capacity(
-            countBits(collapseStages(samplerMask)));
-    layouts[2].bindings = utils::FixedCapacityVector<DescriptorSetLayoutBinding>::with_capacity(
-            countBits(collapseStages(inputAttachmentMask)));
-
-    addDescriptors(uboMask, layouts[0].bindings);
-    addDescriptors(samplerMask, layouts[1].bindings);
-    addDescriptors(inputAttachmentMask, layouts[2].bindings);
-
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-    auto& bindingToName = mInfo->bindingToName;
-#endif
-
-    auto& groupInfo = builder.getSamplerGroupInfo();
-    auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
-    auto& bindings = mInfo->bindings;
-    for (uint8_t groupInd = 0; groupInd < Program::SAMPLER_BINDING_COUNT; groupInd++) {
-        auto const& group = groupInfo[groupInd];
-        auto const& samplers = group.samplers;
-        for (size_t i = 0; i < samplers.size(); ++i) {
-            uint32_t const binding = samplers[i].binding;
-            bindingToSamplerIndex[binding] = (groupInd << 8) | (0xff & i);
-            assert_invariant(bindings.find(binding) == bindings.end());
-            bindings.insert(binding);
-
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-            bindingToName[binding] = samplers[i].name.c_str();
-#endif
-        }
     }
 
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
@@ -320,6 +251,7 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
+        VulkanResourceAllocator* handleAllocator,
         uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
@@ -353,6 +285,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             if (UTILS_UNLIKELY(!msTexture)) {
                 // TODO: This should be allocated with the ResourceAllocator.
                 msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
+                        handleAllocator,
                         texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
                         samples, texture->width, texture->height, texture->depth, texture->usage,
                         stagePool, true /* heap allocated */);
@@ -382,7 +315,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     VulkanTexture* msTexture = depthTexture->getSidecar();
     if (UTILS_UNLIKELY(!msTexture)) {
         msTexture = new VulkanTexture(device, physicalDevice, context, allocator,
-                commands, depthTexture->target, msLevel, depthTexture->format, samples,
+                commands, handleAllocator,
+                depthTexture->target, msLevel, depthTexture->format, samples,
                 depthTexture->width, depthTexture->height, depthTexture->depth, depthTexture->usage,
                 stagePool, true /* heap allocated */);
         depthTexture->setSidecar(msTexture);
@@ -534,15 +468,7 @@ bool VulkanTimerQuery::isCompleted() noexcept {
     // timestamp has at least been written into a processed command buffer.
 
     // This fence indicates that the corresponding buffer has been completed.
-    if (!mFence) {
-        return false;
-    }
-    VkResult status = mFence->status.load(std::memory_order_relaxed);
-    if (status != VK_SUCCESS) {
-        return false;
-    }
-
-    return true;
+    return mFence && mFence->getStatus() == VK_SUCCESS;
 }
 
 VulkanTimerQuery::~VulkanTimerQuery() = default;
@@ -557,36 +483,5 @@ VulkanRenderPrimitive::VulkanRenderPrimitive(VulkanResourceAllocator* resourceAl
     mResources.acquire(vertexBuffer);
     mResources.acquire(indexBuffer);
 }
-
-using Bitmask = VulkanDescriptorSetLayout::Bitmask;
-
-Bitmask Bitmask::fromBackendLayout(descset::DescriptorSetLayout const& layout) {
-    Bitmask mask;
-    for (auto const& binding: layout.bindings) {
-        switch (binding.type) {
-            case descset::DescriptorType::UNIFORM_BUFFER: {
-                if (binding.flags == descset::DescriptorFlags::DYNAMIC_OFFSET) {
-                    mask.dynamicUbo |= fromStageFlags<UniformBufferBitmask>(binding.stageFlags,
-                            binding.binding);
-                } else {
-                    mask.ubo |= fromStageFlags<UniformBufferBitmask>(binding.stageFlags,
-                            binding.binding);
-                }
-                break;
-            }
-            case descset::DescriptorType::SAMPLER: {
-                mask.sampler |= fromStageFlags<SamplerBitmask>(binding.stageFlags, binding.binding);
-                break;
-            }
-            case descset::DescriptorType::INPUT_ATTACHMENT: {
-                mask.inputAttachment |=
-                        fromStageFlags<InputAttachmentBitmask>(binding.stageFlags, binding.binding);
-                break;
-            }
-        }
-    }
-    return mask;
-}
-
 
 } // namespace filament::backend

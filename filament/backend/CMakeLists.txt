@@ -12,6 +12,7 @@ set(PUBLIC_HDRS
         include/backend/AcquiredImage.h
         include/backend/BufferDescriptor.h
         include/backend/CallbackHandler.h
+        include/backend/DescriptorSetOffsetArray.h
         include/backend/DriverApiForward.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
@@ -69,9 +70,13 @@ set(PRIVATE_HDRS
 if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
     list(APPEND SRCS
             include/backend/platforms/OpenGLPlatform.h
+            src/opengl/BindingMap.h
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
             src/opengl/GLBufferObject.h
+            src/opengl/GLDescriptorSet.cpp
+            src/opengl/GLDescriptorSet.h
+            src/opengl/GLDescriptorSetLayout.h
             src/opengl/GLTexture.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
@@ -495,21 +500,38 @@ endif()
 
 # ==================================================================================================
 # Compute tests
+#
+#if (NOT IOS AND NOT WEBGL)
+#
+#add_executable(compute_test
+#        test/ComputeTest.cpp
+#        test/Arguments.cpp
+#        test/test_ComputeBasic.cpp
+#        )
+#
+#target_link_libraries(compute_test PRIVATE
+#        backend
+#        getopt
+#        gtest
+#        )
+#
+#set_target_properties(compute_test PROPERTIES FOLDER Tests)
+#
+#endif()
 
-if (NOT IOS AND NOT WEBGL)
+# ==================================================================================================
+# Metal utils tests
 
-add_executable(compute_test
-        test/ComputeTest.cpp
-        test/Arguments.cpp
-        test/test_ComputeBasic.cpp
-        )
+if (APPLE AND NOT IOS)
 
-target_link_libraries(compute_test PRIVATE
+add_executable(metal_utils_test test/MetalTest.mm)
+
+target_link_libraries(metal_utils_test PRIVATE
         backend
         getopt
         gtest
         )
 
-set_target_properties(compute_test PROPERTIES FOLDER Tests)
+set_target_properties(metal_utils_test PROPERTIES FOLDER Tests)
 
 endif()

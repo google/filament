@@ -31,7 +31,6 @@ namespace filament::backend {
 
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
-    if (k1.initialColorLayoutMask != k2.initialColorLayoutMask) return false;
     if (k1.initialDepthLayout != k2.initialDepthLayout) return false;
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (k1.colorFormat[i] != k2.colorFormat[i]) return false;
@@ -258,9 +257,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .storeOp = kEnableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
-            .initialLayout = ((!discard && config.initialColorLayoutMask & (1 << i)) || clear)
-                                     ? imgutil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT)
-                                     : imgutil::getVkLayout(VulkanLayout::UNDEFINED),
+            .initialLayout = imgutil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
             .finalLayout = imgutil::getVkLayout(FINAL_COLOR_ATTACHMENT_LAYOUT),
         };
     }

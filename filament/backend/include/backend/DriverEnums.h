@@ -19,13 +19,16 @@
 #ifndef TNT_FILAMENT_BACKEND_DRIVERENUMS_H
 #define TNT_FILAMENT_BACKEND_DRIVERENUMS_H
 
-#include <utils/BitmaskEnum.h>
 #include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
 #include <backend/Platform.h>
 #include <backend/PresentCallable.h>
 
+#include <utils/BitmaskEnum.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/ostream.h>
 
 #include <math/vec4.h>
@@ -97,6 +100,8 @@ static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guarantee
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
 static constexpr size_t MAX_SSBO_COUNT              = 4;    // This is guaranteed by OpenGL ES.
+static constexpr size_t MAX_DESCRIPTOR_SET_COUNT    = 4;    // This is guaranteed by Vulkan.
+static constexpr size_t MAX_DESCRIPTOR_COUNT        = 64;   // per set
 
 static constexpr size_t MAX_PUSH_CONSTANT_COUNT     = 32;   // Vulkan 1.1 spec allows for 128-byte
                                                             // of push constant (we assume 4-byte
@@ -191,6 +196,70 @@ static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguag
     }
 }
 
+enum class ShaderStage : uint8_t {
+    VERTEX = 0,
+    FRAGMENT = 1,
+    COMPUTE = 2
+};
+
+static constexpr size_t PIPELINE_STAGE_COUNT = 2;
+enum class ShaderStageFlags : uint8_t {
+    NONE        =    0,
+    VERTEX      =    0x1,
+    FRAGMENT    =    0x2,
+    COMPUTE     =    0x4,
+    ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT | COMPUTE
+};
+
+static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
+    switch (type) {
+        case ShaderStage::VERTEX:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
+        case ShaderStage::FRAGMENT:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
+        case ShaderStage::COMPUTE:
+            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::COMPUTE));
+    }
+}
+
+enum class DescriptorType : uint8_t {
+    UNIFORM_BUFFER,
+    SHADER_STORAGE_BUFFER,
+    SAMPLER,
+    INPUT_ATTACHMENT,
+};
+
+enum class DescriptorFlags : uint8_t {
+    NONE = 0x00,
+    DYNAMIC_OFFSET = 0x01
+};
+
+using descriptor_set_t = uint8_t;
+
+using descriptor_binding_t = uint8_t;
+
+struct DescriptorSetLayoutBinding {
+    DescriptorType type;
+    ShaderStageFlags stageFlags;
+    descriptor_binding_t binding;
+    DescriptorFlags flags = DescriptorFlags::NONE;
+    uint16_t count = 0;
+
+    friend inline bool operator==(
+            DescriptorSetLayoutBinding const& lhs,
+            DescriptorSetLayoutBinding const& rhs) noexcept {
+        return lhs.type == rhs.type &&
+               lhs.flags == rhs.flags &&
+               lhs.count == rhs.count &&
+               lhs.stageFlags == rhs.stageFlags;
+    }
+};
+
+struct DescriptorSetLayout {
+    utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
+};
+
+
 /**
  * Bitmask for selecting render buffers
  */
@@ -268,15 +337,6 @@ enum class FenceStatus : int8_t {
     ERROR = -1,                 //!< An error occurred. The Fence condition is not satisfied.
     CONDITION_SATISFIED = 0,    //!< The Fence condition is satisfied.
     TIMEOUT_EXPIRED = 1,        //!< wait()'s timeout expired. The Fence condition is not satisfied.
-};
-
-/**
- * Status codes for sync objects
- */
-enum class SyncStatus : int8_t {
-    ERROR = -1,          //!< An error occurred. The Sync is not signaled.
-    SIGNALED = 0,        //!< The Sync is signaled.
-    NOT_SIGNALED = 1,    //!< The Sync is not signaled yet
 };
 
 static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
@@ -367,6 +427,18 @@ enum class SamplerType : uint8_t {
     SAMPLER_3D,             //!< 3D texture
     SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
 };
+
+inline const char* stringify(SamplerType samplerType) {
+    switch (samplerType) {
+        case SamplerType::SAMPLER_2D: return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY: return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP: return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL: return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D: return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "SAMPLER_CUBEMAP_ARRAY";
+    }
+    return "UNKNOWN";
+}
 
 //! Subpass type
 enum class SubpassType : uint8_t {
@@ -696,6 +768,23 @@ enum class TextureUsage : uint16_t {
     DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
 
+inline const char* stringify(TextureUsage usage) {
+    switch (usage) {
+        case TextureUsage::NONE: return "NONE";
+        case TextureUsage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
+        case TextureUsage::DEPTH_ATTACHMENT: return "DEPTH_ATTACHMENT";
+        case TextureUsage::STENCIL_ATTACHMENT: return "STENCIL_ATTACHMENT";
+        case TextureUsage::UPLOADABLE: return "UPLOADABLE";
+        case TextureUsage::SAMPLEABLE: return "SAMPLEABLE";
+        case TextureUsage::SUBPASS_INPUT: return "SUBPASS_INPUT";
+        case TextureUsage::BLIT_SRC: return "BLIT_SRC";
+        case TextureUsage::BLIT_DST: return "BLIT_DST";
+        case TextureUsage::PROTECTED: return "PROTECTED";
+        case TextureUsage::DEFAULT: return "DEFAULT";
+        default: return "UNKNOWN";
+    }
+}
+
 //! Texture swizzle
 enum class TextureSwizzle : uint8_t {
     SUBSTITUTE_ZERO,
@@ -887,6 +976,9 @@ struct SamplerParams { // NOLINT
 
     struct EqualTo {
         bool operator()(SamplerParams lhs, SamplerParams rhs) const noexcept {
+            assert_invariant(lhs.padding0 == 0);
+            assert_invariant(lhs.padding1 == 0);
+            assert_invariant(lhs.padding2 == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
             return *pLhs == *pRhs;
@@ -895,6 +987,9 @@ struct SamplerParams { // NOLINT
 
     struct LessThan {
         bool operator()(SamplerParams lhs, SamplerParams rhs) const noexcept {
+            assert_invariant(lhs.padding0 == 0);
+            assert_invariant(lhs.padding1 == 0);
+            assert_invariant(lhs.padding2 == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
             return *pLhs == *pRhs;
@@ -902,6 +997,12 @@ struct SamplerParams { // NOLINT
     };
 
 private:
+    friend inline bool operator == (SamplerParams lhs, SamplerParams rhs) noexcept {
+        return SamplerParams::EqualTo{}(lhs, rhs);
+    }
+    friend inline bool operator != (SamplerParams lhs, SamplerParams rhs) noexcept {
+        return  !SamplerParams::EqualTo{}(lhs, rhs);
+    }
     friend inline bool operator < (SamplerParams lhs, SamplerParams rhs) noexcept {
         return SamplerParams::LessThan{}(lhs, rhs);
     }
@@ -1069,32 +1170,6 @@ struct RasterState {
  * \privatesection
  */
 
-enum class ShaderStage : uint8_t {
-    VERTEX = 0,
-    FRAGMENT = 1,
-    COMPUTE = 2
-};
-
-static constexpr size_t PIPELINE_STAGE_COUNT = 2;
-enum class ShaderStageFlags : uint8_t {
-    NONE        =    0,
-    VERTEX      =    0x1,
-    FRAGMENT    =    0x2,
-    COMPUTE     =    0x4,
-    ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT | COMPUTE
-};
-
-static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
-    switch (type) {
-        case ShaderStage::VERTEX:
-            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
-        case ShaderStage::FRAGMENT:
-            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::FRAGMENT));
-        case ShaderStage::COMPUTE:
-            return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::COMPUTE));
-    }
-}
-
 /**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
  * can be discarded at the beginning and end of the render pass.
@@ -1258,6 +1333,8 @@ using StereoscopicType = backend::Platform::StereoscopicType;
 template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TargetBufferFlags>
+        : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::DescriptorFlags>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};

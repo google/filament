@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_PERSHADOWMAPUNIFORMS_H
-#define TNT_FILAMENT_PERSHADOWMAPUNIFORMS_H
+#ifndef TNT_FILAMENT_SHADOWMAPDESCRIPTORSET_H
+#define TNT_FILAMENT_SHADOWMAPDESCRIPTORSET_H
 
-#include <private/filament/UibStructs.h>
+#include "DescriptorSet.h"
+
+#include "DescriptorSetLayout.h"
+
+#include "private/filament/UibStructs.h"
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
@@ -38,16 +42,16 @@ class LightManager;
  * writes the data directly into the CommandStream, for this reason partial update of the data
  * is not possible.
  */
-class PerShadowMapUniforms {
+class ShadowMapDescriptorSet {
 
 public:
     class Transaction {
-        friend PerShadowMapUniforms;
+        friend ShadowMapDescriptorSet;
         PerViewUib* uniforms = nullptr;
         Transaction() = default; // disallow creation by the caller
     };
 
-    explicit PerShadowMapUniforms(FEngine& engine) noexcept;
+    explicit ShadowMapDescriptorSet(FEngine& engine) noexcept;
 
     void terminate(backend::DriverApi& driver);
 
@@ -69,7 +73,7 @@ public:
     static Transaction open(backend::DriverApi& driver) noexcept;
 
     // update local data into GPU UBO
-    void commit(Transaction& transaction, backend::DriverApi& driver) noexcept;
+    void commit(Transaction& transaction, FEngine& engine, backend::DriverApi& driver) noexcept;
 
     // bind this UBO
     void bind(backend::DriverApi& driver) noexcept;
@@ -77,8 +81,9 @@ public:
 private:
     static PerViewUib& edit(Transaction const& transaction) noexcept;
     backend::Handle<backend::HwBufferObject> mUniformBufferHandle;
+    DescriptorSet mDescriptorSet;
 };
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_PERSHADOWMAPUNIFORMS_H
+#endif //TNT_FILAMENT_SHADOWMAPDESCRIPTORSET_H

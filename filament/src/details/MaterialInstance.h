@@ -18,26 +18,42 @@
 #define TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 
 #include "downcast.h"
+
 #include "UniformBuffer.h"
+
+#include "ds/DescriptorSet.h"
+
 #include "details/Engine.h"
 
 #include "private/backend/DriverApi.h"
 
+#include <filament/MaterialInstance.h>
+
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <math/scalar.h>
-
 #include <utils/BitmaskEnum.h>
-#include <utils/compiler.h>
+#include <utils/bitset.h>
+#include <utils/CString.h>
 
-#include <filament/MaterialInstance.h>
+#include <tsl/robin_map.h>
+
+#include <algorithm>
+#include <limits>
+#include <mutex>
+#include <string_view>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
 class FMaterial;
+class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
+    FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
@@ -48,27 +64,15 @@ public:
 
     void terminate(FEngine& engine);
 
-    void commit(FEngine::DriverApi& driver) const {
-        if (UTILS_UNLIKELY(mUniforms.isDirty() || mSamplers.isDirty())) {
-            commitSlow(driver);
-        }
-    }
+    void commit(FEngine::DriverApi& driver) const;
 
-    void use(FEngine::DriverApi& driver) const {
-        if (mUbHandle) {
-            driver.bindUniformBuffer(+UniformBindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
-        }
-        if (mSbHandle) {
-            driver.bindSamplers(+SamplerBindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);
-        }
-    }
+    void use(FEngine::DriverApi& driver) const;
 
     FMaterial const* getMaterial() const noexcept { return mMaterial; }
 
     uint64_t getSortingKey() const noexcept { return mMaterialSortingKey; }
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
-    backend::SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
 
     void setScissor(uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept {
         constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
@@ -205,10 +209,21 @@ public:
         }
     }
 
+    void setDefaultInstance(bool value) noexcept {
+        mIsDefaultInstance = value;
+    }
+
+    bool isDefaultInstance() const noexcept {
+        return mIsDefaultInstance;
+    }
+
+    // Called by the engine to ensure that unset samplers are initialized with placedholders.
+    void fixMissingSamplers() const;
+
     const char* getName() const noexcept;
 
     void setParameter(std::string_view name,
-            backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept;
+            backend::Handle<backend::HwTexture> texture, backend::SamplerParams params);
 
     using MaterialInstance::setParameter;
 
@@ -234,18 +249,18 @@ private:
     template<typename T>
     T getParameterImpl(std::string_view name) const;
 
-    // initialize the default instance
-    FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept;
-
-    void commitSlow(FEngine::DriverApi& driver) const;
-
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
 
+    struct TextureParameter {
+        FTexture const* texture;
+        backend::SamplerParams params;
+    };
+
     backend::Handle<backend::HwBufferObject> mUbHandle;
-    backend::Handle<backend::HwSamplerGroup> mSbHandle;
+    tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
+    mutable filament::DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
-    backend::SamplerGroup mSamplers;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};
@@ -260,6 +275,7 @@ private:
     bool mDepthWrite : 1;
     bool mHasScissor : 1;
     bool mIsDoubleSided : 1;
+    bool mIsDefaultInstance : 1;
     TransparencyMode mTransparencyMode : 2;
 
     uint64_t mMaterialSortingKey = 0;
@@ -271,6 +287,8 @@ private:
     };
 
     utils::CString mName;
+    mutable utils::bitset64 mMissingSamplerDescriptors{};
+    mutable std::once_flag mMissingSamplersFlag;
 };
 
 FILAMENT_DOWNCAST(MaterialInstance)

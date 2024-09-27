@@ -21,12 +21,13 @@
 
 #include "details/MaterialInstance.h"
 
+#include "ds/DescriptorSetLayout.h"
+
 #include <filament/Material.h>
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/BufferInterfaceBlock.h>
-#include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
@@ -45,12 +46,13 @@
 #include <utils/Mutex.h>
 
 #include <array>
-#include <atomic>
 #include <memory>
 #include <mutex>
 #include <new>
 #include <optional>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -86,9 +88,25 @@ public:
         return mUniformInterfaceBlock;
     }
 
-    // return the uniform interface block for this material
-    const SamplerInterfaceBlock& getSamplerInterfaceBlock() const noexcept {
-        return mSamplerInterfaceBlock;
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
+        assert_invariant(mMaterialDomain == MaterialDomain::POST_PROCESS);
+        return mPerViewDescriptorSetLayout;
+    }
+
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout(Variant variant) const noexcept {
+        if (Variant::isValidDepthVariant(variant)) {
+            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+            return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
+        }
+        if (Variant::isSSRVariant(variant)) {
+            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+            return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
+        }
+        return mPerViewDescriptorSetLayout;
+    }
+
+    DescriptorSetLayout const& getDescriptorSetLayout() const noexcept {
+        return mDescriptorSetLayout;
     }
 
     void compile(CompilerPriorityQueue priority,
@@ -109,9 +127,7 @@ public:
         return const_cast<FMaterial*>(this)->getDefaultInstance();
     }
 
-    FMaterialInstance* getDefaultInstance() noexcept {
-        return std::launder(reinterpret_cast<FMaterialInstance*>(&mDefaultInstanceStorage));
-    }
+    FMaterialInstance* getDefaultInstance() noexcept;
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
@@ -182,8 +198,15 @@ public:
     float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
     float getSpecularAntiAliasingThreshold() const noexcept { return mSpecularAntiAliasingThreshold; }
 
+    backend::descriptor_binding_t getSamplerBinding(
+            std::string_view const& name) const;
+
     bool hasMaterialProperty(Property property) const noexcept {
         return bool(mMaterialProperties & uint64_t(property));
+    }
+
+    SamplerInterfaceBlock const& getSamplerInterfaceBlock() const noexcept {
+        return mSamplerInterfaceBlock;
     }
 
     size_t getParameterCount() const noexcept {
@@ -204,6 +227,10 @@ public:
     // Return true is the value was changed.
     template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
     bool setConstant(uint32_t id, T value) noexcept;
+
+    uint8_t getPerViewLayoutIndex() const noexcept {
+        return mPerViewLayoutIndex;
+    }
 
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
@@ -257,10 +284,15 @@ private:
 
     void processDepthVariants(FEngine& engine, MaterialParser const* parser);
 
+    void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
+
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
+    DescriptorSetLayout mPerViewDescriptorSetLayout;
+    DescriptorSetLayout mDescriptorSetLayout;
+    backend::Program::DescriptorSetInfo mProgramDescriptorBindings;
 
     backend::RasterState mRasterState;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
@@ -280,6 +312,7 @@ private:
     RefractionType mRefractionType = RefractionType::SOLID;
     ReflectionMode mReflectionMode = ReflectionMode::DEFAULT;
     uint64_t mMaterialProperties = 0;
+    uint8_t mPerViewLayoutIndex = 0;
 
     float mMaskThreshold = 0.4f;
     float mSpecularAntiAliasingVariance = 0.0f;
@@ -293,17 +326,15 @@ private:
     bool mSpecularAntiAliasing = false;
 
     // reserve some space to construct the default material instance
-    std::aligned_storage<sizeof(FMaterialInstance), alignof(FMaterialInstance)>::type mDefaultInstanceStorage;
-    static_assert(sizeof(mDefaultInstanceStorage) >= sizeof(mDefaultInstanceStorage));
+    mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
-    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
     utils::FixedCapacityVector<Variant> mDepthVariants; // only populated with default material
 
-    using BindingUniformInfoContainer = utils::FixedCapacityVector<
-            std::pair<filament::UniformBindingPoints, backend::Program::UniformInfo>>;
+    using BindingUniformInfoContainer = utils::FixedCapacityVector<std::tuple<
+            uint8_t, utils::CString, backend::Program::UniformInfo>>;
 
     BindingUniformInfoContainer mBindingUniformInfo;
 
@@ -311,8 +342,6 @@ private:
 
     AttributeInfoContainer mAttributeInfo;
 
-    SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
-    SamplerBindingToNameMap mSamplerBindingToNameMap;
     // Constants defined by this Material
     utils::FixedCapacityVector<MaterialConstant> mMaterialConstants;
     // A map from the Constant name to the mMaterialConstant index

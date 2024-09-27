@@ -16,17 +16,38 @@
 
 #include <filament/MaterialInstance.h>
 
-#include <filament/TextureSampler.h>
-
-#include "details/MaterialInstance.h"
-
 #include "RenderPass.h"
+
+#include "ds/DescriptorSetLayout.h"
 
 #include "details/Engine.h"
 #include "details/Material.h"
+#include "details/MaterialInstance.h"
 #include "details/Texture.h"
 
+#include "private/filament/EngineEnums.h"
+
+#include <filament/MaterialEnums.h>
+#include <filament/TextureSampler.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/BitmaskEnum.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/CString.h>
+#include <utils/ostream.h>
+#include <utils/Panic.h>
 #include <utils/Log.h>
+
+#include <math/scalar.h>
+
+#include <algorithm>
+#include <cmath>
+#include <mutex>
+#include <string_view>
+#include <utility>
 
 using namespace filament::math;
 using namespace utils;
@@ -37,12 +58,14 @@ using namespace backend;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept
         : mMaterial(material),
+          mDescriptorSet(material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),
           mColorWrite(false),
           mDepthWrite(false),
           mHasScissor(false),
           mIsDoubleSided(false),
+          mIsDefaultInstance(false),
           mTransparencyMode(TransparencyMode::DEFAULT) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -54,11 +77,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
         driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
-    if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
-        mSbHandle = driver.createSamplerGroup(
-                mSamplers.getSize(), utils::FixedSizeString<32>(mMaterial->getName().c_str_safe()));
-    }
+    // set the UBO, always descriptor 0
+    mDescriptorSet.setBuffer(0, mUbHandle, 0, mUniforms.getSize());
 
     const RasterState& rasterState = material->getRasterState();
     // At the moment, only MaterialInstances have a stencil state, but in the future it should be
@@ -96,6 +116,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 FMaterialInstance::FMaterialInstance(FEngine& engine,
         FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
+          mTextureParameters(other->mTextureParameters),
+          mDescriptorSet(other->mDescriptorSet.duplicate(mMaterial->getDescriptorSetLayout())),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -107,6 +129,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mDepthWrite(other->mDepthWrite),
           mHasScissor(false),
           mIsDoubleSided(other->mIsDoubleSided),
+          mIsDefaultInstance(false),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
 
@@ -120,11 +143,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
-    if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers = other->getSamplerGroup();
-        mSbHandle = driver.createSamplerGroup(
-                mSamplers.getSize(), utils::FixedSizeString<32>(mMaterial->getName().c_str_safe()));
-    }
+    // set the UBO, always descriptor 0
+    mDescriptorSet.setBuffer(0, mUbHandle, 0, mUniforms.getSize());
 
     if (material->hasDoubleSidedCapability()) {
         setDoubleSided(mIsDoubleSided);
@@ -143,6 +163,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    // If the original descriptor set has been commited, the copy needs to commit as well.
+    if (other->mDescriptorSet.getHandle()) {
+        mDescriptorSet.commitSlow(mMaterial->getDescriptorSetLayout(), driver);
+    }
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(
@@ -156,26 +181,41 @@ FMaterialInstance::~FMaterialInstance() noexcept = default;
 
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
+    mDescriptorSet.terminate(driver);
     driver.destroyBufferObject(mUbHandle);
-    driver.destroySamplerGroup(mSbHandle);
 }
 
-void FMaterialInstance::commitSlow(DriverApi& driver) const {
+void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty()) {
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
-    if (mSamplers.isDirty()) {
-        driver.updateSamplerGroup(mSbHandle, mSamplers.toBufferDescriptor(driver));
+    if (!mTextureParameters.empty()) {
+        for (auto const& [binding, p]: mTextureParameters) {
+            assert_invariant(p.texture);
+            // TODO: figure out a way to do this more efficiently (isValid() is a hashmap lookup)
+            FEngine& engine = mMaterial->getEngine();
+            FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
+                    << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
+            Handle<HwTexture> handle = p.texture->getHwHandleForSampling();
+            assert_invariant(handle);
+            mDescriptorSet.setSampler(binding, handle, p.params);
+        }
     }
+
+    // TODO: eventually we should remove this in RELEASE builds
+    fixMissingSamplers();
+
+    // Commit descriptors if needed (e.g. when textures are updated,or the first time)
+    mDescriptorSet.commit(mMaterial->getDescriptorSetLayout(), driver);
 }
 
 // ------------------------------------------------------------------------------------------------
 
 void FMaterialInstance::setParameter(std::string_view name,
-        backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept {
-    size_t const index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
-    mSamplers.setSampler(index, { texture, params });
+        backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) {
+    auto binding = mMaterial->getSamplerBinding(name);
+    mDescriptorSet.setSampler(binding, texture, params);
 }
 
 void FMaterialInstance::setParameterImpl(std::string_view name,
@@ -195,17 +235,25 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
                 PANIC_LOG("Depth textures can't be sampled with a linear filter "
                           "unless the comparison mode is set to COMPARE_TO_TEXTURE. "
                           "(material: \"%s\", parameter: \"%.*s\")",
-                          getMaterial()->getName().c_str(), name.size(), name.data());
+                        getMaterial()->getName().c_str(), name.size(), name.data());
             }
         }
     }
 #endif
 
-    Handle<HwTexture> handle{};
-    if (UTILS_LIKELY(texture)) {
-        handle = texture->getHwHandle();
+    auto binding = mMaterial->getSamplerBinding(name);
+    if (texture && texture->textureHandleCanMutate()) {
+        mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
+    } else {
+        Handle<HwTexture> handle{};
+        if (texture) {
+            handle = texture->getHwHandleForSampling();
+            assert_invariant(handle == texture->getHwHandle());
+        } else {
+            mTextureParameters.erase(binding);
+        }
+        mDescriptorSet.setSampler(binding, handle, sampler.getSamplerParams());
     }
-    setParameter(name, handle, sampler.getSamplerParams());
 }
 
 void FMaterialInstance::setMaskThreshold(float threshold) noexcept {
@@ -271,6 +319,83 @@ const char* FMaterialInstance::getName() const noexcept {
         return mMaterial->getName().c_str_safe();
     }
     return mName.c_str();
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+
+    if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
+        std::call_once(mMissingSamplersFlag, [this]() {
+            auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
+            slog.w << "sampler parameters not set in MaterialInstance \""
+                   << mName.c_str_safe() << "\" or Material \""
+                   << mMaterial->getName().c_str_safe() << "\":\n";
+            mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
+                auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+                    return item.binding == binding;
+                });
+                // just safety-check, should never fail
+                if (UTILS_LIKELY(pos != list.end())) {
+                    slog.w << "[" << +binding << "] " << pos->name.c_str() << '\n';
+                }
+            });
+            flush(slog.w);
+        });
+        mMissingSamplerDescriptors.clear();
+    }
+
+    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
+}
+
+void FMaterialInstance::fixMissingSamplers() const {
+    // Here we check that all declared sampler parameters are set, this is required by
+    // Vulkan and Metal; GL is more permissive. If a sampler parameter is not set, we will
+    // log a warning once per MaterialInstance in the system log and patch-in a dummy
+    // texture.
+    auto const& layout = mMaterial->getDescriptorSetLayout();
+    auto const samplersDescriptors = layout.getSamplerDescriptors();
+    auto const validDescriptors = mDescriptorSet.getValidDescriptors();
+    auto const missingSamplerDescriptors =
+            (validDescriptors & samplersDescriptors) ^ samplersDescriptors;
+
+    // always record the missing samplers state at commit() time
+    mMissingSamplerDescriptors = missingSamplerDescriptors;
+
+    if (UTILS_UNLIKELY(missingSamplerDescriptors.any())) {
+        // here we need to set the samplers that are missing
+        auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
+        missingSamplerDescriptors.forEachSetBit([this, &list](descriptor_binding_t binding) {
+            auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+                return item.binding == binding;
+            });
+
+            FEngine const& engine = mMaterial->getEngine();
+
+            // just safety-check, should never fail
+            if (UTILS_LIKELY(pos != list.end())) {
+                switch (pos->type) {
+                    case SamplerType::SAMPLER_2D:
+                        mDescriptorSet.setSampler(binding,
+                                engine.getZeroTexture(), {});
+                        break;
+                    case SamplerType::SAMPLER_2D_ARRAY:
+                        mDescriptorSet.setSampler(binding,
+                                engine.getZeroTextureArray(), {});
+                        break;
+                    case SamplerType::SAMPLER_CUBEMAP:
+                        mDescriptorSet.setSampler(binding,
+                                engine.getDummyCubemap()->getHwHandle(), {});
+                        break;
+                    case SamplerType::SAMPLER_EXTERNAL:
+                    case SamplerType::SAMPLER_3D:
+                    case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+                        // we're currently not able to fix-up those
+                        break;
+                }
+            }
+        });
+    }
 }
 
 } // namespace filament

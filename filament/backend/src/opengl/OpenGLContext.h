@@ -60,9 +60,18 @@ public:
     struct RenderPrimitive {
         static_assert(MAX_VERTEX_ATTRIBUTE_COUNT <= 16);
 
-        GLuint vao[2] = {};                                     // 4
+        GLuint vao[2] = {};                                     // 8
         GLuint elementArray = 0;                                // 4
+        GLenum indicesType = 0;                                 // 4
+
+        // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
+        // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
+        // immutable.
+        Handle<HwVertexBuffer> vertexBufferWithObjects;         // 4
+
         mutable utils::bitset<uint16_t> vertexAttribArray;      // 2
+
+        uint8_t reserved[2] = {};                               // 2
 
         // if this differs from vertexBufferWithObjects->bufferObjectsVersion, this VAO needs to
         // be updated (see OpenGLDriver::updateVertexArrayObject())
@@ -76,16 +85,11 @@ public:
         // See OpenGLContext::bindVertexArray()
         uint8_t nameVersion = 0;                                // 1
 
-        // Size in bytes of indices in the index buffer
-        uint8_t indicesSize = 0;                                // 1
-
-        // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
-        // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
-        // immutable.
-        Handle<HwVertexBuffer> vertexBufferWithObjects;         // 4
+        // Size in bytes of indices in the index buffer (1 or 2)
+        uint8_t indicesShift = 0;                                // 1
 
         GLenum getIndicesType() const noexcept {
-            return indicesSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+            return indicesType;
         }
     } gl;
 
@@ -474,12 +478,6 @@ public:
 
     void unbindEverything() noexcept;
     void synchronizeStateAndCache(size_t index) noexcept;
-    void setEs2UniformBinding(size_t index, GLuint id, void const* data, uint16_t age) noexcept {
-        mUniformBindings[index] = { id, data, age };
-    }
-    auto getEs2UniformBinding(size_t index) const noexcept {
-        return mUniformBindings[index];
-    }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     GLuint getSamplerSlow(SamplerParams sp) const noexcept;
@@ -506,9 +504,6 @@ private:
     std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
     RenderPrimitive mDefaultVAO;
     std::optional<GLuint> mDefaultFbo[2];
-    std::array<
-            std::tuple<GLuint, void const*, uint16_t>,
-            CONFIG_UNIFORM_BINDING_COUNT> mUniformBindings = {};
     mutable tsl::robin_map<SamplerParams, GLuint,
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 

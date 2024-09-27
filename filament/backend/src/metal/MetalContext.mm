@@ -101,9 +101,14 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     context->pendingCommandBuffer = [context->commandQueue commandBuffer];
     // It's safe for this block to capture the context variable. MetalDriver::terminate will ensure
     // all frames and their completion handlers finish before context is deallocated.
+    uint64_t thisCommandBufferId = context->pendingCommandBufferId;
     [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         context->resourceTracker.clearResources((__bridge void*) buffer);
-        
+
+        // Command buffers should complete in order, so latestCompletedCommandBufferId will only
+        // ever increase.
+        context->latestCompletedCommandBufferId = thisCommandBufferId;
+
         auto errorCode = (MTLCommandBufferError)buffer.error.code;
         if (@available(macOS 11.0, *)) {
             if (errorCode == MTLCommandBufferErrorMemoryless) {
@@ -125,6 +130,7 @@ void submitPendingCommands(MetalContext* context) {
     assert_invariant(context->pendingCommandBuffer.status != MTLCommandBufferStatusCommitted);
     [context->pendingCommandBuffer commit];
     context->pendingCommandBuffer = nil;
+    context->pendingCommandBufferId++;
 }
 
 id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context) {
@@ -167,7 +173,6 @@ void MetalPushConstantBuffer::setPushConstant(PushConstantVariant value, uint8_t
 
 void MetalPushConstantBuffer::setBytes(id<MTLCommandEncoder> encoder, ShaderStage stage) {
     constexpr size_t PUSH_CONSTANT_SIZE_BYTES = 4;
-    constexpr size_t PUSH_CONSTANT_BUFFER_INDEX = 26;
 
     static char buffer[MAX_PUSH_CONSTANT_COUNT * PUSH_CONSTANT_SIZE_BYTES];
     assert_invariant(mPushConstants.size() <= MAX_PUSH_CONSTANT_COUNT);

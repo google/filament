@@ -24,7 +24,7 @@ vec3 decodeDataForIBL(const vec4 data) {
 
 vec3 PrefilteredDFG_LUT(float lod, float NoV) {
     // coord = sqrt(linear_roughness), which is the mapping used by cmgen.
-    return textureLod(light_iblDFG, vec2(NoV, lod), 0.0).rgb;
+    return textureLod(sampler0_iblDFG, vec2(NoV, lod), 0.0).rgb;
 }
 
 //------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
 
 vec3 Irradiance_RoughnessOne(const vec3 n) {
     // note: lod used is always integer, hopefully the hardware skips tri-linear filtering
-    return decodeDataForIBL(textureLod(light_iblSpecular, n, frameUniforms.iblRoughnessOneLevel));
+    return decodeDataForIBL(textureLod(sampler0_iblSpecular, n, frameUniforms.iblRoughnessOneLevel));
 }
 
 //------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ vec3 diffuseIrradiance(const vec3 n) {
             return Irradiance_RoughnessOne(n);
         }
 #else
-        ivec2 s = textureSize(light_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
+        ivec2 s = textureSize(sampler0_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
         float du = 1.0 / float(s.x);
         float dv = 1.0 / float(s.y);
         vec3 m0 = normalize(cross(n, vec3(0.0, 1.0, 0.0)));
@@ -121,12 +121,12 @@ float perceptualRoughnessToLod(float perceptualRoughness) {
 
 vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
     float lod = perceptualRoughnessToLod(perceptualRoughness);
-    return decodeDataForIBL(textureLod(light_iblSpecular, r, lod));
+    return decodeDataForIBL(textureLod(sampler0_iblSpecular, r, lod));
 }
 
 vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
     float lod = frameUniforms.iblRoughnessOneLevel * roughness;
-    return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
+    return decodeDataForIBL(textureLod(sampler0_iblSpecular, r, lod + offset));
 }
 
 vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {
@@ -252,7 +252,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
     T *= R;
 
     float roughness = pixel.roughness;
-    float dim = float(textureSize(light_iblSpecular, 0).x);
+    float dim = float(textureSize(sampler0_iblSpecular, 0).x);
     float omegaP = (4.0 * PI) / (6.0 * dim * dim);
 
     vec3 indirectSpecular = vec3(0.0);
@@ -273,7 +273,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
             // PDF inverse (we must use D_GGX() here, which is used to generate samples)
             float ipdf = (4.0 * LoH) / (D_GGX(roughness, NoH, h) * NoH);
             float mipLevel = prefilteredImportanceSampling(ipdf, omegaP);
-            vec3 L = decodeDataForIBL(textureLod(light_iblSpecular, l, mipLevel));
+            vec3 L = decodeDataForIBL(textureLod(sampler0_iblSpecular, l, mipLevel));
 
             float D = distribution(roughness, NoH, h);
             float V = visibility(roughness, NoV, NoL);
@@ -310,7 +310,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
     R[2] = vec3( 0, 0, 1);
     T *= R;
 
-    float dim = float(textureSize(light_iblSpecular, 0).x);
+    float dim = float(textureSize(sampler0_iblSpecular, 0).x);
     float omegaP = (4.0 * PI) / (6.0 * dim * dim);
 
     vec3 indirectDiffuse = vec3(0.0);
@@ -329,7 +329,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
             float ipdf = PI / NoL;
             // we have to bias the mipLevel (+1) to help with very strong highlights
             float mipLevel = prefilteredImportanceSampling(ipdf, omegaP) + 1.0;
-            vec3 L = decodeDataForIBL(textureLod(light_iblSpecular, l, mipLevel));
+            vec3 L = decodeDataForIBL(textureLod(sampler0_iblSpecular, l, mipLevel));
             indirectDiffuse += L;
         }
     }
@@ -543,7 +543,7 @@ vec3 evaluateRefraction(
     // distance to camera plane
     const float invLog2sqrt5 = 0.8614;
     float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-    Ft = textureLod(light_ssr, vec3(p.xy, 0.0), lod).rgb;
+    Ft = textureLod(sampler0_ssr, vec3(p.xy, 0.0), lod).rgb;
 #endif
 
     // base color changes the amount of light passing through the boundary
@@ -585,7 +585,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
             const float invLog2sqrt5 = 0.8614;
             float d = -mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
             float lod = max(0.0, (log2(pixel.roughness / d) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-            ssrFr = textureLod(light_ssr, vec3(interpolationCache.uv, 1.0), lod);
+            ssrFr = textureLod(sampler0_ssr, vec3(interpolationCache.uv, 1.0), lod);
         }
     }
 #else // BLEND_MODE_OPAQUE

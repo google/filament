@@ -14,7 +14,18 @@
  * limitations under the License.
  */
 
-#include "backend/Program.h"
+#include <backend/Program.h>
+#include <backend/DriverEnums.h>
+
+#include <utils/debug.h>
+#include <utils/CString.h>
+#include <utils/ostream.h>
+#include <utils/Invocable.h>
+
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -52,41 +63,24 @@ Program& Program::shaderLanguage(ShaderLanguage shaderLanguage) {
     return *this;
 }
 
-Program& Program::uniformBlockBindings(
-        FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& uniformBlockBindings) noexcept {
-    for (auto const& item : uniformBlockBindings) {
-        assert_invariant(item.second < UNIFORM_BINDING_COUNT);
-        mUniformBlocks[item.second] = item.first;
-    }
+Program& Program::descriptorBindings(backend::descriptor_set_t set,
+        DescriptorBindingsInfo descriptorBindings) noexcept {
+    mDescriptorBindings[set] = std::move(descriptorBindings);
     return *this;
 }
 
-Program& Program::uniforms(uint32_t index, UniformInfo const& uniforms) noexcept {
-    assert_invariant(index < UNIFORM_BINDING_COUNT);
-    mBindingUniformInfo[index] = uniforms;
+Program& Program::uniforms(uint32_t index, utils::CString name, UniformInfo uniforms) noexcept {
+    mBindingUniformsInfo.reserve(mBindingUniformsInfo.capacity() + 1);
+    mBindingUniformsInfo.emplace_back(index, std::move(name), std::move(uniforms));
     return *this;
 }
 
-
-Program& Program::attributes(
-        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> attributes) noexcept {
+Program& Program::attributes(AttributesInfo attributes) noexcept {
     mAttributes = std::move(attributes);
     return *this;
 }
 
-Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
-        const Program::Sampler* samplers, size_t count) noexcept {
-    auto& groupData = mSamplerGroups[bindingPoint];
-    groupData.stageFlags = stageFlags;
-    auto& samplerList = groupData.samplers;
-    samplerList.reserve(count);
-    samplerList.resize(count);
-    std::copy_n(samplers, count, samplerList.data());
-    return *this;
-}
-
-Program& Program::specializationConstants(
-        FixedCapacityVector<SpecializationConstant> specConstants) noexcept {
+Program& Program::specializationConstants(SpecializationConstantsInfo specConstants) noexcept {
     mSpecializationConstants = std::move(specConstants);
     return *this;
 }

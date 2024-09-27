@@ -41,7 +41,7 @@ public:
     FRenderPrimitive() noexcept = default;
 
     void init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
-            const RenderableManager::Builder::Entry& entry) noexcept;
+            FRenderableManager::Entry const& entry) noexcept;
 
     void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             RenderableManager::PrimitiveType type,
