@@ -17,18 +17,23 @@
 #ifndef TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 #define TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 
-#include "downcast.h"
 #include <filament/SkinningBuffer.h>
 
-#include "private/filament/EngineEnums.h"
-#include "private/filament/UibStructs.h"
+#include "downcast.h"
+
+#include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 
 #include <backend/DriverApiForward.h>
-
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
+
+#include <math/mat4.h>
 #include <math/vec2.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 // for gtest
 class FilamentTest_Bones_Test;
@@ -55,9 +60,6 @@ public:
         return (count + CONFIG_MAX_BONE_COUNT - 1) & ~(CONFIG_MAX_BONE_COUNT - 1);
     }
 
-    backend::Handle<backend::HwSamplerGroup> setIndicesAndWeights(FEngine& engine,
-            math::float2 const* pairs, size_t count);
-
 private:
     friend class ::FilamentTest_Bones_Test;
     friend class SkinningBuffer;
@@ -75,12 +77,8 @@ private:
         return mHandle;
     }
 
-    struct HandleIndicesAndWeights{
-        backend::Handle<backend::HwSamplerGroup> sampler;
-        backend::Handle<backend::HwTexture> texture;
-    };
-    static HandleIndicesAndWeights createIndicesAndWeightsHandle(FEngine& engine,
-            size_t count);
+    static backend::TextureHandle createIndicesAndWeightsHandle(FEngine& engine, size_t count);
+
     static void setIndicesAndWeightsData(FEngine& engine,
           backend::Handle<backend::HwTexture> textureHandle,
           const utils::FixedCapacityVector<math::float2>& pairs,

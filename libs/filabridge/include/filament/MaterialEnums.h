@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 54;
+static constexpr size_t MATERIAL_VERSION = 55;
 
 /**
  * Supported shading models
@@ -255,6 +255,9 @@ enum class UserVariantFilterBit : UserVariantFilterMask {
 } // namespace filament
 
 template<> struct utils::EnableBitMaskOperators<filament::UserVariantFilterBit>
+        : public std::true_type {};
+
+template<> struct utils::EnableIntegerOperators<filament::UserVariantFilterBit>
         : public std::true_type {};
 
 #endif

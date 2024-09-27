@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-#include "PerShadowMapUniforms.h"
+#include "ShadowMapDescriptorSet.h"
 
 #include "details/Camera.h"
 #include "details/Engine.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/DescriptorSets.h>
 #include <private/filament/UibStructs.h>
 
 #include <backend/DriverEnums.h>
@@ -35,22 +36,31 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-PerShadowMapUniforms::PerShadowMapUniforms(FEngine& engine) noexcept {
+ShadowMapDescriptorSet::ShadowMapDescriptorSet(FEngine& engine) noexcept {
     DriverApi& driver = engine.getDriverApi();
+
     mUniformBufferHandle = driver.createBufferObject(sizeof(PerViewUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+
+    // create the descriptor-set from the layout
+    mDescriptorSet = DescriptorSet{ engine.getPerViewDescriptorSetLayoutDepthVariant() };
+
+    // initialize the descriptor-set
+    mDescriptorSet.setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
+            mUniformBufferHandle, 0, sizeof(PerViewUib));
 }
 
-void PerShadowMapUniforms::terminate(DriverApi& driver) {
+void ShadowMapDescriptorSet::terminate(DriverApi& driver) {
+    mDescriptorSet.terminate(driver);
     driver.destroyBufferObject(mUniformBufferHandle);
 }
 
-PerViewUib& PerShadowMapUniforms::edit(Transaction const& transaction) noexcept {
+PerViewUib& ShadowMapDescriptorSet::edit(Transaction const& transaction) noexcept {
     assert_invariant(transaction.uniforms);
     return *transaction.uniforms;
 }
 
-void PerShadowMapUniforms::prepareCamera(Transaction const& transaction,
+void ShadowMapDescriptorSet::prepareCamera(Transaction const& transaction,
         FEngine& engine, const CameraInfo& camera) noexcept {
     mat4f const& viewFromWorld = camera.view;
     mat4f const& worldFromView = camera.model;
@@ -78,12 +88,12 @@ void PerShadowMapUniforms::prepareCamera(Transaction const& transaction,
     s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
-void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction, float bias) noexcept {
+void ShadowMapDescriptorSet::prepareLodBias(Transaction const& transaction, float bias) noexcept {
     auto& s = edit(transaction);
     s.lodBias = bias;
 }
 
-void PerShadowMapUniforms::prepareViewport(Transaction const& transaction,
+void ShadowMapDescriptorSet::prepareViewport(Transaction const& transaction,
         backend::Viewport const& viewport) noexcept {
     float2 const dimensions{ viewport.width, viewport.height };
     auto& s = edit(transaction);
@@ -92,7 +102,7 @@ void PerShadowMapUniforms::prepareViewport(Transaction const& transaction,
     s.logicalViewportOffset = 0.0f;
 }
 
-void PerShadowMapUniforms::prepareTime(Transaction const& transaction,
+void ShadowMapDescriptorSet::prepareTime(Transaction const& transaction,
         FEngine& engine, math::float4 const& userTime) noexcept {
     auto& s = edit(transaction);
     const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1'000'000'000;
@@ -101,7 +111,7 @@ void PerShadowMapUniforms::prepareTime(Transaction const& transaction,
     s.userTime = userTime;
 }
 
-void PerShadowMapUniforms::prepareShadowMapping(Transaction const& transaction,
+void ShadowMapDescriptorSet::prepareShadowMapping(Transaction const& transaction,
         bool highPrecision) noexcept {
     auto& s = edit(transaction);
     constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
@@ -109,7 +119,7 @@ void PerShadowMapUniforms::prepareShadowMapping(Transaction const& transaction,
     s.vsmExponent = highPrecision ? high : low;
 }
 
-PerShadowMapUniforms::Transaction PerShadowMapUniforms::open(backend::DriverApi& driver) noexcept {
+ShadowMapDescriptorSet::Transaction ShadowMapDescriptorSet::open(backend::DriverApi& driver) noexcept {
     Transaction transaction;
     // TODO: use out-of-line buffer if too large
     transaction.uniforms = (PerViewUib *)driver.allocate(sizeof(PerViewUib), 16);
@@ -117,15 +127,16 @@ PerShadowMapUniforms::Transaction PerShadowMapUniforms::open(backend::DriverApi&
     return transaction;
 }
 
-void PerShadowMapUniforms::commit(Transaction& transaction,
-        backend::DriverApi& driver) noexcept {
+void ShadowMapDescriptorSet::commit(Transaction& transaction,
+        FEngine& engine, backend::DriverApi& driver) noexcept {
     driver.updateBufferObject(mUniformBufferHandle, {
             transaction.uniforms, sizeof(PerViewUib) }, 0);
+    mDescriptorSet.commit(engine.getPerViewDescriptorSetLayoutDepthVariant(), driver);
     transaction.uniforms = nullptr;
 }
 
-void PerShadowMapUniforms::bind(backend::DriverApi& driver) noexcept {
-    driver.bindUniformBuffer(+UniformBindingPoints::PER_VIEW, mUniformBufferHandle);
+void ShadowMapDescriptorSet::bind(backend::DriverApi& driver) noexcept {
+    mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
 }
 
 } // namespace filament

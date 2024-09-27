@@ -577,7 +577,7 @@ uint32_t getComponentCount(VkFormat format) {
     return {};
 }
 
-VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
+VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]) {
     VkComponentMapping map;
     VkComponentSwizzle* dst = &map.r;
     for (int i = 0; i < 4; ++i, ++dst) {

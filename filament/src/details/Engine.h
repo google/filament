@@ -23,12 +23,15 @@
 #include "DFG.h"
 #include "PostProcessManager.h"
 #include "ResourceList.h"
+#include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
 #include "components/TransformManager.h"
 #include "components/RenderableManager.h"
+
+#include "ds/DescriptorSetLayout.h"
 
 #include "details/BufferObject.h"
 #include "details/Camera.h"
@@ -296,8 +299,11 @@ public:
     void createLight(const LightManager::Builder& builder, utils::Entity entity);
 
     FRenderer* createRenderer() noexcept;
+
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
+
+    FMaterialInstance* createMaterialInstance(const FMaterial* material) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
@@ -445,6 +451,22 @@ public:
         return mHwVertexBufferInfoFactory;
     }
 
+    HwDescriptorSetLayoutFactory& getDescriptorSetLayoutFactory() noexcept {
+        return mHwDescriptorSetLayoutFactory;
+    }
+
+    DescriptorSetLayout const& getPerViewDescriptorSetLayoutDepthVariant() const noexcept {
+        return mPerViewDescriptorSetLayoutDepthVariant;
+    }
+
+    DescriptorSetLayout const& getPerViewDescriptorSetLayoutSsrVariant() const noexcept {
+        return mPerViewDescriptorSetLayoutSsrVariant;
+    }
+
+    DescriptorSetLayout const& getPerRenderableDescriptorSetLayout() const noexcept {
+        return mPerRenderableDescriptorSetLayout;
+    }
+
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
     backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
@@ -514,6 +536,10 @@ private:
     FCameraManager mCameraManager;
     std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
+    HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;
+    DescriptorSetLayout mPerViewDescriptorSetLayoutDepthVariant;
+    DescriptorSetLayout mPerViewDescriptorSetLayoutSsrVariant;
+    DescriptorSetLayout mPerRenderableDescriptorSetLayout;
 
     ResourceList<FBufferObject> mBufferObjects{ "BufferObject" };
     ResourceList<FRenderer> mRenderers{ "Renderer" };
