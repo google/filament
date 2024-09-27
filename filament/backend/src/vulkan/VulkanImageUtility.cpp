@@ -131,13 +131,17 @@ getVkTransition(const VulkanLayoutTransition& transition) {
 
 }// anonymous namespace
 
-void transitionLayout(VkCommandBuffer cmdbuffer,
+bool transitionLayout(VkCommandBuffer cmdbuffer,
         VulkanLayoutTransition transition) {
     if (transition.oldLayout == transition.newLayout) {
-        return;
+        return false;
     }
     auto [srcAccessMask, dstAccessMask, srcStage, dstStage, oldLayout, newLayout]
             = getVkTransition(transition);
+
+    if (oldLayout == newLayout) {
+        return false;
+    }
 
     assert_invariant(transition.image != VK_NULL_HANDLE && "No image for transition");
     VkImageMemoryBarrier barrier = {
@@ -152,6 +156,7 @@ void transitionLayout(VkCommandBuffer cmdbuffer,
             .subresourceRange = transition.subresources,
     };
     vkCmdPipelineBarrier(cmdbuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    return true;
 }
 
 }// namespace filament::backend

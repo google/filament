@@ -220,7 +220,7 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
 
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
-    highp vec2 res = vec2(textureSize(light_structure, 0).xy);
+    highp vec2 res = vec2(textureSize(sampler0_structure, 0).xy);
     highp mat4 uvFromViewMatrix =
         scaleMatrix(res.x, res.y) *
         frameUniforms.ssrUvFromViewMatrix;
@@ -231,7 +231,7 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
     highp vec2 hitPixel;  // not currently used
     highp vec3 vsHitPoint;
 
-    if (traceScreenSpaceRay(vsOrigin, vsDirection, uvFromViewMatrix, light_structure,
+    if (traceScreenSpaceRay(vsOrigin, vsDirection, uvFromViewMatrix, sampler0_structure,
             vsZThickness, nearPlaneZ, stride, jitterFraction, maxSteps,
             maxRayTraceDistance, hitPixel, vsHitPoint)) {
         highp vec4 reprojected = mulMat4x4Float3(frameUniforms.ssrReprojection, vsHitPoint);
@@ -256,7 +256,7 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
         fade *= (1.0 - max(0.0, vsDirection.z));
 
         // we output a premultiplied alpha color because this is going to be mipmapped
-        Fr = vec4(textureLod(light_ssr, reprojected.xy, 0.0).rgb * fade, fade);
+        Fr = vec4(textureLod(sampler0_ssr, reprojected.xy, 0.0).rgb * fade, fade);
     }
     return Fr;
 }

@@ -30,34 +30,45 @@ namespace filament {
 static constexpr size_t POST_PROCESS_VARIANT_BITS = 1;
 static constexpr size_t POST_PROCESS_VARIANT_COUNT = (1u << POST_PROCESS_VARIANT_BITS);
 static constexpr size_t POST_PROCESS_VARIANT_MASK = POST_PROCESS_VARIANT_COUNT - 1;
+
 enum class PostProcessVariant : uint8_t {
     OPAQUE,
     TRANSLUCENT
 };
 
-// Binding points for uniform buffers
-enum class UniformBindingPoints : uint8_t {
-    PER_VIEW                   = 0,    // uniforms updated per view
-    PER_RENDERABLE             = 1,    // uniforms updated per renderable
-    PER_RENDERABLE_BONES       = 2,    // bones data, per renderable
-    PER_RENDERABLE_MORPHING    = 3,    // morphing uniform/sampler updated per render primitive
-    LIGHTS                     = 4,    // lights data array
-    SHADOW                     = 5,    // punctual shadow data
-    FROXEL_RECORDS             = 6,
-    FROXELS                    = 7,
-    PER_MATERIAL_INSTANCE      = 8,    // uniforms updates per material
-    // Update utils::Enum::count<>() below when adding values here
-    // These are limited by CONFIG_BINDING_COUNT (currently 10)
+enum class DescriptorSetBindingPoints : uint8_t {
+    PER_VIEW        = 0,
+    PER_RENDERABLE  = 1,
+    PER_MATERIAL    = 2,
 };
 
-// Binding points for sampler buffers.
-enum class SamplerBindingPoints : uint8_t {
-    PER_VIEW                   = 0,    // samplers updated per view
-    PER_RENDERABLE_MORPHING    = 1,    // morphing sampler updated per render primitive
-    PER_MATERIAL_INSTANCE      = 2,    // samplers updates per material
-    PER_RENDERABLE_SKINNING    = 3,    // bone indices and weights sampler updated per render primitive
-    // Update utils::Enum::count<>() below when adding values here
-    // These are limited by CONFIG_SAMPLER_BINDING_COUNT (currently 4)
+// binding point for the "per-view" descriptor set
+enum class PerViewBindingPoints : uint8_t  {
+    FRAME_UNIFORMS  =  0,   // uniforms updated per view
+    SHADOWS         =  1,   // punctual shadow data
+    LIGHTS          =  2,   // lights data array
+    RECORD_BUFFER   =  3,   // froxel record buffer
+    FROXEL_BUFFER   =  4,   // froxel buffer
+    STRUCTURE       =  5,   // variable, DEPTH
+    SHADOW_MAP      =  6,   // user defined (1024x1024) DEPTH, array
+    IBL_DFG_LUT     =  7,   // user defined (128x128), RGB16F
+    IBL_SPECULAR    =  8,   // user defined, user defined, CUBEMAP
+    SSAO            =  9,   // variable, RGB8 {AO, [depth]}
+    SSR             = 10,   // variable, RGB_11_11_10, mipmapped
+    FOG             = 11    // variable, user defined, CUBEMAP
+};
+
+enum class PerRenderableBindingPoints : uint8_t  {
+    OBJECT_UNIFORMS             =  0,   // uniforms updated per renderable
+    BONES_UNIFORMS              =  1,
+    MORPHING_UNIFORMS           =  2,
+    MORPH_TARGET_POSITIONS      =  3,
+    MORPH_TARGET_TANGENTS       =  4,
+    BONES_INDICES_AND_WEIGHTS   =  5,
+};
+
+enum class PerMaterialBindingPoints : uint8_t  {
+    MATERIAL_PARAMS             =  0,   // uniforms
 };
 
 enum class ReservedSpecializationConstants : uint8_t {
@@ -138,9 +149,14 @@ constexpr uint8_t CONFIG_MAX_STEREOSCOPIC_EYES = 4;
 } // namespace filament
 
 template<>
-struct utils::EnableIntegerOperators<filament::UniformBindingPoints> : public std::true_type {};
+struct utils::EnableIntegerOperators<filament::DescriptorSetBindingPoints> : public std::true_type {};
 template<>
-struct utils::EnableIntegerOperators<filament::SamplerBindingPoints> : public std::true_type {};
+struct utils::EnableIntegerOperators<filament::PerViewBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PerRenderableBindingPoints> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PerMaterialBindingPoints> : public std::true_type {};
+
 template<>
 struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> : public std::true_type {};
 template<>
@@ -149,13 +165,6 @@ template<>
 struct utils::EnableIntegerOperators<filament::PostProcessVariant> : public std::true_type {};
 
 template<>
-inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 9; }
-template<>
-inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 4; }
-template<>
 inline constexpr size_t utils::Enum::count<filament::PostProcessVariant>() { return filament::POST_PROCESS_VARIANT_COUNT; }
-
-static_assert(utils::Enum::count<filament::UniformBindingPoints>() <= filament::backend::CONFIG_UNIFORM_BINDING_COUNT);
-static_assert(utils::Enum::count<filament::SamplerBindingPoints>() <= filament::backend::CONFIG_SAMPLER_BINDING_COUNT);
 
 #endif // TNT_FILAMENT_ENGINE_ENUM_H

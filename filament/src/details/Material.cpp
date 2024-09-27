@@ -20,9 +20,12 @@
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 
+#include "ds/ColorPassDescriptorSet.h"
+
 #include "FilamentAPI-impl.h"
 
 #include <private/filament/EngineEnums.h>
+#include <private/filament/DescriptorSets.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/PushConstantInfo.h>
@@ -259,20 +262,12 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
     assert_invariant(success);
 
     if (UTILS_UNLIKELY(parser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
-        success = parser->getBindingUniformInfo(&mBindingUniformInfo);
-        assert_invariant(success);
-
         success = parser->getAttributeInfo(&mAttributeInfo);
         assert_invariant(success);
-    } else if (mFeatureLevel <= FeatureLevel::FEATURE_LEVEL_1) {
-        // this chunk is not needed for materials at feature level 2 and above
-        success = parser->getUniformBlockBindings(&mUniformBlockBindings);
+
+        success = parser->getBindingUniformInfo(&mBindingUniformInfo);
         assert_invariant(success);
     }
-
-    success = parser->getSamplerBlockBindings(
-            &mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
-    assert_invariant(success);
 
     // Older materials will not have a subpass chunk; this should not be an error.
     if (!parser->getSubpasses(&mSubpassInfo)) {
@@ -330,10 +325,13 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
     processSpecializationConstants(engine, builder, parser);
     processPushConstants(engine, parser);
     processDepthVariants(engine, parser);
+    processDescriptorSets(engine, parser);
 
-    // we can only initialize the default instance once we're initialized ourselves
-    new(&mDefaultInstanceStorage) FMaterialInstance(engine, this);
-
+    mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(
+            mIsVariantLit,
+            mReflectionMode == ReflectionMode::SCREEN_SPACE ||
+            mRefractionMode == RefractionMode::SCREEN_SPACE,
+            !(mVariantFilterMask & +UserVariantFilterBit::FOG));
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
@@ -345,9 +343,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 #endif
 }
 
-FMaterial::~FMaterial() noexcept {
-    std::destroy_at(getDefaultInstance());
-}
+FMaterial::~FMaterial() noexcept = default;
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     if (mMaterialDomain == MaterialDomain::SURFACE) {
@@ -406,7 +402,16 @@ void FMaterial::terminate(FEngine& engine) {
 
     destroyPrograms(engine);
 
-    getDefaultInstance()->terminate(engine);
+    if (mDefaultMaterialInstance) {
+        mDefaultMaterialInstance->setDefaultInstance(false);
+        engine.destroy(mDefaultMaterialInstance);
+        mDefaultMaterialInstance = nullptr;
+    }
+
+    mPerViewDescriptorSetLayout.terminate(
+            engine.getDescriptorSetLayoutFactory(), engine.getDriverApi());
+    mDescriptorSetLayout.terminate(
+            engine.getDescriptorSetLayoutFactory(), engine.getDriverApi());
 }
 
 void FMaterial::compile(CompilerPriorityQueue priority,
@@ -452,7 +457,21 @@ void FMaterial::compile(CompilerPriorityQueue priority,
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
-    return FMaterialInstance::duplicate(getDefaultInstance(), name);
+    if (mDefaultMaterialInstance) {
+        // if we have a default instance, use it to create a new one
+        return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
+    } else {
+        // but if we don't, just create an instance with all the default parameters
+        return mEngine.createMaterialInstance(this);
+    }
+}
+
+FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
+    if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this);
+        mDefaultMaterialInstance->setDefaultInstance(true);
+    }
+    return mDefaultMaterialInstance;
 }
 
 bool FMaterial::hasParameter(const char* name) const noexcept {
@@ -575,37 +594,28 @@ Program FMaterial::getProgramWithVariants(
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
-           .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
-           .shaderLanguage(mMaterialParser->getShaderLanguage())
-           .uniformBlockBindings(mUniformBlockBindings)
-           .diagnostics(mName,
-                    [this, variant](io::ostream& out) -> io::ostream& {
-                        return out << mName.c_str_safe()
-                                   << ", variant=(" << io::hex << variant.key << io::dec << ")";
+            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+            .shaderLanguage(mMaterialParser->getShaderLanguage())
+            .diagnostics(mName,
+                    [this, variant, vertexVariant, fragmentVariant](
+                            io::ostream& out) -> io::ostream& {
+                        return out << mName.c_str_safe() << ", variant=(" << io::hex
+                                   << (int)variant.key << io::dec << "), vertexVariant=(" << io::hex
+                                   << (int)vertexVariant.key << io::dec << "), fragmentVariant=("
+                                   << io::hex << (int)fragmentVariant.key << io::dec << ")";
                     });
 
-    UTILS_NOUNROLL
-    for (size_t i = 0; i < Enum::count<SamplerBindingPoints>(); i++) {
-        SamplerBindingPoints const bindingPoint = (SamplerBindingPoints)i;
-        auto const& info = mSamplerGroupBindingInfoList[i];
-        if (info.count) {
-            std::array<Program::Sampler, backend::MAX_SAMPLER_COUNT> samplers{};
-            for (size_t j = 0, c = info.count; j < c; ++j) {
-                uint8_t const binding = info.bindingOffset + j;
-                samplers[j] = { mSamplerBindingToNameMap[binding], binding };
-            }
-            program.setSamplerGroup(+bindingPoint, info.shaderStageFlags,
-                    samplers.data(), info.count);
-        }
-    }
     if (UTILS_UNLIKELY(mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         assert_invariant(!mBindingUniformInfo.empty());
-        for (auto const& [index, uniforms] : mBindingUniformInfo) {
-            program.uniforms(uint32_t(index), uniforms);
+        for (auto const& [index, name, uniforms] : mBindingUniformInfo) {
+            program.uniforms(uint32_t(index), name, uniforms);
         }
         program.attributes(mAttributeInfo);
     }
 
+    program.descriptorBindings(0, mProgramDescriptorBindings[0]);
+    program.descriptorBindings(1, mProgramDescriptorBindings[1]);
+    program.descriptorBindings(2, mProgramDescriptorBindings[2]);
     program.specializationConstants(mSpecializationConstants);
 
     program.pushConstants(ShaderStage::VERTEX, mPushConstants[(uint8_t) ShaderStage::VERTEX]);
@@ -1035,6 +1045,30 @@ void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* cons
             }
         }
     }
+}
+
+void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* const parser) {
+    UTILS_UNUSED_IN_RELEASE bool success;
+
+    success = parser->getDescriptorBindings(&mProgramDescriptorBindings);
+    assert_invariant(success);
+
+    std::array<backend::DescriptorSetLayout, 2> descriptorSetLayout;
+    success = parser->getDescriptorSetLayout(&descriptorSetLayout);
+    assert_invariant(success);
+
+    mDescriptorSetLayout = {
+            engine.getDescriptorSetLayoutFactory(),
+            engine.getDriverApi(), std::move(descriptorSetLayout[0]) };
+
+    mPerViewDescriptorSetLayout = {
+            engine.getDescriptorSetLayoutFactory(),
+            engine.getDriverApi(), std::move(descriptorSetLayout[1]) };
+}
+
+backend::descriptor_binding_t FMaterial::getSamplerBinding(
+        std::string_view const& name) const {
+    return mSamplerInterfaceBlock.getSamplerInfo(name)->binding;
 }
 
 template bool FMaterial::setConstant<int32_t>(uint32_t id, int32_t value) noexcept;

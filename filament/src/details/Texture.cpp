@@ -39,6 +39,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/algorithm.h>
+#include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
@@ -221,6 +222,7 @@ Texture* Texture::Builder::build(Engine& engine) {
 
 FTexture::FTexture(FEngine& engine, const Builder& builder) {
     FEngine::DriverApi& driver = engine.getDriverApi();
+    mDriver = &driver; // this is unfortunately needed for getHwHandleForSampling()
     mWidth  = static_cast<uint32_t>(builder->mWidth);
     mHeight = static_cast<uint32_t>(builder->mHeight);
     mDepth  = static_cast<uint32_t>(builder->mDepth);
@@ -228,21 +230,33 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
+    mSwizzle = builder->mSwizzle;
+    mTextureIsSwizzled = builder->mTextureIsSwizzled;
+
+    if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
+        // mHandle and mHandleForSampling will be created in setExternalImage()
+        // If this Texture is used for sampling before setExternalImage() is called,
+        // we'll lazily create a 1x1 placeholder texture.
+        return;
+    }
 
     if (UTILS_LIKELY(builder->mImportedId == 0)) {
-        if (UTILS_LIKELY(!builder->mTextureIsSwizzled)) {
-            mHandle = driver.createTexture(
-                    mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
-        } else {
-            mHandle = driver.createTextureSwizzled(
-                    mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
-                    builder->mSwizzle[0], builder->mSwizzle[1], builder->mSwizzle[2],
-                    builder->mSwizzle[3]);
-        }
+        mHandle = driver.createTexture(
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     } else {
         mHandle = driver.importTexture(builder->mImportedId,
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     }
+
+    if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
+        auto const& s = builder->mSwizzle;
+        auto swizzleView = driver.createTextureViewSwizzle(mHandle, s[0], s[1], s[2], s[3]);
+        driver.destroyTexture(mHandle);
+        mHandle = swizzleView;
+    }
+
+    mHandleForSampling = mHandle;
+
     if (auto name = builder.getName(); !name.empty()) {
         driver.setDebugTag(mHandle.getId(), std::move(name));
     } else {
@@ -252,8 +266,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
 
 // frees driver resources, object becomes invalid
 void FTexture::terminate(FEngine& engine) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyTexture(mHandle);
+    setHandles({});
 }
 
 size_t FTexture::getWidth(size_t level) const noexcept {
@@ -354,6 +367,9 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
     engine.getDriverApi().update3DImage(mHandle,
             uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(p));
+
+    // this method shouldn't have been const
+    const_cast<FTexture*>(this)->updateLodRange(level);
 }
 
 // deprecated
@@ -420,36 +436,78 @@ void FTexture::setImage(FEngine& engine, size_t level,
         engine.getDriverApi().queueCommand(
                 make_copyable_function([buffer = std::move(buffer)]() {}));
     }
+
+    // this method shouldn't been const
+    const_cast<FTexture*>(this)->updateLodRange(level);
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
-    if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
-        engine.getDriverApi().setExternalImage(mHandle, image);
+    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
+        return;
     }
+    // The call to setupExternalImage is synchronous, and allows the driver to take ownership of the
+    // external image on this thread, if necessary.
+    auto& api = engine.getDriverApi();
+    api.setupExternalImage(image);
+
+    auto texture = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
+
+    if (mTextureIsSwizzled) {
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
-    if (mTarget == Sampler::SAMPLER_EXTERNAL) {
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
-        // the external image on this thread, if necessary.
-        engine.getDriverApi().setupExternalImage(image);
-        engine.getDriverApi().setExternalImagePlane(mHandle, image, plane);
+    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
+        return;
     }
+    // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
+    // the external image on this thread, if necessary.
+    auto& api = engine.getDriverApi();
+    api.setupExternalImage(image);
+
+    auto texture =
+            api.createTextureExternalImagePlane(mFormat, mWidth, mHeight, mUsage, image, plane);
+
+    if (mTextureIsSwizzled) {
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
-    if (stream) {
-        FILAMENT_CHECK_PRECONDITION(mTarget == Sampler::SAMPLER_EXTERNAL)
-                << "Texture target must be SAMPLER_EXTERNAL";
+    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
+        return;
+    }
 
+    auto& api = engine.getDriverApi();
+    auto texture = api.createTexture(
+            mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+
+    if (mTextureIsSwizzled) {
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
+
+    if (stream) {
         mStream = stream;
-        engine.getDriverApi().setExternalStream(mHandle, stream->getHandle());
+        api.setExternalStream(mHandle, stream->getHandle());
     } else {
         mStream = nullptr;
-        engine.getDriverApi().setExternalStream(mHandle, backend::Handle<backend::HwStream>());
+        api.setExternalStream(mHandle, backend::Handle<backend::HwStream>());
     }
 }
 
@@ -469,6 +527,87 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     }
 
     engine.getDriverApi().generateMipmaps(mHandle);
+    // this method shouldn't have been const
+    const_cast<FTexture*>(this)->updateLodRange(0, mLevelCount);
+}
+
+bool FTexture::textureHandleCanMutate() const noexcept {
+    return (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) ||
+            mTarget == SamplerType::SAMPLER_EXTERNAL;
+}
+
+void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
+    assert_invariant(mTarget != SamplerType::SAMPLER_EXTERNAL);
+    if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
+        auto& range = mLodRange;
+        uint8_t const last = int8_t(baseLevel + levelCount);
+        if (range.first > baseLevel || range.last < last) {
+            if (range.empty()) {
+                range = { baseLevel, last };
+            } else {
+                range.first = std::min(range.first, baseLevel);
+                range.last = std::max(range.last, last);
+            }
+            // We defer the creation of the texture view to getHwHandleForSampling() because it
+            // is a common case that by then, the view won't be needed. Creating the first view on a
+            // texture has a backend cost.
+        }
+    }
+}
+
+void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
+    assert_invariant(!mHandle || mHandleForSampling);
+    if (mHandle) {
+        mDriver->destroyTexture(mHandle);
+    }
+    if (mHandleForSampling != mHandle) {
+        mDriver->destroyTexture(mHandleForSampling);
+    }
+    mHandle = handle;
+    mHandleForSampling = handle;
+}
+
+backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
+        backend::Handle<backend::HwTexture> handle) const noexcept {
+    assert_invariant(!mHandle || mHandleForSampling);
+    if (mHandleForSampling && mHandleForSampling != mHandle) {
+        mDriver->destroyTexture(mHandleForSampling);
+    }
+    return mHandleForSampling = handle;
+}
+
+backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
+        backend::DriverApi& driver) noexcept {
+    auto handle = driver.createTexture(
+            Sampler::SAMPLER_2D, 1, InternalFormat::RGBA8, 1, 1, 1, 1, Usage::DEFAULT);
+    static uint8_t pixels[4] = { 0, 0, 0, 0 };
+    driver.update3DImage(handle, 0, 0, 0, 0, 1, 1, 1,
+            { (char*)&pixels[0], sizeof(pixels),
+                    Texture::PixelBufferDescriptor::PixelDataFormat::RGBA,
+                    Texture::PixelBufferDescriptor::PixelDataType::UBYTE });
+    return handle;
+}
+
+backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
+    if (UTILS_UNLIKELY(mTarget == SamplerType::SAMPLER_EXTERNAL && !mHandleForSampling)) {
+        return setHandleForSampling(createPlaceholderTexture(*mDriver));
+    }
+    auto const& range = mLodRange;
+    auto& activeRange = mActiveLodRange;
+    bool const lodRangeChanged = activeRange.first != range.first || activeRange.last != range.last;
+    if (UTILS_UNLIKELY(lodRangeChanged)) {
+        activeRange = range;
+        if (range.empty() || hasAllLods(range)) {
+            setHandleForSampling(mHandle);
+        } else {
+            setHandleForSampling(mDriver->createTextureView(mHandle, range.first, range.size()));
+        }
+    }
+    return mHandleForSampling;
+}
+
+void FTexture::updateLodRange(uint8_t level) noexcept {
+    updateLodRange(level, 1);
 }
 
 bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept {

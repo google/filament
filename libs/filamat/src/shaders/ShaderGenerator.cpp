@@ -16,20 +16,29 @@
 
 #include "ShaderGenerator.h"
 
-#include <filament/MaterialEnums.h>
-
-#include <private/filament/EngineEnums.h>
-#include <private/filament/Variant.h>
-
-#include <utils/CString.h>
-
-#include "backend/DriverEnums.h"
-#include "filamat/MaterialBuilder.h"
 #include "CodeGenerator.h"
 #include "SibGenerator.h"
 #include "UibGenerator.h"
 
+#include <filament/MaterialEnums.h>
+
+#include <private/filament/DescriptorSets.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
+
+#include <filamat/MaterialBuilder.h>
+
+#include <backend/DriverEnums.h>
+
+#include <utils/CString.h>
+#include <utils/debug.h>
+#include <utils/sstream.h>
+
+#include <algorithm>
 #include <iterator>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filamat {
 
@@ -443,42 +452,45 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
     // uniforms
     cg.generateUniforms(vs, ShaderStage::VERTEX,
-            UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+            DescriptorSetBindingPoints::PER_VIEW,
+            +PerViewBindingPoints::FRAME_UNIFORMS,
+            UibGenerator::getPerViewUib());
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
-            UniformBindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
+            DescriptorSetBindingPoints::PER_RENDERABLE,
+            +PerRenderableBindingPoints::OBJECT_UNIFORMS,
+            UibGenerator::getPerRenderableUib());
 
     const bool litVariants = material.isLit || material.hasShadowMultiplier;
     if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
         cg.generateUniforms(vs, ShaderStage::FRAGMENT,
-                UniformBindingPoints::SHADOW, UibGenerator::getShadowUib());
+                DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::SHADOWS,
+                UibGenerator::getShadowUib());
     }
 
     if (hasSkinningOrMorphing(variant, featureLevel)) {
         cg.generateUniforms(vs, ShaderStage::VERTEX,
-                UniformBindingPoints::PER_RENDERABLE_BONES,
+                DescriptorSetBindingPoints::PER_RENDERABLE,
+                +PerRenderableBindingPoints::BONES_UNIFORMS,
                 UibGenerator::getPerRenderableBonesUib());
-        cg.generateSamplers(vs, SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_RENDERABLE_SKINNING),
-                SibGenerator::getPerRenderPrimitiveBonesSib(variant));
         cg.generateUniforms(vs, ShaderStage::VERTEX,
-                UniformBindingPoints::PER_RENDERABLE_MORPHING,
+                DescriptorSetBindingPoints::PER_RENDERABLE,
+                +PerRenderableBindingPoints::MORPHING_UNIFORMS,
                 UibGenerator::getPerRenderableMorphingUib());
-
-        cg.generateSamplers(vs, SamplerBindingPoints::PER_RENDERABLE_MORPHING,
-                material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_RENDERABLE_MORPHING),
-                SibGenerator::getPerRenderPrimitiveMorphingSib(variant));
+        cg.generateSamplers(vs, DescriptorSetBindingPoints::PER_RENDERABLE,
+                SibGenerator::getPerRenderableSib(variant));
     }
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
-            UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+            DescriptorSetBindingPoints::PER_MATERIAL,
+            +PerMaterialBindingPoints::MATERIAL_PARAMS,
+            material.uib);
 
     CodeGenerator::generateSeparator(vs);
 
     // TODO: should we generate per-view SIB in the vertex shader?
-    cg.generateSamplers(vs, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-            material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+    cg.generateSamplers(vs, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
     // shader code
     CodeGenerator::generateCommon(vs, ShaderStage::VERTEX);
@@ -498,7 +510,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material, const filament::Variant variant,
-        Interpolation interpolation) const noexcept {
+        Interpolation interpolation, UserVariantFilterMask variantFilter) const noexcept {
 
     assert_invariant(filament::Variant::isValid(variant));
     assert_invariant(mMaterialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
@@ -548,43 +560,76 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     // uniforms and samplers
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-            UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+            DescriptorSetBindingPoints::PER_VIEW,
+            +PerViewBindingPoints::FRAME_UNIFORMS,
+            UibGenerator::getPerViewUib());
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-            UniformBindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib());
+            DescriptorSetBindingPoints::PER_RENDERABLE,
+            +PerRenderableBindingPoints::OBJECT_UNIFORMS,
+            UibGenerator::getPerRenderableUib());
 
     if (variant.hasDynamicLighting()) {
         cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                UniformBindingPoints::LIGHTS, UibGenerator::getLightsUib());
+                DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::LIGHTS,
+                UibGenerator::getLightsUib());
     }
 
     bool const litVariants = material.isLit || material.hasShadowMultiplier;
     if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
         cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                UniformBindingPoints::SHADOW, UibGenerator::getShadowUib());
+                DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::SHADOWS,
+                UibGenerator::getShadowUib());
     }
 
     if (variant.hasDynamicLighting()) {
         cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                UniformBindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib());
+                DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::RECORD_BUFFER,
+                UibGenerator::getFroxelRecordUib());
+
         cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-                UniformBindingPoints::FROXELS, UibGenerator::getFroxelsUib());
+                DescriptorSetBindingPoints::PER_VIEW,
+                +PerViewBindingPoints::FROXEL_BUFFER,
+                UibGenerator::getFroxelsUib());
     }
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-            UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+            DescriptorSetBindingPoints::PER_MATERIAL,
+            +PerMaterialBindingPoints::MATERIAL_PARAMS,
+            material.uib);
 
     CodeGenerator::generateSeparator(fs);
 
-    if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) { // FIXME: generate only what we need
-        cg.generateSamplers(fs, SamplerBindingPoints::PER_VIEW,
-                material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_VIEW),
-                SibGenerator::getPerViewSib(variant));
+    if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+
+        auto const perViewDescriptorSetLayout = getPerViewDescriptorSetLayoutWithVariant(
+                variant, variantFilter,
+                material.isLit, material.reflectionMode, material.refractionMode);
+
+        // this is the list of samplers we need to filter
+        auto list = SibGenerator::getPerViewSib(variant).getSamplerInfoList();
+
+        // remove all the samplers that are not included in the descriptor-set layout
+        list.erase(
+                std::remove_if(list.begin(), list.end(),
+                        [&perViewDescriptorSetLayout](auto const& entry) {
+                            auto pos = std::find_if(
+                                    perViewDescriptorSetLayout.bindings.begin(),
+                                    perViewDescriptorSetLayout.bindings.end(),
+                                    [&entry](const auto& item) {
+                                        return item.binding == entry.binding;
+                                    });
+                            return pos == perViewDescriptorSetLayout.bindings.end();
+                        }), list.end());
+
+        cg.generateSamplers(fs, DescriptorSetBindingPoints::PER_VIEW, list);
     }
 
-    cg.generateSamplers(fs, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-            material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+    cg.generateSamplers(fs, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
     fs << "float filament_lodBias;\n";
 
@@ -648,14 +693,16 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
     CodeGenerator::generateCommonTypes(s, ShaderStage::COMPUTE);
 
     cg.generateUniforms(s, ShaderStage::COMPUTE,
-            UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+            DescriptorSetBindingPoints::PER_VIEW,
+            +PerViewBindingPoints::FRAME_UNIFORMS,
+            UibGenerator::getPerViewUib());
 
     cg.generateUniforms(s, ShaderStage::COMPUTE,
-            UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+            DescriptorSetBindingPoints::PER_MATERIAL,
+            +PerMaterialBindingPoints::MATERIAL_PARAMS,
+            material.uib);
 
-    cg.generateSamplers(s, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-            material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+    cg.generateSamplers(s, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
     // generate SSBO
     cg.generateBuffers(s, material.buffers);
@@ -696,14 +743,16 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
     generatePostProcessMaterialVariantDefines(vs, PostProcessVariant(variantKey));
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
-            UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+            DescriptorSetBindingPoints::PER_VIEW,
+            +PerViewBindingPoints::FRAME_UNIFORMS,
+            UibGenerator::getPerViewUib());
 
     cg.generateUniforms(vs, ShaderStage::VERTEX,
-            UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+            DescriptorSetBindingPoints::PER_MATERIAL,
+            +PerMaterialBindingPoints::MATERIAL_PARAMS,
+            material.uib);
 
-    cg.generateSamplers(vs, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-            material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+    cg.generateSamplers(vs, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
     CodeGenerator::generatePostProcessCommon(vs, ShaderStage::VERTEX);
     CodeGenerator::generatePostProcessGetters(vs, ShaderStage::VERTEX);
@@ -735,14 +784,16 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     }
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-            UniformBindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
+            DescriptorSetBindingPoints::PER_VIEW,
+            +PerViewBindingPoints::FRAME_UNIFORMS,
+            UibGenerator::getPerViewUib());
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
-            UniformBindingPoints::PER_MATERIAL_INSTANCE, material.uib);
+            DescriptorSetBindingPoints::PER_MATERIAL,
+            +PerMaterialBindingPoints::MATERIAL_PARAMS,
+            material.uib);
 
-    cg.generateSamplers(fs, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
-            material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
-            material.sib);
+    cg.generateSamplers(fs, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
     // subpass
     CodeGenerator::generateSubpass(fs, material.subpass);
@@ -785,6 +836,24 @@ bool ShaderGenerator::hasStereo(
             // HACK(exv): Ignore stereo variant when targeting ESSL 1.0. We should properly build a
             // system in matc which allows the set of included variants to differ per-feature level.
             && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
+}
+
+backend::DescriptorSetLayout ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
+        filament::Variant variant,
+        UserVariantFilterMask variantFilter,
+        bool isLit,
+        ReflectionMode reflectionMode,
+        RefractionMode refractionMode) {
+    if (filament::Variant::isValidDepthVariant(variant)) {
+        return descriptor_sets::getDepthVariantLayout();
+    }
+    if (filament::Variant::isSSRVariant(variant)) {
+        return descriptor_sets::getSsrVariantLayout();
+    }
+    // We need to filter out all the descriptors not included in the "resolved" layout below
+    return descriptor_sets::getPerViewDescriptorSetLayout(
+            MaterialDomain::SURFACE, variantFilter,
+            isLit, reflectionMode, refractionMode);
 }
 
 } // namespace filament

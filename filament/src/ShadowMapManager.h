@@ -19,7 +19,7 @@
 
 #include "Culler.h"
 #include "ShadowMap.h"
-#include "TypedUniformBuffer.h"
+#include "ds/TypedBuffer.h"
 
 #include <filament/LightManager.h>
 #include <filament/Options.h>
@@ -217,7 +217,7 @@ private:
 
     SoftShadowOptions mSoftShadowOptions;
 
-    mutable TypedUniformBuffer<ShadowUib> mShadowUb;
+    mutable TypedBuffer<ShadowUib> mShadowUb;
     backend::Handle<backend::HwBufferObject> mShadowUbh;
 
     ShadowMappingUniforms mShadowMappingUniforms = {};

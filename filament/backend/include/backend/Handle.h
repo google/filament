@@ -41,6 +41,8 @@ struct HwTexture;
 struct HwTimerQuery;
 struct HwVertexBufferInfo;
 struct HwVertexBuffer;
+struct HwDescriptorSetLayout;
+struct HwDescriptorSet;
 
 /*
  * A handle to a backend resource. HandleBase is for internal use only.
@@ -130,19 +132,21 @@ private:
 
 // Types used by the command stream
 // (we use this renaming because the macro-system doesn't deal well with "<" and ">")
-using BufferObjectHandle     = Handle<HwBufferObject>;
-using FenceHandle            = Handle<HwFence>;
-using IndexBufferHandle      = Handle<HwIndexBuffer>;
-using ProgramHandle          = Handle<HwProgram>;
-using RenderPrimitiveHandle  = Handle<HwRenderPrimitive>;
-using RenderTargetHandle     = Handle<HwRenderTarget>;
-using SamplerGroupHandle     = Handle<HwSamplerGroup>;
-using StreamHandle           = Handle<HwStream>;
-using SwapChainHandle        = Handle<HwSwapChain>;
-using TextureHandle          = Handle<HwTexture>;
-using TimerQueryHandle       = Handle<HwTimerQuery>;
-using VertexBufferHandle     = Handle<HwVertexBuffer>;
-using VertexBufferInfoHandle = Handle<HwVertexBufferInfo>;
+using BufferObjectHandle        = Handle<HwBufferObject>;
+using FenceHandle               = Handle<HwFence>;
+using IndexBufferHandle         = Handle<HwIndexBuffer>;
+using ProgramHandle             = Handle<HwProgram>;
+using RenderPrimitiveHandle     = Handle<HwRenderPrimitive>;
+using RenderTargetHandle        = Handle<HwRenderTarget>;
+using SamplerGroupHandle        = Handle<HwSamplerGroup>;
+using StreamHandle              = Handle<HwStream>;
+using SwapChainHandle           = Handle<HwSwapChain>;
+using TextureHandle             = Handle<HwTexture>;
+using TimerQueryHandle          = Handle<HwTimerQuery>;
+using VertexBufferHandle        = Handle<HwVertexBuffer>;
+using VertexBufferInfoHandle    = Handle<HwVertexBufferInfo>;
+using DescriptorSetLayoutHandle = Handle<HwDescriptorSetLayout>;
+using DescriptorSetHandle       = Handle<HwDescriptorSet>;
 
 } // namespace filament::backend
 

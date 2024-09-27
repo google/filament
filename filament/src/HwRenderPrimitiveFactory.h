@@ -48,7 +48,7 @@ public:
 
     void terminate(backend::DriverApi& driver) noexcept;
 
-    struct Parameters { // 20 bytes
+    struct Parameters { // 12 bytes
         backend::VertexBufferHandle vbh;            // 4
         backend::IndexBufferHandle ibh;             // 4
         backend::PrimitiveType type;                // 4
@@ -65,7 +65,7 @@ public:
     void destroy(backend::DriverApi& driver, Handle handle) noexcept;
 
 private:
-    struct Key {
+    struct Key { // 16 bytes
         // The key should not be copyable, unfortunately due to how the Bimap works we have
         // to copy-construct it once.
         Key(Key const&) = default;
@@ -100,7 +100,8 @@ private:
     }
 
     // Size of the arena used for the "set" part of the bimap
-    static constexpr size_t SET_ARENA_SIZE = 4 * 1024 * 1024;
+    // about ~65K entry before fall back to heap
+    static constexpr size_t SET_ARENA_SIZE = 1 * 1024 * 1024;
 
     // Arena for the set<>, using a pool allocator inside a heap area.
     using PoolAllocatorArena = utils::Arena<

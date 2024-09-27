@@ -19,9 +19,13 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
-#include "private/backend/SamplerGroup.h"
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <CoreVideo/CoreVideo.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace {
 
@@ -61,29 +65,39 @@ using namespace filament::backend;
 
 // Rendering an external image without setting any data should not crash.
 TEST_F(BackendTest, RenderExternalImageWithoutSet) {
-    TrianglePrimitive triangle(getDriverApi());
+    auto& api = getDriverApi();
+
+    TrianglePrimitive triangle(api);
 
     auto swapChain = createSwapChain();
 
-    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 
     // Create a program that samples a texture.
-    Program p = shaderGen.getProgram(getDriverApi());
-    Program::Sampler sampler { utils::CString("test_tex"), 0 };
-    p.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, &sampler, 1);
-    backend::Handle<HwProgram> program = getDriverApi().createProgram(std::move(p));
+    Program p = shaderGen.getProgram(api);
+    p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
+    backend::Handle<HwProgram> program = api.createProgram(std::move(p));
+    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+            {{
+                     DescriptorType::SAMPLER,
+                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                     DescriptorFlags::NONE, 0
+             }}});
 
-    backend::Handle<HwRenderTarget> defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+
+    backend::Handle<HwRenderTarget> defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
     const NativeView& view = getNativeView();
-    backend::Handle<HwTexture> texture = getDriverApi().createTexture(
+    backend::Handle<HwTexture> texture = api.createTexture(
                 SamplerType::SAMPLER_EXTERNAL,      // target
                 1,                                  // levels
                 TextureFormat::RGBA8,               // format
@@ -102,63 +116,74 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     PipelineState state;
     state.program = program;
+    state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    getDriverApi().startCapture(0);
-    getDriverApi().makeCurrent(swapChain, swapChain);
-    getDriverApi().beginFrame(0, 0, 0);
+    api.startCapture(0);
+    api.makeCurrent(swapChain, swapChain);
+    api.beginFrame(0, 0, 0);
 
-    SamplerGroup samplers(1);
-    samplers.setSampler(0, { texture, {} });
-    backend::Handle<HwSamplerGroup> samplerGroup =
-            getDriverApi().createSamplerGroup(1, utils::FixedSizeString<32>("Test"));
-    getDriverApi().updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(getDriverApi()));
-    getDriverApi().bindSamplers(0, samplerGroup);
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Render a triangle.
-    getDriverApi().beginRenderPass(defaultRenderTarget, params);
-    getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-    getDriverApi().endRenderPass();
+    api.beginRenderPass(defaultRenderTarget, params);
+    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+    api.endRenderPass();
 
-    getDriverApi().flush();
-    getDriverApi().commit(swapChain);
-    getDriverApi().endFrame(0);
+    api.flush();
+    api.commit(swapChain);
+    api.endFrame(0);
 
-    getDriverApi().stopCapture(0);
+    api.stopCapture(0);
 
     // Delete our resources.
-    getDriverApi().destroyTexture(texture);
-    getDriverApi().destroySamplerGroup(samplerGroup);
+    api.destroyDescriptorSet(descriptorSet);
+    api.destroyDescriptorSetLayout(descriptorSetLayout);
+    api.destroyTexture(texture);
 
     // Destroy frame resources.
-    getDriverApi().destroyProgram(program);
-    getDriverApi().destroyRenderTarget(defaultRenderTarget);
+    api.destroyProgram(program);
+    api.destroyRenderTarget(defaultRenderTarget);
+
+    api.finish();
 
     executeCommands();
 }
 
 TEST_F(BackendTest, RenderExternalImage) {
-    TrianglePrimitive triangle(getDriverApi());
+    auto& api = getDriverApi();
+
+    TrianglePrimitive triangle(api);
 
     auto swapChain = createSwapChain();
 
-    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("Test")
-            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
-            .add( {{"tex", SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
-            .build();
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
+        SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH, false };
+    filamat::DescriptorSets descriptors;
+    descriptors[1] = { { "test_tex", { DescriptorType::SAMPLER, ShaderStageFlags::FRAGMENT, 0 },
+            samplerInfo } };
+    ShaderGenerator shaderGen(
+            vertex, fragment, sBackend, sIsMobilePlatform, std::move(descriptors));
 
     // Create a program that samples a texture.
-    Program p = shaderGen.getProgram(getDriverApi());
-    Program::Sampler sampler { utils::CString("test_tex"), 0 };
-    p.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, &sampler, 1);
-    auto program = getDriverApi().createProgram(std::move(p));
+    Program p = shaderGen.getProgram(api);
+    p.descriptorBindings(1, {{"test_tex", DescriptorType::SAMPLER, 0}});
+    auto program = api.createProgram(std::move(p));
 
-    backend::Handle<HwRenderTarget> defaultRenderTarget = getDriverApi().createDefaultRenderTarget(0);
+    DescriptorSetLayoutHandle descriptorSetLayout = api.createDescriptorSetLayout({
+            {{
+                     DescriptorType::SAMPLER,
+                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, 0,
+                     DescriptorFlags::NONE, 0
+             }}});
+
+    DescriptorSetHandle descriptorSet = api.createDescriptorSet(descriptorSetLayout);
+
+    backend::Handle<HwRenderTarget> defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // require users to create two Filament textures and have two material parameters
     // add a "plane" parameter to setExternalImage
@@ -166,15 +191,6 @@ TEST_F(BackendTest, RenderExternalImage) {
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
     const NativeView& view = getNativeView();
-    backend::Handle<HwTexture> texture = getDriverApi().createTexture(
-                SamplerType::SAMPLER_EXTERNAL,      // target
-                1,                                  // levels
-                TextureFormat::RGBA8,               // format
-                1,                                  // samples
-                view.width,                         // width
-                view.height,                        // height
-                1,                                  // depth
-                usage);                             // usage
 
     // Create an external image.
     CFStringRef keys[4];
@@ -209,8 +225,9 @@ TEST_F(BackendTest, RenderExternalImage) {
         }
     }
 
-    getDriverApi().setupExternalImage(pixBuffer);
-    getDriverApi().setExternalImage(texture, pixBuffer);
+    api.setupExternalImage(pixBuffer);
+    backend::Handle<HwTexture> texture =
+            api.createTextureExternalImage(TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer);
 
     // We're now free to release the buffer.
     CVBufferRelease(pixBuffer);
@@ -224,40 +241,43 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     PipelineState state;
     state.program = program;
+    state.pipelineLayout.setLayout[1] = { descriptorSetLayout };
     state.rasterState.colorWrite = true;
     state.rasterState.depthWrite = false;
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    getDriverApi().startCapture(0);
-    getDriverApi().makeCurrent(swapChain, swapChain);
-    getDriverApi().beginFrame(0, 0, 0);
+    api.startCapture(0);
+    api.makeCurrent(swapChain, swapChain);
+    api.beginFrame(0, 0, 0);
 
-    SamplerGroup samplers(1);
-    samplers.setSampler(0, { texture, {} });
-    backend::Handle<HwSamplerGroup> samplerGroup =
-            getDriverApi().createSamplerGroup(1, utils::FixedSizeString<32>("Test"));
-    getDriverApi().updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(getDriverApi()));
-    getDriverApi().bindSamplers(0, samplerGroup);
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {});
+
+    api.bindDescriptorSet(descriptorSet, 1, {});
 
     // Render a triangle.
-    getDriverApi().beginRenderPass(defaultRenderTarget, params);
-    getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-    getDriverApi().endRenderPass();
+    api.beginRenderPass(defaultRenderTarget, params);
+    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+    api.endRenderPass();
 
-    getDriverApi().flush();
-    getDriverApi().commit(swapChain);
-    getDriverApi().endFrame(0);
+    readPixelsAndAssertHash("RenderExternalImage", 512, 512, defaultRenderTarget, 267229901, true);
 
-    getDriverApi().stopCapture(0);
+    api.flush();
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    api.stopCapture(0);
 
     // Delete our resources.
-    getDriverApi().destroyTexture(texture);
-    getDriverApi().destroySamplerGroup(samplerGroup);
+    api.destroyDescriptorSet(descriptorSet);
+    api.destroyDescriptorSetLayout(descriptorSetLayout);
+    api.destroyTexture(texture);
 
     // Destroy frame resources.
-    getDriverApi().destroyProgram(program);
-    getDriverApi().destroyRenderTarget(defaultRenderTarget);
+    api.destroyProgram(program);
+    api.destroyRenderTarget(defaultRenderTarget);
+
+    api.finish();
 
     executeCommands();
 }

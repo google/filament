@@ -10,8 +10,9 @@ set(PUBLIC_HDR_DIR include)
 file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/**/*.h)
 
 set(SRCS
-        src/SamplerInterfaceBlock.cpp
         src/BufferInterfaceBlock.cpp
+        src/DescriptorSets.cpp
+        src/SamplerInterfaceBlock.cpp
         src/Variant.cpp
 )
 

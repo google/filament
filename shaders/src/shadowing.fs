@@ -400,7 +400,7 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     highp vec3 ray;
     for (int i = 0 ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
-        highp float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
+        highp float z = textureLod(sampler0_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
         highp float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
             occlusion = 1.0;

@@ -30,11 +30,7 @@
 #include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
 
-#include <functional>
-
 namespace filament::backend {
-
-using namespace descset;
 
 // [GDSR]: Great-Descriptor-Set-Refactor: As of 03/20/24, the Filament frontend is planning to
 // introduce descriptor set. This PR will arrive before that change is complete. As such, some of
@@ -45,60 +41,34 @@ class VulkanDescriptorSetManager {
 public:
     static constexpr uint8_t UNIQUE_DESCRIPTOR_SET_COUNT =
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT;
-    using GetPipelineLayoutFunction = std::function<VkPipelineLayout(
-            VulkanDescriptorSetLayoutList const&, VulkanProgram* program)>;
+
+    using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
 
     VulkanDescriptorSetManager(VkDevice device, VulkanResourceAllocator* resourceAllocator);
 
     void terminate() noexcept;
 
-    void gc();
-
-    // TODO: Obsolete after [GDSR].
-    // This will write/update/bind all of the descriptor set. After [GDSR], the binding for
-    // descriptor sets will not depend on the layout described in the program.
-    VkPipelineLayout bind(VulkanCommandBuffer* commands, VulkanProgram* program,
-            GetPipelineLayoutFunction& getPipelineLayoutFn);
-
-    // TODO: Obsolete after [GDSR].
-    // This is to "dynamically" bind UBOs that might have offsets changed between pipeline binding
-    // and the draw call. We do this because UBOs for primitives that are part of the same
-    // renderable can be stored within one buffer. This can be a no-op if there were no range
-    // changes between the pipeline bind and the draw call. We will re-use applicable states
-    // provided within the bind() call, including the UBO descriptor set layout. TODO: make it a
-    // proper dynamic binding when Filament-side descriptor changes are completed.
-    void dynamicBind(VulkanCommandBuffer* commands, Handle<VulkanDescriptorSetLayout> uboLayout);
-
-    // TODO: Obsolete after [GDSR].
-    // Since we use program pointer as cache key, we need to clear the cache when it's freed.
-    void clearProgram(VulkanProgram* program) noexcept;
-
-    Handle<VulkanDescriptorSetLayout> createLayout(descset::DescriptorSetLayout const& layout);
-
-    void destroyLayout(Handle<VulkanDescriptorSetLayout> layout);
-
-    void updateBuffer(Handle<VulkanDescriptorSet> set, uint8_t binding,
+    void updateBuffer(VulkanDescriptorSet* set, uint8_t binding,
             VulkanBufferObject* bufferObject, VkDeviceSize offset, VkDeviceSize size) noexcept;
 
-    void updateSampler(Handle<VulkanDescriptorSet> set, uint8_t binding,
+    void updateSampler(VulkanDescriptorSet* set, uint8_t binding,
             VulkanTexture* texture, VkSampler sampler) noexcept;
 
-    void updateInputAttachment(Handle<VulkanDescriptorSet> set, VulkanAttachment attachment) noexcept;
+    void updateInputAttachment(VulkanDescriptorSet* set, VulkanAttachment attachment) noexcept;
 
-    void clearBuffer(uint32_t bindingIndex);
+    void bind(uint8_t setIndex, VulkanDescriptorSet* set, backend::DescriptorSetOffsetArray&& offsets);
+
+    void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
+            DescriptorSetMask const& setMask);
 
     void setPlaceHolders(VkSampler sampler, VulkanTexture* texture,
             VulkanBufferObject* bufferObject) noexcept;
 
-    void clearState() noexcept;
+    void createSet(Handle<HwDescriptorSet> handle, VulkanDescriptorSetLayout* layout);
 
-    // TODO: To be completed after [GDSR]
-    Handle<VulkanDescriptorSet> createSet(Handle<VulkanDescriptorSetLayout> layout) {
-        return Handle<VulkanDescriptorSet>();
-    }
+    void destroySet(Handle<HwDescriptorSet> handle);
 
-    // TODO: To be completed after [GDSR]
-    void destroySet(Handle<VulkanDescriptorSet> set) {}
+    void initVkLayout(VulkanDescriptorSetLayout* layout);
 
 private:
     class Impl;
@@ -108,4 +78,3 @@ private:
 }// namespace filament::backend
 
 #endif// TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
-

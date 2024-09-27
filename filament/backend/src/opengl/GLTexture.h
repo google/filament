@@ -21,11 +21,31 @@
 
 #include "gl_headers.h"
 
+#include <backend/Handle.h>
+#include <backend/DriverEnums.h>
 #include <backend/platforms/OpenGLPlatform.h>
+
+#include <array>
 
 #include <stdint.h>
 
 namespace filament::backend {
+
+struct GLTextureRef {
+    GLTextureRef() = default;
+    // view reference counter
+    uint16_t count = 1;
+    // current per-view values of the texture (in GL we can only have a single View active at
+    // a time, and this tracks that state). It's used to avoid unnecessarily change state.
+    int8_t baseLevel = 127;
+    int8_t maxLevel = -1;
+    std::array<TextureSwizzle, 4> swizzle{
+            TextureSwizzle::CHANNEL_0,
+            TextureSwizzle::CHANNEL_1,
+            TextureSwizzle::CHANNEL_2,
+            TextureSwizzle::CHANNEL_3
+    };
+};
 
 struct GLTexture : public HwTexture {
     using HwTexture::HwTexture;
@@ -44,8 +64,14 @@ struct GLTexture : public HwTexture {
         bool imported           : 1;
         uint8_t sidecarSamples  : 4;
         uint8_t reserved1       : 3;
+        std::array<TextureSwizzle, 4> swizzle{
+                TextureSwizzle::CHANNEL_0,
+                TextureSwizzle::CHANNEL_1,
+                TextureSwizzle::CHANNEL_2,
+                TextureSwizzle::CHANNEL_3
+        };
     } gl;
-
+    mutable Handle<GLTextureRef> ref;
     OpenGLPlatform::ExternalTexture* externalTexture = nullptr;
 };
 

@@ -20,6 +20,8 @@
 
 #include "components/RenderableManager.h"
 
+#include "ds/DescriptorSet.h"
+
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
@@ -69,7 +71,7 @@ namespace filament {
 using namespace backend;
 
 struct RenderableManager::BuilderDetails {
-    using Entry = RenderableManager::Builder::Entry;
+    using Entry = FRenderableManager::Entry;
     std::vector<Entry> mEntries;
     Box mAABB;
     uint8_t mLayerMask = 0x1;
@@ -139,7 +141,7 @@ RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
 RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
         PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
         size_t offset, UTILS_UNUSED size_t minIndex, UTILS_UNUSED size_t maxIndex, size_t count) noexcept {
-    std::vector<Entry>& entries = mImpl->mEntries;
+    std::vector<BuilderDetails::Entry>& entries = mImpl->mEntries;
     if (index < entries.size()) {
         entries[index].vertices = vertices;
         entries[index].indices = indices;
@@ -554,7 +556,7 @@ void FRenderableManager::create(
     if (ci) {
         // create and initialize all needed RenderPrimitives
         using size_type = Slice<FRenderPrimitive>::size_type;
-        Builder::Entry const * const entries = builder->mEntries.data();
+        auto const * const entries = builder->mEntries.data();
         const size_t entryCount = builder->mEntries.size();
         FRenderPrimitive* rp = new FRenderPrimitive[entryCount];
         auto& factory = mHwRenderPrimitiveFactory;
@@ -670,15 +672,15 @@ void FRenderableManager::create(
         // the shader always handles both. See Variant::SKINNING_OR_MORPHING.
         if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
 
-            auto [sampler, texture] = FSkinningBuffer::createIndicesAndWeightsHandle(
-                    downcast(engine), builder->mBoneIndicesAndWeightsCount);
-            if (builder->mBoneIndicesAndWeightsCount > 0) {
-                FSkinningBuffer::setIndicesAndWeightsData(downcast(engine), texture,
-                        builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
-            }
             Bones& bones = manager[ci].bones;
-            bones.handleSamplerGroup = sampler;
-            bones.handleTexture = texture;
+            bones.handleTexture = FSkinningBuffer::createIndicesAndWeightsHandle(
+                    engine, builder->mBoneIndicesAndWeightsCount);
+            if (builder->mBoneIndicesAndWeightsCount > 0) {
+                FSkinningBuffer::setIndicesAndWeightsData(engine,
+                        bones.handleTexture,
+                        builder->mBoneIndicesAndWeights,
+                        builder->mBoneIndicesAndWeightsCount);
+            }
 
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
@@ -753,13 +755,17 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(mHwRenderPrimitiveFactory, driver, manager[ci].primitives);
 
+    // destroy the per-renderable descriptor set if we have one
+    DescriptorSet& descriptorSet = manager[ci].descriptorSet;
+    descriptorSet.terminate(driver);
+
     // destroy the bones structures if any
     Bones const& bones = manager[ci].bones;
     if (bones.handle && !bones.skinningBufferMode) {
+        // when not in skinningBufferMode, we now the handle, so we destroy it
         driver.destroyBufferObject(bones.handle);
     }
-    if (bones.handleSamplerGroup){
-        driver.destroySamplerGroup(bones.handleSamplerGroup);
+    if (bones.handleTexture) {
         driver.destroyTexture(bones.handleTexture);
     }
 

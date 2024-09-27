@@ -32,6 +32,7 @@
 #include <functional>
 #include <mutex>
 #include <vector>
+#include <deque>
 
 namespace filament {
 namespace backend {
@@ -61,6 +62,7 @@ public:
 private:
 
     friend class MetalSwapChain;
+    friend struct MetalDescriptorSet;
 
     MetalPlatform& mPlatform;
     MetalContext* mContext;
@@ -78,6 +80,17 @@ private:
     void runAtNextTick(const std::function<void()>& fn) noexcept;
     void executeTickOps() noexcept;
     std::vector<std::function<void()>> mTickOps;
+
+    // Tasks regularly executed on the driver thread after a command buffer has completed
+    struct DeferredTask {
+        DeferredTask(uint64_t commandBufferId, utils::Invocable<void()>&& fn) noexcept
+            : commandBufferId(commandBufferId), fn(std::move(fn)) {}
+        uint64_t commandBufferId;     // after this command buffer completes
+        utils::Invocable<void()> fn;  // execute this task
+    };
+    void executeAfterCurrentCommandBufferCompletes(utils::Invocable<void()>&& fn) noexcept;
+    void executeDeferredOps() noexcept;
+    std::deque<DeferredTask> mDeferredTasks;
 
     /*
      * Driver interface
@@ -138,7 +151,6 @@ private:
     inline void setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
             Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh);
 
-    void finalizeSamplerGroup(MetalSamplerGroup* sg);
     void enumerateBoundBuffers(BufferObjectBinding bindingType,
             const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f);
 

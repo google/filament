@@ -33,7 +33,7 @@
 namespace filament {
 
 void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
-        const RenderableManager::Builder::Entry& entry) noexcept {
+        FRenderableManager::Entry const& entry) noexcept {
 
     assert_invariant(entry.materialInstance);
 

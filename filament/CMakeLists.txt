@@ -66,6 +66,7 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/HwDescriptorSetLayoutFactory.cpp
         src/HwRenderPrimitiveFactory.cpp
         src/HwVertexBufferInfoFactory.cpp
         src/IndexBuffer.cpp
@@ -76,8 +77,6 @@ set(SRCS
         src/MaterialInstance.cpp
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
-        src/PerViewUniforms.cpp
-        src/PerShadowMapUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
@@ -126,6 +125,12 @@ set(SRCS
         src/details/Texture.cpp
         src/details/VertexBuffer.cpp
         src/details/View.cpp
+        src/ds/ColorPassDescriptorSet.cpp
+        src/ds/DescriptorSet.cpp
+        src/ds/DescriptorSetLayout.cpp
+        src/ds/PostProcessDescriptorSet.cpp
+        src/ds/ShadowMapDescriptorSet.cpp
+        src/ds/SsrPassDescriptorSet.cpp
         src/fg/Blackboard.cpp
         src/fg/DependencyGraph.cpp
         src/fg/FrameGraph.cpp
@@ -149,23 +154,21 @@ set(PRIVATE_HDRS
         src/FrameInfo.h
         src/FrameSkipper.h
         src/Froxelizer.h
+        src/HwDescriptorSetLayoutFactory.h
         src/HwRenderPrimitiveFactory.h
         src/HwVertexBufferInfoFactory.h
         src/Intersections.h
         src/MaterialParser.h
-        src/PerViewUniforms.h
-        src/PerShadowMapUniforms.h
         src/PIDController.h
         src/PostProcessManager.h
-        src/RendererUtils.h
         src/RenderPass.h
         src/RenderPrimitive.h
+        src/RendererUtils.h
         src/ResourceAllocator.h
         src/ResourceList.h
         src/ShadowMap.h
         src/ShadowMapManager.h
         src/SharedHandle.h
-        src/TypedUniformBuffer.h
         src/UniformBuffer.h
         src/components/CameraManager.h
         src/components/LightManager.h
@@ -193,6 +196,14 @@ set(PRIVATE_HDRS
         src/details/Texture.h
         src/details/VertexBuffer.h
         src/details/View.h
+        src/downcast.h
+        src/ds/ColorPassDescriptorSet.h
+        src/ds/DescriptorSetLayout.h
+        src/ds/PostProcessDescriptorSet.h
+        src/ds/ShadowMapDescriptorSet.h
+        src/ds/SsrPassDescriptorSet.h
+        src/ds/TypedBuffer.h
+        src/ds/TypedUniformBuffer.h
         src/fg/Blackboard.h
         src/fg/FrameGraph.h
         src/fg/FrameGraphId.h
@@ -210,7 +221,6 @@ set(PRIVATE_HDRS
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
         src/materials/fsr/ffx_fsr1_mobile.fs
-        src/downcast.h
 )
 
 set(MATERIAL_SRCS
