@@ -151,17 +151,9 @@ public:
 
     void acquire(VulkanBufferObject* texture);
 
-    bool hasTexture(VulkanTexture* texture) {
-        return std::any_of(mTextures.begin(), mTextures.end(),
-                [texture](auto t) { return t == texture; });
-    }
-
-    // TODO: maybe change to fixed size for performance.
     VkDescriptorSet const vkSet;
 
 private:
-    std::array<VulkanTexture*, 16> mTextures = { nullptr };
-    uint8_t mTextureCount = 0;
     VulkanAcquireOnlyResourceManager mResources;
     OnRecycle mOnRecycleFn;
 };
@@ -202,10 +194,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
 
     inline VkShaderModule getFragmentShader() const { return mInfo->shaders[1]; }
 
-    inline utils::FixedCapacityVector<uint16_t> const& getBindingToSamplerIndex() const {
-        return mInfo->bindingToSamplerIndex;
-    }
-
     // Get a list of the sampler binding indices so that we don't have to loop through all possible
     // samplers.
     inline BindingList const& getBindings() const { return mInfo->bindings; }
@@ -236,8 +224,7 @@ struct VulkanProgram : public HwProgram, VulkanResource {
 private:
     struct PipelineInfo {
         explicit PipelineInfo(backend::Program const& program) noexcept
-            : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff),
-              pushConstantDescription(program)
+            : pushConstantDescription(program)
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
             , bindingToName(MAX_SAMPLER_COUNT, "")
 #endif
@@ -245,8 +232,6 @@ private:
 
         BindingList bindings;
 
-        // We store the samplerGroupIndex as the top 8-bit and the index within each group as the lower 8-bit.
-        utils::FixedCapacityVector<uint16_t> bindingToSamplerIndex;
         VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
 
         PushConstantDescription pushConstantDescription;
