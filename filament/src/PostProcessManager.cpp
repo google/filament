@@ -3410,6 +3410,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                         float(vp.width) / inputDesc.width,
                         float(vp.height) / inputDesc.height
                     });
+                mi->commit(driver);
                 mi->use(driver);
 
                 auto pipeline = material.getPipelineState(mEngine);
