@@ -38,26 +38,14 @@ public:
     void build(utils::JobSystem& js);
 
 private:
-    using nanometer_t = float;
-    using celcius_t = float;
     using radian_t = float;
 
     filament::math::float3 generate(radian_t phi) const noexcept;
 
-    static float iorFromWavelength(nanometer_t wavelength, celcius_t temperature) noexcept;
-    static radian_t lowestAngle(float ior) noexcept;
-    static radian_t maxIncidentAngle(float n) noexcept;
-    static radian_t incident(float n, radian_t phi) noexcept;
-
-    static float illuminantD65(float w) noexcept;
-    static float3 XYZ_to_sRGB(const float3& v) noexcept;
-    static float3 linear_to_sRGB(float3 linear) noexcept;
-    static float fresnel(radian_t Bi, radian_t Bt) noexcept;
-
     size_t mAngleCount = 256;
     float mTemprature = 20.0f;
-    float mMinWavelength = CIE_D65_START;
-    float mMaxWavelength = CIE_D65_END;
+    float mMinWavelength = CIE_XYZ_START;                       // 390
+    float mMaxWavelength = CIE_XYZ_START + CIE_XYZ_COUNT;       // 830
 };
 
 
