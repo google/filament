@@ -267,26 +267,6 @@ public:
 
     MTLPixelFormat devicePixelFormat;
 
-    // Frees memory associated with this texture and marks it as "terminated".
-    // Used to track "use after free" scenario.
-    void terminate() noexcept;
-    bool isTerminated() const noexcept { return terminated; }
-    inline void checkUseAfterFree(const char* samplerGroupDebugName, size_t textureIndex) const {
-        if (UTILS_LIKELY(!isTerminated())) {
-            return;
-        }
-        NSString* reason =
-                [NSString stringWithFormat:
-                                  @"Filament Metal texture use after free, sampler group = "
-                                  @"%s, texture index = %zu",
-                          samplerGroupDebugName, textureIndex];
-        NSException* useAfterFreeException =
-                [NSException exceptionWithName:@"MetalTextureUseAfterFree"
-                                        reason:reason
-                                      userInfo:nil];
-        [useAfterFreeException raise];
-    }
-
 private:
     void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
             PixelBufferDescriptor const& data) noexcept;
@@ -303,8 +283,6 @@ private:
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
     // bound as a render target attachment.
     id<MTLTexture> swizzledTextureView = nil;
-
-    bool terminated = false;
 };
 
 class MetalRenderTarget : public HwRenderTarget {
