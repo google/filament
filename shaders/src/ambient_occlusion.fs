@@ -35,18 +35,18 @@ float evaluateSSAO(inout SSAOInterpolationCache cache) {
     // filter. This adds about 2.0ms @ 250MHz on Pixel 4.
 
     if (frameUniforms.aoSamplingQualityAndEdgeDistance > 0.0) {
-        highp vec2 size = vec2(textureSize(light_ssao, 0));
+        highp vec2 size = vec2(textureSize(sampler0_ssao, 0));
 
         // Read four AO samples and their depths values
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-        vec4 ao = textureGather(light_ssao, vec3(cache.uv, 0.0), 0);
-        vec4 dg = textureGather(light_ssao, vec3(cache.uv, 0.0), 1);
-        vec4 db = textureGather(light_ssao, vec3(cache.uv, 0.0), 2);
+        vec4 ao = textureGather(sampler0_ssao, vec3(cache.uv, 0.0), 0);
+        vec4 dg = textureGather(sampler0_ssao, vec3(cache.uv, 0.0), 1);
+        vec4 db = textureGather(sampler0_ssao, vec3(cache.uv, 0.0), 2);
 #else
-        vec3 s01 = textureLodOffset(light_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(0, 1)).rgb;
-        vec3 s11 = textureLodOffset(light_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(1, 1)).rgb;
-        vec3 s10 = textureLodOffset(light_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(1, 0)).rgb;
-        vec3 s00 = textureLodOffset(light_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(0, 0)).rgb;
+        vec3 s01 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(0, 1)).rgb;
+        vec3 s11 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(1, 1)).rgb;
+        vec3 s10 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(1, 0)).rgb;
+        vec3 s00 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 0.0), 0.0, ivec2(0, 0)).rgb;
         vec4 ao = vec4(s01.r, s11.r, s10.r, s00.r);
         vec4 dg = vec4(s01.g, s11.g, s10.g, s00.g);
         vec4 db = vec4(s01.b, s11.b, s10.b, s00.b);
@@ -74,7 +74,7 @@ float evaluateSSAO(inout SSAOInterpolationCache cache) {
         cache.weights = w / (w.x + w.y + w.z + w.w);
         return dot(ao, cache.weights);
     } else {
-        return textureLod(light_ssao, vec3(cache.uv, 0.0), 0.0).r;
+        return textureLod(sampler0_ssao, vec3(cache.uv, 0.0), 0.0).r;
     }
 #else
     // SSAO is not applied when blending is enabled
@@ -160,14 +160,14 @@ float specularAO(float NoV, float visibility, float roughness, const in SSAOInte
         vec3 bn;
         if (frameUniforms.aoSamplingQualityAndEdgeDistance > 0.0) {
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-            vec4 bnr = textureGather(light_ssao, vec3(cache.uv, 1.0), 0);
-            vec4 bng = textureGather(light_ssao, vec3(cache.uv, 1.0), 1);
-            vec4 bnb = textureGather(light_ssao, vec3(cache.uv, 1.0), 2);
+            vec4 bnr = textureGather(sampler0_ssao, vec3(cache.uv, 1.0), 0);
+            vec4 bng = textureGather(sampler0_ssao, vec3(cache.uv, 1.0), 1);
+            vec4 bnb = textureGather(sampler0_ssao, vec3(cache.uv, 1.0), 2);
 #else
-            vec3 s01 = textureLodOffset(light_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(0, 1)).rgb;
-            vec3 s11 = textureLodOffset(light_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(1, 1)).rgb;
-            vec3 s10 = textureLodOffset(light_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(1, 0)).rgb;
-            vec3 s00 = textureLodOffset(light_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(0, 0)).rgb;
+            vec3 s01 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(0, 1)).rgb;
+            vec3 s11 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(1, 1)).rgb;
+            vec3 s10 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(1, 0)).rgb;
+            vec3 s00 = textureLodOffset(sampler0_ssao, vec3(cache.uv, 1.0), 0.0, ivec2(0, 0)).rgb;
             vec4 bnr = vec4(s01.r, s11.r, s10.r, s00.r);
             vec4 bng = vec4(s01.g, s11.g, s10.g, s00.g);
             vec4 bnb = vec4(s01.b, s11.b, s10.b, s00.b);
@@ -176,7 +176,7 @@ float specularAO(float NoV, float visibility, float roughness, const in SSAOInte
             bn.g = dot(bng, cache.weights);
             bn.b = dot(bnb, cache.weights);
         } else {
-            bn = textureLod(light_ssao, vec3(cache.uv, 1.0), 0.0).xyz;
+            bn = textureLod(sampler0_ssao, vec3(cache.uv, 1.0), 0.0).xyz;
         }
 
         bn = unpackBentNormal(bn);

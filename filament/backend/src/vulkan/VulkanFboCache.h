@@ -42,19 +42,8 @@ public:
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key.
     struct alignas(8) RenderPassKey {
-        // For each target, we need to know three image layouts: the layout BEFORE the pass, the
-        // layout DURING the pass, and the layout AFTER the pass. Here are the rules:
-        // - For depth, we explicitly specify all three layouts.
-        // - Color targets have their initial image layout specified with a bitmask.
-        // - For each color target, the pre-existing layout is either UNDEFINED (0) or GENERAL (1).
-        // - The render pass and final images layout for color buffers is always
-        //   VulkanLayout::COLOR_ATTACHMENT.
-        uint8_t initialColorLayoutMask;
-
-        // Note that if VulkanLayout grows beyond 16, we'd need to up this.
-        VulkanLayout initialDepthLayout : 8;
-        uint8_t padding0;
-        uint8_t padding1;
+        VulkanLayout initialDepthLayout;
+        uint8_t padding[3] = {};
 
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         VkFormat depthFormat; // 4 bytes
@@ -71,7 +60,6 @@ public:
         uint32_t timestamp;
     };
     static_assert(0 == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT % 8);
-    static_assert(sizeof(RenderPassKey::initialColorLayoutMask) == MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT / 8);
     static_assert(sizeof(TargetBufferFlags) == 4, "TargetBufferFlags has unexpected size.");
     static_assert(sizeof(VkFormat) == 4, "VkFormat has unexpected size.");
     static_assert(sizeof(RenderPassKey) == 56, "RenderPassKey has unexpected size.");

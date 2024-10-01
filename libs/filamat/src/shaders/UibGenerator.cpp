@@ -22,9 +22,69 @@
 #include <private/filament/EngineEnums.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/debug.h>
+
+#include <stdlib.h>
+
 namespace filament {
 
 using namespace backend;
+
+BufferInterfaceBlock const& UibGenerator::get(UibGenerator::Ubo ubo) noexcept {
+    assert_invariant(ubo != Ubo::MaterialParams);
+    switch (ubo) {
+        case Ubo::FrameUniforms:
+            return getPerViewUib();
+        case Ubo::ObjectUniforms:
+            return getPerRenderableUib();
+        case Ubo::BonesUniforms:
+            return getPerRenderableBonesUib();
+        case Ubo::MorphingUniforms:
+            return getPerRenderableMorphingUib();
+        case Ubo::LightsUniforms:
+            return getLightsUib();
+        case Ubo::ShadowUniforms:
+            return getShadowUib();
+        case Ubo::FroxelRecordUniforms:
+            return getFroxelRecordUib();
+        case Ubo::FroxelsUniforms:
+            return getFroxelsUib();
+        case Ubo::MaterialParams:
+            abort();
+    }
+}
+
+UibGenerator::Binding UibGenerator::getBinding(UibGenerator::Ubo ubo) noexcept {
+    switch (ubo) {
+        case Ubo::FrameUniforms:
+            return { +DescriptorSetBindingPoints::PER_VIEW,
+                     +PerViewBindingPoints::FRAME_UNIFORMS };
+        case Ubo::ObjectUniforms:
+            return { +DescriptorSetBindingPoints::PER_RENDERABLE,
+                     +PerRenderableBindingPoints::OBJECT_UNIFORMS };
+        case Ubo::BonesUniforms:
+            return { +DescriptorSetBindingPoints::PER_RENDERABLE,
+                     +PerRenderableBindingPoints::BONES_UNIFORMS };
+        case Ubo::MorphingUniforms:
+            return { +DescriptorSetBindingPoints::PER_RENDERABLE,
+                     +PerRenderableBindingPoints::MORPHING_UNIFORMS };
+        case Ubo::LightsUniforms:
+            return { +DescriptorSetBindingPoints::PER_VIEW,
+                     +PerViewBindingPoints::LIGHTS };
+        case Ubo::ShadowUniforms:
+            return { +DescriptorSetBindingPoints::PER_VIEW,
+                     +PerViewBindingPoints::SHADOWS };
+        case Ubo::FroxelRecordUniforms:
+            return { +DescriptorSetBindingPoints::PER_VIEW,
+                     +PerViewBindingPoints::RECORD_BUFFER };
+        case Ubo::FroxelsUniforms:
+            return { +DescriptorSetBindingPoints::PER_VIEW,
+                     +PerViewBindingPoints::FROXEL_BUFFER };
+        case Ubo::MaterialParams:
+            return { +DescriptorSetBindingPoints::PER_MATERIAL,
+                     +PerMaterialBindingPoints::MATERIAL_PARAMS };
+    }
+}
 
 static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
         "Changing CONFIG_MAX_SHADOW_CASCADES affects PerView size and breaks materials.");

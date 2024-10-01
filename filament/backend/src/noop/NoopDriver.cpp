@@ -99,9 +99,6 @@ void NoopDriver::destroyProgram(Handle<HwProgram> ph) {
 void NoopDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
-void NoopDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
-}
-
 void NoopDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
@@ -109,6 +106,12 @@ void NoopDriver::destroyStream(Handle<HwStream> sh) {
 }
 
 void NoopDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+}
+
+void NoopDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
+}
+
+void NoopDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
 Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream) {
@@ -248,9 +251,6 @@ void NoopDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t inde
         Handle<HwBufferObject> boh) {
 }
 
-void NoopDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-}
-
 void NoopDriver::update3DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
@@ -276,11 +276,6 @@ void NoopDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 
 void NoopDriver::generateMipmaps(Handle<HwTexture> th) { }
 
-void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
-        BufferDescriptor&& data) {
-    scheduleDestroy(std::move(data));
-}
-
 void NoopDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
@@ -301,19 +296,6 @@ void NoopDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> re
 }
 
 void NoopDriver::commit(Handle<HwSwapChain> sch) {
-}
-
-void NoopDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
-}
-
-void NoopDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
-        Handle<HwBufferObject> ubh, uint32_t offset, uint32_t size) {
-}
-
-void NoopDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
-}
-
-void NoopDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
 void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
@@ -390,6 +372,27 @@ void NoopDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void NoopDriver::resetState(int) {
+}
+
+void NoopDriver::updateDescriptorSetBuffer(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::BufferObjectHandle boh,
+        uint32_t offset,
+        uint32_t size) {
+}
+
+void NoopDriver::updateDescriptorSetTexture(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::TextureHandle th,
+        SamplerParams params) {
+}
+
+void NoopDriver::bindDescriptorSet(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_set_t set,
+        backend::DescriptorSetOffsetArray&& offsets) {
 }
 
 void NoopDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {

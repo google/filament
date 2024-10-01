@@ -226,7 +226,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const mi = mEquirectMaterial->getDefaultInstance();
+    MaterialInstance* const mi = mEquirectMaterial->createInstance();
 
     FILAMENT_CHECK_PRECONDITION(equirect != nullptr) << "equirect is null!";
 
@@ -289,6 +289,8 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         engine.destroy(rt);
     }
 
+    engine.destroy(mi);
+
     return outCube;
 }
 
@@ -321,7 +323,7 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
             .height(mSampleCount)
             .build(engine);
 
-    MaterialInstance* const mi = mKernelMaterial->getDefaultInstance();
+    MaterialInstance* const mi = mKernelMaterial->createInstance();
     mi->setParameter("size", uint2{ 1, mSampleCount });
     mi->setParameter("sampleCount", float(mSampleCount));
 
@@ -339,6 +341,7 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
     renderer->renderStandaloneView(view);
 
     engine.destroy(rt);
+    engine.destroy(mi);
 }
 
 UTILS_NOINLINE
@@ -404,7 +407,7 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const mi = mContext.mIrradianceIntegrationMaterial->getDefaultInstance();
+    MaterialInstance* const mi = mContext.mIrradianceIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     rcm.setMaterialInstanceAt(
@@ -451,6 +454,8 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
         renderer->renderStandaloneView(view);
         engine.destroy(rt);
     }
+
+    engine.destroy(mi);
 
     return outIrradianceTexture;
 }
@@ -522,7 +527,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
         roughnessArray[i] = roughness;
     }
 
-    MaterialInstance* const mi = mKernelMaterial->getDefaultInstance();
+    MaterialInstance* const mi = mKernelMaterial->createInstance();
     mi->setParameter("size", uint2{ mLevelCount, mSampleCount });
     mi->setParameter("sampleCount", float(mSampleCount));
     mi->setParameter("roughness", roughnessArray, 16);
@@ -541,6 +546,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     renderer->renderStandaloneView(view);
 
     engine.destroy(rt);
+    engine.destroy(mi);
 }
 
 UTILS_NOINLINE
@@ -634,7 +640,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const mi = mContext.mIntegrationMaterial->getDefaultInstance();
+    MaterialInstance* const mi = mContext.mIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     rcm.setMaterialInstanceAt(
@@ -700,6 +706,8 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         dim >>= 1;
     }
+
+    engine.destroy(mi);
 
     return outReflectionsTexture;
 }

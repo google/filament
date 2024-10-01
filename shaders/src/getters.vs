@@ -87,7 +87,7 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
     uint pairStop = pairIndex + uint(ids.w - 3u);
     for (uint i = pairIndex; i < pairStop; ++i) {
         ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
-        vec2 indexWeight = texelFetch(bonesBuffer_indicesAndWeights, texcoord, 0).rg;
+        vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
         posSum += mulBoneVertex(p, uint(indexWeight.r)) * indexWeight.g;
     }
     p = posSum;
@@ -110,7 +110,7 @@ void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
     uint pairStop = pairIndex + uint(ids.w - 3u);
     for (uint i = pairIndex; i < pairStop; i = i + 1u) {
         ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
-        vec2 indexWeight = texelFetch(bonesBuffer_indicesAndWeights, texcoord, 0).rg;
+        vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
 
         normSum += mulBoneNormal(n, uint(indexWeight.r)) * indexWeight.g;
     }
@@ -141,7 +141,7 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
     uint pairStop = pairIndex + uint(ids.w - 3u);
     for (uint i = pairIndex; i < pairStop; i = i + 1u) {
         ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
-        vec2 indexWeight = texelFetch(bonesBuffer_indicesAndWeights, texcoord, 0).rg;
+        vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
 
         normSum += mulBoneNormal(n, uint(indexWeight.r)) * indexWeight.g;
         tangSum += mulBoneNormal(t, uint(indexWeight.r)) * indexWeight.g;
@@ -160,7 +160,7 @@ void morphPosition(inout vec4 p) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
             texcoord.z = i;
-            p += w * texelFetch(morphTargetBuffer_positions, texcoord, 0);
+            p += w * texelFetch(sampler1_positions, texcoord, 0);
         }
     }
 }
@@ -174,7 +174,7 @@ void morphNormal(inout vec3 n) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
             texcoord.z = i;
-            ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
+            ivec4 tangent = texelFetch(sampler1_tangents, texcoord, 0);
             vec3 normal;
             toTangentFrame(float4(tangent) * (1.0 / 32767.0), normal);
             n += w * (normal - baseNormal);

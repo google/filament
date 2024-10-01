@@ -1362,32 +1362,32 @@ math::float4 ShadowMap::getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo)
 
 void ShadowMap::prepareCamera(Transaction const& transaction,
         FEngine& engine, const CameraInfo& cameraInfo) noexcept {
-    PerShadowMapUniforms::prepareCamera(transaction, engine, cameraInfo);
-    PerShadowMapUniforms::prepareLodBias(transaction, 0.0f);
+    ShadowMapDescriptorSet::prepareCamera(transaction, engine, cameraInfo);
+    ShadowMapDescriptorSet::prepareLodBias(transaction, 0.0f);
 }
 
 void ShadowMap::prepareViewport(Transaction const& transaction,
         backend::Viewport const& viewport) noexcept {
-    PerShadowMapUniforms::prepareViewport(transaction, viewport);
+    ShadowMapDescriptorSet::prepareViewport(transaction, viewport);
 }
 
 void ShadowMap::prepareTime(Transaction const& transaction,
         FEngine& engine, math::float4 const& userTime) noexcept {
-    PerShadowMapUniforms::prepareTime(transaction, engine, userTime);
+    ShadowMapDescriptorSet::prepareTime(transaction, engine, userTime);
 }
 
 void ShadowMap::prepareShadowMapping(Transaction const& transaction,
         bool highPrecision) noexcept {
-    PerShadowMapUniforms::prepareShadowMapping(transaction, highPrecision);
+    ShadowMapDescriptorSet::prepareShadowMapping(transaction, highPrecision);
 }
 
-PerShadowMapUniforms::Transaction ShadowMap::open(DriverApi& driver) noexcept {
-    return PerShadowMapUniforms::open(driver);
+ShadowMapDescriptorSet::Transaction ShadowMap::open(DriverApi& driver) noexcept {
+    return ShadowMapDescriptorSet::open(driver);
 }
 
 void ShadowMap::commit(Transaction& transaction,
-        backend::DriverApi& driver) const noexcept {
-    mPerShadowMapUniforms.commit(transaction, driver);
+        FEngine& engine, backend::DriverApi& driver) const noexcept {
+    mPerShadowMapUniforms.commit(transaction, engine, driver);
 }
 
 void ShadowMap::bind(backend::DriverApi& driver) const noexcept {

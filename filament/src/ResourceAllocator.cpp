@@ -183,23 +183,23 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
             textureCache.erase(it);
         } else {
             // we don't, allocate a new texture and populate the in-use list
-            if (swizzle == defaultSwizzle) {
-                handle = mBackend.createTexture(
-                        target, levels, format, samples, width, height, depth, usage);
-            } else {
-                handle = mBackend.createTextureSwizzled(
-                        target, levels, format, samples, width, height, depth, usage,
-                        swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+            handle = mBackend.createTexture(
+                    target, levels, format, samples, width, height, depth, usage);
+            if (swizzle != defaultSwizzle) {
+                TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
+                        handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+                mBackend.destroyTexture(handle);
+                handle = swizzledHandle;
             }
         }
     } else {
-        if (swizzle == defaultSwizzle) {
-            handle = mBackend.createTexture(
-                    target, levels, format, samples, width, height, depth, usage);
-        } else {
-            handle = mBackend.createTextureSwizzled(
-                    target, levels, format, samples, width, height, depth, usage,
-                    swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+        handle = mBackend.createTexture(
+                target, levels, format, samples, width, height, depth, usage);
+        if (swizzle != defaultSwizzle) {
+            TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
+                    handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+            mBackend.destroyTexture(handle);
+            handle = swizzledHandle;
         }
     }
     mDisposer->checkout(handle, key);

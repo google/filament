@@ -19,18 +19,31 @@
 
 #include <filament/Viewport.h>
 
-#include <private/filament/UibStructs.h>
-#include <private/backend/SamplerGroup.h>
+#include "DescriptorSet.h"
 
 #include "TypedUniformBuffer.h"
 
+#include <private/filament/UibStructs.h>
+
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/EntityInstance.h>
 
-#include <random>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat4.h>
+
+#include <array>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
+
+class DescriptorSetLayout;
+class HwDescriptorSetLayoutFactory;
 
 struct AmbientOcclusionOptions;
 struct DynamicResolutionOptions;
@@ -53,7 +66,8 @@ class LightManager;
  * holds onto handles for the PER_VIEW UBO and SamplerGroup. This class maintains a shadow copy
  * of the UBO/sampler data, so it is possible to partially update it between commits.
  */
-class PerViewUniforms {
+
+class ColorPassDescriptorSet {
 
     using LightManagerInstance = utils::EntityInstance<LightManager>;
     using TextureHandle = backend::Handle<backend::HwTexture>;
@@ -64,9 +78,18 @@ class PerViewUniforms {
     static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCSS  = 3u;
 
 public:
-    explicit PerViewUniforms(FEngine& engine) noexcept;
 
-    void terminate(backend::DriverApi& driver);
+    static uint8_t getIndex(bool lit, bool ssr, bool fog)  noexcept;
+
+    ColorPassDescriptorSet(FEngine& engine,
+            TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
+
+    void init(
+            backend::BufferObjectHandle lights,
+            backend::BufferObjectHandle recordBuffer,
+            backend::BufferObjectHandle froxelBuffer) noexcept;
+
+    void terminate(HwDescriptorSetLayoutFactory& factory, backend::DriverApi& driver);
 
     void prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept;
     void prepareLodBias(float bias, math::float2 derivativesScale) noexcept;
@@ -104,7 +127,7 @@ public:
             math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
 
-    void prepareShadowMapping(bool highPrecision) noexcept;
+    void prepareShadowMapping(backend::BufferObjectHandle shadowUniforms, bool highPrecision) noexcept;
 
     void prepareDirectionalLight(FEngine& engine, float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
@@ -136,15 +159,22 @@ public:
     void commit(backend::DriverApi& driver) noexcept;
 
     // bind this UBO
-    void bind(backend::DriverApi& driver) noexcept;
-
-    void unbindSamplers() noexcept;
+    void bind(backend::DriverApi& driver, uint8_t index) const noexcept {
+        mDescriptorSet[index].bind(driver, DescriptorSetBindingPoints::PER_VIEW);
+    }
 
 private:
-    TypedUniformBuffer<PerViewUib> mUniforms;
-    backend::SamplerGroup mSamplers;
-    backend::Handle<backend::HwBufferObject> mUniformBufferHandle;
-    backend::Handle<backend::HwSamplerGroup> mSamplerGroupHandle;
+    static constexpr size_t DESCRIPTOR_LAYOUT_COUNT = 8;
+
+    void setSampler(backend::descriptor_binding_t binding,
+            backend::TextureHandle th, backend::SamplerParams params) noexcept;
+
+    void setBuffer(backend::descriptor_binding_t binding,
+            backend::BufferObjectHandle boh, uint32_t offset, uint32_t size) noexcept;
+
+    TypedUniformBuffer<PerViewUib>& mUniforms;
+    std::array<DescriptorSetLayout, DESCRIPTOR_LAYOUT_COUNT> mDescriptorSetLayout;
+    std::array<DescriptorSet, DESCRIPTOR_LAYOUT_COUNT> mDescriptorSet;
     static void prepareShadowSampling(PerViewUib& uniforms,
             ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
 };
