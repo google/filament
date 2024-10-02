@@ -103,6 +103,7 @@ private:
     mutable utils::bitset64 mDirty;                         //  8
     mutable utils::bitset64 mValid;                         //  8
     backend::DescriptorSetHandle mDescriptorSetHandle;      //  4
+    mutable bool mSetAfterCommitWarning;                    //  1
 };
 
 } // namespace filament
