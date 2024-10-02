@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Log.h>
 
 #include <utility>
 #include <limits>
@@ -44,7 +45,8 @@ DescriptorSet::~DescriptorSet() noexcept {
 
 DescriptorSet::DescriptorSet(DescriptorSetLayout const& descriptorSetLayout) noexcept
         : mDescriptors(descriptorSetLayout.getMaxDescriptorBinding() + 1),
-          mDirty(std::numeric_limits<uint64_t>::max()) {
+          mDirty(std::numeric_limits<uint64_t>::max()),
+          mSetAfterCommitWarning(false) {
 }
 
 DescriptorSet::DescriptorSet(DescriptorSet&& rhs) noexcept = default;
@@ -57,6 +59,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& rhs) noexcept {
         mDescriptorSetHandle = std::move(rhs.mDescriptorSetHandle);
         mDirty = rhs.mDirty;
         mValid = rhs.mValid;
+        mSetAfterCommitWarning = rhs.mSetAfterCommitWarning;
     }
     return *this;
 }
@@ -103,8 +106,21 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
 void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints set,
         backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept {
     // TODO: on debug check that dynamicOffsets is large enough
-    assert_invariant(mDirty.none());
+
     assert_invariant(mDescriptorSetHandle);
+
+    // TODO: Make sure clients do the right thing and not change material instance parameters
+    // within the renderpass. We have to comment the assert out since it crashed a client's debug
+    // build.
+    // assert_invariant(mDirty.none());
+    if (mDirty.any() && !mSetAfterCommitWarning) {
+        mDirty.forEachSetBit([&](uint8_t binding) {
+            utils::slog.w << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
+                          << ") binding=" << (int) binding
+                          << " was set between begin/endRenderPass" << utils::io::endl;
+        });
+        mSetAfterCommitWarning = true;
+    }
     driver.bindDescriptorSet(mDescriptorSetHandle, +set, std::move(dynamicOffsets));
 }
 
