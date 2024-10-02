@@ -78,8 +78,12 @@ struct GLDescriptorSet : public HwDescriptorSet {
 private:
     // a Buffer Descriptor such as SSBO or UBO with static offset
     struct Buffer {
-        Buffer() = default;
-        explicit Buffer(GLenum target) noexcept : target(target) { }
+        // Workaround: we cannot define the following as Buffer() = default because one of our
+        // clients has their compiler set up where such declaration (possibly coupled with explicit)
+        // will be considered a deleted constructor.
+        Buffer() {}
+
+        explicit Buffer(GLenum target) noexcept : target(target) {}
         GLenum target;                          // 4
         GLuint id = 0;                          // 4
         uint32_t offset = 0;                    // 4
