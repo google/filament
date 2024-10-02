@@ -40,7 +40,7 @@ public:
 private:
     using radian_t = float;
 
-    filament::math::float3 generate(radian_t phi) const noexcept;
+    filament::math::float3 generate(radian_t phi, radian_t dphi) const noexcept;
 
     size_t mAngleCount = 256;
     float mTemprature = 20.0f;

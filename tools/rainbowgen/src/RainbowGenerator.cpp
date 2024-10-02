@@ -57,10 +57,10 @@ void RainbowGenerator::build(JobSystem& js) {
         for (size_t i = 0; i < count; i++) {
             size_t const index = start + i;
             float const s = (float(index) + 0.5f) / float(angleCount);
-            float const twoPhi = minDeviation + (maxDeviation - minDeviation) * s;
-            float const phi = twoPhi / 2;
-            float3  c = generate(phi);
-//            std::cout << c.r << ", " << c.g << ", " << c.b << std::endl;
+            float const phi  = 0.5f * (minDeviation + (maxDeviation - minDeviation) * s);
+            float const dphi = 0.25f * ((maxDeviation - minDeviation) / float(angleCount));
+            float3  c = generate(phi, dphi);
+            std::cout << c.r << ", " << c.g << ", " << c.b << std::endl;
             c = linear_to_sRGB(c);
             rainbow[index] = c;
         }
@@ -95,7 +95,7 @@ void RainbowGenerator::build(JobSystem& js) {
     tga_free(image);
 }
 
-float3 RainbowGenerator::generate(radian_t phi) const noexcept {
+float3 RainbowGenerator::generate(radian_t phi, radian_t dphi) const noexcept {
     auto func = [](float n, radian_t beta, radian_t phi) {
         return 2.0f * beta - std::asin(n * std::sin(beta)) - phi;
     };
@@ -119,16 +119,33 @@ float3 RainbowGenerator::generate(radian_t phi) const noexcept {
             continue;
         }
 
-        float const B = beta(n, phi/2, phi);
-        float const Bi_a = 2.0f * B - phi;       // by definition
-        float const Bt_w = B;                    // by definition
-        Fresnel const Faw = fresnel(Bi_a, Bt_w);
-        Fresnel const Fwa = fresnel(Bt_w, Bi_a);
-        float T = Faw.t * Fwa.r * Fwa.t;
+
+
+        float T=0;
+
+        // here we shouldn't sample "beta", but rather the offset from the center
+        for (radian_t b = 0; b < f::PI_2; b += f::DEG_TO_RAD/100) {
+            if (n * std::sin(b) <= 1) {
+                radian_t p = deviation(n, b) * 0.5f;
+                if (p >= phi - dphi && p <= phi + dphi) {
+
+
+                    float const B = b;
+                    float const Bi_a = 2.0f * B - p;         // by definition
+                    float const Bt_w = B;                    // by definition
+                    Fresnel const Faw = fresnel(Bi_a, Bt_w);
+                    Fresnel const Fwa = fresnel(Bt_w, Bi_a);
+                    T += Faw.t * Fwa.r * Fwa.t;
+
+                }
+            }
+        }
+//        float s = c;
+
 
         // apply the density of the rays in that direction
-        float const s = 1 / dfunc(n, B);
-        T *= s;   // fixme: what's the correct factor here?
+//        float const s = 1 / dfunc(n, B);
+//        T *= s;   // fixme: what's the correct factor here?
 
         f0 += T * CIE_XYZ[i];
     }
