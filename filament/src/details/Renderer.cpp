@@ -968,11 +968,54 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const auto [structure, picking_] = ppm.structure(fg,
             passBuilder, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
-            .picking = view.hasPicking()
+            .picking = view.hasPicking() && !view.isTransparentPickable()
     });
-    const auto picking = picking_;
-
+    auto picking = picking_;
+    
     if (view.hasPicking()) {
+        if (view.isTransparentPickable()) {
+            struct PickingRenderPassData {
+                FrameGraphId<FrameGraphTexture> depth;
+                FrameGraphId<FrameGraphTexture> picking;
+            };
+            auto& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    bool const isES2 = mEngine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = svp.width, .height = svp.height,
+                            .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
+
+                    data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                    data.picking = builder.createTexture("Picking Buffer", {
+                            .width = svp.width, .height = svp.height,
+                            .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+
+                    data.picking = builder.write(data.picking,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                    builder.declareRenderPass("Picking Render Target", {
+                            .attachments = {.color = { data.picking }, .depth = data.depth },
+                            .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
+                        });
+                },
+                [=, passBuilder = passBuilder](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
+                        Variant pickingVariant(Variant::DEPTH_VARIANT);
+                        pickingVariant.setPicking(true);
+
+                        auto out = resources.getRenderPassInfo();
+                        passBuilder.renderFlags(renderFlags);
+                        passBuilder.variant(pickingVariant);
+                        passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
+
+                        RenderPass const pass{ passBuilder.build(mEngine) };
+                        RenderPass::execute(pass, mEngine, resources.getPassName(), out.target, out.params);
+                });
+            picking = pickingRenderPass->picking;
+        }
+
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
@@ -992,7 +1035,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 [=, &view](FrameGraphResources const& resources,
                         auto const&, DriverApi& driver) mutable {
                     auto out = resources.getRenderPassInfo();
-                    view.executePickingQueries(driver, out.target, scale * aoOptions.resolution);
+                    auto finalScale = view.isTransparentPickable()
+                        ? scale
+                        : scale * aoOptions.resolution;
+                    view.executePickingQueries(driver, out.target, finalScale);
                 });
     }
 
