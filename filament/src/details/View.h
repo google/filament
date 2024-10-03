@@ -133,6 +133,9 @@ public:
     void setFrontFaceWindingInverted(bool inverted) noexcept { mFrontFaceWindingInverted = inverted; }
     bool isFrontFaceWindingInverted() const noexcept { return mFrontFaceWindingInverted; }
 
+    void setIsTransparentPickable(bool pickable) noexcept { mIsTransparentPickable = pickable; }
+    bool isTransparentPickable() const noexcept { return mIsTransparentPickable; }
+
 
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
     uint8_t getVisibleLayers() const noexcept {
@@ -531,6 +534,7 @@ private:
     Viewport mViewport;
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
+    bool mIsTransparentPickable = true;
 
     FRenderTarget* mRenderTarget = nullptr;
 
