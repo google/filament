@@ -73,12 +73,13 @@ void ShaderGenerator::shutdown() {
     FinalizeProcess();
 }
 
-ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment,
-        Backend backend, bool isMobile, const filament::SamplerInterfaceBlock* sib) noexcept
-        : mBackend(backend),
-          mVertexBlob(transpileShader(ShaderStage::VERTEX, std::move(vertex), backend, isMobile, sib)),
-          mFragmentBlob(transpileShader(ShaderStage::FRAGMENT, std::move(fragment), backend,
-                  isMobile, sib)) {
+ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment, Backend backend,
+        bool isMobile, filamat::DescriptorSets&& descriptorSets) noexcept
+    : mBackend(backend),
+      mVertexBlob(transpileShader(
+              ShaderStage::VERTEX, std::move(vertex), backend, isMobile, descriptorSets)),
+      mFragmentBlob(transpileShader(
+              ShaderStage::FRAGMENT, std::move(fragment), backend, isMobile, descriptorSets)) {
     switch (backend) {
         case Backend::OPENGL:
             mShaderLanguage = filament::backend::ShaderLanguage::ESSL3;
@@ -95,9 +96,8 @@ ShaderGenerator::ShaderGenerator(std::string vertex, std::string fragment,
     }
 }
 
-ShaderGenerator::Blob ShaderGenerator::transpileShader(
-        ShaderStage stage, std::string shader, Backend backend, bool isMobile,
-        const filament::SamplerInterfaceBlock* sib) noexcept {
+ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::string shader,
+        Backend backend, bool isMobile, const filamat::DescriptorSets& descriptorSets) noexcept {
     TProgram program;
     const EShLanguage language = stage == ShaderStage::VERTEX ? EShLangVertex : EShLangFragment;
     TShader tShader(language);
@@ -161,9 +161,8 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::METAL) {
         const auto sm = isMobile ? ShaderModel::MOBILE : ShaderModel::DESKTOP;
-        filamat::SibVector sibs = filamat::SibVector::with_capacity(1);
-        if (sib) { sibs.emplace_back(0, sib); }
-        filamat::GLSLPostProcessor::spirvToMsl(&spirv, &result, sm, false, sibs, nullptr);
+        filamat::GLSLPostProcessor::spirvToMsl(
+                &spirv, &result, stage, sm, false, descriptorSets, nullptr);
         return { result.c_str(), result.c_str() + result.length() + 1 };
     } else if (backend == Backend::VULKAN) {
         return { (uint8_t*)spirv.data(), (uint8_t*)(spirv.data() + spirv.size()) };

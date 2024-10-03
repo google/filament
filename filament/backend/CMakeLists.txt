@@ -12,6 +12,7 @@ set(PUBLIC_HDRS
         include/backend/AcquiredImage.h
         include/backend/BufferDescriptor.h
         include/backend/CallbackHandler.h
+        include/backend/DescriptorSetOffsetArray.h
         include/backend/DriverApiForward.h
         include/backend/DriverEnums.h
         include/backend/Handle.h
@@ -69,9 +70,13 @@ set(PRIVATE_HDRS
 if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
     list(APPEND SRCS
             include/backend/platforms/OpenGLPlatform.h
+            src/opengl/BindingMap.h
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
             src/opengl/GLBufferObject.h
+            src/opengl/GLDescriptorSet.cpp
+            src/opengl/GLDescriptorSet.h
+            src/opengl/GLDescriptorSetLayout.h
             src/opengl/GLTexture.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
@@ -114,6 +119,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             list(APPEND SRCS src/opengl/platforms/PlatformGLX.cpp)
         elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
             list(APPEND SRCS src/opengl/platforms/PlatformEGLHeadless.cpp)
+        elseif (FILAMENT_SUPPORTS_OSMESA)
+            list(APPEND SRCS src/opengl/platforms/PlatformOSMesa.cpp)
         endif()
     elseif (WIN32)
         list(APPEND SRCS src/opengl/platforms/PlatformWGL.cpp)
@@ -361,6 +368,15 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
         -Wl,--exclude-libs,bluegl
 )
 
+if (LINUX AND FILAMENT_SUPPORTS_OSMESA)
+    set(OSMESA_COMPILE_FLAGS
+        -I${FILAMENT_OSMESA_PATH}/include/GL)
+    set(OSMESA_LINKER_FLAGS
+        -Wl,-L${FILAMENT_OSMESA_PATH}/lib/x86_64-linux-gnu/
+        -lOSMesa
+    )
+endif()
+
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
 else()
@@ -381,6 +397,7 @@ endif()
 
 target_compile_options(${TARGET} PRIVATE
         ${FILAMENT_WARNINGS}
+        ${OSMESA_COMPILE_FLAGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
 )
@@ -390,6 +407,7 @@ if (FILAMENT_SUPPORTS_METAL)
 endif()
 
 target_link_libraries(${TARGET} PRIVATE
+        ${OSMESA_LINKER_FLAGS}
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )
 
@@ -495,21 +513,38 @@ endif()
 
 # ==================================================================================================
 # Compute tests
+#
+#if (NOT IOS AND NOT WEBGL)
+#
+#add_executable(compute_test
+#        test/ComputeTest.cpp
+#        test/Arguments.cpp
+#        test/test_ComputeBasic.cpp
+#        )
+#
+#target_link_libraries(compute_test PRIVATE
+#        backend
+#        getopt
+#        gtest
+#        )
+#
+#set_target_properties(compute_test PROPERTIES FOLDER Tests)
+#
+#endif()
 
-if (NOT IOS AND NOT WEBGL)
+# ==================================================================================================
+# Metal utils tests
 
-add_executable(compute_test
-        test/ComputeTest.cpp
-        test/Arguments.cpp
-        test/test_ComputeBasic.cpp
-        )
+if (APPLE AND NOT IOS)
 
-target_link_libraries(compute_test PRIVATE
+add_executable(metal_utils_test test/MetalTest.mm)
+
+target_link_libraries(metal_utils_test PRIVATE
         backend
         getopt
         gtest
         )
 
-set_target_properties(compute_test PROPERTIES FOLDER Tests)
+set_target_properties(metal_utils_test PROPERTIES FOLDER Tests)
 
 endif()

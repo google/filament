@@ -155,8 +155,9 @@ kernel void main0(device Output_data& output_data [[buffer(0)]],
 
     driver.dispatchCompute(ph, { groupCount, 1, 1 });
 
-    driver.unbindBuffer(BufferObjectBinding::SHADER_STORAGE, 0);
-    driver.unbindBuffer(BufferObjectBinding::SHADER_STORAGE, 1);
+// FIXME: we need a way to unbind the buffer in order to read from them
+//    driver.unbindBuffer(BufferObjectBinding::SHADER_STORAGE, 0);
+//    driver.unbindBuffer(BufferObjectBinding::SHADER_STORAGE, 1);
 
     float* const user = (float*)malloc(size);
     driver.readBufferSubData(output_data, 0, size, { user, size });

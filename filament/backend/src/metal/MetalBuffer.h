@@ -73,10 +73,11 @@ public:
     enum class Type {
         NONE = 0,
         GENERIC = 1,
-        RING = 2,
+        RING = 2,       // deprecated
         STAGING = 3,
+        DESCRIPTOR_SET = 4,
     };
-    static constexpr size_t TypeCount = 3;
+    static constexpr size_t TypeCount = 4;
 
     static constexpr auto toIndex(Type t) {
         assert_invariant(t != Type::NONE);
@@ -88,6 +89,8 @@ public:
                 return 1;
             case Type::STAGING:
                 return 2;
+            case Type::DESCRIPTOR_SET:
+                return 3;
         }
     }
 
@@ -182,7 +185,7 @@ public:
      * is no device allocation.
      *
      */
-    id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
+    id<MTLBuffer> getGpuBufferForDraw() noexcept;
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 

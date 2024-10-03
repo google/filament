@@ -24,18 +24,28 @@
 
 #include <filament/MaterialChunkType.h>
 
-#include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 #include <private/filament/ConstantInfo.h>
 #include <private/filament/PushConstantInfo.h>
+#include <private/filament/EngineEnums.h>
 
+#include <backend/DriverEnums.h>
+#include <backend/Program.h>
+
+#include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
+
+#include <array>
+#include <optional>
+#include <tuple>
+#include <utility>
 
 #include <stdlib.h>
-#include <optional>
+#include <stdint.h>
 
 using namespace utils;
 using namespace filament::backend;
@@ -62,12 +72,13 @@ constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage la
 // ------------------------------------------------------------------------------------------------
 
 MaterialParser::MaterialParserDetails::MaterialParserDetails(
-        const utils::FixedCapacityVector<ShaderLanguage>& preferredLanguages, const void* data,
+        utils::FixedCapacityVector<ShaderLanguage> preferredLanguages, const void* data,
         size_t size)
     : mManagedBuffer(data, size),
       mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
-      mPreferredLanguages(preferredLanguages),
-      mMaterialChunk(mChunkContainer) {}
+      mPreferredLanguages(std::move(preferredLanguages)),
+      mMaterialChunk(mChunkContainer) {
+}
 
 template<typename T>
 UTILS_NOINLINE
@@ -82,11 +93,29 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
     return false;
 }
 
+MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(const void* start, size_t size)
+        : mStart(malloc(size)), mSize(size) {
+    memcpy(mStart, start, size);
+}
+
+MaterialParser::MaterialParserDetails::ManagedBuffer::~ManagedBuffer() noexcept {
+    free(mStart);
+}
+
 // ------------------------------------------------------------------------------------------------
+
+template<typename T>
+bool MaterialParser::get(typename T::Container* container) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(T::tag);
+    if (start == end) return false;
+    filaflat::Unflattener unflattener{ start, end };
+    return T::unflatten(unflattener, container);
+}
 
 MaterialParser::MaterialParser(utils::FixedCapacityVector<ShaderLanguage> preferredLanguages,
         const void* data, size_t size)
-    : mImpl(preferredLanguages, data, size) {}
+    : mImpl(std::move(preferredLanguages), data, size) {
+}
 
 ChunkContainer& MaterialParser::getChunkContainer() noexcept {
     return mImpl.mChunkContainer;
@@ -158,25 +187,16 @@ bool MaterialParser::getCacheId(uint64_t* cacheId) const noexcept {
    return unflattener.read(cacheId);
 }
 
-bool MaterialParser::getUIB(BufferInterfaceBlock* uib) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialUib);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkUniformInterfaceBlock::unflatten(unflattener, uib);
+bool MaterialParser::getUIB(BufferInterfaceBlock* container) const noexcept {
+    return get<ChunkUniformInterfaceBlock>(container);
 }
 
-bool MaterialParser::getSIB(SamplerInterfaceBlock* sib) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSib);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkSamplerInterfaceBlock::unflatten(unflattener, sib);
+bool MaterialParser::getSIB(SamplerInterfaceBlock* container) const noexcept {
+    return get<ChunkSamplerInterfaceBlock>(container);
 }
 
-bool MaterialParser::getSubpasses(SubpassInfo* subpass) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSubpass);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkSubpassInterfaceBlock::unflatten(unflattener, subpass);
+bool MaterialParser::getSubpasses(SubpassInfo* container) const noexcept {
+    return get<ChunkSubpassInterfaceBlock>(container);
 }
 
 bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {
@@ -187,43 +207,24 @@ bool MaterialParser::getMaterialProperties(uint64_t* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialProperties, value);
 }
 
-bool MaterialParser::getUniformBlockBindings(
-        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* value) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialUniformBindings);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkUniformBlockBindings::unflatten(unflattener, value);
-}
-
 bool MaterialParser::getBindingUniformInfo(BindingUniformInfoContainer* container) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialBindingUniformInfo);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkBindingUniformInfo::unflatten(unflattener, container);
+    return get<ChunkBindingUniformInfo>(container);
 }
 
 bool MaterialParser::getAttributeInfo(AttributeInfoContainer* container) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialAttributeInfo);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkAttributeInfo::unflatten(unflattener, container);
+    return get<ChunkAttributeInfo>(container);
 }
 
-bool MaterialParser::getSamplerBlockBindings(
-        SamplerGroupBindingInfoList* pSamplerGroupInfoList,
-        SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialSamplerBindings);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkSamplerBlockBindings::unflatten(unflattener,
-            pSamplerGroupInfoList, pSamplerBindingToNameMap);
+bool MaterialParser::getDescriptorBindings(DescriptorBindingsContainer* container) const noexcept {
+    return get<ChunkDescriptorBindingsInfo>(container);
 }
 
-bool MaterialParser::getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(filamat::MaterialConstants);
-    if (start == end) return false;
-    Unflattener unflattener(start, end);
-    return ChunkMaterialConstants::unflatten(unflattener, value);
+bool MaterialParser::getDescriptorSetLayout(DescriptorSetLayoutContainer* container) const noexcept {
+    return get<ChunkDescriptorSetLayoutInfo>(container);
+}
+
+bool MaterialParser::getConstants(utils::FixedCapacityVector<MaterialConstant>* container) const noexcept {
+    return get<ChunkMaterialConstants>(container);
 }
 
 bool MaterialParser::getPushConstants(utils::CString* structVarName,
@@ -466,13 +467,19 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
     }
 
     for (uint64_t i = 0; i < numFields; i++) {
+        static_assert(sizeof(backend::descriptor_binding_t) == sizeof(uint8_t));
         CString fieldName;
+        uint8_t fieldBinding = 0;
         uint8_t fieldType = 0;
         uint8_t fieldFormat = 0;
         uint8_t fieldPrecision = 0;
         bool fieldMultisample = false;
 
         if (!unflattener.read(&fieldName)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldBinding)) {
             return false;
         }
 
@@ -492,7 +499,9 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        builder.add({ fieldName.data(), fieldName.size() }, SamplerInterfaceBlock::Type(fieldType),
+        builder.add({ fieldName.data(), fieldName.size() },
+                SamplerInterfaceBlock::Binding(fieldBinding),
+                SamplerInterfaceBlock::Type(fieldType),
                 SamplerInterfaceBlock::Format(fieldFormat),
                 SamplerInterfaceBlock::Precision(fieldPrecision),
                 fieldMultisample);
@@ -557,28 +566,6 @@ bool ChunkSubpassInterfaceBlock::unflatten(Unflattener& unflattener,
     return true;
 }
 
-bool ChunkUniformBlockBindings::unflatten(filaflat::Unflattener& unflattener,
-        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* uniformBlockBindings) {
-    uint8_t count;
-    if (!unflattener.read(&count)) {
-        return false;
-    }
-    uniformBlockBindings->reserve(count);
-
-    for (uint8_t i = 0; i < count; i++) {
-        CString name;
-        uint8_t binding;
-        if (!unflattener.read(&name)) {
-            return false;
-        }
-        if (!unflattener.read(&binding)) {
-            return false;
-        }
-        uniformBlockBindings->emplace_back(std::move(name), binding);
-    }
-    return true;
-}
-
 bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
         MaterialParser::BindingUniformInfoContainer* bindingUniformInfo) {
     uint8_t bindingPointCount;
@@ -589,6 +576,10 @@ bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
     for (size_t i = 0; i < bindingPointCount; i++) {
         uint8_t index;
         if (!unflattener.read(&index)) {
+            return false;
+        }
+        utils::CString uboName;
+        if (!unflattener.read(&uboName)) {
             return false;
         }
         uint8_t uniformCount;
@@ -616,7 +607,7 @@ bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
             }
             uniforms.push_back({ name, offset, size, UniformType(type) });
         }
-        bindingUniformInfo->emplace_back(UniformBindingPoints(index), std::move(uniforms));
+        bindingUniformInfo->emplace_back(index, std::move(uboName), std::move(uniforms));
     }
     return true;
 }
@@ -646,49 +637,91 @@ bool ChunkAttributeInfo::unflatten(filaflat::Unflattener& unflattener,
     return true;
 }
 
-bool ChunkSamplerBlockBindings::unflatten(Unflattener& unflattener,
-        SamplerGroupBindingInfoList* pSamplerGroupBindingInfoList,
-        SamplerBindingToNameMap* pSamplerBindingToNameMap) {
-    assert_invariant(pSamplerGroupBindingInfoList && pSamplerBindingToNameMap);
-    SamplerGroupBindingInfoList& samplerGroupBindingInfoList = *pSamplerGroupBindingInfoList;
-    SamplerBindingToNameMap& samplerBindingToNameMap = *pSamplerBindingToNameMap;
+bool ChunkDescriptorBindingsInfo::unflatten(filaflat::Unflattener& unflattener,
+        MaterialParser::DescriptorBindingsContainer* container) {
 
-    uint8_t count;
-    if (!unflattener.read(&count)) {
-        return false;
-    }
-    assert_invariant(count == utils::Enum::count<SamplerBindingPoints>());
-
-    UTILS_NOUNROLL
-    for (size_t i = 0; i < count; i++) {
-        if (!unflattener.read(&samplerGroupBindingInfoList[i].bindingOffset)) {
-            return false;
-        }
-        if (!unflattener.read((uint8_t *)&samplerGroupBindingInfoList[i].shaderStageFlags)) {
-            return false;
-        }
-        if (!unflattener.read(&samplerGroupBindingInfoList[i].count)) {
-            return false;
-        }
-    }
-
-    if (!unflattener.read(&count)) {
+    uint8_t setCount;
+    if (!unflattener.read(&setCount)) {
         return false;
     }
 
-    samplerBindingToNameMap.reserve(count);
-    samplerBindingToNameMap.resize(count);
-    for (size_t i = 0; i < count; i++) {
-        uint8_t binding;
-        if (!unflattener.read(&binding)) {
+    for (size_t j = 0; j < setCount; j++) {
+        static_assert(sizeof(DescriptorSetBindingPoints) == sizeof(uint8_t));
+
+        DescriptorSetBindingPoints set;
+        if (!unflattener.read(reinterpret_cast<uint8_t*>(&set))) {
             return false;
         }
-        assert_invariant(binding < backend::MAX_SAMPLER_COUNT);
-        if (!unflattener.read(&samplerBindingToNameMap[binding])) {
+
+        uint8_t descriptorCount;
+        if (!unflattener.read(&descriptorCount)) {
             return false;
+        }
+
+        auto& descriptors = (*container)[+set];
+        descriptors.reserve(descriptorCount);
+        for (size_t i = 0; i < descriptorCount; i++) {
+            utils::CString name;
+            if (!unflattener.read(&name)) {
+                return false;
+            }
+            uint8_t type;
+            if (!unflattener.read(&type)) {
+                return false;
+            }
+            uint8_t binding;
+            if (!unflattener.read(&binding)) {
+                return false;
+            }
+            descriptors.push_back({
+                    std::move(name),
+                    backend::DescriptorType(type),
+                    backend::descriptor_binding_t(binding)});
         }
     }
 
+    return true;
+}
+
+bool ChunkDescriptorSetLayoutInfo::unflatten(filaflat::Unflattener& unflattener,
+        MaterialParser::DescriptorSetLayoutContainer* container) {
+    for (size_t j = 0; j < 2; j++) {
+        uint8_t descriptorCount;
+        if (!unflattener.read(&descriptorCount)) {
+            return false;
+        }
+        auto& descriptors = (*container)[j].bindings;
+        descriptors.reserve(descriptorCount);
+        for (size_t i = 0; i < descriptorCount; i++) {
+            uint8_t type;
+            if (!unflattener.read(&type)) {
+                return false;
+            }
+            uint8_t stageFlags;
+            if (!unflattener.read(&stageFlags)) {
+                return false;
+            }
+            uint8_t binding;
+            if (!unflattener.read(&binding)) {
+                return false;
+            }
+            uint8_t flags;
+            if (!unflattener.read(&flags)) {
+                return false;
+            }
+            uint16_t count;
+            if (!unflattener.read(&count)) {
+                return false;
+            }
+            descriptors.push_back({
+                    backend::DescriptorType(type),
+                    backend::ShaderStageFlags(stageFlags),
+                    backend::descriptor_binding_t(binding),
+                    backend::DescriptorFlags(flags),
+                    count,
+            });
+        }
+    }
     return true;
 }
 

@@ -57,7 +57,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             highp vec4 shadowPosition = getShadowPosition(cascade);
-            visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0);
+            visibility = shadow(true, sampler0_shadowMap, cascade, shadowPosition, 0.0);
             // shadow far attenuation
             highp vec3 v = getWorldPosition() - getWorldCameraPosition();
             // (viewFromWorld * v).z == dot(transpose(viewFromWorld), v)

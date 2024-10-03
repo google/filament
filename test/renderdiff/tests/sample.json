@@ -1,0 +1,34 @@
+{
+    "name": "SampleTest" ,                            // [required]
+    "backends": ["opengl"],                           // [required] Specifies the backend that will be used to render
+                                                      //     this test
+    "model_search_paths": ["third_party/models"],     // [optional] Base iirectory from which we will glob for
+                                                      //     .glb files and try to match against names in the 'models'
+                                                      //     field.
+    "presets": [                                      // [optional] A list of preset configurations that tests can
+                                                      //     inherit from.
+        {
+            "name": "Standard",                       // [required]
+            "models": ["lucy", "DamagedHelmet"],      // [optional] Base name for the gltf file used in the test.  For
+                                                      //     example, source files are lucy.glb and DamagedHelmet.gltf
+            "rendering": {                            // [required] Rendering settings used in the test. The json format
+                "viewer.cameraFocusDistance": 0,      //     is taken from AutomationSpec in libs/viewer
+                "view.postProcessingEnabled": true
+            }
+        }
+    ],
+    "tests": [                                        // [required] List of test configurations
+        {
+            "name": "BloomFlare",                     // [required]
+            "description": "Testing bloom and flare", // [optional]
+            "apply_presets": ["Standard"],            // [optional] Applies the preset in order. Item must be in
+                                                      //     'presets' field in the top-level struct.
+            "model": [],                              // [optional] List of models used in this test.  The list is
+                                                      //      *appended* onto the lists provided by the presets.
+            "rendering": {                            // [required] See description in 'presets'
+                "view.bloom.enabled": true,
+                "view.bloom.lensFlare": true
+            }
+        }
+    ]
+}

@@ -255,6 +255,19 @@ public:
     void* UTILS_NULLABLE getNativeWindow() const noexcept;
 
     /**
+     * If this flag is passed to setFrameScheduledCallback, then the behavior of the default
+     * CallbackHandler (when nullptr is passed as the handler argument) is altered to call the
+     * callback on the Metal completion handler thread (as opposed to the main Filament thread).
+     * This flag also instructs the Metal backend to release the associated CAMetalDrawable on the
+     * completion handler thread.
+     *
+     * This flag has no effect if a custom CallbackHandler is passed.
+     *
+     * @see setFrameScheduledCallback
+     */
+    static constexpr uint64_t CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER = 1;
+
+    /**
      * FrameScheduledCallback is a callback function that notifies an application when Filament has
      * completed processing a frame and that frame is ready to be scheduled for presentation.
      *
@@ -298,7 +311,7 @@ public:
      * @see PresentCallable
      */
     void setFrameScheduledCallback(backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
-            FrameScheduledCallback&& callback = {});
+            FrameScheduledCallback&& callback = {}, uint64_t flags = 0);
 
     /**
      * Returns whether or not this SwapChain currently has a FrameScheduledCallback set.

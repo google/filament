@@ -166,28 +166,40 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
 id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
         const ArgumentEncoderState &state) noexcept {
     const auto& textureTypes = state.textureTypes;
-    const auto& count = textureTypes.size();
-    assert_invariant(count > 0);
+    const auto& textureCount = textureTypes.size();
+    const auto& bufferCount = state.bufferCount;
+    assert_invariant(textureCount > 0);
 
     // Metal has separate data types for textures versus samplers, so the argument buffer layout
     // alternates between texture and sampler, i.e.:
+    // buffer0
+    // buffer1
     // textureA
     // samplerA
     // textureB
     // samplerB
     // etc
     NSMutableArray<MTLArgumentDescriptor*>* arguments =
-            [NSMutableArray arrayWithCapacity:(count * 2)];
-    for (size_t i = 0; i < count; i++) {
+            [NSMutableArray arrayWithCapacity:(bufferCount + textureCount * 2)];
+    size_t i = 0;
+    for (size_t j = 0; j < bufferCount; j++) {
+        MTLArgumentDescriptor* bufferArgument = [MTLArgumentDescriptor argumentDescriptor];
+        bufferArgument.index = i++;
+        bufferArgument.dataType = MTLDataTypePointer;
+        bufferArgument.access = MTLArgumentAccessReadOnly;
+        [arguments addObject:bufferArgument];
+    }
+
+    for (size_t j = 0; j < textureCount; j++) {
         MTLArgumentDescriptor* textureArgument = [MTLArgumentDescriptor argumentDescriptor];
-        textureArgument.index = i * 2 + 0;
+        textureArgument.index = i++;
         textureArgument.dataType = MTLDataTypeTexture;
         textureArgument.textureType = textureTypes[i];
         textureArgument.access = MTLArgumentAccessReadOnly;
         [arguments addObject:textureArgument];
 
         MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
-        samplerArgument.index = i * 2 + 1;
+        samplerArgument.index = i++;
         samplerArgument.dataType = MTLDataTypeSampler;
         textureArgument.access = MTLArgumentAccessReadOnly;
         [arguments addObject:samplerArgument];
@@ -195,6 +207,65 @@ id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
 
     return [device newArgumentEncoderWithArguments:arguments];
 }
+
+template <NSUInteger N, ShaderStage stage>
+void MetalBufferBindings<N, stage>::setBuffer(const id<MTLBuffer> buffer, NSUInteger offset, NSUInteger index) {
+    assert_invariant(offset + 1 <= N);
+
+    if (mBuffers[index] != buffer) {
+        mBuffers[index] = buffer;
+        mDirtyBuffers.set(index);
+    }
+
+    if (mOffsets[index] != offset) {
+        mOffsets[index] = offset;
+        mDirtyOffsets.set(index);
+    }
+}
+
+template <NSUInteger N, ShaderStage stage>
+void MetalBufferBindings<N, stage>::bindBuffers(
+        id<MTLCommandEncoder> encoder, NSUInteger startIndex) {
+    if (mDirtyBuffers.none() && mDirtyOffsets.none()) {
+        return;
+    }
+
+    utils::bitset8 onlyOffsetDirty = mDirtyOffsets & ~mDirtyBuffers;
+    onlyOffsetDirty.forEachSetBit([&](size_t i) {
+        if constexpr (stage == ShaderStage::VERTEX) {
+            [(id<MTLRenderCommandEncoder>)encoder setVertexBufferOffset:mOffsets[i]
+                                                                atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::FRAGMENT) {
+            [(id<MTLRenderCommandEncoder>)encoder setFragmentBufferOffset:mOffsets[i]
+                                                                  atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::COMPUTE) {
+            [(id<MTLComputeCommandEncoder>)encoder setBufferOffset:mOffsets[i]
+                                                           atIndex:i + startIndex];
+        }
+    });
+    mDirtyOffsets.reset();
+
+    mDirtyBuffers.forEachSetBit([&](size_t i) {
+        if constexpr (stage == ShaderStage::VERTEX) {
+            [(id<MTLRenderCommandEncoder>)encoder setVertexBuffer:mBuffers[i]
+                                                           offset:mOffsets[i]
+                                                          atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::FRAGMENT) {
+            [(id<MTLRenderCommandEncoder>)encoder setFragmentBuffer:mBuffers[i]
+                                                             offset:mOffsets[i]
+                                                            atIndex:i + startIndex];
+        } else if constexpr (stage == ShaderStage::COMPUTE) {
+            [(id<MTLComputeCommandEncoder>)encoder setBuffer:mBuffers[i]
+                                                      offset:mOffsets[i]
+                                                     atIndex:i + startIndex];
+        }
+    });
+    mDirtyBuffers.reset();
+}
+
+template class MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::VERTEX>;
+template class MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::FRAGMENT>;
+template class MetalBufferBindings<MAX_DESCRIPTOR_SET_COUNT, ShaderStage::COMPUTE>;
 
 } // namespace backend
 } // namespace filament

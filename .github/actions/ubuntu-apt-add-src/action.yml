@@ -1,0 +1,9 @@
+name: 'ubuntu apt add deb-src'
+runs:
+  using: "composite"
+  steps:
+    - name: "ubuntu apt add deb-src"
+      run: |
+          echo "deb-src http://archive.ubuntu.com/ubuntu jammy main restricted universe" | sudo tee /etc/apt/sources.list.d/my.list
+          sudo apt-get update
+      shell: bash

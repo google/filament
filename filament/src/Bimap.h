@@ -56,7 +56,12 @@ class Bimap {
         }
     };
 
-    using ForwardMap = tsl::robin_map<KeyDelegate, Value, KeyHasherDelegate>;
+    using ForwardMap = tsl::robin_map<
+            KeyDelegate, Value,
+            KeyHasherDelegate,
+            std::equal_to<KeyDelegate>,
+            std::allocator<std::pair<KeyDelegate, Value>>,
+            true>;
     using BackwardMap = tsl::robin_map<Value, KeyDelegate, ValueHash>;
 
     Allocator mAllocator;

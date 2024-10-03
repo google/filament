@@ -19,6 +19,8 @@
 #include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
+#include <filament/SwapChain.h>
+
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
 #include "MetalContext.h"
@@ -41,6 +43,16 @@
 
 #include <algorithm>
 
+#ifndef FILAMENT_METAL_DEBUG_LOG
+#define FILAMENT_METAL_DEBUG_LOG 0
+#endif
+
+#if FILAMENT_METAL_DEBUG_LOG == 1
+#define DEBUG_LOG(x, ...) printf("[METAL DEBUG] " x, ##__VA_ARGS__)
+#else
+#define DEBUG_LOG(...)
+#endif
+
 namespace filament {
 namespace backend {
 
@@ -57,7 +69,6 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
     //    MetalIndexBuffer             :  56       moderate
     //    MetalBufferObject            :  64       many
     // -- less than or equal 64 bytes
-    //    MetalSamplerGroup            : 112       few
     //    MetalProgram                 : 152       moderate
     //    MetalTexture                 : 152       moderate
     //    MetalSwapChain               : 208       few
@@ -71,7 +82,6 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
            << "\nMetalVertexBuffer: " << sizeof(MetalVertexBuffer)
            << "\nMetalVertexBufferInfo: " << sizeof(MetalVertexBufferInfo)
            << "\nMetalIndexBuffer: " << sizeof(MetalIndexBuffer)
-           << "\nMetalSamplerGroup: " << sizeof(MetalSamplerGroup)
            << "\nMetalRenderPrimitive: " << sizeof(MetalRenderPrimitive)
            << "\nMetalTexture: " << sizeof(MetalTexture)
            << "\nMetalTimerQuery: " << sizeof(MetalTimerQuery)
@@ -111,6 +121,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
 
     mContext->device = mPlatform.createDevice();
     assert_invariant(mContext->device);
+
+    mContext->emptyBuffer = [mContext->device newBufferWithLength:16
+                                                          options:MTLResourceStorageModePrivate];
 
     initializeSupportedGpuFamilies(mContext);
 
@@ -222,10 +235,13 @@ MetalDriver::~MetalDriver() noexcept {
 
 void MetalDriver::tick(int) {
     executeTickOps();
+    executeDeferredOps();
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    DEBUG_LOG("beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
+            monotonic_clock_ns, refreshIntervalNs, frameId);
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
@@ -237,13 +253,19 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
                 TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::RING));
         mPlatform.debugUpdateStat("filament.metal.alive_buffers.staging",
                 TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::STAGING));
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers.descriptor_set",
+                TrackedMetalBuffer::getAliveBuffers(TrackedMetalBuffer::Type::DESCRIPTOR_SET));
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(
-        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t flags) {
+    // Turn off the CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER flag if a custom handler is provided.
+    if (handler) {
+        flags &= ~SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER;
+    }
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(handler, std::move(callback));
+    swapChain->setFrameScheduledCallback(handler, std::move(callback), flags);
 }
 
 void MetalDriver::setFrameCompletedCallback(
@@ -262,6 +284,7 @@ void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {
+    DEBUG_LOG("endFrame(frameId = %d)\n", frameId);
     // If we haven't committed the command buffer (if the frame was canceled), do it now. There may
     // be commands in it (like fence signaling) that need to execute.
     submitPendingCommands(mContext);
@@ -294,6 +317,69 @@ void MetalDriver::endFrame(uint32_t frameId) {
 #endif
 }
 
+void MetalDriver::updateDescriptorSetBuffer(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::BufferObjectHandle boh,
+        uint32_t offset,
+        uint32_t size) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateDescriptorSetBuffer must be called outside of a render pass.");
+    DEBUG_LOG(
+            "updateDescriptorSetBuffer(dsh = %d, binding = %d, boh = %d, offset = %d, size = "
+            "%d)\n",
+            dsh.getId(), binding, boh.getId(), offset, size);
+
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    auto* bo = handle_cast<MetalBufferObject>(boh);
+    id<MTLBuffer> mtlBuffer = bo->getBuffer()->getGpuBufferForDraw();
+    descriptorSet->buffers[binding] = { mtlBuffer, offset, size };
+    ShaderStageFlags stageFlags = descriptorSet->layout->getBindings()[binding].stageFlags;
+    if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+        descriptorSet->vertexResources.push_back(mtlBuffer);
+    }
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+        descriptorSet->fragmentResources.push_back(mtlBuffer);
+    }
+}
+
+void MetalDriver::updateDescriptorSetTexture(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_binding_t binding,
+        backend::TextureHandle th,
+        SamplerParams params) {
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "updateDescriptorSetTexture must be called outside of a render pass.");
+    DEBUG_LOG("updateDescriptorSetTexture(dsh = %d, binding = %d, th = %d, params = {...})\n",
+            dsh.getId(), binding, th.getId());
+
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    auto* texture = handle_cast<MetalTexture>(th);
+
+    id<MTLTexture> mtlTexture = texture->getMtlTextureForRead();
+    if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+        auto externalImage = texture->getExternalImage();
+        assert_invariant(externalImage != nil);
+        descriptorSet->externalImages.push_back(externalImage);
+    }
+    assert_invariant(mtlTexture != nil);
+
+    descriptorSet->textures[binding] = MetalDescriptorSet::TextureBinding { mtlTexture, params };
+
+    auto const& bindings = descriptorSet->layout->getBindings();
+    auto found = std::find_if(bindings.begin(), bindings.end(),
+            [binding](const auto& b) { return b.binding == binding; });
+    assert_invariant(found != bindings.end());
+
+    ShaderStageFlags stageFlags = found->stageFlags;
+    if (any(stageFlags & ShaderStageFlags::VERTEX)) {
+        descriptorSet->vertexResources.push_back(mtlTexture);
+    }
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT)) {
+        descriptorSet->fragmentResources.push_back(mtlTexture);
+    }
+}
+
 void MetalDriver::flush(int) {
     FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
             << "flush must be called outside of a render pass.";
@@ -305,9 +391,13 @@ void MetalDriver::finish(int) {
             << "finish must be called outside of a render pass.";
     // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
     submitPendingCommands(mContext);
-    id<MTLCommandBuffer> oneOffBuffer = [mContext->commandQueue commandBuffer];
-    [oneOffBuffer commit];
+
+    id<MTLCommandBuffer> oneOffBuffer = getPendingCommandBuffer(mContext);
+    submitPendingCommands(mContext);
     [oneOffBuffer waitUntilCompleted];
+
+    executeTickOps();
+    executeDeferredOps();
 }
 
 void MetalDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
@@ -363,22 +453,46 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
-            target, levels, format, samples, width, height, depth, usage,
-            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
+    mContext->textures.insert(construct_handle<MetalTexture>(
+            th, *mContext, target, levels, format, samples, width, height, depth, usage));
+
+    DEBUG_LOG(
+            "createTextureR(th = %d, target = %s, levels = %d, format = ?, samples = %d, width = "
+            "%d, height = %d, depth = %d, usage = %s)\n",
+            th.getId(), stringify(target), levels, samples, width, height, depth, stringify(usage));
 }
 
-void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
-        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
-        uint32_t depth, TextureUsage usage,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-    // Clamp sample count to what the device supports.
-    auto& sc = mContext->sampleCountLookup;
-    samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
+void MetalDriver::createTextureViewR(
+        Handle<HwTexture> th, Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+    MetalTexture const* src = handle_cast<MetalTexture>(srch);
+    mContext->textures.insert(
+            construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount));
+}
 
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
-            target, levels, format, samples, width, height, depth, usage, r, g, b, a));
+void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a) {
+    MetalTexture const* src = handle_cast<MetalTexture>(srch);
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
+}
+
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+    mContext->textures.insert(construct_handle<MetalTexture>(
+            th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
+    // This release matches the retain call in setupExternalImage. The MetalTexture will have
+    // retained the buffer by now.
+    CVPixelBufferRelease((CVPixelBufferRef)image);
+}
+
+void MetalDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* image, uint32_t plane) {
+    mContext->textures.insert(construct_handle<MetalTexture>(
+            th, *mContext, format, width, height, usage, (CVPixelBufferRef)image, plane));
+    // This release matches the retain call in setupExternalImage. The MetalTexture will have
+    // retained the buffer by now.
+    CVPixelBufferRelease((CVPixelBufferRef)image);
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -403,11 +517,6 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         target, levels, format, samples, width, height, depth, usage, metalTexture));
 }
 
-void MetalDriver::createSamplerGroupR(
-        Handle<HwSamplerGroup> sbh, uint32_t size, utils::FixedSizeString<32> debugName) {
-    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size, debugName));
-}
-
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         PrimitiveType pt) {
@@ -416,6 +525,11 @@ void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
+#if FILAMENT_METAL_DEBUG_LOG
+    auto handleId = rph.getId();
+    DEBUG_LOG("createProgramR(rph = %d, program = ", handleId);
+    utils::slog.d << program << utils::io::endl;
+#endif
     construct_handle<MetalProgram>(rph, *mContext, std::move(program));
 }
 
@@ -444,7 +558,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         FILAMENT_CHECK_PRECONDITION(colorTexture->getMtlTextureForWrite())
                 << "Color texture passed to render target has no texture allocation";
-        colorTexture->extendLodRangeTo(buffer.level);
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
@@ -455,7 +568,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         FILAMENT_CHECK_PRECONDITION(depthTexture->getMtlTextureForWrite())
                 << "Depth texture passed to render target has no texture allocation.";
-        depthTexture->extendLodRangeTo(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
@@ -466,7 +578,6 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         FILAMENT_CHECK_PRECONDITION(stencilTexture->getMtlTextureForWrite())
                 << "Stencil texture passed to render target has no texture allocation.";
-        stencilTexture->extendLodRangeTo(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
 
@@ -483,6 +594,9 @@ void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, 
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
+        // This release matches the retain call in setupExternalImage. The MetalSwapchain will have
+        // retained the buffer by now.
+        CVPixelBufferRelease((CVPixelBufferRef)pixelBuffer);
     } else {
         auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, metalLayer, flags);
@@ -496,6 +610,72 @@ void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
+}
+
+const char* toString(DescriptorType type) {
+    switch (type) {
+        case DescriptorType::UNIFORM_BUFFER:
+            return "UNIFORM_BUFFER";
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+            return "SHADER_STORAGE_BUFFER";
+        case DescriptorType::SAMPLER:
+            return "SAMPLER";
+        case DescriptorType::INPUT_ATTACHMENT:
+            return "INPUT_ATTACHMENT";
+    }
+}
+
+const char* toString(ShaderStageFlags flags) {
+    std::vector<const char*> stages;
+    if (any(flags & ShaderStageFlags::VERTEX)) {
+        stages.push_back("VERTEX");
+    }
+    if (any(flags & ShaderStageFlags::FRAGMENT)) {
+        stages.push_back("FRAGMENT");
+    }
+    if (any(flags & ShaderStageFlags::COMPUTE)) {
+        stages.push_back("COMPUTE");
+    }
+    if (stages.empty()) {
+        return "NONE";
+    }
+    static char buffer[64];
+    buffer[0] = '\0';
+    for (size_t i = 0; i < stages.size(); i++) {
+        if (i > 0) {
+            strcat(buffer, " | ");
+        }
+        strcat(buffer, stages[i]);
+    }
+    return buffer;
+}
+
+const char* toString(DescriptorFlags flags) {
+    if (flags == DescriptorFlags::DYNAMIC_OFFSET) {
+        return "DYNAMIC_OFFSET";
+    }
+    return "NONE";
+}
+
+void MetalDriver::createDescriptorSetLayoutR(
+        Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info) {
+    std::sort(info.bindings.begin(), info.bindings.end(),
+            [](const auto& a, const auto& b) { return a.binding < b.binding; });
+    DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
+    for (size_t i = 0; i < info.bindings.size(); i++) {
+        DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
+                info.bindings[i].binding, toString(info.bindings[i].type), info.bindings[i].count,
+                toString(info.bindings[i].stageFlags), toString(info.bindings[i].flags));
+    }
+    DEBUG_LOG("})\n");
+    construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
+}
+
+void MetalDriver::createDescriptorSetR(
+        Handle<HwDescriptorSet> dsh, Handle<HwDescriptorSetLayout> dslh) {
+    DEBUG_LOG("createDescriptorSetR(dsh = %d, dslh = %d)\n", dsh.getId(), dslh.getId());
+    MetalDescriptorSetLayout* layout = handle_cast<MetalDescriptorSetLayout>(dslh);
+    construct_handle<MetalDescriptorSet>(dsh, layout);
 }
 
 Handle<HwVertexBufferInfo> MetalDriver::createVertexBufferInfoS() noexcept {
@@ -518,16 +698,24 @@ Handle<HwTexture> MetalDriver::createTextureS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
-Handle<HwTexture> MetalDriver::createTextureSwizzledS() noexcept {
+Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureViewSwizzleS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImageS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImagePlaneS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
 Handle<HwTexture> MetalDriver::importTextureS() noexcept {
     return alloc_handle<MetalTexture>();
-}
-
-Handle<HwSamplerGroup> MetalDriver::createSamplerGroupS() noexcept {
-    return alloc_handle<MetalSamplerGroup>();
 }
 
 Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
@@ -566,6 +754,14 @@ Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
     return alloc_and_construct_handle<MetalTimerQuery, HwTimerQuery>();
 }
 
+Handle<HwDescriptorSetLayout> MetalDriver::createDescriptorSetLayoutS() noexcept {
+    return alloc_handle<MetalDescriptorSetLayout>();
+}
+
+Handle<HwDescriptorSet> MetalDriver::createDescriptorSetS() noexcept {
+    return alloc_handle<MetalDescriptorSet>();
+}
+
 void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
     if (vbih) {
         destruct_handle<MetalVertexBufferInfo>(vbih);
@@ -588,22 +784,6 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (UTILS_UNLIKELY(!boh)) {
         return;
     }
-    auto* bo = handle_cast<MetalBufferObject>(boh);
-    // Unbind this buffer object from any uniform / SSBO slots it's still bound to.
-    bo->boundUniformBuffers.forEachSetBit([this](size_t index) {
-        mContext->uniformState[index] = BufferState {
-                .buffer = nullptr,
-                .offset = 0,
-                .bound = false
-        };
-    });
-    bo->boundSsbos.forEachSetBit([this](size_t index) {
-        mContext->ssboState[index] = BufferState {
-                .buffer = nullptr,
-                .offset = 0,
-                .bound = false
-        };
-    });
     destruct_handle<MetalBufferObject>(boh);
 }
 
@@ -619,22 +799,8 @@ void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
     }
 }
 
-void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
-    if (!sbh) {
-        return;
-    }
-    // Unbind this sampler group from our internal state.
-    auto* metalSampler = handle_cast<MetalSamplerGroup>(sbh);
-    for (auto& samplerBinding : mContext->samplerBindings) {
-        if (samplerBinding == metalSampler) {
-            samplerBinding = {};
-        }
-    }
-    mContext->samplerGroups.erase(metalSampler);
-    destruct_handle<MetalSamplerGroup>(sbh);
-}
-
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
+    DEBUG_LOG("destroyTexture(th = %d)\n", th.getId());
     if (!th) {
         return;
     }
@@ -661,7 +827,16 @@ void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
-        destruct_handle<MetalSwapChain>(sch);
+        auto* swapChain = handle_cast<MetalSwapChain>(sch);
+        // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
+        // complete before destroying it. This is because pixel buffer SwapChains hold a
+        // MetalExternalImage that could still being rendered into.
+        if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
+            executeAfterCurrentCommandBufferCompletes(
+                    [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
+        } else {
+            destruct_handle<MetalSwapChain>(sch);
+        }
     }
 }
 
@@ -675,6 +850,21 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     }
 }
 
+void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh) {
+    DEBUG_LOG("destroyDescriptorSetLayout(dslh = %d)\n", dslh.getId());
+    if (dslh) {
+        destruct_handle<MetalDescriptorSetLayout>(dslh);
+    }
+}
+
+void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
+    DEBUG_LOG("destroyDescriptorSet(dsh = %d)\n", dsh.getId());
+    if (dsh) {
+        executeAfterCurrentCommandBufferCompletes(
+                [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
+    }
+}
+
 void MetalDriver::terminate() {
     // Terminate any outstanding MetalTextures.
     while (!mContext->texturesToDestroy.empty()) {
@@ -685,8 +875,6 @@ void MetalDriver::terminate() {
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();
-
-    executeTickOps();
 
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
@@ -945,11 +1133,6 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
-void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
-    auto tex = handle_cast<MetalTexture>(th);
-    tex->setLodRange(minLevel, maxLevel);
-}
-
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
@@ -959,30 +1142,26 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
     auto tex = handle_cast<MetalTexture>(th);
     tex->loadImage(level, MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
     scheduleDestroy(std::move(data));
+
+    DEBUG_LOG(
+            "update3DImage(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width = "
+            "%d, height = %d, depth = %d, data = ?)\n",
+            th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
 }
 
 void MetalDriver::setupExternalImage(void* image) {
-    // This is called when passing in a CVPixelBuffer as either an external image or swap chain.
-    // Here we take ownership of the passed in buffer. It will be released the next time
-    // setExternalImage is called, when the texture is destroyed, or when the swap chain is
-    // destroyed.
+    // setupExternalImage is called on the Filament thread when creating a Texture or SwapChain from
+    // a CVPixelBuffer external image. Here we take ownership of the passed in buffer by calling
+    // CVPixelBufferRetain. This keeps the buffer alive until the driver thread processes it (inside
+    // createTextureExternalImage or createSwapChain), allowing the application to free their
+    // reference to the buffer.
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
 }
 
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "setExternalImage must be called outside of a render pass.";
-    auto texture = handle_cast<MetalTexture>(th);
-    texture->externalImage.set((CVPixelBufferRef) image);
-}
+void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
 
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "setExternalImagePlane must be called outside of a render pass.";
-    auto texture = handle_cast<MetalTexture>(th);
-    texture->externalImage.set((CVPixelBufferRef) image, plane);
-}
+void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
@@ -998,96 +1177,8 @@ void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
             << "generateMipmaps must be called outside of a render pass.";
     auto tex = handle_cast<MetalTexture>(th);
     tex->generateMipmaps();
-}
 
-void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescriptor&& data) {
-    FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "updateSamplerGroup must be called outside of a render pass.";
-
-    auto sb = handle_cast<MetalSamplerGroup>(sbh);
-    assert_invariant(sb->size == data.size / sizeof(SamplerDescriptor));
-    auto const* const samplers = (SamplerDescriptor const*) data.buffer;
-
-    // Verify that all the textures in the sampler group are still alive.
-    // These bugs lead to memory corruption and can be difficult to track down.
-    for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
-        if (!samplers[s].t) {
-            continue;
-        }
-        // The difference between this check and the one below is that in release, we do this for
-        // only a set number of recently freed textures, while the debug check is exhaustive.
-        auto* metalTexture = handle_cast<MetalTexture>(samplers[s].t);
-        metalTexture->checkUseAfterFree(sb->debugName.c_str(), s);
-#ifndef NDEBUG
-        auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
-        if (iter == mContext->textures.end()) {
-            utils::slog.e << "updateSamplerGroup: texture #"
-                          << (int) s << " is dead, texture handle = "
-                          << samplers[s].t << utils::io::endl;
-        }
-        assert_invariant(iter != mContext->textures.end());
-#endif
-    }
-
-    // Create a MTLArgumentEncoder for these textures.
-    // Ideally, we would create this encoder at createSamplerGroup time, but we need to know the
-    // texture type of each texture. It's also not guaranteed that the types won't change between
-    // calls to updateSamplerGroup.
-    utils::FixedCapacityVector<MTLTextureType> textureTypes(sb->size);
-    std::transform(samplers, samplers + data.size / sizeof(SamplerDescriptor), textureTypes.begin(),
-            [this](const SamplerDescriptor& sampler) {
-        if (!sampler.t) {
-            // Use Type2D for non-bound textures.
-            return MTLTextureType2D;
-        }
-        auto* t = handle_cast<MetalTexture>(sampler.t);
-        if (t->target == SamplerType::SAMPLER_EXTERNAL) {
-            // Use Type2D for external image textures.
-            return MTLTextureType2D;
-        }
-        id<MTLTexture> mtlTexture = t->getMtlTextureForRead();
-        assert_invariant(mtlTexture);
-        return mtlTexture.textureType;
-    });
-    auto& encoderCache = mContext->argumentEncoderCache;
-    id<MTLArgumentEncoder> encoder =
-            encoderCache.getOrCreateState(ArgumentEncoderState(std::move(textureTypes)));
-    sb->reset(getPendingCommandBuffer(mContext), encoder, mContext->device);
-
-    // In a perfect world, all the MTLTexture bindings would be known at updateSamplerGroup time.
-    // However, there are two special cases preventing this:
-    // 1. External images
-    // 2. LOD-clamped textures
-    //
-    // Both of these cases prevent us from knowing the final id<MTLTexture> that will be bound into
-    // the argument buffer representing the sampler group. So, we wait until draw call time to bind
-    // textures (done in finalizeSamplerGroup).
-    // The good news is that once a render pass has started, the texture bindings won't change.
-    // A SamplerGroup is "finalized" when all of its textures have been set and is ready for use in
-    // a draw call.
-    // finalizeSamplerGroup has one additional responsibility: to call useResources for all the
-    // textures, which is required by Metal.
-    for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
-        if (!samplers[s].t) {
-            // Assign a default sampler to empty slots.
-            // Metal requires all samplers referenced in shaders to be bound.
-            // An empty texture will be assigned inside finalizeSamplerGroup.
-            id<MTLSamplerState> sampler = mContext->samplerStateCache.getOrCreateState({});
-            sb->setFinalizedSampler(s, sampler);
-            continue;
-        }
-
-        // Bind the sampler state. We always know the full sampler state at updateSamplerGroup time.
-        SamplerState samplerState {
-                .samplerParams = samplers[s].s,
-        };
-        id<MTLSamplerState> sampler = mContext->samplerStateCache.getOrCreateState(samplerState);
-        sb->setFinalizedSampler(s, sampler);
-
-        sb->setTextureHandle(s, samplers[s].t);
-    }
-
-    scheduleDestroy(std::move(data));
+    DEBUG_LOG("generateMipmaps(th = %d)\n", th.getId());
 }
 
 void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
@@ -1099,6 +1190,7 @@ void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
+    DEBUG_LOG("beginRenderPass(rth = %d, params = {...})\n", rth.getId());
 
 #if defined(FILAMENT_METAL_PROFILING)
     const char* renderPassName = "Unknown";
@@ -1140,7 +1232,27 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->windingState.invalidate();
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
-    mContext->finalizedSamplerGroups.clear();
+    mContext->finalizedDescriptorSets.clear();
+    mContext->vertexDescriptorBindings.invalidate();
+    mContext->fragmentDescriptorBindings.invalidate();
+    mContext->computeDescriptorBindings.invalidate();
+    mContext->dynamicOffsets.setDirty(true);
+
+    // Finalize any descriptor sets that were bound before the render pass.
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        auto* descriptorSet = mContext->currentDescriptorSets[i];
+        if (!descriptorSet) {
+            continue;
+        }
+        descriptorSet->finalize(this);
+        mContext->finalizedDescriptorSets.insert(descriptorSet);
+    }
+
+    // Bind descriptor sets.
+    mContext->vertexDescriptorBindings.bindBuffers(
+            mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
+    mContext->fragmentDescriptorBindings.bindBuffers(
+            mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
 
     for (auto& pc : mContext->currentPushConstants) {
         pc.clear();
@@ -1150,6 +1262,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 void MetalDriver::nextSubpass(int dummy) {}
 
 void MetalDriver::endRenderPass(int dummy) {
+    DEBUG_LOG("endRenderPass()\n");
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, OS_SIGNPOST_ID_EXCLUSIVE, "Render pass");
 #endif
@@ -1187,109 +1300,6 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
     swapChain->present();
     submitPendingCommands(mContext);
     swapChain->releaseDrawable();
-}
-
-void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
-    assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
-    auto* bo = handle_cast<MetalBufferObject>(boh);
-    auto* currentBo = mContext->uniformState[index].buffer;
-    if (currentBo) {
-        currentBo->boundUniformBuffers.unset(index);
-    }
-    bo->boundUniformBuffers.set(index);
-    mContext->uniformState[index] = BufferState{
-            .buffer = bo,
-            .offset = 0,
-            .bound = true
-    };
-}
-
-void MetalDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
-        Handle<HwBufferObject> boh,  uint32_t offset, uint32_t size) {
-
-    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
-                     bindingType == BufferObjectBinding::UNIFORM);
-
-    auto* bo = handle_cast<MetalBufferObject>(boh);
-
-    switch (bindingType) {
-        default:
-        case BufferObjectBinding::UNIFORM: {
-            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
-            auto* currentBo = mContext->uniformState[index].buffer;
-            if (currentBo) {
-                currentBo->boundUniformBuffers.unset(index);
-            }
-            bo->boundUniformBuffers.set(index);
-            mContext->uniformState[index] = BufferState {
-                    .buffer = bo,
-                    .offset = offset,
-                    .bound = true
-            };
-
-            break;
-        }
-
-        case BufferObjectBinding::SHADER_STORAGE: {
-            assert_invariant(index < MAX_SSBO_COUNT);
-            auto* currentBo = mContext->ssboState[index].buffer;
-            if (currentBo) {
-                currentBo->boundSsbos.unset(index);
-            }
-            bo->boundSsbos.set(index);
-            mContext->ssboState[index] = BufferState {
-                    .buffer = bo,
-                    .offset = offset,
-                    .bound = true
-            };
-
-            break;
-        }
-    }
-}
-
-void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
-
-    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
-                     bindingType == BufferObjectBinding::UNIFORM);
-
-    switch (bindingType) {
-        default:
-        case BufferObjectBinding::UNIFORM: {
-            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
-            auto* currentBo = mContext->uniformState[index].buffer;
-            if (currentBo) {
-                currentBo->boundUniformBuffers.unset(index);
-            }
-            mContext->uniformState[index] = BufferState {
-                    .buffer = nullptr,
-                    .offset = 0,
-                    .bound = false
-            };
-
-            break;
-        }
-
-        case BufferObjectBinding::SHADER_STORAGE: {
-            assert_invariant(index < MAX_SSBO_COUNT);
-            auto* currentBo = mContext->ssboState[index].buffer;
-            if (currentBo) {
-                currentBo->boundSsbos.unset(index);
-            }
-            mContext->ssboState[index] = BufferState {
-                    .buffer = nullptr,
-                    .offset = 0,
-                    .bound = false
-            };
-
-            break;
-        }
-    }
-}
-
-void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
-    auto sb = handle_cast<MetalSamplerGroup>(sbh);
-    mContext->samplerBindings[index] = sb;
 }
 
 void MetalDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
@@ -1535,7 +1545,11 @@ void MetalDriver::blit(
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "blit/resolve");
 
-    dstTexture->extendLodRangeTo(dstLevel);
+    DEBUG_LOG(
+            "blit(dst = %d, srcLevel = %d, srcLayer = %d, dstOrigin = (%d, %d), src = %d, dstLevel "
+            "= %d, dstLayer = %d, srcOrigin = (%d, %d), size = (%d, %d))\n",
+            dst.getId(), srcLevel, srcLayer, dstOrigin.x, dstOrigin.y, src.getId(), dstLevel,
+            dstLayer, srcOrigin.x, srcOrigin.y, size.x, size.y);
 }
 
 void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
@@ -1591,102 +1605,10 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
     }
 }
 
-void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
-    // All the id<MTLSamplerState> objects have already been bound to the argument buffer.
-    // Here we bind all the textures.
-
-    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
-
-    // Verify that all the textures in the sampler group are still alive.
-    // These bugs lead to memory corruption and can be difficult to track down.
-    const auto& handles = samplerGroup->getTextureHandles();
-    for (size_t s = 0; s < handles.size(); s++) {
-        if (!handles[s]) {
-            continue;
-        }
-        // The difference between this check and the one below is that in release, we do this for
-        // only a set number of recently freed textures, while the debug check is exhaustive.
-        auto* metalTexture = handle_cast<MetalTexture>(handles[s]);
-        metalTexture->checkUseAfterFree(samplerGroup->debugName.c_str(), s);
-#ifndef NDEBUG
-        auto iter = mContext->textures.find(metalTexture);
-        if (iter == mContext->textures.end()) {
-            utils::slog.e << "finalizeSamplerGroup: texture #"
-                          << (int) s << " is dead, texture handle = "
-                          << handles[s] << utils::io::endl;
-        }
-        assert_invariant(iter != mContext->textures.end());
-#endif
-    }
-
-    utils::FixedCapacityVector<id<MTLTexture>> newTextures(samplerGroup->size, nil);
-    for (size_t binding = 0; binding < samplerGroup->size; binding++) {
-        auto [th, _] = samplerGroup->getFinalizedTexture(binding);
-
-        if (!th) {
-            // Bind an empty texture.
-            newTextures[binding] = getOrCreateEmptyTexture(mContext);
-            continue;
-        }
-
-        assert_invariant(th);
-        auto* texture = handle_cast<MetalTexture>(th);
-
-        // External images
-        if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
-            if (texture->externalImage.isValid()) {
-                id<MTLTexture> mtlTexture = texture->externalImage.getMetalTextureForDraw();
-                assert_invariant(mtlTexture);
-                newTextures[binding] = mtlTexture;
-            } else {
-                // Bind an empty texture.
-                newTextures[binding] = getOrCreateEmptyTexture(mContext);
-            }
-            continue;
-        }
-
-        newTextures[binding] = texture->getMtlTextureForRead();
-    }
-
-    if (!std::equal(newTextures.begin(), newTextures.end(), samplerGroup->textures.begin())) {
-        // One or more of the id<MTLTexture>s has changed.
-        // First, determine if this SamplerGroup needs mutation.
-        // We can't just simply mutate the SamplerGroup, since it could currently be in use by the
-        // GPU from a prior render pass.
-        // If the SamplerGroup does need mutation, then there's two cases:
-        // 1. The SamplerGroup has not been finalized yet (which means it has not yet been used in a
-        //    draw call). We're free to mutate it.
-        // 2. The SamplerGroup is finalized. We must call mutate(), which will create a new argument
-        //    buffer that we can then mutate freely.
-
-        if (samplerGroup->isFinalized()) {
-            samplerGroup->mutate(cmdBuffer);
-        }
-
-        for (size_t binding = 0; binding < samplerGroup->size; binding++) {
-            samplerGroup->setFinalizedTexture(binding, newTextures[binding]);
-        }
-
-        samplerGroup->finalize();
-    }
-
-    // At this point, all the id<MTLTextures> should be set to valid textures. Some of them will be
-    // the "empty" texture. Per Apple documentation, the useResource method must be called once per
-    // render pass.
-    samplerGroup->useResources(mContext->currentRenderPassEncoder);
-
-    // useResources won't retain references to the textures, so we need to do so manually.
-    for (id<MTLTexture> texture : samplerGroup->textures) {
-        const void* retainedTexture = CFBridgingRetain(texture);
-        [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-            CFBridgingRelease(retainedTexture);
-        }];
-    }
-}
-
 void MetalDriver::bindPipeline(PipelineState const& ps) {
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "bindPipeline() without a valid command encoder.";
+    DEBUG_LOG("bindPipeline(ps = { program = %d }))\n", ps.program.getId());
 
     MetalVertexBufferInfo const* const vbi =
             handle_cast<MetalVertexBufferInfo>(ps.vertexBufferInfo);
@@ -1831,37 +1753,6 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
                                                    clamp:0.0];
         mContext->currentPolygonOffset = ps.polygonOffset;
     }
-
-    // Bind sampler groups (argument buffers).
-    for (size_t s = 0; s < Program::SAMPLER_BINDING_COUNT; s++) {
-        MetalSamplerGroup* const samplerGroup = mContext->samplerBindings[s];
-        if (!samplerGroup) {
-            continue;
-        }
-        const auto& stageFlags = program->getSamplerGroupInfo()[s].stageFlags;
-        if (stageFlags == ShaderStageFlags::NONE) {
-            continue;
-        }
-
-        auto iter = mContext->finalizedSamplerGroups.find(samplerGroup);
-        if (iter == mContext->finalizedSamplerGroups.end()) {
-            finalizeSamplerGroup(samplerGroup);
-            mContext->finalizedSamplerGroups.insert(samplerGroup);
-        }
-
-        assert_invariant(samplerGroup->getArgumentBuffer());
-
-        if (uint8_t(stageFlags) & uint8_t(ShaderStageFlags::VERTEX)) {
-            [mContext->currentRenderPassEncoder setVertexBuffer:samplerGroup->getArgumentBuffer()
-                                                         offset:samplerGroup->getArgumentBufferOffset()
-                                                        atIndex:(SAMPLER_GROUP_BINDING_START + s)];
-        }
-        if (uint8_t(stageFlags) & uint8_t(ShaderStageFlags::FRAGMENT)) {
-            [mContext->currentRenderPassEncoder setFragmentBuffer:samplerGroup->getArgumentBuffer()
-                                                           offset:samplerGroup->getArgumentBufferOffset()
-                                                          atIndex:(SAMPLER_GROUP_BINDING_START + s)];
-        }
-    }
 }
 
 void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1901,23 +1792,65 @@ void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
                                                atIndex:ZERO_VERTEX_BUFFER_BINDING];
 }
 
+void MetalDriver::bindDescriptorSet(
+        backend::DescriptorSetHandle dsh,
+        backend::descriptor_set_t set,
+        backend::DescriptorSetOffsetArray&& offsets) {
+    auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
+    utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
+#if FILAMENT_METAL_DEBUG_LOG == 1
+    printf("[METAL DEBUG] bindDescriptorSet(dsh = %d, set = %d, offsets = [", dsh.getId(), set);
+    for (size_t i = 0; i < dynamicBindings; i++) {
+        printf("%d", offsets[i]);
+        if (i < dynamicBindings - 1) {
+            printf(", ");
+        }
+
+        offsetsVector[i] = offsets[i];
+    }
+    printf("])\n");
+#endif
+
+    // Bind the descriptor set.
+    mContext->currentDescriptorSets[set] = descriptorSet;
+    mContext->vertexDescriptorBindings.setBuffer(
+            descriptorSet->finalizeAndGetBuffer(this, ShaderStage::VERTEX), 0, set);
+    mContext->fragmentDescriptorBindings.setBuffer(
+            descriptorSet->finalizeAndGetBuffer(this, ShaderStage::FRAGMENT), 0, set);
+    mContext->dynamicOffsets.setOffsets(set, offsets.data(), dynamicBindings);
+
+    // If we're inside a render pass, we should also finalize the descriptor set and update the
+    // argument buffers. Otherwise, we'll do this the next time we enter a render pass.
+    if (isInRenderPass(mContext)) {
+        auto found = mContext->finalizedDescriptorSets.find(descriptorSet);
+        if (found == mContext->finalizedDescriptorSets.end()) {
+            descriptorSet->finalize(this);
+            mContext->finalizedDescriptorSets.insert(descriptorSet);
+        }
+        mContext->vertexDescriptorBindings.bindBuffers(
+                mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
+        mContext->fragmentDescriptorBindings.bindBuffers(
+                mContext->currentRenderPassEncoder, DESCRIPTOR_SET_BINDING_START);
+    }
+}
+
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
+    DEBUG_LOG("draw2(...)\n");
 
-    // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
-    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
-
-    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
-            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
-                    uint32_t index) {
-                uniformsToBind[index] = buffer;
-                offsets[index] = state.offset;
-            });
-    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX | MetalBuffer::Stage::FRAGMENT,
-            uniformsToBind, offsets, Program::UNIFORM_BINDING_COUNT);
+    // Bind the offset data.
+    if (mContext->dynamicOffsets.isDirty()) {
+        const auto [size, data] = mContext->dynamicOffsets.getOffsets();
+        [mContext->currentRenderPassEncoder setFragmentBytes:data
+                                                      length:size * sizeof(uint32_t)
+                                                     atIndex:DYNAMIC_OFFSET_BINDING];
+        [mContext->currentRenderPassEncoder setVertexBytes:data
+                                                    length:size * sizeof(uint32_t)
+                                                   atIndex:DYNAMIC_OFFSET_BINDING];
+        mContext->dynamicOffsets.setDirty(false);
+    }
 
     // Update push constants.
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
@@ -1931,8 +1864,7 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
 
     MetalIndexBuffer* indexBuffer = primitive->indexBuffer;
 
-    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
-    id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw(cmdBuffer);
+    id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw();
     [mContext->currentRenderPassEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
                                                    indexCount:indexCount
                                                     indexType:getIndexType(indexBuffer->elementSize)
@@ -1983,31 +1915,6 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
         utils::slog.e << description << utils::io::endl;
     }
     assert_invariant(!error);
-
-    // Bind uniform buffers.
-    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
-    NSUInteger uniformOffsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
-    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
-            [&uniformsToBind, &uniformOffsets](const BufferState& state, MetalBuffer* buffer,
-                    uint32_t index) {
-        uniformsToBind[index] = buffer;
-        uniformOffsets[index] = state.offset;
-    });
-    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), computeEncoder,
-            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::COMPUTE, uniformsToBind,
-            uniformOffsets, Program::UNIFORM_BINDING_COUNT);
-
-    // Bind SSBOs.
-    MetalBuffer* ssbosToBind[MAX_SSBO_COUNT] = { nil };
-    NSUInteger ssboOffsets[MAX_SSBO_COUNT] = { 0 };
-    enumerateBoundBuffers(BufferObjectBinding::SHADER_STORAGE,
-            [&ssbosToBind, &ssboOffsets](const BufferState& state, MetalBuffer* buffer,
-                    uint32_t index) {
-        ssbosToBind[index] = buffer;
-        ssboOffsets[index] = state.offset;
-    });
-    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), computeEncoder, SSBO_BINDING_START,
-            MetalBuffer::Stage::COMPUTE, ssbosToBind, ssboOffsets, MAX_SSBO_COUNT);
 
     [computeEncoder setComputePipelineState:computePipelineState];
 
@@ -2066,32 +1973,6 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
-void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
-        const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f) {
-    assert_invariant(bindingType == BufferObjectBinding::UNIFORM ||
-            bindingType == BufferObjectBinding::SHADER_STORAGE);
-
-    auto enumerate = [&](auto arrayType){
-        for (auto i = 0u; i < arrayType.size(); i++) {
-            const auto& thisBuffer = arrayType[i];
-            if (!thisBuffer.bound) {
-                continue;
-            }
-            f(thisBuffer, thisBuffer.buffer->getBuffer(), i);
-        }
-    };
-
-    switch (bindingType) {
-        default:
-        case (BufferObjectBinding::UNIFORM):
-            enumerate(mContext->uniformState);
-            break;
-        case (BufferObjectBinding::SHADER_STORAGE):
-            enumerate(mContext->ssboState);
-            break;
-    }
-}
-
 void MetalDriver::resetState(int) {
 }
 
@@ -2108,6 +1989,21 @@ void MetalDriver::executeTickOps() noexcept {
     std::swap(ops, mTickOps);
     for (const auto& f : ops) {
         f();
+    }
+}
+
+void MetalDriver::executeAfterCurrentCommandBufferCompletes(utils::Invocable<void()>&& fn) noexcept {
+    mDeferredTasks.emplace_back(mContext->pendingCommandBufferId, std::move(fn));
+}
+
+void MetalDriver::executeDeferredOps() noexcept {
+    for (; !mDeferredTasks.empty(); mDeferredTasks.pop_front()) {
+        const auto& task = mDeferredTasks.front();
+        if (task.commandBufferId <= mContext->latestCompletedCommandBufferId) {
+            task.fn();
+        } else {
+            break;
+        }
     }
 }
 

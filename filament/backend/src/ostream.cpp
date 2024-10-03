@@ -410,7 +410,6 @@ io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
 io::ostream& operator<<(io::ostream& out, const TargetBufferInfo& tbi) {
     return out << "TargetBufferInfo{"
     << "handle=" << tbi.handle
-    << ", baseViewIndex=" << tbi.baseViewIndex
     << ", level=" << tbi.level
     << ", layer=" << tbi.layer << "}";
 }

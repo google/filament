@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_DRIVER_H
 
 #include <backend/CallbackHandler.h>
+#include <backend/DescriptorSetOffsetArray.h>
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>

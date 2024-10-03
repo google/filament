@@ -20,7 +20,7 @@
 #include <filament/Box.h>
 
 #include "Culler.h"
-#include "PerShadowMapUniforms.h"
+#include "ds/ShadowMapDescriptorSet.h"
 
 #include "details/Camera.h"
 #include "details/Scene.h"
@@ -190,7 +190,7 @@ public:
     ShadowType getShadowType() const noexcept { return mShadowType; }
     uint8_t getFace() const noexcept { return mFace; }
 
-    using Transaction = PerShadowMapUniforms::Transaction;
+    using Transaction = ShadowMapDescriptorSet::Transaction;
 
     static void prepareCamera(Transaction const& transaction,
             FEngine& engine, const CameraInfo& cameraInfo) noexcept;
@@ -200,9 +200,8 @@ public:
             FEngine& engine, math::float4 const& userTime) noexcept;
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
-    static PerShadowMapUniforms::Transaction open(backend::DriverApi& driver) noexcept;
-    void commit(Transaction& transaction,
-            backend::DriverApi& driver) const noexcept;
+    static ShadowMapDescriptorSet::Transaction open(backend::DriverApi& driver) noexcept;
+    void commit(Transaction& transaction, FEngine& engine, backend::DriverApi& driver) const noexcept;
     void bind(backend::DriverApi& driver) const noexcept;
 
 private:
@@ -340,7 +339,7 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    mutable PerShadowMapUniforms mPerShadowMapUniforms;                     // 4
+    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                     // 4
 
     FCamera* mCamera = nullptr;                                             //  8
     FCamera* mDebugCamera = nullptr;                                        //  8

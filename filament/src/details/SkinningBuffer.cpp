@@ -18,8 +18,6 @@
 
 #include "components/RenderableManager.h"
 
-#include "private/filament/SibStructs.h"
-
 #include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
@@ -29,7 +27,9 @@
 
 #include <utils/CString.h>
 
-#include <cstring>
+#include <string.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -200,7 +200,7 @@ void updateDataAt(backend::DriverApi& driver,
     size_t const elementSize = sizeof(float2);
     size_t const size = getSkinningBufferSize(count);
     auto* out = (float2*)malloc(size);
-    std::memcpy(out, pairs.begin(), size);
+    memcpy(out, pairs.begin(), size);
 
     size_t const textureWidth = getSkinningBufferWidth(count);
     size_t const lineCount = count / textureWidth;
@@ -233,29 +233,15 @@ void updateDataAt(backend::DriverApi& driver,
     }
 }
 
-FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeightsHandle(
+backend::TextureHandle FSkinningBuffer::createIndicesAndWeightsHandle(
         FEngine& engine, size_t count) {
-    backend::Handle<backend::HwSamplerGroup> samplerHandle;
-    backend::Handle<backend::HwTexture> textureHandle;
-
     FEngine::DriverApi& driver = engine.getDriverApi();
     // create a texture for skinning pairs data (bone index and weight)
-    textureHandle = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+    return driver.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RG32F, 1,
             getSkinningBufferWidth(count),
             getSkinningBufferHeight(count), 1,
             TextureUsage::DEFAULT);
-    samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT,
-            utils::FixedSizeString<32>("Skinning buffer samplers"));
-    SamplerGroup samplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
-    samplerGroup.setSampler(PerRenderPrimitiveSkinningSib::BONE_INDICES_AND_WEIGHTS,
-            { textureHandle, {}});
-    driver.updateSamplerGroup(samplerHandle,
-            samplerGroup.toBufferDescriptor(driver));
-    return {
-            .sampler = samplerHandle,
-            .texture = textureHandle
-    };
 }
 
 void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,

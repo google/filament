@@ -64,6 +64,9 @@ function print_help {
     echo "        enabling debug paths in the backend from the build script. For example, make a"
     echo "        systrace-enabled build without directly changing #defines. Remember to add -f when"
     echo "        changing this option."
+    echo "    -X osmesa_path"
+    echo "        Indicates a path to a completed OSMesa build. OSMesa is used to create an offscreen GL"
+    echo "        context for software rasterization"
     echo "    -S type"
     echo "        Enable stereoscopic rendering where type is one of [instanced|multiview]. This is only"
     echo "        meant for building the samples."
@@ -180,6 +183,8 @@ BACKEND_DEBUG_FLAG_OPTION=""
 
 STEREOSCOPIC_OPTION=""
 
+OSMESA_OPTION=""
+
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
 
@@ -240,6 +245,7 @@ function build_desktop_target {
             ${ASAN_UBSAN_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
+            ${OSMESA_OPTION} \
             ${architectures} \
             ../..
         ln -sf "out/cmake-${lc_target}/compile_commands.json" \
@@ -796,7 +802,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgijmp:q:uvslwedk:bx:S:" opt; do
+while getopts ":hacCfgijmp:q:uvslwedk:bx:S:X:" opt; do
     case ${opt} in
         h)
             print_help
@@ -949,6 +955,8 @@ while getopts ":hacCfgijmp:q:uvslwedk:bx:S:" opt; do
                     echo ""
                     exit 1
             esac
+            ;;
+        X)  OSMESA_OPTION="-DFILAMENT_OSMESA_PATH=${OPTARG}"
             ;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2

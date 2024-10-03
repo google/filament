@@ -26,6 +26,8 @@
 
 #include "components/RenderableManager.h"
 
+#include "ds/DescriptorSet.h"
+
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
@@ -81,8 +83,7 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
 }
 
 RenderPass RenderPassBuilder::build(FEngine& engine) {
-    FILAMENT_CHECK_POSTCONDITION(mRenderableSoa)
-            << "RenderPassBuilder::geometry() hasn't been called";
+    assert_invariant(mRenderableSoa);
     assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
     assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
     return RenderPass{ engine, *this };
@@ -92,8 +93,15 @@ RenderPass RenderPassBuilder::build(FEngine& engine) {
 
 void RenderPass::BufferObjectHandleDeleter::operator()(
         backend::BufferObjectHandle handle) noexcept {
-    if (handle) {
+    if (handle) { // this is common case
         driver.get().destroyBufferObject(handle);
+    }
+}
+
+void RenderPass::DescriptorSetHandleDeleter::operator()(
+        backend::DescriptorSetHandle handle) noexcept {
+    if (handle) { // this is common case
+        driver.get().destroyDescriptorSet(handle);
     }
 }
 
@@ -101,6 +109,7 @@ void RenderPass::BufferObjectHandleDeleter::operator()(
 
 RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
+          mColorPassDescriptorSet(builder.mColorPassDescriptorSet),
           mScissorViewport(builder.mScissorViewport),
           mCustomCommands(engine.getPerRenderPassArena()) {
 
@@ -132,7 +141,6 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     }
 
     appendCommands(engine, { commandBegin, commandCount },
-            builder.mUboHandle,
             builder.mVisibleRenderables,
             builder.mCommandTypeFlags,
             builder.mFlags,
@@ -143,7 +151,7 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
 
     if (builder.mCustomCommands.has_value()) {
         Command* p = commandBegin + commandCount;
-        for (auto [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
+        for (auto const& [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
             appendCustomCommand(p++, channel, passId, command, order, fn);
         }
     }
@@ -176,7 +184,6 @@ RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexc
 
 void RenderPass::appendCommands(FEngine& engine,
         Slice<Command> commands,
-        backend::BufferObjectHandle const uboHandle,
         utils::Range<uint32_t> const vr,
         CommandTypeFlags const commandTypeFlags,
         RenderFlags const renderFlags,
@@ -209,12 +216,11 @@ void RenderPass::appendCommands(FEngine& engine,
     auto stereoscopicEyeCount = engine.getConfig().stereoscopicEyeCount;
 
     auto work = [commandTypeFlags, curr, &soa,
-                 boh = uboHandle,
                  variant, renderFlags, visibilityMask,
                  cameraPosition, cameraForwardVector, stereoscopicEyeCount]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
-                soa, { startIndex, startIndex + indexCount }, boh,
+                soa, { startIndex, startIndex + indexCount },
                 variant, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector, stereoscopicEyeCount);
     };
@@ -313,18 +319,22 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
     constexpr size_t maxInstanceCount = CONFIG_MAX_INSTANCES;
 
     while (curr != last) {
-
-        // Currently, if we have skinnning or morphing, we can't use auto instancing. This is
-        // because the morphing/skinning data for comparison is not easily accessible.
-        // Additionally, we can't have a different skinning/morphing per instance anyway.
-        // And thirdly, the info.index meaning changes with instancing, it is the index into
-        // the instancing buffer no longer the index into the soa.
+        // Currently, if we have skinning or morphing, we can't use auto instancing. This is
+        // because the morphing/skinning data for comparison is not easily accessible; and also
+        // because we're assuming that the per-renderable descriptor-set only has the
+        // OBJECT_UNIFORMS descriptor active (i.e. the skinning/morphing descriptors are unused).
+        // We also can't use auto-instancing if manual- or hybrid- instancing is used.
+        // TODO: support auto-instancing for skinning/morphing
         Command const* e = curr + 1;
-        if (UTILS_LIKELY(!curr->info.hasSkinning && !curr->info.hasMorphing)) {
+        if (UTILS_LIKELY(
+                !curr->info.hasSkinning && !curr->info.hasMorphing &&
+                 curr->info.instanceCount <= 1))
+        {
+            assert_invariant(!curr->info.hasHybridInstancing);
             // we can't have nice things! No more than maxInstanceCount due to UBO size limits
             e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
                     [lhs = *curr](Command const& rhs) {
-                        // primitives must be identical to be instanced.
+                        // primitives must be identical to be instanced
                         // Currently, instancing doesn't support skinning/morphing.
                         return lhs.info.mi == rhs.info.mi &&
                                lhs.info.rph == rhs.info.rph &&
@@ -342,23 +352,43 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
         if (UTILS_UNLIKELY(instanceCount > 1)) {
             drawCallsSavedCount += instanceCount - 1;
 
+            auto& driver = engine.getDriverApi();
+
             // allocate our staging buffer only if needed
             if (UTILS_UNLIKELY(!stagingBuffer)) {
+                // Create a temporary UBO for holding the per-renderable data of each primitive,
+                // The `curr->info.index` is updated so that this (now instanced) command can
+                // bind the UBO in the right place (where the per-instance data is).
+                // The lifetime of this object is the longest of this RenderPass and all its
+                // executors.
 
                 // create a temporary UBO for instancing
                 mInstancedUboHandle = BufferObjectSharedHandle{
-                        engine.getDriverApi().createBufferObject(
+                        driver.createBufferObject(
                                 count * sizeof(PerRenderableData) + sizeof(PerRenderableUib),
-                                BufferObjectBinding::UNIFORM, BufferUsage::STATIC),
-                        engine.getDriverApi() };
+                                BufferObjectBinding::UNIFORM, BufferUsage::STATIC), driver };
 
                 // TODO: use stream inline buffer for small sizes
                 // TODO: use a pool for larger heap buffers
                 // buffer large enough for all instances data
-                stagingBufferSize = sizeof(PerRenderableData) * (last - curr);
+                stagingBufferSize = count * sizeof(PerRenderableData);
                 stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
                 uboData = mRenderableSoa.data<FScene::UBO>();
                 assert_invariant(uboData);
+
+                // We also need a descriptor-set to hold the custom UBO. This works because
+                // we currently assume the descriptor-set only needs to hold this UBO in the
+                // instancing case (it wouldn't be true if we supported skinning/morphing, and
+                // in this case we would need to preserve the default descriptor-set content).
+                // This has the same lifetime as the UBO (see above).
+                mInstancedDescriptorSetHandle = DescriptorSetSharedHandle{
+                        driver.createDescriptorSet(
+                                engine.getPerRenderableDescriptorSetLayout().getHandle()),
+                        driver
+                };
+                driver.updateDescriptorSetBuffer(mInstancedDescriptorSetHandle,
+                        +PerRenderableBindingPoints::OBJECT_UNIFORMS,
+                        mInstancedUboHandle, 0, sizeof(PerRenderableUib));
             }
 
             // copy the ubo data to a staging buffer
@@ -371,7 +401,7 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
             // make the first command instanced
             curr[0].info.instanceCount = instanceCount * eyeCount;
             curr[0].info.index = instancedPrimitiveOffset;
-            curr[0].info.boh = mInstancedUboHandle;
+            curr[0].info.dsh = mInstancedDescriptorSetHandle;
 
             instancedPrimitiveOffset += instanceCount;
 
@@ -469,10 +499,10 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
 /* static */
 UTILS_NOINLINE
 void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* const commands,
-        FScene::RenderableSoa const& soa, Range<uint32_t> range,
-        backend::BufferObjectHandle renderablesUbo,
-        Variant variant, RenderFlags renderFlags,
-        FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
+        FScene::RenderableSoa const& soa, Range<uint32_t> const range,
+        Variant const variant, RenderFlags const renderFlags,
+        FScene::VisibleMaskType const visibilityMask,
+        float3 const cameraPosition, float3 const cameraForward,
         uint8_t stereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
@@ -504,13 +534,13 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
-                    soa, range, renderablesUbo,
+                    soa, range,
                     variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
                     stereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
-                    soa, range, renderablesUbo,
+                    soa, range,
                     variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
                     stereoEyeCount);
             break;
@@ -534,7 +564,6 @@ UTILS_NOINLINE
 RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
-        backend::BufferObjectHandle renderablesUbo,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
 
@@ -572,6 +601,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
     auto const* const UTILS_RESTRICT soaMorphing        = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask  = soa.data<FScene::VISIBLE_MASK>();
     auto const* const UTILS_RESTRICT soaInstanceInfo    = soa.data<FScene::INSTANCES>();
+    auto const* const UTILS_RESTRICT soaDescriptorSet   = soa.data<FScene::DESCRIPTOR_SET_HANDLE>();
 
     Command cmd;
 
@@ -655,6 +685,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmd.info.hasMorphing = (bool)morphing.handle;
         cmd.info.hasSkinning = (bool)skinning.handle;
 
+        assert_invariant(cmd.info.hasHybridInstancing || cmd.info.instanceCount <= 1);
+
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
@@ -662,13 +694,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.instanceCount *= stereoEyeCount;
         }
 
-        if (cmd.info.hasHybridInstancing) {
-            // with hybrid instancing, we already know which UBO to use
-            cmd.info.boh = soaInstanceInfo[i].handle;
-        } else {
-            // with no- or user- instancing, we can only know after instanceify()
-            cmd.info.boh = renderablesUbo;
-        }
+        // soaDescriptorSet[i] is either populated with a common descriptor-set or truly with
+        // a per-renderable one, depending on for e.g. skinning/morphing/instancing.
+        cmd.info.dsh = soaDescriptorSet[i];
+
+        // always set the skinningOffset, even when skinning is off, this doesn't cost anything.
+        cmd.info.skinningOffset = soaSkinning[i].offset * sizeof(PerRenderableBoneUib::BoneData);
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
@@ -678,8 +709,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
          */
-        for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
-            auto const& primitive = primitives[pi];
+        for (auto const& primitive: primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
 
@@ -692,9 +722,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmd.info.indexOffset = primitive.getIndexOffset();
             cmd.info.indexCount = primitive.getIndexCount();
             cmd.info.type = primitive.getPrimitiveType();
-            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
-                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
             cmd.info.morphingOffset = primitive.getMorphingBufferOffset();
+// FIXME: morphtarget buffer
+//            cmd.info.morphTargetBuffer = morphing.morphTargetBuffer ?
+//                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
                 RenderPass::setupColorCommand(cmd, renderableVariant, mi,
@@ -867,6 +898,7 @@ void RenderPass::Executor::execute(FEngine& engine,
     SYSTRACE_CONTEXT();
 
     DriverApi& driver = engine.getDriverApi();
+
     size_t const capacity = engine.getMinCommandBufferSize();
     CircularBuffer const& circularBuffer = driver.getCircularBuffer();
 
@@ -875,7 +907,7 @@ void RenderPass::Executor::execute(FEngine& engine,
 
         bool const scissorOverride = mScissorOverride;
         if (UTILS_UNLIKELY(scissorOverride)) {
-            // initialize with scissor overide
+            // initialize with scissor override
             driver.scissor(mScissor);
         }
 
@@ -885,9 +917,11 @@ void RenderPass::Executor::execute(FEngine& engine,
                 .polygonOffset = mPolygonOffset,
         };
 
+        pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_RENDERABLE] =
+                engine.getPerRenderableDescriptorSetLayout().getHandle();
+
         PipelineState currentPipeline{};
         Handle<HwRenderPrimitive> currentPrimitiveHandle{};
-        bool rebindPipeline = true;
 
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
@@ -895,24 +929,17 @@ void RenderPass::Executor::execute(FEngine& engine,
 
         // Maximum space occupied in the CircularBuffer by a single `Command`. This must be
         // reevaluated when the inner loop below adds DriverApi commands or when we change the
-        // CommandStream protocol. Currently, the maximum is 320 bytes.
+        // CommandStream protocol. Currently, the maximum is 248 bytes.
         // The batch size is calculated by adding the size of all commands that can possibly be
         // emitted per draw call:
         constexpr size_t const maxCommandSizeInBytes =
-                sizeof(CustomCommand) +
                 sizeof(COMMAND_TYPE(scissor)) +
-                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindBufferRange)) +
-                sizeof(COMMAND_TYPE(bindBufferRange)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindUniformBuffer)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
-                sizeof(COMMAND_TYPE(bindSamplers)) +
+                sizeof(COMMAND_TYPE(bindDescriptorSet)) +
+                sizeof(COMMAND_TYPE(bindDescriptorSet)) +
                 sizeof(COMMAND_TYPE(bindPipeline)) +
-                sizeof(COMMAND_TYPE(setPushConstant)) +
                 sizeof(COMMAND_TYPE(bindRenderPrimitive)) +
+                sizeof(COMMAND_TYPE(bindDescriptorSet)) + backend::CustomCommand::align(sizeof(NoopCommand) + 8) +
+                sizeof(COMMAND_TYPE(setPushConstant)) +
                 sizeof(COMMAND_TYPE(draw2));
 
 
@@ -969,103 +996,80 @@ void RenderPass::Executor::execute(FEngine& engine,
 
                     ma = mi->getMaterial();
 
-                   if (UTILS_LIKELY(!scissorOverride)) {
-                       backend::Viewport scissor = mi->getScissor();
-                       if (UTILS_UNLIKELY(mi->hasScissor())) {
-                           scissor = applyScissorViewport(mScissorViewport, scissor);
-                       }
-                       driver.scissor(scissor);
-                   }
+                    if (UTILS_LIKELY(!scissorOverride)) {
+                        backend::Viewport scissor = mi->getScissor();
+                        if (UTILS_UNLIKELY(mi->hasScissor())) {
+                            scissor = applyScissorViewport(mScissorViewport, scissor);
+                        }
+                        driver.scissor(scissor);
+                    }
 
-                   if (UTILS_LIKELY(!polygonOffsetOverride)) {
-                       pipeline.polygonOffset = mi->getPolygonOffset();
-                   }
+                    if (UTILS_LIKELY(!polygonOffsetOverride)) {
+                        pipeline.polygonOffset = mi->getPolygonOffset();
+                    }
                     pipeline.stencilState = mi->getStencilState();
-                    mi->use(driver);
 
-                    // FIXME: MaterialInstance changed (not necessarily the program though),
-                    //  however, texture bindings may have changed and currently we need to
-                    //  rebind the pipeline when that happens.
-                    rebindPipeline = true;
+                    // Each material has its own version of the per-view descriptor-set layout,
+                    // because it depends on the material features (e.g. lit/unlit)
+                    pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_VIEW] =
+                            ma->getPerViewDescriptorSetLayout(info.materialVariant).getHandle();
+
+                    // Each material has a per-material descriptor-set layout which encodes the
+                    // material's parameters (ubo and samplers)
+                    pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_MATERIAL] =
+                            ma->getDescriptorSetLayout().getHandle();
+
+                    if (UTILS_UNLIKELY(ma->getMaterialDomain() == MaterialDomain::POST_PROCESS)) {
+                        // It is possible to get a post-process material here (even though it's
+                        // not technically a public API yet, it is used by the IBLPrefilterLibrary.
+                        // Ideally we would have a more formal compute API). In this case, we need
+                        // to set the post-process descriptor-set.
+                        engine.getPostProcessManager().bindPostProcessDescriptorSet(driver);
+                    } else {
+                        // If we have a ColorPassDescriptorSet we use it to bind the per-view
+                        // descriptor-set (ideally only if it changed). If we don't, it means
+                        // the descriptor-set is already bound and the layout we got from the
+                        // material above should match. This is the case for situations where we
+                        // have a known per-view descriptor-set layout, e.g.: shadow-maps, ssr and
+                        // structure passes.
+                        if (mColorPassDescriptorSet) {
+                            // We have a ColorPassDescriptorSet, we need to go through it for binding
+                            // the per-view descriptor-set because its layout can change based on the
+                            // material.
+                            mColorPassDescriptorSet->bind(driver, ma->getPerViewLayoutIndex());
+                        }
+                    }
+
+                    // Each MaterialInstance has its own descriptor set. This binds it.
+                    mi->use(driver);
                 }
 
                 assert_invariant(ma);
                 pipeline.program = ma->getProgram(info.materialVariant);
 
-                // Bind per-renderable uniform block. There is no need to attempt to skip this command
-                // because the backends already do this.
-                size_t const offset = info.hasHybridInstancing ?
-                                      0 : info.index * sizeof(PerRenderableData);
-
-                assert_invariant(info.boh);
-
-                driver.bindBufferRange(BufferObjectBinding::UNIFORM,
-                        +UniformBindingPoints::PER_RENDERABLE,
-                        info.boh, offset, sizeof(PerRenderableUib));
-
-                if (UTILS_UNLIKELY(info.hasSkinning)) {
-
-                    FScene::RenderableSoa const& soa = *mRenderableSoa;
-
-                    const FRenderableManager::SkinningBindingInfo& skinning =
-                            soa.elementAt<FScene::SKINNING_BUFFER>(info.index);
-
-                    // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
-                    driver.bindBufferRange(BufferObjectBinding::UNIFORM,
-                            +UniformBindingPoints::PER_RENDERABLE_BONES,
-                            skinning.handle,
-                            skinning.offset * sizeof(PerRenderableBoneUib::BoneData),
-                            sizeof(PerRenderableBoneUib));
-                    // note: always bind the skinningTexture because the shader needs it.
-                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                            skinning.handleSampler);
-                    // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
-                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
-                            info.morphTargetBuffer);
-
-                    // FIXME: Currently we need to rebind the PipelineState when texture or
-                    //  UBO binding change.
-                    rebindPipeline = true;
-                }
-
-                if (UTILS_UNLIKELY(info.hasMorphing)) {
-
-                    FScene::RenderableSoa const& soa = *mRenderableSoa;
-
-                    const FRenderableManager::SkinningBindingInfo& skinning =
-                            soa.elementAt<FScene::SKINNING_BUFFER>(info.index);
-
-                    const FRenderableManager::MorphingBindingInfo& morphing =
-                            soa.elementAt<FScene::MORPHING_BUFFER>(info.index);
-
-                    // Instead of using a UBO per primitive, we could also have a single UBO for all
-                    // primitives and use bindUniformBufferRange which might be more efficient.
-                    driver.bindUniformBuffer(+UniformBindingPoints::PER_RENDERABLE_MORPHING,
-                            morphing.handle);
-                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
-                            info.morphTargetBuffer);
-                    // note: even if only morphing is enabled, binding skinningTexture is needed.
-                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                            skinning.handleSampler);
-
-                    // FIXME: Currently we need to rebind the PipelineState when texture or
-                    //  UBO binding change.
-                    rebindPipeline = true;
-                }
-
-                if (rebindPipeline ||
-                        (memcmp(&pipeline,  &currentPipeline, sizeof(PipelineState)) != 0)) {
-                    rebindPipeline = false;
+                if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;
                     driver.bindPipeline(pipeline);
-
-                    driver.setPushConstant(ShaderStage::VERTEX,
-                            +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }
 
-                if (info.rph != currentPrimitiveHandle) {
+                if (UTILS_UNLIKELY(info.rph != currentPrimitiveHandle)) {
                     currentPrimitiveHandle = info.rph;
                     driver.bindRenderPrimitive(info.rph);
+                }
+
+                // Bind per-renderable uniform block. There is no need to attempt to skip this command
+                // because the backends already do this.
+                uint32_t const offset = info.hasHybridInstancing ?
+                                      0 : info.index * sizeof(PerRenderableData);
+
+                assert_invariant(info.dsh);
+                driver.bindDescriptorSet(info.dsh,
+                        +DescriptorSetBindingPoints::PER_RENDERABLE,
+                        {{ offset, info.skinningOffset }, driver});
+
+                if (UTILS_UNLIKELY(info.hasMorphing)) {
+                    driver.setPushConstant(ShaderStage::VERTEX,
+                            +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }
 
                 driver.draw2(info.indexOffset, info.indexCount, info.instanceCount);
@@ -1082,17 +1086,17 @@ void RenderPass::Executor::execute(FEngine& engine,
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e,
-        BufferObjectSharedHandle instancedUbo) noexcept
-        : mRenderableSoa(&pass->mRenderableSoa),
-          mCommands(b, e),
-          mCustomCommands(pass->mCustomCommands.data(), pass->mCustomCommands.size()),
-          mInstancedUboHandle(std::move(instancedUbo)),
-          mScissorViewport(pass->mScissorViewport),
+RenderPass::Executor::Executor(RenderPass const& pass, Command const* b, Command const* e) noexcept
+        : mCommands(b, e),
+          mCustomCommands(pass.mCustomCommands.data(), pass.mCustomCommands.size()),
+          mInstancedUboHandle(pass.mInstancedUboHandle),
+          mInstancedDescriptorSetHandle(pass.mInstancedDescriptorSetHandle),
+          mColorPassDescriptorSet(pass.mColorPassDescriptorSet),
+          mScissorViewport(pass.mScissorViewport),
           mPolygonOffsetOverride(false),
           mScissorOverride(false) {
-    assert_invariant(b >= pass->begin());
-    assert_invariant(e <= pass->end());
+    assert_invariant(b >= pass.begin());
+    assert_invariant(e <= pass.end());
 }
 
 RenderPass::Executor::Executor() noexcept
