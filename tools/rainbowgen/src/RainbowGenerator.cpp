@@ -53,26 +53,32 @@ void RainbowGenerator::build(JobSystem& js) {
     std::cout << maxDeviation * f::RAD_TO_DEG << std::endl;
 
     std::vector<float3> rainbow(angleCount, float3{});
-    auto work = [=, &rainbow](uint32_t start, uint32_t count) {
-        for (size_t i = 0; i < count; i++) {
-            size_t const index = start + i;
-            float const s = (float(index) + 0.5f) / float(angleCount);
-            float const phi  = 0.5f * (minDeviation + (maxDeviation - minDeviation) * s);
-            float const dphi = 0.25f * ((maxDeviation - minDeviation) / float(angleCount));
-            float3  c = generate(phi, dphi);
-            std::cout << c.r << ", " << c.g << ", " << c.b << std::endl;
-            c = linear_to_sRGB(c);
-            rainbow[index] = c;
+
+    size_t count = 16384;
+    for (size_t i = 0; i < count; i++) {
+        float const offset = float(i) / count;
+        radian_t const angle = 0.0f * f::DEG_TO_RAD;
+        radian_t const incident = std::asin(offset) - angle;
+        for (size_t j = 0; j < CIE_XYZ_COUNT; j++) {
+            // Current wavelength
+            float const w = float(CIE_XYZ_START + j);
+            float const n = indexOfRefraction(w, mTemprature);
+            radian_t const refracted = std::asin(std::sin(incident) / n);
+            Fresnel const Faw = fresnel(incident, refracted);
+            Fresnel const Fwa = fresnel(refracted, incident);
+            float const T = Faw.t * Fwa.r * Fwa.t;
+
+            // fixme: double check this formula
+            radian_t const phi = angle + 2.0f * (2.0f * refracted - incident);
+            if (phi >= minDeviation && phi < maxDeviation) {
+                size_t const index =
+                        ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount;
+                if (index < angleCount) {
+                    rainbow[index] += T * CIE_XYZ[j] * (5000.0f / count);
+                }
+            }
         }
-    };
-
-    auto* renderableJob = jobs::parallel_for(js, nullptr,
-            0, angleCount,
-            std::cref(work),
-            jobs::CountSplitter<64, 0>());
-
-    js.runAndWait(renderableJob);
-
+    }
 
     auto* image = tga_new(angleCount, 16*3);
     for (size_t index = 0; index < angleCount; index++) {
@@ -81,7 +87,8 @@ void RainbowGenerator::build(JobSystem& js) {
                 float3 const sun = sRGB_to_linear(float3(255, 161, 72) / 255.0f);
                 float3 const sky = sRGB_to_linear(float3(135, 206, 235) / 255.0f);
                 float3 c = rainbow[index];
-                c = linear_to_sRGB(c);// * sun + sky);
+                c = XYZ_to_sRGB(c / 118.518f);
+                c = linear_to_sRGB(c);// * sun*0.5 + sky*0.5);
                 uint3 const rgb = uint3(saturate(c) * 255);
                 tga_set_pixel(image, index, y+i*16, {
                         .b = (uint8_t)rgb.v[2],
