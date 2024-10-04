@@ -175,8 +175,12 @@ public:
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
 
-    bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
+    // ultimately decides to use the DIR variant
+    bool hasDirectionalLighting() const noexcept { return mHasDirectionalLighting; }
+
+    // ultimately decides to use the DYN variant
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
+
     bool hasShadowing() const noexcept { return mHasShadowing; }
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
@@ -573,7 +577,7 @@ private:
     Range mVisibleDirectionalShadowCasters;
     Range mSpotLightShadowCasters;
     uint32_t mRenderableUBOSize = 0;
-    mutable bool mHasDirectionalLight = false;
+    mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
