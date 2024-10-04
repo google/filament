@@ -157,7 +157,9 @@ static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
                     return descriptor_sets::getSsrVariantLayout();
                 }
                 return descriptor_sets::getPerViewDescriptorSetLayout(config.domain,
-                        config.variantFilter, material.isLit, material.reflectionMode,
+                        config.variantFilter,
+                        material.isLit || material.hasShadowMultiplier,
+                        material.reflectionMode,
                         material.refractionMode);
             }
             case DescriptorSetBindingPoints::PER_RENDERABLE:
