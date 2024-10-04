@@ -181,7 +181,11 @@ public:
     // ultimately decides to use the DYN variant
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
 
+    // ultimately decides to use the SRE variant
     bool hasShadowing() const noexcept { return mHasShadowing; }
+
+    bool needsDirectionalShadowMaps() const noexcept { return mHasShadowing && mHasDirectionalLighting; }
+    bool needsPointShadowMaps() const noexcept { return mHasShadowing && mHasDynamicLighting; }
     bool needsShadowMap() const noexcept { return mNeedsShadowMap; }
     bool hasFog() const noexcept { return mFogOptions.enabled && mFogOptions.density > 0.0f; }
     bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
