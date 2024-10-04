@@ -608,7 +608,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
         auto const perViewDescriptorSetLayout = getPerViewDescriptorSetLayoutWithVariant(
                 variant, variantFilter,
-                material.isLit, material.reflectionMode, material.refractionMode);
+                material.isLit || material.hasShadowMultiplier,
+                material.reflectionMode, material.refractionMode);
 
         // this is the list of samplers we need to filter
         auto list = SibGenerator::getPerViewSib(variant).getSamplerInfoList();
