@@ -802,7 +802,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     passBuilder.renderFlags(renderFlags);
 
     Variant variant;
-    variant.setDirectionalLighting(view.hasDirectionalLight());
+    variant.setDirectionalLighting(view.hasDirectionalLighting());
     variant.setDynamicLighting(view.hasDynamicLighting());
     variant.setFog(view.hasFog());
     variant.setVsm(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
@@ -1197,7 +1197,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
-                       view.hasShadowing() && view.hasDirectionalLight())) {
+                       view.hasShadowing() && view.hasDirectionalLighting())) {
         input = ppm.debugShadowCascades(fg, input, depth);
     }
 
