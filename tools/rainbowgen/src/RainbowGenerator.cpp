@@ -30,6 +30,7 @@
 #include <functional>
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <vector>
 
 #include <stdint.h>
@@ -45,48 +46,66 @@ RainbowGenerator::~RainbowGenerator() = default;
 
 void RainbowGenerator::build(JobSystem& js) {
     uint32_t const angleCount = mAngleCount;
-    float const n0 = indexOfRefraction(350, mTemprature);
-    float const n1 = indexOfRefraction(750, mTemprature);
-    float const minDeviation = deviation(n0, maxIncidentAngle(n0)); // 2 phi = 39.7
-    float const maxDeviation = deviation(n1, maxIncidentAngle(n1)); // 2 phi = 42.5
+    float const n0 = indexOfRefraction(350);
+    float const n1 = indexOfRefraction(700);
+    float const minDeviation = deviation(n0, maxIncidentAngle(n0)); // phi = 39.7
+    float const maxDeviation = deviation(n1, maxIncidentAngle(n1)); // phi = 42.5
     std::cout << minDeviation * f::RAD_TO_DEG << std::endl;
     std::cout << maxDeviation * f::RAD_TO_DEG << std::endl;
 
     std::vector<float3> rainbow(angleCount, float3{});
 
+    // The sun appears as about half a degree in the sky
+    std::default_random_engine rng{ std::random_device{}() };
+    std::uniform_real_distribution<float> dist{ -f::DEG_TO_RAD * 0.25f, f::DEG_TO_RAD * 0.25f };
+
     size_t count = 16384;
     for (size_t i = 0; i < count; i++) {
-        float const offset = float(i) / count;
-        radian_t const angle = 0.0f * f::DEG_TO_RAD;
-        radian_t const incident = std::asin(offset) - angle;
+        float const impact = float(i) / count;
+        radian_t const impactAngle = dist(rng);
+        radian_t const incident = std::asin(impact) - impactAngle;
         for (size_t j = 0; j < CIE_XYZ_COUNT; j++) {
             // Current wavelength
             float const w = float(CIE_XYZ_START + j);
-            float const n = indexOfRefraction(w, mTemprature);
-            radian_t const refracted = std::asin(std::sin(incident) / n);
-            Fresnel const Faw = fresnel(incident, refracted);
-            Fresnel const Fwa = fresnel(refracted, incident);
-            float const T = Faw.t * Fwa.r * Fwa.t;
+            float const n = indexOfRefraction(w);
+            radian_t const refracted = refract(n, incident);
+            radian_t const phi = deviation(incident, refracted, impactAngle);
 
-            // fixme: double check this formula
-            radian_t const phi = angle + 2.0f * (2.0f * refracted - incident);
             if (phi >= minDeviation && phi < maxDeviation) {
-                size_t const index =
-                        ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount;
+                // air-water non-polarized fresnel
+                Fresnel const F = fresnel(incident, refracted);
+
+                // water-air fresnel is equal to 1 - air-water fresnel, so we only need to
+                // compute it once, this is equal to :
+                //      transmitted(air-water) * reflected(water-air) * transmitted(water-air)
+                float const T = F.t * F.t * F.r;
+
+                size_t const index = (size_t)std::round(
+                        ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount);
+
                 if (index < angleCount) {
-                    rainbow[index] += T * CIE_XYZ[j] * (5000.0f / count);
+                    float const s = float(angleCount) / ((maxDeviation - minDeviation) * count);
+                    rainbow[index] += T * CIE_XYZ[j] * s;
                 }
             }
         }
     }
 
-    auto* image = tga_new(angleCount, 16*3);
+    auto* image = tga_new(angleCount, 16 * 4);
     for (size_t index = 0; index < angleCount; index++) {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             for (int y = 0; y < 16; y++) {
-                float3 const sun = sRGB_to_linear(float3(255, 161, 72) / 255.0f);
-                float3 const sky = sRGB_to_linear(float3(135, 206, 235) / 255.0f);
-                float3 c = rainbow[index];
+
+//                float3 const sun = sRGB_to_linear(float3(255, 161, 72) / 255.0f);
+//                float3 const sky = sRGB_to_linear(float3(135, 206, 235) / 255.0f);
+
+                float3 c;
+                if (i == 3) {
+                    c = rainbow[index];
+                } else {
+                    c = float3{ i == 0, i == 1, i == 2 } * rainbow[index][i];
+                }
+
                 c = XYZ_to_sRGB(c / 118.518f);
                 c = linear_to_sRGB(c);// * sun*0.5 + sky*0.5);
                 uint3 const rgb = uint3(saturate(c) * 255);
@@ -100,65 +119,6 @@ void RainbowGenerator::build(JobSystem& js) {
     }
     tga_write("toto.tga", image);
     tga_free(image);
-}
-
-float3 RainbowGenerator::generate(radian_t phi, radian_t dphi) const noexcept {
-    auto func = [](float n, radian_t beta, radian_t phi) {
-        return 2.0f * beta - std::asin(n * std::sin(beta)) - phi;
-    };
-    auto dfunc = [](float n, radian_t beta) {
-        return 2 - n * std::cos(beta) / std::sqrt(1 - n * n * sin(beta) * sin(beta));
-    };
-    auto beta = [&](float n, radian_t guess, radian_t phi) {
-        float r = guess;
-        for (size_t j = 0; j < 8; j++) {
-            r = r - func(n, r, phi) / dfunc(n, r);
-        }
-        return r;
-    };
-
-    float3 f0 = 0.0f;
-    for (size_t i = 0; i < CIE_XYZ_COUNT; i++) {
-        // Current wavelength
-        float const w = float(CIE_XYZ_START + i);
-        float const n = indexOfRefraction(w, mTemprature);
-        if (2 * phi >= deviation(n, maxIncidentAngle(n))) {
-            continue;
-        }
-
-
-
-        float T=0;
-
-        // here we shouldn't sample "beta", but rather the offset from the center
-        for (radian_t b = 0; b < f::PI_2; b += f::DEG_TO_RAD/100) {
-            if (n * std::sin(b) <= 1) {
-                radian_t p = deviation(n, b) * 0.5f;
-                if (p >= phi - dphi && p <= phi + dphi) {
-
-
-                    float const B = b;
-                    float const Bi_a = 2.0f * B - p;         // by definition
-                    float const Bt_w = B;                    // by definition
-                    Fresnel const Faw = fresnel(Bi_a, Bt_w);
-                    Fresnel const Fwa = fresnel(Bt_w, Bi_a);
-                    T += Faw.t * Fwa.r * Fwa.t;
-
-                }
-            }
-        }
-//        float s = c;
-
-
-        // apply the density of the rays in that direction
-//        float const s = 1 / dfunc(n, B);
-//        T *= s;   // fixme: what's the correct factor here?
-
-        f0 += T * CIE_XYZ[i];
-    }
-    f0 /= 118.518f; // normalization factor
-    f0 = XYZ_to_sRGB(f0);
-    return f0;
 }
 
 // ------------------------------------------------------------------------------------------------
