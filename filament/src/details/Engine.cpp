@@ -103,7 +103,6 @@ Engine* FEngine::create(Engine::Builder const& builder) {
         }
         DriverConfig const driverConfig{
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
-                .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
                 .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
                 .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
@@ -701,7 +700,6 @@ int FEngine::loop() {
 
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
             .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
             .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
             .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,

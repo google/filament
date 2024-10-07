@@ -1551,7 +1551,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     backend::DescriptorSetLayout const perViewDescriptorSetLayout =
             descriptor_sets::getPerViewDescriptorSetLayout(
             mMaterialDomain, mVariantFilter,
-            info.isLit, info.reflectionMode, info.refractionMode);
+            info.isLit || info.hasShadowMultiplier, info.reflectionMode, info.refractionMode);
 
     // Descriptor layout and descriptor name/binding mapping
     container.push<MaterialDescriptorBindingsChuck>(info.sib, perViewDescriptorSetLayout);
