@@ -169,7 +169,7 @@ public:
         auto [p, tag] = handleToPointer(handle.getId());
 
         if (isPoolHandle(handle.getId())) {
-            // check for use after free
+            // check for pool handle use-after-free
             if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
                 uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
                 auto const pNode = static_cast<typename Allocator::Node*>(p);
@@ -179,6 +179,22 @@ public:
                         << "use-after-free of Handle with id=" << handle.getId()
                         << ", tag=" << getHandleTag(handle.getId()).c_str_safe();
             }
+        } else {
+            // check for heap handle use-after-free
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                uint8_t const index = (handle.getId() & HANDLE_INDEX_MASK);
+                // if we've already handed out this handle index before, it's definitely a
+                // use-after-free, otherwise it's probably just a corrupted handle
+                if (index < mId) {
+                    FILAMENT_CHECK_POSTCONDITION(p != nullptr)
+                            << "use-after-free of heap Handle with id=" << handle.getId()
+                            << ", tag=" << getHandleTag(handle.getId()).c_str_safe();
+                } else {
+                    FILAMENT_CHECK_POSTCONDITION(p != nullptr)
+                            << "corrupted heap Handle with id=" << handle.getId()
+                            << ", tag=" << getHandleTag(handle.getId()).c_str_safe();
+                }
+            }
         }
 
         return static_cast<Dp>(p);
@@ -186,14 +202,18 @@ public:
 
     template<typename B>
     bool is_valid(Handle<B>& handle) {
-        if (handle && isPoolHandle(handle.getId())) {
-            auto [p, tag] = handleToPointer(handle.getId());
+        if (!handle) {
+            // null handles are considered valid
+            return true;
+        }
+        auto [p, tag] = handleToPointer(handle.getId());
+        if (isPoolHandle(handle.getId())) {
             uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
             auto const pNode = static_cast<typename Allocator::Node*>(p);
             uint8_t const expectedAge = pNode[-1].age;
             return expectedAge == age;
         }
-        return true;
+        return p != nullptr;
     }
 
     template<typename Dp, typename B>
