@@ -14,12 +14,10 @@
 
 // Validates correctness of composite SPIR-V instructions.
 
-#include "source/val/validate.h"
-
-#include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/spirv_target_env.h"
 #include "source/val/instruction.h"
+#include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {
@@ -96,7 +94,7 @@ spv_result_t GetExtractInsertValueType(ValidationState_t& _,
           break;
         }
 
-        if (!_.GetConstantValUint64(type_inst->word(3), &array_size)) {
+        if (!_.EvalConstantValUint64(type_inst->word(3), &array_size)) {
           assert(0 && "Array type definition is corrupt");
         }
         if (component_index >= array_size) {
@@ -124,6 +122,7 @@ spv_result_t GetExtractInsertValueType(ValidationState_t& _,
         *member_type = type_inst->word(component_index + 2);
         break;
       }
+      case spv::Op::OpTypeCooperativeMatrixKHR:
       case spv::Op::OpTypeCooperativeMatrixNV: {
         *member_type = type_inst->word(2);
         break;
@@ -290,7 +289,7 @@ spv_result_t ValidateCompositeConstruct(ValidationState_t& _,
       }
 
       uint64_t array_size = 0;
-      if (!_.GetConstantValUint64(array_inst->word(3), &array_size)) {
+      if (!_.EvalConstantValUint64(array_inst->word(3), &array_size)) {
         assert(0 && "Array type definition is corrupt");
       }
 
@@ -335,6 +334,25 @@ spv_result_t ValidateCompositeConstruct(ValidationState_t& _,
         }
       }
 
+      break;
+    }
+    case spv::Op::OpTypeCooperativeMatrixKHR: {
+      const auto result_type_inst = _.FindDef(result_type);
+      assert(result_type_inst);
+      const auto component_type_id =
+          result_type_inst->GetOperandAs<uint32_t>(1);
+
+      if (3 != num_operands) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Must be only one constituent";
+      }
+
+      const uint32_t operand_type_id = _.GetOperandTypeId(inst, 2);
+
+      if (operand_type_id != component_type_id) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected Constituent type to be equal to the component type";
+      }
       break;
     }
     case spv::Op::OpTypeCooperativeMatrixNV: {

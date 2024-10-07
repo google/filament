@@ -736,6 +736,113 @@ OpFunctionEnd
   SinglePassRunAndMatch<DeadInsertElimPass>(text, true);
 }
 
+TEST_F(DeadInsertElimTest, PhiOverEmptyStruct) {
+  // Reproducer for nullptr access error in MarkInsertChain
+  // that occurs when processing a phi operation with an
+  // empty struct result type.
+  //
+  // Note: Disassembly created from HLSL source with
+  // dxc -T cs_6_6 -spirv -Oconfig=
+  //  --eliminate-dead-branches,--merge-return,--ssa-rewrite
+  //
+  // RWBuffer<float> buf;
+  //
+  // struct S { };
+  //
+  // S fn() {
+  //     S s = (S)0;
+  //     if (buf[0] > 0) {
+  //         return s;
+  //     }
+  //     return s;
+  // }
+  //
+  // [numthreads(1,1,1)]
+  // void main() {
+  //     fn();
+  // }
+
+  const std::string disassembly =
+      R"(OpCapability Shader
+               OpCapability SampledBuffer
+               OpCapability ImageBuffer
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 660
+               OpName %S "S"
+               OpName %type_buffer_image "type.buffer.image"
+               OpName %buf "buf"
+               OpName %main "main"
+               OpName %src_main "src.main"
+               OpName %bb_entry "bb.entry"
+               OpName %fn "fn"
+               OpName %bb_entry_0 "bb.entry"
+               OpName %s "s"
+               OpName %if_true "if.true"
+               OpName %if_merge "if.merge"
+               OpDecorate %buf DescriptorSet 0
+               OpDecorate %buf Binding 0
+          %S = OpTypeStruct
+          %4 = OpConstantNull %S
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+      %float = OpTypeFloat 32
+    %float_0 = OpConstant %float 0
+%type_buffer_image = OpTypeImage %float Buffer 2 0 0 2 R32f
+%_ptr_UniformConstant_type_buffer_image = OpTypePointer UniformConstant %type_buffer_image
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+         %19 = OpTypeFunction %S
+%_ptr_Function_S = OpTypePointer Function %S
+    %v4float = OpTypeVector %float 4
+       %bool = OpTypeBool
+        %buf = OpVariable %_ptr_UniformConstant_type_buffer_image UniformConstant
+      %false = OpConstantFalse %bool
+%_ptr_Function_bool = OpTypePointer Function %bool
+       %true = OpConstantTrue %bool
+       %main = OpFunction %void None %12
+         %13 = OpLabel
+         %14 = OpFunctionCall %void %src_main
+               OpReturn
+               OpFunctionEnd
+   %src_main = OpFunction %void None %12
+   %bb_entry = OpLabel
+         %17 = OpFunctionCall %S %fn
+               OpReturn
+               OpFunctionEnd
+         %fn = OpFunction %S None %19
+ %bb_entry_0 = OpLabel
+         %39 = OpVariable %_ptr_Function_bool Function %false
+         %34 = OpVariable %_ptr_Function_S Function
+          %s = OpVariable %_ptr_Function_S Function
+               OpSelectionMerge %33 None
+               OpSwitch %uint_0 %36
+         %36 = OpLabel
+               OpStore %s %4
+         %23 = OpLoad %type_buffer_image %buf
+         %25 = OpImageRead %v4float %23 %uint_0 None
+         %26 = OpCompositeExtract %float %25 0
+         %28 = OpFOrdGreaterThan %bool %26 %float_0
+               OpSelectionMerge %if_merge None
+               OpBranchConditional %28 %if_true %if_merge
+    %if_true = OpLabel
+               OpStore %39 %true
+               OpStore %34 %4
+               OpBranch %33
+   %if_merge = OpLabel
+               OpStore %39 %true
+               OpStore %34 %4
+               OpBranch %33
+         %33 = OpLabel
+         %41 = OpPhi %S %4 %if_true %4 %if_merge
+               OpReturnValue %41
+               OpFunctionEnd
+)";
+  // Used to crash with a nullptr access violation when processing %41
+  SinglePassRunToBinary<DeadInsertElimPass>(disassembly, true);
+}
+
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //
 

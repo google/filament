@@ -24,7 +24,7 @@ namespace spvtools {
 // provides a method for linting.
 //
 // Instances of this class provides basic thread-safety guarantee.
-class Linter {
+class SPIRV_TOOLS_EXPORT Linter {
  public:
   explicit Linter(spv_target_env env);
 
@@ -40,7 +40,7 @@ class Linter {
   bool Run(const uint32_t* binary, size_t binary_size);
 
  private:
-  struct Impl;
+  struct SPIRV_TOOLS_LOCAL Impl;
   std::unique_ptr<Impl> impl_;
 };
 }  // namespace spvtools

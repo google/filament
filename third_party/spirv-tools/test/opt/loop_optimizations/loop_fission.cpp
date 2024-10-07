@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/loop_fission.h"
+
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "source/opt/loop_fission.h"
-#include "source/opt/loop_unroller.h"
 #include "source/opt/loop_utils.h"
-#include "source/opt/pass.h"
 #include "test/opt/assembly_builder.h"
 #include "test/opt/function_utils.h"
 #include "test/opt/pass_fixture.h"
