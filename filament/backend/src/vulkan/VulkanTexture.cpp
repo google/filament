@@ -113,24 +113,51 @@ VkComponentMapping composeSwizzle(VkComponentMapping const& prev, VkComponentMap
     };
 }
 
+inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+        if (any(usage & TextureUsage::SAMPLEABLE)) {
+            return VulkanLayout::DEPTH_SAMPLER;
+        } else {
+            return VulkanLayout::DEPTH_ATTACHMENT;
+        }
+    }
+
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        return VulkanLayout::COLOR_ATTACHMENT;
+    }
+    // Finally, the layout for an immutable texture is optimal read-only.
+    return VulkanLayout::READ_ONLY;
+}
+
+inline VulkanLayout getDefaultLayoutImpl(VkImageUsageFlags vkusage) {
+    TextureUsage usage{};
+    if (vkusage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        usage = usage | TextureUsage::DEPTH_ATTACHMENT;
+    }
+    if (vkusage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+        usage = usage | TextureUsage::COLOR_ATTACHMENT;
+    }
+    if (vkusage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+        usage = usage | TextureUsage::SAMPLEABLE;
+    }
+    return getDefaultLayoutImpl(usage);
+}
+
 } // anonymous namespace
 
-VulkanTextureState::VulkanTextureState(
-        VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanStagePool& stagePool,
-        VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount)
-        : VulkanResource(VulkanResourceType::HEAP_ALLOCATED),
-          mVkFormat(format),
-          mViewType(viewType),
-          mFullViewRange {
-                  filament::backend::getImageAspect(format), 0, levels, 0, layerCount
-          },
-          mStagePool(stagePool),
-          mDevice(device),
-          mAllocator(allocator),
-          mCommands(commands),
-          mIsTransientAttachment(false) {
-}
+VulkanTextureState::VulkanTextureState(VkDevice device, VmaAllocator allocator,
+        VulkanCommands* commands, VulkanStagePool& stagePool, VkFormat format,
+        VkImageViewType viewType, uint8_t levels, uint8_t layerCount, VulkanLayout defaultLayout)
+    : VulkanResource(VulkanResourceType::HEAP_ALLOCATED),
+      mVkFormat(format),
+      mViewType(viewType),
+      mFullViewRange{filament::backend::getImageAspect(format), 0, levels, 0, layerCount},
+      mDefaultLayout(defaultLayout),
+      mStagePool(stagePool),
+      mDevice(device),
+      mAllocator(allocator),
+      mCommands(commands),
+      mIsTransientAttachment(false) {}
 
 VulkanTextureState* VulkanTexture::getSharedState() {
     VulkanTextureState* state = mAllocator->handle_cast<VulkanTextureState*>(mState);
@@ -142,6 +169,7 @@ VulkanTextureState const* VulkanTexture::getSharedState() const {
     return state;
 }
 
+// Constructor for internally passed VkImage
 VulkanTexture::VulkanTexture(
         VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
         VulkanResourceAllocator* handleAllocator,
@@ -154,12 +182,14 @@ VulkanTexture::VulkanTexture(
           mAllocator(handleAllocator),
           mState(handleAllocator->initHandle<VulkanTextureState>(
                   device, allocator, commands, stagePool,
-                  format, imgutil::getViewType(SamplerType::SAMPLER_2D), 1, 1)) {
+                  format, imgutil::getViewType(SamplerType::SAMPLER_2D), 1, 1,
+                  getDefaultLayoutImpl(tusage))) {
     auto* const state = getSharedState();
     state->mTextureImage = image;
     mPrimaryViewRange = state->mFullViewRange;
 }
 
+// Constructor for user facing texture
 VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
         VulkanResourceAllocator* handleAllocator, SamplerType target, uint8_t levels,
@@ -171,7 +201,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       mAllocator(handleAllocator),
       mState(handleAllocator->initHandle<VulkanTextureState>(device, allocator, commands, stagePool,
               backend::getVkFormat(tformat), imgutil::getViewType(target), levels,
-              getLayerCount(target, depth))) {
+              getLayerCount(target, depth), VulkanLayout::UNDEFINED)) {
     auto* const state = getSharedState();
 
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
@@ -326,18 +356,20 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     VulkanCommandBuffer& commandsBuf = state->mCommands->get();
     commandsBuf.acquire(this);
-    transitionLayout(&commandsBuf, mPrimaryViewRange, imgutil::getDefaultLayout(imageInfo.usage));
+
+    auto const defaultLayout = state->mDefaultLayout = getDefaultLayoutImpl(imageInfo.usage);
+    transitionLayout(&commandsBuf, mPrimaryViewRange, defaultLayout);
 }
 
+// Constructor for creating a texture view
 VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanResourceAllocator* handleAllocator,
-        VulkanTexture const* src, uint8_t baseLevel, uint8_t levelCount)
-        : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-                src->format, src->usage),
-          VulkanResource(VulkanResourceType::TEXTURE),
-          mAllocator(handleAllocator)
-{
+        VulkanResourceAllocator* handleAllocator, VulkanTexture const* src, uint8_t baseLevel,
+        uint8_t levelCount)
+    : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+              src->format, src->usage),
+      VulkanResource(VulkanResourceType::TEXTURE),
+      mAllocator(handleAllocator) {
     mState = src->mState;
     auto* state = getSharedState();
 
@@ -347,14 +379,15 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     mPrimaryViewRange.levelCount = levelCount;
 }
 
+// Constructor for creating a texture view with swizzle
 VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanResourceAllocator* handleAllocator,
-        VulkanTexture const* src, VkComponentMapping swizzle)
-        : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
-                src->format, src->usage),
-          VulkanResource(VulkanResourceType::TEXTURE),
-          mAllocator(handleAllocator) {
+        VulkanResourceAllocator* handleAllocator, VulkanTexture const* src,
+        VkComponentMapping swizzle)
+    : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth,
+              src->format, src->usage),
+      VulkanResource(VulkanResourceType::TEXTURE),
+      mAllocator(handleAllocator) {
     mState = src->mState;
     auto* state = getSharedState();
     state->refs++;
@@ -457,7 +490,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     VkImageLayout const newVkLayout = imgutil::getVkLayout(newLayout);
 
     if (nextLayout == VulkanLayout::UNDEFINED) {
-        nextLayout = imgutil::getDefaultLayout(this->usage);
+        nextLayout = getDefaultLayout();
     }
 
     transitionLayout(&commands, transitionRange, newLayout);
@@ -508,6 +541,11 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
     transitionLayout(&commands, range, oldLayout);
 }
 
+VulkanLayout VulkanTexture::getDefaultLayout() const {
+    auto* const state = getSharedState();
+    return state->mDefaultLayout;
+}
+
 VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange range) {
     range.levelCount = 1;
     range.layerCount = 1;
@@ -553,13 +591,11 @@ VkImageAspectFlags VulkanTexture::getImageAspect() const {
 }
 
 bool VulkanTexture::transitionLayout(VulkanCommandBuffer* commands,
-        const VkImageSubresourceRange& range, VulkanLayout newLayout) {
-    return transitionLayout(commands->buffer(), commands->fence, range, newLayout);
+        VkImageSubresourceRange const& range, VulkanLayout newLayout) {
+    return transitionLayout(commands->buffer(), range, newLayout);
 }
 
-bool VulkanTexture::transitionLayout(
-        VkCommandBuffer cmdbuf, std::shared_ptr<VulkanCmdFence> fence,
-        const VkImageSubresourceRange& range,
+bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceRange const& range,
         VulkanLayout newLayout) {
     auto* const state = getSharedState();
     VulkanLayout const oldLayout = getLayout(range.baseArrayLayer, range.baseMipLevel);
@@ -619,8 +655,6 @@ bool VulkanTexture::transitionLayout(
     setLayout(range, newLayout);
 
     if (hasTransitions) {
-        state->mTransitionFence = fence;
-
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
         FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
