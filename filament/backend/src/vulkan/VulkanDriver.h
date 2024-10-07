@@ -115,10 +115,6 @@ private:
     VulkanPlatform* mPlatform = nullptr;
     std::unique_ptr<VulkanTimestamps> mTimestamps;
 
-    // Placeholder resources
-    VulkanTexture* mEmptyTexture;
-    VulkanBufferObject* mEmptyBufferObject;
-
     VulkanSwapChain* mCurrentSwapChain = nullptr;
     VulkanRenderTarget* mDefaultRenderTarget = nullptr;
     VulkanRenderPass mCurrentRenderPass = {};
