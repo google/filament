@@ -199,7 +199,6 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkGetAndroidHardwareBufferProperties failed with error="
             << static_cast<int32_t>(result);
-
     FILAMENT_CHECK_POSTCONDITION(metadata.format == formatInfo.format)
             << "mismatched image format for external image (AHB)";
     metadata.externalFormat = formatInfo.externalFormat;

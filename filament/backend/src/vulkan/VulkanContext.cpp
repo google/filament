@@ -20,7 +20,6 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
-#include "VulkanUtility.h"
 
 #include <backend/PixelBufferDescriptor.h>
 
