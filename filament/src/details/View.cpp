@@ -584,7 +584,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         // we also know if we have a directional light
         FLightManager::Instance const directionalLight =
                 lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
-        mHasDirectionalLight = directionalLight.isValid();
+        mHasDirectionalLighting = directionalLight.isValid();
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
         if (hasDynamicLighting()) {
