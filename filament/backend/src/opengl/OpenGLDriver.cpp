@@ -1732,7 +1732,7 @@ void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         auto& gl = mContext;
         GLIndexBuffer const* ib = handle_cast<const GLIndexBuffer*>(ibh);
-        gl.deleteBuffers(1, &ib->gl.buffer, GL_ELEMENT_ARRAY_BUFFER);
+        gl.deleteBuffer(ib->gl.buffer, GL_ELEMENT_ARRAY_BUFFER);
         destruct(ibh, ib);
     }
 }
@@ -1745,7 +1745,7 @@ void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
         if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
             free(bo->gl.buffer);
         } else {
-            gl.deleteBuffers(1, &bo->gl.id, bo->gl.binding);
+            gl.deleteBuffer(bo->gl.id, bo->gl.binding);
         }
         destruct(boh, bo);
     }
@@ -3892,6 +3892,7 @@ void OpenGLDriver::bindDescriptorSet(
         // `offsets` data's lifetime will end when this function returns. We have to make a copy.
         // (the data is allocated inside the CommandStream)
         mBoundDescriptorSets[set].dsh = dsh;
+        assert_invariant(offsets.data() != nullptr || ds->getDynamicBufferCount() == 0);
         std::copy_n(offsets.data(), ds->getDynamicBufferCount(),
                 mBoundDescriptorSets[set].offsets.data());
     }

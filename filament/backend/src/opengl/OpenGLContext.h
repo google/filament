@@ -190,7 +190,7 @@ public:
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
-    void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
+    void deleteBuffer(GLuint buffer, GLenum target) noexcept;
     void deleteVertexArray(GLuint vao) noexcept;
 
     void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept;
@@ -316,9 +316,14 @@ public:
         // a glFinish. So we must delay the destruction until we know the GPU is finished.
         bool delay_fbo_destruction;
 
+        // Mesa sometimes clears the generic buffer binding when *another* buffer is destroyed,
+        // if that other buffer is bound on an *indexed* buffer binding.
+        bool rebind_buffer_after_deletion;
+
         // Force feature level 0. Typically used for low end ES3 devices with significant driver
         // bugs or performance issues.
         bool force_feature_level0;
+
 
     } bugs = {};
 
@@ -553,6 +558,9 @@ private:
                     ""},
             {   bugs.delay_fbo_destruction,
                     "delay_fbo_destruction",
+                    ""},
+            {   bugs.rebind_buffer_after_deletion,
+                    "rebind_buffer_after_deletion",
                     ""},
             {   bugs.force_feature_level0,
                     "force_feature_level0",

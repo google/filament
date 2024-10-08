@@ -115,7 +115,6 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout const& 
 
 void VulkanDescriptorSet::acquire(VulkanTexture* texture) {
     mResources.acquire(texture);
-    mTextures[mTextureCount++] = texture;
 }
 
 void VulkanDescriptorSet::acquire(VulkanBufferObject* bufferObject) {

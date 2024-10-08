@@ -67,7 +67,9 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
                 bool const dynamicOffset = any(entry.flags & DescriptorFlags::DYNAMIC_OFFSET);
                 dynamicBuffers.set(index, dynamicOffset);
                 if (UTILS_UNLIKELY(gl.isES2())) {
-                    dynamicBufferCount++;
+                    if (dynamicOffset) {
+                        dynamicBufferCount++;
+                    }
                     desc.emplace<BufferGLES2>(dynamicOffset);
                 } else {
                     auto const type = GLUtils::getBufferBindingType(BufferObjectBinding::UNIFORM);

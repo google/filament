@@ -86,9 +86,11 @@ std::vector<Variant> determineSurfaceVariants(
                         RefractionMode::CUBEMAP,
                         RefractionMode::NONE }) {
                     auto const vdsl = ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
-                            vertexVariant, userVariantFilter, isLit, reflection, refraction);
+                            vertexVariant, userVariantFilter, isLit || shadowMultiplier,
+                            reflection, refraction);
                     auto const fdsl = ShaderGenerator::getPerViewDescriptorSetLayoutWithVariant(
-                            fragmentVariant, userVariantFilter, isLit, reflection, refraction);
+                            fragmentVariant, userVariantFilter, isLit || shadowMultiplier,
+                            reflection, refraction);
                     // Check that all bindings present in the vertex shader DescriptorSetLayout
                     // are also present in the fragment shader DescriptorSetLayout.
                     for (auto const& r: vdsl.bindings) {

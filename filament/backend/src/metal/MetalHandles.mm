@@ -648,14 +648,6 @@ MetalTexture::MetalTexture(MetalContext& context, TextureFormat format, uint32_t
     texture = externalImage->getMtlTexture();
 }
 
-void MetalTexture::terminate() noexcept {
-    texture = nil;
-    swizzledTextureView = nil;
-    msaaSidecar = nil;
-    externalImage = nullptr;
-    terminated = true;
-}
-
 id<MTLTexture> MetalTexture::getMtlTextureForRead() const noexcept {
     return swizzledTextureView ? swizzledTextureView : texture;
 }
