@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include <utils/Allocator.h>
+#include <utils/compiler.h>
 #include <private/backend/HandleAllocator.h>
 #include "utils/Panic.h"
 
@@ -38,6 +39,12 @@ struct Concrete : public MyHandle {
     uint8_t data[32];
 };
 
+#ifdef GTEST_HAS_EXCEPTIONS
+#define EXPECT_THROW_IF_ENABLED EXPECT_THROW
+#else
+#define EXPECT_THROW_IF_ENABLED(args...)
+#endif
+
 TEST(HandlesTest, useAfterFreePool) {
     HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES, false);
 
@@ -46,7 +53,7 @@ TEST(HandlesTest, useAfterFreePool) {
 
     Handle<MyHandle> handleB = allocator.allocate<Concrete>();
 
-    EXPECT_THROW({
+    EXPECT_THROW_IF_ENABLED({
         Concrete* actualHandleA = allocator.handle_cast<Concrete*>(handleA);
     }, utils::PostconditionPanic);
 }
@@ -67,14 +74,14 @@ TEST(HandlesTest, useAfterFreeHeap) {
     Handle<MyHandle> handleB = allocator.allocate<Concrete>();
 
     // This should assert:
-    EXPECT_THROW({
+    EXPECT_THROW_IF_ENABLED({
         Concrete* actualHandleA = allocator.handle_cast<Concrete*>(handleA);
     }, utils::PostconditionPanic);
 
     // simulate a "corrupted" handle
     Handle<MyHandle> corruptedHandle { HANDLE_HEAP_FLAG | 0x123456 };
 
-    EXPECT_THROW({
+    EXPECT_THROW_IF_ENABLED({
         Concrete* actualHandleA = allocator.handle_cast<Concrete*>(corruptedHandle);
     }, utils::PostconditionPanic);
 }
