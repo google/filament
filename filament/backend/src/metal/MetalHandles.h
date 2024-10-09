@@ -135,11 +135,15 @@ private:
 
 class MetalBufferObject : public HwBufferObject {
 public:
+
+    using TagResolver = MetalBuffer::TagResolver;
+
     MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
          uint32_t byteCount);
 
-    void updateBuffer(void* data, size_t size, uint32_t byteOffset);
-    void updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset);
+    void updateBuffer(void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag);
+    void updateBufferUnsynchronized(
+            void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag);
     MetalBuffer* getBuffer() { return &buffer; }
 
 private:
