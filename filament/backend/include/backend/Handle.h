@@ -106,8 +106,16 @@ struct Handle : public HandleBase {
     Handle(Handle const& rhs) noexcept = default;
     Handle(Handle&& rhs) noexcept = default;
 
-    Handle& operator=(Handle const& rhs) noexcept = default;
-    Handle& operator=(Handle&& rhs) noexcept = default;
+    // Explicitly redefine copy/move assignment operators rather than just using default here.
+    // Because it doesn't make a call to the parent's method automatically in certain compilers.
+    Handle& operator=(Handle const& rhs) noexcept {
+        HandleBase::operator=(rhs);
+        return *this;
+    }
+    Handle& operator=(Handle&& rhs) noexcept {
+        HandleBase::operator=(std::move(rhs));
+        return *this;
+    }
 
     explicit Handle(HandleId id) noexcept : HandleBase(id) { }
 
