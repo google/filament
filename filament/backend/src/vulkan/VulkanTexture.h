@@ -79,6 +79,7 @@ struct VulkanTextureState : public VulkanResource {
     VmaAllocator mAllocator;
     VulkanCommands* mCommands;
     std::shared_ptr<VulkanCmdFence> mTransitionFence;
+    bool mIsTransientAttachment;
 };
 
 
@@ -168,6 +169,11 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     VulkanTexture* getSidecar() const {
         VulkanTextureState const* state = getSharedState();
         return state->mSidecarMSAA.get();
+    }
+
+    bool isTransientAttachment() const {
+        VulkanTextureState const* state = getSharedState();
+        return state->mIsTransientAttachment;
     }
 
     bool transitionLayout(VulkanCommandBuffer* commands, const VkImageSubresourceRange& range,

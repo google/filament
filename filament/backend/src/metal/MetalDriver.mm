@@ -107,13 +107,13 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
-        : mPlatform(*platform),
-          mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
-          mHandleAllocator("Handles",
-                  driverConfig.handleArenaSize,
-                  driverConfig.disableHandleUseAfterFreeCheck),
-          mStereoscopicType(driverConfig.stereoscopicType) {
+MetalDriver::MetalDriver(
+        MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+    : mPlatform(*platform),
+      mContext(new MetalContext),
+      mHandleAllocator(
+              "Handles", driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
+      mStereoscopicType(driverConfig.stereoscopicType) {
     mContext->driver = this;
 
     TrackedMetalBuffer::setPlatform(platform);
@@ -808,15 +808,7 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     auto* metalTexture = handle_cast<MetalTexture>(th);
     mContext->textures.erase(metalTexture);
 
-    // Free memory from the texture and mark it as freed.
-    metalTexture->terminate();
-
-    // Add this texture handle to our texturesToDestroy queue to be destroyed later.
-    if (auto handleToFree = mContext->texturesToDestroy.push(th)) {
-        // If texturesToDestroy is full, then .push evicts the oldest texture handle in the
-        // queue (or simply th, if use-after-free detection is disabled).
-        destruct_handle<MetalTexture>(handleToFree.value());
-    }
+    destruct_handle<MetalTexture>(th);
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -866,12 +858,6 @@ void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 void MetalDriver::terminate() {
-    // Terminate any outstanding MetalTextures.
-    while (!mContext->texturesToDestroy.empty()) {
-        Handle<HwTexture> toDestroy = mContext->texturesToDestroy.pop();
-        destruct_handle<MetalTexture>(toDestroy);
-    }
-
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();

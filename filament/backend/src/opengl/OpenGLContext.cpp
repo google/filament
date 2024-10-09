@@ -552,6 +552,14 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         } else if (strstr(renderer, "AMD") ||
                    strstr(renderer, "ATI")) {
             // AMD/ATI GPU
+        } else if (strstr(vendor, "Mesa")) {
+            // Seen on
+            //  [Mesa],
+            //  [llvmpipe (LLVM 17.0.6, 256 bits)],
+            //  [4.5 (Core Profile) Mesa 24.0.6-1],
+            //  [4.50]
+            // not known which version are affected
+            bugs->rebind_buffer_after_deletion = true;
         } else if (strstr(renderer, "Mozilla")) {
             bugs->disable_invalidate_framebuffer = true;
         }
@@ -929,15 +937,19 @@ void OpenGLContext::unbindSampler(GLuint sampler) noexcept {
     }
 }
 
-void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept {
-    glDeleteBuffers(n, buffers);
+void OpenGLContext::deleteBuffer(GLuint buffer, GLenum target) noexcept {
+    glDeleteBuffers(1, &buffer);
+
     // bindings of bound buffers are reset to 0
-    const size_t targetIndex = getIndexForBufferTarget(target);
-    auto& genericBuffer = state.buffers.genericBinding[targetIndex];
-    UTILS_NOUNROLL
-    for (GLsizei i = 0; i < n; ++i) {
-        if (genericBuffer == buffers[i]) {
-            genericBuffer = 0;
+    size_t const targetIndex = getIndexForBufferTarget(target);
+    auto& genericBinding = state.buffers.genericBinding[targetIndex];
+    if (genericBinding == buffer) {
+        genericBinding = 0;
+    }
+
+    if (UTILS_UNLIKELY(bugs.rebind_buffer_after_deletion)) {
+        if (genericBinding) {
+            glBindBuffer(target, genericBinding);
         }
     }
 
@@ -946,16 +958,13 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
             (target != GL_UNIFORM_BUFFER && target != GL_TRANSFORM_FEEDBACK_BUFFER));
 
     if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {
-        auto& indexedBuffer = state.buffers.targets[targetIndex];
-        UTILS_NOUNROLL // clang generates >1 KiB of code!!
-        for (GLsizei i = 0; i < n; ++i) {
-            UTILS_NOUNROLL
-            for (auto& buffer : indexedBuffer.buffers) {
-                if (buffer.name == buffers[i]) {
-                    buffer.name = 0;
-                    buffer.offset = 0;
-                    buffer.size = 0;
-                }
+        auto& indexedBinding = state.buffers.targets[targetIndex];
+        UTILS_NOUNROLL
+        for (auto& entry: indexedBinding.buffers) {
+            if (entry.name == buffer) {
+                entry.name = 0;
+                entry.offset = 0;
+                entry.size = 0;
             }
         }
     }

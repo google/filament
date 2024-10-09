@@ -233,14 +233,15 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
 
-    if (mTarget == SamplerType::SAMPLER_EXTERNAL) {
+    bool const isImported = builder->mImportedId != 0;
+    if (mTarget == SamplerType::SAMPLER_EXTERNAL && !isImported) {
         // mHandle and mHandleForSampling will be created in setExternalImage()
         // If this Texture is used for sampling before setExternalImage() is called,
         // we'll lazily create a 1x1 placeholder texture.
         return;
     }
 
-    if (UTILS_LIKELY(builder->mImportedId == 0)) {
+    if (UTILS_LIKELY(!isImported)) {
         mHandle = driver.createTexture(
                 mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
     } else {
