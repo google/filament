@@ -23,6 +23,7 @@
 #include <utils/debug.h>
 
 #include <type_traits> // FIXME: STL headers are not allowed in public headers
+#include <utility>
 
 #include <stdint.h>
 
