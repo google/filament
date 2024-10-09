@@ -1044,6 +1044,11 @@ void OpenGLContext::resetState() noexcept {
     );
     glDepthMask(state.raster.depthMask);
     glDepthFunc(state.raster.depthFunc);
+
+    utils::slog.e << "stencil front=" << 
+        state.stencil.front.func.func << " "  <<
+        state.stencil.front.func.ref << " "  <<
+        state.stencil.front.func.mask << " " << utils::io::endl;
     
     // state.stencil
     glStencilFuncSeparate(

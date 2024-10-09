@@ -460,20 +460,20 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
 
     // stencil test / operation
     // GL_STENCIL_TEST must be enabled if we're testing OR writing to the stencil buffer.
-    if (UTILS_LIKELY(
-            ss.front.stencilFunc == StencilState::StencilFunction::A &&
-            ss.back.stencilFunc == StencilState::StencilFunction::A &&
-            ss.front.stencilOpDepthFail == StencilOperation::KEEP &&
-            ss.back.stencilOpDepthFail == StencilOperation::KEEP &&
-            ss.front.stencilOpStencilFail == StencilOperation::KEEP &&
-            ss.back.stencilOpStencilFail == StencilOperation::KEEP &&
-            ss.front.stencilOpDepthStencilPass == StencilOperation::KEEP &&
-            ss.back.stencilOpDepthStencilPass == StencilOperation::KEEP)) {
-        // that's equivalent to having the stencil test disabled
-        gl.disable(GL_STENCIL_TEST);
-    } else {
+    // if (UTILS_LIKELY(
+    //         ss.front.stencilFunc == StencilState::StencilFunction::A &&
+    //         ss.back.stencilFunc == StencilState::StencilFunction::A &&
+    //         ss.front.stencilOpDepthFail == StencilOperation::KEEP &&
+    //         ss.back.stencilOpDepthFail == StencilOperation::KEEP &&
+    //         ss.front.stencilOpStencilFail == StencilOperation::KEEP &&
+    //         ss.back.stencilOpStencilFail == StencilOperation::KEEP &&
+    //         ss.front.stencilOpDepthStencilPass == StencilOperation::KEEP &&
+    //         ss.back.stencilOpDepthStencilPass == StencilOperation::KEEP) && false) {
+    //     // that's equivalent to having the stencil test disabled
+    //     gl.disable(GL_STENCIL_TEST);
+    // } else {
         gl.enable(GL_STENCIL_TEST);
-    }
+//    }
 
     // glStencilFuncSeparate() also sets the reference value, which may be used depending
     // on the stencilOp, so we always need to call glStencilFuncSeparate().
@@ -481,9 +481,9 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
             getStencilFunc(ss.front.stencilFunc), ss.front.ref, ss.front.readMask,
             getStencilFunc(ss.back.stencilFunc), ss.back.ref, ss.back.readMask);
 
-    if (UTILS_LIKELY(!ss.stencilWrite)) {
-        gl.stencilMaskSeparate(0x00, 0x00);
-    } else {
+//    if (UTILS_LIKELY(!ss.stencilWrite)) {
+//        gl.stencilMaskSeparate(0x00, 0x00);
+//    } else {
         // Stencil ops are only relevant when stencil write is enabled
         gl.stencilOpSeparate(
                 getStencilOp(ss.front.stencilOpStencilFail),
@@ -493,7 +493,7 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
                 getStencilOp(ss.back.stencilOpDepthFail),
                 getStencilOp(ss.back.stencilOpDepthStencilPass));
         gl.stencilMaskSeparate(ss.front.writeMask, ss.back.writeMask);
-    }
+//    }
 }
 
 // ------------------------------------------------------------------------------------------------
