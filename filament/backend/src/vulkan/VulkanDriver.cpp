@@ -606,7 +606,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         }
     }
 
-    VulkanAttachment depthStencil[2] = {};
+    VulkanAttachment depthStencil;
     if (depth.handle) {
         depthStencil[0] = {
             .texture = mResourceAllocator.handle_cast<VulkanTexture*>(depth.handle),
@@ -621,19 +621,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         attachmentCount++;
     }
 
-    if (stencil.handle) {
-        depthStencil[1] = {
-            .texture = mResourceAllocator.handle_cast<VulkanTexture*>(stencil.handle),
-            .level = stencil.level,
-            .baseViewIndex = stencil.baseViewIndex,
-            .layerCount = layerCount,
-            .layer = stencil.layer,
-        };
-        UTILS_UNUSED_IN_RELEASE VkExtent2D extent = depthStencil[1].getExtent2D();
-        tmin = { std::min(tmin.x, extent.width), std::min(tmin.y, extent.height) };
-        tmax = { std::max(tmax.x, extent.width), std::max(tmax.y, extent.height) };
-        attachmentCount++;
-    }
+    // The stencil buffer is always assumed to be part of the depth-stencil buffer.    
+    assert_invariant(!stencil.handle || stencil.handle == depth.handle);
 
     // All attachments must have the same dimensions, which must be greater than or equal to the
     // render target dimensions.

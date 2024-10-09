@@ -314,7 +314,7 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);
     VkExtent2D const extent = swapChain.getExtent();
     mColor[0] = { .texture = swapChain.getCurrentColor() };
-    mDepth = { .texture = swapChain.getDepth() };
+    mDepthStencil = { .texture = swapChain.getDepth() };
     width = extent.width;
     height = extent.height;
 }
@@ -323,7 +323,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
         uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-        VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
+        VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
@@ -332,8 +332,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         mColor[index] = color[index];
     }
-    mDepth = depthStencil[0];
-    VulkanTexture* depthTexture = (VulkanTexture*) mDepth.texture;
+    mDepthStencil = depthStencil[0];
+    VulkanTexture* depthTexture = (VulkanTexture*) mDepthStencil.texture;
 
     if (samples == 1) {
         return;
@@ -372,7 +372,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     // There is no need for sidecar depth if the depth texture is already MSAA.
     if (depthTexture->samples > 1) {
-        mMsaaDepthAttachment = mDepth;
+        mMsaaDepthAttachment = mDepthStencil;
         return;
     }
 
@@ -392,7 +392,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     mMsaaDepthAttachment = {
         .texture = msTexture,
         .level = msLevel,
-        .layer = mDepth.layer,
+        .layer = mDepthStencil.layer,
     };
 }
 
@@ -418,8 +418,8 @@ VulkanAttachment& VulkanRenderTarget::getMsaaColor(int target) {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment& VulkanRenderTarget::getDepth() {
-    return mDepth;
+VulkanAttachment& VulkanRenderTarget::getDepthStencil() {
+    return mDepthStencil;
 }
 
 VulkanAttachment& VulkanRenderTarget::getMsaaDepth() {
