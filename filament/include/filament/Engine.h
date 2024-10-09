@@ -380,8 +380,14 @@ public:
          * it's a GLES2 context. Ignored on other backends.
          */
         bool forceGLES2Context = false;
-    };
 
+        /**
+         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
+         * This is only supported for:
+         *      - PlatformEGLAndroid
+         */
+        bool assertNativeWindowIsValid = false;
+    };
 
 #if UTILS_HAS_THREADING
     using CreateCallback = void(void* UTILS_NULLABLE user, void* UTILS_NONNULL token);

@@ -525,7 +525,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge,
         jboolean disableHandleUseAfterFreeCheck,
         jint preferredShaderLanguage,
-        jboolean forceGLES2Context) {
+        jboolean forceGLES2Context, jboolean assertNativeWindowIsValid) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -542,6 +542,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .disableHandleUseAfterFreeCheck = (bool) disableHandleUseAfterFreeCheck,
             .preferredShaderLanguage = (Engine::Config::ShaderLanguage) preferredShaderLanguage,
             .forceGLES2Context = (bool) forceGLES2Context,
+            .assertNativeWindowIsValid = (bool) assertNativeWindowIsValid,
     };
     builder->config(&config);
 }

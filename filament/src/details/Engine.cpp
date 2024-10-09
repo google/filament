@@ -107,7 +107,8 @@ Engine* FEngine::create(Engine::Builder const& builder) {
                 .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
                 .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
-                .stereoscopicType =  instance->getConfig().stereoscopicType,
+                .stereoscopicType = instance->getConfig().stereoscopicType,
+                .assertNativeWindowIsValid = instance->getConfig().assertNativeWindowIsValid,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -705,6 +706,7 @@ int FEngine::loop() {
             .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
             .forceGLES2Context = mConfig.forceGLES2Context,
             .stereoscopicType =  mConfig.stereoscopicType,
+            .assertNativeWindowIsValid = mConfig.assertNativeWindowIsValid,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
