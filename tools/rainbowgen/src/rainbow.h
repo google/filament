@@ -29,17 +29,12 @@ using radian_t = float;
 using nanometer_t = float;
 using celcius_t = float;
 
-struct Fresnel {
-    float r;
-    float t;
-};
-
 // fresnel at water droplet interface
-inline Fresnel fresnel(radian_t Bi, radian_t Bt) noexcept {
+inline float fresnel(radian_t Bi, radian_t Bt) noexcept {
     float const r_pe = std::sin(Bi - Bt) / std::sin(Bi + Bt);
     float const r_pa = std::tan(Bi - Bt) / std::tan(Bi + Bt);
     float const r = 0.5f * (r_pe * r_pe + r_pa * r_pa);
-    return { r, 1 - r };
+    return r;
 }
 
 // refraction angle
@@ -54,13 +49,19 @@ inline radian_t maxIncidentAngle(float n) noexcept {
 
 // deviation: angle between ray exiting the droplet and the ground
 // impactAngle: angle between the ground and the incident ray
-inline radian_t deviation(radian_t incident, radian_t refracted, radian_t impactAngle) noexcept  {
-    return 4.0f * refracted - 2.0f * incident - impactAngle;
+inline radian_t deviation(int order, radian_t incident, radian_t refracted, radian_t impactAngle) noexcept  {
+    if (order == 0) {
+        return 4.0f * refracted - 2.0f * incident - impactAngle;
+    }
+    if (order == 1) {
+        return f::PI + 6.0f * refracted - 2.0f * incident - impactAngle;
+    }
+    return -1;
 }
 
 // deviation: angle between ray entering the droplet and ray exiting the droplet
 inline radian_t deviation(float n, radian_t incident) noexcept  {
-    return deviation(incident, refract(n, incident), 0.0f);
+    return deviation(0, incident, refract(n, incident), 0.0f);
 }
 
 // index of refraction for a wavelength

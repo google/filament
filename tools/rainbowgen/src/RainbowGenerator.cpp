@@ -48,8 +48,8 @@ void RainbowGenerator::build(JobSystem& js) {
     uint32_t const angleCount = mAngleCount;
     float const n0 = indexOfRefraction(350);
     float const n1 = indexOfRefraction(700);
-    float const minDeviation = deviation(n0, maxIncidentAngle(n0)); // phi = 39.7
-    float const maxDeviation = deviation(n1, maxIncidentAngle(n1)); // phi = 42.5
+    float const minDeviation = 35*f::DEG_TO_RAD; //deviation(n0, maxIncidentAngle(n0)); // phi = 39.7
+    float const maxDeviation = 60*f::DEG_TO_RAD; //deviation(n1, maxIncidentAngle(n1)); // phi = 42.5
     std::cout << minDeviation * f::RAD_TO_DEG << std::endl;
     std::cout << maxDeviation * f::RAD_TO_DEG << std::endl;
 
@@ -60,32 +60,31 @@ void RainbowGenerator::build(JobSystem& js) {
     std::uniform_real_distribution<float> dist{ -f::DEG_TO_RAD * 0.25f, f::DEG_TO_RAD * 0.25f };
 
     size_t count = 16384;
+    float const s = f::PI * float(angleCount) / ((maxDeviation - minDeviation) * count);
+
     for (size_t i = 0; i < count; i++) {
-        float const impact = float(i) / count;
-        radian_t const impactAngle = dist(rng);
+        float const impact = (float(i) / count) * 2.0f - 1.0f;
+        radian_t const impactAngle = 0; //dist(rng);
         radian_t const incident = std::asin(impact) - impactAngle;
         for (size_t j = 0; j < CIE_XYZ_COUNT; j++) {
             // Current wavelength
             float const w = float(CIE_XYZ_START + j);
             float const n = indexOfRefraction(w);
             radian_t const refracted = refract(n, incident);
-            radian_t const phi = deviation(incident, refracted, impactAngle);
+            // water-air fresnel is equal to 1 - air-water fresnel, so we only need to
+            // air-water non-polarized fresnel
+            float const F = fresnel(incident, refracted);
 
-            if (phi >= minDeviation && phi < maxDeviation) {
-                // air-water non-polarized fresnel
-                Fresnel const F = fresnel(incident, refracted);
-
-                // water-air fresnel is equal to 1 - air-water fresnel, so we only need to
-                // compute it once, this is equal to :
-                //      transmitted(air-water) * reflected(water-air) * transmitted(water-air)
-                float const T = F.t * F.t * F.r;
-
-                size_t const index = (size_t)std::round(
-                        ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount);
-
-                if (index < angleCount) {
-                    float const s = float(angleCount) / ((maxDeviation - minDeviation) * count);
-                    rainbow[index] += T * CIE_XYZ[j] * s;
+            for (int order = 0; order < 2; order++) {
+                float const internalBounces = float(order + 1);
+                radian_t const phi = deviation(order, incident, refracted, impactAngle);
+                if (phi >= minDeviation && phi < maxDeviation) {
+                    size_t const index = (size_t)std::round(
+                            ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount);
+                    if (index < angleCount) {
+                        float const T = (1 - F) * std::pow(1 - F,  internalBounces) * F;
+                        rainbow[index] += CIE_XYZ[j] * (T * s / 118.518f);
+                    }
                 }
             }
         }
@@ -106,7 +105,7 @@ void RainbowGenerator::build(JobSystem& js) {
                     c = float3{ i == 0, i == 1, i == 2 } * rainbow[index][i];
                 }
 
-                c = XYZ_to_sRGB(c / 118.518f);
+                c = XYZ_to_sRGB(c);
                 c = linear_to_sRGB(c);// * sun*0.5 + sky*0.5);
                 uint3 const rgb = uint3(saturate(c) * 255);
                 tga_set_pixel(image, index, y+i*16, {
