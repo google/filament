@@ -203,8 +203,8 @@ public:
     template<typename B>
     bool is_valid(Handle<B>& handle) {
         if (!handle) {
-            // null handles are considered valid
-            return true;
+            // null handles are invalid
+            return false;
         }
         auto [p, tag] = handleToPointer(handle.getId());
         if (isPoolHandle(handle.getId())) {

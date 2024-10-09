@@ -94,9 +94,9 @@ TEST(HandlesTest, isValid) {
     EXPECT_TRUE(allocator.is_valid(heapHandle));
 
     {
-        // null handles are valid
+        // null handles are invalid
         Handle<MyHandle> handle;
-        EXPECT_TRUE(allocator.is_valid(handle));
+        EXPECT_FALSE(allocator.is_valid(handle));
     }
     {
         Handle<MyHandle> handle { HANDLE_HEAP_FLAG | 0x123456 };
