@@ -514,7 +514,7 @@ void VulkanDescriptorSetManager::updateSampler(VulkanDescriptorSet* set, uint8_t
     } else {
         info.imageView = texture->getViewForType(range, expectedType);
     }
-    info.imageLayout = imgutil::getVkLayout(texture->getPrimaryImageLayout());
+    info.imageLayout = imgutil::getVkLayout(texture->getDefaultLayout());
     VkWriteDescriptorSet const descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .pNext = nullptr,
