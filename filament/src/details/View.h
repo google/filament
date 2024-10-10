@@ -534,7 +534,7 @@ private:
     Viewport mViewport;
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
-    bool mIsTransparentPickable = true;
+    bool mIsTransparentPickable = false;
 
     FRenderTarget* mRenderTarget = nullptr;
 
