@@ -1283,12 +1283,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
-        .initialDepthLayout = currentDepthLayout,
         .depthFormat = depth.getFormat(),
         .clear = clearVal,
         .discardStart = discardStart,
         .discardEnd = discardEndVal,
+        .initialDepthLayout = currentDepthLayout,
         .samples = rt->getSamples(),
+        .needsResolveMask = 0,
+        .usesLazilyAllocatedMemory = 0,
         .subpassMask = uint8_t(params.subpassMask),
         .viewCount = renderTargetLayerCount,
     };
@@ -1297,8 +1299,16 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (info.texture) {
             assert_invariant(info.layerCount == renderTargetLayerCount);
             rpkey.colorFormat[i] = info.getFormat();
-            if (rpkey.samples > 1 && info.texture->samples == 1) {
-                rpkey.needsResolveMask |= (1 << i);
+            if (rpkey.samples > 1) {
+                const VulkanTexture* sidecar = info.texture->getSidecar();
+                assert_invariant(sidecar);
+				assert_invariant(sidecar->samples > 1);
+                if (sidecar && sidecar->isTransientAttachment()) {
+                    rpkey.usesLazilyAllocatedMemory |= (1 << i);
+                }
+                if (info.texture->samples == 1) {
+                    rpkey.needsResolveMask |= (1 << i);
+                }
             }
         } else {
             rpkey.colorFormat[i] = VK_FORMAT_UNDEFINED;

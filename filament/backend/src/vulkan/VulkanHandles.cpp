@@ -282,11 +282,16 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
             if (UTILS_UNLIKELY(!msTexture)) {
+                // Clear all usage flags that are not related to attachments, so that we can
+                // use the transient usage flag.
+                const TextureUsage usage = texture->usage & TextureUsage::ALL_ATTACHMENTS;
+                assert_invariant(static_cast<uint16_t>(usage) != 0U);
+
                 // TODO: This should be allocated with the ResourceAllocator.
                 msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
                         handleAllocator,
                         texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
-                        samples, texture->width, texture->height, texture->depth, texture->usage,
+                        samples, texture->width, texture->height, texture->depth, usage,
                         stagePool, true /* heap allocated */);
                 texture->setSidecar(msTexture);
             }
