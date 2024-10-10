@@ -71,7 +71,7 @@ constexpr inline MTLIndexType getIndexType(size_t elementSize) noexcept {
     } else if (elementSize == 4) {
         return MTLIndexTypeUInt32;
     }
-    FILAMENT_CHECK_POSTCONDITION(false) << "Index element size not supported.";
+    FILAMENT_CHECK_POSTCONDITION(false) << "Index element size " << elementSize << " not supported.";
 }
 
 constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalized) noexcept {

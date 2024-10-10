@@ -416,12 +416,28 @@ void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
+    // Errors are postponed until the next tick, to give Filament a chance to call setDebugTag on
+    // the handle; this way we get nicer error messages.
+
+    // Check that the elementType is valid.
+    const bool isSupportedElementType =
+            elementType == ElementType::USHORT || elementType == ElementType::UINT;
+    if (UTILS_UNLIKELY(!isSupportedElementType)) {
+        runAtNextTick([this, ibh, isSupportedElementType, elementType]() {
+            FILAMENT_CHECK_PRECONDITION(isSupportedElementType)
+                    << "Invalid elementType (" << static_cast<int>(elementType)
+                    << "). Only ElementType::USHORT and ElementType::UINT supported"
+                    << ", tag=" << mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe();
+        });
+        // Adjust the elementType to a valid value. This allows Filament to proceed until we can log
+        // the error at the next tick.
+        elementType = ElementType::UINT;
+    }
+
     auto elementSize = (uint8_t)getElementTypeSize(elementType);
     auto* indexBuffer =
             construct_handle<MetalIndexBuffer>(ibh, *mContext, usage, elementSize, indexCount);
     auto& buffer = indexBuffer->buffer;
-    // If the allocation was not successful, postpone the error message until the next tick, to give
-    // Filament a chance to call setDebugTag on the handle; this way we get a nicer error message.
     if (UTILS_UNLIKELY(!buffer.wasAllocationSuccessful())) {
         const size_t byteCount = buffer.getSize();
         runAtNextTick([byteCount, this, ibh]() {
