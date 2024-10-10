@@ -31,22 +31,22 @@ namespace {
 std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& context,
         VkDevice device, VkExtent2D extent, VkFormat format) {
     bool const isDepth = isVkDepthFormat(format);
-    // Filament expects blit() to work with any texture, so we almost always set these usage flags.
-    // TODO: investigate performance implications of setting these flags.
-    VkImageUsageFlags const blittable
-            = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    VkImageCreateInfo imageInfo{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = format,
-            .extent = {extent.width, extent.height, 1},
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = blittable
-                     | (isDepth ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
-                                : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    // Filament expects blit() to work with any texture, so we almost always set these usage flags
+    // (see copyFrame() and readPixels()).
+    VkImageUsageFlags const blittable =
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    VkImageCreateInfo imageInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format,
+        .extent = {extent.width, extent.height, 1},
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = blittable | (isDepth ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+                                      : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
     };
     VkImage image;
     VkResult result = vkCreateImage(device, &imageInfo, VKALLOC, &image);
@@ -220,7 +220,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             .imageArrayLayers = 1,
             .imageUsage
             = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-              | VK_IMAGE_USAGE_TRANSFER_DST_BIT // Allows use as a blit destination.
+              | VK_IMAGE_USAGE_TRANSFER_DST_BIT // Allows use as a blit destination (for copyFrame)
               | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,// Allows use as a blit source (for readPixels)
 
             // TODO: Setting the preTransform to IDENTITY means we are letting the Android

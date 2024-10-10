@@ -79,6 +79,7 @@ struct Texture::BuilderDetails {
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::NONE;
+    bool mHasBlitSrc = false;
     bool mTextureIsSwizzled = false;
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
@@ -183,6 +184,15 @@ Texture* Texture::Builder::build(Engine& engine) {
         }
     }
 
+    // TODO: remove in a future filament release.
+    // Clients might not have known that textures that are read need to have BLIT_SRC as usages. For
+    // now, we workaround the issue by making sure any color attachment can be the source of a copy
+    // for readPixels().
+    mImpl->mHasBlitSrc = any(mImpl->mUsage & TextureUsage::BLIT_SRC);
+    if (!mImpl->mHasBlitSrc && any(mImpl->mUsage & TextureUsage::COLOR_ATTACHMENT)) {
+        mImpl->mUsage |= TextureUsage::BLIT_SRC;
+    }
+
     const bool sampleable = bool(mImpl->mUsage & TextureUsage::SAMPLEABLE);
     const bool swizzled = mImpl->mTextureIsSwizzled;
     const bool imported = mImpl->mImportedId;
@@ -232,6 +242,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mLevelCount = builder->mLevels;
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
+    mHasBlitSrc = builder->mHasBlitSrc;
 
     bool const isImported = builder->mImportedId != 0;
     if (mTarget == SamplerType::SAMPLER_EXTERNAL && !isImported) {
