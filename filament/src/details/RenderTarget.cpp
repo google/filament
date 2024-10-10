@@ -156,8 +156,8 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 // ------------------------------------------------------------------------------------------------
 
 FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder)
-    : mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()) {
-
+    : mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()),
+      mSupportsReadPixels(false) {
     std::copy(std::begin(builder.mImpl->mAttachments), std::end(builder.mImpl->mAttachments),
             std::begin(mAttachments));
 
@@ -188,6 +188,16 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
             if (any(attachment.texture->getUsage() &
                     (TextureUsage::SAMPLEABLE | Texture::Usage::SUBPASS_INPUT))) {
                 mSampleableAttachmentsMask |= targetBufferBit;
+            }
+
+            // readPixels() only applies to the color attachment that binds at index 0.
+            if (i == 0 && any(attachment.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT)) {
+
+                // TODO: the following will be changed to
+                //    mSupportsReadPixels =
+                //            any(attachment.texture->getUsage() & TextureUsage::BLIT_SRC);
+                //    in a later filament version when clients have properly added the right usage.
+                mSupportsReadPixels = attachment.texture->hasBlitSrcUsage();
             }
         }
     }
