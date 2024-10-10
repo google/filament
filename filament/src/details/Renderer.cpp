@@ -971,7 +971,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .picking = view.hasPicking() && !view.isTransparentPickable()
     });
     auto picking = picking_;
-    
+
     if (view.hasPicking()) {
         if (view.isTransparentPickable()) {
             struct PickingRenderPassData {
