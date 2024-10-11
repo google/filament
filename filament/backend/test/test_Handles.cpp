@@ -39,7 +39,7 @@ struct Concrete : public MyHandle {
     uint8_t data[32];
 };
 
-#ifdef GTEST_HAS_EXCEPTIONS
+#if GTEST_HAS_EXCEPTIONS
 #define EXPECT_THROW_IF_ENABLED EXPECT_THROW
 #else
 #define EXPECT_THROW_IF_ENABLED(args...)
