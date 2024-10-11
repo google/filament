@@ -553,6 +553,8 @@ void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     if (swapChain) {
         SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
         if (sc->sur != EGL_NO_SURFACE) {
+            // - if EGL_KHR_surfaceless_context is supported, mEGLDummySurface is EGL_NO_SURFACE.
+            // - this is actually a bit too aggressive, but it is a rare operation.
             egl.makeCurrent(mEGLDummySurface, mEGLDummySurface);
             eglDestroySurface(mEGLDisplay, sc->sur);
             delete sc;

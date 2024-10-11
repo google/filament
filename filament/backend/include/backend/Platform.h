@@ -91,6 +91,13 @@ public:
          * Sets the technique for stereoscopic rendering.
          */
         StereoscopicType stereoscopicType = StereoscopicType::NONE;
+
+        /**
+         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
+         * This is only supported for:
+         *      - PlatformEGLAndroid
+         */
+        bool assertNativeWindowIsValid = false;
     };
 
     Platform() noexcept;

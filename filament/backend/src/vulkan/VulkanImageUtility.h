@@ -76,36 +76,6 @@ inline VkImageViewType getViewType(SamplerType target) {
     }
 }
 
-inline VulkanLayout getDefaultLayout(TextureUsage usage) {
-    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        if (any(usage & TextureUsage::SAMPLEABLE)) {
-            return VulkanLayout::DEPTH_SAMPLER;
-        } else {
-            return VulkanLayout::DEPTH_ATTACHMENT;
-        }
-    }
-
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        return VulkanLayout::COLOR_ATTACHMENT;
-    }
-    // Finally, the layout for an immutable texture is optimal read-only.
-    return VulkanLayout::READ_ONLY;
-}
-
-inline VulkanLayout getDefaultLayout(VkImageUsageFlags vkusage) {
-    TextureUsage usage{};
-    if (vkusage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        usage = usage | TextureUsage::DEPTH_ATTACHMENT;
-    }
-    if (vkusage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-        usage = usage | TextureUsage::COLOR_ATTACHMENT;
-    }
-    if (vkusage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        usage = usage | TextureUsage::SAMPLEABLE;
-    }
-    return getDefaultLayout(usage);
-}
-
 constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
     switch (layout) {
         case VulkanLayout::UNDEFINED:

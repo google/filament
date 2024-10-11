@@ -404,14 +404,6 @@ void VulkanDriver::updateDescriptorSetTexture(
         SamplerParams params) {
     VulkanDescriptorSet* set = mResourceAllocator.handle_cast<VulkanDescriptorSet*>(dsh);
     VulkanTexture* texture = mResourceAllocator.handle_cast<VulkanTexture*>(th);
-
-    // We need to make sure the initial layout transition has been completed before we can write
-    // the sampler descriptor. We flush and wait until the transition has been completed.
-    if (!texture->transitionReady()) {
-        mCommands.flush();
-        mCommands.wait();
-    }
-
     VkSampler const vksampler = mSamplerCache.getSampler(params);
     mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
 }
@@ -1360,8 +1352,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
             VulkanTexture* texture = attachment.texture;
             if (texture->samples == 1) {
-                mRenderPassFboInfo.hasColorResolve = true;
-
                 auto const& range = attachment.getSubresourceRange();
                 attachment.texture->transitionLayout(&commands,
                         range, VulkanLayout::COLOR_ATTACHMENT);
