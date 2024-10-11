@@ -962,35 +962,47 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
     // Currently it consists of a simple depth pass.
-    // This is normally used by SSAO and contact-shadows
+    // This is normally used by SSAO and contact-shadows.
+    // Also, picking is handled here if transparent picking is disabled.
 
     // TODO: the scaling should depends on all passes that need the structure pass
     const auto [structure, picking_] = ppm.structure(fg,
             passBuilder, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
-            .picking = view.hasPicking() && !view.isTransparentPickable()
+            .picking = view.hasPicking() && !view.isTransparentPickingEnabled()
     });
     auto picking = picking_;
 
+    // --------------------------------------------------------------------------------------------
+    // Picking pass -- automatically culled if not used
+    // Picking is handled here if transparent picking is enabled.
+
     if (view.hasPicking()) {
-        if (view.isTransparentPickable()) {
+        if (view.isTransparentPickingEnabled()) {
             struct PickingRenderPassData {
                 FrameGraphId<FrameGraphTexture> depth;
                 FrameGraphId<FrameGraphTexture> picking;
             };
             auto& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    bool const isES2 = mEngine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
+                    bool const isFL0 = mEngine.getDriverApi().getFeatureLevel() == 
+                        FeatureLevel::FEATURE_LEVEL_0;
+
+                    // TODO: Specify the precision for picking pass
+                    uint32_t const width = std::max(32u,
+                        (uint32_t)std::ceil(float(svp.width) * aoOptions.resolution));
+                    uint32_t const height = std::max(32u,
+                        (uint32_t)std::ceil(float(svp.height) * aoOptions.resolution));
                     data.depth = builder.createTexture("Depth Buffer", {
-                            .width = svp.width, .height = svp.height,
-                            .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
 
                     data.depth = builder.write(data.depth,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                     data.picking = builder.createTexture("Picking Buffer", {
-                            .width = svp.width, .height = svp.height,
-                            .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
 
                     data.picking = builder.write(data.picking,
                         FrameGraphTexture::Usage::COLOR_ATTACHMENT);
@@ -1035,10 +1047,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 [=, &view](FrameGraphResources const& resources,
                         auto const&, DriverApi& driver) mutable {
                     auto out = resources.getRenderPassInfo();
-                    auto finalScale = view.isTransparentPickable()
-                        ? scale
-                        : scale * aoOptions.resolution;
-                    view.executePickingQueries(driver, out.target, finalScale);
+                    view.executePickingQueries(driver, out.target, scale * aoOptions.resolution);
                 });
     }
 
