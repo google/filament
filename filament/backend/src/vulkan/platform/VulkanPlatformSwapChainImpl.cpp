@@ -239,7 +239,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     };
     VkResult result = vkCreateSwapchainKHR(mDevice, &createInfo, VKALLOC, &mSwapchain);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkGetPhysicalDeviceSurfaceFormatsKHR error: " << static_cast<int32_t>(result);
+            << "vkCreateSwapchainKHR error: " << static_cast<int32_t>(result);
 
     mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
