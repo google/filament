@@ -442,6 +442,7 @@ if (APPLE OR LINUX)
         test/test_StencilBuffer.cpp
         test/test_Scissor.cpp
         test/test_MipLevels.cpp
+        test/test_Handles.cpp
     )
     set(BACKEND_TEST_LIBS
         backend
