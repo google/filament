@@ -261,10 +261,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 auto& passList = data.passList;
 
                 // Directional, cascaded shadow maps
-                auto const directionalShadowCastersRange = view.getVisibleDirectionalShadowCasters();
-                if (!directionalShadowCastersRange.empty()) {
+                // if the view has shadowing enabled, the SRE variant could be used, so we must
+                // generate the shadow maps
+                if (view.needsDirectionalShadowMaps()) {
+                    auto const directionalShadowCastersRange = view.getVisibleDirectionalShadowCasters();
                     for (auto& shadowMap : getCascadedShadowMap()) {
-                        // for the directional light, we already know if it has visible shadows.
+                        // For the directional light, we already know if it has visible shadows.
+                        // if hasVisibleShadows() is false, we're guaranteed the shader won't
+                        // sample this shadow map (see PerViewUib::cascades and
+                        // ShadowMapManager::updateCascadeShadowMaps)
                         if (shadowMap.hasVisibleShadows()) {
                             passList.push_back({
                                     {}, &shadowMap, directionalShadowCastersRange,
@@ -274,8 +279,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 }
 
                 // Point lights and Spotlight shadow maps
-                auto const spotShadowCastersRange = view.getVisibleSpotShadowCasters();
-                if (!spotShadowCastersRange.empty()) {
+                // if the view has shadowing enabled, the SRE variant could be used, so we must
+                // generate the shadow maps
+                if (view.needsPointShadowMaps()) {
+                    auto const spotShadowCastersRange = view.getVisibleSpotShadowCasters();
                     for (auto& shadowMap : getSpotShadowMaps()) {
                         assert_invariant(!shadowMap.isDirectionalShadow());
 
@@ -293,11 +300,11 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 break;
                         }
 
-                        if (shadowMap.hasVisibleShadows()) {
-                            passList.push_back({
-                                    {}, &shadowMap, spotShadowCastersRange,
-                                    VISIBLE_DYN_SHADOW_RENDERABLE });
-                        }
+                        // For spot/point lights, shadowMap.hasVisibleShadows() doesn't guarantee
+                        // the shader won't access the shadow map, so we must generate it.
+                        passList.push_back({
+                                {}, &shadowMap, spotShadowCastersRange,
+                                VISIBLE_DYN_SHADOW_RENDERABLE });
                     }
                 }
 
@@ -311,7 +318,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 scene, mainCameraInfo, userTime, passBuilder = passBuilder](
                     FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
-
                 // Note: we could almost parallel_for the loop below, the problem currently is
                 // that updatePrimitivesLod() updates temporary global state.
                 // prepareSpotShadowMap() also update the visibility of renderable. These two
@@ -321,7 +327,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // Generate a RenderPass for each shadow map
                 for (auto const& entry : data.passList) {
                     ShadowMap const& shadowMap = *entry.shadowMap;
-                    assert_invariant(shadowMap.hasVisibleShadows());
 
                     // Note: this loop can generate a lot of commands that come out of the
                     //       "per frame command arena". The allocation persists until the
@@ -339,14 +344,18 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             // we should never be here
                             break;
                         case ShadowType::SPOT:
-                            ShadowMapManager::cullSpotShadowMap(shadowMap, engine, view,
-                                    scene->getRenderableData(), entry.range,
-                                    scene->getLightData());
+                            if (shadowMap.hasVisibleShadows()) {
+                                ShadowMapManager::cullSpotShadowMap(shadowMap, engine, view,
+                                        scene->getRenderableData(), entry.range,
+                                        scene->getLightData());
+                            }
                             break;
                         case ShadowType::POINT:
-                            ShadowMapManager::cullPointShadowMap(shadowMap, view,
-                                    scene->getRenderableData(), entry.range,
-                                    scene->getLightData());
+                            if (shadowMap.hasVisibleShadows()) {
+                                ShadowMapManager::cullPointShadowMap(shadowMap, view,
+                                        scene->getRenderableData(), entry.range,
+                                        scene->getLightData());
+                            }
                             break;
                     }
 
@@ -420,22 +429,21 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
     auto const& passList = prepareShadowPass.getData().passList;
     for (auto const& entry: passList) {
-        assert_invariant(entry.shadowMap->hasVisibleShadows());
-
         const uint8_t layer = entry.shadowMap->getLayer();
         const auto* options = entry.shadowMap->getShadowOptions();
         const auto msaaSamples = textureRequirements.msaaSamples;
+        const bool blur = entry.shadowMap->hasVisibleShadows() &&
+                view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     FrameGraphRenderPass::Descriptor renderTargetDesc{};
 
                     data.output = builder.createSubresource(prepareShadowPass->shadows,
                             "Shadowmap Layer", { .layer = layer });
 
-                    if (view.hasVSM()) {
+                    if (UTILS_UNLIKELY(view.hasVSM())) {
                         // Each shadow pass has its own sample count, but textures are created with
                         // a default count of 1 because we're using "magic resolve" (sample count is
                         // set on the render target).
@@ -445,13 +453,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 .width = textureRequirements.size, .height = textureRequirements.size,
                                 .samples = msaaSamples,
                                 .format = TextureFormat::DEPTH16,
-                        });
-
-                        // Temporary (resolved) texture used to render the shadowmap when blurring
-                        // is needed -- it'll be used as the source of the blur.
-                        data.tempBlurSrc = builder.createTexture("Temporary Shadowmap", {
-                                .width = textureRequirements.size, .height = textureRequirements.size,
-                                .format = textureRequirements.format
                         });
 
                         depth = builder.write(depth,
@@ -468,7 +469,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         renderTargetDesc.clearColor = vsmClearColor;
                         renderTargetDesc.samples = msaaSamples;
 
-                        if (blur) {
+                        if (UTILS_UNLIKELY(blur)) {
+                            // Temporary (resolved) texture used to render the shadowmap when blurring
+                            // is needed -- it'll be used as the source of the blur.
+                            data.tempBlurSrc = builder.createTexture("Temporary Shadowmap", {
+                                    .width = textureRequirements.size,
+                                    .height = textureRequirements.size,
+                                    .format = textureRequirements.format
+                            });
+
                             data.tempBlurSrc = builder.write(data.tempBlurSrc,
                                     FrameGraphTexture::Usage::COLOR_ATTACHMENT);
 
@@ -510,15 +519,20 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     auto rt = resources.getRenderPassInfo(data.rt);
 
                     driver.beginRenderPass(rt.target, rt.params);
-                    entry.shadowMap->bind(driver);
-                    entry.executor.overrideScissor(entry.shadowMap->getScissor());
-                    entry.executor.execute(engine, "Shadow Pass");
+                    // if we know there are no visible shadows, we can skip rendering, but
+                    // we need the render-pass to clear/initialize the shadow-map
+                    // Note: this is always true for directional/cascade shadows.
+                    if (entry.shadowMap->hasVisibleShadows()) {
+                        entry.shadowMap->bind(driver);
+                        entry.executor.overrideScissor(entry.shadowMap->getScissor());
+                        entry.executor.execute(engine, "Shadow Pass");
+                    }
                     driver.endRenderPass();
                 });
 
 
         // now emit the blurring passes if needed
-        if (view.hasVSM()) {
+        if (UTILS_UNLIKELY(blur)) {
             auto& ppm = engine.getPostProcessManager();
 
             const float blurWidth = options->vsm.blurWidth;

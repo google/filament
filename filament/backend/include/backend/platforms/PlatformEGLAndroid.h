@@ -89,6 +89,11 @@ protected:
      */
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
 
+protected:
+    bool makeCurrent(ContextType type,
+            SwapChain* drawSwapChain,
+            SwapChain* readSwapChain) noexcept override;
+
 private:
     struct InitializeJvmForPerformanceManagerIfNeeded {
         InitializeJvmForPerformanceManagerIfNeeded();
@@ -102,6 +107,10 @@ private:
 
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
+
+    void* mNativeWindowLib = nullptr;
+    int32_t (*ANativeWindow_getBuffersDefaultDataSpace)(ANativeWindow* window) = nullptr;
+    bool mAssertNativeWindowIsValid = false;
 };
 
 } // namespace filament::backend
