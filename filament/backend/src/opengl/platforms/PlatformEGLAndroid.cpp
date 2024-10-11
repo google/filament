@@ -103,15 +103,9 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
           mExternalStreamManager(ExternalStreamManagerAndroid::create()),
           mInitializeJvmForPerformanceManagerIfNeeded(),
           mPerformanceHintManager() {
-
-    char scratch[PROP_VALUE_MAX + 1];
-    int length = __system_property_get("ro.build.version.release", scratch);
-    int const androidVersion = length >= 0 ? atoi(scratch) : 1;
-    if (!androidVersion) {
-        mOSVersion = 1000; // if androidVersion is 0, it means "future"
-    } else {
-        length = __system_property_get("ro.build.version.sdk", scratch);
-        mOSVersion = length >= 0 ? atoi(scratch) : 1;
+    mOSVersion = android_get_device_api_level();
+    if (mOSVersion < 0) {
+        mOSVersion = __ANDROID_API_FUTURE__;
     }
 
     mNativeWindowLib = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
@@ -120,18 +114,6 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
                 (int32_t(*)(ANativeWindow*))dlsym(mNativeWindowLib,
                         "ANativeWindow_getBuffersDefaultDataSpace");
     }
-
-    // This disables an ANGLE optimization on ARM, which turns out to be more costly for us
-    // see b/229017581
-    // We need to do this before we create the GL context.
-    // An alternative solution is use a system property:
-    //            __system_property_set(
-    //                    "debug.angle.feature_overrides_disabled",
-    //                    "preferSubmitAtFBOBoundary");
-    // but that would outlive this process, so the environment variable is better.
-    // We also make sure to not update the variable if it already exists.
-    // There is no harm setting this if we're not on ANGLE or ARM.
-    setenv("ANGLE_FEATURE_OVERRIDES_DISABLED", "preferSubmitAtFBOBoundary", false);
 }
 
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
