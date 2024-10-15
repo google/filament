@@ -246,7 +246,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
 }
 
-void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
+void VulkanPipelineCache::bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept {
     mPipelineRequirements.shaders[0] = program->getVertexShader();
     mPipelineRequirements.shaders[1] = program->getFragmentShader();
 

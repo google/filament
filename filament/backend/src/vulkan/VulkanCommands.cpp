@@ -45,10 +45,8 @@ VulkanCmdFence::VulkanCmdFence(VkFence ifence)
     status.store(VK_INCOMPLETE);
 }
 
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device,
-        VkCommandPool pool)
-    : mResourceManager(allocator),
-      mPipeline(VK_NULL_HANDLE) {
+VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool)
+    : mPipeline(VK_NULL_HANDLE) {
     // Create the low-level command buffer.
     const VkCommandBufferAllocateInfo allocateInfo{
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -131,7 +129,7 @@ bool VulkanGroupMarkers::empty() const noexcept {
 #endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VulkanContext* context, VulkanResourceAllocator* allocator)
+        VulkanContext* context)
     : mDevice(device),
       mQueue(queue),
       mPool(createPool(mDevice, queueFamilyIndex)),
@@ -148,7 +146,7 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
     }
 
     for (size_t i = 0; i < CAPACITY; ++i) {
-        mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator, mDevice, mPool);
+        mStorage[i] = std::make_unique<VulkanCommandBuffer>(mDevice, mPool);
     }
 
 #if !FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)

@@ -21,8 +21,10 @@
 
 #include "DriverBase.h"
 
+#include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
-#include "VulkanResources.h"
+
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <utils/Condition.h>
 #include <utils/FixedCapacityVector.h>
@@ -36,6 +38,8 @@
 #include <utility>
 
 namespace filament::backend {
+
+using namespace fvkmemory;
 
 struct VulkanContext;
 
@@ -59,68 +63,22 @@ private:
 
 #endif // FVK_DEBUG_GROUP_MARKERS
 
-// Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
-struct VulkanCmdFence {
-    struct SetValueScope {
-    public:
-        ~SetValueScope() {
-            mHolder->mutex.unlock();
-            mHolder->condition.notify_all();
-        }
-
-    private:
-        SetValueScope(VulkanCmdFence* fenceHolder, VkResult result) :
-            mHolder(fenceHolder) {
-            mHolder->mutex.lock();
-            mHolder->status.store(result);
-        }
-        VulkanCmdFence* mHolder;
-        friend struct VulkanCmdFence;
-    };
-
-    VulkanCmdFence(VkFence ifence);
-    ~VulkanCmdFence() = default;
-
-    SetValueScope setValue(VkResult value) {
-        return {this, value};
-    }
-
-    VkFence& getFence() {
-        return fence;
-    }
-
-    VkResult getStatus() {
-        std::unique_lock<utils::Mutex> lock(mutex);
-        return status.load(std::memory_order_acquire);
-    }
-
-private:
-    VkFence fence;
-    utils::Condition condition;
-    utils::Mutex mutex;
-    std::atomic<VkResult> status;
-};
-
 // The submission fence has shared ownership semantics because it is potentially wrapped by a
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device, VkCommandPool pool);
+    VulkanCommandBuffer(VkDevice device, VkCommandPool pool);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
 
-    inline void acquire(VulkanResource* resource) {
-        mResourceManager.acquire(resource);
-    }
-
-    inline void acquire(VulkanAcquireOnlyResourceManager* srcResources) {
-        mResourceManager.acquireAll(srcResources);
+    inline void acquire(resource_ptr<Resource> resource) {
+        mResources.push_back(resource);
     }
 
     inline void reset() {
         fence.reset();
-        mResourceManager.clear();
+        mResources.clear();
         mPipeline = VK_NULL_HANDLE;
     }
 
@@ -142,9 +100,9 @@ struct VulkanCommandBuffer {
     std::shared_ptr<VulkanCmdFence> fence;
 
 private:
-    VulkanAcquireOnlyResourceManager mResourceManager;
     VkCommandBuffer mBuffer;
     VkPipeline mPipeline;
+    std::vector<resource_ptr<Resource>> mResources;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.
@@ -183,7 +141,7 @@ public:
 class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-            VulkanContext* context, VulkanResourceAllocator* allocator);
+            VulkanContext* context);
 
     void terminate();
 
@@ -218,11 +176,8 @@ public:
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
-
     void popGroupMarker();
-
     void insertEventMarker(char const* string, uint32_t len);
-
     std::string getTopGroupMarker() const;
 #endif
 

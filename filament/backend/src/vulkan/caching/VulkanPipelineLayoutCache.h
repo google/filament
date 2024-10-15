@@ -30,7 +30,7 @@ class VulkanPipelineLayoutCache {
 public:
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
     
-    VulkanPipelineLayoutCache(VkDevice device, VulkanResourceAllocator* allocator)
+    VulkanPipelineLayoutCache(VkDevice device)
         : mDevice(device),
           mTimestamp(0) {}
 
@@ -56,7 +56,7 @@ public:
     // A pipeline layout depends on the descriptor set layout and the push constant ranges, which
     // are described in the program.
     VkPipelineLayout getLayout(DescriptorSetLayoutArray const& descriptorSetLayouts,
-            VulkanProgram* program);
+            fvkmemory::resource_ptr<VulkanProgram> program);
 
 private:
     using Timestamp = uint64_t;

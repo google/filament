@@ -17,14 +17,15 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 #define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
-#include "VulkanCommands.h"
-#include "VulkanContext.h"
+#include "backend/DriverEnums.h"
 #include "VulkanMemory.h"
 
 #include <map>
 #include <unordered_set>
 
 namespace filament::backend {
+
+class VulkanCommands;
 
 // Immutable POD representing a shared CPU-GPU staging area.
 struct VulkanStage {

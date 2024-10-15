@@ -16,6 +16,7 @@
 
 #include "VulkanStagePool.h"
 
+#include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
