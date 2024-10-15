@@ -56,11 +56,11 @@ void RainbowGenerator::build(JobSystem& js) {
     std::vector<float3> rainbow(angleCount, float3{});
 
     // The sun appears as about half a degree in the sky
-    std::default_random_engine rng{ std::random_device{}() };
-    std::uniform_real_distribution<float> dist{ -f::DEG_TO_RAD * 0.25f, f::DEG_TO_RAD * 0.25f };
+    std::default_random_engine const rng{ std::random_device{}() };
+    std::uniform_real_distribution<float> const dist{ -f::DEG_TO_RAD * 0.25f, f::DEG_TO_RAD * 0.25f };
 
     size_t count = 16384;
-    float const s = f::PI * float(angleCount) / ((maxDeviation - minDeviation) * count);
+    float const s = 2.0f * float(angleCount) / ((maxDeviation - minDeviation) * count * CIE_XYZ_COUNT);
 
     for (size_t i = 0; i < count; i++) {
         float const impact = (float(i) / count) * 2.0f - 1.0f;
@@ -83,7 +83,7 @@ void RainbowGenerator::build(JobSystem& js) {
                             ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount);
                     if (index < angleCount) {
                         float const T = (1 - F) * std::pow(1 - F,  internalBounces) * F;
-                        rainbow[index] += CIE_XYZ[j] * (T * s / 118.518f);
+                        rainbow[index] += (T * s) * (CIE_XYZ[j] / 118.518f);
                     }
                 }
             }
@@ -101,12 +101,16 @@ void RainbowGenerator::build(JobSystem& js) {
                 float3 c;
                 if (i == 3) {
                     c = rainbow[index];
+                    auto d = c;
+                    d = linear_to_sRGB(XYZ_to_sRGB(d));
+                    if (y == 0) std::cout << d.r << ", " << d.g << ", " << d.b << std::endl;
+//                    if (y == 0) std::cout << d.r << std::endl;
                 } else {
                     c = float3{ i == 0, i == 1, i == 2 } * rainbow[index][i];
                 }
 
                 c = XYZ_to_sRGB(c);
-                c = linear_to_sRGB(c);// * sun*0.5 + sky*0.5);
+                c = linear_to_sRGB(c) * 56;// * sun*0.5 + sky*0.5);
                 uint3 const rgb = uint3(saturate(c) * 255);
                 tga_set_pixel(image, index, y+i*16, {
                         .b = (uint8_t)rgb.v[2],
