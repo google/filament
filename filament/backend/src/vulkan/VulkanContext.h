@@ -21,6 +21,8 @@
 #include "VulkanImageUtility.h"
 #include "VulkanUtility.h"
 
+#include "vulkan/memory/ResourcePointer.h"
+
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
@@ -41,10 +43,10 @@ struct VulkanTimerQuery;
 struct VulkanCommandBuffer;
 
 struct VulkanAttachment {
-    VulkanTexture* texture = nullptr;
+    fvkmemory::resource_ptr<VulkanTexture> texture;
     uint8_t level = 0;
     uint8_t layerCount = 1;
-    uint16_t layer = 0;
+    uint8_t layer = 0;
 
     bool isDepth() const;
     VkImage getImage() const;
@@ -70,9 +72,11 @@ public:
     std::tuple<uint32_t, uint32_t> getNextQuery();
     void clearQuery(uint32_t queryIndex);
 
-    void beginQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery* query);
-    void endQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery const* query);
-    QueryResult getResult(VulkanTimerQuery const* query);
+    void beginQuery(VulkanCommandBuffer const* commands,
+            fvkmemory::resource_ptr<VulkanTimerQuery> query);
+    void endQuery(VulkanCommandBuffer const* commands,
+            fvkmemory::resource_ptr<VulkanTimerQuery> query);
+    QueryResult getResult(fvkmemory::resource_ptr<VulkanTimerQuery> query);
 
 private:
     VkDevice mDevice;
@@ -82,7 +86,7 @@ private:
 };
 
 struct VulkanRenderPass {
-    VulkanRenderTarget* renderTarget;
+    fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
     int currentSubpass;

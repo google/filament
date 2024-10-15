@@ -117,9 +117,10 @@ void VulkanReadPixels::terminate() noexcept {
 VulkanReadPixels::VulkanReadPixels(VkDevice device)
     : mDevice(device) {}
 
-void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint32_t const y,
-        uint32_t const width, uint32_t const height, uint32_t const graphicsQueueFamilyIndex,
-        PixelBufferDescriptor&& pbd, SelecteMemoryFunction const& selectMemoryFunc,
+void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget, uint32_t const x,
+        uint32_t const y, uint32_t const width, uint32_t const height,
+        uint32_t const graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
+        SelecteMemoryFunction const& selectMemoryFunc,
         OnReadCompleteFunction const& readCompleteFunc) {
     assert_invariant(mDevice != VK_NULL_HANDLE);
 
@@ -143,7 +144,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
 
     VkCommandPool& cmdpool = mCommandPool;
 
-    VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
+    fvkmemory::resource_ptr<VulkanTexture> srcTexture = srcTarget->getColor(0).texture;
     assert_invariant(srcTexture);
     VkFormat const srcFormat = srcTexture->getVkFormat();
     bool const swizzle
