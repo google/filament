@@ -135,9 +135,13 @@ public:
     using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
     VulkanDescriptorSet(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
+            UniformBufferBitmask const& dynamicUboMask,
+            uint8_t uniqueDynamicUboCount,
             OnRecycle&& onRecycleFn)
         : VulkanResource(VulkanResourceType::DESCRIPTOR_SET),
           vkSet(rawSet),
+          dynamicUboMask(dynamicUboMask),
+          uniqueDynamicUboCount(uniqueDynamicUboCount),
           mResources(allocator),
           mOnRecycleFn(std::move(onRecycleFn)) {}
 
@@ -147,13 +151,24 @@ public:
         }
     }
 
+    void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
+        mOffsets = std::move(offsets);
+    }
+
+    backend::DescriptorSetOffsetArray const* getOffsets() {
+        return &mOffsets;
+    }
+
     void acquire(VulkanTexture* texture);
 
     void acquire(VulkanBufferObject* texture);
 
     VkDescriptorSet const vkSet;
+    UniformBufferBitmask const dynamicUboMask;
+    uint8_t const uniqueDynamicUboCount;
 
 private:
+    backend::DescriptorSetOffsetArray mOffsets;
     VulkanAcquireOnlyResourceManager mResources;
     OnRecycle mOnRecycleFn;
 };
@@ -194,10 +209,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
 
     inline VkShaderModule getFragmentShader() const { return mInfo->shaders[1]; }
 
-    // Get a list of the sampler binding indices so that we don't have to loop through all possible
-    // samplers.
-    inline BindingList const& getBindings() const { return mInfo->bindings; }
-
     inline uint32_t getPushConstantRangeCount() const {
         return mInfo->pushConstantDescription.getVkRangeCount();
     }
@@ -225,22 +236,10 @@ private:
     struct PipelineInfo {
         explicit PipelineInfo(backend::Program const& program) noexcept
             : pushConstantDescription(program)
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-            , bindingToName(MAX_SAMPLER_COUNT, "")
-#endif
             {}
 
-        BindingList bindings;
-
         VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
-
         PushConstantDescription pushConstantDescription;
-
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-        // We store the sampler name mapped from binding index (only for debug purposes).
-        utils::FixedCapacityVector<std::string> bindingToName;
-#endif
-
     };
 
     PipelineInfo* mInfo;
