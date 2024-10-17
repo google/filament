@@ -1227,6 +1227,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
     mContext->windingState.invalidate();
+    mContext->scissorRectState.invalidate();
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedDescriptorSets.clear();
@@ -1953,7 +1954,11 @@ void MetalDriver::scissor(Viewport scissorBox) {
             .height = static_cast<NSUInteger>(bottom - top)
     };
 
-    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
+    auto& srs = mContext->scissorRectState;
+    srs.updateState(scissorRect);
+    if (srs.stateChanged()) {
+        [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
+    }
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

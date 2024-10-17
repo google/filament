@@ -161,6 +161,7 @@ struct MetalContext {
     CullModeStateTracker cullModeState;
     WindingStateTracker windingState;
     DepthClampStateTracker depthClampState;
+    ScissorRectStateTracker scissorRectState;
     Handle<HwRenderPrimitive> currentRenderPrimitive;
 
     // State caches.
