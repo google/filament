@@ -350,12 +350,17 @@ public:
         BufferObjectSharedHandle mInstancedUboHandle;
         DescriptorSetSharedHandle mInstancedDescriptorSetHandle;
         ColorPassDescriptorSet const* mColorPassDescriptorSet = nullptr;
-        backend::Viewport mScissorViewport;
+        // this stores either the scissor-viewport or the scissor override
+        backend::Viewport mScissor{ 0, 0, INT32_MAX, INT32_MAX };
 
-        backend::Viewport mScissor{};            // value of scissor override
-        backend::PolygonOffset mPolygonOffset{}; // value of the override
-        bool mPolygonOffsetOverride : 1;         // whether to override the polygon offset setting
-        bool mScissorOverride : 1;               // whether to override the polygon offset setting
+        // value of the polygon offset override
+        backend::PolygonOffset mPolygonOffset{};
+        // whether to override the polygon offset from the MaterialInstance
+        bool mPolygonOffsetOverride : 1;
+        // whether to override the scissor rectangle from the MaterialInstance
+        bool mScissorOverride : 1;
+        // whether the scissor-viewport is set
+        bool mHasScissorViewport : 1;
 
         Executor(RenderPass const& pass, Command const* b, Command const* e) noexcept;
 
@@ -382,8 +387,6 @@ public:
         // if non-null, overrides the material's polygon offset
         void overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept;
 
-        // if non-null, overrides the material's scissor
-        void overrideScissor(backend::Viewport const* scissor) noexcept;
         void overrideScissor(backend::Viewport const& scissor) noexcept;
 
         void execute(FEngine& engine, const char* name) const noexcept;
@@ -420,7 +423,7 @@ private:
             uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
             Executor::CustomCommandFn command);
 
-    static Command* resize(Arena& arena, Command* const last) noexcept;
+    static Command* resize(Arena& arena, Command* last) noexcept;
 
     // sorts commands then trims sentinels
     static Command* sortCommands(
@@ -461,7 +464,7 @@ private:
 
     FScene::RenderableSoa const& mRenderableSoa;
     ColorPassDescriptorSet const* const mColorPassDescriptorSet;
-    backend::Viewport const mScissorViewport;
+    backend::Viewport const mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
     Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
     mutable BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
@@ -509,6 +512,8 @@ public:
         return *this;
     }
 
+    // Specifies the viewport for the scissor rectangle, that is, the final scissor rect is
+    // offset by the viewport's left-top and clipped to the viewport's width/height.
     RenderPassBuilder& scissorViewport(backend::Viewport viewport) noexcept {
         mScissorViewport = viewport;
         return *this;
