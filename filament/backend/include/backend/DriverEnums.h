@@ -318,19 +318,8 @@ struct Viewport {
     int32_t right() const noexcept { return left + int32_t(width); }
     //! get the top coordinate in window space of the viewport
     int32_t top() const noexcept { return bottom + int32_t(height); }
-
-    friend bool operator==(Viewport const& lhs, Viewport const& rhs) noexcept {
-        // clang can do this branchless with xor/or
-        return lhs.left == rhs.left && lhs.bottom == rhs.bottom &&
-               lhs.width == rhs.width && lhs.height == rhs.height;
-    }
-
-    friend bool operator!=(Viewport const& lhs, Viewport const& rhs) noexcept {
-        // clang is being dumb and uses branches
-        return bool(((lhs.left ^ rhs.left) | (lhs.bottom ^ rhs.bottom)) |
-                    ((lhs.width ^ rhs.width) | (lhs.height ^ rhs.height)));
-    }
 };
+
 
 /**
  * Specifies the mapping of the near and far clipping plane to window coordinates.
