@@ -817,13 +817,15 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
+                const bool isPickingVariant = Variant::isPickingVariant(variant);
 
                 cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
                 cmd.info.rasterState.culling = mi->getCullingMode();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmd.info.rasterState.depthWrite = (1 // only keep bit 0
-                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
+                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE)
+                                                     | isPickingVariant)
                                                    & !(filterTranslucentObjects & translucent)
                                                    & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                                                   | writeDepthForShadowCasters;

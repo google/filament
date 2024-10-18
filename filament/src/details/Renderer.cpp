@@ -455,6 +455,15 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 void FRenderer::readPixels(FRenderTarget* renderTarget,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         backend::PixelBufferDescriptor&& buffer) {
+
+    // TODO: change the following to an assert when client call sites have addressed the issue.
+    if (!renderTarget->supportsReadPixels()) {
+        utils::slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
+                         "TextureUsage::BLIT_SRC.  This precondition will be asserted in a later "
+                         "release of Filament."
+                      << utils::io::endl;
+    }
+
     RendererUtils::readPixels(mEngine.getDriverApi(), renderTarget->getHwHandle(),
             xoffset, yoffset, width, height, std::move(buffer));
 }
@@ -953,25 +962,83 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
     // Currently it consists of a simple depth pass.
-    // This is normally used by SSAO and contact-shadows
+    // This is normally used by SSAO and contact-shadows.
+    // Also, picking is handled here if transparent picking is disabled.
 
     // TODO: the scaling should depends on all passes that need the structure pass
     const auto [structure, picking_] = ppm.structure(fg,
             passBuilder, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
-            .picking = view.hasPicking()
+            .picking = view.hasPicking() && !view.isTransparentPickingEnabled()
     });
-    const auto picking = picking_;
+    auto picking = picking_;
 
+    // --------------------------------------------------------------------------------------------
+    // Picking pass -- automatically culled if not used
+    // Picking is handled here if transparent picking is enabled.
 
     if (view.hasPicking()) {
+        if (view.isTransparentPickingEnabled()) {
+            struct PickingRenderPassData {
+                FrameGraphId<FrameGraphTexture> depth;
+                FrameGraphId<FrameGraphTexture> picking;
+            };
+            auto& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    bool const isFL0 = mEngine.getDriverApi().getFeatureLevel() == 
+                        FeatureLevel::FEATURE_LEVEL_0;
+
+                    // TODO: Specify the precision for picking pass
+                    uint32_t const width = std::max(32u,
+                        (uint32_t)std::ceil(float(svp.width) * aoOptions.resolution));
+                    uint32_t const height = std::max(32u,
+                        (uint32_t)std::ceil(float(svp.height) * aoOptions.resolution));
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
+
+                    data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                    data.picking = builder.createTexture("Picking Buffer", {
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+
+                    data.picking = builder.write(data.picking,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                    builder.declareRenderPass("Picking Render Target", {
+                            .attachments = {.color = { data.picking }, .depth = data.depth },
+                            .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
+                        });
+                },
+                [=, passBuilder = passBuilder](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
+                        Variant pickingVariant(Variant::DEPTH_VARIANT);
+                        pickingVariant.setPicking(true);
+
+                        auto out = resources.getRenderPassInfo();
+                        passBuilder.renderFlags(renderFlags);
+                        passBuilder.variant(pickingVariant);
+                        passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
+
+                        RenderPass const pass{ passBuilder.build(mEngine) };
+                        RenderPass::execute(pass, mEngine, resources.getPassName(), out.target, out.params);
+                });
+            picking = pickingRenderPass->picking;
+        }
+
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
-        fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
+        fg.addPass<PickingResolvePassData>(
+                "Picking Resolve Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    data.picking = builder.read(picking,
-                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    // Note that BLIT_SRC is needed because this texture will be read later (via
+                    // readPixels()).
+                    data.picking =
+                            builder.read(picking, FrameGraphTexture::Usage::COLOR_ATTACHMENT |
+                                                          FrameGraphTexture::Usage::BLIT_SRC);
                     builder.declareRenderPass("Picking Resolve Target", {
                             .attachments = { .color = { data.picking }}
                     });

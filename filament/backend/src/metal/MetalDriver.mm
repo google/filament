@@ -40,6 +40,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
+#include <utils/Invocable.h>
 
 #include <algorithm>
 
@@ -1081,24 +1082,34 @@ size_t MetalDriver::getMaxUniformBufferSize() {
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
+    FILAMENT_CHECK_PRECONDITION(data.buffer)
+            << "updateIndexBuffer called with a null buffer.";
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
-    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset);
+    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset,
+            [&]() { return mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "updateBufferObject must be called outside of a render pass.";
+            << "updateBufferObject must be called outside of a render pass. tag="
+            << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
+    FILAMENT_CHECK_PRECONDITION(data.buffer)
+            << "updateBufferObject called with a null buffer. tag="
+            << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    bo->updateBuffer(data.buffer, data.size, byteOffset);
+
+    bo->updateBuffer(data.buffer, data.size, byteOffset,
+            [&]() { return mHandleAllocator.getHandleTag(boh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
         BufferDescriptor&& data, uint32_t byteOffset) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    bo->updateBufferUnsynchronized(data.buffer, data.size, byteOffset);
+    bo->updateBufferUnsynchronized(data.buffer, data.size, byteOffset,
+            [&]() { return mHandleAllocator.getHandleTag(boh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
 

@@ -383,12 +383,14 @@ MetalBufferObject::MetalBufferObject(MetalContext& context, BufferObjectBinding 
         BufferUsage usage, uint32_t byteCount)
         : HwBufferObject(byteCount), buffer(context, bindingType, usage, byteCount) {}
 
-void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
-    buffer.copyIntoBuffer(data, size, byteOffset);
+void MetalBufferObject::updateBuffer(
+        void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag) {
+    buffer.copyIntoBuffer(data, size, byteOffset, std::move(getHandleTag));
 }
 
-void MetalBufferObject::updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset) {
-    buffer.copyIntoBufferUnsynchronized(data, size, byteOffset);
+void MetalBufferObject::updateBufferUnsynchronized(
+        void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag) {
+    buffer.copyIntoBufferUnsynchronized(data, size, byteOffset, std::move(getHandleTag));
 }
 
 MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t bufferCount,

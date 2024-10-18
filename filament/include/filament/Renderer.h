@@ -508,7 +508,7 @@ public:
      *
      *  Framebuffer as seen on User buffer (PixelBufferDescriptor&)
      *  screen
-     *  
+     *
      *      +--------------------+
      *      |                    |                .stride         .alignment
      *      |                    |         ----------------------->-->
@@ -537,6 +537,9 @@ public:
      * OpenGL only: if issuing a readPixels on a RenderTarget backed by a Texture that had data
      * uploaded to it via setImage, the data returned from readPixels will be y-flipped with respect
      * to the setImage call.
+     *
+     * Note: the texture that backs the COLOR attachment for `renderTarget` must have
+     * TextureUsage::BLIT_SRC as part of its usage.
      *
      * @remark
      * readPixels() is intended for debugging and testing. It will impact performance significantly.

@@ -23,6 +23,7 @@
 #include <utils/debug.h>
 
 #include <type_traits> // FIXME: STL headers are not allowed in public headers
+#include <utility>
 
 #include <stdint.h>
 
@@ -106,8 +107,18 @@ struct Handle : public HandleBase {
     Handle(Handle const& rhs) noexcept = default;
     Handle(Handle&& rhs) noexcept = default;
 
-    Handle& operator=(Handle const& rhs) noexcept = default;
-    Handle& operator=(Handle&& rhs) noexcept = default;
+    // Explicitly redefine copy/move assignment operators rather than just using default here.
+    // Because it doesn't make a call to the parent's method automatically during the std::move
+    // function call(https://en.cppreference.com/w/cpp/algorithm/move) in certain compilers like
+    // NDK 25.1.8937393 and below (see b/371980551)
+    Handle& operator=(Handle const& rhs) noexcept {
+        HandleBase::operator=(rhs);
+        return *this;
+    }
+    Handle& operator=(Handle&& rhs) noexcept {
+        HandleBase::operator=(std::move(rhs));
+        return *this;
+    }
 
     explicit Handle(HandleId id) noexcept : HandleBase(id) { }
 

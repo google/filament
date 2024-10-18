@@ -66,10 +66,10 @@ inline void blitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, V
             1, blitRegions, filter);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
-        oldSrcLayout = imgutil::getDefaultLayout(src.texture->usage);
+        oldSrcLayout = src.texture->getDefaultLayout();
     }
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
-        oldDstLayout = imgutil::getDefaultLayout(dst.texture->usage);
+        oldDstLayout = dst.texture->getDefaultLayout();
     }
     src.texture->transitionLayout(commands, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(commands, dstRange, oldDstLayout);
@@ -109,10 +109,10 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
             1, resolveRegions);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
-        oldSrcLayout = imgutil::getDefaultLayout(src.texture->usage);
+        oldSrcLayout = src.texture->getDefaultLayout();
     }
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
-        oldDstLayout = imgutil::getDefaultLayout(dst.texture->usage);
+        oldDstLayout = dst.texture->getDefaultLayout();
     }
     src.texture->transitionLayout(commands, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(commands, dstRange, oldDstLayout);
