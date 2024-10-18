@@ -807,11 +807,10 @@ void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
             primitives[primitiveIndex].setMaterialInstance(mi);
             AttributeBitset const required = material->getRequiredAttributes();
             AttributeBitset const declared = primitives[primitiveIndex].getEnabledAttributes();
-            if (!primitives[primitiveIndex].getHwHandle()) {
-                slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
-                       << "] render primitive doesn't exist for material \""
-                       << material->getName().c_str_safe() << "\"" << io::endl;
-            } else if (UTILS_UNLIKELY((declared & required) != required)) {
+            // Print the warning only when the handle is available. Otherwise this may end up
+            // emitting many invalid warnings as the `declared` bitset is not populated yet.
+            bool const isPrimitiveInitialized = !!primitives[primitiveIndex].getHwHandle();
+            if (UTILS_UNLIKELY(isPrimitiveInitialized && (declared & required) != required)) {
                 slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
                        << "] missing required attributes ("
                        << required << "), declared=" << declared << io::endl;
