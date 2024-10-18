@@ -126,6 +126,8 @@ See documentation chapter: \ref statistics.
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 #ifndef VULKAN_H_
     #include <vulkan/vulkan.h>
 #endif

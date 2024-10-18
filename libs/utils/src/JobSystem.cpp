@@ -134,6 +134,30 @@ void JobSystem::setThreadPriority(Priority priority) noexcept {
         slog.w << "setpriority failed: " << strerror(errno) << io::endl;
     }
 #endif
+#elif defined(__APPLE__)
+    qos_class_t qosClass = QOS_CLASS_DEFAULT;
+    switch (priority) {
+        case Priority::BACKGROUND:
+            qosClass = QOS_CLASS_BACKGROUND;
+            break;
+        case Priority::NORMAL:
+            qosClass = QOS_CLASS_DEFAULT;
+            break;
+        case Priority::DISPLAY:
+            qosClass = QOS_CLASS_USER_INTERACTIVE;
+            break;
+        case Priority::URGENT_DISPLAY:
+            qosClass = QOS_CLASS_USER_INTERACTIVE;
+            break;
+    }
+    errno = 0;
+    UTILS_UNUSED_IN_RELEASE int error;
+    error = pthread_set_qos_class_self_np(qosClass, 0);
+#ifndef NDEBUG
+    if (UTILS_UNLIKELY(error)) {
+        slog.w << "pthread_set_qos_class_self_np failed: " << strerror(errno) << io::endl;
+    }
+#endif
 #endif
 }
 
