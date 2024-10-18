@@ -1308,7 +1308,7 @@ public class View {
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
-    private static native void nSetTransparentPickingEnabled(long nativeView, boolean enabled); 
+    private static native void nSetTransparentPickingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsTransparentPickingEnabled(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
