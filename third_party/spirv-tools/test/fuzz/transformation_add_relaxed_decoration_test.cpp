@@ -86,9 +86,8 @@ TEST(TransformationAddRelaxedDecorationTest, BasicScenarios) {
   // Invalid: 28 is in a dead block, but returns bool (not numeric).
   ASSERT_FALSE(TransformationAddRelaxedDecoration(28).IsApplicable(
       context.get(), transformation_context));
-  // It is valid to add RelaxedPrecision to 25 (and it's fine to
-  // have a duplicate).
-  for (uint32_t result_id : {25u, 25u}) {
+  // It is valid to add RelaxedPrecision to 25
+  for (uint32_t result_id : {25u}) {
     TransformationAddRelaxedDecoration transformation(result_id);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
@@ -109,7 +108,6 @@ TEST(TransformationAddRelaxedDecorationTest, BasicScenarios) {
                OpName %8 "a"
                OpName %10 "b"
                OpName %14 "c"
-               OpDecorate %25 RelaxedPrecision
                OpDecorate %25 RelaxedPrecision
           %2 = OpTypeVoid
           %3 = OpTypeFunction %2

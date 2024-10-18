@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "OpenCLDebugInfo100.h"
@@ -1148,6 +1147,339 @@ OpFunctionEnd)";
   EXPECT_EQ(dbg_decl->GetSingleWordOperand(kDebugDeclareOperandVariableIndex),
             20);
 }
+
+struct TargetEnvCompareTestData {
+  spv_target_env later_env, earlier_env;
+};
+
+using TargetEnvCompareTest = ::testing::TestWithParam<TargetEnvCompareTestData>;
+
+TEST_P(TargetEnvCompareTest, Case) {
+  // If new environments are added, then we must update the list of tests.
+  ASSERT_EQ(SPV_ENV_VULKAN_1_3 + 1, SPV_ENV_MAX);
+
+  const auto& tc = GetParam();
+
+  std::unique_ptr<Module> module(new Module());
+  IRContext localContext(tc.later_env, std::move(module),
+                         spvtools::MessageConsumer());
+  EXPECT_TRUE(localContext.IsTargetEnvAtLeast(tc.earlier_env));
+
+  if (tc.earlier_env != tc.later_env) {
+    std::unique_ptr<Module> module(new Module());
+    IRContext localContext(tc.earlier_env, std::move(module),
+                           spvtools::MessageConsumer());
+    EXPECT_FALSE(localContext.IsTargetEnvAtLeast(tc.later_env));
+  }
+}
+
+TEST_F(IRContextTest, ReturnsTrueWhenExtensionIsRemoved) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_shader_clock"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            1);
+
+  EXPECT_TRUE(ctx->RemoveExtension(kSPV_KHR_shader_clock));
+
+  EXPECT_FALSE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            0);
+}
+
+TEST_F(IRContextTest, ReturnsFalseWhenExtensionIsNotRemoved) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_device_group"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_device_group));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            1);
+
+  EXPECT_FALSE(ctx->RemoveExtension(kSPV_KHR_shader_clock));
+
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_device_group));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            1);
+}
+
+TEST_F(IRContextTest, RemovesExtensionIfLast) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_device_group"
+               OpExtension "SPV_KHR_shader_clock"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_device_group));
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            2);
+
+  EXPECT_TRUE(ctx->RemoveExtension(kSPV_KHR_shader_clock));
+
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_device_group));
+  EXPECT_FALSE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            1);
+}
+
+TEST_F(IRContextTest, RemovesExtensionIfFirst) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_shader_clock"
+               OpExtension "SPV_KHR_device_group"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_device_group));
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            2);
+
+  EXPECT_TRUE(ctx->RemoveExtension(kSPV_KHR_shader_clock));
+
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_device_group));
+  EXPECT_FALSE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            1);
+}
+
+TEST_F(IRContextTest, RemovesMultipleExtensions) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpExtension "SPV_KHR_shader_clock"
+               OpExtension "SPV_KHR_shader_clock"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            2);
+
+  EXPECT_TRUE(ctx->RemoveExtension(kSPV_KHR_shader_clock));
+
+  EXPECT_FALSE(ctx->get_feature_mgr()->HasExtension(kSPV_KHR_shader_clock));
+  EXPECT_EQ(std::distance(ctx->module()->extension_begin(),
+                          ctx->module()->extension_end()),
+            0);
+}
+
+TEST_F(IRContextTest, ReturnsTrueWhenCapabilityIsRemoved) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpCapability ShaderClockKHR
+               OpExtension "SPV_KHR_shader_clock"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(
+      ctx->get_feature_mgr()->HasCapability(spv::Capability::ShaderClockKHR));
+  EXPECT_EQ(std::distance(ctx->module()->capability_begin(),
+                          ctx->module()->capability_end()),
+            2);
+
+  EXPECT_TRUE(ctx->RemoveCapability(spv::Capability::ShaderClockKHR));
+
+  EXPECT_FALSE(
+      ctx->get_feature_mgr()->HasCapability(spv::Capability::ShaderClockKHR));
+  EXPECT_EQ(std::distance(ctx->module()->capability_begin(),
+                          ctx->module()->capability_end()),
+            1);
+}
+
+TEST_F(IRContextTest, ReturnsFalseWhenCapabilityIsNotRemoved) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpCapability DeviceGroup
+               OpExtension "SPV_KHR_device_group"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(
+      ctx->get_feature_mgr()->HasCapability(spv::Capability::DeviceGroup));
+  EXPECT_EQ(std::distance(ctx->module()->capability_begin(),
+                          ctx->module()->capability_end()),
+            2);
+
+  EXPECT_FALSE(ctx->RemoveCapability(spv::Capability::ShaderClockKHR));
+
+  EXPECT_TRUE(
+      ctx->get_feature_mgr()->HasCapability(spv::Capability::DeviceGroup));
+  EXPECT_EQ(std::distance(ctx->module()->capability_begin(),
+                          ctx->module()->capability_end()),
+            2);
+}
+
+TEST_F(IRContextTest, RemovesMultipleCapabilities) {
+  const std::string text = R"(
+               OpCapability Shader
+               OpCapability DeviceGroup
+               OpCapability DeviceGroup
+               OpExtension "SPV_KHR_device_group"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main"
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+          %1 = OpFunction %void None %6
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd)";
+
+  std::unique_ptr<IRContext> ctx =
+      BuildModule(SPV_ENV_UNIVERSAL_1_6, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_TRUE(
+      ctx->get_feature_mgr()->HasCapability(spv::Capability::DeviceGroup));
+  EXPECT_EQ(std::distance(ctx->module()->capability_begin(),
+                          ctx->module()->capability_end()),
+            3);
+
+  EXPECT_TRUE(ctx->RemoveCapability(spv::Capability::DeviceGroup));
+
+  EXPECT_FALSE(
+      ctx->get_feature_mgr()->HasCapability(spv::Capability::DeviceGroup));
+  EXPECT_EQ(std::distance(ctx->module()->capability_begin(),
+                          ctx->module()->capability_end()),
+            1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TestCase, TargetEnvCompareTest,
+    ::testing::Values(
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_1, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_1, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_3, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_UNIVERSAL_1_4},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_UNIVERSAL_1_4},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_4},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_UNIVERSAL_1_5},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_5},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_UNIVERSAL_1_6},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_0, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_1, SPV_ENV_VULKAN_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_2, SPV_ENV_VULKAN_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_3, SPV_ENV_VULKAN_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_VULKAN_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_VULKAN_1_0},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_VULKAN_1_0},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_1, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_1, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_1, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_1, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_4, SPV_ENV_VULKAN_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_5, SPV_ENV_VULKAN_1_1},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_VULKAN_1_1},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_2, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_2, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_2, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_2, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_2, SPV_ENV_UNIVERSAL_1_4},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_2, SPV_ENV_UNIVERSAL_1_5},
+        TargetEnvCompareTestData{SPV_ENV_UNIVERSAL_1_6, SPV_ENV_VULKAN_1_2},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_0},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_1},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_2},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_3},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_4},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_5},
+        TargetEnvCompareTestData{SPV_ENV_VULKAN_1_3, SPV_ENV_UNIVERSAL_1_6}));
 
 }  // namespace
 }  // namespace opt

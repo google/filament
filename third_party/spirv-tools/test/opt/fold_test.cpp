@@ -16,7 +16,6 @@
 #include <limits>
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "effcee/effcee.h"
@@ -27,7 +26,6 @@
 #include "source/opt/ir_context.h"
 #include "source/opt/module.h"
 #include "spirv-tools/libspirv.hpp"
-#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -68,42 +66,136 @@ struct InstructionFoldingCase {
   ResultType expected_result;
 };
 
+std::tuple<std::unique_ptr<IRContext>, Instruction*> GetInstructionToFold(
+    const std::string test_body, const uint32_t id_to_fold,
+    spv_target_env spv_env) {
+  // Build module.
+  std::unique_ptr<IRContext> context =
+      BuildModule(spv_env, nullptr, test_body,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  EXPECT_NE(nullptr, context);
+  if (context == nullptr) {
+    return {nullptr, nullptr};
+  }
+
+  // Fold the instruction to test.
+  if (id_to_fold != 0) {
+    analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+    Instruction* inst = def_use_mgr->GetDef(id_to_fold);
+    return {std::move(context), inst};
+  }
+
+  // If there is not ID, we get the instruction just before a terminator
+  // instruction. That could be a return or abort. This is used for cases where
+  // the instruction we want to fold does not have a result id.
+  Function* func = &*context->module()->begin();
+  for (auto& bb : *func) {
+    Instruction* terminator = bb.terminator();
+    if (terminator->IsReturnOrAbort()) {
+      return {std::move(context), terminator->PreviousNode()};
+    }
+  }
+  return {nullptr, nullptr};
+}
+
+std::tuple<std::unique_ptr<IRContext>, Instruction*> FoldInstruction(
+    const std::string test_body, const uint32_t id_to_fold,
+    spv_target_env spv_env) {
+  // Build module.
+  std::unique_ptr<IRContext> context;
+  Instruction* inst = nullptr;
+  std::tie(context, inst) =
+      GetInstructionToFold(test_body, id_to_fold, spv_env);
+
+  if (context == nullptr) {
+    return {nullptr, nullptr};
+  }
+
+  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
+  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
+  EXPECT_EQ(inst->result_id(), original_inst->result_id());
+  EXPECT_EQ(inst->type_id(), original_inst->type_id());
+
+  if (!succeeded && inst != nullptr) {
+    EXPECT_EQ(inst->NumInOperands(), original_inst->NumInOperands());
+    for (uint32_t i = 0; i < inst->NumInOperands(); ++i) {
+      EXPECT_EQ(inst->GetOperand(i), original_inst->GetOperand(i));
+    }
+  }
+
+  return {std::move(context), succeeded ? inst : nullptr};
+}
+
+template <class ElementType, class Function>
+void CheckForExpectedScalarConstant(Instruction* inst,
+                                    ElementType expected_result,
+                                    Function GetValue) {
+  ASSERT_TRUE(inst);
+
+  IRContext* context = inst->context();
+  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+  while (inst->opcode() == spv::Op::OpCopyObject) {
+    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+  }
+
+  // Make sure we have a constant.
+  analysis::ConstantManager* const_mrg = context->get_constant_mgr();
+  const analysis::Constant* constant = const_mrg->GetConstantFromInst(inst);
+  ASSERT_TRUE(constant);
+
+  // Make sure the constant is a scalar.
+  const analysis::ScalarConstant* result = constant->AsScalarConstant();
+  ASSERT_TRUE(result);
+
+  // Check if the result matches the expected value.
+  // If ExpectedType is not a float type, it should cast the value to a double
+  // and never get a nan.
+  if (!std::isnan(static_cast<double>(expected_result))) {
+    EXPECT_EQ(expected_result, GetValue(result));
+  } else {
+    EXPECT_TRUE(std::isnan(static_cast<double>(GetValue(result))));
+  }
+}
+
+template <class ElementType, class Function>
+void CheckForExpectedVectorConstant(Instruction* inst,
+                                    std::vector<ElementType> expected_result,
+                                    Function GetValue) {
+  ASSERT_TRUE(inst);
+
+  IRContext* context = inst->context();
+  EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
+  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+  inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+  std::vector<spv::Op> opcodes = {spv::Op::OpConstantComposite};
+  EXPECT_THAT(opcodes, Contains(inst->opcode()));
+  analysis::ConstantManager* const_mrg = context->get_constant_mgr();
+  const analysis::Constant* result = const_mrg->GetConstantFromInst(inst);
+  EXPECT_NE(result, nullptr);
+  if (result != nullptr) {
+    const std::vector<const analysis::Constant*>& componenets =
+        result->AsVectorConstant()->GetComponents();
+    EXPECT_EQ(componenets.size(), expected_result.size());
+    for (size_t i = 0; i < componenets.size(); i++) {
+      EXPECT_EQ(expected_result[i], GetValue(componenets[i]));
+    }
+  }
+}
+
 using IntegerInstructionFoldingTest =
     ::testing::TestWithParam<InstructionFoldingCase<uint32_t>>;
 
 TEST_P(IntegerInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
-
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_TRUE(succeeded);
-  if (inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    EXPECT_EQ(inst->opcode(), spv::Op::OpConstant);
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::Constant* constant = const_mrg->GetConstantFromInst(inst);
-    // We expect to see either integer types or 16-bit float types here.
-    EXPECT_TRUE((constant->AsIntConstant() != nullptr) ||
-                ((constant->AsFloatConstant() != nullptr) &&
-                 (constant->type()->AsFloat()->width() == 16)));
-    const analysis::ScalarConstant* result =
-        const_mrg->GetConstantFromInst(inst)->AsScalarConstant();
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      EXPECT_EQ(result->GetU32BitValue(), tc.expected_result);
-    }
-  }
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedScalarConstant(
+      inst, tc.expected_result, [](const analysis::Constant* c) {
+        return c->AsScalarConstant()->GetU32BitValue();
+      });
 }
 
 // Returns a common SPIR-V header for all of the test that follow.
@@ -149,14 +241,20 @@ OpName %main "main"
 %ulong = OpTypeInt 64 0
 %v2int = OpTypeVector %int 2
 %v4int = OpTypeVector %int 4
+%v2short = OpTypeVector %short 2
+%v2long = OpTypeVector %long 2
+%v4long = OpTypeVector %long 4
 %v4float = OpTypeVector %float 4
 %v4double = OpTypeVector %double 4
 %v2uint = OpTypeVector %uint 2
+%v2ulong = OpTypeVector %ulong 2
 %v2float = OpTypeVector %float 2
 %v2double = OpTypeVector %double 2
 %v2half = OpTypeVector %half 2
 %v2bool = OpTypeVector %bool 2
 %m2x2int = OpTypeMatrix %v2int 2
+%mat4v2float = OpTypeMatrix %v2float 4
+%mat2v4float = OpTypeMatrix %v4float 2
 %mat4v4float = OpTypeMatrix %v4float 4
 %mat4v4double = OpTypeMatrix %v4double 4
 %struct_v2int_int_int = OpTypeStruct %v2int %int %int
@@ -175,16 +273,18 @@ OpName %main "main"
 %_ptr_struct_v2int_int_int = OpTypePointer Function %struct_v2int_int_int
 %_ptr_v2float = OpTypePointer Function %v2float
 %_ptr_v2double = OpTypePointer Function %v2double
+%int_2 = OpConstant %int 2
+%int_arr_2 = OpTypeArray %int %int_2
 %short_0 = OpConstant %short 0
 %short_2 = OpConstant %short 2
 %short_3 = OpConstant %short 3
+%short_n5 = OpConstant %short -5
 %ubyte_1 = OpConstant %ubyte 1
 %byte_n1 = OpConstant %byte -1
 %100 = OpConstant %int 0 ; Need a def with an numerical id to define id maps.
 %103 = OpConstant %int 7 ; Need a def with an numerical id to define id maps.
 %int_0 = OpConstant %int 0
 %int_1 = OpConstant %int 1
-%int_2 = OpConstant %int 2
 %int_3 = OpConstant %int 3
 %int_4 = OpConstant %int 4
 %int_10 = OpConstant %int 10
@@ -198,12 +298,20 @@ OpName %main "main"
 %long_1 = OpConstant %long 1
 %long_2 = OpConstant %long 2
 %long_3 = OpConstant %long 3
+%long_n3 = OpConstant %long -3
+%long_7 = OpConstant %long 7
+%long_n7 = OpConstant %long -7
 %long_10 = OpConstant %long 10
+%long_32768 = OpConstant %long 32768
+%long_n57344 = OpConstant %long -57344
+%long_n4611686018427387904 = OpConstant %long -4611686018427387904
 %long_4611686018427387904 = OpConstant %long 4611686018427387904
 %long_n1 = OpConstant %long -1
 %long_n3689348814741910323 = OpConstant %long -3689348814741910323
 %long_min = OpConstant %long -9223372036854775808
 %long_max = OpConstant %long 9223372036854775807
+%ulong_7 = OpConstant %ulong 7
+%ulong_4611686018427387904 = OpConstant %ulong 4611686018427387904
 %uint_0 = OpConstant %uint 0
 %uint_1 = OpConstant %uint 1
 %uint_2 = OpConstant %uint 2
@@ -224,8 +332,12 @@ OpName %main "main"
 %v2int_2_2 = OpConstantComposite %v2int %int_2 %int_2
 %v2int_2_3 = OpConstantComposite %v2int %int_2 %int_3
 %v2int_3_2 = OpConstantComposite %v2int %int_3 %int_2
+%v2int_n1_n24 = OpConstantComposite %v2int %int_n1 %int_n24
 %v2int_4_4 = OpConstantComposite %v2int %int_4 %int_4
 %v2int_min_max = OpConstantComposite %v2int %int_min %int_max
+%v2short_2_n5 = OpConstantComposite %v2short %short_2 %short_n5
+%v2long_2_2 = OpConstantComposite %v2long %long_2 %long_2
+%v2long_2_3 = OpConstantComposite %v2long %long_2 %long_3
 %v2bool_null = OpConstantNull %v2bool
 %v2bool_true_false = OpConstantComposite %v2bool %true %false
 %v2bool_false_true = OpConstantComposite %v2bool %false %true
@@ -283,6 +395,7 @@ OpName %main "main"
 %v2double_null = OpConstantNull %v2double
 %108 = OpConstant %half 0
 %half_1 = OpConstant %half 1
+%half_2 = OpConstant %half 2
 %half_0_1 = OpConstantComposite %v2half %108 %half_1
 %106 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
 %v4float_0_0_0_0 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
@@ -291,8 +404,10 @@ OpName %main "main"
 %v4float_1_1_1_1 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
 %v4float_1_2_3_4 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
 %v4float_null = OpConstantNull %v4float
-%mat4v4float_null = OpConstantComposite %mat4v4float %v4float_null %v4float_null %v4float_null %v4float_null
+%mat2v4float_null = OpConstantNull %mat2v4float
+%mat4v4float_null = OpConstantNull %mat4v4float
 %mat4v4float_1_2_3_4 = OpConstantComposite %mat4v4float %v4float_1_2_3_4 %v4float_1_2_3_4 %v4float_1_2_3_4 %v4float_1_2_3_4
+%mat4v4float_1_2_3_4_null = OpConstantComposite %mat4v4float %v4float_1_2_3_4 %v4float_null %v4float_1_2_3_4 %v4float_null
 %107 = OpConstantComposite %v4double %double_0 %double_0 %double_0 %double_0
 %v4double_0_0_0_0 = OpConstantComposite %v4double %double_0 %double_0 %double_0 %double_0
 %v4double_0_0_0_1 = OpConstantComposite %v4double %double_0 %double_0 %double_0 %double_1
@@ -301,8 +416,9 @@ OpName %main "main"
 %v4double_1_2_3_4 = OpConstantComposite %v4double %double_1 %double_2 %double_3 %double_4
 %v4double_1_1_1_0p5 = OpConstantComposite %v4double %double_1 %double_1 %double_1 %double_0p5
 %v4double_null = OpConstantNull %v4double
-%mat4v4double_null = OpConstantComposite %mat4v4double %v4double_null %v4double_null %v4double_null %v4double_null
+%mat4v4double_null = OpConstantNull %mat4v4double
 %mat4v4double_1_2_3_4 = OpConstantComposite %mat4v4double %v4double_1_2_3_4 %v4double_1_2_3_4 %v4double_1_2_3_4 %v4double_1_2_3_4
+%mat4v4double_1_2_3_4_null = OpConstantComposite %mat4v4double %v4double_1_2_3_4 %v4double_null %v4double_1_2_3_4 %v4double_null
 %v4float_n1_2_1_3 = OpConstantComposite %v4float %float_n1 %float_2 %float_1 %float_3
 %uint_0x3f800000 = OpConstant %uint 0x3f800000
 %uint_0xbf800000 = OpConstant %uint 0xbf800000
@@ -313,8 +429,11 @@ OpName %main "main"
 %int_0xC05FD666 = OpConstant %int 0xC05FD666
 %int_0x66666666 = OpConstant %int 0x66666666
 %v4int_0x3FF00000_0x00000000_0xC05FD666_0x66666666 = OpConstantComposite %v4int %int_0x00000000 %int_0x3FF00000 %int_0x66666666 %int_0xC05FD666
+%ushort_0x4400 = OpConstant %ushort 0x4400
+%short_0x4400 = OpConstant %short 0x4400
 %ushort_0xBC00 = OpConstant %ushort 0xBC00
 %short_0xBC00 = OpConstant %short 0xBC00
+%int_arr_2_undef = OpUndef %int_arr_2
 )";
 
   return header;
@@ -748,7 +867,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
           "OpReturn\n" +
           "OpFunctionEnd",
       2, 1),
-  // Test case 44: UClamp 1 2 x
+  // Test case 46: UClamp 1 2 x
   InstructionFoldingCase<uint32_t>(
       Header() + "%main = OpFunction %void None %void_func\n" +
           "%main_lab = OpLabel\n" +
@@ -757,7 +876,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
           "OpReturn\n" +
           "OpFunctionEnd",
       2, 2),
-  // Test case 45: UClamp 2 x 1
+  // Test case 47: UClamp 2 x 1
   InstructionFoldingCase<uint32_t>(
       Header() + "%main = OpFunction %void None %void_func\n" +
           "%main_lab = OpLabel\n" +
@@ -766,7 +885,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
           "OpReturn\n" +
           "OpFunctionEnd",
       2, 1),
-    // Test case 46: Bit-cast int 0 to unsigned int
+    // Test case 48: Bit-cast int 0 to unsigned int
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -774,7 +893,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0),
-    // Test case 47: Bit-cast int -24 to unsigned int
+    // Test case 49: Bit-cast int -24 to unsigned int
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -782,7 +901,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, static_cast<uint32_t>(-24)),
-    // Test case 48: Bit-cast float 1.0f to unsigned int
+    // Test case 50: Bit-cast float 1.0f to unsigned int
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -790,7 +909,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, static_cast<uint32_t>(0x3f800000)),
-    // Test case 49: Bit-cast ushort 0xBC00 to ushort
+    // Test case 51: Bit-cast ushort 0xBC00 to ushort
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -798,7 +917,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0xBC00),
-    // Test case 50: Bit-cast short 0xBC00 to ushort
+    // Test case 52: Bit-cast short 0xBC00 to ushort
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -806,7 +925,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0xFFFFBC00),
-    // Test case 51: Bit-cast half 1 to ushort
+    // Test case 53: Bit-cast half 1 to ushort
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -814,7 +933,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0x3C00),
-    // Test case 52: Bit-cast ushort 0xBC00 to short
+    // Test case 54: Bit-cast ushort 0xBC00 to short
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -822,7 +941,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0xBC00),
-    // Test case 53: Bit-cast short 0xBC00 to short
+    // Test case 55: Bit-cast short 0xBC00 to short
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -830,7 +949,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0xFFFFBC00),
-    // Test case 54: Bit-cast half 1 to short
+    // Test case 56: Bit-cast half 1 to short
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -838,7 +957,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0x3C00),
-    // Test case 55: Bit-cast ushort 0xBC00 to half
+    // Test case 57: Bit-cast ushort 0xBC00 to half
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -846,7 +965,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0xBC00),
-    // Test case 56: Bit-cast short 0xBC00 to half
+    // Test case 58: Bit-cast short 0xBC00 to half
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -854,7 +973,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0xFFFFBC00),
-    // Test case 57: Bit-cast half 1 to half
+    // Test case 59: Bit-cast half 1 to half
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -862,7 +981,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0x3C00),
-    // Test case 58: Bit-cast ubyte 1 to byte
+    // Test case 60: Bit-cast ubyte 1 to byte
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -870,58 +989,302 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTest,
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 1),
-    // Test case 59: Bit-cast byte -1 to ubyte
+    // Test case 61: Bit-cast byte -1 to ubyte
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
             "%2 = OpBitcast %ubyte %byte_n1\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
-        2, 0xFFFFFFFF)
+        2, 0xFFFFFFFF),
+    // Test case 62: Negate 2.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpSNegate %int %int_2\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, -2),
+    // Test case 63: Negate negative short.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpSNegate %short %short_0xBC00\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0x4400 /* expected to be sign extended. */),
+    // Test case 64: Negate positive short.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpSNegate %short %short_0x4400\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0xFFFFBC00 /* expected to be sign extended. */),
+    // Test case 65: Negate a negative short.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpSNegate %ushort %ushort_0xBC00\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0x4400 /* expected to be zero extended. */),
+    // Test case 66: Negate positive short.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpSNegate %ushort %ushort_0x4400\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0xBC00 /* expected to be zero extended. */),
+    // Test case 67: Fold 2 + 3 (short)
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpIAdd %short %short_2 %short_3\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 5),
+    // Test case 68: Fold 2 + -5 (short)
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpIAdd %short %short_2 %short_n5\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, -3),
+  // Test case 69: Fold int(3ll)
+  InstructionFoldingCase<uint32_t>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSConvert %int %long_3\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, 3),
+  // Test case 70: Fold short(-3ll)
+  InstructionFoldingCase<uint32_t>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSConvert %short %long_n3\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, -3),
+  // Test case 71: Fold short(32768ll) - This should do a sign extend when
+  // converting to short.
+  InstructionFoldingCase<uint32_t>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSConvert %short %long_32768\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, -32768),
+  // Test case 72: Fold short(-57344) - This should do a sign extend when
+  // converting to short making the upper bits 0.
+  InstructionFoldingCase<uint32_t>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSConvert %short %long_n57344\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, 8192),
+  // Test case 73: Fold int(-5(short)). The -5 should be interpreted as an unsigned value, and be zero extended to 32-bits.
+  InstructionFoldingCase<uint32_t>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpUConvert %uint %short_n5\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, 65531),
+  // Test case 74: Fold short(-24(int)). The upper bits should be cleared. So 0xFFFFFFE8 should become 0x0000FFE8.
+  InstructionFoldingCase<uint32_t>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpUConvert %ushort %int_n24\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, 65512)
 ));
 // clang-format on
 
-using IntVectorInstructionFoldingTest =
-    ::testing::TestWithParam<InstructionFoldingCase<std::vector<uint32_t>>>;
+using LongIntegerInstructionFoldingTest =
+    ::testing::TestWithParam<InstructionFoldingCase<uint64_t>>;
 
-TEST_P(IntVectorInstructionFoldingTest, Case) {
+TEST_P(LongIntegerInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedScalarConstant(
+      inst, tc.expected_result, [](const analysis::Constant* c) {
+        return c->AsScalarConstant()->GetU64BitValue();
+      });
+}
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  spv::Op original_opcode = inst->opcode();
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
+INSTANTIATE_TEST_SUITE_P(
+    TestCase, LongIntegerInstructionFoldingTest,
+    ::testing::Values(
+        // Test case 0: fold 1+4611686018427387904
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpIAdd %long %long_1 %long_4611686018427387904\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 1 + 4611686018427387904),
+        // Test case 1: fold 1-4611686018427387904
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpISub %long %long_1 %long_4611686018427387904\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 1 - 4611686018427387904),
+        // Test case 2: fold 2*4611686018427387904
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpIMul %long %long_2 %long_4611686018427387904\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 9223372036854775808ull),
+        // Test case 3: fold 4611686018427387904/2 (unsigned)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpUDiv %ulong %ulong_4611686018427387904 %ulong_2\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 4611686018427387904 / 2),
+        // Test case 4: fold 4611686018427387904/2 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSDiv %long %long_4611686018427387904 %long_2\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 4611686018427387904 / 2),
+        // Test case 5: fold -4611686018427387904/2 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSDiv %long %long_n4611686018427387904 %long_2\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, -4611686018427387904 / 2),
+        // Test case 6: fold 4611686018427387904 mod 7 (unsigned)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpUMod %ulong %ulong_4611686018427387904 %ulong_7\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 4611686018427387904ull % 7ull),
+        // Test case 7: fold 7 mod 3 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSMod %long %long_7 %long_3\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, 1ull),
+        // Test case 8: fold 7 rem 3 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSRem %long %long_7 %long_3\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, 1ull),
+        // Test case 9: fold 7 mod -3 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSMod %long %long_7 %long_n3\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, -2ll),
+        // Test case 10: fold 7 rem 3 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSRem %long %long_7 %long_n3\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, 1ll),
+        // Test case 11: fold -7 mod 3 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSMod %long %long_n7 %long_3\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, 2ll),
+        // Test case 12: fold -7 rem 3 (signed)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSRem %long %long_n7 %long_3\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, -1ll),
+        // Test case 13: fold long(-24)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" +
+                "%2 = OpSConvert %long %int_n24\n" + "OpReturn\n" +
+                "OpFunctionEnd",
+            2, -24ll),
+        // Test case 14: fold long(-24)
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" +
+                "%n = OpVariable %_ptr_int Function\n" +
+                "%load = OpLoad %int %n\n" + "%2 = OpSConvert %long %int_10\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 10ll),
+        // Test case 15: fold long(-24(short)).
+        // The upper bits should be cleared. So 0xFFFFFFE8 should become
+        // 0x000000000000FFE8.
+        InstructionFoldingCase<uint64_t>(
+            Header() + "%main = OpFunction %void None %void_func\n" +
+                "%main_lab = OpLabel\n" + "%2 = OpUConvert %ulong %short_n5\n" +
+                "OpReturn\n" + "OpFunctionEnd",
+            2, 65531ull)));
 
-  // Make sure the instruction folded as expected.
-  EXPECT_EQ(succeeded, inst == nullptr || inst->opcode() != original_opcode);
-  if (succeeded && inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    std::vector<spv::Op> opcodes = {spv::Op::OpConstantComposite};
-    EXPECT_THAT(opcodes, Contains(inst->opcode()));
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::Constant* result = const_mrg->GetConstantFromInst(inst);
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      const std::vector<const analysis::Constant*>& componenets =
-          result->AsVectorConstant()->GetComponents();
-      EXPECT_EQ(componenets.size(), tc.expected_result.size());
-      for (size_t i = 0; i < componenets.size(); i++) {
-        EXPECT_EQ(tc.expected_result[i], componenets[i]->GetU32());
-      }
-    }
-  }
+using UIntVectorInstructionFoldingTest =
+    ::testing::TestWithParam<InstructionFoldingCase<std::vector<uint32_t>>>;
+
+TEST_P(UIntVectorInstructionFoldingTest, Case) {
+  const auto& tc = GetParam();
+
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedVectorConstant(
+      inst, tc.expected_result,
+      [](const analysis::Constant* c) { return c->GetU32(); });
 }
 
 // clang-format off
-INSTANTIATE_TEST_SUITE_P(TestCase, IntVectorInstructionFoldingTest,
+INSTANTIATE_TEST_SUITE_P(TestCase, UIntVectorInstructionFoldingTest,
 ::testing::Values(
     // Test case 0: fold 0*n
     InstructionFoldingCase<std::vector<uint32_t>>(
@@ -942,24 +1305,6 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntVectorInstructionFoldingTest,
           "OpReturn\n" +
           "OpFunctionEnd",
       2, {0,3}),
-    InstructionFoldingCase<std::vector<uint32_t>>(
-      Header() + "%main = OpFunction %void None %void_func\n" +
-          "%main_lab = OpLabel\n" +
-          "%n = OpVariable %_ptr_int Function\n" +
-          "%load = OpLoad %int %n\n" +
-          "%2 = OpVectorShuffle %v2int %v2int_null %v2int_2_3 4294967295 3\n" +
-          "OpReturn\n" +
-          "OpFunctionEnd",
-      2, {0,0}),
-    InstructionFoldingCase<std::vector<uint32_t>>(
-      Header() + "%main = OpFunction %void None %void_func\n" +
-          "%main_lab = OpLabel\n" +
-          "%n = OpVariable %_ptr_int Function\n" +
-          "%load = OpLoad %int %n\n" +
-          "%2 = OpVectorShuffle %v2int %v2int_null %v2int_2_3 0 4294967295 \n" +
-          "OpReturn\n" +
-          "OpFunctionEnd",
-      2, {0,0}),
     // Test case 4: fold bit-cast int -24 to unsigned int
     InstructionFoldingCase<std::vector<uint32_t>>(
       Header() + "%main = OpFunction %void None %void_func\n" +
@@ -969,8 +1314,141 @@ INSTANTIATE_TEST_SUITE_P(TestCase, IntVectorInstructionFoldingTest,
           "%2 = OpBitcast %v2uint %v2int_min_max\n" +
           "OpReturn\n" +
           "OpFunctionEnd",
-      2, {2147483648, 2147483647})
+      2, {2147483648, 2147483647}),
+    // Test case 5: fold SNegate vector of uint
+    InstructionFoldingCase<std::vector<uint32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%n = OpVariable %_ptr_int Function\n" +
+          "%load = OpLoad %int %n\n" +
+          "%2 = OpSNegate %v2uint %v2uint_0x3f800000_0xbf800000\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {static_cast<uint32_t>(-0x3f800000), static_cast<uint32_t>(-0xbf800000)}),
+    // Test case 6: fold vector components of uint (including integer overflow)
+    InstructionFoldingCase<std::vector<uint32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpIAdd %v2uint %v2uint_0x3f800000_0xbf800000 %v2uint_0x3f800000_0xbf800000\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {0x7f000000u, 0x7f000000u}),
+    // Test case 6: fold vector components of uint
+    InstructionFoldingCase<std::vector<uint32_t>>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpSConvert %v2int %v2short_2_n5\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, {2,static_cast<uint32_t>(-5)}),
+    // Test case 6: fold vector components of uint (incuding integer overflow)
+    InstructionFoldingCase<std::vector<uint32_t>>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%2 = OpUConvert %v2uint %v2short_2_n5\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, {2,65531})
 ));
+// clang-format on
+
+using IntVectorInstructionFoldingTest =
+    ::testing::TestWithParam<InstructionFoldingCase<std::vector<int32_t>>>;
+
+TEST_P(IntVectorInstructionFoldingTest, Case) {
+  const auto& tc = GetParam();
+
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+
+  CheckForExpectedVectorConstant(
+      inst, tc.expected_result,
+      [](const analysis::Constant* c) { return c->GetS32(); });
+}
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(TestCase, IntVectorInstructionFoldingTest,
+::testing::Values(
+    // Test case 0: fold negate of a vector
+    InstructionFoldingCase<std::vector<int32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSNegate %v2int %v2int_2_3\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {-2, -3}),
+    // Test case 1: fold negate of a vector containing negative values.
+    InstructionFoldingCase<std::vector<int32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSNegate %v2int %v2int_n1_n24\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {1, 24}),
+    // Test case 2: fold negate of a vector at the limits
+    InstructionFoldingCase<std::vector<int32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpSNegate %v2int %v2int_min_max\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {INT_MIN, -INT_MAX}),
+    // Test case 3: fold vector components of int
+    InstructionFoldingCase<std::vector<int32_t>>(
+      Header() + "%main = OpFunction %void None %void_func\n" +
+          "%main_lab = OpLabel\n" +
+          "%2 = OpIMul %v2int %v2int_2_3 %v2int_2_3\n" +
+          "OpReturn\n" +
+          "OpFunctionEnd",
+      2, {4,9})
+));
+// clang-format on
+
+using LongIntVectorInstructionFoldingTest =
+    ::testing::TestWithParam<InstructionFoldingCase<std::vector<uint64_t>>>;
+
+TEST_P(LongIntVectorInstructionFoldingTest, Case) {
+  const auto& tc = GetParam();
+
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedVectorConstant(
+      inst, tc.expected_result,
+      [](const analysis::Constant* c) { return c->GetU64(); });
+}
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(TestCase, LongIntVectorInstructionFoldingTest,
+  ::testing::Values(
+     // Test case 0: fold {2,2} + {2,3} (Testing that the vector logic works
+     // correctly. Scalar tests will check that the 64-bit values are correctly
+     // folded.)
+     InstructionFoldingCase<std::vector<uint64_t>>(
+         Header() + "%main = OpFunction %void None %void_func\n" +
+             "%main_lab = OpLabel\n" +
+             "%n = OpVariable %_ptr_int Function\n" +
+             "%load = OpLoad %int %n\n" +
+             "%2 = OpIAdd %v2long %v2long_2_2 %v2long_2_3\n" +
+             "OpReturn\n" +
+             "OpFunctionEnd",
+         2, {4,5}),
+      // Test case 0: fold {2,2} / {2,3} (Testing that the vector logic works
+      // correctly. Scalar tests will check that the 64-bit values are correctly
+      // folded.)
+     InstructionFoldingCase<std::vector<uint64_t>>(
+         Header() + "%main = OpFunction %void None %void_func\n" +
+             "%main_lab = OpLabel\n" +
+             "%n = OpVariable %_ptr_int Function\n" +
+             "%load = OpLoad %int %n\n" +
+             "%2 = OpSDiv %v2long %v2long_2_2 %v2long_2_3\n" +
+             "OpReturn\n" +
+             "OpFunctionEnd",
+         2, {1,0})
+  ));
 // clang-format on
 
 using DoubleVectorInstructionFoldingTest =
@@ -979,36 +1457,13 @@ using DoubleVectorInstructionFoldingTest =
 TEST_P(DoubleVectorInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
-
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_TRUE(succeeded);
-  if (succeeded && inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    std::vector<spv::Op> opcodes = {spv::Op::OpConstantComposite};
-    EXPECT_THAT(opcodes, Contains(inst->opcode()));
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::Constant* result = const_mrg->GetConstantFromInst(inst);
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      const std::vector<const analysis::Constant*>& componenets =
-          result->AsVectorConstant()->GetComponents();
-      EXPECT_EQ(componenets.size(), tc.expected_result.size());
-      for (size_t i = 0; i < componenets.size(); i++) {
-        EXPECT_EQ(tc.expected_result[i], componenets[i]->GetDouble());
-      }
-    }
-  }
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedVectorConstant(
+      inst, tc.expected_result,
+      [](const analysis::Constant* c) { return c->GetDouble(); });
 }
 
 // clang-format off
@@ -1050,7 +1505,16 @@ INSTANTIATE_TEST_SUITE_P(TestCase, DoubleVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {30.0,30.0,30.0,30.0}),
-   // Test case 4: OpMatrixTimesVector Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}} {0.0, 0.0, 0.0, 0.0}
+   // Test case 4: OpVectorTimesMatrix Non-Zero Non-Zero {{1.0, 2.0, 3.0, 4.0}, Null, {1.0, 2.0, 3.0, 4.0}, Null} {1.0, 2.0, 3.0, 4.0} {30.0, 0.0, 30.0, 0.0}
+   InstructionFoldingCase<std::vector<double>>(
+       Header() +
+       "%main = OpFunction %void None %void_func\n" +
+       "%main_lab = OpLabel\n" +
+       "%2 = OpVectorTimesMatrix %v4double %v4double_1_2_3_4 %mat4v4double_1_2_3_4_null\n" +
+       "OpReturn\n" +
+       "OpFunctionEnd",
+       2, {30.0,0.0,30.0,0.0}),
+   // Test case 5: OpMatrixTimesVector Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}} {0.0, 0.0, 0.0, 0.0}
    InstructionFoldingCase<std::vector<double>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1059,7 +1523,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, DoubleVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {0.0,0.0,0.0,0.0}),
-   // Test case 5: OpMatrixTimesVector Non-Zero Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {0.0, 0.0, 0.0, 0.0} {0.0, 0.0, 0.0, 0.0}
+   // Test case 6: OpMatrixTimesVector Non-Zero Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {0.0, 0.0, 0.0, 0.0} {0.0, 0.0, 0.0, 0.0}
    InstructionFoldingCase<std::vector<double>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1068,7 +1532,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, DoubleVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {0.0,0.0,0.0,0.0}),
-   // Test case 6: OpMatrixTimesVector Non-Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {10.0, 20.0, 30.0, 40.0}
+   // Test case 7: OpMatrixTimesVector Non-Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {10.0, 20.0, 30.0, 40.0}
    InstructionFoldingCase<std::vector<double>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1076,7 +1540,16 @@ INSTANTIATE_TEST_SUITE_P(TestCase, DoubleVectorInstructionFoldingTest,
        "%2 = OpMatrixTimesVector %v4double %mat4v4double_1_2_3_4 %v4double_1_2_3_4\n" +
        "OpReturn\n" +
        "OpFunctionEnd",
-       2, {10.0,20.0,30.0,40.0})
+       2, {10.0,20.0,30.0,40.0}),
+   // Test case 8: OpMatrixTimesVector Non-Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{1.0, 2.0, 3.0, 4.0}, Null, {1.0, 2.0, 3.0, 4.0}, Null} {10.0, 20.0, 30.0, 40.0}
+   InstructionFoldingCase<std::vector<double>>(
+       Header() +
+       "%main = OpFunction %void None %void_func\n" +
+       "%main_lab = OpLabel\n" +
+       "%2 = OpMatrixTimesVector %v4double %mat4v4double_1_2_3_4_null %v4double_1_2_3_4\n" +
+       "OpReturn\n" +
+       "OpFunctionEnd",
+       2, {4.0,8.0,12.0,16.0})
 ));
 
 using FloatVectorInstructionFoldingTest =
@@ -1085,37 +1558,10 @@ using FloatVectorInstructionFoldingTest =
 TEST_P(FloatVectorInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
-
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  spv::Op original_opcode = inst->opcode();
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_EQ(succeeded, inst == nullptr || inst->opcode() != original_opcode);
-  if (succeeded && inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    std::vector<spv::Op> opcodes = {spv::Op::OpConstantComposite};
-    EXPECT_THAT(opcodes, Contains(inst->opcode()));
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::Constant* result = const_mrg->GetConstantFromInst(inst);
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      const std::vector<const analysis::Constant*>& componenets =
-          result->AsVectorConstant()->GetComponents();
-      EXPECT_EQ(componenets.size(), tc.expected_result.size());
-      for (size_t i = 0; i < componenets.size(); i++) {
-        EXPECT_EQ(tc.expected_result[i], componenets[i]->GetFloat());
-      }
-    }
-  }
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) = FoldInstruction(tc.test_body, tc.id_to_fold,SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedVectorConstant(inst, tc.expected_result, [](const analysis::Constant* c){ return c->GetFloat();});
 }
 
 // clang-format off
@@ -1155,7 +1601,16 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {0.0f,0.0f,0.0f,0.0f}),
-   // Test case 4: OpVectorTimesMatrix Zero Non-Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {0.0, 0.0, 0.0, 0.0} {0.0, 0.0, 0.0, 0.0}
+   // Test case 4: OpVectorTimesMatrix Non-Zero Non-Zero {{1.0, 2.0, 3.0, 4.0}, Null, {1.0, 2.0, 3.0, 4.0}, Null} {1.0, 2.0, 3.0, 4.0} {30.0, 0.0, 30.0, 0.0}
+   InstructionFoldingCase<std::vector<float>>(
+       Header() +
+       "%main = OpFunction %void None %void_func\n" +
+       "%main_lab = OpLabel\n" +
+       "%2 = OpVectorTimesMatrix %v4float %v4float_1_2_3_4 %mat4v4float_1_2_3_4_null\n" +
+       "OpReturn\n" +
+       "OpFunctionEnd",
+       2, {30.0,0.0,30.0,0.0}),
+   // Test case 5: OpVectorTimesMatrix Zero Non-Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {0.0, 0.0, 0.0, 0.0} {0.0, 0.0, 0.0, 0.0}
    InstructionFoldingCase<std::vector<float>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1164,7 +1619,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {0.0f,0.0f,0.0f,0.0f}),
-   // Test case 5: OpVectorTimesMatrix Non-Zero Non-Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {1.0, 2.0, 3.0, 4.0} {30.0, 30.0, 30.0, 30.0}
+   // Test case 6: OpVectorTimesMatrix Non-Zero Non-Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {1.0, 2.0, 3.0, 4.0} {30.0, 30.0, 30.0, 30.0}
    InstructionFoldingCase<std::vector<float>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1173,7 +1628,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {30.0f,30.0f,30.0f,30.0f}),
-   // Test case 6: OpMatrixTimesVector Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}} {0.0, 0.0, 0.0, 0.0}
+   // Test case 7: OpMatrixTimesVector Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}} {0.0, 0.0, 0.0, 0.0}
    InstructionFoldingCase<std::vector<float>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1182,7 +1637,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {0.0f,0.0f,0.0f,0.0f}),
-   // Test case 7: OpMatrixTimesVector Non-Zero Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {0.0, 0.0, 0.0, 0.0} {0.0, 0.0, 0.0, 0.0}
+   // Test case 8: OpMatrixTimesVector Non-Zero Zero {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {0.0, 0.0, 0.0, 0.0} {0.0, 0.0, 0.0, 0.0}
    InstructionFoldingCase<std::vector<float>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1191,7 +1646,7 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
        "OpReturn\n" +
        "OpFunctionEnd",
        2, {0.0f,0.0f,0.0f,0.0f}),
-   // Test case 8: OpMatrixTimesVector Non-Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {10.0, 20.0, 30.0, 40.0}
+   // Test case 9: OpMatrixTimesVector Non-Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}, {1.0, 2.0, 3.0, 4.0}} {10.0, 20.0, 30.0, 40.0}
    InstructionFoldingCase<std::vector<float>>(
        Header() +
        "%main = OpFunction %void None %void_func\n" +
@@ -1199,42 +1654,101 @@ INSTANTIATE_TEST_SUITE_P(TestCase, FloatVectorInstructionFoldingTest,
        "%2 = OpMatrixTimesVector %v4float %mat4v4float_1_2_3_4 %v4float_1_2_3_4\n" +
        "OpReturn\n" +
        "OpFunctionEnd",
-       2, {10.0f,20.0f,30.0f,40.0f})
+       2, {10.0f,20.0f,30.0f,40.0f}),
+   // Test case 10: OpMatrixTimesVector Non-Zero Non-Zero {1.0, 2.0, 3.0, 4.0} {{1.0, 2.0, 3.0, 4.0}, Null, {1.0, 2.0, 3.0, 4.0}, Null} {10.0, 20.0, 30.0, 40.0}
+   InstructionFoldingCase<std::vector<float>>(
+       Header() +
+       "%main = OpFunction %void None %void_func\n" +
+       "%main_lab = OpLabel\n" +
+       "%2 = OpMatrixTimesVector %v4float %mat4v4float_1_2_3_4_null %v4float_1_2_3_4\n" +
+       "OpReturn\n" +
+       "OpFunctionEnd",
+       2, {4.0,8.0,12.0,16.0})
 ));
 // clang-format on
+
+using FloatMatrixInstructionFoldingTest = ::testing::TestWithParam<
+    InstructionFoldingCase<std::vector<std::vector<float>>>>;
+
+TEST_P(FloatMatrixInstructionFoldingTest, Case) {
+  const auto& tc = GetParam();
+
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+
+  EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
+  if (inst->opcode() == spv::Op::OpCopyObject) {
+    analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
+    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
+    analysis::ConstantManager* const_mgr = context->get_constant_mgr();
+    const analysis::Constant* result = const_mgr->GetConstantFromInst(inst);
+    EXPECT_NE(result, nullptr);
+    if (result != nullptr) {
+      std::vector<const analysis::Constant*> matrix =
+          result->AsMatrixConstant()->GetComponents();
+      EXPECT_EQ(matrix.size(), tc.expected_result.size());
+      for (size_t c = 0; c < matrix.size(); c++) {
+        if (matrix[c]->AsNullConstant() != nullptr) {
+          matrix[c] = const_mgr->GetNullCompositeConstant(matrix[c]->type());
+        }
+        const analysis::VectorConstant* column_const =
+            matrix[c]->AsVectorConstant();
+        ASSERT_NE(column_const, nullptr);
+        const std::vector<const analysis::Constant*>& column =
+            column_const->GetComponents();
+        EXPECT_EQ(column.size(), tc.expected_result[c].size());
+        for (size_t r = 0; r < column.size(); r++) {
+          EXPECT_EQ(tc.expected_result[c][r], column[r]->GetFloat());
+        }
+      }
+    }
+  }
+}
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(TestCase, FloatMatrixInstructionFoldingTest,
+::testing::Values(
+   // Test case 0: OpTranspose square null matrix
+   InstructionFoldingCase<std::vector<std::vector<float>>>(
+       Header() + "%main = OpFunction %void None %void_func\n" +
+           "%main_lab = OpLabel\n" +
+           "%2 = OpTranspose %mat4v4float %mat4v4float_null\n" +
+           "OpReturn\n" +
+           "OpFunctionEnd",
+       2, {{0.0f, 0.0f, 0.0f, 0.0f},{0.0f, 0.0f, 0.0f, 0.0f},{0.0f, 0.0f, 0.0f, 0.0f},{0.0f, 0.0f, 0.0f, 0.0f}}),
+   // Test case 1: OpTranspose rectangular null matrix
+   InstructionFoldingCase<std::vector<std::vector<float>>>(
+       Header() + "%main = OpFunction %void None %void_func\n" +
+           "%main_lab = OpLabel\n" +
+           "%2 = OpTranspose %mat4v2float %mat2v4float_null\n" +
+           "OpReturn\n" +
+           "OpFunctionEnd",
+       2, {{0.0f, 0.0f},{0.0f, 0.0f},{0.0f, 0.0f},{0.0f, 0.0f}}),
+   InstructionFoldingCase<std::vector<std::vector<float>>>(
+       Header() + "%main = OpFunction %void None %void_func\n" +
+           "%main_lab = OpLabel\n" +
+           "%2 = OpTranspose %mat4v4float %mat4v4float_1_2_3_4\n" +
+           "OpReturn\n" +
+           "OpFunctionEnd",
+       2, {{1.0f, 1.0f, 1.0f, 1.0f},{2.0f, 2.0f, 2.0f, 2.0f},{3.0f, 3.0f, 3.0f, 3.0f},{4.0f, 4.0f, 4.0f, 4.0f}})
+));
+// clang-format on
+
 using BooleanInstructionFoldingTest =
     ::testing::TestWithParam<InstructionFoldingCase<bool>>;
 
 TEST_P(BooleanInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
-
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_TRUE(succeeded);
-  if (inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    std::vector<spv::Op> bool_opcodes = {spv::Op::OpConstantTrue,
-                                         spv::Op::OpConstantFalse};
-    EXPECT_THAT(bool_opcodes, Contains(inst->opcode()));
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::BoolConstant* result =
-        const_mrg->GetConstantFromInst(inst)->AsBoolConstant();
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      EXPECT_EQ(result->value(), tc.expected_result);
-    }
-  }
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedScalarConstant(
+      inst, tc.expected_result,
+      [](const analysis::Constant* c) { return c->AsBoolConstant()->value(); });
 }
 
 // clang-format off
@@ -1820,35 +2334,15 @@ using FloatInstructionFoldingTest =
 TEST_P(FloatInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_TRUE(succeeded);
-  if (inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    EXPECT_EQ(inst->opcode(), spv::Op::OpConstant);
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::FloatConstant* result =
-        const_mrg->GetConstantFromInst(inst)->AsFloatConstant();
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      if (!std::isnan(tc.expected_result)) {
-        EXPECT_EQ(result->GetFloatValue(), tc.expected_result);
-      } else {
-        EXPECT_TRUE(std::isnan(result->GetFloatValue()));
-      }
-    }
-  }
+  CheckForExpectedScalarConstant(inst, tc.expected_result,
+                                 [](const analysis::Constant* c) {
+                                   return c->AsFloatConstant()->GetFloatValue();
+                                 });
 }
 
 // Not testing NaNs because there are no expectations concerning NaNs according
@@ -2253,35 +2747,14 @@ using DoubleInstructionFoldingTest =
 TEST_P(DoubleInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
-
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_TRUE(succeeded);
-  if (inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
-    inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(0));
-    EXPECT_EQ(inst->opcode(), spv::Op::OpConstant);
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::FloatConstant* result =
-        const_mrg->GetConstantFromInst(inst)->AsFloatConstant();
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      if (!std::isnan(tc.expected_result)) {
-        EXPECT_EQ(result->GetDoubleValue(), tc.expected_result);
-      } else {
-        EXPECT_TRUE(std::isnan(result->GetDoubleValue()));
-      }
-    }
-  }
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
+  CheckForExpectedScalarConstant(
+      inst, tc.expected_result, [](const analysis::Constant* c) {
+        return c->AsFloatConstant()->GetDoubleValue();
+      });
 }
 
 // clang-format off
@@ -3139,32 +3612,22 @@ using IntegerInstructionFoldingTestWithMap =
 TEST_P(IntegerInstructionFoldingTestWithMap, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      GetInstructionToFold(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_5);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
   inst = context->get_instruction_folder().FoldInstructionToConstant(inst,
                                                                      tc.id_map);
-
-  // Make sure the instruction folded as expected.
   EXPECT_NE(inst, nullptr);
-  if (inst != nullptr) {
-    EXPECT_EQ(inst->opcode(), spv::Op::OpConstant);
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::IntConstant* result =
-        const_mrg->GetConstantFromInst(inst)->AsIntConstant();
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      EXPECT_EQ(result->GetU32BitValue(), tc.expected_result);
-    }
-  }
+
+  CheckForExpectedScalarConstant(inst, tc.expected_result,
+                                 [](const analysis::Constant* c) {
+                                   return c->AsIntConstant()->GetU32BitValue();
+                                 });
 }
 // clang-format off
+
 INSTANTIATE_TEST_SUITE_P(TestCase, IntegerInstructionFoldingTestWithMap,
   ::testing::Values(
       // Test case 0: fold %3 = 0; %3 * n
@@ -3187,32 +3650,16 @@ using BooleanInstructionFoldingTestWithMap =
 TEST_P(BooleanInstructionFoldingTestWithMap, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
-
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      GetInstructionToFold(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_5);
   inst = context->get_instruction_folder().FoldInstructionToConstant(inst,
                                                                      tc.id_map);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_NE(inst, nullptr);
-  if (inst != nullptr) {
-    std::vector<spv::Op> bool_opcodes = {spv::Op::OpConstantTrue,
-                                         spv::Op::OpConstantFalse};
-    EXPECT_THAT(bool_opcodes, Contains(inst->opcode()));
-    analysis::ConstantManager* const_mrg = context->get_constant_mgr();
-    const analysis::BoolConstant* result =
-        const_mrg->GetConstantFromInst(inst)->AsBoolConstant();
-    EXPECT_NE(result, nullptr);
-    if (result != nullptr) {
-      EXPECT_EQ(result->value(), tc.expected_result);
-    }
-  }
+  ASSERT_NE(inst, nullptr);
+  CheckForExpectedScalarConstant(
+      inst, tc.expected_result,
+      [](const analysis::Constant* c) { return c->AsBoolConstant()->value(); });
 }
 
 // clang-format off
@@ -3238,30 +3685,15 @@ using GeneralInstructionFoldingTest =
 TEST_P(GeneralInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_EQ(inst->result_id(), original_inst->result_id());
-  EXPECT_EQ(inst->type_id(), original_inst->type_id());
-  EXPECT_TRUE((!succeeded) == (tc.expected_result == 0));
-  if (succeeded) {
+  EXPECT_TRUE((inst == nullptr) == (tc.expected_result == 0));
+  if (inst != nullptr) {
     EXPECT_EQ(inst->opcode(), spv::Op::OpCopyObject);
     EXPECT_EQ(inst->GetSingleWordInOperand(0), tc.expected_result);
-  } else {
-    EXPECT_EQ(inst->NumInOperands(), original_inst->NumInOperands());
-    for (uint32_t i = 0; i < inst->NumInOperands(); ++i) {
-      EXPECT_EQ(inst->GetOperand(i), original_inst->GetOperand(i));
-    }
   }
 }
 
@@ -3688,23 +4120,7 @@ INSTANTIATE_TEST_SUITE_P(IntegerArithmeticTestCases, GeneralInstructionFoldingTe
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 0),
-    // Test case 38: Don't fold 2 + 3 (long), bad length
-    InstructionFoldingCase<uint32_t>(
-        Header() + "%main = OpFunction %void None %void_func\n" +
-            "%main_lab = OpLabel\n" +
-            "%2 = OpIAdd %long %long_2 %long_3\n" +
-            "OpReturn\n" +
-            "OpFunctionEnd",
-        2, 0),
-    // Test case 39: Don't fold 2 + 3 (short), bad length
-    InstructionFoldingCase<uint32_t>(
-        Header() + "%main = OpFunction %void None %void_func\n" +
-            "%main_lab = OpLabel\n" +
-            "%2 = OpIAdd %short %short_2 %short_3\n" +
-            "OpReturn\n" +
-            "OpFunctionEnd",
-        2, 0),
-    // Test case 40: fold 1*n
+    // Test case 38: fold 1*n
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -3714,7 +4130,7 @@ INSTANTIATE_TEST_SUITE_P(IntegerArithmeticTestCases, GeneralInstructionFoldingTe
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 3),
-    // Test case 41: fold n*1
+    // Test case 39: fold n*1
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -3724,7 +4140,7 @@ INSTANTIATE_TEST_SUITE_P(IntegerArithmeticTestCases, GeneralInstructionFoldingTe
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 3),
-    // Test case 42: Don't fold comparisons of 64-bit types
+    // Test case 40: Don't fold comparisons of 64-bit types
     // (https://github.com/KhronosGroup/SPIRV-Tools/issues/3343).
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
@@ -4262,6 +4678,17 @@ INSTANTIATE_TEST_SUITE_P(FloatRedundantFoldingTest, GeneralInstructionFoldingTes
             "%2 = OpDot %half %half_0_1 %half_0_1\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
+        2, 0),
+    // Test case 23: Don't fold 1.0(half) / 2.0(half)
+    // We do not have to code to emulate 16-bit float operations. Just make sure we do not crash.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%n = OpVariable %_ptr_half Function\n" +
+            "%3 = OpLoad %half %n\n" +
+            "%2 = OpFDiv %half %half_1 %half_2\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
         2, 0)
 ));
 
@@ -4574,7 +5001,31 @@ INSTANTIATE_TEST_SUITE_P(IntegerRedundantFoldingTest, GeneralInstructionFoldingT
             "%2 = OpIAdd %v2int %v2int_0_0 %3\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
-        2, 3)
+        2, 3),
+    // Test case 8: Don't fold because of undefined value. Using 4294967295
+    // means that entry is undefined. We do not expect it to ever happen, so
+    // not worth folding.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%n = OpVariable %_ptr_int Function\n" +
+            "%load = OpLoad %int %n\n" +
+            "%2 = OpVectorShuffle %v2int %v2int_null %v2int_2_3 4294967295 3\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0),
+    // Test case 9: Don't fold because of undefined value. Using 4294967295
+    // means that entry is undefined. We do not expect it to ever happen, so
+    // not worth folding.
+    InstructionFoldingCase<uint32_t>(
+        Header() + "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%n = OpVariable %_ptr_int Function\n" +
+            "%load = OpLoad %int %n\n" +
+            "%2 = OpVectorShuffle %v2int %v2int_null %v2int_2_3 0 4294967295 \n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        2, 0)
 ));
 
 INSTANTIATE_TEST_SUITE_P(ClampAndCmpLHS, GeneralInstructionFoldingTest,
@@ -4896,30 +5347,15 @@ using ToNegateFoldingTest =
 TEST_P(ToNegateFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) =
+      FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_1);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-
-  // Make sure the instruction folded as expected.
-  EXPECT_EQ(inst->result_id(), original_inst->result_id());
-  EXPECT_EQ(inst->type_id(), original_inst->type_id());
-  EXPECT_TRUE((!succeeded) == (tc.expected_result == 0));
-  if (succeeded) {
+  EXPECT_TRUE((inst == nullptr) == (tc.expected_result == 0));
+  if (inst != nullptr) {
     EXPECT_EQ(inst->opcode(), spv::Op::OpFNegate);
     EXPECT_EQ(inst->GetSingleWordInOperand(0), tc.expected_result);
-  } else {
-    EXPECT_EQ(inst->NumInOperands(), original_inst->NumInOperands());
-    for (uint32_t i = 0; i < inst->NumInOperands(); ++i) {
-      EXPECT_EQ(inst->GetOperand(i), original_inst->GetOperand(i));
-    }
   }
 }
 
@@ -5018,19 +5454,12 @@ using MatchingInstructionFoldingTest =
 TEST_P(MatchingInstructionFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) = FoldInstruction(tc.test_body, tc.id_to_fold,SPV_ENV_UNIVERSAL_1_1);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-  EXPECT_EQ(succeeded, tc.expected_result);
-  if (succeeded) {
+  EXPECT_EQ(inst != nullptr, tc.expected_result);
+  if (inst != nullptr) {
     Match(tc.test_body, context.get());
   }
 }
@@ -7363,6 +7792,41 @@ INSTANTIATE_TEST_SUITE_P(CompositeExtractOrInsertMatchingTest, MatchingInstructi
             "%5 = OpCompositeConstruct %v2int %3 %4\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
+        5, true),
+    // Test case 16: Don't fold when type cannot be deduced to a constant.
+    InstructionFoldingCase<bool>(
+        Header() +
+            "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%4 = OpCompositeInsert %struct_v2int_int_int %int_1 %struct_v2int_int_int_null 2\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
+        4, false),
+    // Test case 17: Don't fold when index into composite is out of bounds.
+    InstructionFoldingCase<bool>(
+	Header() +
+            "%main = OpFunction %void None %void_func\n" +
+	    "%main_lab = OpLabel\n" +
+	    "%4 = OpCompositeExtract %int %struct_v2int_int_int 3\n" +
+	    "OpReturn\n" +
+	    "OpFunctionEnd",
+	4, false),
+    // Test case 18: Fold when every element of an array is inserted.
+    InstructionFoldingCase<bool>(
+        Header() +
+            "; CHECK: [[int:%\\w+]] = OpTypeInt 32 1\n" +
+            "; CHECK: [[int2:%\\w+]] = OpConstant [[int]] 2\n" +
+            "; CHECK-DAG: [[arr_type:%\\w+]] = OpTypeArray [[int]] [[int2]]\n" +
+            "; CHECK-DAG: [[int10:%\\w+]] = OpConstant [[int]] 10\n" +
+            "; CHECK-DAG: [[int1:%\\w+]] = OpConstant [[int]] 1\n" +
+            "; CHECK: [[construct:%\\w+]] = OpCompositeConstruct [[arr_type]] [[int10]] [[int1]]\n" +
+            "; CHECK: %5 = OpCopyObject [[arr_type]] [[construct]]\n" +
+            "%main = OpFunction %void None %void_func\n" +
+            "%main_lab = OpLabel\n" +
+            "%4 = OpCompositeInsert %int_arr_2 %int_10 %int_arr_2_undef 0\n" +
+            "%5 = OpCompositeInsert %int_arr_2 %int_1 %4 1\n" +
+            "OpReturn\n" +
+            "OpFunctionEnd",
         5, true)
 ));
 
@@ -7742,27 +8206,13 @@ using MatchingInstructionWithNoResultFoldingTest =
 TEST_P(MatchingInstructionWithNoResultFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) = FoldInstruction(tc.test_body, tc.id_to_fold,SPV_ENV_UNIVERSAL_1_1);
 
-  // Fold the instruction to test.
-  Instruction* inst = nullptr;
-  Function* func = &*context->module()->begin();
-  for (auto& bb : *func) {
-    Instruction* terminator = bb.terminator();
-    if (terminator->IsReturnOrAbort()) {
-      inst = terminator->PreviousNode();
-      break;
-    }
-  }
-  assert(inst && "Invalid test.  Could not find instruction to fold.");
-  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-  EXPECT_EQ(succeeded, tc.expected_result);
-  if (succeeded) {
+  // Find the instruction to test.
+  EXPECT_EQ(inst != nullptr, tc.expected_result);
+  if (inst != nullptr) {
     Match(tc.test_body, context.get());
   }
 }
@@ -8102,8 +8552,9 @@ TEST_P(EntryPointFoldingTest, Case) {
                   SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   ASSERT_NE(nullptr, context);
 
-  // Fold the instruction to test.
+  // Find the first entry point. That is the instruction we want to fold.
   Instruction* inst = nullptr;
+  ASSERT_FALSE(context->module()->entry_points().empty());
   inst = &*context->module()->entry_points().begin();
   assert(inst && "Invalid test.  Could not find entry point instruction to fold.");
   std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
@@ -8196,19 +8647,12 @@ using SPV14FoldingTest =
 TEST_P(SPV14FoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_4, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) = FoldInstruction(tc.test_body, tc.id_to_fold,SPV_ENV_UNIVERSAL_1_4);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-  EXPECT_EQ(succeeded, tc.expected_result);
-  if (succeeded) {
+  EXPECT_EQ(inst != nullptr, tc.expected_result);
+  if (inst !=  nullptr) {
     Match(tc.test_body, context.get());
   }
 }
@@ -8309,19 +8753,12 @@ using FloatControlsFoldingTest =
 TEST_P(FloatControlsFoldingTest, Case) {
   const auto& tc = GetParam();
 
-  // Build module.
-  std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_4, nullptr, tc.test_body,
-                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  ASSERT_NE(nullptr, context);
+  std::unique_ptr<IRContext> context;
+  Instruction* inst;
+  std::tie(context, inst) = FoldInstruction(tc.test_body, tc.id_to_fold, SPV_ENV_UNIVERSAL_1_4);
 
-  // Fold the instruction to test.
-  analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
-  Instruction* inst = def_use_mgr->GetDef(tc.id_to_fold);
-  std::unique_ptr<Instruction> original_inst(inst->Clone(context.get()));
-  bool succeeded = context->get_instruction_folder().FoldInstruction(inst);
-  EXPECT_EQ(succeeded, tc.expected_result);
-  if (succeeded) {
+  EXPECT_EQ(inst != nullptr, tc.expected_result);
+  if (inst != nullptr) {
     Match(tc.test_body, context.get());
   }
 }
@@ -8393,6 +8830,7 @@ std::string ImageOperandsTestBody(const std::string& image_instruction) {
       %v3int = OpTypeVector %int 3
     %Texture = OpVariable %_ptr_UniformConstant_type_2d_image UniformConstant
    %gSampler = OpVariable %_ptr_UniformConstant_type_sampler UniformConstant
+        %110 = OpConstantComposite %v2int %5 %5
         %101 = OpConstantComposite %v2int %int_n1 %int_n1
          %20 = OpConstantComposite %v2float %float_0 %float_0
        %main = OpFunction %void None %22
@@ -8452,7 +8890,12 @@ INSTANTIATE_TEST_SUITE_P(ImageOperandsBitmaskFoldingTest, MatchingInstructionWit
     InstructionFoldingCase<bool>(ImageOperandsTestBody(
       "         OpImageWrite %88 %5 %101 Offset %101      \n"
       "; CHECK: OpImageWrite %88 %5 %101 ConstOffset %101 \n")
-      , 0 /* No result-id */, true)
+      , 0 /* No result-id */, true),
+    // Test case 8: OpImageFetch with zero constant Offset
+    InstructionFoldingCase<bool>(ImageOperandsTestBody(
+        "         %89 = OpImageFetch %10 %88 %101 Lod|Offset %5 %110      \n"
+        "; CHECK: %89 = OpImageFetch %10 %88 %101 Lod %5 \n")
+        , 89, true)
 ));
 
 }  // namespace

@@ -674,6 +674,31 @@ TEST_F(FoldSpecConstantOpAndCompositePassBasicTest, CompositeInsertMatrixNull) {
   SinglePassRunAndMatch<FoldSpecConstantOpAndCompositePass>(test, false);
 }
 
+// Silently ignore spec constants that cannot be folded
+TEST_F(FoldSpecConstantOpAndCompositePassBasicTest, UnfoldableOp) {
+  const std::string test = R"(
+               OpCapability Shader
+               OpCapability SignedZeroInfNanPreserve
+               OpExtension "SPV_KHR_float_controls"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main"
+               OpSource GLSL 450
+               OpDecorate %v SpecId 1
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %float = OpTypeFloat 32
+          %v = OpConstant %float 0x1p-1
+%c = OpSpecConstantOp %float QuantizeToF16 %v
+;CHECK: {{%\w+}} = OpSpecConstantOp {{%\w+}} QuantizeToF16 {{%\w+}}
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<FoldSpecConstantOpAndCompositePass>(test, false);
+}
+
 // All types and some common constants that are potentially required in
 // FoldSpecConstantOpAndCompositeTest.
 std::vector<std::string> CommonTypesAndConstants() {
@@ -1033,14 +1058,8 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%true = OpConstantTrue %bool",
-                "%true_0 = OpConstantTrue %bool",
                 "%spec_bool_t_vec = OpConstantComposite %v2bool %bool_true %bool_true",
-                "%false = OpConstantFalse %bool",
-                "%false_0 = OpConstantFalse %bool",
                 "%spec_bool_f_vec = OpConstantComposite %v2bool %bool_false %bool_false",
-                "%false_1 = OpConstantFalse %bool",
-                "%false_2 = OpConstantFalse %bool",
                 "%spec_bool_from_null = OpConstantComposite %v2bool %bool_false %bool_false",
               },
             },
@@ -1055,14 +1074,8 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%true = OpConstantTrue %bool",
-                "%true_0 = OpConstantTrue %bool",
                 "%spec_bool_t_vec = OpConstantComposite %v2bool %bool_true %bool_true",
-                "%false = OpConstantFalse %bool",
-                "%false_0 = OpConstantFalse %bool",
                 "%spec_bool_f_vec = OpConstantComposite %v2bool %bool_false %bool_false",
-                "%false_1 = OpConstantFalse %bool",
-                "%false_2 = OpConstantFalse %bool",
                 "%spec_bool_from_null = OpConstantComposite %v2bool %bool_false %bool_false",
               },
             },
@@ -1077,14 +1090,8 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%int_1 = OpConstant %int 1",
-                "%int_1_0 = OpConstant %int 1",
                 "%spec_int_one_vec = OpConstantComposite %v2int %signed_one %signed_one",
-                "%int_0 = OpConstant %int 0",
-                "%int_0_0 = OpConstant %int 0",
                 "%spec_int_zero_vec = OpConstantComposite %v2int %signed_zero %signed_zero",
-                "%int_0_1 = OpConstant %int 0",
-                "%int_0_2 = OpConstant %int 0",
                 "%spec_int_from_null = OpConstantComposite %v2int %signed_zero %signed_zero",
               },
             },
@@ -1099,14 +1106,8 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%int_1 = OpConstant %int 1",
-                "%int_1_0 = OpConstant %int 1",
                 "%spec_int_one_vec = OpConstantComposite %v2int %signed_one %signed_one",
-                "%int_0 = OpConstant %int 0",
-                "%int_0_0 = OpConstant %int 0",
                 "%spec_int_zero_vec = OpConstantComposite %v2int %signed_zero %signed_zero",
-                "%int_0_1 = OpConstant %int 0",
-                "%int_0_2 = OpConstant %int 0",
                 "%spec_int_from_null = OpConstantComposite %v2int %signed_zero %signed_zero",
               },
             },
@@ -1121,14 +1122,8 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%uint_1 = OpConstant %uint 1",
-                "%uint_1_0 = OpConstant %uint 1",
                 "%spec_uint_one_vec = OpConstantComposite %v2uint %unsigned_one %unsigned_one",
-                "%uint_0 = OpConstant %uint 0",
-                "%uint_0_0 = OpConstant %uint 0",
                 "%spec_uint_zero_vec = OpConstantComposite %v2uint %unsigned_zero %unsigned_zero",
-                "%uint_0_1 = OpConstant %uint 0",
-                "%uint_0_2 = OpConstant %uint 0",
                 "%spec_uint_from_null = OpConstantComposite %v2uint %unsigned_zero %unsigned_zero",
               },
             },
@@ -1143,14 +1138,8 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%uint_1 = OpConstant %uint 1",
-                "%uint_1_0 = OpConstant %uint 1",
                 "%spec_uint_one_vec = OpConstantComposite %v2uint %unsigned_one %unsigned_one",
-                "%uint_0 = OpConstant %uint 0",
-                "%uint_0_0 = OpConstant %uint 0",
                 "%spec_uint_zero_vec = OpConstantComposite %v2uint %unsigned_zero %unsigned_zero",
-                "%uint_0_1 = OpConstant %uint 0",
-                "%uint_0_2 = OpConstant %uint 0",
                 "%spec_uint_from_null = OpConstantComposite %v2uint %unsigned_zero %unsigned_zero",
               },
             },
@@ -1159,8 +1148,6 @@ INSTANTIATE_TEST_SUITE_P(
             {
               // original
               {
-                "%spec_uint_zero = OpSpecConstantOp %uint UConvert %bool_false",
-                "%spec_uint_one = OpSpecConstantOp %uint UConvert %bool_true",
                 "%spec_ulong_zero = OpSpecConstantOp %ulong UConvert %unsigned_zero",
                 "%spec_ulong_one = OpSpecConstantOp %ulong UConvert %unsigned_one",
                 "%spec_short_zero = OpSpecConstantOp %ushort UConvert %unsigned_zero",
@@ -1172,8 +1159,6 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%spec_uint_zero = OpConstant %uint 0",
-                "%spec_uint_one = OpConstant %uint 1",
                 "%spec_ulong_zero = OpConstant %ulong 0",
                 "%spec_ulong_one = OpConstant %ulong 1",
                 "%spec_short_zero = OpConstant %ushort 0",
@@ -1211,24 +1196,13 @@ INSTANTIATE_TEST_SUITE_P(
             {
               // original
               {
-                "%spec_v2uint_zero = OpSpecConstantOp %v2uint UConvert %bool_false_vec",
-                "%spec_v2uint_one = OpSpecConstantOp %v2uint UConvert %bool_true_vec",
                 "%spec_v2ulong_zero = OpSpecConstantOp %v2ulong UConvert %unsigned_zero_vec",
                 "%spec_v2ulong_one = OpSpecConstantOp %v2ulong UConvert %unsigned_one_vec",
               },
               // expected
               {
-                "%uint_0 = OpConstant %uint 0",
-                "%uint_0_0 = OpConstant %uint 0",
-                "%spec_v2uint_zero = OpConstantComposite %v2uint %unsigned_zero %unsigned_zero",
-                "%uint_1 = OpConstant %uint 1",
-                "%uint_1_0 = OpConstant %uint 1",
-                "%spec_v2uint_one = OpConstantComposite %v2uint %unsigned_one %unsigned_one",
-                "%ulong_0 = OpConstant %ulong 0",
-                "%ulong_0_0 = OpConstant %ulong 0",
                 "%spec_v2ulong_zero = OpConstantComposite %v2ulong %ulong_zero %ulong_zero",
                 "%ulong_1 = OpConstant %ulong 1",
-                "%ulong_1_0 = OpConstant %ulong 1",
                 "%spec_v2ulong_one = OpConstantComposite %v2ulong %ulong_1 %ulong_1",
               },
             },
@@ -1243,14 +1217,10 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%long_0 = OpConstant %long 0",
-                "%long_0_0 = OpConstant %long 0",
                 "%spec_v2long_zero = OpConstantComposite %v2long %long_zero %long_zero",
                 "%long_1 = OpConstant %long 1",
-                "%long_1_0 = OpConstant %long 1",
                 "%spec_v2long_one = OpConstantComposite %v2long %long_1 %long_1",
                 "%long_n1 = OpConstant %long -1",
-                "%long_n1_0 = OpConstant %long -1",
                 "%spec_v2long_minus_one = OpConstantComposite %v2long %long_n1 %long_n1",
               },
             },
@@ -1347,7 +1317,7 @@ INSTANTIATE_TEST_SUITE_P(
               {
                 "%int_minus_1 = OpConstant %int -1",
                 "%int_minus_2 = OpConstant %int -2",
-                "%int_neg_null = OpConstant %int 0",
+                "%int_neg_null = OpConstantNull %int",
                 "%int_max = OpConstant %int 2147483647",
                 "%int_neg_max = OpConstant %int -2147483647",
               },
@@ -1528,15 +1498,10 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%int_n1 = OpConstant %int -1",
-                "%int_n1_0 = OpConstant %int -1",
                 "%v2int_minus_1 = OpConstantComposite %v2int %signed_minus_one %signed_minus_one",
                 "%int_n2 = OpConstant %int -2",
-                "%int_n2_0 = OpConstant %int -2",
                 "%v2int_minus_2 = OpConstantComposite %v2int %int_n2 %int_n2",
-                "%int_0 = OpConstant %int 0",
-                "%int_0_0 = OpConstant %int 0",
-                "%v2int_neg_null = OpConstantComposite %v2int %signed_zero %signed_zero",
+                "%v2int_neg_null = OpConstantComposite %v2int %signed_null %signed_null",
               },
             },
             // vector integer (including null vetors) add, sub, div, mul
@@ -1558,35 +1523,23 @@ INSTANTIATE_TEST_SUITE_P(
               // expected
               {
                 "%int_5 = OpConstant %int 5",
-                "%int_5_0 = OpConstant %int 5",
                 "%spec_v2int_iadd = OpConstantComposite %v2int %int_5 %int_5",
                 "%int_n4 = OpConstant %int -4",
-                "%int_n4_0 = OpConstant %int -4",
                 "%spec_v2int_isub = OpConstantComposite %v2int %int_n4 %int_n4",
                 "%int_n2 = OpConstant %int -2",
-                "%int_n2_0 = OpConstant %int -2",
                 "%spec_v2int_sdiv = OpConstantComposite %v2int %int_n2 %int_n2",
                 "%int_n6 = OpConstant %int -6",
-                "%int_n6_0 = OpConstant %int -6",
                 "%spec_v2int_imul = OpConstantComposite %v2int %int_n6 %int_n6",
-                "%int_n6_1 = OpConstant %int -6",
-                "%int_n6_2 = OpConstant %int -6",
                 "%spec_v2int_iadd_null = OpConstantComposite %v2int %int_n6 %int_n6",
 
                 "%uint_5 = OpConstant %uint 5",
-                "%uint_5_0 = OpConstant %uint 5",
                 "%spec_v2uint_iadd = OpConstantComposite %v2uint %uint_5 %uint_5",
                 "%uint_4294967292 = OpConstant %uint 4294967292",
-                "%uint_4294967292_0 = OpConstant %uint 4294967292",
                 "%spec_v2uint_isub = OpConstantComposite %v2uint %uint_4294967292 %uint_4294967292",
                 "%uint_1431655764 = OpConstant %uint 1431655764",
-                "%uint_1431655764_0 = OpConstant %uint 1431655764",
                 "%spec_v2uint_udiv = OpConstantComposite %v2uint %uint_1431655764 %uint_1431655764",
                 "%uint_2863311528 = OpConstant %uint 2863311528",
-                "%uint_2863311528_0 = OpConstant %uint 2863311528",
                 "%spec_v2uint_imul = OpConstantComposite %v2uint %uint_2863311528 %uint_2863311528",
-                "%uint_2863311528_1 = OpConstant %uint 2863311528",
-                "%uint_2863311528_2 = OpConstant %uint 2863311528",
                 "%spec_v2uint_isub_null = OpConstantComposite %v2uint %uint_2863311528 %uint_2863311528",
               },
             },
@@ -1630,34 +1583,17 @@ INSTANTIATE_TEST_SUITE_P(
                 "%v2int_minus_3 = OpConstantComposite %v2int %int_minus_3 %int_minus_3",
 
                 // srem
-                "%int_1 = OpConstant %int 1",
-                "%int_1_0 = OpConstant %int 1",
                 "%7_srem_3 = OpConstantComposite %v2int %signed_one %signed_one",
-                "%int_n1 = OpConstant %int -1",
-                "%int_n1_0 = OpConstant %int -1",
                 "%minus_7_srem_3 = OpConstantComposite %v2int %signed_minus_one %signed_minus_one",
-                "%int_1_1 = OpConstant %int 1",
-                "%int_1_2 = OpConstant %int 1",
                 "%7_srem_minus_3 = OpConstantComposite %v2int %signed_one %signed_one",
-                "%int_n1_1 = OpConstant %int -1",
-                "%int_n1_2 = OpConstant %int -1",
                 "%minus_7_srem_minus_3 = OpConstantComposite %v2int %signed_minus_one %signed_minus_one",
                 // smod
-                "%int_1_3 = OpConstant %int 1",
-                "%int_1_4 = OpConstant %int 1",
                 "%7_smod_3 = OpConstantComposite %v2int %signed_one %signed_one",
-                "%int_2 = OpConstant %int 2",
-                "%int_2_0 = OpConstant %int 2",
                 "%minus_7_smod_3 = OpConstantComposite %v2int %signed_two %signed_two",
                 "%int_n2 = OpConstant %int -2",
-                "%int_n2_0 = OpConstant %int -2",
                 "%7_smod_minus_3 = OpConstantComposite %v2int %int_n2 %int_n2",
-                "%int_n1_3 = OpConstant %int -1",
-                "%int_n1_4 = OpConstant %int -1",
                 "%minus_7_smod_minus_3 = OpConstantComposite %v2int %signed_minus_one %signed_minus_one",
                 // umod
-                "%uint_1 = OpConstant %uint 1",
-                "%uint_1_0 = OpConstant %uint 1",
                 "%7_umod_3 = OpConstantComposite %v2uint %unsigned_one %unsigned_one",
               },
             },
@@ -1677,26 +1613,15 @@ INSTANTIATE_TEST_SUITE_P(
               },
               // expected
               {
-                "%int_2 = OpConstant %int 2",
-                "%int_2_0 = OpConstant %int 2",
                 "%xor_1_3 = OpConstantComposite %v2int %signed_two %signed_two",
-                "%int_0 = OpConstant %int 0",
-                "%int_0_0 = OpConstant %int 0",
                 "%and_1_2 = OpConstantComposite %v2int %signed_zero %signed_zero",
-                "%int_3 = OpConstant %int 3",
-                "%int_3_0 = OpConstant %int 3",
                 "%or_1_2 = OpConstantComposite %v2int %signed_three %signed_three",
 
                 "%unsigned_31 = OpConstant %uint 31",
                 "%v2unsigned_31 = OpConstantComposite %v2uint %unsigned_31 %unsigned_31",
                 "%uint_2147483648 = OpConstant %uint 2147483648",
-                "%uint_2147483648_0 = OpConstant %uint 2147483648",
                 "%unsigned_left_shift_max = OpConstantComposite %v2uint %uint_2147483648 %uint_2147483648",
-                "%uint_1 = OpConstant %uint 1",
-                "%uint_1_0 = OpConstant %uint 1",
                 "%unsigned_right_shift_logical = OpConstantComposite %v2uint %unsigned_one %unsigned_one",
-                "%int_n1 = OpConstant %int -1",
-                "%int_n1_0 = OpConstant %int -1",
                 "%signed_right_shift_arithmetic = OpConstantComposite %v2int %signed_minus_one %signed_minus_one",
               },
             },
@@ -2066,7 +1991,6 @@ INSTANTIATE_TEST_SUITE_P(
               "%spec_int_20 = OpConstant %int 101",
               "%used_vec_a = OpConstantComposite %v2int %spec_int_18 %spec_int_19",
               "%int_10201 = OpConstant %int 10201",
-              "%int_1 = OpConstant %int 1",
               "%used_vec_b = OpConstantComposite %v2int %int_10201 %signed_one",
               "%spec_int_21 = OpConstant %int 10201",
               "%array = OpConstantComposite %type_arr_int_4 %spec_int_20 %spec_int_20 %spec_int_21 %spec_int_21",

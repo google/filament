@@ -15,7 +15,6 @@
 #include "source/val/basic_block.h"
 
 #include <algorithm>
-#include <utility>
 #include <vector>
 
 namespace spvtools {

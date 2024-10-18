@@ -470,10 +470,7 @@ if(SPIRV_BUILD_FUZZER)
   spvtools_check_symbol_exports(SPIRV-Tools-fuzz)
 
   if(ENABLE_SPIRV_TOOLS_INSTALL)
-      install(TARGETS SPIRV-Tools-fuzz EXPORT SPIRV-Tools-fuzzTargets
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+      install(TARGETS SPIRV-Tools-fuzz EXPORT SPIRV-Tools-fuzzTargets)
       export(EXPORT SPIRV-Tools-fuzzTargets FILE SPIRV-Tools-fuzzTarget.cmake)
 
       spvtools_config_package_dir(SPIRV-Tools-fuzz PACKAGE_DIR)

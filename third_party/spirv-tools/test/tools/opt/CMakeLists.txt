@@ -13,9 +13,9 @@
 # limitations under the License.
 
 if(NOT ${SPIRV_SKIP_TESTS})
-  if(${PYTHONINTERP_FOUND})
+  if(${Python3_Interpreter_FOUND})
     add_test(NAME spirv_opt_cli_tools_tests
-      COMMAND ${PYTHON_EXECUTABLE}
+      COMMAND Python3::Interpreter
       ${CMAKE_CURRENT_SOURCE_DIR}/../spirv_test_framework.py
       $<TARGET_FILE:spirv-opt> $<TARGET_FILE:spirv-as> $<TARGET_FILE:spirv-dis>
       --test-dir ${CMAKE_CURRENT_SOURCE_DIR})
