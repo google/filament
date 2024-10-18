@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <cstdint>
 #include <string>
 
 #ifndef TNT_GLSLMINIFY_H
