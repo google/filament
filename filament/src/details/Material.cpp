@@ -462,13 +462,13 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
         return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
     } else {
         // but if we don't, just create an instance with all the default parameters
-        return mEngine.createMaterialInstance(this);
+        return mEngine.createMaterialInstance(this, name);
     }
 }
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance = mEngine.createMaterialInstance(this);
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mName.c_str());
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;
