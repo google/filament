@@ -204,9 +204,8 @@ private:
 // Different kinds of state, like pipeline state, uniform buffer state, etc., are passed to the
 // current Metal command encoder and persist throughout the lifetime of the encoder (a frame).
 // StateTracker is used to prevent calling redundant state change methods.
-template<typename StateType>
+template <typename StateType, typename StateEqual = std::equal_to<StateType>>
 class StateTracker {
-
 public:
 
     // Call to force the state to dirty at the beginning of each frame, as all state must be
@@ -214,7 +213,7 @@ public:
     void invalidate() noexcept { mStateDirty = true; }
 
     void updateState(const StateType& newState) noexcept {
-        if (mCurrentState != newState) {
+        if (!StateEqual()(mCurrentState, newState)) {
             mCurrentState = newState;
             mStateDirty = true;
         }
@@ -235,7 +234,6 @@ private:
 
     bool mStateDirty = true;
     StateType mCurrentState = {};
-
 };
 
 // Pipeline state
@@ -342,6 +340,16 @@ using DepthStencilStateTracker = StateTracker<DepthStencilState>;
 
 using DepthStencilStateCache = StateCache<DepthStencilState, id<MTLDepthStencilState>,
         DepthStateCreator>;
+
+struct MtlScissorRectEqual {
+    bool operator()(MTLScissorRect lhs, MTLScissorRect rhs) const {
+        return lhs.height == rhs.height &&
+            lhs.width == rhs.width &&
+            lhs.x == rhs.x &&
+            lhs.y == rhs.y;
+    }
+};
+using ScissorRectStateTracker = StateTracker<MTLScissorRect, MtlScissorRectEqual>;
 
 // Uniform buffers
 
