@@ -807,7 +807,11 @@ void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
             primitives[primitiveIndex].setMaterialInstance(mi);
             AttributeBitset const required = material->getRequiredAttributes();
             AttributeBitset const declared = primitives[primitiveIndex].getEnabledAttributes();
-            if (UTILS_UNLIKELY((declared & required) != required)) {
+            if (!primitives[primitiveIndex].getHwHandle()) {
+                slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
+                       << "] render primitive doesn't exist for material \""
+                       << material->getName().c_str_safe() << "\"" << io::endl;
+            } else if (UTILS_UNLIKELY((declared & required) != required)) {
                 slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
                        << "] missing required attributes ("
                        << required << "), declared=" << declared << io::endl;
