@@ -526,6 +526,8 @@ if (APPLE AND NOT IOS)
 
 add_executable(metal_utils_test test/MetalTest.mm)
 
+target_compile_options(metal_utils_test PRIVATE "-fobjc-arc")
+
 target_link_libraries(metal_utils_test PRIVATE
         backend
         getopt
