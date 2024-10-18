@@ -210,7 +210,7 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t f
     swapChain->hWnd = (HWND) nativeWindow;
     swapChain->hDc = GetDC(swapChain->hWnd);
     if (!swapChain->hDc) {
-          DWORD dwError = GetLastError();
+        DWORD dwError = GetLastError();
         ASSERT_POSTCONDITION_NON_FATAL(swapChain->hDc,
            "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow);
         reportWindowsError(dwError);
