@@ -342,7 +342,7 @@ using DepthStencilStateCache = StateCache<DepthStencilState, id<MTLDepthStencilS
         DepthStateCreator>;
 
 struct MtlScissorRectEqual {
-    bool operator()(MTLScissorRect lhs, MTLScissorRect rhs) const {
+    bool operator()(const MTLScissorRect& lhs, const MTLScissorRect& rhs) const {
         return lhs.height == rhs.height &&
             lhs.width == rhs.width &&
             lhs.x == rhs.x &&
