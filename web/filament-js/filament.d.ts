@@ -514,6 +514,8 @@ export class View {
     public setAntiAliasing(antialiasing: View$AntiAliasing): void;
     public setStencilBufferEnabled(enabled: boolean): void;
     public isStencilBufferEnabled(): boolean;
+    public setTransparentPickingEnabled(enabled: boolean): void;
+    public isTransparentPickingEnabled(): boolean;
 }
 
 export class TransformManager {
