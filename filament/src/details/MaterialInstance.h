@@ -53,7 +53,7 @@ class FTexture;
 
 class FMaterialInstance : public MaterialInstance {
 public:
-  FMaterialInstance(FEngine& engine, FMaterial const* material,
+    FMaterialInstance(FEngine& engine, FMaterial const* material,
                     const char* name) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
