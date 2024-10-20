@@ -861,12 +861,6 @@ void RenderPass::Executor::overridePolygonOffset(backend::PolygonOffset const* p
     }
 }
 
-void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noexcept {
-    if ((mScissorOverride = (scissor != nullptr))) { // NOLINT(*-assignment-in-if-condition)
-        mScissor = *scissor;
-    }
-}
-
 void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noexcept {
     mScissorOverride = true;
     mScissor = scissor;
@@ -883,15 +877,15 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
     // clang vectorizes this!
     constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
     // compute new left/bottom, assume no overflow
-    int32_t l = scissor.left + scissorViewport.left;
-    int32_t b = scissor.bottom + scissorViewport.bottom;
+    int32_t const l = scissor.left + scissorViewport.left;
+    int32_t const b = scissor.bottom + scissorViewport.bottom;
     // compute right/top without overflowing, scissor.width/height guaranteed
     // to convert to int32
     int32_t r = (l > maxvali - int32_t(scissor.width)) ? maxvali : l + int32_t(scissor.width);
     int32_t t = (b > maxvali - int32_t(scissor.height)) ? maxvali : b + int32_t(scissor.height);
     // clip to the viewport
-    l = std::max(l, scissorViewport.left);
-    b = std::max(b, scissorViewport.bottom);
+    assert_invariant(l == std::max(l, scissorViewport.left));
+    assert_invariant(b == std::max(b, scissorViewport.bottom));
     r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
     t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
     assert_invariant(r >= l && t >= b);
@@ -913,9 +907,14 @@ void RenderPass::Executor::execute(FEngine& engine,
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
 
-        bool const scissorOverride = mScissorOverride;
-        if (UTILS_UNLIKELY(scissorOverride)) {
-            // initialize with scissor override
+        // The scissor rectangle is associated to a render pass, so the tracking can be local.
+        backend::Viewport currentScissor{ 0, 0, INT32_MAX, INT32_MAX };
+        bool const hasScissorOverride = mScissorOverride;
+        bool const hasScissorViewport = mHasScissorViewport;
+        if (UTILS_UNLIKELY(hasScissorViewport || hasScissorOverride)) {
+            // we should never have both an override and scissor-viewport
+            assert_invariant(!hasScissorViewport || !hasScissorOverride);
+            currentScissor = mScissor;
             driver.scissor(mScissor);
         }
 
@@ -999,17 +998,24 @@ void RenderPass::Executor::execute(FEngine& engine,
 
                 if (UTILS_UNLIKELY(mi != info.mi)) {
                     // this is always taken the first time
-                    mi = info.mi;
-                    assert_invariant(mi);
+                    assert_invariant(info.mi);
 
+                    mi = info.mi;
                     ma = mi->getMaterial();
 
-                    if (UTILS_LIKELY(!scissorOverride)) {
+                    // if we have the scissor override, the material instance and scissor-viewport
+                    // are ignored (typically used for shadow maps).
+                    if (!hasScissorOverride) {
+                        // apply the MaterialInstance scissor
                         backend::Viewport scissor = mi->getScissor();
-                        if (UTILS_UNLIKELY(mi->hasScissor())) {
-                            scissor = applyScissorViewport(mScissorViewport, scissor);
+                        if (hasScissorViewport) {
+                            // apply the scissor viewport if any
+                            scissor = applyScissorViewport(mScissor, scissor);
                         }
-                        driver.scissor(scissor);
+                        if (scissor != currentScissor) {
+                            currentScissor = scissor;
+                            driver.scissor(scissor);
+                        }
                     }
 
                     if (UTILS_LIKELY(!polygonOffsetOverride)) {
@@ -1100,16 +1106,18 @@ RenderPass::Executor::Executor(RenderPass const& pass, Command const* b, Command
           mInstancedUboHandle(pass.mInstancedUboHandle),
           mInstancedDescriptorSetHandle(pass.mInstancedDescriptorSetHandle),
           mColorPassDescriptorSet(pass.mColorPassDescriptorSet),
-          mScissorViewport(pass.mScissorViewport),
+          mScissor(pass.mScissorViewport),
           mPolygonOffsetOverride(false),
           mScissorOverride(false) {
+    mHasScissorViewport = mScissor != backend::Viewport{ 0, 0, INT32_MAX, INT32_MAX };
     assert_invariant(b >= pass.begin());
     assert_invariant(e <= pass.end());
 }
 
 RenderPass::Executor::Executor() noexcept
         : mPolygonOffsetOverride(false),
-          mScissorOverride(false) {
+          mScissorOverride(false),
+          mHasScissorViewport(false) {
 }
 
 RenderPass::Executor::Executor(Executor&& rhs) noexcept = default;
