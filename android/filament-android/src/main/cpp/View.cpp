@@ -223,6 +223,20 @@ Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetTransparentPickingEnabled(JNIEnv*,
+        jclass, jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setTransparentPickingEnabled(enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsTransparentPickingEnabled(JNIEnv*,
+        jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return static_cast<jboolean>(view->isTransparentPickingEnabled());
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
     View* view = (View*) nativeView;
 #pragma clang diagnostic push
