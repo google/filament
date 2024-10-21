@@ -303,7 +303,8 @@ public:
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
             const FMaterialInstance* other, const char* name) noexcept;
 
-    FMaterialInstance* createMaterialInstance(const FMaterial* material) noexcept;
+    FMaterialInstance* createMaterialInstance(const FMaterial* material,
+                                              const char* name) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
