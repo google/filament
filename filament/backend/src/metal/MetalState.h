@@ -442,7 +442,7 @@ public:
 
 private:
     static_assert(N <= 8);
-    std::array<__unsafe_unretained id<MTLBuffer>, N> mBuffers = { nil };
+    std::array<__weak id<MTLBuffer>, N> mBuffers = { nil };
     std::array<NSUInteger, N> mOffsets = { 0 };
     utils::bitset8 mDirtyBuffers;
     utils::bitset8 mDirtyOffsets;
