@@ -1108,7 +1108,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
     //        know at this point. This will usually be the case when post-process is disabled.
     // FIXME: we probably should take the dynamic scaling into account too
-    passBuilder.scissorViewport(hasPostProcess ? xvp : vp);
+    // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
+    // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
+    passBuilder.scissorViewport(hasPostProcess || msaaOptions.enabled ? xvp : vp);
 
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.

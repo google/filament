@@ -55,6 +55,11 @@ IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
 
 FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
         : mIndexCount(builder->mIndexCount) {
+    auto& name = builder.getName();
+    const char* const tag = name.empty() ? "(no tag)" : name.c_str_safe();
+    FILAMENT_CHECK_PRECONDITION(
+            builder->mIndexType == IndexType::UINT || builder->mIndexType == IndexType::USHORT)
+            << "Invalid index type " << static_cast<int>(builder->mIndexType) << ", tag=" << tag;
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createIndexBuffer(
             (backend::ElementType)builder->mIndexType,
