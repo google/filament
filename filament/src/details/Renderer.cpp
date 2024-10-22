@@ -1110,7 +1110,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // FIXME: we probably should take the dynamic scaling into account too
     // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
     // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
-    passBuilder.scissorViewport(hasPostProcess || msaaOptions.enabled ? xvp : vp);
+    const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
+          (isRenderingMultiview && engine.debug.stereo.combine_multiview_images);
+    passBuilder.scissorViewport(useIntermediateBuffer ? xvp : vp);
 
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
