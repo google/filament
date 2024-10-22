@@ -746,6 +746,33 @@ public class View {
     }
 
     /**
+     * Returns true if transparent picking is enabled.
+     *
+     * @see #setTransparentPickingEnabled
+     */
+    public boolean isTransparentPickingEnabled() {
+        return nIsTransparentPickingEnabled(getNativeObject());
+    }
+
+    /**
+     * Enables or disables transparent picking. Disabled by default.
+     *
+     * When transparent picking is enabled, View::pick() will pick from both
+     * transparent and opaque renderables. When disabled, View::pick() will only
+     * pick from opaque renderables.
+     *
+     * <p>
+     * Transparent picking will create an extra pass for rendering depth
+     * from both transparent and opaque renderables. 
+     * </p>
+     *
+     * @param enabled true enables transparent picking, false disables it.
+     */
+    public void setTransparentPickingEnabled(boolean enabled) {
+        nSetTransparentPickingEnabled(getNativeObject(), enabled);
+    }
+
+    /**
      * Sets options relative to dynamic lighting for this view.
      *
      * <p>
@@ -1281,6 +1308,8 @@ public class View {
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
+    private static native void nSetTransparentPickingEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsTransparentPickingEnabled(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, boolean bentNormals, float minHorizonAngleRad);
