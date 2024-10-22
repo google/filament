@@ -128,12 +128,18 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 #include <utils/Systrace.h>
 
 #define FVK_SYSTRACE_CONTEXT()      SYSTRACE_CONTEXT()
-#define FVK_SYSTRACE_START(marker)  SYSTRACE_NAME_BEGIN(marker)
+#define FVK_SYSTRACE_START(marker)  \
+    const std::string ___marker_name = std::string("backend::") + marker; \
+    SYSTRACE_NAME_BEGIN(___marker_name.c_str())
 #define FVK_SYSTRACE_END()          SYSTRACE_NAME_END()
+#define FVK_SYSTRACE_CALL()         \
+    const std::string ___marker_name = std::string("backend::") + __func__; \
+    SYSTRACE_NAME(___marker_name.c_str())
 #else
 #define FVK_SYSTRACE_CONTEXT()
 #define FVK_SYSTRACE_START(marker)
 #define FVK_SYSTRACE_END()
+#define FVK_SYSTRACE_CALL()
 #endif
 
 #ifndef FVK_HANDLE_ARENA_SIZE_IN_MB

@@ -106,7 +106,8 @@
 
 #if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() \
-        DebugMarker _debug_marker(*this, __func__);
+        const std::string _debug_marker_name = std::string("backend") + __func__; \
+        DebugMarker _debug_marker(*this, _debug_marker_name.c_str());
 #else
 #   define DEBUG_MARKER()
 #endif
