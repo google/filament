@@ -407,6 +407,9 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
+    FILAMENT_CHECK_PRECONDITION(engine.isValid(mSwapChain))
+            << "SwapChain must remain valid until endFrame is called.";
+
     if (mSwapChain) {
         mSwapChain->commit(driver);
         mSwapChain = nullptr;
