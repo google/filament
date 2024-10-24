@@ -143,7 +143,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
 
     VkCommandPool& cmdpool = mCommandPool;
 
-    VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
+    VulkanTexture* srcTexture = srcTarget->getColor0().texture;
     assert_invariant(srcTexture);
     VkFormat const srcFormat = srcTexture->getVkFormat();
     bool const swizzle
@@ -230,7 +230,7 @@ void VulkanReadPixels::run(VulkanRenderTarget* srcTarget, uint32_t const x, uint
         },
     });
 
-    VulkanAttachment const srcAttachment = srcTarget->getColor(0);
+    VulkanAttachment const srcAttachment = srcTarget->getColor0();
     VkImageSubresourceRange const srcRange = srcAttachment.getSubresourceRange();
     srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
 
