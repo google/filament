@@ -21,6 +21,7 @@
 
 #include "DriverBase.h"
 
+#include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
 #include "VulkanResources.h"
 
@@ -58,48 +59,6 @@ private:
 };
 
 #endif // FVK_DEBUG_GROUP_MARKERS
-
-// Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
-struct VulkanCmdFence {
-    struct SetValueScope {
-    public:
-        ~SetValueScope() {
-            mHolder->mutex.unlock();
-            mHolder->condition.notify_all();
-        }
-
-    private:
-        SetValueScope(VulkanCmdFence* fenceHolder, VkResult result) :
-            mHolder(fenceHolder) {
-            mHolder->mutex.lock();
-            mHolder->status.store(result);
-        }
-        VulkanCmdFence* mHolder;
-        friend struct VulkanCmdFence;
-    };
-
-    VulkanCmdFence(VkFence ifence);
-    ~VulkanCmdFence() = default;
-
-    SetValueScope setValue(VkResult value) {
-        return {this, value};
-    }
-
-    VkFence& getFence() {
-        return fence;
-    }
-
-    VkResult getStatus() {
-        std::unique_lock<utils::Mutex> lock(mutex);
-        return status.load(std::memory_order_acquire);
-    }
-
-private:
-    VkFence fence;
-    utils::Condition condition;
-    utils::Mutex mutex;
-    std::atomic<VkResult> status;
-};
 
 // The submission fence has shared ownership semantics because it is potentially wrapped by a
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and

@@ -18,6 +18,7 @@
 
 #include "CommandStreamDispatcher.h"
 #include "DataReshaper.h"
+#include "VulkanAsyncHandles.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"

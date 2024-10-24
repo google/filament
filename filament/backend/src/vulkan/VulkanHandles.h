@@ -407,42 +407,6 @@ private:
     FixedSizeVulkanResourceManager<2> mResources;
 };
 
-struct VulkanFence : public HwFence, VulkanResource {
-    VulkanFence()
-        : VulkanResource(VulkanResourceType::FENCE) {}
-
-    explicit VulkanFence(std::shared_ptr<VulkanCmdFence> fence)
-        : VulkanResource(VulkanResourceType::FENCE),
-          fence(fence) {}
-
-    std::shared_ptr<VulkanCmdFence> fence;
-};
-
-struct VulkanTimerQuery : public HwTimerQuery, VulkanThreadSafeResource {
-    explicit VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices);
-    ~VulkanTimerQuery();
-
-    void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept;
-
-    bool isCompleted() noexcept;
-
-    uint32_t getStartingQueryIndex() const {
-        return mStartingQueryIndex;
-    }
-
-    uint32_t getStoppingQueryIndex() const {
-        return mStoppingQueryIndex;
-    }
-
-private:
-    uint32_t mStartingQueryIndex;
-    uint32_t mStoppingQueryIndex;
-
-    std::shared_ptr<VulkanCmdFence> mFence;
-    utils::Mutex mFenceMutex;
-};
-
-
 inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
         BufferObjectBinding bindingType) noexcept {
     switch(bindingType) {

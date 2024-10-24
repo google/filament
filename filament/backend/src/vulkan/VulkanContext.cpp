@@ -86,7 +86,7 @@ VulkanTimestamps::VulkanTimestamps(VkDevice device) : mDevice(device) {
     VkQueryPoolCreateInfo tqpCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
         .queryType = VK_QUERY_TYPE_TIMESTAMP,
-    };  
+    };
     std::unique_lock<utils::Mutex> lock(mMutex);
     tqpCreateInfo.queryCount = mUsed.size() * 2;
     VkResult result = vkCreateQueryPool(mDevice, &tqpCreateInfo, VKALLOC, &mPool);
@@ -101,7 +101,7 @@ std::tuple<uint32_t, uint32_t> VulkanTimestamps::getNextQuery() {
     for (size_t timerIndex = 0; timerIndex < maxTimers; ++timerIndex) {
         if (!mUsed.test(timerIndex)) {
             mUsed.set(timerIndex);
-	    return std::make_tuple(timerIndex * 2, timerIndex * 2 + 1);
+            return std::make_tuple(timerIndex * 2, timerIndex * 2 + 1);
         }
     }
     FVK_LOGE << "More than " << maxTimers << " timers are not supported." << utils::io::endl;
