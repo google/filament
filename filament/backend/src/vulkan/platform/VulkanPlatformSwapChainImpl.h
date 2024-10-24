@@ -64,6 +64,11 @@ struct VulkanPlatformSwapChainImpl : public Platform::SwapChain {
         return false;
     }
 
+    // Non-virtual override-able method
+    bool isProtected() {
+        return false;
+    }
+
 protected:
     // Non-virtual override-able method
     void destroy();
@@ -97,6 +102,9 @@ struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainImpl {
     // Non-virtual override-able method
     bool hasResized();
 
+    // Non-virtual override-able method
+    bool isProtected();
+
 protected:
     // Non-virtual override-able method
     void destroy();
@@ -117,6 +125,7 @@ private:
 
     bool mUsesRGB = false;
     bool mHasStencil = false;
+    bool mIsProtected = false;
     bool mSuboptimal;
 };
 

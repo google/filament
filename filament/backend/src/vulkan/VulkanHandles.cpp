@@ -246,6 +246,7 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     mDepth = { .texture = swapChain.getDepth() };
     width = extent.width;
     height = extent.height;
+    mProtected = swapChain.isProtected();
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
@@ -259,6 +260,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
       mOffscreen(true),
       mSamples(samples),
       mLayerCount(layerCount) {
+    mProtected = false;
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         mColor[index] = color[index];
     }

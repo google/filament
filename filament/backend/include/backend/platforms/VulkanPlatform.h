@@ -88,6 +88,7 @@ public:
         VkFormat colorFormat = VK_FORMAT_UNDEFINED;
         VkFormat depthFormat = VK_FORMAT_UNDEFINED;
         VkExtent2D extent = {0, 0};
+        bool protection = false;
     };
 
     struct ImageSyncData {
@@ -200,6 +201,13 @@ public:
     virtual bool hasResized(SwapChainPtr handle);
 
     /**
+     * Check if the surface is protected.
+     * @param handle             The handle returned by createSwapChain()
+     * @return                   Whether the swapchain is protected
+     */
+    virtual bool isProtected(SwapChainPtr handle);
+
+    /**
      * Carry out a recreation of the swapchain.
      * @param handle             The handle returned by createSwapChain()
      * @return                   Result of the recreation
@@ -266,6 +274,23 @@ public:
      * @return The queue that was selected for the Vulkan backend.
      */
     VkQueue getGraphicsQueue() const noexcept;
+
+    /**
+    * @return The family index of the protected graphics queue selected for the
+    *          Vulkan backend.
+    */
+    uint32_t getProtectedGraphicsQueueFamilyIndex() const noexcept;
+
+    /**
+     * @return The index of the protected graphics queue (if there are multiple
+     *          graphics queues) selected for the Vulkan backend.
+     */
+    uint32_t getProtectedGraphicsQueueIndex() const noexcept;
+
+    /**
+     * @return The protected queue that was selected for the Vulkan backend.
+     */
+    VkQueue getProtectedGraphicsQueue() const noexcept;
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();

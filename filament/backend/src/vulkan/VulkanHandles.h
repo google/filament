@@ -280,6 +280,7 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     uint8_t getLayerCount() const { return mLayerCount; }
     bool hasDepth() const { return mDepth.texture; }
     bool isSwapChain() const { return !mOffscreen; }
+    bool isProtected() const { return mProtected; }
     void bindToSwapChain(VulkanSwapChain& surf);
 
 private:
@@ -288,6 +289,7 @@ private:
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
     const bool mOffscreen : 1;
+    bool mProtected : 1;
     uint8_t mSamples : 7;
     uint8_t mLayerCount = 1;
 };

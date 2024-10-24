@@ -35,7 +35,7 @@ class VulkanResourceAllocator;
 struct VulkanTextureState : public VulkanResource {
     VulkanTextureState(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
             VulkanStagePool& stagePool, VkFormat format, VkImageViewType viewType, uint8_t levels,
-            uint8_t layerCount, VulkanLayout defaultLayout);
+            uint8_t layerCount, VulkanLayout defaultLayout, bool isProtected = false);
 
     struct ImageViewKey {
         VkImageSubresourceRange range;  // 4 * 5 bytes
@@ -69,6 +69,8 @@ struct VulkanTextureState : public VulkanResource {
     VkImageSubresourceRange const mFullViewRange;
     VkImage mTextureImage = VK_NULL_HANDLE;
     VulkanLayout mDefaultLayout;
+
+    bool mIsProtected = false;
 
     // Track the image layout of each subresource using a sparse range map.
     utils::RangeMap<uint32_t, VulkanLayout> mSubresourceLayouts;
@@ -177,6 +179,11 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     bool isTransientAttachment() const {
         VulkanTextureState const* state = getSharedState();
         return state->mIsTransientAttachment;
+    }
+
+    bool getIsProtected() const {
+        VulkanTextureState const* state = getSharedState();
+        return state->mIsProtected;
     }
 
     bool transitionLayout(VulkanCommandBuffer* commands, VkImageSubresourceRange const& range,
