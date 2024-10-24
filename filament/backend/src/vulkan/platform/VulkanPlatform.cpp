@@ -326,7 +326,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     deviceQueueCreateInfo[1].pQueuePriorities = &queuePriority[0];
 
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.queueCreateInfoCount = protectedGraphicsQueueFamilyIndex == INVALID_VK_INDEX ? 1 : 2;
+    bool const hasProtectedQueue = protectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
+    deviceCreateInfo.queueCreateInfoCount = hasProtectedQueue ? 2 : 1;
     deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
 
     // We could simply enable all supported features, but since that may have performance
@@ -370,7 +371,7 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceProtectedMemoryFeatures protectedMemory = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
     };
-    if (protectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX) {
+    if (hasProtectedQueue) {
         // Enable protected memory, if requested.
         protectedMemory.protectedMemory = VK_TRUE;
         protectedMemory.pNext = pNext;
@@ -707,7 +708,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
 
     VkPhysicalDeviceProtectedMemoryFeatures queryProtectedMemoryFeatures = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
     };
     // Chain to the pNext linked list
     queryProtectedMemoryFeatures.pNext = context.mPhysicalDeviceFeatures.pNext;
@@ -773,7 +774,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     mImpl->mDevice
             = mImpl->mDevice == VK_NULL_HANDLE ? createLogicalDevice(mImpl->mPhysicalDevice,
-                      context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex, mImpl->mProtectedGraphicsQueueFamilyIndex, deviceExts)
+                      context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex, 
+                      mImpl->mProtectedGraphicsQueueFamilyIndex, deviceExts)
                                                : mImpl->mDevice;
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
 

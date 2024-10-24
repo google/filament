@@ -259,8 +259,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
       mSamples(samples),
-      mLayerCount(layerCount) {
-    mProtected = false;
+      mLayerCount(layerCount),
+      mProtected(false){
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         mColor[index] = color[index];
     }

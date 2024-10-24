@@ -157,12 +157,8 @@ public:
 
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
-    VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-    };
-    VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-    };
+    VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {};
+    VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {};
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
     bool mMultiviewEnabled = false;

@@ -289,9 +289,9 @@ private:
     VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VulkanAttachment mMsaaDepthAttachment = {};
     const bool mOffscreen : 1;
-    bool mProtected : 1;
     uint8_t mSamples : 7;
     uint8_t mLayerCount = 1;
+    bool mProtected : 1;
 };
 
 struct VulkanBufferObject;

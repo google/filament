@@ -35,7 +35,7 @@ class VulkanResourceAllocator;
 struct VulkanTextureState : public VulkanResource {
     VulkanTextureState(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
             VulkanStagePool& stagePool, VkFormat format, VkImageViewType viewType, uint8_t levels,
-            uint8_t layerCount, VulkanLayout defaultLayout, bool isProtected = false);
+            uint8_t layerCount, VulkanLayout defaultLayout, bool isProtected);
 
     struct ImageViewKey {
         VkImageSubresourceRange range;  // 4 * 5 bytes
