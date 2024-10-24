@@ -106,7 +106,13 @@
 
 #if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() \
-        DebugMarker _debug_marker(*this, __func__);
+        const char* _debug_marker_header = "backend::"; \
+        const size_t _debug_marker_header_len = strlen(_debug_marker_header); \
+        char _debug_marker_name[256] = {0}; \
+        constexpr size_t _debug_marker_name_max_len = sizeof(_debug_marker_name); \
+        strncpy(_debug_marker_name, _debug_marker_header, _debug_marker_name_max_len - 1); \
+        strncpy(_debug_marker_name + _debug_marker_header_len, __func__, _debug_marker_name_max_len - _debug_marker_header_len - 1); \
+        DebugMarker _debug_marker(*this, _debug_marker_name);
 #else
 #   define DEBUG_MARKER()
 #endif
