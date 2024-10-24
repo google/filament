@@ -21,6 +21,7 @@
 #include "DriverBase.h"
 
 #include "VulkanBuffer.h"
+#include "VulkanFboCache.h"
 #include "VulkanResources.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
@@ -268,28 +269,68 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     explicit VulkanRenderTarget();
 
     void transformClientRectToPlatform(VkRect2D* bounds) const;
-    void transformClientRectToPlatform(VkViewport* bounds) const;
-    VkExtent2D getExtent() const;
-    // We return references in the following methods to avoid a copy.
-    VulkanAttachment& getColor(int target);
-    VulkanAttachment& getMsaaColor(int target);
-    VulkanAttachment& getDepth();
-    VulkanAttachment& getMsaaDepth();
-    uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
-    uint8_t getSamples() const { return mSamples; }
-    uint8_t getLayerCount() const { return mLayerCount; }
-    bool hasDepth() const { return mDepth.texture; }
-    bool isSwapChain() const { return !mOffscreen; }
+
+    void transformViewportToPlatform(VkViewport* bounds) const;
+
+    inline VkExtent2D getExtent() const {
+        return {width, height};
+    }
+
+    inline VulkanAttachment const& getColor0() const {
+        assert_invariant(mInfo->colors[0]);
+        return mInfo->attachments[0];
+    }
+
+    inline VulkanAttachment const& getDepth() const {
+        assert_invariant(hasDepth());
+        if (mInfo->fbkey.samples == 1) {
+            return mInfo->attachments[mInfo->depthIndex];
+        }
+        return mInfo->attachments[mInfo->msaaDepthIndex];
+    }
+
+    inline VulkanFboCache::RenderPassKey const& getRenderPassKey() const {
+        return mInfo->rpkey;
+    }
+
+    inline VulkanFboCache::FboKey const& getFboKey() const {
+        return mInfo->fbkey;
+    }
+
+    inline uint8_t getSamples() const {
+        return mInfo->fbkey.samples;
+    }
+
+    uint8_t getColorTargetCount(VulkanRenderPass const& pass) const;
+
+    inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
+
+    inline bool isSwapChain() const { return !mOffscreen; }
+
     void bindToSwapChain(VulkanSwapChain& surf);
 
+    void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
+
+    void emitBarriersEndRenderPass(VulkanCommandBuffer& commands);
+
 private:
-    VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    VulkanAttachment mDepth = {};
-    VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    VulkanAttachment mMsaaDepthAttachment = {};
-    const bool mOffscreen : 1;
-    uint8_t mSamples : 7;
-    uint8_t mLayerCount = 1;
+    struct Auxiliary {
+        static constexpr int8_t UNDEFINED_INDEX = -1;
+
+        explicit Auxiliary() noexcept = default;
+
+        VulkanFboCache::RenderPassKey rpkey = {};
+        VulkanFboCache::FboKey fbkey = {};
+        std::vector<VulkanAttachment> attachments;
+        utils::bitset32 colors;
+        int8_t depthIndex = UNDEFINED_INDEX;
+        int8_t msaaDepthIndex = UNDEFINED_INDEX;
+        int8_t msaaIndex = UNDEFINED_INDEX;
+    };
+    bool const mOffscreen;
+
+    VulkanAcquireOnlyResourceManager mResources;
+    std::unique_ptr<Auxiliary> mInfo;
 };
 
 struct VulkanBufferObject;
