@@ -235,7 +235,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         imageInfo.arrayLayers = depth * 6;
         imageInfo.extent.depth = 1;
     }
-    if (state->mIsProtected) {
+    if (any(usage & TextureUsage::PROTECTED)) {
         imageInfo.flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
     }
 

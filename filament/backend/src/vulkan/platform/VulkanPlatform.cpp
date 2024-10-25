@@ -301,7 +301,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceFeatures2 const& features, uint32_t graphicsQueueFamilyIndex,
-    uint32_t protectedGraphicsQueueFamilyIndex, ExtensionSet const& deviceExtensions) {
+        uint32_t protectedGraphicsQueueFamilyIndex, ExtensionSet const& deviceExtensions) {
     VkDevice device;
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};
     const float queuePriority[] = {1.0f};
@@ -424,7 +424,7 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
     return queueFamiliesProperties;
 }
 
-uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags = VK_QUEUE_GRAPHICS_BIT) {
+uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags) {
     const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties
             = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
     uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
@@ -491,7 +491,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice) == INVALID_VK_INDEX) {
+        if (identifyGraphicsQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT) == INVALID_VK_INDEX) {
             continue;
         }
 
@@ -714,7 +714,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     queryProtectedMemoryFeatures.pNext = context.mPhysicalDeviceFeatures.pNext;
     context.mPhysicalDeviceFeatures.pNext = &queryProtectedMemoryFeatures;
     VkPhysicalDeviceProtectedMemoryProperties protectedMemoryProperties = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES,
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES,
     };
     protectedMemoryProperties.pNext = context.mPhysicalDeviceProperties.pNext;
     context.mPhysicalDeviceProperties.pNext = &protectedMemoryProperties;
@@ -727,7 +727,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     mImpl->mGraphicsQueueFamilyIndex
             = mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX
-                      ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice)
+                      ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT)
                       : mImpl->mGraphicsQueueFamilyIndex;
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
 
@@ -735,9 +735,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     context.mProtectedMemorySupported = static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
     if (context.mProtectedMemorySupported) {
         mImpl->mProtectedGraphicsQueueFamilyIndex
-            = mImpl->mProtectedGraphicsQueueFamilyIndex == INVALID_VK_INDEX
-            ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT))
-            : mImpl->mProtectedGraphicsQueueFamilyIndex;
+            = identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, 
+                (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         assert_invariant(mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
     }
 
