@@ -391,7 +391,6 @@ else()
     if (CMAKE_CXX_STANDARD EQUAL 20)
         list(APPEND FILAMENT_WARNINGS -Wno-deprecated-this-capture)
     endif()
-
 endif()
 
 if (APPLE)
