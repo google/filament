@@ -6,6 +6,10 @@ plugins {
 
 project.ext.isSample = true
 
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
 filamentTools {
     cmgenArgs = "-q --format=ktx --size=256 --extract-blur=0.1 --deploy=src/main/assets/envs/default_env"
     iblInputFile = project.layout.projectDirectory.file("../../../third_party/environments/lightroom_14b.hdr")
@@ -13,7 +17,7 @@ filamentTools {
 }
 
 // don't forget to update MainACtivity.kt when/if changing this.
-task copyMesh(type: Copy) {
+tasks.register('copyMesh', Copy) {
     from "../../../third_party/models/BusterDrone"
     into "src/main/assets/models"
 }

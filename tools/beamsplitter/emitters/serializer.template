@@ -6,6 +6,7 @@
 #include <utils/Log.h>
 
 #include <ostream>
+#include <cstring>
 
 #include "jsonParseUtils.h"
 
