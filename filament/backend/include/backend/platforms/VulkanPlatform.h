@@ -88,7 +88,7 @@ public:
         VkFormat colorFormat = VK_FORMAT_UNDEFINED;
         VkFormat depthFormat = VK_FORMAT_UNDEFINED;
         VkExtent2D extent = {0, 0};
-        bool protection = false;
+        bool isProtected = false;
     };
 
     struct ImageSyncData {

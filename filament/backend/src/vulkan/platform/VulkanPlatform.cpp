@@ -491,7 +491,8 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT) == INVALID_VK_INDEX) {
+        if (identifyGraphicsQueueFamilyIndex(candidateDevice, VK_QUEUE_GRAPHICS_BIT) 
+            == INVALID_VK_INDEX) {
             continue;
         }
 
@@ -727,12 +728,14 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     mImpl->mGraphicsQueueFamilyIndex
             = mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX
-                      ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, VK_QUEUE_GRAPHICS_BIT)
+                      ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, 
+                          VK_QUEUE_GRAPHICS_BIT)
                       : mImpl->mGraphicsQueueFamilyIndex;
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
 
     // We know we need to allocate the protected version of the VK objects
-    context.mProtectedMemorySupported = static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
+    context.mProtectedMemorySupported = 
+        static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
     if (context.mProtectedMemorySupported) {
         mImpl->mProtectedGraphicsQueueFamilyIndex
             = identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, 
@@ -755,7 +758,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     // Applying the same logic to the protected queue index (Not sure about shared context and protection)
     mImpl->mProtectedGraphicsQueueIndex
-        = mImpl->mProtectedGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : mImpl->mProtectedGraphicsQueueIndex;
+        = mImpl->mProtectedGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : 
+        mImpl->mProtectedGraphicsQueueIndex;
 
     ExtensionSet deviceExts;
     // If using a shared context, we do not assume any extensions.

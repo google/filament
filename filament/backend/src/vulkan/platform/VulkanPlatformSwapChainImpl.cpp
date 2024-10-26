@@ -249,7 +249,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
-    mSwapChainBundle.protection = mIsProtected;
+    mSwapChainBundle.isProtected = mIsProtected;
 
     FVK_LOGI << "vkCreateSwapchain"
            << ": " << mSwapChainBundle.extent.width << "x" << mSwapChainBundle.extent.height << ", "
@@ -257,7 +257,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
            << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
            << "identity-transform=" << (caps.currentTransform == 1) << ", "
            << "depth=" << mSwapChainBundle.depthFormat << ", "
-           << "protected=" << mSwapChainBundle.protection
+           << "protected=" << mSwapChainBundle.isProtected
            << io::endl;
 
     VkSemaphoreCreateInfo const semaphoreCreateInfo = {
