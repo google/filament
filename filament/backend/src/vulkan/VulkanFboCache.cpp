@@ -69,8 +69,8 @@ VulkanFboCache::~VulkanFboCache() {
             << "Please explicitly call terminate() while the VkDevice is still alive.";
 }
 
-VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
-    auto iter = mFramebufferCache.find(config);
+VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
+    FboMap::iterator iter = mFramebufferCache.find(config);
     if (UTILS_LIKELY(iter != mFramebufferCache.end() && iter->second.handle != VK_NULL_HANDLE)) {
         iter.value().timestamp = mCurrentTime;
         return iter->second.handle;
@@ -121,7 +121,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
     return framebuffer;
 }
 
-VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
+VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept {
     auto iter = mRenderPassCache.find(config);
     if (UTILS_LIKELY(iter != mRenderPassCache.end() && iter->second.handle != VK_NULL_HANDLE)) {
         iter.value().timestamp = mCurrentTime;
@@ -362,7 +362,7 @@ void VulkanFboCache::gc() noexcept {
     }
     const uint32_t evictTime = mCurrentTime - TIME_BEFORE_EVICTION;
 
-    for (auto iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ++iter) {
+    for (FboMap::iterator iter = mFramebufferCache.begin(); iter != mFramebufferCache.end(); ++iter) {
         const FboVal fbo = iter->second;
         if (fbo.timestamp < evictTime && fbo.handle) {
             mRenderPassRefCount[iter->first.renderPass]--;

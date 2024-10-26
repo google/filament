@@ -56,7 +56,8 @@ namespace filament {
 
 using namespace backend;
 
-FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) noexcept
+FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
+                                     const char* name) noexcept
         : mMaterial(material),
           mDescriptorSet(material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
@@ -66,7 +67,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
           mHasScissor(false),
           mIsDoubleSided(false),
           mIsDefaultInstance(false),
-          mTransparencyMode(TransparencyMode::DEFAULT) {
+          mTransparencyMode(TransparencyMode::DEFAULT),
+          mName(name ? CString(name) : material->getName()) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 

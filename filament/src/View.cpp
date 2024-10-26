@@ -185,6 +185,14 @@ bool View::isFrontFaceWindingInverted() const noexcept {
     return downcast(this)->isFrontFaceWindingInverted();
 }
 
+void View::setTransparentPickingEnabled(bool enabled) noexcept {
+    downcast(this)->setTransparentPickingEnabled(enabled);
+}
+
+bool View::isTransparentPickingEnabled() const noexcept {
+    return downcast(this)->isTransparentPickingEnabled();
+}
+
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
     downcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
