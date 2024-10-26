@@ -36,15 +36,12 @@ namespace filament::backend {
 
 namespace {
 
-void flipVertically(VkRect2D* rect, uint32_t framebufferHeight) {
-    rect->offset.y = framebufferHeight - rect->offset.y - rect->extent.height;
-}
-
 void flipVertically(VkViewport* rect, uint32_t framebufferHeight) {
     rect->y = framebufferHeight - rect->y - rect->height;
 }
 
 void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeight) {
+    rect->offset.y = fbHeight - rect->offset.y - rect->extent.height;
     int32_t x = std::max(rect->offset.x, 0);
     int32_t y = std::max(rect->offset.y, 0);
     int32_t right = std::min(rect->offset.x + (int32_t) rect->extent.width, (int32_t) fbWidth);
@@ -104,6 +101,27 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
         }
     }
     return mask;
+}
+
+VulkanTexture* initMsaaTexture(VulkanTexture* texture, VkDevice device,
+        VkPhysicalDevice physicalDevice, VulkanContext const& context, VmaAllocator allocator,
+        VulkanCommands* commands, VulkanResourceAllocator* handleAllocator, uint8_t levels,
+        uint8_t samples, VulkanStagePool& stagePool) {
+    assert_invariant(texture);
+    auto msTexture = texture->getSidecar();
+    if (UTILS_UNLIKELY(!msTexture)) {
+        // Clear all usage flags that are not related to attachments, so that we can
+        // use the transient usage flag.
+        const TextureUsage usage = texture->usage & TextureUsage::ALL_ATTACHMENTS;
+        assert_invariant(static_cast<uint16_t>(usage) != 0U);
+
+        msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
+                handleAllocator, texture->target, levels,
+                texture->format, samples, texture->width, texture->height, texture->depth, usage,
+                stagePool, true /* heap allocated */);
+        texture->setSidecar(msTexture);
+    }
+    return msTexture;
 }
 
 } // anonymous namespace
@@ -234,152 +252,238 @@ VulkanProgram::~VulkanProgram() {
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-VulkanRenderTarget::VulkanRenderTarget() :
-    HwRenderTarget(0, 0),
-    VulkanResource(VulkanResourceType::RENDER_TARGET),
-    mOffscreen(false), mSamples(1) {}
+VulkanRenderTarget::VulkanRenderTarget()
+    : HwRenderTarget(0, 0),
+      VulkanResource(VulkanResourceType::RENDER_TARGET),
+      mOffscreen(false),
+      mProtected(false),
+      mResources(nullptr),
+      mInfo(std::make_unique<Auxiliary>()) {
+    mInfo->rpkey.samples = mInfo->fbkey.samples = 1;
+}
 
 void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);
+
     VkExtent2D const extent = swapChain.getExtent();
-    mColor[0] = { .texture = swapChain.getCurrentColor() };
-    mDepth = { .texture = swapChain.getDepth() };
     width = extent.width;
     height = extent.height;
     mProtected = swapChain.isProtected();
+
+    VulkanAttachment color = {.texture = swapChain.getCurrentColor()};
+    mInfo->attachments = {color};
+
+    auto& fbkey = mInfo->fbkey;
+    auto& rpkey = mInfo->rpkey;
+
+    rpkey.colorFormat[0] = color.getFormat();
+    fbkey.width = width;
+    fbkey.height = height;
+    fbkey.color[0] = color.getImageView();
+    fbkey.resolve[0] = VK_NULL_HANDLE;
+
+    VulkanAttachment depth = {};
+    rpkey.depthFormat = depth.getFormat();
+    fbkey.depth = VK_NULL_HANDLE;
+
+    if (swapChain.getDepth()) {
+        depth = {.texture = swapChain.getDepth()};
+        mInfo->attachments.push_back(depth);
+        mInfo->depthIndex = 1;
+
+        rpkey.depthFormat = depth.getFormat();
+        fbkey.depth = depth.getImageView();
+    }
+    mInfo->colors.set(0);
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanResourceAllocator* handleAllocator,
-        uint32_t width, uint32_t height, uint8_t samples,
+        VulkanResourceAllocator* handleAllocator, uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
-      mSamples(samples),
-      mLayerCount(layerCount),
-      mProtected(false){
-    for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        mColor[index] = color[index];
-    }
-    mDepth = depthStencil[0];
-    VulkanTexture* depthTexture = (VulkanTexture*) mDepth.texture;
+      mProtected(false),
+      mResources(handleAllocator),
+      mInfo(std::make_unique<Auxiliary>()) {
 
-    if (samples == 1) {
-        return;
-    }
+    auto& depth = depthStencil[0];
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
     auto const& limits = context.getPhysicalDeviceLimits();
-    mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
+    samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
             limits.framebufferColorSampleCounts);
 
-    // Create sidecar MSAA textures for color attachments if they don't already exist.
+    auto& rpkey = mInfo->rpkey;
+    rpkey.samples = samples;
+    rpkey.depthFormat = depth.getFormat();
+    rpkey.viewCount = layerCount;
+
+    auto& fbkey = mInfo->fbkey;
+    fbkey.width = width;
+    fbkey.height = height;
+    fbkey.samples = samples;
+
+    std::vector<VulkanAttachment>& attachments = mInfo->attachments;
+    std::vector<VulkanAttachment> msaa;
+
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        VulkanAttachment const& spec = color[index];
-        VulkanTexture* texture = (VulkanTexture*) spec.texture;
-        if (texture && texture->samples == 1) {
-            auto msTexture = texture->getSidecar();
-            if (UTILS_UNLIKELY(!msTexture)) {
-                // Clear all usage flags that are not related to attachments, so that we can
-                // use the transient usage flag.
-                const TextureUsage usage = texture->usage & TextureUsage::ALL_ATTACHMENTS;
-                assert_invariant(static_cast<uint16_t>(usage) != 0U);
+        VulkanAttachment& attachment = color[index];
+        auto texture = attachment.texture;
+        if (!texture) {
+            rpkey.colorFormat[index] = VK_FORMAT_UNDEFINED;
+            continue;
+        }
 
-                // TODO: This should be allocated with the ResourceAllocator.
-                msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
-                        handleAllocator,
-                        texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
-                        samples, texture->width, texture->height, texture->depth, usage,
-                        stagePool, true /* heap allocated */);
-                texture->setSidecar(msTexture);
+        attachments.push_back(attachment);
+        mInfo->colors.set(index);
+
+        rpkey.colorFormat[index] = attachment.getFormat();
+        fbkey.color[index] = attachment.getImageView();
+        fbkey.resolve[index] = VK_NULL_HANDLE;
+
+        mResources.acquire(attachment.texture);
+
+        if (samples > 1) {
+            VulkanAttachment msaaAttachment = {};
+            if (texture->samples == 1) {
+                auto msaaTexture = initMsaaTexture(texture, device, physicalDevice, context,
+                        allocator, commands, handleAllocator,
+                        ((VulkanTexture const*) texture)->levels, samples, stagePool);
+                if (msaaTexture && msaaTexture->isTransientAttachment()) {
+                    rpkey.usesLazilyAllocatedMemory |= (1 << index);
+                }
+                if (attachment.texture->samples == 1) {
+                    rpkey.needsResolveMask |= (1 << index);
+                }
+                msaaAttachment = {
+                    .texture = msaaTexture,
+                    .layerCount = layerCount,
+                };
+
+                fbkey.resolve[index] = attachment.getImageView();
+            } else {
+                msaaAttachment = {
+                    .texture = texture,
+                    .layerCount = layerCount,
+                };
             }
-            mMsaaAttachments[index] = {.texture = msTexture};
+            fbkey.color[index] = msaaAttachment.getImageView();
+            msaa.push_back(msaaAttachment);
+            mResources.acquire(msaaAttachment.texture);
         }
-        if (texture && texture->samples > 1) {
-            mMsaaAttachments[index] = mColor[index];
+    }
+
+    if (attachments.size() > 0 && samples > 1 && msaa.size() > 0) {
+        mInfo->msaaIndex = (uint8_t) attachments.size();
+        attachments.insert(attachments.end(), msaa.begin(), msaa.end());
+    }
+
+    if (depth.texture) {
+        auto depthTexture = depth.texture;
+        mInfo->depthIndex = (uint8_t) attachments.size();
+        attachments.push_back(depth);
+        mResources.acquire(depthTexture);
+        fbkey.depth = depth.getImageView();
+        if (samples > 1) {
+            mInfo->msaaDepthIndex = mInfo->depthIndex;
+            if (depthTexture->samples == 1) {
+                // MSAA depth texture must have the mipmap count of 1
+                uint8_t const msLevel = 1;
+                // Create sidecar MSAA texture for the depth attachment if it does not already exist.
+                auto msaa = initMsaaTexture(depthTexture, device, physicalDevice, context, allocator,
+                        commands, handleAllocator, msLevel, samples, stagePool);
+                mInfo->msaaDepthIndex = (uint8_t) attachments.size();
+                attachments.push_back({ .texture = msaa, .layerCount = layerCount });
+                mResources.acquire(msaa);
+            }
         }
     }
-
-    if (!depthTexture) {
-        return;
-    }
-
-    // There is no need for sidecar depth if the depth texture is already MSAA.
-    if (depthTexture->samples > 1) {
-        mMsaaDepthAttachment = mDepth;
-        return;
-    }
-
-    // MSAA depth texture must have the mipmap count of 1
-    uint8_t const msLevel = 1;
-
-    // Create sidecar MSAA texture for the depth attachment if it does not already exist.
-    VulkanTexture* msTexture = depthTexture->getSidecar();
-    if (UTILS_UNLIKELY(!msTexture)) {
-        msTexture = new VulkanTexture(device, physicalDevice, context, allocator,
-                commands, handleAllocator,
-                depthTexture->target, msLevel, depthTexture->format, samples,
-                depthTexture->width, depthTexture->height, depthTexture->depth, depthTexture->usage,
-                stagePool, true /* heap allocated */);
-        depthTexture->setSidecar(msTexture);
-    }
-
-    mMsaaDepthAttachment = {
-        .texture = msTexture,
-        .level = msLevel,
-        .layer = mDepth.layer,
-    };
 }
 
 void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
-    const auto& extent = getExtent();
-    flipVertically(bounds, extent.height);
+    auto const& extent = getExtent();
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
+void VulkanRenderTarget::transformViewportToPlatform(VkViewport* bounds) const {
     flipVertically(bounds, getExtent().height);
-}
-
-VkExtent2D VulkanRenderTarget::getExtent() const {
-    return {width, height};
-}
-
-VulkanAttachment& VulkanRenderTarget::getColor(int target) {
-    return mColor[target];
-}
-
-VulkanAttachment& VulkanRenderTarget::getMsaaColor(int target) {
-    return mMsaaAttachments[target];
-}
-
-VulkanAttachment& VulkanRenderTarget::getDepth() {
-    return mDepth;
-}
-
-VulkanAttachment& VulkanRenderTarget::getMsaaDepth() {
-    return mMsaaDepthAttachment;
 }
 
 uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
     if (!mOffscreen) {
         return 1;
     }
+    if (pass.currentSubpass == 1) {
+        return mInfo->colors.count();
+    }
     uint8_t count = 0;
-    for (uint8_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (!mColor[i].texture) {
-            continue;
-        }
-        // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
-        if (!(pass.params.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+    mInfo->colors.forEachSetBit([&count, &pass](size_t index) {
+        if (!(pass.params.subpassMask & (1 << index))) {
             count++;
         }
-    }
+    });
     return count;
+}
+
+void VulkanRenderTarget::emitBarriersBeginRenderPass(VulkanCommandBuffer& commands) {
+    auto& attachments = mInfo->attachments;
+    auto samples = mInfo->fbkey.samples;
+    auto barrier = [&commands](VulkanAttachment& attachment, VulkanLayout const layout) {
+        auto tex = attachment.texture;
+        auto const& range = attachment.getSubresourceRange();
+        if (tex->getLayout(range.baseMipLevel, range.baseArrayLayer) != layout &&
+                !tex->transitionLayout(&commands, range, layout)) {
+            // If the layout transition did not emit a barrier, we do it manually here.
+            tex->samplerToAttachmentBarrier(&commands, range);
+        }
+    };
+
+    for (size_t i = 0, count = mInfo->colors.count(); i < count; ++i) {
+        auto& attachment = attachments[i];
+        auto tex = attachment.texture;
+        if (samples == 1 || tex->samples == 1) {
+            barrier(attachment, VulkanLayout::COLOR_ATTACHMENT);
+        }
+    }
+    if (mInfo->msaaIndex != Auxiliary::UNDEFINED_INDEX) {
+        for (size_t i = mInfo->msaaIndex, count = mInfo->msaaIndex + mInfo->colors.count();
+                i < count; ++i) {
+            barrier(attachments[i], VulkanLayout::COLOR_ATTACHMENT);
+        }
+    }
+    if (mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX) {
+        barrier(attachments[mInfo->depthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    }
+    if (mInfo->msaaDepthIndex != Auxiliary::UNDEFINED_INDEX) {
+        barrier(attachments[mInfo->msaaDepthIndex], VulkanLayout::DEPTH_ATTACHMENT);
+    }
+}
+
+void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands) {
+    if (isSwapChain()) {
+        return;
+    }
+
+    for (auto& attachment: mInfo->attachments) {
+        auto const& range = attachment.getSubresourceRange();
+        bool const isDepth = attachment.isDepth();
+        auto texture = attachment.texture;
+        if (isDepth) {
+            texture->setLayout(range, VulkanFboCache::FINAL_DEPTH_ATTACHMENT_LAYOUT);
+            if (!texture->transitionLayout(&commands, range, VulkanLayout::DEPTH_SAMPLER)) {
+                texture->attachmentToSamplerBarrier(&commands, range);
+            }
+        } else {
+            texture->setLayout(range, VulkanFboCache::FINAL_COLOR_ATTACHMENT_LAYOUT);
+            if (!texture->transitionLayout(&commands, range, VulkanLayout::READ_WRITE)) {
+                texture->attachmentToSamplerBarrier(&commands, range);
+            }
+        }
+    }
 }
 
 VulkanVertexBufferInfo::VulkanVertexBufferInfo(

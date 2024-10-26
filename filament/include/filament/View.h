@@ -669,6 +669,26 @@ public:
     bool isFrontFaceWindingInverted() const noexcept;
 
     /**
+     * Enables or disables transparent picking. Disabled by default.
+     *
+     * When transparent picking is enabled, View::pick() will pick from both
+     * transparent and opaque renderables. When disabled, View::pick() will only
+     * pick from opaque renderables.
+     *
+     * @param enabled true enables transparent picking, false disables it.
+     *
+     * @note Transparent picking will create an extra pass for rendering depth
+     *       from both transparent and opaque renderables. 
+     */
+    void setTransparentPickingEnabled(bool enabled) noexcept;
+
+    /**
+     * Returns true if transparent picking is enabled.
+     * See setTransparentPickingEnabled() for more information.
+     */
+    bool isTransparentPickingEnabled() const noexcept;
+
+    /**
      * Enables use of the stencil buffer.
      *
      * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth

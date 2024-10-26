@@ -195,6 +195,15 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
             }
         #endif
     #elif defined(WIN32)
+        // On (at least) NVIDIA drivers, the Vulkan implementation (specifically the call to
+        // vkGetPhysicalDeviceSurfaceCapabilitiesKHR()) does not correctly handle the fact that
+        // each native window has its own DPI_AWARENESS_CONTEXT, and erroneously uses the context
+        // of the calling thread. As a workaround, we set the current thread's DPI_AWARENESS_CONTEXT
+        // to that of the native window we've been given. This isn't a perfect solution, because an
+        // application could create swap chains on multiple native windows with varying DPI-awareness,
+        // but even then, at least one of the windows would be guaranteed to work correctly.
+        SetThreadDpiAwarenessContext(GetWindowDpiAwarenessContext((HWND) nativeWindow));
+
         VkWin32SurfaceCreateInfoKHR const createInfo = {
             .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
             .hinstance = GetModuleHandle(nullptr),
