@@ -18,6 +18,7 @@
 
 #include "CommandStreamDispatcher.h"
 #include "DataReshaper.h"
+#include "SystraceProfile.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
@@ -104,7 +105,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
     FVK_LOGE << utils::io::endl;
     return VK_FALSE;
 }
-#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
+#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -125,7 +126,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     FVK_LOGE << utils::io::endl;
     return VK_FALSE;
 }
-#endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
+#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 
 }// anonymous namespace
@@ -155,7 +156,7 @@ DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
                 << "Unable to create Vulkan debug messenger.";
     }
-#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
+#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 }
 
 DebugUtils* DebugUtils::get() {
@@ -183,7 +184,7 @@ void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
     };
     vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
 }
-#endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
+#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
@@ -358,6 +359,7 @@ void VulkanDriver::collectGarbage() {
 }
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    PROFILE_BEGINFRAME();
     FVK_SYSTRACE_CALL();
     // Do nothing.
 }
@@ -374,6 +376,7 @@ void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {
+    PROFILE_ENDFRAME();
     FVK_SYSTRACE_CALL();
     mCommands.flush();
     collectGarbage();

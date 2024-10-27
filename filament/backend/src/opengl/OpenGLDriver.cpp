@@ -23,6 +23,7 @@
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
 #include "OpenGLTimerQuery.h"
+#include "SystraceProfile.h"
 #include "gl_headers.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
@@ -3454,6 +3455,7 @@ void OpenGLDriver::beginFrame(
         UTILS_UNUSED int64_t monotonic_clock_ns,
         UTILS_UNUSED int64_t refreshIntervalNs,
         UTILS_UNUSED uint32_t frameId) {
+    PROFILE_BEGINFRAME();
     DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
@@ -3489,6 +3491,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
+    PROFILE_ENDFRAME();
     DEBUG_MARKER()
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
