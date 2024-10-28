@@ -1293,8 +1293,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             rpkey.colorFormat[i] = info.getFormat();
             if (rpkey.samples > 1) {
                 const VulkanTexture* sidecar = info.texture->getSidecar();
-                assert_invariant(sidecar);
-				assert_invariant(sidecar->samples > 1);
                 if (sidecar && sidecar->isTransientAttachment()) {
                     rpkey.usesLazilyAllocatedMemory |= (1 << i);
                 }
