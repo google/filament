@@ -28,6 +28,9 @@
 
 #include <memory>
 
+#include <sstream>
+#include <iomanip>
+
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
 
@@ -82,24 +85,53 @@ private:
 };
 
 struct VulkanRenderPass {
+    VulkanCommandBuffer* cmdBuffer;
     VulkanRenderTarget* renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
     int currentSubpass;
 };
 
+namespace {
+
+template< typename T >
+std::string int_to_hex( T i )
+{
+  std::stringstream stream;
+  stream << "0x" 
+         << std::setfill ('0') << std::setw(sizeof(T)*2) 
+         << std::hex << i;
+  return stream.str();
+}
+
+bool printed = false;
+
+}
+
 // This is a collection of immutable data about the vulkan context. This actual handles to the
 // context are stored in VulkanPlatform.
 struct VulkanContext {
 public:
-    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
-        for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
-            if (flags & 1) {
+    inline uint32_t selectMemoryType(uint32_t flags, VkMemoryPropertyFlags reqs) const {
+        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
+            assert_invariant(isProtectedMemorySupported()==true);
+        }
+
+        if (!printed) {
+            for (uint32_t i = 0; i < mMemoryProperties.memoryTypeCount; i++) {
+                utils::slog.e << "[" << int_to_hex((uint8_t) i) << "]="
+                              << int_to_hex(
+                                         (uint32_t) mMemoryProperties.memoryTypes[i].propertyFlags)
+                              << utils::io::endl;
+            }
+            printed = true;
+        }
+        for (uint32_t i = 0; i < mMemoryProperties.memoryTypeCount; i++) {
+            if (flags & (1ULL << i)) {
                 if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
                     return i;
                 }
             }
-            flags >>= 1;
         }
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
@@ -113,19 +145,19 @@ public:
     }
 
     inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
-        return mPhysicalDeviceProperties.limits;
+        return mPhysicalDeviceProperties.properties.limits;
     }
 
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
-        return mPhysicalDeviceProperties.vendorID;
+        return mPhysicalDeviceProperties.properties.vendorID;
     }
 
     inline bool isImageCubeArraySupported() const noexcept {
-        return mPhysicalDeviceFeatures.imageCubeArray == VK_TRUE;
+        return mPhysicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
     }
 
     inline bool isDepthClampSupported() const noexcept {
-        return mPhysicalDeviceFeatures.depthClamp == VK_TRUE;
+        return mPhysicalDeviceFeatures.features.depthClamp == VK_TRUE;
     }
 
     inline bool isDebugMarkersSupported() const noexcept {
@@ -141,21 +173,30 @@ public:
     }
 
     inline bool isClipDistanceSupported() const noexcept {
-        return mPhysicalDeviceFeatures.shaderClipDistance == VK_TRUE;
+        return mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
     }
 
     inline bool isLazilyAllocatedMemorySupported() const noexcept {
         return mLazilyAllocatedMemorySupported;
     }
 
+    inline bool isProtectedMemorySupported() const noexcept {
+        return mProtectedMemorySupported;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
-    VkPhysicalDeviceProperties mPhysicalDeviceProperties = {};
-    VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
+    VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+    };
+    VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+    };
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
     bool mMultiviewEnabled = false;
     bool mLazilyAllocatedMemorySupported = false;
+    bool mProtectedMemorySupported = false;
 
     VkFormatList mDepthStencilFormats;
     VkFormatList mBlittableDepthStencilFormats;

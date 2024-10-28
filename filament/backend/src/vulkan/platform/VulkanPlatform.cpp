@@ -159,6 +159,7 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = 
         // Request all cross-platform extensions.
         VK_KHR_SURFACE_EXTENSION_NAME,
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+        VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
 
     // Request these if available.
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -300,10 +301,11 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 }
 
 VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
-        VkPhysicalDeviceFeatures const& features, uint32_t graphicsQueueFamilyIndex,
-        ExtensionSet const& deviceExtensions) {
+        VkPhysicalDeviceFeatures2 const& features, uint32_t graphicsQueueFamilyIndex,
+        uint32_t protectedGraphicsQueueFamilyIndex, ExtensionSet const&
+        deviceExtensions) {
     VkDevice device;
-    VkDeviceQueueCreateInfo deviceQueueCreateInfo[1] = {};
+    VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};
     const float queuePriority[] = {1.0f};
     VkDeviceCreateInfo deviceCreateInfo = {};
     FixedCapacityVector<const char*> requestExtensions;
@@ -314,22 +316,29 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     for (auto const& ext: deviceExtensions) {
         requestExtensions.push_back(ext.data());
     }
-    deviceQueueCreateInfo->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    deviceQueueCreateInfo->queueFamilyIndex = graphicsQueueFamilyIndex;
-    deviceQueueCreateInfo->queueCount = 1;
-    deviceQueueCreateInfo->pQueuePriorities = &queuePriority[0];
+    deviceQueueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    deviceQueueCreateInfo[0].queueFamilyIndex = graphicsQueueFamilyIndex;
+    deviceQueueCreateInfo[0].queueCount = 1;
+    deviceQueueCreateInfo[0].pQueuePriorities = &queuePriority[0];
+    // Protected queue
+    deviceQueueCreateInfo[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    deviceQueueCreateInfo[1].flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+    deviceQueueCreateInfo[1].queueFamilyIndex = protectedGraphicsQueueFamilyIndex;
+    deviceQueueCreateInfo[1].queueCount = 1;
+    deviceQueueCreateInfo[1].pQueuePriorities = &queuePriority[0];
+
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.queueCreateInfoCount = 1;
+    deviceCreateInfo.queueCreateInfoCount = protectedGraphicsQueueFamilyIndex == INVALID_VK_INDEX ? 1 : 2;
     deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
 
     // We could simply enable all supported features, but since that may have performance
     // consequences let's just enable the features we need.
     VkPhysicalDeviceFeatures enabledFeatures{
-            .depthClamp = features.depthClamp,
-            .samplerAnisotropy = features.samplerAnisotropy,
-            .textureCompressionETC2 = features.textureCompressionETC2,
-            .textureCompressionBC = features.textureCompressionBC,
-            .shaderClipDistance = features.shaderClipDistance,
+            .depthClamp = features.features.depthClamp,
+            .samplerAnisotropy = features.features.samplerAnisotropy,
+            .textureCompressionETC2 = features.features.textureCompressionETC2,
+            .textureCompressionBC = features.features.textureCompressionBC,
+            .shaderClipDistance = features.features.shaderClipDistance,
     };
 
     deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
@@ -360,7 +369,19 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
         pNext = &multiview;
     }
 
+    VkPhysicalDeviceProtectedMemoryFeatures protectedMemory = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+    };
+    if (protectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX) {
+        // Enable protected memory, if requested.
+        protectedMemory.protectedMemory = VK_TRUE;
+
+        protectedMemory.pNext = pNext;
+        pNext = &protectedMemory;
+    }
+
     deviceCreateInfo.pNext = pNext;
+
 
     VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
@@ -406,13 +427,13 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
     return queueFamiliesProperties;
 }
 
-uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice) {
+uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice, VkQueueFlags flags = VK_QUEUE_GRAPHICS_BIT) {
     const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties
             = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
     uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
         VkQueueFamilyProperties props = queueFamiliesProperties[j];
-        if (props.queueCount != 0 && props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+        if (props.queueCount != 0 && props.queueFlags & flags) {
             graphicsQueueFamilyIndex = j;
             break;
         }
@@ -541,12 +562,16 @@ VkFormatList findAttachmentDepthStencilFormats(VkPhysicalDevice device) {
 
         VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT,
+
+//        VK_FORMAT_D16_UNORM,
+//        VK_FORMAT_D16_UNORM_S8_UINT,
     };
     std::vector<VkFormat> selectedFormats;
     for (VkFormat format: formats) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
-        if ((props.optimalTilingFeatures & features) == features) {
+        if ((props.optimalTilingFeatures & features) == features ||
+                (props.linearTilingFeatures & features) == features) {
             selectedFormats.push_back(format);
         }
     }
@@ -584,6 +609,9 @@ struct VulkanPlatformPrivate {
     uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
+    VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
     VulkanContext mContext = {};
 
     // We use a map to both map a handle (i.e. SwapChainPtr) to the concrete type and also to
@@ -686,10 +714,24 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
 
+    VkPhysicalDeviceProtectedMemoryFeatures queryProtectedMemoryFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
+    };
+    // Chain to the pNext linked list
+    queryProtectedMemoryFeatures.pNext = context.mPhysicalDeviceFeatures.pNext;
+    context.mPhysicalDeviceFeatures.pNext = &queryProtectedMemoryFeatures;
+
+
+    VkPhysicalDeviceProtectedMemoryProperties protectedMemoryProperties = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES,
+    };
+    protectedMemoryProperties.pNext = context.mPhysicalDeviceProperties.pNext;
+    context.mPhysicalDeviceProperties.pNext = &protectedMemoryProperties;
+
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
-    vkGetPhysicalDeviceProperties(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
-    vkGetPhysicalDeviceFeatures(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
+    vkGetPhysicalDeviceProperties2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
+    vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
     vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
 
     mImpl->mGraphicsQueueFamilyIndex
@@ -698,10 +740,20 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                       : mImpl->mGraphicsQueueFamilyIndex;
     assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
 
+    // We know we need to allocate the protected version of the VK objects
+    context.mProtectedMemorySupported = static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
+    if (context.mProtectedMemorySupported) {
+        mImpl->mProtectedGraphicsQueueFamilyIndex
+            = mImpl->mProtectedGraphicsQueueFamilyIndex == INVALID_VK_INDEX
+            ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice, (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT))
+            : mImpl->mProtectedGraphicsQueueFamilyIndex;
+        assert_invariant(mImpl->mProtectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
+    }
+
     // Only enable shaderClipDistance if we are doing instanced stereoscopic rendering.
-    if (context.mPhysicalDeviceFeatures.shaderClipDistance == VK_TRUE
+    if (context.mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE
             && driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
-        context.mPhysicalDeviceFeatures.shaderClipDistance = VK_FALSE;
+        context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
     }
 
     // At this point, we should have a family index that points to a family that has > 0 queues for
@@ -710,6 +762,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // within the family hasn't been provided by the client, we assume it to be 0.
     mImpl->mGraphicsQueueIndex
             = mImpl->mGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : mImpl->mGraphicsQueueIndex;
+
+    // Applying the same logic to the protected queue index (Not sure about shared context and protection)
+    mImpl->mProtectedGraphicsQueueIndex
+        = mImpl->mProtectedGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : mImpl->mProtectedGraphicsQueueIndex;
 
     ExtensionSet deviceExts;
     // If using a shared context, we do not assume any extensions.
@@ -727,13 +783,22 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     mImpl->mDevice
             = mImpl->mDevice == VK_NULL_HANDLE ? createLogicalDevice(mImpl->mPhysicalDevice,
-                      context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex, deviceExts)
-                                               : mImpl->mDevice;
+                      context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex,
+                      mImpl->mProtectedGraphicsQueueFamilyIndex, deviceExts) : mImpl->mDevice;
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
 
     vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
             &mImpl->mGraphicsQueue);
     assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
+
+    if (context.mProtectedMemorySupported) {
+        VkDeviceQueueInfo2 info = {};
+        info.queueFamilyIndex = mImpl->mProtectedGraphicsQueueFamilyIndex;
+        info.queueIndex = mImpl->mProtectedGraphicsQueueIndex;
+        info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2;
+        info.flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
+        vkGetDeviceQueue2(mImpl->mDevice, &info, &mImpl->mProtectedGraphicsQueue);
+    }
 
     // Store the extension support in the context
     context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -800,6 +865,10 @@ bool VulkanPlatform::hasResized(SwapChainPtr handle) {
     SWAPCHAIN_RET_FUNC(hasResized, handle, )
 }
 
+bool VulkanPlatform::isProtected(SwapChainPtr handle) {
+    SWAPCHAIN_RET_FUNC(isProtected, handle, )
+}
+
 VkResult VulkanPlatform::recreate(SwapChainPtr handle) {
     SWAPCHAIN_RET_FUNC(recreate, handle, )
 }
@@ -835,6 +904,16 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
             mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
             surface, fallbackExtent, flags);
     mImpl->mSurfaceSwapChains.insert(swapchain);
+
+    if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
+        if (!mImpl->mContext.mProtectedMemorySupported) {
+            utils::slog.w << "protected swapchain requested, but VulkanPlatform does not support it"
+                << utils::io::endl;
+        }
+        else {
+        }
+    }
+
     return swapchain;
 }
 
@@ -860,6 +939,18 @@ uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
     return mImpl->mGraphicsQueue;
+}
+
+uint32_t VulkanPlatform::getProtectedGraphicsQueueFamilyIndex() const noexcept {
+    return mImpl->mProtectedGraphicsQueueFamilyIndex;
+}
+
+uint32_t VulkanPlatform::getProtectedGraphicsQueueIndex() const noexcept {
+    return mImpl->mProtectedGraphicsQueueIndex;
+}
+
+VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
+    return mImpl->mProtectedGraphicsQueue;
 }
 
 #undef SWAPCHAIN_RET_FUNC

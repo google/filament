@@ -40,7 +40,8 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
       mTransitionSwapChainImageLayoutForPresent(
             platform->getCustomization().transitionSwapChainImageLayoutForPresent),
       mAcquired(false),
-      mIsFirstRenderPass(true) {
+      mIsFirstRenderPass(true),
+      mIsProtected(false) {
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
     FILAMENT_CHECK_POSTCONDITION(swapChain) << "Unable to create swapchain";
 
@@ -63,21 +64,28 @@ void VulkanSwapChain::update() {
     mColors.reserve(bundle.colors.size());
     VkDevice const device = mPlatform->getDevice();
 
+    mIsProtected = bundle.protection;
+    TextureUsage depthUsage = TextureUsage::DEPTH_ATTACHMENT;
+    TextureUsage colorUsage = TextureUsage::COLOR_ATTACHMENT;
+    if (bundle.protection) {
+        depthUsage |= TextureUsage::PROTECTED;
+        colorUsage |= TextureUsage::PROTECTED;
+    }
     for (auto const color: bundle.colors) {
         mColors.push_back(std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
                 color, bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
-                TextureUsage::COLOR_ATTACHMENT, mStagePool, true /* heap allocated */));
+                colorUsage, mStagePool, true /* heap allocated */));
     }
     mDepth = std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
             bundle.depth, bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
-            TextureUsage::DEPTH_ATTACHMENT, mStagePool, true /* heap allocated */);
+            depthUsage, mStagePool, true /* heap allocated */);
 
     mExtent = bundle.extent;
 }
 
 void VulkanSwapChain::present() {
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
-        VulkanCommandBuffer& commands = mCommands->get();
+        VulkanCommandBuffer& commands = mIsProtected ? mCommands->getProtected() : mCommands->get();
         VkImageSubresourceRange const subresources{
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,

@@ -280,13 +280,14 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
     SYSTRACE_CALL();
 
-#if 0 && defined(__ANDROID__)
-    char scratch[PROP_VALUE_MAX + 1];
-    int length = __system_property_get("debug.filament.protected", scratch);
-    if (swapChain && length > 0) {
+#if 1 && defined(__ANDROID__)
+//    char scratch[PROP_VALUE_MAX + 1];
+//    int length = __system_property_get("debug.filament.protected", scratch);
+//    if (swapChain && length > 0) {
+    if (swapChain) {
         uint64_t flags = swapChain->getFlags();
-        bool value = bool(atoi(scratch));
-        if (value) {
+//        bool value = bool(atoi(scratch));
+        if (true) {
             flags |= SwapChain::CONFIG_PROTECTED_CONTENT;
         } else {
             flags &= ~SwapChain::CONFIG_PROTECTED_CONTENT;

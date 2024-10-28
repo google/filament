@@ -162,9 +162,8 @@ PushConstantDescription::PushConstantDescription(backend::Program const& program
     }
 }
 
-void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout layout,
+void PushConstantDescription::write(VulkanCommandBuffer* cmdbuf, VkPipelineLayout layout,
         backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-    VulkanCommandBuffer* cmdbuf = &(commands->get());
     uint32_t binaryValue = 0;
     UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
     if (std::holds_alternative<bool>(value)) {
@@ -267,7 +266,6 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     VkExtent2D const extent = swapChain.getExtent();
     width = extent.width;
     height = extent.height;
-
     VulkanAttachment color = {.texture = swapChain.getCurrentColor()};
     mInfo->attachments = {color};
 
@@ -293,6 +291,7 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
         fbkey.depth = depth.getImageView();
     }
     mInfo->colors.set(0);
+    mProtected = swapChain.isProtected();
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
@@ -303,6 +302,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     : HwRenderTarget(width, height),
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
+      mProtected(false),
       mResources(handleAllocator),
       mInfo(std::make_unique<Auxiliary>()) {
 
@@ -334,6 +334,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             rpkey.colorFormat[index] = VK_FORMAT_UNDEFINED;
             continue;
         }
+
+        mProtected = mProtected || texture->isProtected();
 
         attachments.push_back(attachment);
         mInfo->colors.set(index);
@@ -398,6 +400,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 mResources.acquire(msaa);
             }
         }
+        mProtected = mProtected || depthTexture->isProtected();
     }
 }
 

@@ -198,8 +198,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mResourceAllocator(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
       mResourceManager(&mResourceAllocator),
       mThreadSafeResourceManager(&mResourceAllocator),
-      mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
-              mPlatform->getGraphicsQueueFamilyIndex(), &mContext, &mResourceAllocator),
+      mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(), mPlatform->getGraphicsQueueFamilyIndex(),
+          mPlatform->getProtectedGraphicsQueue(), mPlatform->getProtectedGraphicsQueueFamilyIndex(),
+          &mContext, &mResourceAllocator),
       mPipelineLayoutCache(mPlatform->getDevice(), &mResourceAllocator),
       mPipelineCache(mPlatform->getDevice(), mAllocator),
       mStagePool(mAllocator, &mCommands),
@@ -365,6 +366,7 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
     FVK_SYSTRACE_START("beginFrame");
     // Do nothing.
     FVK_SYSTRACE_END();
+    FVK_LOGE <<"-----begin frame ---" << utils::io::endl;
 }
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
@@ -384,6 +386,7 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     mCommands.flush();
     collectGarbage();
     FVK_SYSTRACE_END();
+    FVK_LOGE <<"-----end frame ---" << utils::io::endl;
 }
 
 void VulkanDriver::updateDescriptorSetBuffer(
@@ -525,19 +528,6 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
     FVK_SYSTRACE_END();
 }
-
-//void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
-//        TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-//        TextureUsage usage,
-//        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
-//    TextureSwizzle swizzleArray[] = {r, g, b, a};
-//    const VkComponentMapping swizzleMap = getSwizzleMap(swizzleArray);
-//    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
-//            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
-//            target, levels, format, samples, w, h, depth, usage, mStagePool,
-//            false /*heap allocated */, swizzleMap);
-//    mResourceManager.acquire(vktexture);
-//}
 
 void VulkanDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount) {
@@ -690,8 +680,13 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
-    VulkanCommandBuffer const& commandBuffer = mCommands.get();
-    mResourceAllocator.construct<VulkanFence>(fh, commandBuffer.fence);
+    VulkanCommandBuffer* cmdbuf = nullptr;
+    if (mCurrentRenderPass.cmdBuffer) {
+        cmdbuf = mCurrentRenderPass.cmdBuffer;
+    } else {
+        cmdbuf = &mCommands.get();
+    }
+    mResourceAllocator.construct<VulkanFence>(fh, cmdbuf->getFenceStatus());
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -703,6 +698,15 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
             mAllocator, &mCommands, &mResourceAllocator, mStagePool, nativeWindow, flags);
     mResourceManager.acquire(swapChain);
+
+    if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
+        if (!isProtectedContentSupported()) {
+            utils::slog.w << "protected swapchain requested, but Vulkan does not support it"
+                << utils::io::endl;
+        } else {
+
+        }
+    }
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
@@ -977,8 +981,7 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
 }
 
 bool VulkanDriver::isProtectedContentSupported() {
-    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
-    return false;
+    return mContext.isProtectedMemorySupported();
 }
 
 bool VulkanDriver::isStereoSupported() {
@@ -1242,6 +1245,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("beginRenderPass");
 
+    FVK_LOGE <<"begin render pass" << utils::io::endl;
+
     VulkanRenderTarget* const rt = mResourceAllocator.handle_cast<VulkanRenderTarget*>(rth);
     VkExtent2D const& extent = rt->getExtent();
     assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
@@ -1250,6 +1255,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
+
     if (rt->isSwapChain()) {
         VulkanSwapChain* sc = mCurrentSwapChain;
         assert_invariant(sc);
@@ -1270,7 +1276,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // If that's the case, we need to change the layout of the texture to DEPTH_SAMPLER, which is a
     // more general layout. Otherwise, we prefer the DEPTH_ATTACHMENT layout, which is optimal for
     // the non-sampling case.
-    VulkanCommandBuffer& commands = mCommands.get();
+    VulkanCommandBuffer& commands = rt->isProtected() ? mCommands.getProtected() : mCommands.get();
     VkCommandBuffer const cmdbuffer = commands.buffer();
 
     // Scissor is reset with each render pass
@@ -1379,6 +1385,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     vkCmdSetViewport(cmdbuffer, 0, 1, &viewport);
 
     mCurrentRenderPass = {
+        .cmdBuffer = &commands,
         .renderTarget = rt,
         .renderPass = renderPassInfo.renderPass,
         .params = params,
@@ -1391,8 +1398,10 @@ void VulkanDriver::endRenderPass(int) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("endRenderPass");
 
-    VulkanCommandBuffer& commands = mCommands.get();
-    VkCommandBuffer cmdbuffer = commands.buffer();
+    FVK_LOGE <<"end render pass" << utils::io::endl;
+
+    VulkanCommandBuffer* cmdbuf = mCurrentRenderPass.cmdBuffer;
+    VkCommandBuffer cmdbuffer = cmdbuf->buffer();
     vkCmdEndRenderPass(cmdbuffer);
 
     VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
@@ -1400,7 +1409,7 @@ void VulkanDriver::endRenderPass(int) {
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
     // pipeline barrier between framebuffer writes and shader reads.
-    rt->emitBarriersEndRenderPass(commands);
+    rt->emitBarriersEndRenderPass(*cmdbuf);
 
     mRenderPassFboInfo = {};
     mCurrentRenderPass.renderTarget = nullptr;
@@ -1412,11 +1421,12 @@ void VulkanDriver::nextSubpass(int) {
     FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.currentSubpass == 0)
             << "Only two subpasses are currently supported.";
 
+    VulkanCommandBuffer* cmdbuf = mCurrentRenderPass.cmdBuffer;
     VulkanRenderTarget* renderTarget = mCurrentRenderPass.renderTarget;
     assert_invariant(renderTarget);
     assert_invariant(mCurrentRenderPass.params.subpassMask);
 
-    vkCmdNextSubpass(mCommands.get().buffer(), VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdNextSubpass(cmdbuf->buffer(), VK_SUBPASS_CONTENTS_INLINE);
 
     mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
             ++mCurrentRenderPass.currentSubpass);
@@ -1464,8 +1474,8 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
     assert_invariant(mBoundPipeline.program && "Expect a program when writing to push constants");
-    VulkanCommands* commands = &mCommands;
-    mBoundPipeline.program->writePushConstant(commands, mBoundPipeline.pipelineLayout, stage, index,
+    VulkanCommandBuffer* cmdbuf = mCurrentRenderPass.cmdBuffer;
+    mBoundPipeline.program->writePushConstant(cmdbuf, mBoundPipeline.pipelineLayout, stage, index,
             value);
 }
 
@@ -1476,6 +1486,7 @@ void VulkanDriver::insertEventMarker(char const* string) {
 }
 
 void VulkanDriver::pushGroupMarker(char const* string) {
+    FVK_LOGE <<"---> " << string << utils::io::endl;
     // Turns out all the markers are 0-terminated, so we can just pass it without len.
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands.pushGroupMarker(string);
@@ -1654,9 +1665,9 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 
 void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     FVK_SYSTRACE_CONTEXT();
-    FVK_SYSTRACE_START("draw");
+    FVK_SYSTRACE_START("bindPipeline");
 
-    VulkanCommandBuffer* commands = &mCommands.get();
+    VulkanCommandBuffer* commands = mCurrentRenderPass.cmdBuffer;
     const VulkanVertexBufferInfo& vbi =
             *mResourceAllocator.handle_cast<VulkanVertexBufferInfo*>(pipelineState.vertexBufferInfo);
 
@@ -1666,6 +1677,8 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
 
     auto* program = mResourceAllocator.handle_cast<VulkanProgram*>(programHandle);
     commands->acquire(program);
+
+    FVK_LOGE <<"bindpipeline with cmdbuf=" << commands->buffer() << utils::io::endl;
 
     // Update the VK raster state.
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
@@ -1738,7 +1751,7 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("bindRenderPrimitive");
 
-    VulkanCommandBuffer* commands = &mCommands.get();
+    VulkanCommandBuffer* commands = mCurrentRenderPass.cmdBuffer;
     VkCommandBuffer cmdbuffer = commands->buffer();
     const VulkanRenderPrimitive& prim = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
     commands->acquire(prim.indexBuffer);
@@ -1775,10 +1788,12 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("draw2");
 
-    VulkanCommandBuffer& commands = mCommands.get();
-    VkCommandBuffer cmdbuffer = commands.buffer();
+    VulkanCommandBuffer* commands = mCurrentRenderPass.cmdBuffer;
+    VkCommandBuffer cmdbuffer = commands->buffer();
 
-    mDescriptorSetManager.commit(&commands, mBoundPipeline.pipelineLayout,
+    FVK_LOGE <<"draw2 with cmdbuf=" << cmdbuffer << utils::io::endl;
+
+    mDescriptorSetManager.commit(commands, mBoundPipeline.pipelineLayout,
             mBoundPipeline.descriptorSetMask);
 
     // Finally, make the actual draw call. TODO: support subranges
@@ -1806,8 +1821,8 @@ void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 }
 
 void VulkanDriver::scissor(Viewport scissorBox) {
-    VulkanCommandBuffer& commands = mCommands.get();
-    VkCommandBuffer cmdbuffer = commands.buffer();
+    VulkanCommandBuffer* commands = mCurrentRenderPass.cmdBuffer;
+    VkCommandBuffer cmdbuffer = commands->buffer();
 
     // TODO: it's a common case that scissor() is called with (0, 0, maxint, maxint)
     //       we should maybe have a fast path for this and avoid vkCmdSetScissor() if possible

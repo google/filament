@@ -185,7 +185,7 @@ struct PushConstantDescription {
 
     uint32_t getVkRangeCount() const noexcept { return mRangeCount; }
 
-    void write(VulkanCommands* commands, VkPipelineLayout layout, backend::ShaderStage stage,
+    void write(VulkanCommandBuffer* cmdbuf, VkPipelineLayout layout, backend::ShaderStage stage,
             uint8_t index, backend::PushConstantVariant const& value);
 
 private:
@@ -218,9 +218,9 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->pushConstantDescription.getVkRanges();
     }
 
-    inline void writePushConstant(VulkanCommands* commands, VkPipelineLayout layout,
+    inline void writePushConstant(VulkanCommandBuffer* cmdbuf, VkPipelineLayout layout,
             backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-        mInfo->pushConstantDescription.write(commands, layout, stage, index, value);
+        mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
     }
 
 #if FVK_ENABLED_DEBUG_SAMPLER_NAME
@@ -307,6 +307,8 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
 
     inline bool isSwapChain() const { return !mOffscreen; }
 
+    bool isProtected() const { return mProtected; }
+
     void bindToSwapChain(VulkanSwapChain& surf);
 
     void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
@@ -328,6 +330,7 @@ private:
         int8_t msaaIndex = UNDEFINED_INDEX;
     };
     bool const mOffscreen;
+    bool mProtected;
 
     VulkanAcquireOnlyResourceManager mResources;
     std::unique_ptr<Auxiliary> mInfo;
