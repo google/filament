@@ -179,8 +179,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/caching/VulkanDescriptorSetManager.h
             src/vulkan/caching/VulkanPipelineLayoutCache.cpp
             src/vulkan/caching/VulkanPipelineLayoutCache.h
-            src/vulkan/memory/ResourceCounter.cpp
-            src/vulkan/memory/ResourceCounter.h
             src/vulkan/memory/ResourceManager.cpp
             src/vulkan/memory/ResourceManager.h
             src/vulkan/memory/ResourcePointer.h

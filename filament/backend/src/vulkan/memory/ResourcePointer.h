@@ -22,6 +22,8 @@
 
 #include <backend/Handle.h>
 
+#include <utility>
+
 namespace filament::backend {
 class VulkanDriver;
 
@@ -38,37 +40,36 @@ private:
     using enabled_resource_ptr =
             resource_ptr<typename std::enable_if<std::is_base_of<B, D>::value, D>::type>;
 public:
-
     template<typename B, typename... ARGS>
-    static enabled_resource_ptr<B> make(Handle<B> const& handle, ARGS&&... args) noexcept {
-        auto counter = ResourceManager::construct<D, B>(handle, std::forward<ARGS>(args)...);
-        return {counter};
+    static enabled_resource_ptr<B> make(ResourceManager* resManager, Handle<B> const& handle,
+            ARGS&&... args) noexcept {
+        D* ptr = resManager->construct<D, B>(handle, std::forward<ARGS>(args)...);
+        return {ptr};
     }
 
     // This will alloc a handle and then construct the object.
     template<typename... ARGS>
-    static resource_ptr<D> construct(ARGS&&... args) noexcept {
-        auto handle = ResourceManager::allocHandle<D>();
-        auto counter = ResourceManager::construct<D, D>(handle, std::forward<ARGS>(args)...);
-        return {counter};
+    static resource_ptr<D> construct(ResourceManager* resManager, ARGS&&... args) noexcept {
+        auto handle = resManager->allocHandle<D>();
+        D* ptr = resManager->construct<D, D>(handle, std::forward<ARGS>(args)...);
+        return {ptr};
     }
 
     template<typename B>
-    static enabled_resource_ptr<B> cast(Handle<B> const& handle) noexcept {
-        D* ptr = ResourceManager::handle_cast<D*, B>(handle);
-        auto counter = ResourceManager::fromCounterIndex<D>(ptr->counterIndex);
-        return {counter};
+    static enabled_resource_ptr<B> cast(ResourceManager* resManager,
+            Handle<B> const& handle) noexcept {
+        D* ptr = resManager->handle_cast<D*, B>(handle);
+        return {ptr};
     }
 
-    static resource_ptr<D> cast(D* ptr) noexcept {
-        assert_invariant(ptr);
-        auto counter = ResourceManager::fromCounterIndex<D>(ptr->counterIndex);
-        return {counter};
+    template<typename B>
+    static enabled_resource_ptr<B> cast(B* ptr) noexcept {
+        return {ptr};
     }
 
     ~resource_ptr() {
-        if (mCounter) {
-            mCounter.dec();
+        if (mRef) {
+            mRef->dec();
         }
     }
 
@@ -93,40 +94,36 @@ public:
 
     // move operator
     inline resource_ptr<D>& operator=(resource_ptr<D> && rhs) {
-        if (mCounter && mCounter != rhs.mCounter) {
-            mCounter.dec();
+        if (mRef && mRef != rhs.mRef) {
+            mRef->dec();
         }
-        mCounter = rhs.mCounter; // There should be no change in the reference count.
-        mRef = rhs.mRef;
-        rhs.mCounter = RefCounter {};
+        mRef = rhs.mRef; // There should be no change in the reference count.
         rhs.mRef = nullptr;
         return *this;
     }
 
     inline resource_ptr<D>& operator=(resource_ptr<D> const& rhs) {
-        if (mCounter == rhs.mCounter) {
+        if (mRef == rhs.mRef) {
             return *this;
         }
-        if (mCounter) {
-            mCounter.dec();
+        if (mRef) {
+            mRef->dec();
         }
-        mCounter = rhs.mCounter;
-        mCounter.inc();
         mRef = rhs.mRef;
+        mRef->inc();
         return *this;
     }
 
     template<typename E, typename = is_supported_t<E>>
     inline resource_ptr<D>& operator=(resource_ptr<E> const& rhs) {
-        if (mCounter == rhs.mCounter) {
+        if (mRef == rhs.mRef) {
             return *this;
         }
-        if (mCounter) {
-            mCounter.dec();
+        if (mRef) {
+            mRef->dec();
         }
-        mCounter = rhs.mCounter;
-        mCounter.inc();
         mRef = rhs.mRef;
+        mRef->inc();
         return *this;
     }
 
@@ -135,7 +132,7 @@ public:
     }
 
     inline explicit operator bool() const {
-        return bool(mCounter);
+        return bool(mRef);
     }
 
     inline D* operator->() {
@@ -147,16 +144,14 @@ public:
     }
 
     inline HandleId id() const {
-        if (mCounter) {
-            return mCounter.id();
+        if (mRef) {
+            return mRef->id;
         }
         return HandleBase::nullid;
     }
 
     inline D* get() const {
-        if (!mRef) {
-            mRef = ResourceManager::handle_cast<D*>(Handle<D>(id()));
-        }
+        assert_invariant(mRef);
         return mRef;
     }
 
@@ -164,36 +159,31 @@ private:
     // inc() and dec() For tracking ref-count with respect to create/destroy backend APIs. They can
     // only be used from VulkanDriver.
     inline void dec() {
-        if (mCounter) {
-            mCounter.dec();
-        }
+        mRef->dec();
     }
 
     inline void inc() {
-        if (mCounter) {
-            mCounter.inc();
-        }
+        mRef->inc();
     }
 
     inline ResourceType type() const {
-        if (mCounter) {
-            return mCounter.type();
+        if (mRef) {
+            return mRef->restype;
         }
         return ResourceType::UNDEFINED_TYPE;
     }
 
-    resource_ptr(RefCounter counter)
-        : mCounter(counter),
-          mRef(nullptr) {
-        mCounter.inc();
+    resource_ptr(D* ref)
+        : mRef(ref) {
+        mRef->inc();
     }
 
-    RefCounter mCounter;
-    mutable D* mRef = nullptr;
+    D* mRef = nullptr;
 
     // Allow generic structures to hold resources of different types.  For example,
     //    std::vector<fvkmemory::Resource> resources;
     friend struct resource_ptr<Resource>;
+    friend struct resource_ptr<ThreadSafeResource>;
 
     // This enables access to resource_ptr's private inc() and dec() methods.
     friend class filament::backend::VulkanDriver;

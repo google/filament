@@ -17,6 +17,8 @@
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/VulkanHandles.h"
 
+#include <utils/Panic.h>
+
 namespace filament::backend::fvkmemory {
 
 namespace {
@@ -25,64 +27,80 @@ uint32_t COUNTER[(size_t) ResourceType::UNDEFINED_TYPE] = {};
 #endif
 }
 
-ResourceManager* ResourceManager::sSingleton = nullptr;
-
 ResourceManager::ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck)
-    : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck),
-      mPool(arenaSize) {}
+    : mHandleAllocatorImpl("Handles", arenaSize, disableUseAfterFreeCheck) {}
 
-void ResourceManager::gcImpl() {
-    std::unique_lock<utils::Mutex> lock(mGcListMutex);
-    for (auto const& [type, id]: mGcList) {
-        ResourceManager::destroyWithType(type, id);
+void ResourceManager::gc() noexcept {
+    auto destroyAll = [this](GcList& list) {
+        for (auto const& [type, id]: list) {
+            destroyWithType(type, id);
+        }
+        list.clear();
+    };
+
+    {
+        // Note that we're not copying mThreadSafeGcList because the objects here do not have
+        // resource_ptrs to other handle objects, so their desctruction would not add more elements
+        // to mThreadSafeGcList.
+        std::unique_lock<utils::Mutex> lock(mThreadSafeGcListMutex);
+        destroyAll(mThreadSafeGcList);
     }
+
+    GcList gcs;
+    gcs.insert(gcs.end(), mGcList.begin(), mGcList.end());
     mGcList.clear();
+    destroyAll(gcs);
+}
+
+void ResourceManager::terminate() noexcept {
+    while (!mThreadSafeGcList.empty() || !mGcList.empty()) {
+        gc();
+    }
 }
 
 void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
-    auto s = sSingleton;
     switch (type) {
         case ResourceType::BUFFER_OBJECT:
-            s->destruct<VulkanBufferObject>(Handle<HwBufferObject>(id));
+            destruct<VulkanBufferObject>(Handle<VulkanBufferObject>(id));
             break;
         case ResourceType::INDEX_BUFFER:
-            s->destruct<VulkanIndexBuffer>(Handle<HwIndexBuffer>(id));
+            destruct<VulkanIndexBuffer>(Handle<VulkanIndexBuffer>(id));
             break;
         case ResourceType::PROGRAM:
-            s->destruct<VulkanProgram>(Handle<HwProgram>(id));
+            destruct<VulkanProgram>(Handle<VulkanProgram>(id));
             break;
         case ResourceType::RENDER_TARGET:
-            s->destruct<VulkanRenderTarget>(Handle<HwRenderTarget>(id));
+            destruct<VulkanRenderTarget>(Handle<VulkanRenderTarget>(id));
             break;
         case ResourceType::SWAP_CHAIN:
-            s->destruct<VulkanSwapChain>(Handle<HwSwapChain>(id));
+            destruct<VulkanSwapChain>(Handle<VulkanSwapChain>(id));
             break;
         case ResourceType::RENDER_PRIMITIVE:
-            s->destruct<VulkanRenderPrimitive>(Handle<VulkanRenderPrimitive>(id));
+            destruct<VulkanRenderPrimitive>(Handle<VulkanRenderPrimitive>(id));
             break;
         case ResourceType::TEXTURE:
-            s->destruct<VulkanTexture>(Handle<HwTexture>(id));
+            destruct<VulkanTexture>(Handle<VulkanTexture>(id));
             break;
         case ResourceType::TEXTURE_STATE:
-            s->destruct<VulkanTextureState>(Handle<VulkanTextureState>(id));
+            destruct<VulkanTextureState>(Handle<VulkanTextureState>(id));
             break;
         case ResourceType::TIMER_QUERY:
-            s->destruct<VulkanTimerQuery>(Handle<HwTimerQuery>(id));
+            destruct<VulkanTimerQuery>(Handle<VulkanTimerQuery>(id));
             break;
         case ResourceType::VERTEX_BUFFER:
-            s->destruct<VulkanVertexBuffer>(Handle<HwVertexBuffer>(id));
+            destruct<VulkanVertexBuffer>(Handle<VulkanVertexBuffer>(id));
             break;
         case ResourceType::VERTEX_BUFFER_INFO:
-            s->destruct<VulkanVertexBufferInfo>(Handle<HwVertexBufferInfo>(id));
+            destruct<VulkanVertexBufferInfo>(Handle<VulkanVertexBufferInfo>(id));
             break;
         case ResourceType::DESCRIPTOR_SET_LAYOUT:
-            s->destruct<VulkanDescriptorSetLayout>(Handle<VulkanDescriptorSetLayout>(id));
+            destruct<VulkanDescriptorSetLayout>(Handle<VulkanDescriptorSetLayout>(id));
             break;
         case ResourceType::DESCRIPTOR_SET:
-            s->destruct<VulkanDescriptorSet>(Handle<VulkanDescriptorSet>(id));
+            destruct<VulkanDescriptorSet>(Handle<VulkanDescriptorSet>(id));
             break;
         case ResourceType::FENCE:
-            s->destruct<VulkanFence>(Handle<VulkanFence>(id));
+            destruct<VulkanFence>(Handle<VulkanFence>(id));
             break;
         case ResourceType::UNDEFINED_TYPE:
             break;
@@ -92,13 +110,14 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
 #endif
 }
 
-void ResourceManager::trackIncrement(ResourceType type, HandleId id) {
+void ResourceManager::traceConstruction(ResourceType type, HandleId id) {
 #if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
-     COUNTER[(size_t) type]++;
+    assert_invariant(type != ResourceType::UNDEFINED_TYPE);
+    COUNTER[(size_t) type]++;
 #endif
 }
 
-void ResourceManager::printImpl() const {
+void ResourceManager::print() const noexcept {
 #if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
     utils::slog.e << "-------------------" << utils::io::endl;
     for (size_t i = 0; i < (size_t) ResourceType::UNDEFINED_TYPE; ++i) {

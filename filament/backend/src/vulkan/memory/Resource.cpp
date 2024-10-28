@@ -15,6 +15,7 @@
  */
 
 #include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourceManager.h"
 
 #include "vulkan/VulkanHandles.h"
 
@@ -115,6 +116,14 @@ std::string getTypeStr(ResourceType type) {
         case ResourceType::UNDEFINED_TYPE:
             return "";
     }
+}
+
+template void ResourceImpl<true>::destroy(ResourceType type, HandleId id);
+template void ResourceImpl<false>::destroy(ResourceType type, HandleId id);
+
+template <bool THREAD_SAFE>
+void ResourceImpl<THREAD_SAFE>::destroy(ResourceType type, HandleId id) {
+    resManager->destructLaterWithType(type, id);
 }
 
 } // namespace filament::backend::fvkmemory
