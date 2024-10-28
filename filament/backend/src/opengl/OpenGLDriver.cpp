@@ -108,7 +108,7 @@
 
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
 #   define DEBUG_MARKER()
-#   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker)
+#   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker);
 #elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
 #   define PROFILE_MARKER(marker) DEBUG_MARKER()
