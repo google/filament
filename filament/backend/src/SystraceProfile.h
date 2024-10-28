@@ -17,18 +17,12 @@
 #ifndef TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
 #define TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
 
-#ifdef NDEBUG
-#define ENABLE_BACKEND_PROFILE
-#endif
+#include <utils/Systrace.h>
 
-#if defined(ENABLE_BACKEND_PROFILE)
-#   define PROFILE_SCOPE(marker)   SYSTRACE_NAME(marker)
-#else
-#   define PROFILE_SCOPE(marker)
-#endif
+#define PROFILE_SCOPE(marker)       SYSTRACE_NAME(marker)
 
-#define PROFILE_BEGINFRAME()    PROFILE_SCOPE("backend::beginFrame")
-#define PROFILE_ENDFRAME()      PROFILE_SCOPE("backend::endFrame")
+#define PROFILE_NAME_BEGINFRAME    "backend::beginFrame"
+#define PROFILE_NAME_ENDFRAME      "backend::endFrame"
 
 #endif // TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
 

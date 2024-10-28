@@ -92,30 +92,32 @@
 #define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
 #define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
 #define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
-#define DEBUG_GROUP_MARKER_ALL        0x03    // all markers
+#define DEBUG_GROUP_MARKER_ALL        0xFF    // all markers
 
 #define DEBUG_MARKER_NONE             0x00    // no debug marker
 #define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
 #define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_ALL              0x03    // all markers
+#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (systrace)
+#define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
 #define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_ALL
 
 // set to the desired debug level (for internal debugging [Default: None])
-#define DEBUG_MARKER_LEVEL      DEBUG_MARKER_NONE
+#define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
 
-#if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
-#   define DEBUG_MARKER() \
-        const char* _debug_marker_header = "backend::"; \
-        const size_t _debug_marker_header_len = strlen(_debug_marker_header); \
-        char _debug_marker_name[256] = {0}; \
-        constexpr size_t _debug_marker_name_max_len = sizeof(_debug_marker_name); \
-        strncpy(_debug_marker_name, _debug_marker_header, _debug_marker_name_max_len - 1); \
-        strncpy(_debug_marker_name + _debug_marker_header_len, __func__, _debug_marker_name_max_len - _debug_marker_header_len - 1); \
-        DebugMarker _debug_marker(*this, _debug_marker_name);
+#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
+#   define DEBUG_MARKER()
+#   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker)
+#elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
+#   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
+#   define PROFILE_MARKER(marker) DEBUG_MARKER()
+#   if DEBUG_MARKER_LEVEL & DEBUG_MARKER_PROFILE
+#       error PROFILING is exclusive; all other debug features must be disabled.
+#   endif
 #else
 #   define DEBUG_MARKER()
+#   define PROFILE_MARKER(marker)
 #endif
 
 using namespace filament::math;
@@ -3455,8 +3457,7 @@ void OpenGLDriver::beginFrame(
         UTILS_UNUSED int64_t monotonic_clock_ns,
         UTILS_UNUSED int64_t refreshIntervalNs,
         UTILS_UNUSED uint32_t frameId) {
-    PROFILE_BEGINFRAME();
-    DEBUG_MARKER()
+    PROFILE_MARKER(PROFILE_NAME_BEGINFRAME)
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     mPlatform.beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
@@ -3491,8 +3492,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
-    PROFILE_ENDFRAME();
-    DEBUG_MARKER()
+    PROFILE_MARKER(PROFILE_NAME_ENDFRAME)
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
     // done with the frame. We do NOT officially support using Filament in this way, but we can

@@ -345,7 +345,7 @@ void VulkanDriver::tick(int) {
 // rather than the wall clock, because we must wait 3 frames after a DriverAPI-level resource has
 // been destroyed for safe destruction, due to outstanding command buffers and triple buffering.
 void VulkanDriver::collectGarbage() {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
     // Command buffers need to be submitted and completed before other resources can be gc'd. And
     // its gc() function carrys out the *wait*.
     mCommands.gc();
@@ -359,8 +359,7 @@ void VulkanDriver::collectGarbage() {
 }
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
-    PROFILE_BEGINFRAME();
-    FVK_SYSTRACE_CALL();
+    FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
     // Do nothing.
 }
 
@@ -376,8 +375,7 @@ void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {
-    PROFILE_ENDFRAME();
-    FVK_SYSTRACE_CALL();
+    FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
     mCommands.flush();
     collectGarbage();
 }
@@ -412,12 +410,12 @@ void VulkanDriver::updateDescriptorSetTexture(
 }
 
 void VulkanDriver::flush(int) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
     mCommands.flush();
 }
 
 void VulkanDriver::finish(int dummy) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     mCommands.flush();
     mCommands.wait();
@@ -1231,7 +1229,7 @@ void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     VulkanRenderTarget* const rt = mResourceAllocator.handle_cast<VulkanRenderTarget*>(rth);
     VkExtent2D const& extent = rt->getExtent();
@@ -1378,7 +1376,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 }
 
 void VulkanDriver::endRenderPass(int) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     VulkanCommandBuffer& commands = mCommands.get();
     VkCommandBuffer cmdbuffer = commands.buffer();
@@ -1416,7 +1414,7 @@ void VulkanDriver::nextSubpass(int) {
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
             "Vulkan driver does not support distinct draw/read swap chains.");
@@ -1436,7 +1434,7 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     VulkanSwapChain* swapChain = mResourceAllocator.handle_cast<VulkanSwapChain*>(sch);
 
@@ -1503,7 +1501,7 @@ void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,
 void VulkanDriver::resolve(
         Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer,
         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
             << "resolve() cannot be invoked inside a render pass.";
@@ -1545,7 +1543,7 @@ void VulkanDriver::blit(
         Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
         math::uint2 size) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     FILAMENT_CHECK_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE)
             << "blit() cannot be invoked inside a render pass.";
@@ -1585,7 +1583,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
         Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect,
         SamplerMagFilter filter) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     // Note: blitDEPRECATED is only used for Renderer::copyFrame()
 
@@ -1627,7 +1625,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     VulkanCommandBuffer* commands = &mCommands.get();
     const VulkanVertexBufferInfo& vbi =
@@ -1706,7 +1704,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     VulkanCommandBuffer* commands = &mCommands.get();
     VkCommandBuffer cmdbuffer = commands->buffer();
@@ -1740,7 +1738,7 @@ void VulkanDriver::bindDescriptorSet(
 }
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
-    FVK_SYSTRACE_CALL();
+    FVK_SYSTRACE_SCOPE();
 
     VulkanCommandBuffer& commands = mCommands.get();
     VkCommandBuffer cmdbuffer = commands.buffer();
