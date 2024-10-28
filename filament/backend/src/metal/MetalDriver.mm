@@ -1795,7 +1795,7 @@ void MetalDriver::bindDescriptorSet(
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
 
-    if (!dsh) {
+    if (UTILS_UNLIKELY(!dsh)) {
         DEBUG_LOG("bindDescriptorSet(dsh = null, set = %d, offsets = [])\n", set);
         mContext->currentDescriptorSets[set] = nullptr;
         mContext->vertexDescriptorBindings.setBuffer(nil, 0, set);
