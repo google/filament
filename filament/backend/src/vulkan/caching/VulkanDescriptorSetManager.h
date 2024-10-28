@@ -61,6 +61,8 @@ public:
 
     void bind(uint8_t setIndex, VulkanDescriptorSet* set, backend::DescriptorSetOffsetArray&& offsets);
 
+    void unbind(uint8_t setIndex);
+
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
             DescriptorSetMask const& setMask);
 
