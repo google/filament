@@ -3875,6 +3875,14 @@ void OpenGLDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+
+    if (UTILS_UNLIKELY(!dsh)) {
+        mBoundDescriptorSets[set].dsh = dsh;
+        mInvalidDescriptorSetBindings.set(set, true);
+        mInvalidDescriptorSetBindingOffsets.set(set, true);
+        return;
+    }
+
     // handle_cast<> here also serves to validate the handle (it actually cannot return nullptr)
     GLDescriptorSet const* const ds = handle_cast<GLDescriptorSet*>(dsh);
     if (ds) {
