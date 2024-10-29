@@ -101,7 +101,7 @@
 #define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
-#define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_ALL
+#define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_NONE
 
 // set to the desired debug level (for internal debugging [Default: None])
 #define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
@@ -109,6 +109,9 @@
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
 #   define DEBUG_MARKER()
 #   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker);
+#   if DEBUG_GROUP_MARKER_LEVEL != DEBUG_GROUP_MARKER_NONE
+#       error PROFILING is exclusive; group markers must be disabled.
+#   endif
 #elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
 #   define PROFILE_MARKER(marker) DEBUG_MARKER()
