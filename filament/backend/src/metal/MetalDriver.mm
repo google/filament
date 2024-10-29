@@ -1794,6 +1794,16 @@ void MetalDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+
+    if (UTILS_UNLIKELY(!dsh)) {
+        DEBUG_LOG("bindDescriptorSet(dsh = null, set = %d, offsets = [])\n", set);
+        mContext->currentDescriptorSets[set] = nullptr;
+        mContext->vertexDescriptorBindings.setBuffer(nil, 0, set);
+        mContext->fragmentDescriptorBindings.setBuffer(nil, 0, set);
+        mContext->dynamicOffsets.setOffsets(set, nullptr, 0);
+        return;
+    }
+
     auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
     utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
