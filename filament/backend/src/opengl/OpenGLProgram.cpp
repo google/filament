@@ -174,7 +174,8 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
                     }
                     break;
                 }
-                case DescriptorType::SAMPLER: {
+                case DescriptorType::SAMPLER:
+                case DescriptorType::SAMPLER_EXTERNAL: {
                     if (!entry.name.empty()) {
                         GLint const loc = glGetUniformLocation(program, entry.name.c_str());
                         if (loc >= 0) {

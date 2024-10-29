@@ -91,6 +91,10 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
                 break;
             }
+            case DescriptorType::SAMPLER_EXTERNAL: {
+                PANIC_POSTCONDITION("DescriptorType::SAMPLER_EXTERNAL is not supported yet");
+                break;
+            }
             case DescriptorType::INPUT_ATTACHMENT: {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.inputAttachment);
                 break;
