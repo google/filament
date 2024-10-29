@@ -64,13 +64,17 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkD
 
 CommandBufferObserver::~CommandBufferObserver() {}
 
-static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
+static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex,
+    bool isProtected) {
     VkCommandPoolCreateInfo createInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
                      | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
             .queueFamilyIndex = queueFamilyIndex,
     };
+    if (isProtected) {
+        createInfo.flags |= VK_COMMAND_POOL_CREATE_PROTECTED_BIT;
+    }
     VkCommandPool pool;
     vkCreateCommandPool(device, &createInfo, VKALLOC, &pool);
     return pool;
