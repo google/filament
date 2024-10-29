@@ -35,8 +35,11 @@ DescriptorSetLayout::DescriptorSetLayout(
         backend::DescriptorSetLayout descriptorSetLayout) noexcept  {
     for (auto&& desc : descriptorSetLayout.bindings) {
         mMaxDescriptorBinding = std::max(mMaxDescriptorBinding, desc.binding);
-        mSamplers.set(desc.binding, desc.type == backend::DescriptorType::SAMPLER);
-        mUniformBuffers.set(desc.binding, desc.type == backend::DescriptorType::UNIFORM_BUFFER);
+        mSamplers.set(desc.binding,
+                desc.type == backend::DescriptorType::SAMPLER ||
+                desc.type == backend::DescriptorType::SAMPLER_EXTERNAL);
+        mUniformBuffers.set(desc.binding,
+                desc.type == backend::DescriptorType::UNIFORM_BUFFER);
     }
 
     mDescriptorSetLayoutHandle = factory.create(driver,
