@@ -208,7 +208,15 @@ public:
         return mRenderableManager;
     }
 
+    FRenderableManager const& getRenderableManager() const noexcept {
+        return mRenderableManager;
+    }
+
     FLightManager& getLightManager() noexcept {
+        return mLightManager;
+    }
+
+    FLightManager const& getLightManager() const noexcept {
         return mLightManager;
     }
 
@@ -423,8 +431,11 @@ public:
 
     bool execute();
 
-    utils::JobSystem& getJobSystem() noexcept {
-        return mJobSystem;
+    utils::JobSystem& getJobSystem() const noexcept {
+        // JobSystem is thread-safe, and it's always okay to return a non-const one,
+        // it's conceptually the same as if we were holding a non-const reference, as opposed
+        // to by-value class attribute.
+        return const_cast<utils::JobSystem&>(mJobSystem);
     }
 
     std::default_random_engine& getRandomEngine() {

@@ -56,7 +56,7 @@ public:
     void terminate(backend::DriverApi& driver);
 
     static void prepareCamera(Transaction const& transaction,
-            FEngine& engine, const CameraInfo& camera) noexcept;
+            backend::DriverApi& driver, const CameraInfo& camera) noexcept;
 
     static void prepareLodBias(Transaction const& transaction,
             float bias) noexcept;
@@ -65,7 +65,7 @@ public:
             backend::Viewport const& viewport) noexcept;
 
     static void prepareTime(Transaction const& transaction,
-            FEngine& engine, math::float4 const& userTime) noexcept;
+            FEngine const& engine, math::float4 const& userTime) noexcept;
 
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
