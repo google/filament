@@ -94,11 +94,7 @@ public:
 
     // move operator
     inline resource_ptr<D>& operator=(resource_ptr<D> && rhs) {
-        if (mRef && mRef != rhs.mRef) {
-            mRef->dec();
-        }
-        mRef = rhs.mRef; // There should be no change in the reference count.
-        rhs.mRef = nullptr;
+        std::swap(mRef, rhs.mRef);
         return *this;
     }
 
@@ -159,10 +155,12 @@ private:
     // inc() and dec() For tracking ref-count with respect to create/destroy backend APIs. They can
     // only be used from VulkanDriver.
     inline void dec() {
+        assert_invariant(mRef);
         mRef->dec();
     }
 
     inline void inc() {
+        assert_invariant(mRef);
         mRef->inc();
     }
 

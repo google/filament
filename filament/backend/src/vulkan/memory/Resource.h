@@ -61,49 +61,21 @@ inline bool isThreadSafeType(ResourceType type) {
     return type == ResourceType::FENCE || type == ResourceType::TIMER_QUERY;
 }
 
-template<bool THREAD_SAFE = false>
-struct ResourceImpl {
-    ResourceImpl()
-        : id(HandleBase::nullid),
-          resManager(nullptr),
-          mDestroyed(false),
+struct Resource {
+    Resource()
+        : resManager(nullptr),
+          id(HandleBase::nullid),
           mCount(0) {}
 
 private:
     inline void inc() noexcept {
-        if UTILS_UNLIKELY (mDestroyed) {
-            return;
-        }
-        if constexpr (THREAD_SAFE) {
-            std::unique_lock<utils::Mutex> lock(mMutex);
-            if UTILS_LIKELY (!mDestroyed) {
-                mCount++;
-            }
-        } else {
-            mCount++;
-        }
+        mCount++;
     }
 
     inline void dec() noexcept {
-        if UTILS_UNLIKELY (mDestroyed) {
-            return;
-        }
-        if constexpr (THREAD_SAFE) {
-            bool shouldDestroy = false;
-            {
-                std::unique_lock<utils::Mutex> lock(mMutex);
-                shouldDestroy = --mCount == 0;
-            }
-            if (shouldDestroy) {
-                destroy(restype, id);
-                mDestroyed = true;
-            }
-        } else {
-            assert_invariant(mCount > 0);
-            if (--mCount == 0) {
-                destroy(restype, id);
-                mDestroyed = true;
-            }
+        assert_invariant(mCount > 0);
+        if (--mCount == 0) {
+            destroy(restype, id);
         }
     }
 
@@ -116,13 +88,10 @@ private:
 
     void destroy(ResourceType type, HandleId id);
 
-    HandleId id;                 // 4
     ResourceManager* resManager; // 8
-    ResourceType restype : 7;
-    bool mDestroyed      : 1;    // only for thread-safe
+    HandleId id;                 // 4
+    ResourceType restype : 6;
     uint32_t mCount      : 24;   // restype + mDestroyed + mCount is 4 bytes.
-
-    typename std::conditional_t<THREAD_SAFE, utils::Mutex, std::monostate> mMutex;
 
     friend class ResourceManager;
 
@@ -130,8 +99,55 @@ private:
     friend struct resource_ptr;
 };
 
-using Resource = ResourceImpl<false>;
-using ThreadSafeResource = ResourceImpl<true>;
+struct ThreadSafeResource {
+    ThreadSafeResource()
+        : resManager(nullptr),
+          id(HandleBase::nullid),
+          mDestroyed(false),
+          mCount(0) {}
+
+private:
+    inline void inc() noexcept {
+        assert_invariant(!mDestroyed);
+        std::unique_lock<utils::Mutex> lock(mMutex);
+        mCount++;
+    }
+
+    inline void dec() noexcept {
+        assert_invariant(!mDestroyed);
+        bool doDestroy = false;
+        {
+            std::unique_lock<utils::Mutex> lock(mMutex);
+            doDestroy = --mCount == 0;
+        }
+        if (doDestroy) {
+            destroy(restype, id);
+            mDestroyed = true;
+        }
+    }
+
+    template <typename T>
+    inline void init(HandleId id, ResourceManager* resManager) {
+        this->id = id;
+        this->resManager = resManager;
+        this->restype = getTypeEnum<T>();
+    }
+
+    void destroy(ResourceType type, HandleId id);
+
+    ResourceManager* resManager; // 8
+    HandleId id;                 // 4
+    ResourceType restype : 5;
+    bool mDestroyed      : 1;    // only for thread-safe
+    uint32_t mCount      : 24;   // restype + mDestroyed + mCount is 4 bytes.
+
+    utils::Mutex mMutex;
+
+    friend class ResourceManager;
+
+    template <typename D>
+    friend struct resource_ptr;
+};
 
 } // namespace filament::backend::fvkmemory
 

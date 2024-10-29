@@ -118,11 +118,11 @@ std::string getTypeStr(ResourceType type) {
     }
 }
 
-template void ResourceImpl<true>::destroy(ResourceType type, HandleId id);
-template void ResourceImpl<false>::destroy(ResourceType type, HandleId id);
+void Resource::destroy(ResourceType type, HandleId id) {
+    resManager->destructLaterWithType(type, id);
 
-template <bool THREAD_SAFE>
-void ResourceImpl<THREAD_SAFE>::destroy(ResourceType type, HandleId id) {
+}
+void ThreadSafeResource::destroy(ResourceType type, HandleId id) {
     resManager->destructLaterWithType(type, id);
 }
 

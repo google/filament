@@ -54,9 +54,12 @@ private:
     template<typename D, typename B, typename... ARGS>
     inline D* construct(Handle<B> const& handle, ARGS&&... args) noexcept {
         constexpr bool THREAD_SAFETY = requires_thread_safety<D>::value;
-        using ResourceT = ResourceImpl<THREAD_SAFETY>;
         D* obj = mHandleAllocatorImpl.construct<D, B>(handle, std::forward<ARGS>(args)...);
-        ((ResourceT*) obj)->template init<D>(handle.getId(), this);
+        if constexpr (THREAD_SAFETY) {
+            ((ThreadSafeResource*) obj)->template init<D>(handle.getId(), this);
+        } else {
+            ((Resource*) obj)->template init<D>(handle.getId(), this);
+        }
         traceConstruction(getTypeEnum<D>(), handle.getId());
         return obj;
     }
@@ -100,11 +103,8 @@ private:
     template<typename D>
     friend struct resource_ptr;
 
-    static constexpr bool IS_THREAD_SAFE = true;
-    static constexpr bool IS_NOT_THREAD_SAFE = false;
-
-    friend struct ResourceImpl<IS_THREAD_SAFE>;
-    friend struct ResourceImpl<IS_NOT_THREAD_SAFE>;
+    friend struct Resource;
+    friend struct ThreadSafeResource;
 };
 
 } // namespace filament::backend::fvkmemory
