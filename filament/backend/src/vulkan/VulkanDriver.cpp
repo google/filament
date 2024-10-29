@@ -977,8 +977,7 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
 }
 
 bool VulkanDriver::isProtectedContentSupported() {
-    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
-    return false;
+    return mContext.isProtectedMemorySupported();
 }
 
 bool VulkanDriver::isStereoSupported() {
