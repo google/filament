@@ -135,12 +135,18 @@ bool VulkanGroupMarkers::empty() const noexcept {
 #endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
+        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
         VulkanContext* context, VulkanResourceAllocator* allocator)
     : mDevice(device),
       mQueue(queue),
-      mPool(createPool(mDevice, queueFamilyIndex)),
+      mPool(createPool(mDevice, queueFamilyIndex, false)),
+      mProtectedQueue(protectedQueue),
+      mProtectedPool(VK_NULL_HANDLE),
+      mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
+      mAllocator(allocator),
       mContext(context),
-      mStorage(CAPACITY) {
+      mStorage(CAPACITY),
+      mProtectedStorage(CAPACITY) {
     VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     for (auto& semaphore: mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);

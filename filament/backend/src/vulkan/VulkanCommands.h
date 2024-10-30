@@ -183,6 +183,7 @@ public:
 class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
+            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
             VulkanContext* context, VulkanResourceAllocator* allocator);
 
     void terminate();
@@ -225,23 +226,34 @@ public:
 
     std::string getTopGroupMarker() const;
 #endif
+    using BufferList = utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>>;
 
 private:
     static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
     VkDevice const mDevice;
     VkQueue const mQueue;
     VkCommandPool const mPool;
+    VkQueue const mProtectedQueue;
+    VkCommandPool mProtectedPool;
+    // For defered initialization if/when we need protected content
+    uint32_t mProtectedQueueFamilyIndex;
+    VulkanResourceAllocator* mAllocator;
     VulkanContext const* mContext;
 
     // int8 only goes up to 127, therefore capacity must be less than that.
     static_assert(CAPACITY < 128);
     int8_t mCurrentCommandBufferIndex = -1;
+    int8_t mCurrentProtectedCommandBufferIndex = -1;
     VkSemaphore mSubmissionSignal = {};
     VkSemaphore mInjectedSignal = {};
-    utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
+    BufferList mStorage;
+    BufferList mProtectedStorage;
+    VkFence mProtectedFences[CAPACITY] = {};
     VkFence mFences[CAPACITY] = {};
     VkSemaphore mSubmissionSignals[CAPACITY] = {};
+    VkSemaphore mProtectedSubmissionSignals[CAPACITY] = {};
     uint8_t mAvailableBufferCount = CAPACITY;
+    uint8_t mAvailableProtectedBufferCount = CAPACITY;
     CommandBufferObserver* mObserver = nullptr;
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
