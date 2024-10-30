@@ -20,7 +20,7 @@
 #include <private/backend/HandleAllocator.h>
 #include <utils/Mutex.h>
 
-#include <type_traits>
+#include <atomic>
 #include <cstdint>
 
 namespace filament::backend::fvkmemory {
@@ -65,7 +65,8 @@ struct Resource {
     Resource()
         : resManager(nullptr),
           id(HandleBase::nullid),
-          mCount(0) {}
+          mCount(0),
+          restype(ResourceType::UNDEFINED_TYPE) {}
 
 private:
     inline void inc() noexcept {
@@ -90,8 +91,8 @@ private:
 
     ResourceManager* resManager; // 8
     HandleId id;                 // 4
-    ResourceType restype : 6;
-    uint32_t mCount      : 24;   // restype + mDestroyed + mCount is 4 bytes.
+    uint32_t mCount      : 24;
+    ResourceType restype : 6;    // restype + mCount is 4 bytes.
 
     friend class ResourceManager;
 
@@ -103,26 +104,17 @@ struct ThreadSafeResource {
     ThreadSafeResource()
         : resManager(nullptr),
           id(HandleBase::nullid),
-          mDestroyed(false),
-          mCount(0) {}
+          mCount(0),
+          restype(ResourceType::UNDEFINED_TYPE) {}
 
 private:
     inline void inc() noexcept {
-        assert_invariant(!mDestroyed);
-        std::unique_lock<utils::Mutex> lock(mMutex);
-        mCount++;
+        mCount.fetch_add(1, std::memory_order_relaxed);
     }
 
     inline void dec() noexcept {
-        assert_invariant(!mDestroyed);
-        bool doDestroy = false;
-        {
-            std::unique_lock<utils::Mutex> lock(mMutex);
-            doDestroy = --mCount == 0;
-        }
-        if (doDestroy) {
+        if (mCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
             destroy(restype, id);
-            mDestroyed = true;
         }
     }
 
@@ -135,13 +127,10 @@ private:
 
     void destroy(ResourceType type, HandleId id);
 
-    ResourceManager* resManager; // 8
-    HandleId id;                 // 4
-    ResourceType restype : 5;
-    bool mDestroyed      : 1;    // only for thread-safe
-    uint32_t mCount      : 24;   // restype + mDestroyed + mCount is 4 bytes.
-
-    utils::Mutex mMutex;
+    ResourceManager* resManager;  // 8
+    HandleId id;                  // 4
+    std::atomic<uint32_t> mCount; // 4
+    ResourceType restype;         // 1
 
     friend class ResourceManager;
 
