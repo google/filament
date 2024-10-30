@@ -147,12 +147,14 @@ inline VulkanLayout getDefaultLayoutImpl(VkImageUsageFlags vkusage) {
 
 VulkanTextureState::VulkanTextureState(VkDevice device, VmaAllocator allocator,
         VulkanCommands* commands, VulkanStagePool& stagePool, VkFormat format,
-        VkImageViewType viewType, uint8_t levels, uint8_t layerCount, VulkanLayout defaultLayout)
+        VkImageViewType viewType, uint8_t levels, uint8_t layerCount, VulkanLayout defaultLayout,
+        bool isProtected)
     : VulkanResource(VulkanResourceType::HEAP_ALLOCATED),
       mVkFormat(format),
       mViewType(viewType),
       mFullViewRange{filament::backend::getImageAspect(format), 0, levels, 0, layerCount},
       mDefaultLayout(defaultLayout),
+      mIsProtected(isProtected),
       mStagePool(stagePool),
       mDevice(device),
       mAllocator(allocator),
@@ -183,7 +185,8 @@ VulkanTexture::VulkanTexture(
           mState(handleAllocator->initHandle<VulkanTextureState>(
                   device, allocator, commands, stagePool,
                   format, imgutil::getViewType(SamplerType::SAMPLER_2D), 1, 1,
-                  getDefaultLayoutImpl(tusage))) {
+                  getDefaultLayoutImpl(tusage),
+                  any(usage& TextureUsage::PROTECTED))) {
     auto* const state = getSharedState();
     state->mTextureImage = image;
     mPrimaryViewRange = state->mFullViewRange;
@@ -201,7 +204,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
       mAllocator(handleAllocator),
       mState(handleAllocator->initHandle<VulkanTextureState>(device, allocator, commands, stagePool,
               backend::getVkFormat(tformat), imgutil::getViewType(target), levels,
-              getLayerCount(target, depth), VulkanLayout::UNDEFINED)) {
+              getLayerCount(target, depth), VulkanLayout::UNDEFINED, any(usage& TextureUsage::PROTECTED))) {
     auto* const state = getSharedState();
 
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
@@ -231,6 +234,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     if (target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
         imageInfo.arrayLayers = depth * 6;
         imageInfo.extent.depth = 1;
+    }
+    if (any(usage & TextureUsage::PROTECTED)) {
+        imageInfo.flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
     }
 
     if (any(usage & TextureUsage::BLIT_SRC)) {
@@ -331,7 +337,8 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     const VkFlags requiredMemoryFlags =
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-        (useTransientAttachment ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : 0U);
+        (useTransientAttachment ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : 0U) |
+        (state->mIsProtected ? VK_MEMORY_PROPERTY_PROTECTED_BIT : 0U);
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, requiredMemoryFlags);
 
@@ -416,6 +423,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     assert_invariant(depth <= this->depth * ((target == SamplerType::SAMPLER_CUBEMAP ||
                         target == SamplerType::SAMPLER_CUBEMAP_ARRAY) ? 6 : 1));
     auto* const state = getSharedState();
+    assert_invariant(state->mIsProtected == false);
     const PixelBufferDescriptor* hostData = &data;
     PixelBufferDescriptor reshapedData;
 

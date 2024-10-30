@@ -306,6 +306,7 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
 
     inline bool isSwapChain() const { return !mOffscreen; }
+    inline bool isProtected() const { return mProtected; }
 
     void bindToSwapChain(VulkanSwapChain& surf);
 
@@ -328,6 +329,7 @@ private:
         int8_t msaaIndex = UNDEFINED_INDEX;
     };
     bool const mOffscreen;
+    bool mProtected;
 
     VulkanAcquireOnlyResourceManager mResources;
     std::unique_ptr<Auxiliary> mInfo;

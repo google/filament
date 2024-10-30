@@ -63,14 +63,20 @@ void VulkanSwapChain::update() {
     mColors.reserve(bundle.colors.size());
     VkDevice const device = mPlatform->getDevice();
 
+    TextureUsage depthUsage = TextureUsage::DEPTH_ATTACHMENT;
+    TextureUsage colorUsage = TextureUsage::COLOR_ATTACHMENT;
+    if (bundle.isProtected) {
+        depthUsage |= TextureUsage::PROTECTED;
+        colorUsage |= TextureUsage::PROTECTED;
+    }
     for (auto const color: bundle.colors) {
         mColors.push_back(std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
                 color, bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
-                TextureUsage::COLOR_ATTACHMENT, mStagePool, true /* heap allocated */));
+                colorUsage, mStagePool, true /* heap allocated */));
     }
     mDepth = std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
             bundle.depth, bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
-            TextureUsage::DEPTH_ATTACHMENT, mStagePool, true /* heap allocated */);
+            depthUsage, mStagePool, true /* heap allocated */);
 
     mExtent = bundle.extent;
 }

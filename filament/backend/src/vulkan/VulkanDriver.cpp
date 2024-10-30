@@ -977,8 +977,7 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
 }
 
 bool VulkanDriver::isProtectedContentSupported() {
-    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
-    return false;
+    return mContext.isProtectedMemorySupported();
 }
 
 bool VulkanDriver::isStereoSupported() {
@@ -1767,8 +1766,12 @@ void VulkanDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t setIndex,
         backend::DescriptorSetOffsetArray&& offsets) {
-    VulkanDescriptorSet* set = mResourceAllocator.handle_cast<VulkanDescriptorSet*>(dsh);
-    mDescriptorSetManager.bind(setIndex, set, std::move(offsets));
+    if (dsh) {
+        VulkanDescriptorSet* set = mResourceAllocator.handle_cast<VulkanDescriptorSet*>(dsh);
+        mDescriptorSetManager.bind(setIndex, set, std::move(offsets));
+    } else {
+        mDescriptorSetManager.unbind(setIndex);
+    }
 }
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {

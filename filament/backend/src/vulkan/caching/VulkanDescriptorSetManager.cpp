@@ -369,6 +369,10 @@ void VulkanDescriptorSetManager::bind(uint8_t setIndex, VulkanDescriptorSet* set
     mStashedSets[setIndex] = set;
 }
 
+void VulkanDescriptorSetManager::unbind(uint8_t setIndex) {
+    mStashedSets[setIndex] = nullptr;
+}
+
 void VulkanDescriptorSetManager::commit(VulkanCommandBuffer* commands,
         VkPipelineLayout pipelineLayout, DescriptorSetMask const& setMask) {
     // setMask indicates the set of descriptor sets the driver wants to bind, curMask is the
