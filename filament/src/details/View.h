@@ -203,9 +203,9 @@ public:
             CameraInfo const& cameraInfo, math::float4 const& userTime,
             RenderPassBuilder const& passBuilder) noexcept;
 
-    void updatePrimitivesLod(
-            FEngine& engine, const CameraInfo& camera,
-            FScene::RenderableSoa& renderableData, Range visible) noexcept;
+    static void updatePrimitivesLod(FScene::RenderableSoa& renderableData,
+            FEngine const& engine, CameraInfo const& camera,
+            Range visible) noexcept;
 
     void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
