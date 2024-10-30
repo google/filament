@@ -162,9 +162,14 @@ PushConstantDescription::PushConstantDescription(backend::Program const& program
     }
 }
 
-void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout layout,
-        backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-    VulkanCommandBuffer* cmdbuf = &(commands->get());
+void PushConstantDescription::write(VulkanCommands* commands, bool isProtected, 
+        VkPipelineLayout layout, backend::ShaderStage stage, uint8_t index, 
+        backend::PushConstantVariant const& value) {
+    VulkanCommandBuffer* cmdbuf;
+    if (isProtected)
+        cmdbuf = &(commands->getProtected());
+    else
+        cmdbuf = &(commands->get());
     uint32_t binaryValue = 0;
     UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
     if (std::holds_alternative<bool>(value)) {
@@ -338,6 +343,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             continue;
         }
 
+        mProtected |= texture->getIsProtected();
+
         attachments.push_back(attachment);
         mInfo->colors.set(index);
 
@@ -384,6 +391,10 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
 
     if (depth.texture) {
         auto depthTexture = depth.texture;
+
+        // largely unecessary but for completeness
+        mProtected |= depthTexture->getIsProtected();
+
         mInfo->depthIndex = (uint8_t) attachments.size();
         attachments.push_back(depth);
         mResources.acquire(depthTexture);

@@ -191,6 +191,10 @@ public:
     // Creates a "current" command buffer if none exists, otherwise returns the current one.
     VulkanCommandBuffer& get();
 
+    // Creates a "current" protected command buffer if none exists, otherwise returns the 
+    // current one.
+    VulkanCommandBuffer& getProtected();
+
     // Submits the current command buffer if it exists, then sets "current" to null.
     // If there are no outstanding commands then nothing happens and this returns false.
     bool flush();
@@ -227,6 +231,9 @@ public:
     std::string getTopGroupMarker() const;
 #endif
     using BufferList = utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>>;
+
+private:
+    VulkanCommandBuffer& getInternal(VulkanCommands::BufferList& storage, int8_t& currentCommandBufferIndex, uint8_t& availableBufferCount, VkFence fences[]);
 
 private:
     static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
