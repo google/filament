@@ -125,7 +125,8 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
       mSurface(surface),
       mFallbackExtent(fallbackExtent),
       mUsesRGB((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0),
-      mHasStencil((flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0) {
+      mHasStencil((flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0),
+      mIsProtected((flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) != 0) {
     assert_invariant(surface);
     create();
 }
@@ -212,6 +213,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
 
     VkSwapchainCreateInfoKHR const createInfo{
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+            .flags = mIsProtected ? VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR :
+                VkSwapchainCreateFlagsKHR(0),
             .surface = mSurface,
             .minImageCount = desiredImageCount,
             .imageFormat = surfaceFormat.format,
@@ -246,13 +249,15 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
+    mSwapChainBundle.isProtected = mIsProtected;
 
     FVK_LOGI << "vkCreateSwapchain"
            << ": " << mSwapChainBundle.extent.width << "x" << mSwapChainBundle.extent.height << ", "
            << surfaceFormat.format << ", " << surfaceFormat.colorSpace << ", "
            << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
            << "identity-transform=" << (caps.currentTransform == 1) << ", "
-           << "depth=" << mSwapChainBundle.depthFormat
+           << "depth=" << mSwapChainBundle.depthFormat << ", "
+           << "protected=" << mSwapChainBundle.isProtected
            << io::endl;
 
     VkSemaphoreCreateInfo const semaphoreCreateInfo = {
@@ -315,6 +320,10 @@ bool VulkanPlatformSurfaceSwapChain::hasResized() {
         perceivedExtent = mFallbackExtent;
     }
     return !equivalent(mSwapChainBundle.extent, perceivedExtent);
+}
+
+bool VulkanPlatformSurfaceSwapChain::isProtected() {
+    return mIsProtected;
 }
 
 // Non-virtual override

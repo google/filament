@@ -256,6 +256,7 @@ VulkanRenderTarget::VulkanRenderTarget()
     : HwRenderTarget(0, 0),
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(false),
+      mProtected(false),
       mResources(nullptr),
       mInfo(std::make_unique<Auxiliary>()) {
     mInfo->rpkey.samples = mInfo->fbkey.samples = 1;
@@ -267,6 +268,7 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     VkExtent2D const extent = swapChain.getExtent();
     width = extent.width;
     height = extent.height;
+    mProtected = swapChain.isProtected();
 
     VulkanAttachment color = {.texture = swapChain.getCurrentColor()};
     mInfo->attachments = {color};
@@ -303,6 +305,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     : HwRenderTarget(width, height),
       VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
+      mProtected(false),
       mResources(handleAllocator),
       mInfo(std::make_unique<Auxiliary>()) {
 
