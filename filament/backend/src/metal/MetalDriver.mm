@@ -623,6 +623,8 @@ const char* toString(DescriptorType type) {
             return "SAMPLER";
         case DescriptorType::INPUT_ATTACHMENT:
             return "INPUT_ATTACHMENT";
+        case DescriptorType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
     }
 }
 
