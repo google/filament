@@ -7,3 +7,5 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- backend: descriptor layouts distinguish samplers and external samplers (b/376089915) [⚠️ **New Material Version**]

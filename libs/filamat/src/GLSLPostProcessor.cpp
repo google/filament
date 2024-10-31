@@ -72,6 +72,8 @@ const char* toString(DescriptorType type) {
             return "SAMPLER";
         case DescriptorType::INPUT_ATTACHMENT:
             return "INPUT_ATTACHMENT";
+        case DescriptorType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
     }
 }
 
@@ -135,7 +137,9 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
             +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::NONE, 0 });
 
     for (auto const& sampler : samplers) {
-        layout.bindings.push_back(DescriptorSetLayoutBinding { DescriptorType::SAMPLER,
+        layout.bindings.push_back(DescriptorSetLayoutBinding {
+                (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) ?
+                        DescriptorType::SAMPLER_EXTERNAL : DescriptorType::SAMPLER,
                 ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT, sampler.binding,
                 DescriptorFlags::NONE, 0 });
     }
@@ -211,7 +215,8 @@ static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
     for (size_t i = 0; i < info.bindings.size(); i++) {
         backend::descriptor_binding_t binding = info.bindings[i].binding;
         auto name = getDescriptorName(set, binding);
-        if (info.bindings[i].type == DescriptorType::SAMPLER) {
+        if (info.bindings[i].type == DescriptorType::SAMPLER ||
+            info.bindings[i].type == DescriptorType::SAMPLER_EXTERNAL) {
             auto pos = std::find_if(samplerList.begin(), samplerList.end(),
                     [&](const auto& entry) { return entry.binding == binding; });
             assert_invariant(pos != samplerList.end());
@@ -245,7 +250,8 @@ void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
         printf("[DS] info (%s) = [\n", getName(setIndex));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
-            if (info.type == DescriptorType::SAMPLER) {
+            if (info.type == DescriptorType::SAMPLER ||
+                info.type == DescriptorType::SAMPLER_EXTERNAL) {
                 assert_invariant(sampler.has_value());
                 printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
                        "%s, samplerType = %s}",
@@ -456,7 +462,8 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                     break;
                 }
 
-                case DescriptorType::SAMPLER: {
+                case DescriptorType::SAMPLER:
+                case DescriptorType::SAMPLER_EXTERNAL: {
                     assert_invariant(sampler.has_value());
                     const std::string samplerName = std::string(name.c_str()) + "Smplr";
                     argBufferBuilder
