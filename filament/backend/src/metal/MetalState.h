@@ -28,7 +28,9 @@
 
 #include <memory>
 #include <tsl/robin_map.h>
+
 #include <utils/Hash.h>
+#include <utils/Invocable.h>
 
 namespace filament {
 namespace backend {
@@ -168,6 +170,15 @@ public:
     StateCache& operator=(const StateCache&) = delete;
 
     void setDevice(id<MTLDevice> device) noexcept { mDevice = device; }
+
+    void removeIf(utils::Invocable<bool(const StateType&)> fn) noexcept {
+        for (auto it = mStateCache.begin(); it != mStateCache.end(); it++) {
+            const auto& [key, _] = *it;
+            if (UTILS_UNLIKELY(fn(key))) {
+                mStateCache.erase(it);
+            }
+        }
+    }
 
     MetalType getOrCreateState(const StateType& state) noexcept {
         assert_invariant(mDevice);

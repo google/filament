@@ -495,6 +495,10 @@ const MetalShaderCompiler::MetalFunctionBundle& MetalProgram::getFunctions() {
     return mFunctionBundle;
 }
 
+const MetalShaderCompiler::MetalFunctionBundle& MetalProgram::getFunctionsIfPresent() const {
+    return mFunctionBundle;
+}
+
 void MetalProgram::initialize() {
     if (!mToken) {
         return;
