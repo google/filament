@@ -33,51 +33,28 @@ using namespace utils;
 
 namespace filament::backend {
 
+    namespace {
+
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    using Timestamp = VulkanGroupMarkers::Timestamp;
+        using Timestamp = VulkanGroupMarkers::Timestamp;
 #endif
 
-    VulkanCmdFence::VulkanCmdFence(VkFence ifence)
-        : fence(ifence) {
-        // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence gets
-        // submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually finishes
-        // executing the command buffer, the status changes to VK_SUCCESS.
-        status.store(VK_INCOMPLETE);
-    }
-
-    VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device,
-        VkCommandPool pool)
-        : mResourceManager(allocator),
-        mPipeline(VK_NULL_HANDLE) {
-        // Create the low-level command buffer.
-        const VkCommandBufferAllocateInfo allocateInfo{
+        VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
+            VkCommandBuffer cmdbuffer;
+            // Create the low-level command buffer.
+            VkCommandBufferAllocateInfo const allocateInfo{
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
                 .commandPool = pool,
                 .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                 .commandBufferCount = 1,
-        };
-
-        // The buffer allocated here will be implicitly reset when vkBeginCommandBuffer is called.
-        // We don't need to deallocate since destroying the pool will free all of the buffers.
-        vkAllocateCommandBuffers(device, &allocateInfo, &mBuffer);
-    }
-
-    CommandBufferObserver::~CommandBufferObserver() {}
-
-    static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex, bool isProtected = false) {
-        VkCommandPoolCreateInfo createInfo = {
-                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-                         | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                .queueFamilyIndex = queueFamilyIndex,
-        };
-        if (isProtected) {
-            createInfo.flags |= VK_COMMAND_POOL_CREATE_PROTECTED_BIT;
+            };
+            // The buffer allocated here will be implicitly reset when vkBeginCommandBuffer is called.
+            // We don't need to deallocate since destroying the pool will free all of the buffers.
+            vkAllocateCommandBuffers(device, &allocateInfo, &cmdbuffer);
+            return cmdbuffer;
         }
-        VkCommandPool pool;
-        vkCreateCommandPool(device, &createInfo, VKALLOC, &pool);
-        return pool;
-    }
+
+    } // anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
@@ -133,179 +110,126 @@ namespace filament::backend {
 
 #endif // FVK_DEBUG_GROUP_MARKERS
 
-    VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
-        VulkanContext* context, VulkanResourceAllocator* allocator)
-        : mDevice(device),
+    VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext* context, VulkanResourceAllocator* allocator,
+        VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected)
+        : mContext(context),
+        mMarkerCount(0),
+        isProtected(isProtected),
+        mDevice(device),
         mQueue(queue),
-        mPool(createPool(mDevice, queueFamilyIndex)),
-        mProtectedQueue(protectedQueue),
-        mProtectedPool(VK_NULL_HANDLE),
-        mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
-        mAllocator(allocator),
-        mContext(context),
-        mStorage(CAPACITY),
-        mProtectedStorage(CAPACITY) {
+        mResourceManager(allocator),
+        mBuffer(createCommandBuffer(device, pool)),
+        mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)) {
         VkSemaphoreCreateInfo sci{ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-        for (auto& semaphore : mSubmissionSignals) {
-            vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
-        }
+        vkCreateSemaphore(mDevice, &sci, VKALLOC, &mSubmission);
 
         VkFenceCreateInfo fenceCreateInfo{ .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        for (auto& fence : mFences) {
-            vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
-        }
-
-        for (size_t i = 0; i < CAPACITY; ++i) {
-            mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator, mDevice, mPool);
-        }
-
-#if !FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-        (void)mContext;
-#endif
+        vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
+        mIsProtected = isProtected;
     }
 
-    void VulkanCommands::terminate() {
-        wait();
-        gc();
-        vkDestroyCommandPool(mDevice, mPool, VKALLOC);
+    VulkanCommandBuffer::~VulkanCommandBuffer() {
+        vkDestroySemaphore(mDevice, mSubmission, VKALLOC);
+        vkDestroyFence(mDevice, mFence, VKALLOC);
+    }
 
-        if (mProtectedPool == VK_NULL_HANDLE) {
-            vkDestroyCommandPool(mDevice, mProtectedPool, VKALLOC);
-            for (VkSemaphore sema : mProtectedSubmissionSignals) {
-                vkDestroySemaphore(mDevice, sema, VKALLOC);
-            }
-            for (VkFence fence : mProtectedFences) {
-                vkDestroyFence(mDevice, fence, VKALLOC);
-            }
-        }
+    void VulkanCommandBuffer::reset() noexcept {
+        mMarkerCount = 0;
+        mResourceManager.clear();
+        mWaitSemaphores.clear();
 
-        for (VkSemaphore sema : mSubmissionSignals) {
-            vkDestroySemaphore(mDevice, sema, VKALLOC);
+        // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
+        // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
+        // finishes executing the command buffer, the status changes to VK_SUCCESS.
+        mFenceStatus = std::make_shared<VulkanCmdFence>(VK_INCOMPLETE);
+        vkResetFences(mDevice, 1, &mFence);
+    }
+
+    void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
+        if (mContext->isDebugUtilsSupported()) {
+            VkDebugUtilsLabelEXT labelInfo = {
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    .pLabelName = marker,
+                    .color = {0, 1, 0, 1},
+            };
+            vkCmdBeginDebugUtilsLabelEXT(mBuffer, &labelInfo);
         }
-        for (VkFence fence : mFences) {
-            vkDestroyFence(mDevice, fence, VKALLOC);
+        else if (mContext->isDebugMarkersSupported()) {
+            VkDebugMarkerMarkerInfoEXT markerInfo = {
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+                    .pMarkerName = marker,
+                    .color = {0.0f, 1.0f, 0.0f, 1.0f},
+            };
+            vkCmdDebugMarkerBeginEXT(mBuffer, &markerInfo);
+        }
+        mMarkerCount++;
+    }
+
+    void VulkanCommandBuffer::popMarker() noexcept {
+        assert_invariant(mMarkerCount > 0);
+        if (mContext->isDebugUtilsSupported()) {
+            vkCmdEndDebugUtilsLabelEXT(mBuffer);
+        }
+        else if (mContext->isDebugMarkersSupported()) {
+            vkCmdDebugMarkerEndEXT(mBuffer);
+        }
+        mMarkerCount--;
+    }
+
+    void VulkanCommandBuffer::insertEvent(char const* marker) noexcept {
+        if (mContext->isDebugUtilsSupported()) {
+            VkDebugUtilsLabelEXT labelInfo = {
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    .pLabelName = marker,
+                    .color = {1, 1, 0, 1},
+            };
+            vkCmdInsertDebugUtilsLabelEXT(mBuffer, &labelInfo);
+        }
+        else if (mContext->isDebugMarkersSupported()) {
+            VkDebugMarkerMarkerInfoEXT markerInfo = {
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+                    .pMarkerName = marker,
+                    .color = {0.0f, 1.0f, 0.0f, 1.0f},
+            };
+            vkCmdDebugMarkerInsertEXT(mBuffer, &markerInfo);
         }
     }
 
-    VulkanCommandBuffer& VulkanCommands::getInternal(VulkanCommands::BufferList& storage, int8_t& currentCommandBufferIndex, uint8_t& availableBufferCount, VkFence fences[]) {
-        if (currentCommandBufferIndex >= 0) {
-            return *storage[currentCommandBufferIndex].get();
-        }
-
-        // If we ran out of available command buffers, stall until one finishes. This is very rare.
-        // It occurs only when Filament invokes commit() or endFrame() a large number of times without
-        // presenting the swap chain or waiting on a fence.
-        while (availableBufferCount == 0) {
-#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
-            FVK_LOGI << "VulkanCommands has stalled. "
-                << "If this occurs frequently, consider increasing VK_MAX_COMMAND_BUFFERS."
-                << io::endl;
-#endif
-            wait();
-            gc();
-        }
-
-        VulkanCommandBuffer* currentbuf = nullptr;
-        // Find an available slot.
-        for (size_t i = 0; i < CAPACITY; ++i) {
-            auto wrapper = storage[i].get();
-            if (wrapper->buffer() == VK_NULL_HANDLE) {
-                currentCommandBufferIndex = static_cast<int8_t>(i);
-                currentbuf = wrapper;
-                break;
-            }
-        }
-
-        assert_invariant(currentbuf);
-        availableBufferCount--;
-
-        // Note that the fence wrapper uses shared_ptr because a DriverAPI fence can also have ownership
-        // over it.  The destruction of the low-level fence occurs either in VulkanCommands::gc(), or in
-        // VulkanDriver::destroyFence(), both of which are safe spots.
-        currentbuf->fence = std::make_shared<VulkanCmdFence>(fences[currentCommandBufferIndex]);
-
+    void VulkanCommandBuffer::begin() noexcept {
+        FVK_LOGE << "[" << (mIsProtected ? "protected" : "regular") << "]=" << buffer() << " begin"
+            << utils::io::endl;
         // Begin writing into the command buffer.
-        const VkCommandBufferBeginInfo binfo{
-                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        VkCommandBufferBeginInfo const binfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         };
-        vkBeginCommandBuffer(currentbuf->buffer(), &binfo);
-
-        // Notify the observer that a new command buffer has been activated.
-        if (mObserver) {
-            mObserver->onCommandBuffer(*currentbuf);
-        }
-
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-        // We push the current markers onto a temporary stack. This must be placed after currentbuf is
-        // set to the new command buffer since pushGroupMarker also calls get().
-        while (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
-            auto [marker, time] = mCarriedOverMarkers->pop();
-            pushGroupMarker(marker.c_str(), time);
-        }
-#endif
-        return *currentbuf;
-    }
-    VulkanCommandBuffer& VulkanCommands::get() {
-        return getInternal(mStorage, mCurrentCommandBufferIndex, mAvailableBufferCount, mFences);
+        vkBeginCommandBuffer(mBuffer, &binfo);
     }
 
-    VulkanCommandBuffer& VulkanCommands::getProtected() {
-        assert_invariant(mProtectedQueue != VK_NULL_HANDLE);
-
-        if (mProtectedPool == VK_NULL_HANDLE) {
-            mProtectedPool = createPool(mDevice, mProtectedQueueFamilyIndex, true);
-            VkSemaphoreCreateInfo sci{ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-            for (auto& semaphore : mProtectedSubmissionSignals) {
-                vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
-            }
-
-            VkFenceCreateInfo fenceCreateInfo{ .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-            for (auto& fence : mProtectedFences) {
-                vkCreateFence(mDevice, &fenceCreateInfo, VKALLOC, &fence);
-            }
-
-            // From now on mProtectedPool != VK_NULL_HANDLE is the signal that protection is active
-            for (size_t i = 0; i < CAPACITY; ++i) {
-                mProtectedStorage[i] = std::make_unique<VulkanCommandBuffer>(mAllocator, mDevice, mProtectedPool);
-            }
+    VkSemaphore VulkanCommandBuffer::submit() {
+        while (mMarkerCount > 0) {
+            popMarker();
         }
 
-        return getInternal(mProtectedStorage, mCurrentProtectedCommandBufferIndex, mAvailableProtectedBufferCount, mProtectedFences);
-    }
+        vkEndCommandBuffer(mBuffer);
 
-    inline static void submitCommandBuffer(VkQueue queue, VulkanCommandBuffer* commandBuffer,
-        VkSemaphore& submission, VkSemaphore& injection, VkSemaphore finished, bool protectedSubmit) {
-        VkPipelineStageFlags waitDestStageMasks[2] = {
+        FVK_LOGE << "[" << (mIsProtected ? "protected" : "regular") << "]=" << buffer() << " end"
+            << utils::io::endl;
+
+        VkPipelineStageFlags const waitDestStageMasks[2] = {
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
         };
-
-        VkSemaphore signals[2] = {
-            VK_NULL_HANDLE,
-            VK_NULL_HANDLE,
-        };
-        uint32_t waitSemaphoreCount = 0;
-        if (submission) {
-            signals[waitSemaphoreCount++] = submission;
-        }
-        if (injection) {
-            signals[waitSemaphoreCount++] = injection;
-        }
-
-        VkCommandBuffer const cmdbuffer = commandBuffer->buffer();
-        vkEndCommandBuffer(cmdbuffer);
 
         VkSubmitInfo submitInfo{
-                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                .waitSemaphoreCount = waitSemaphoreCount,
-                .pWaitSemaphores = waitSemaphoreCount > 0 ? signals: nullptr,
-                .pWaitDstStageMask = waitDestStageMasks,
-                .commandBufferCount = 1,
-                .pCommandBuffers = &cmdbuffer,
-                .signalSemaphoreCount = 1u,
-                .pSignalSemaphores = &finished,
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = mWaitSemaphores.size(),
+            .pWaitSemaphores = mWaitSemaphores.data(),
+            .pWaitDstStageMask = waitDestStageMasks,
+            .commandBufferCount = 1u,
+            .pCommandBuffers = &mBuffer,
+            .signalSemaphoreCount = 1u,
+            .pSignalSemaphores = &mSubmission,
         };
         // add submit protection if needed
         VkProtectedSubmitInfo protectedSubmitInfo{
@@ -313,24 +237,23 @@ namespace filament::backend {
             .protectedSubmit = VK_TRUE,
         };
 
-        if (protectedSubmit) {
+        if (isProtected) {
             submitInfo.pNext = &protectedSubmitInfo;
         }
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
-        FVK_LOGI << "Submitting cmdbuffer=" << cmdbuffer
-            << " wait=(" << signals[0] << ", " << signals[1] << ") "
-            << " signal=" << finished
-            << " fence=" << commandBuffer->fence->fence
-            << utils::io::endl;
+        FVK_LOGI << "Submitting cmdbuffer=" << mBuffer
+            << " wait=(";
+        for (size_t s = 0, count = mWaitSemaphores.size(); s < count; ++s) {
+            FVK_LOGI << mWaitSemaphores[s] << " ";
+        }
+        FVK_LOGI << ") "
+            << " signal=" << mSubmission
+            << " fence=" << mFence << utils::io::endl;
 #endif
 
-        auto& cmdfence = commandBuffer->fence;
-        UTILS_UNUSED_IN_RELEASE VkResult result = VK_SUCCESS;
-        {
-            auto scope = cmdfence->setValue(VK_NOT_READY);
-            result = vkQueueSubmit(queue, 1, &submitInfo, cmdfence->getFence());
-        }
+        mFenceStatus->setStatus(VK_NOT_READY);
+        VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
         if (result != VK_SUCCESS) {
@@ -338,179 +261,212 @@ namespace filament::backend {
         }
 #endif
         assert_invariant(result == VK_SUCCESS);
+        mWaitSemaphores.clear();
+        return mSubmission;
+    }
 
-        submission = finished;
-        injection = VK_NULL_HANDLE;
+    CommandBufferPool::CommandBufferPool(VulkanContext* context, VulkanResourceAllocator* allocator,
+        VkDevice device, VkQueue queue, uint8_t queueFamilyIndex, bool isProtected)
+        : mDevice(device),
+        mRecording(INVALID) {
+        VkCommandPoolCreateInfo createInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
+                     VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
+                    (isProtected ? VK_COMMAND_POOL_CREATE_PROTECTED_BIT : 0u),
+            .queueFamilyIndex = queueFamilyIndex,
+        };
+        vkCreateCommandPool(device, &createInfo, VKALLOC, &mPool);
+
+        for (size_t i = 0; i < CAPACITY; ++i) {
+            mBuffers.emplace_back(std::make_unique<VulkanCommandBuffer>(context, allocator, device,
+                queue, mPool, isProtected));
+        }
+    }
+
+    CommandBufferPool::~CommandBufferPool() {
+        wait();
+        gc();
+        vkDestroyCommandPool(mDevice, mPool, VKALLOC);
+    }
+
+    VulkanCommandBuffer& CommandBufferPool::getRecording() {
+        if (isRecording()) {
+            return *mBuffers[mRecording];
+        }
+
+        auto const findNext = [this]() {
+            for (int8_t i = 0; i < CAPACITY; ++i) {
+                if (!mSubmitted[i]) {
+                    return i;
+                }
+            }
+            return INVALID;
+            };
+
+        while ((mRecording = findNext()) == INVALID) {
+            wait();
+            gc();
+        }
+
+        auto& recording = *mBuffers[mRecording];
+        recording.begin();
+        return recording;
+    }
+
+    void CommandBufferPool::gc() {
+        ActiveBuffers reclaimed;
+        mSubmitted.forEachSetBit([this, &reclaimed](size_t index) {
+            auto& buffer = mBuffers[index];
+            if (buffer->getStatus() == VK_SUCCESS) {
+                reclaimed.set(index, true);
+                buffer->reset();
+            }
+            });
+        mSubmitted &= ~reclaimed;
+    }
+
+    void CommandBufferPool::update() {
+        mSubmitted.forEachSetBit([this](size_t index) {
+            auto& buffer = mBuffers[index];
+            VkResult status = vkGetFenceStatus(mDevice, buffer->getVkFence());
+            if (status == VK_SUCCESS) {
+                buffer->setComplete();
+            }
+            });
+    }
+
+    VkSemaphore CommandBufferPool::flush() {
+        // We're not recording right now.
+        if (!isRecording()) {
+            return VK_NULL_HANDLE;
+        }
+        auto submitSemaphore = mBuffers[mRecording]->submit();
+        mSubmitted.set(mRecording, true);
+        mRecording = INVALID;
+        return submitSemaphore;
+    }
+
+    void CommandBufferPool::wait() {
+        uint8_t count = 0;
+        VkFence fences[CAPACITY];
+        mSubmitted.forEachSetBit([this, &count, &fences](size_t index) {
+            fences[count++] = mBuffers[index]->getVkFence();
+            });
+        vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+        update();
+    }
+
+    void CommandBufferPool::waitFor(VkSemaphore previousAction) {
+        if (!isRecording()) {
+            return;
+        }
+        auto& recording = mBuffers[mRecording];
+        recording->insertWait(previousAction);
+    }
+
+    void CommandBufferPool::pushMarker(char const* marker) {
+        getRecording().pushMarker(marker);
+    }
+
+    void CommandBufferPool::popMarker() {
+        getRecording().popMarker();
+    }
+
+    void CommandBufferPool::insertEvent(char const* marker) {
+        getRecording().insertEvent(marker);
+    }
+
+    VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
+        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context,
+        VulkanResourceAllocator* allocator)
+        : mDevice(device),
+        mProtectedQueue(protectedQueue),
+        mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
+        mAllocator(allocator),
+        mContext(context),
+        mPool(std::make_unique<CommandBufferPool>(context, allocator, device, queue, queueFamilyIndex,
+            false)) {
+    }
+
+    void VulkanCommands::terminate() {
+        mPool.reset();
+        mProtectedPool.reset();
+    }
+
+    VulkanCommandBuffer& VulkanCommands::get() {
+        auto& ret = mPool->getRecording();
+        return ret;
+    }
+
+    VulkanCommandBuffer& VulkanCommands::getProtected() {
+        assert_invariant(mProtectedQueue != VK_NULL_HANDLE);
+
+        if (!mProtectedPool) {
+            mProtectedPool = std::make_unique<CommandBufferPool>(mContext, mAllocator, mDevice,
+                mProtectedQueue, mProtectedQueueFamilyIndex, true);
+        }
+        auto& ret = mProtectedPool->getRecording();
+        return ret;
     }
 
     bool VulkanCommands::flush() {
-        // It's perfectly fine to call flush when no commands have been written.
-        bool submitted = false;
-        UTILS_UNUSED_IN_RELEASE bool popMarkers = true;
-        if (mProtectedPool != VK_NULL_HANDLE) {
-            if (mCurrentProtectedCommandBufferIndex >= 0) {
-                int8_t const index = mCurrentProtectedCommandBufferIndex;
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-                while (mGroupMarkers && !mGroupMarkers->empty()) {
-                    if (!mCarriedOverMarkers) {
-                        mCarriedOverMarkers = std::make_unique<VulkanGroupMarkers>();
-                    }
-                    auto const [marker, time] = mGroupMarkers->top();
-                    mCarriedOverMarkers->push(marker, time);
-                    // We still need to call through to vkCmdEndDebugUtilsLabelEXT.
-                    popGroupMarker();
-                }
-                popMarkers = false;
-#endif
-                submitCommandBuffer(mProtectedQueue, mProtectedStorage[index].get(),
-                    mSubmissionSignal, mInjectedSignal, mProtectedSubmissionSignals[index],
-                    true);
-                mCurrentProtectedCommandBufferIndex = -1;
-                submitted = true;
+        VkSemaphore dependency = mInjectedDependency;
+        VkSemaphore lastSubmit = mLastSubmit;
+        bool hasFlushed = false;
+
+        // Note that we've ordered it so that the non-protected commands are followed by the protected
+        // commands.  This assumes that the protected commands will be that one doing the rendering into
+        // the protected memory (i.e. protected render target).
+        for (auto pool : { mPool.get(), mProtectedPool.get() }) {
+            if (!pool || !pool->isRecording()) {
+                continue;
             }
+            if (dependency != VK_NULL_HANDLE) {
+                pool->waitFor(dependency);
+            }
+            if (lastSubmit != VK_NULL_HANDLE) {
+                pool->waitFor(lastSubmit);
+                lastSubmit = VK_NULL_HANDLE;
+            }
+            dependency = pool->flush();
+            hasFlushed = true;
         }
 
-        if (mCurrentCommandBufferIndex >= 0) {
-            int8_t const index = mCurrentCommandBufferIndex;
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-            if (popMarkers) {
-                while (mGroupMarkers && !mGroupMarkers->empty()) {
-                    if (!mCarriedOverMarkers) {
-                        mCarriedOverMarkers = std::make_unique<VulkanGroupMarkers>();
-                    }
-                    auto const [marker, time] = mGroupMarkers->top();
-                    mCarriedOverMarkers->push(marker, time);
-                    popGroupMarker();
-                }
-            }
-#endif
-            submitCommandBuffer(mQueue, mStorage[index].get(),
-                mSubmissionSignal, mInjectedSignal, mSubmissionSignals[index],
-                false);
-            mCurrentCommandBufferIndex = -1;
-            submitted = true;
+        if (hasFlushed) {
+            mInjectedDependency = VK_NULL_HANDLE;
+            mLastSubmit = dependency;
         }
-        return submitted;
-    }
 
-    VkSemaphore VulkanCommands::acquireFinishedSignal() {
-        VkSemaphore semaphore = mSubmissionSignal;
-        mSubmissionSignal = VK_NULL_HANDLE;
-#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
-        FVK_LOGI << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
-#endif
-        return semaphore;
-    }
-
-    void VulkanCommands::injectDependency(VkSemaphore next) {
-        assert_invariant(mInjectedSignal == VK_NULL_HANDLE);
-        mInjectedSignal = next;
-#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
-        FVK_LOGI << "Injecting " << next << " (e.g. due to vkAcquireNextImageKHR)" << io::endl;
-#endif
-    }
-
-    static inline size_t gatherFences(int capacity, const VulkanCommands::BufferList& buffers,
-        VkFence fences[], int8_t skipBufferIndex) {
-        size_t count = 0;
-        for (int i = 0; i < capacity; i++) {
-            auto wrapper = buffers[i].get();
-            if (wrapper->buffer() != VK_NULL_HANDLE
-                && skipBufferIndex != static_cast<int8_t>(i)) {
-                fences[count++] = wrapper->fence->getFence();
-            }
-        }
-        return count;
+        return true;
     }
 
     void VulkanCommands::wait() {
-        VkFence fences[CAPACITY + CAPACITY];
-        size_t total = 0;
-        size_t count = gatherFences(CAPACITY, mStorage,
-            &fences[total], mCurrentCommandBufferIndex);
-        total += count;
+        FVK_SYSTRACE_CONTEXT();
+        FVK_SYSTRACE_START("commands::wait");
 
-        if (mProtectedPool != VK_NULL_HANDLE) {
-            count = gatherFences(CAPACITY, mProtectedStorage,
-                &fences[total], mCurrentProtectedCommandBufferIndex);
-            total += count;
+        mPool->wait();
+        if (mProtectedPool) {
+            mProtectedPool->wait();
         }
-
-        if (total > 0) {
-            vkWaitForFences(mDevice, total, fences, VK_TRUE, UINT64_MAX);
-            updateFences();
-        }
-    }
-
-    static inline size_t resetStorage(int capacity, const VulkanCommands::BufferList& buffers,
-        VkDevice device, VkFence fences[]) {
-        size_t count = 0;
-        for (int i = 0; i < capacity; i++) {
-            auto wrapper = buffers[i].get();
-            if (wrapper->buffer() == VK_NULL_HANDLE) {
-                continue;
-            }
-            auto const vkfence = wrapper->fence->getFence();
-            VkResult const result = vkGetFenceStatus(device, vkfence);
-            if (result != VK_SUCCESS) {
-                continue;
-            }
-            fences[count++] = vkfence;
-            wrapper->fence->setValue(VK_SUCCESS);
-            wrapper->reset();
-        }
-        return count;
+        FVK_SYSTRACE_END();
     }
 
     void VulkanCommands::gc() {
         FVK_SYSTRACE_CONTEXT();
         FVK_SYSTRACE_START("commands::gc");
 
-        // We potentially have both the protected and unprotected
-        // buffers in flight.
-        VkFence fences[CAPACITY + CAPACITY];
-        size_t total = 0;
-
-        // Update fences and buffers
-        size_t count = resetStorage(CAPACITY, mStorage, mDevice, &fences[total]);
-        total += count;
-        mAvailableBufferCount += count;
-
-        // if we have a protected queue present
-        if (mProtectedPool != VK_NULL_HANDLE) {
-            count = resetStorage(CAPACITY, mProtectedStorage,
-                mDevice, &fences[total]);
-            total += count;
-            mAvailableProtectedBufferCount += count;
-        }
-
-        if (total > 0) {
-            vkResetFences(mDevice, total, fences);
+        mPool->gc();
+        if (mProtectedPool) {
+            mProtectedPool->gc();
         }
         FVK_SYSTRACE_END();
     }
 
-    static inline void updateStorageFences(int capacity, const VulkanCommands::BufferList& buffers,
-        VkDevice device) {
-        for (int i = 0; i < capacity; i++) {
-            auto wrapper = buffers[i].get();
-            if (wrapper->buffer() != VK_NULL_HANDLE) {
-                VulkanCmdFence* fence = wrapper->fence.get();
-                if (fence) {
-                    VkResult status = vkGetFenceStatus(device, fence->getFence());
-                    // This is either VK_SUCCESS, VK_NOT_READY, or VK_ERROR_DEVICE_LOST.
-                    fence->setValue(status);
-                }
-            }
-        }
-    }
-
     void VulkanCommands::updateFences() {
-        updateStorageFences(CAPACITY, mStorage, mDevice);
-
-        // if we have a protected queue present
-        if (mProtectedPool != VK_NULL_HANDLE) {
-            updateStorageFences(CAPACITY, mProtectedStorage, mDevice);
+        mPool->update();
+        if (mProtectedPool) {
+            mProtectedPool->update();
         }
     }
 
@@ -524,30 +480,14 @@ namespace filament::backend {
             FVK_LOGD << "----> " << str << utils::io::endl;
         }
 #endif
-
-        // TODO: Add group marker color to the Driver API
-        VkCommandBuffer const cmdbuffer = get().buffer();
-
         if (!mGroupMarkers) {
             mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
         }
         mGroupMarkers->push(str, timestamp);
 
-        if (mContext->isDebugUtilsSupported()) {
-            VkDebugUtilsLabelEXT labelInfo = {
-                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-                    .pLabelName = str,
-                    .color = {0, 1, 0, 1},
-            };
-            vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
-        }
-        else if (mContext->isDebugMarkersSupported()) {
-            VkDebugMarkerMarkerInfoEXT markerInfo = {
-                    .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-                    .pMarkerName = str,
-                    .color = {0.0f, 1.0f, 0.0f, 1.0f},
-            };
-            vkCmdDebugMarkerBeginEXT(cmdbuffer, &markerInfo);
+        mPool->pushMarker(str);
+        if (mProtectedPool) {
+            mProtectedPool->pushMarker(str);
         }
     }
 
@@ -565,11 +505,9 @@ namespace filament::backend {
 #else
             mGroupMarkers->pop();
 #endif
-            if (mContext->isDebugUtilsSupported()) {
-                vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
-            }
-            else if (mContext->isDebugMarkersSupported()) {
-                vkCmdDebugMarkerEndEXT(cmdbuffer);
+            mPool->popMarker();
+            if (mProtectedPool) {
+                mProtectedPool->popMarker();
             }
         }
         else if (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
@@ -580,23 +518,10 @@ namespace filament::backend {
         }
     }
 
-    void VulkanCommands::insertEventMarker(char const* string, uint32_t len) {
-        VkCommandBuffer const cmdbuffer = get().buffer();
-        if (mContext->isDebugUtilsSupported()) {
-            VkDebugUtilsLabelEXT labelInfo = {
-                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-                    .pLabelName = string,
-                    .color = {1, 1, 0, 1},
-            };
-            vkCmdInsertDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
-        }
-        else if (mContext->isDebugMarkersSupported()) {
-            VkDebugMarkerMarkerInfoEXT markerInfo = {
-                    .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-                    .pMarkerName = string,
-                    .color = {0.0f, 1.0f, 0.0f, 1.0f},
-            };
-            vkCmdDebugMarkerInsertEXT(cmdbuffer, &markerInfo);
+    void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
+        mPool->insertEvent(str);
+        if (mProtectedPool) {
+            mProtectedPool->insertEvent(str);
         }
     }
 

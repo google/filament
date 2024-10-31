@@ -693,8 +693,14 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
-    VulkanCommandBuffer const& commandBuffer = getCommandBuffer();
-    mResourceAllocator.construct<VulkanFence>(fh, commandBuffer.fence);
+    VulkanCommandBuffer* cmdbuf = nullptr;
+    if (mCurrentRenderPass.cmdBuffer) {
+        cmdbuf = mCurrentRenderPass.cmdBuffer;
+    }
+    else {
+        cmdbuf = &mCommands.get();
+    }
+    mResourceAllocator.construct<VulkanFence>(fh, cmdbuf->getFenceStatus());
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
