@@ -216,6 +216,14 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
     return std::make_tuple(surface, extent);
 }
 
+VkImage VulkanPlatform::createExternalImageImpl(void* externalBuffer) noexcept {
+
+    VkImage image = nullptr;
+#if defined(__ANDROID__)
+#endif
+    return image;
+}
+
 } // namespace filament::backend
 
 #undef LINUX_OR_FREEBSD

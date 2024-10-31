@@ -292,7 +292,13 @@ public:
      */
     VkQueue getProtectedGraphicsQueue() const noexcept;
 
+    /**
+    * @return an image created from the external buffer
+    */
+    VkImage createExternalImage(void* externalBuffer) const noexcept;
+
 private:
+    static VkImage createExternalImageImpl(void* externalBuffer) noexcept;
     static ExtensionSet getSwapchainInstanceExtensions();
 
     // Platform dependent helper methods

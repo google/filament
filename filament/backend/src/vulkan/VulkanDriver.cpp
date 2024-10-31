@@ -517,12 +517,15 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("createTexture");
 
-    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
+    if (target == SamplerType::SAMPLER_EXTERNAL) {
+    }
+    else {
+        auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, &mResourceAllocator,
             target, levels,
             format, samples, w, h, depth, usage, mStagePool);
-    mResourceManager.acquire(vktexture);
-
+        mResourceManager.acquire(vktexture);
+    }
     FVK_SYSTRACE_END();
 }
 
@@ -563,6 +566,8 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
 
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
+    setExternalImage(th, image);
 }
 
 void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
@@ -1184,6 +1189,8 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+
+    VkImage image = mPlatform->createExternalImage(image);
 }
 
 void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
