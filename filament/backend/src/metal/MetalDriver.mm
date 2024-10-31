@@ -819,17 +819,24 @@ void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
-    if (sch) {
-        auto* swapChain = handle_cast<MetalSwapChain>(sch);
-        // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
-        // complete before destroying it. This is because pixel buffer SwapChains hold a
-        // MetalExternalImage that could still being rendered into.
-        if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
-            executeAfterCurrentCommandBufferCompletes(
-                    [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
-        } else {
-            destruct_handle<MetalSwapChain>(sch);
-        }
+    if (UTILS_UNLIKELY(!sch)) {
+        return;
+    }
+    auto* swapChain = handle_cast<MetalSwapChain>(sch);
+    if (mContext->currentDrawSwapChain == swapChain) {
+        mContext->currentDrawSwapChain = nullptr;
+    }
+    if (mContext->currentReadSwapChain == swapChain) {
+        mContext->currentReadSwapChain = nullptr;
+    }
+    // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
+    // complete before destroying it. This is because pixel buffer SwapChains hold a
+    // MetalExternalImage that could still being rendered into.
+    if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
+        executeAfterCurrentCommandBufferCompletes(
+                [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
+    } else {
+        destruct_handle<MetalSwapChain>(sch);
     }
 }
 
