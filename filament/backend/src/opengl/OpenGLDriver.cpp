@@ -101,7 +101,7 @@
 #define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
-#define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_NONE
+#define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_ALL
 
 // set to the desired debug level (for internal debugging [Default: None])
 #define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
