@@ -82,6 +82,7 @@ private:
 };
 
 struct VulkanRenderPass {
+    VulkanCommandBuffer* cmdBuffer;
     VulkanRenderTarget* renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
