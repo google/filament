@@ -253,7 +253,7 @@ namespace filament::backend {
 #endif
 
         mFenceStatus->setStatus(VK_NOT_READY);
-        VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
+        UTILS_UNUSED_IN_RELEASE VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
         if (result != VK_SUCCESS) {
