@@ -73,7 +73,7 @@ install(FILES "${GEOMETRY_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME $
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if(FILAMENT_TESTS AND NOT ANDROID AND NOT WEBGL AND NOT IOS)
     set(TARGET test_transcoder)
     add_executable(${TARGET} tests/test_transcoder.cpp)
     target_link_libraries(${TARGET} PRIVATE geometry gtest)

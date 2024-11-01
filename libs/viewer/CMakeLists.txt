@@ -57,7 +57,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/viewer DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if(FILAMENT_TESTS AND NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_executable(test_settings tests/test_settings.cpp)
     target_link_libraries(test_settings PRIVATE ${TARGET} gtest)
     set_target_properties(test_settings PROPERTIES FOLDER Tests)

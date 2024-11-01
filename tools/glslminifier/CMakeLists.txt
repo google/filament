@@ -31,7 +31,7 @@ install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID)
+if(FILAMENT_TESTS AND NOT ANDROID)
     add_executable(test_${TARGET}
             src/GlslMinify.cpp
             tests/test_glslminifier.cpp
