@@ -40,6 +40,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Panic.h>
+#include <utils/Slice.h>
 
 #include <chrono>
 
@@ -440,6 +441,22 @@ size_t Engine::getMaxStereoscopicEyes() noexcept {
 
 uint64_t Engine::getSteadyClockTimeNano() noexcept {
     return std::chrono::steady_clock::now().time_since_epoch().count();
+}
+
+utils::Slice<const Engine::FeatureFlag> Engine::getFeatureFlags() const noexcept {
+    return downcast(this)->getFeatureFlags();
+}
+
+bool Engine::setFeatureFlag(char const* name, bool value) noexcept {
+    return downcast(this)->setFeatureFlag(name, value);
+}
+
+std::optional<bool> Engine::getFeatureFlag(char const* name) const noexcept {
+    return downcast(this)->getFeatureFlag(name);
+}
+
+bool* Engine::getFeatureFlagPtr(char const* UTILS_NONNULL name) const noexcept {
+    return downcast(this)->getFeatureFlagPtr(name);
 }
 
 #if defined(__EMSCRIPTEN__)
