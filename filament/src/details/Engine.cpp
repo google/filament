@@ -46,6 +46,7 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Invocable.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
@@ -53,8 +54,17 @@
 #include <utils/ThreadUtils.h>
 
 #include <algorithm>
+#include <initializer_list>
 #include <memory>
+#include <optional>
 #include <thread>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "generated/resources/materials.h"
 
@@ -73,6 +83,8 @@ struct Engine::BuilderDetails {
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
+    std::unordered_map<std::string_view, bool> mFeatureFlags;
+
     static Config validateConfig(Config config) noexcept;
 };
 
@@ -104,11 +116,11 @@ Engine* FEngine::create(Engine::Builder const& builder) {
         DriverConfig const driverConfig{
                 .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
                 .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
-                .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile,
-                .disableHandleUseAfterFreeCheck = instance->getConfig().disableHandleUseAfterFreeCheck,
+                .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
+                .disableHandleUseAfterFreeCheck = instance->features.backend.disable_handle_use_after_free_check,
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
                 .stereoscopicType = instance->getConfig().stereoscopicType,
-                .assertNativeWindowIsValid = instance->getConfig().assertNativeWindowIsValid,
+                .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -219,7 +231,34 @@ FEngine::FEngine(Engine::Builder const& builder) :
         mMainThreadId(ThreadUtils::getThreadId()),
         mConfig(builder->mConfig)
 {
-    // we're assuming we're on the main thread here.
+    // update a feature flag from Engine::Config if the flag is not specified in the Builder
+    auto const featureFlagsBackwardCompatibility =
+            [this, &builder](std::string_view name, bool value) {
+        if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
+            auto* const p = getFeatureFlagPtr(name, true);
+            if (p) {
+                *p = value;
+            }
+        }
+    };
+
+    // update all the features flags specified in the builder
+    for (auto const& feature : builder->mFeatureFlags) {
+        auto* const p = getFeatureFlagPtr(feature.first, true);
+        if (p) {
+            *p = feature.second;
+        }
+    }
+
+    // update "old" feature flags that were specified in Engine::Config
+    featureFlagsBackwardCompatibility("backend.disable_parallel_shader_compile",
+            mConfig.disableParallelShaderCompile);
+    featureFlagsBackwardCompatibility("backend.disable_handle_use_after_free_check",
+            mConfig.disableHandleUseAfterFreeCheck);
+    featureFlagsBackwardCompatibility("backend.opengl.assert_native_window_is_valid",
+            mConfig.assertNativeWindowIsValid);
+
+    // We're assuming we're on the main thread here.
     // (it may not be the case)
     mJobSystem.adopt();
 
@@ -702,11 +741,11 @@ int FEngine::loop() {
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
             .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
-            .disableParallelShaderCompile = mConfig.disableParallelShaderCompile,
-            .disableHandleUseAfterFreeCheck = mConfig.disableHandleUseAfterFreeCheck,
+            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
+            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
             .forceGLES2Context = mConfig.forceGLES2Context,
             .stereoscopicType =  mConfig.stereoscopicType,
-            .assertNativeWindowIsValid = mConfig.assertNativeWindowIsValid,
+            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
@@ -1316,6 +1355,32 @@ void FEngine::unprotected() noexcept {
     mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
 }
 
+bool FEngine::setFeatureFlag(char const* name, bool value) noexcept {
+    auto* const p = getFeatureFlagPtr(name);
+    if (p) {
+        *p = value;
+    }
+    return p != nullptr;
+}
+
+std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
+    auto* const p = getFeatureFlagPtr(name, true);
+    if (p) {
+        return *p;
+    }
+    return std::nullopt;
+}
+
+bool* FEngine::getFeatureFlagPtr(std::string_view name, bool allowConstant) const noexcept {
+    auto pos = std::find_if(mFeatures.begin(), mFeatures.end(),
+            [name](FeatureFlag const& entry) {
+                return name == entry.name;
+            });
+
+    return (pos != mFeatures.end() && (!pos->constant || allowConstant)) ?
+           const_cast<bool*>(pos->value) : nullptr;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 Engine::Builder::Builder() noexcept = default;
@@ -1352,6 +1417,20 @@ Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
 
 Engine::Builder& Engine::Builder::paused(bool paused) noexcept {
     mImpl->mPaused = paused;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::feature(char const* name, bool value) noexcept {
+    mImpl->mFeatureFlags[name] = value;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::features(std::initializer_list<char const *> list) noexcept {
+    for (auto name : list) {
+        if (name) {
+            feature(name, true);
+        }
+    }
     return *this;
 }
 

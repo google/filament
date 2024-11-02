@@ -24,6 +24,10 @@
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+#include <utils/Slice.h>
+
+#include <initializer_list>
+#include <optional>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -309,6 +313,7 @@ public:
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
          * Currently only honored by the GL and Metal backends.
+         * @deprecated use "backend.disable_parallel_shader_compile" feature flag instead
          */
         bool disableParallelShaderCompile = false;
 
@@ -349,6 +354,7 @@ public:
 
         /*
          * Disable backend handles use-after-free checks.
+         * @deprecated use "backend.disable_handle_use_after_free_check" feature flag instead
          */
         bool disableHandleUseAfterFreeCheck = false;
 
@@ -385,9 +391,31 @@ public:
          * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
          * This is only supported for:
          *      - PlatformEGLAndroid
+         * @deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
         bool assertNativeWindowIsValid = false;
     };
+
+
+    /**
+     * Feature flags can be enabled or disabled when the Engine is built. Some Feature flags can
+     * also be toggled at any time. Feature flags should alawys use their default value unless
+     * the feature enabled by the flag is faulty. Feature flags provide a last resort way to
+     * disable problematic features.
+     * Feature flags are intended to have a short life-time and are regularly removed as features
+     * mature.
+     */
+    struct FeatureFlag {
+        char const* UTILS_NONNULL name;         //!< name of the feature flag
+        char const* UTILS_NONNULL description;  //!< short description
+        bool const* UTILS_NONNULL value;        //!< pointer to the value of the flag
+        bool constant;                          //!< whether the flag is constant after construction
+    };
+
+    /**
+     * Returns the list of available feature flags
+     */
+    utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept;
 
 #if UTILS_HAS_THREADING
     using CreateCallback = void(void* UTILS_NULLABLE user, void* UTILS_NONNULL token);
@@ -460,6 +488,21 @@ public:
          * @return A reference to this Builder for chaining calls.
          */
         Builder& paused(bool paused) noexcept;
+
+        /**
+         * Set a feature flag value. This is the only way to set constant feature flags.
+         * @param name feature name
+         * @param value true to enable, false to disable
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& feature(char const* UTILS_NONNULL name, bool value) noexcept;
+
+        /**
+         * Enables a list of features.
+         * @param list list of feature names to enable.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& features(std::initializer_list<char const *> list) noexcept;
 
 #if UTILS_HAS_THREADING
         /**
@@ -1077,6 +1120,37 @@ public:
 
 
     DebugRegistry& getDebugRegistry() noexcept;
+
+    /**
+     * Check if a feature flag exists
+     * @param name name of the feature flag to check
+     * @return true if the feature flag exists, false otherwise
+     */
+    inline bool hasFeatureFlag(char const* UTILS_NONNULL name) noexcept {
+        return getFeatureFlag(name).has_value();
+    }
+
+    /**
+     * Set the value of a non-constant feature flag.
+     * @param name name of the feature flag to set
+     * @param value value to set
+     * @return true if the value was set, false if the feature flag is constant or doesn't exist.
+     */
+    bool setFeatureFlag(char const* UTILS_NONNULL name, bool value) noexcept;
+
+    /**
+     * Retrieves the value of any feature flag.
+     * @param name name of the feature flag
+     * @return the value of the flag if it exists
+     */
+    std::optional<bool> getFeatureFlag(char const* UTILS_NONNULL name) const noexcept;
+
+    /**
+     * Returns a pointer to a non-constant feature flag value.
+     * @param name name of the feature flag
+     * @return a pointer to the feature flag value, or nullptr if the feature flag is constant or doesn't exist
+     */
+    bool* UTILS_NULLABLE getFeatureFlagPtr(char const* UTILS_NONNULL name) const noexcept;
 
 protected:
     //! \privatesection
