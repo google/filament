@@ -19,6 +19,8 @@ project(TNT)
 # ==================================================================================================
 # Options
 # ==================================================================================================
+option(FILAMENT_PREFER_EXTERNAL "Prefer the dependencies found externally via CMake" OFF)
+
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
@@ -631,6 +633,10 @@ endif()
 # ==================================================================================================
 # Functions
 # ==================================================================================================
+
+# List of external subdirectories that are added/used
+set(external_subdirectories)
+
 ## The MSVC compiler has a limitation on literal string length which is reached when all the
 ## licenses are concatenated together into a large string... so split them into multiple strings.
 function(list_licenses OUTPUT MODULES)
@@ -639,6 +645,10 @@ function(list_licenses OUTPUT MODULES)
     set(CONTENT)
     set(_MODULES ${MODULES} ${ARGN})
     foreach(module ${_MODULES})
+        if(NOT "${external_subdirectories}" MATCHES "${module}")
+            continue()
+        endif()
+
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
         if(EXISTS ${fullname})
@@ -730,8 +740,81 @@ endfunction()
 # Sub-projects
 # ==================================================================================================
 
+# Add an external library suth that
+# - it prefers finding it via find_package if FILAMENT_PREFER_EXTERNAL defined
+# - otherwise add it via the ${EXTERNAL} subdirectory
+# Args:
+# - package_name: the name to use with `find_package`
+# - subdirectory: the subdirectory to add if find_package fails
+# - targets: the targets that `find_package` will define
+# - target_aliases: the aliases to define for the targets (for each target in argument targets)
+macro(add_external_library package_name subdirectory targets target_aliases)
+    if(FILAMENT_PREFER_EXTERNAL)
+        find_package(${package_name} GLOBAL)
+
+        # add aliases for targets
+        if(${${package_name}_FOUND})
+            list(APPEND targets ${targets})
+            list(APPEND target_aliases ${target_aliases})
+
+            foreach(target target_alias IN ZIP_LISTS targets target_aliases)
+                if(TARGET ${target} AND NOT TARGET ${target_alias})
+                    get_target_property(target_type ${target} TYPE)
+
+                    get_target_property(_aliased_target ${target} ALIASED_TARGET)
+                    if(NOT ${_aliased_target} MATCHES ".*-NOTFOUND")
+                        set(target ${_aliased_target})
+                    endif()
+
+                    if(${target_type} STREQUAL "EXECUTABLE")
+                        add_executable(${target_alias} ALIAS ${target})
+                    else()
+                        add_library(${target_alias} ALIAS ${target})
+                    endif()
+                endif()
+            endforeach()
+        endif()
+    endif()
+
+    list(FIND external_subdirectories "${subdirectory}" has_subdirectory)
+    if(NOT ${${package_name}_FOUND} AND ${has_subdirectory} EQUAL -1 AND EXISTS "${EXTERNAL}/${subdirectory}")
+        add_subdirectory(${EXTERNAL}/${subdirectory})
+        list(APPEND external_subdirectories ${subdirectory})
+    endif()
+endmacro()
+
+# Add an external header-only library suth that
+# - it prefers finding it via find_path if FILAMENT_PREFER_EXTERNAL defined
+# - otherwise add it via the ${EXTERNAL} subdirectory
+# Args:
+# - package_name: the name to use with `find_path`
+# - subdirectory: the subdirectory to add if find_path fails
+# - header: the header to find via find_path
+# - target: the target to define
+macro(add_external_header_library package_name subdirectory header target)
+    set(found FALSE)
+    if(FILAMENT_PREFER_EXTERNAL)
+        find_path(${package_name}_INCLUDE_DIRS ${header})
+
+        if(NOT "${${package_name}_INCLUDE_DIRS}" MATCHES ".*-NOTFOUND")
+            set(found TRUE)
+            add_library(${target} INTERFACE)
+            target_include_directories(${target} INTERFACE ${${package_name}_INCLUDE_DIRS})
+        else()
+            message(WARNING "Could not find the external header library ${package_name}")
+        endif()
+    endif()
+
+    list(FIND external_subdirectories "${subdirectory}" has_subdirectory)
+    if(NOT ${found} AND ${has_subdirectory} EQUAL -1 AND EXISTS "${EXTERNAL}/${subdirectory}")
+        add_subdirectory(${EXTERNAL}/${subdirectory})
+        list(APPEND external_subdirectories ${subdirectory})
+    endif()
+endmacro()
+
 # Common to all platforms
-add_subdirectory(${EXTERNAL}/libgtest/tnt)
+add_external_library("GTest" "libgtest/tnt" "GTest::gtest" "gtest")
+add_external_library("tsl-robin-map" "robin-map/tnt" "tsl::robin_map" "tsl")
 add_subdirectory(${LIBRARIES}/camutils)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
@@ -749,19 +832,23 @@ add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
 add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
-add_subdirectory(${EXTERNAL}/basisu/tnt)
-add_subdirectory(${EXTERNAL}/civetweb/tnt)
-add_subdirectory(${EXTERNAL}/imgui/tnt)
-add_subdirectory(${EXTERNAL}/robin-map/tnt)
-add_subdirectory(${EXTERNAL}/smol-v/tnt)
-add_subdirectory(${EXTERNAL}/benchmark/tnt)
-add_subdirectory(${EXTERNAL}/meshoptimizer/tnt)
-add_subdirectory(${EXTERNAL}/mikktspace)
-add_subdirectory(${EXTERNAL}/cgltf/tnt)
-add_subdirectory(${EXTERNAL}/draco/tnt)
-add_subdirectory(${EXTERNAL}/jsmn/tnt)
-add_subdirectory(${EXTERNAL}/stb/tnt)
-add_subdirectory(${EXTERNAL}/getopt)
+add_external_library("zstd" "zstd/tnt" "zstd::libzstd" "zstd")
+add_external_library("basisu" "basisu/tnt" "basisu::basisu;basisu::basisu_encoder;basisu::basisu_encoder" "basisu;basis_encoder;basis_transcoder")
+add_external_library("civetweb" "civetweb/tnt" "civetweb::civetweb;civetweb::civetweb-cpp" "civetweb;civetweb-cpp")
+if(TARGET civetweb::civetweb AND TARGET civetweb::civetweb-cpp)
+    target_link_libraries(civetweb::civetweb INTERFACE civetweb::civetweb-cpp)
+endif()
+
+add_external_library("imgui" "imgui/tnt" "imgui::imgui" "imgui")
+add_external_library("smol-v" "smol-v/tnt" "smol-v::smol-v" "smol-v")
+add_external_library("benchmark" "benchmark/tnt" "benchmark::benchmark;benchmark::benchmark_main" "benchmark;benchmark_main")
+add_external_library("meshoptimizer" "meshoptimizer/tnt" "meshoptimizer::meshoptimizer" "meshoptimizer")
+add_external_library("mikktspace" "mikktspace/tnt" "mikktspace::mikktspace" "mikktspace")
+add_external_header_library("cgltf" "cgltf/tnt" "cgltf.h" "cgltf")
+add_external_library("draco" "draco/tnt" "draco::draco" "draco")
+add_external_header_library("jsmn" "jsmn/tnt" "jsmn.h" "jsmn")
+add_external_library("Stb" "stb/tnt" "stb_include.h" "stb")
+add_external_header_library("getopt" "getopt" "getopt/getopt.h" "getopt")
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
 add_subdirectory(${LIBRARIES}/geometry)
@@ -769,9 +856,25 @@ add_subdirectory(${LIBRARIES}/geometry)
 if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     # spirv-tools must come before filamat, as filamat relies on the presence of the
     # spirv-tools_SOURCE_DIR variable.
-    add_subdirectory(${EXTERNAL}/spirv-tools)
-    add_subdirectory(${EXTERNAL}/glslang/tnt)
-    add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
+    if(BUILD_SHARED_LIBS)
+        add_external_library("SPIRV-Tools" "spirv-tools" "SPIRV-Tools-shared" "SPIRV-Tools")
+    else()
+        add_external_library("SPIRV-Tools" "spirv-tools" "SPIRV-Tools-static" "SPIRV-Tools")
+    endif()
+    add_external_library("SPIRV-Tools-opt" "spirv-tools" "SPIRV-Tools-opt" "SPIRV-Tools-opt")
+    add_external_library("glslang" "glslang/tnt" "glslang::glslang;glslang::SPIRV;glslang::OGLCompiler;glslang::MachineIndependent;glslang::OSDependent;glslang::SPVRemapper" "glslang;SPIRV;OGLCompiler;MachineIndependent;OSDependent;SPVRemapper")
+    if(TARGET glslang::glslang AND TARGET glslang::MachineIndependent)
+        target_link_libraries(glslang::glslang INTERFACE glslang::MachineIndependent)
+    endif()
+    if(TARGET glslang::SPIRV AND TARGET glslang::SPVRemapper)
+        target_link_libraries(glslang::SPIRV INTERFACE glslang::SPVRemapper)
+    endif()
+    add_external_library("spirv_cross_core" "spirv-cross/tnt" "spirv-cross-core" "spirv-cross-core")
+    add_external_library("spirv_cross_glsl" "spirv-cross/tnt" "spirv-cross-glsl" "spirv-cross-glsl")
+    add_external_library("spirv_cross_msl" "spirv-cross/tnt" "spirv-cross-msl" "spirv-cross-msl")
+    if(TARGET spirv-cross-glsl AND TARGET spirv-cross-core AND TARGET spirv-cross-msl)
+        target_link_libraries(spirv-cross-glsl INTERFACE spirv-cross-core spirv-cross-msl)
+    endif()
     add_subdirectory(${LIBRARIES}/filamat)
 
     # the material debugger requires filamat
@@ -782,9 +885,9 @@ endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
-    add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
+    add_external_library("vkmemalloc" "vkmemalloc/tnt" "vkmemalloc::vkmemalloc" "vkmemalloc")
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
-    add_subdirectory(${EXTERNAL}/spirv-headers)
+    add_external_header_library("SPIRV_HEADERS" "spirv-headers" "spirv/unified1/spirv.hpp" "SPIRV-Headers")
 endif()
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
@@ -805,11 +908,11 @@ if (IS_HOST_PLATFORM)
 
     add_subdirectory(${FILAMENT}/samples)
 
-    add_subdirectory(${EXTERNAL}/libassimp/tnt)
-    add_subdirectory(${EXTERNAL}/libpng/tnt)
-    add_subdirectory(${EXTERNAL}/libsdl2/tnt)
-    add_subdirectory(${EXTERNAL}/libz/tnt)
-    add_subdirectory(${EXTERNAL}/tinyexr/tnt)
+    add_external_library("assimp" "libassimp/tnt" "assimp::assimp" "assimp")
+    add_external_library("PNG" "libpng/tnt" "PNG::PNG" "png")
+    add_external_library("SDL2" "libsdl2/tnt" "SDL2::SDL2;SDL2::SDL2main" "sdl2;sdl2main")
+    add_external_library("ZLIB" "libz/tnt" "ZLIB::ZLIB" "z")
+    add_external_library("tinyexr" "tinyexr/tnt" "tinyexr::tinyexr;unofficial::tinyexr::tinyexr" "tinyexr;tinyexr")
 
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/cso-lut)
