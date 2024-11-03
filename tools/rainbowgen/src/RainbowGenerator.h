@@ -17,12 +17,11 @@
 #ifndef TNT_RAINBOWGENERATOR_H
 #define TNT_RAINBOWGENERATOR_H
 
-#include "CIE.h"
-
 #include <stdint.h>
 #include <stddef.h>
 
 #include <math/vec3.h>
+#include <math/scalar.h>
 
 #include <vector>
 
@@ -30,23 +29,51 @@ namespace utils {
     class JobSystem;
 };
 
+struct Rainbow {
+    using radian_t = float;
+    using linear_sRGB_t = filament::math::float3;
+    radian_t minDeviation;
+    radian_t maxDeviation;
+    std::vector<linear_sRGB_t> data;
+};
+
 class RainbowGenerator {
 public:
+    using radian_t = Rainbow::radian_t;
+    using celcius_t = float;
+
     RainbowGenerator();
     ~RainbowGenerator();
 
-    void build(utils::JobSystem& js);
+    // LUT size
+    RainbowGenerator& lut(uint32_t count) noexcept;
+
+    // min and max deviation
+    RainbowGenerator& deviation(radian_t min, radian_t max) noexcept;
+
+    // number of samples for the calculation
+    RainbowGenerator& samples(uint32_t count) noexcept;
+
+    // whether we compute the secondary rainbow
+    RainbowGenerator& secondary(bool enabled) noexcept;
+
+    // air temperature
+    RainbowGenerator& temperature(celcius_t t) noexcept;
+
+    // sun arc
+    RainbowGenerator& sunArc(radian_t arc) noexcept;
+
+    // bulid the rainbow LUT
+    Rainbow build(utils::JobSystem& js);
 
 private:
-    using radian_t = float;
-
-    filament::math::float3 generate(radian_t phi, radian_t dphi) const noexcept;
-
     size_t mAngleCount = 256;
-    float mTemprature = 20.0f;
-    float mMinWavelength = CIE_XYZ_START;                       // 390
-    float mMaxWavelength = CIE_XYZ_START + CIE_XYZ_COUNT;       // 830
+    radian_t mMinDeviation = 30.0f * filament::math::f::DEG_TO_RAD;
+    radian_t mMaxDeviation = 60.0f * filament::math::f::DEG_TO_RAD;
+    radian_t mSunArc = 1.0f * filament::math::f::DEG_TO_RAD;
+    uint32_t mSampleCount = 65536;
+    bool mSecondaryRainbow = true;
+    float mAirTemperature = 20.0f;
 };
-
 
 #endif //TNT_RAINBOWGENERATOR_H

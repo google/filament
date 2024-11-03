@@ -17,19 +17,10 @@
 #include "RainbowGenerator.h"
 #include "CIE.h"
 #include "rainbow.h"
-#include "targa.h"
 
 #include <utils/JobSystem.h>
 
-#include <math/scalar.h>
-#include <math/vec2.h>
-#include <math/vec3.h>
-#include <math/mat3.h>
-
-#include <algorithm>
-#include <functional>
 #include <cmath>
-#include <iostream>
 #include <random>
 #include <vector>
 
@@ -44,31 +35,62 @@ RainbowGenerator::RainbowGenerator() = default;
 
 RainbowGenerator::~RainbowGenerator() = default;
 
-void RainbowGenerator::build(JobSystem& js) {
+RainbowGenerator& RainbowGenerator::lut(uint32_t count) noexcept {
+    mAngleCount = count;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::deviation(radian_t min, radian_t max) noexcept {
+    mMinDeviation = min;
+    mMaxDeviation = max;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::samples(uint32_t count) noexcept {
+    mSampleCount = count;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::secondary(bool enabled) noexcept {
+    mSecondaryRainbow = enabled;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::temperature(celcius_t t) noexcept {
+    mAirTemperature = t;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::sunArc(radian_t arc) noexcept {
+    mSunArc = arc;
+    return *this;
+}
+
+Rainbow RainbowGenerator::build(JobSystem&) {
     uint32_t const angleCount = mAngleCount;
-    float const n0 = indexOfRefraction(350);
-    float const n1 = indexOfRefraction(700);
-    float const minDeviation = 30*f::DEG_TO_RAD; //deviation(n0, maxIncidentAngle(n0)); // phi = 39.7
-    float const maxDeviation = 60*f::DEG_TO_RAD; //deviation(n1, maxIncidentAngle(n1)); // phi = 42.5
-    std::cout << minDeviation * f::RAD_TO_DEG << std::endl;
-    std::cout << maxDeviation * f::RAD_TO_DEG << std::endl;
+    float const minDeviation = mMinDeviation;
+    float const maxDeviation = mMaxDeviation;
 
-    std::vector<float3> rainbow(angleCount, float3{});
+    Rainbow rainbow{
+            .minDeviation = minDeviation,
+            .maxDeviation = maxDeviation,
+            .data = std::vector<Rainbow::linear_sRGB_t>(angleCount, Rainbow::linear_sRGB_t{})
+    };
 
-    // The sun appears as about half a degree in the sky
+    // The sun appears as about a degree in the sky
     std::default_random_engine rng{ std::random_device{}() };
-    std::uniform_real_distribution<float> dist{ -f::DEG_TO_RAD * 0.5f, f::DEG_TO_RAD * 0.5f };
+    std::uniform_real_distribution<float> dist{ -mSunArc * 0.5f, mSunArc * 0.5f };
 
-    size_t count = 65536;
-    float const s = 2.0f * float(angleCount) / ((maxDeviation - minDeviation) * count * CIE_XYZ_COUNT);
+    int32_t const count = int32_t(mSampleCount);
+    float const s = float(2 * angleCount) / float((maxDeviation - minDeviation) * float(count) * CIE_XYZ_COUNT);
 
     for (size_t j = 0; j < CIE_XYZ_COUNT; j++) {
         // Current wavelength
         float const w = float(CIE_XYZ_START + j);
         float const n = indexOfRefraction(w);
 
-        for (size_t i = 0; i < count; i++) {
-            float const impact = (float(i) / count) * 2.0f - 1.0f;
+        for (int32_t i = 0; i < count; i++) {
+            float const impact = float(i * 2 - count) / float(count);
             radian_t const impactAngle = dist(rng);
             radian_t const incident = std::asin(impact) - impactAngle;
 
@@ -90,59 +112,21 @@ void RainbowGenerator::build(JobSystem& js) {
 
             for (int order = 0; order < 2; order++) {
                 float const internalBounces = float(order + 1);
-                radian_t const phi = deviation(order, incident, refracted, impactAngle);
+                radian_t const phi = rainbow::deviation(order, incident, refracted, impactAngle);
                 if (phi >= minDeviation && phi < maxDeviation) {
                     size_t const index = (size_t)std::round(
-                            ((phi - minDeviation) / (maxDeviation - minDeviation)) * angleCount);
+                            ((phi - minDeviation) / (maxDeviation - minDeviation)) * float(angleCount));
                     if (index < angleCount) {
                         float const T = Taw * std::pow(Rwa,  internalBounces) * Twa;
-                        rainbow[index] += (T * s) * (CIE_XYZ[j] / 118.518f);
+                        rainbow.data[index] += (T * s) * (CIE_XYZ[j] / 118.518f);
                     }
                 }
             }
         }
     }
 
-    auto* image = tga_new(angleCount, 32);
-    for (size_t index = 0; index < angleCount; index++) {
-        float3 c = rainbow[index];
-        c = XYZ_to_sRGB(c);
-
-        printf("vec3( %g, %g, %g ),\n", c.r, c.g, c.b);
-
-        c = linear_to_sRGB(c*1075);
-
-
-        uint3 const rgb = uint3(saturate(c) * 255);
-        for (int y=0;y<32;y++)
-        tga_set_pixel(image, index, y, {
-                .b = (uint8_t)rgb.v[2],
-                .g = (uint8_t)rgb.v[1],
-                .r = (uint8_t)rgb.v[0]
-        });
-    }
-    tga_write("toto.tga", image);
-    tga_free(image);
+    return rainbow;
 }
-
-// ------------------------------------------------------------------------------------------------
-
-//        float const a = cos(phi / 2);
-//        float const c = tan(phi / 2);
-//        float const d = -n / (2 * a * a);
-//        float const e = 1 - c * c;
-//        float const A = 4 * c * c + e * e;
-//        float const B = 2 * d * e;
-//        float const C = d * d - e * e - 4 * c * c;
-//        float const D = c * c - d * d;
-//        auto func = [A,B,C,D](float x) {
-//            return A*x*x*x*x + B*x*x*x + C*x*x - B*x + D;
-//        };
-//        auto dfunc = [A,B,C](float x) {
-//            return 4*A*x*x*x + 3*B*x*x + 2*C*x - B;
-//        };
-
-
 
 //vec3 sun = frameUniforms.lightColorIntensity.rgb *
 //           (frameUniforms.lightColorIntensity.a * (4.0 * PI));
@@ -154,6 +138,3 @@ void RainbowGenerator::build(JobSystem& js) {
 //float s = saturate((angle - first)/range);
 //int index = int(s * 255);
 //fragColor.rgb += rainbow[index]*sun;
-
-#define TARGALIB_IMPLEMENTATION
-#include "targa.h"

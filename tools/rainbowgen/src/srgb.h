@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <math/mat3.h>
+#include <math/vec3.h>
+
 #include <cmath>
 
 namespace rainbow {
@@ -98,6 +101,31 @@ inline float indexOfRefraction(nanometer_t wavelength) noexcept {
     float const n = std::sqrt((1.0f + 2.0f * R * P_) / (1.0f - R * P_));
 
     return n;
+}
+
+inline constexpr float3 XYZ_to_sRGB(float3 const v) noexcept {
+    constexpr mat3f const XYZ_sRGB{
+            3.2404542f, -0.9692660f,  0.0556434f,
+            -1.5371385f,  1.8760108f, -0.2040259f,
+            -0.4985314f,  0.0415560f,  1.0572252f
+    };
+    return XYZ_sRGB * v;
+}
+
+inline float3 linear_to_sRGB(float3 c) noexcept {
+    for (auto i = 0; i < c.size(); i++) {
+        c[i] = (c[i] <= 0.0031308f) ?
+                c[i] * 12.92f : (std::pow(c[i], 1.0f / 2.4f) * 1.055f) - 0.055f;
+    }
+    return c;
+}
+
+inline float3 sRGB_to_linear(float3 c) noexcept {
+    for (auto i = 0; i < c.size(); i++) {
+        c[i] = (c[i] <= 0.04045f) ?
+                c[i] / 12.92f : std::pow((c[i] + 0.055f) / 1.055f, 2.4f);
+    }
+    return c;
 }
 
 } // namespace rainbow

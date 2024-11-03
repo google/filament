@@ -16,8 +16,13 @@
 
 #include "RainbowGenerator.h"
 
+#include "targa.h"
+#include "srgb.h"
+
 #include <utils/Path.h>
 #include <utils/JobSystem.h>
+
+#include <math/vec3.h>
 
 #include <getopt/getopt.h>
 
@@ -25,6 +30,7 @@
 #include <string>
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -65,7 +71,7 @@ static void license() {
         std::cout << *p++ << std::endl;
 }
 
-static int handleArguments(int argc, char* argv[]) {
+static int handleArguments(int argc, char* argv[], RainbowGenerator& builder) {
     static constexpr const char* OPTSTR = "hL";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
@@ -93,17 +99,40 @@ static int handleArguments(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    const int optionIndex = handleArguments(argc, argv);
+    RainbowGenerator builder;
+    const int optionIndex = handleArguments(argc, argv, builder);
     const int numArgs = argc - optionIndex;
     if (numArgs < 1) {
         printUsage(argv[0]);
         return 1;
     }
 
-
     utils::JobSystem js;
     js.adopt();
 
-    RainbowGenerator rainbow;
-    rainbow.build(js);
+    Rainbow const rainbow = builder.build(js);
+
+    // save to tga...
+    using namespace filament::math;
+    size_t const angleCount = rainbow.data.size();
+    auto* image = tga_new(angleCount, 32);
+    for (size_t index = 0; index < angleCount; index++) {
+        float3 c = rainbow.data[index];
+        c = srgb::XYZ_to_sRGB(c);
+        printf("vec3( %g, %g, %g ),\n", c.r, c.g, c.b);
+        c = srgb::linear_to_sRGB(c * 1075);
+        uint3 const rgb = uint3(saturate(c) * 255);
+        for (int y = 0; y < 32; y++) {
+            tga_set_pixel(image, index, y, {
+                    .b = (uint8_t)rgb.v[2],
+                    .g = (uint8_t)rgb.v[1],
+                    .r = (uint8_t)rgb.v[0]
+            });
+        }
+    }
+    tga_write("toto.tga", image);
+    tga_free(image);
 }
+
+#define TARGALIB_IMPLEMENTATION
+#include "targa.h"
