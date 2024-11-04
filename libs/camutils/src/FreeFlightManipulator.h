@@ -226,6 +226,8 @@ public:
 
     void jumpToBookmark(const Bookmark& bookmark) override {
         Base::mEye = bookmark.flight.position;
+        mTargetEuler.x = bookmark.flight.pitch;
+        mTargetEuler.y = bookmark.flight.yaw;
         updateTarget(bookmark.flight.pitch, bookmark.flight.yaw);
     }
 

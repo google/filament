@@ -740,6 +740,20 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
 
+    // Check the availability of lazily allocated memory
+    {
+        context.mLazilyAllocatedMemorySupported = false;
+        const uint32_t typeCount = context.mMemoryProperties.memoryTypeCount;
+        for(uint32_t i = 0; i < typeCount; ++i) {
+            const VkMemoryType type = context.mMemoryProperties.memoryTypes[i];
+            if (type.propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
+                context.mLazilyAllocatedMemorySupported = true;
+                assert_invariant(type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                break;
+            }
+        }
+    }
+
 #ifdef NDEBUG
     // If we are in release build, we should not have turned on debug extensions
     FILAMENT_CHECK_POSTCONDITION(!context.mDebugUtilsSupported && !context.mDebugMarkersSupported)

@@ -30,6 +30,8 @@
 #include <bluevk/BlueVK.h>
 #include <tsl/robin_map.h>
 
+#include <memory>
+
 namespace filament::backend {
 
 // [GDSR]: Great-Descriptor-Set-Refactor: As of 03/20/24, the Filament frontend is planning to
@@ -45,6 +47,7 @@ public:
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
 
     VulkanDescriptorSetManager(VkDevice device, VulkanResourceAllocator* resourceAllocator);
+    ~VulkanDescriptorSetManager();
 
     void terminate() noexcept;
 
@@ -71,8 +74,43 @@ public:
     void initVkLayout(VulkanDescriptorSetLayout* layout);
 
 private:
-    class Impl;
-    Impl* mImpl;
+    class DescriptorSetHistory;
+    class DescriptorSetLayoutManager;
+    class DescriptorInfinitePool;
+
+    void eraseSetFromHistory(VulkanDescriptorSet* set);
+
+    using DescriptorSetHistoryArray =
+            std::array<DescriptorSetHistory*, UNIQUE_DESCRIPTOR_SET_COUNT>;
+
+    struct BoundInfo {
+        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+        DescriptorSetMask setMask;
+        DescriptorSetHistoryArray boundSets;
+
+        bool operator==(BoundInfo const& info) const {
+            if (pipelineLayout != info.pipelineLayout || setMask != info.setMask) {
+                return false;
+            }
+            bool equal = true;
+            setMask.forEachSetBit([&](size_t i) {
+                if (boundSets[i] != info.boundSets[i]) {
+                    equal = false;
+                }
+            });
+            return equal;
+        }
+    };
+
+    VkDevice mDevice;
+    VulkanResourceAllocator* mResourceAllocator;
+    std::unique_ptr<DescriptorSetLayoutManager> mLayoutManager;
+    std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
+    std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
+    std::unordered_map<VulkanDescriptorSet*, std::unique_ptr<DescriptorSetHistory>> mHistory;
+    DescriptorSetHistoryArray mStashedSets = {};
+
+    BoundInfo mLastBoundInfo;
 };
 
 }// namespace filament::backend

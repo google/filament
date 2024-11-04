@@ -88,28 +88,6 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
     return allocator;
 }
 
-VulkanTexture* createEmptyTexture(VkDevice device, VkPhysicalDevice physicalDevice,
-        VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanResourceAllocator* handleAllocator, VulkanStagePool& stagePool) {
-    VulkanTexture* emptyTexture = new VulkanTexture(device, physicalDevice, context, allocator,
-            commands, handleAllocator, SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, 1, 1, 1,
-            TextureUsage::DEFAULT | TextureUsage::COLOR_ATTACHMENT | TextureUsage::SUBPASS_INPUT,
-            stagePool, true /* heap allocated */);
-    uint32_t black = 0;
-    PixelBufferDescriptor pbd(&black, 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
-    emptyTexture->updateImage(pbd, 1, 1, 1, 0, 0, 0, 0);
-    return emptyTexture;
-}
-
-VulkanBufferObject* createEmptyBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-        VulkanCommands* commands) {
-    VulkanBufferObject* obj =
-            new VulkanBufferObject(allocator, stagePool, 1, BufferObjectBinding::UNIFORM);
-    uint8_t byte = 0;
-    obj->buffer.loadFromCpu(commands->get().buffer(), &byte, 0, 1);
-    return obj;
-}
-
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
         VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
@@ -255,13 +233,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
 #endif
 
     mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
-
-    mEmptyTexture = createEmptyTexture(mPlatform->getDevice(), mPlatform->getPhysicalDevice(),
-            mContext, mAllocator, &mCommands, &mResourceAllocator, mStagePool);
-    mEmptyBufferObject = createEmptyBufferObject(mAllocator, mStagePool, &mCommands);
-
-    mDescriptorSetManager.setPlaceHolders(mSamplerCache.getSampler({}), mEmptyTexture,
-            mEmptyBufferObject);
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -325,9 +296,6 @@ void VulkanDriver::terminate() {
     // Flush and wait here to make sure all queued commands are executed and resources that are tied
     // to those commands are no longer referenced.
     finish(0);
-
-    delete mEmptyBufferObject;
-    delete mEmptyTexture;
 
     // Command buffers should come first since it might have commands depending on resources that
     // are about to be destroyed.
@@ -399,8 +367,8 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t flags) {
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
@@ -436,14 +404,6 @@ void VulkanDriver::updateDescriptorSetTexture(
         SamplerParams params) {
     VulkanDescriptorSet* set = mResourceAllocator.handle_cast<VulkanDescriptorSet*>(dsh);
     VulkanTexture* texture = mResourceAllocator.handle_cast<VulkanTexture*>(th);
-
-    // We need to make sure the initial layout transition has been completed before we can write
-    // the sampler descriptor. We flush and wait until the transition has been completed.
-    if (!texture->transitionReady()) {
-        mCommands.flush();
-        mCommands.wait();
-    }
-
     VkSampler const vksampler = mSamplerCache.getSampler(params);
     mDescriptorSetManager.updateSampler(set, binding, texture, vksampler);
 }
@@ -1315,12 +1275,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     // Create the VkRenderPass or fetch it from cache.
     VulkanFboCache::RenderPassKey rpkey = {
-        .initialDepthLayout = currentDepthLayout,
         .depthFormat = depth.getFormat(),
         .clear = clearVal,
         .discardStart = discardStart,
         .discardEnd = discardEndVal,
+        .initialDepthLayout = currentDepthLayout,
         .samples = rt->getSamples(),
+        .needsResolveMask = 0,
+        .usesLazilyAllocatedMemory = 0,
         .subpassMask = uint8_t(params.subpassMask),
         .viewCount = renderTargetLayerCount,
     };
@@ -1329,8 +1291,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         if (info.texture) {
             assert_invariant(info.layerCount == renderTargetLayerCount);
             rpkey.colorFormat[i] = info.getFormat();
-            if (rpkey.samples > 1 && info.texture->samples == 1) {
-                rpkey.needsResolveMask |= (1 << i);
+            if (rpkey.samples > 1) {
+                const VulkanTexture* sidecar = info.texture->getSidecar();
+                if (sidecar && sidecar->isTransientAttachment()) {
+                    rpkey.usesLazilyAllocatedMemory |= (1 << i);
+                }
+                if (info.texture->samples == 1) {
+                    rpkey.needsResolveMask |= (1 << i);
+                }
             }
         } else {
             rpkey.colorFormat[i] = VK_FORMAT_UNDEFINED;
@@ -1382,8 +1350,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
             VulkanTexture* texture = attachment.texture;
             if (texture->samples == 1) {
-                mRenderPassFboInfo.hasColorResolve = true;
-
                 auto const& range = attachment.getSubresourceRange();
                 attachment.texture->transitionLayout(&commands,
                         range, VulkanLayout::COLOR_ATTACHMENT);

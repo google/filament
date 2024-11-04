@@ -25,12 +25,14 @@
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
+#include <android/native_window.h>
 #include <android/hardware_buffer.h>
 
 #include <utils/android/PerformanceHintManager.h>
 
 #include <utils/compiler.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 #include <utils/Log.h>
 
 #include <EGL/egl.h>
@@ -42,7 +44,9 @@
 
 #include <chrono>
 #include <new>
+#include <string_view>
 
+#include <dlfcn.h>
 #include <unistd.h>
 
 #include <stddef.h>
@@ -80,8 +84,6 @@ UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID =
 }
 using namespace glext;
 
-using EGLStream = Platform::Stream;
-
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmForPerformanceManagerIfNeeded() {
@@ -101,36 +103,71 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
           mExternalStreamManager(ExternalStreamManagerAndroid::create()),
           mInitializeJvmForPerformanceManagerIfNeeded(),
           mPerformanceHintManager() {
-
-    char scratch[PROP_VALUE_MAX + 1];
-    int length = __system_property_get("ro.build.version.release", scratch);
-    int const androidVersion = length >= 0 ? atoi(scratch) : 1;
-    if (!androidVersion) {
-        mOSVersion = 1000; // if androidVersion is 0, it means "future"
-    } else {
-        length = __system_property_get("ro.build.version.sdk", scratch);
-        mOSVersion = length >= 0 ? atoi(scratch) : 1;
+    mOSVersion = android_get_device_api_level();
+    if (mOSVersion < 0) {
+        mOSVersion = __ANDROID_API_FUTURE__;
     }
 
-    // This disables an ANGLE optimization on ARM, which turns out to be more costly for us
-    // see b/229017581
-    // We need to do this before we create the GL context.
-    // An alternative solution is use a system property:
-    //            __system_property_set(
-    //                    "debug.angle.feature_overrides_disabled",
-    //                    "preferSubmitAtFBOBoundary");
-    // but that would outlive this process, so the environment variable is better.
-    // We also make sure to not update the variable if it already exists.
-    // There is no harm setting this if we're not on ANGLE or ARM.
-    setenv("ANGLE_FEATURE_OVERRIDES_DISABLED", "preferSubmitAtFBOBoundary", false);
+    mNativeWindowLib = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
+    if (mNativeWindowLib) {
+        ANativeWindow_getBuffersDefaultDataSpace =
+                (int32_t(*)(ANativeWindow*))dlsym(mNativeWindowLib,
+                        "ANativeWindow_getBuffersDefaultDataSpace");
+    }
 }
 
-PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
-
+PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
+    if (mNativeWindowLib) {
+        dlclose(mNativeWindowLib);
+    }
+}
 
 void PlatformEGLAndroid::terminate() noexcept {
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
     PlatformEGL::terminate();
+}
+
+static constexpr const std::string_view kNativeWindowInvalidMsg =
+        "ANativeWindow is invalid. It probably has been destroyed. EGL surface = ";
+
+bool PlatformEGLAndroid::makeCurrent(ContextType type,
+        SwapChain* drawSwapChain,
+        SwapChain* readSwapChain) noexcept {
+
+    // fast & safe path
+    if (UTILS_LIKELY(!mAssertNativeWindowIsValid)) {
+        return PlatformEGL::makeCurrent(type, drawSwapChain, readSwapChain);
+    }
+
+    SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
+    if (ANativeWindow_getBuffersDefaultDataSpace) {
+        // anw can be nullptr if we're using a pbuffer surface
+        if (UTILS_LIKELY(dsc->nativeWindow)) {
+            // this a proxy of is_valid()
+            auto result = ANativeWindow_getBuffersDefaultDataSpace(dsc->nativeWindow);
+            FILAMENT_CHECK_POSTCONDITION(result >= 0) << kNativeWindowInvalidMsg << dsc->sur;
+        }
+    } else {
+        // If we don't have ANativeWindow_getBuffersDefaultDataSpace, we revert to using the
+        // private query() call.
+        // Shadow version if the real ANativeWindow, so we can access the query() hook. Query
+        // has existed since forever, probably Android 1.0.
+        struct NativeWindow {
+            // is valid query enum value
+            enum { IS_VALID = 17 };
+            uint64_t pad[18];
+            int (* query)(ANativeWindow const*, int, int*);
+        } const* pWindow = reinterpret_cast<NativeWindow const*>(dsc->nativeWindow);
+        int isValid = 0;
+        if (UTILS_LIKELY(pWindow->query)) { // just in case it's nullptr
+            int const err = pWindow->query(dsc->nativeWindow, NativeWindow::IS_VALID, &isValid);
+            if (UTILS_LIKELY(err >= 0)) { // in case the IS_VALID enum is not recognized
+                // query call succeeded
+                FILAMENT_CHECK_POSTCONDITION(isValid) << kNativeWindowInvalidMsg << dsc->sur;
+            }
+        }
+    }
+    return PlatformEGL::makeCurrent(type, drawSwapChain, readSwapChain);
 }
 
 void PlatformEGLAndroid::beginFrame(
@@ -188,6 +225,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
                 "eglGetFrameTimestampsANDROID");
     }
+
+    mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
 
     return driver;
 }

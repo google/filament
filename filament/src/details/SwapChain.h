@@ -79,7 +79,7 @@ public:
     }
 
     void setFrameScheduledCallback(
-            backend::CallbackHandler* handler, FrameScheduledCallback&& callback);
+            backend::CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags);
 
     bool isFrameScheduledCallbackSet() const noexcept;
 

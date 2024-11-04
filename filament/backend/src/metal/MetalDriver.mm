@@ -19,6 +19,8 @@
 #include "CommandStreamDispatcher.h"
 #include "metal/MetalDriver.h"
 
+#include <filament/SwapChain.h>
+
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
 #include "MetalContext.h"
@@ -38,6 +40,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
+#include <utils/Invocable.h>
 
 #include <algorithm>
 
@@ -105,13 +108,13 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<MetalDriver>::make();
 }
 
-MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
-        : mPlatform(*platform),
-          mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
-          mHandleAllocator("Handles",
-                  driverConfig.handleArenaSize,
-                  driverConfig.disableHandleUseAfterFreeCheck),
-          mStereoscopicType(driverConfig.stereoscopicType) {
+MetalDriver::MetalDriver(
+        MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+    : mPlatform(*platform),
+      mContext(new MetalContext),
+      mHandleAllocator(
+              "Handles", driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
+      mStereoscopicType(driverConfig.stereoscopicType) {
     mContext->driver = this;
 
     TrackedMetalBuffer::setPlatform(platform);
@@ -256,10 +259,14 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
     }
 }
 
-void MetalDriver::setFrameScheduledCallback(
-        Handle<HwSwapChain> sch, CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t flags) {
+    // Turn off the CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER flag if a custom handler is provided.
+    if (handler) {
+        flags &= ~SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER;
+    }
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameScheduledCallback(handler, std::move(callback));
+    swapChain->setFrameScheduledCallback(handler, std::move(callback), flags);
 }
 
 void MetalDriver::setFrameCompletedCallback(
@@ -802,15 +809,7 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     auto* metalTexture = handle_cast<MetalTexture>(th);
     mContext->textures.erase(metalTexture);
 
-    // Free memory from the texture and mark it as freed.
-    metalTexture->terminate();
-
-    // Add this texture handle to our texturesToDestroy queue to be destroyed later.
-    if (auto handleToFree = mContext->texturesToDestroy.push(th)) {
-        // If texturesToDestroy is full, then .push evicts the oldest texture handle in the
-        // queue (or simply th, if use-after-free detection is disabled).
-        destruct_handle<MetalTexture>(handleToFree.value());
-    }
+    destruct_handle<MetalTexture>(th);
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -860,12 +859,6 @@ void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 void MetalDriver::terminate() {
-    // Terminate any outstanding MetalTextures.
-    while (!mContext->texturesToDestroy.empty()) {
-        Handle<HwTexture> toDestroy = mContext->texturesToDestroy.pop();
-        destruct_handle<MetalTexture>(toDestroy);
-    }
-
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();
@@ -1089,24 +1082,34 @@ size_t MetalDriver::getMaxUniformBufferSize() {
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
+    FILAMENT_CHECK_PRECONDITION(data.buffer)
+            << "updateIndexBuffer called with a null buffer.";
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);
-    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset);
+    ib->buffer.copyIntoBuffer(data.buffer, data.size, byteOffset,
+            [&]() { return mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     FILAMENT_CHECK_PRECONDITION(!isInRenderPass(mContext))
-            << "updateBufferObject must be called outside of a render pass.";
+            << "updateBufferObject must be called outside of a render pass. tag="
+            << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
+    FILAMENT_CHECK_PRECONDITION(data.buffer)
+            << "updateBufferObject called with a null buffer. tag="
+            << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    bo->updateBuffer(data.buffer, data.size, byteOffset);
+
+    bo->updateBuffer(data.buffer, data.size, byteOffset,
+            [&]() { return mHandleAllocator.getHandleTag(boh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
 
 void MetalDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
         BufferDescriptor&& data, uint32_t byteOffset) {
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    bo->updateBufferUnsynchronized(data.buffer, data.size, byteOffset);
+    bo->updateBufferUnsynchronized(data.buffer, data.size, byteOffset,
+            [&]() { return mHandleAllocator.getHandleTag(boh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
 

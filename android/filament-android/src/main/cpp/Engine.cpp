@@ -520,13 +520,12 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
 extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*,
         jclass, jlong nativeBuilder, jlong commandBufferSizeMB, jlong perRenderPassArenaSizeMB,
         jlong driverHandleArenaSizeMB, jlong minCommandBufferSizeMB, jlong perFrameCommandsSizeMB,
-        jlong jobSystemThreadCount,
-        jlong textureUseAfterFreePoolSize, jboolean disableParallelShaderCompile,
+        jlong jobSystemThreadCount, jboolean disableParallelShaderCompile,
         jint stereoscopicType, jlong stereoscopicEyeCount,
         jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge,
         jboolean disableHandleUseAfterFreeCheck,
         jint preferredShaderLanguage,
-        jboolean forceGLES2Context) {
+        jboolean forceGLES2Context, jboolean assertNativeWindowIsValid) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -535,7 +534,6 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .minCommandBufferSizeMB = (uint32_t) minCommandBufferSizeMB,
             .perFrameCommandsSizeMB = (uint32_t) perFrameCommandsSizeMB,
             .jobSystemThreadCount = (uint32_t) jobSystemThreadCount,
-            .textureUseAfterFreePoolSize = (uint32_t) textureUseAfterFreePoolSize,
             .disableParallelShaderCompile = (bool) disableParallelShaderCompile,
             .stereoscopicType = (Engine::StereoscopicType) stereoscopicType,
             .stereoscopicEyeCount = (uint8_t) stereoscopicEyeCount,
@@ -544,6 +542,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .disableHandleUseAfterFreeCheck = (bool) disableHandleUseAfterFreeCheck,
             .preferredShaderLanguage = (Engine::Config::ShaderLanguage) preferredShaderLanguage,
             .forceGLES2Context = (bool) forceGLES2Context,
+            .assertNativeWindowIsValid = (bool) assertNativeWindowIsValid,
     };
     builder->config(&config);
 }

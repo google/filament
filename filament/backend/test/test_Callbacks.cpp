@@ -35,7 +35,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
     api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
         callable();
         callbackCountA++;
-    });
+    }, 0);
 
     // Render the first frame.
     api.makeCurrent(swapChain, swapChain);
@@ -58,7 +58,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
     api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountB](PresentCallable callable) {
         callable();
         callbackCountB++;
-    });
+    }, 0);
 
     // Render one final frame.
     api.makeCurrent(swapChain, swapChain);

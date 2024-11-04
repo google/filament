@@ -118,9 +118,6 @@ private:
 };
 
 struct MetalContext {
-    explicit MetalContext(size_t metalFreedTextureListSize)
-        : texturesToDestroy(metalFreedTextureListSize) {}
-
     MetalDriver* driver;
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
@@ -186,14 +183,6 @@ struct MetalContext {
 
     // Keeps track of all alive textures.
     tsl::robin_set<MetalTexture*> textures;
-
-    // This circular buffer implements delayed destruction for Metal texture handles. It keeps a
-    // handle to a fixed number of the most recently destroyed texture handles. When we're asked to
-    // destroy a texture handle, we free its texture memory, but keep the MetalTexture object alive,
-    // marking it as "terminated". If we later are asked to use that texture, we can check its
-    // terminated status and throw an Objective-C error instead of crashing, which is helpful for
-    // debugging use-after-free issues in release builds.
-    utils::FixedCircularBuffer<Handle<HwTexture>> texturesToDestroy;
 
     MetalBufferPool* bufferPool;
     MetalBumpAllocator* bumpAllocator;

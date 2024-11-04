@@ -643,7 +643,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 auto out = resources.getRenderPassInfo();
 
                 // Remove the HAS_SHADOWING RenderFlags, since it's irrelevant when rendering reflections
-                passBuilder.renderFlags(~RenderPass::HAS_SHADOWING, 0);
+                passBuilder.renderFlags(RenderPass::HAS_SHADOWING, 0);
 
                 // use our special SSR variant, it can only be applied to object that have
                 // the SCREEN_SPACE ReflectionMode.
@@ -3410,6 +3410,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                         float(vp.width) / inputDesc.width,
                         float(vp.height) / inputDesc.height
                     });
+                mi->commit(driver);
                 mi->use(driver);
 
                 auto pipeline = material.getPipelineState(mEngine);

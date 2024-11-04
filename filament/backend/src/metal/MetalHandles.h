@@ -74,7 +74,8 @@ public:
 
     void releaseDrawable();
 
-    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback);
+    void setFrameScheduledCallback(
+            CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags);
     void setFrameCompletedCallback(
             CallbackHandler* handler, utils::Invocable<void(void)>&& callback);
 
@@ -123,6 +124,7 @@ private:
     struct {
         CallbackHandler* handler = nullptr;
         std::shared_ptr<FrameScheduledCallback> callback = nullptr;
+        uint64_t flags = 0;
     } frameScheduled;
 
     struct {
@@ -133,11 +135,15 @@ private:
 
 class MetalBufferObject : public HwBufferObject {
 public:
+
+    using TagResolver = MetalBuffer::TagResolver;
+
     MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
          uint32_t byteCount);
 
-    void updateBuffer(void* data, size_t size, uint32_t byteOffset);
-    void updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset);
+    void updateBuffer(void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag);
+    void updateBufferUnsynchronized(
+            void* data, size_t size, uint32_t byteOffset, TagResolver&& getHandleTag);
     MetalBuffer* getBuffer() { return &buffer; }
 
 private:
@@ -265,26 +271,6 @@ public:
 
     MTLPixelFormat devicePixelFormat;
 
-    // Frees memory associated with this texture and marks it as "terminated".
-    // Used to track "use after free" scenario.
-    void terminate() noexcept;
-    bool isTerminated() const noexcept { return terminated; }
-    inline void checkUseAfterFree(const char* samplerGroupDebugName, size_t textureIndex) const {
-        if (UTILS_LIKELY(!isTerminated())) {
-            return;
-        }
-        NSString* reason =
-                [NSString stringWithFormat:
-                                  @"Filament Metal texture use after free, sampler group = "
-                                  @"%s, texture index = %zu",
-                          samplerGroupDebugName, textureIndex];
-        NSException* useAfterFreeException =
-                [NSException exceptionWithName:@"MetalTextureUseAfterFree"
-                                        reason:reason
-                                      userInfo:nil];
-        [useAfterFreeException raise];
-    }
-
 private:
     void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
             PixelBufferDescriptor const& data) noexcept;
@@ -301,8 +287,6 @@ private:
     // Filament swizzling only affects texture reads, so this should not be used when the texture is
     // bound as a render target attachment.
     id<MTLTexture> swizzledTextureView = nil;
-
-    bool terminated = false;
 };
 
 class MetalRenderTarget : public HwRenderTarget {

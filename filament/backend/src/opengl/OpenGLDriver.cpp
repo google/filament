@@ -3467,8 +3467,8 @@ void OpenGLDriver::beginFrame(
     }
 }
 
-void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
-        CallbackHandler* handler, FrameScheduledCallback&& callback) {
+void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t flags) {
     DEBUG_MARKER()
 }
 

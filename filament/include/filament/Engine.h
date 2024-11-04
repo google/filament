@@ -288,16 +288,6 @@ public:
          */
         uint32_t jobSystemThreadCount = 0;
 
-        /*
-         * Number of most-recently destroyed textures to track for use-after-free.
-         *
-         * This will cause the backend to throw an exception when a texture is freed but still bound
-         * to a SamplerGroup and used in a draw call. 0 disables completely.
-         *
-         * Currently only respected by the Metal backend.
-         */
-        size_t textureUseAfterFreePoolSize = 0;
-
         /**
          * When uploading vertex or index data, the Filament Metal backend copies data
          * into a shared staging area before transferring it to the GPU. This setting controls
@@ -390,8 +380,14 @@ public:
          * it's a GLES2 context. Ignored on other backends.
          */
         bool forceGLES2Context = false;
-    };
 
+        /**
+         * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
+         * This is only supported for:
+         *      - PlatformEGLAndroid
+         */
+        bool assertNativeWindowIsValid = false;
+    };
 
 #if UTILS_HAS_THREADING
     using CreateCallback = void(void* UTILS_NULLABLE user, void* UTILS_NONNULL token);

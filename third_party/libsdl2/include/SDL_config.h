@@ -46,6 +46,10 @@
 #include "SDL_config_linux_wayland.h"
 #elif defined(FILAMENT_SUPPORTS_X11)
 #include "SDL_config_linux_x11.h"
+#elif defined(FILAMENT_SUPPORTS_OSMESA)
+// We still want the same defines and libs as x11 but we won't actually
+// open any windows.
+#include "SDL_config_linux_x11.h"
 #endif
 #else
 /* This is a minimal configuration just to get SDL running on new platforms */

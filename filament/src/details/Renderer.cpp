@@ -455,6 +455,15 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 void FRenderer::readPixels(FRenderTarget* renderTarget,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         backend::PixelBufferDescriptor&& buffer) {
+
+    // TODO: change the following to an assert when client call sites have addressed the issue.
+    if (!renderTarget->supportsReadPixels()) {
+        utils::slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
+                         "TextureUsage::BLIT_SRC.  This precondition will be asserted in a later "
+                         "release of Filament."
+                      << utils::io::endl;
+    }
+
     RendererUtils::readPixels(mEngine.getDriverApi(), renderTarget->getHwHandle(),
             xoffset, yoffset, width, height, std::move(buffer));
 }
@@ -802,7 +811,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     passBuilder.renderFlags(renderFlags);
 
     Variant variant;
-    variant.setDirectionalLighting(view.hasDirectionalLight());
+    variant.setDirectionalLighting(view.hasDirectionalLighting());
     variant.setDynamicLighting(view.hasDynamicLighting());
     variant.setFog(view.hasFog());
     variant.setVsm(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
@@ -963,15 +972,18 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     });
     const auto picking = picking_;
 
-
     if (view.hasPicking()) {
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
-        fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
+        fg.addPass<PickingResolvePassData>(
+                "Picking Resolve Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    data.picking = builder.read(picking,
-                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    // Note that BLIT_SRC is needed because this texture will be read later (via
+                    // readPixels()).
+                    data.picking =
+                            builder.read(picking, FrameGraphTexture::Usage::COLOR_ATTACHMENT |
+                                                          FrameGraphTexture::Usage::BLIT_SRC);
                     builder.declareRenderPass("Picking Resolve Target", {
                             .attachments = { .color = { data.picking }}
                     });
@@ -1197,7 +1209,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // Debug: CSM visualisation
     if (UTILS_UNLIKELY(engine.debug.shadowmap.visualize_cascades &&
-                       view.hasShadowing() && view.hasDirectionalLight())) {
+                       view.hasShadowing() && view.hasDirectionalLighting())) {
         input = ppm.debugShadowCascades(fg, input, depth);
     }
 

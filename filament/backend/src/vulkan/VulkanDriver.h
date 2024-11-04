@@ -115,10 +115,6 @@ private:
     VulkanPlatform* mPlatform = nullptr;
     std::unique_ptr<VulkanTimestamps> mTimestamps;
 
-    // Placeholder resources
-    VulkanTexture* mEmptyTexture;
-    VulkanBufferObject* mEmptyBufferObject;
-
     VulkanSwapChain* mCurrentSwapChain = nullptr;
     VulkanRenderTarget* mDefaultRenderTarget = nullptr;
     VulkanRenderPass mCurrentRenderPass = {};
@@ -156,7 +152,6 @@ private:
     struct {
         using AttachmentArray = CappedArray<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
         AttachmentArray attachments;
-        bool hasColorResolve = false;
     } mRenderPassFboInfo = {};
 
     bool const mIsSRGBSwapChainSupported;

@@ -123,6 +123,11 @@ public:
     bool textureHandleCanMutate() const noexcept;
     void updateLodRange(uint8_t level) noexcept;
 
+    // TODO: remove in a future filament release.  See below for description.
+    inline bool hasBlitSrcUsage() const noexcept {
+        return mHasBlitSrc;
+    }
+
 private:
     friend class Texture;
     struct LodRange {
@@ -163,7 +168,13 @@ private:
     bool mTextureIsSwizzled;
 
     Usage mUsage = Usage::DEFAULT;
-    // there is 7 bytes of padding here
+
+    // TODO: remove in a future filament release.
+    // Indicates whether the user has set the TextureUsage::BLIT_SRC usage. This will be used to
+    // temporarily validate whether this texture can be used for readPixels.
+    bool mHasBlitSrc = false;
+    // there is 5 bytes of padding here
+
     FStream* mStream = nullptr; // only needed for streaming textures
 };
 
