@@ -30,16 +30,16 @@ namespace utils {
 };
 
 struct Rainbow {
-    using radian_t = float;
     using linear_sRGB_t = filament::math::float3;
-    radian_t minDeviation;
-    radian_t maxDeviation;
+    float s;        // input parameter scale factor
+    float o;        // input parameter offset
+    float scale;    // output scale factor
     std::vector<linear_sRGB_t> data;
 };
 
 class RainbowGenerator {
 public:
-    using radian_t = Rainbow::radian_t;
+    using radian_t = float;
     using celcius_t = float;
 
     RainbowGenerator();
@@ -48,14 +48,17 @@ public:
     // LUT size
     RainbowGenerator& lut(uint32_t count) noexcept;
 
-    // min and max deviation
-    RainbowGenerator& deviation(radian_t min, radian_t max) noexcept;
+    // LUT indexed by cosine
+    RainbowGenerator& cosine(bool enabled) noexcept;
+
+    // min deviation
+    RainbowGenerator& minDeviation(radian_t min) noexcept;
+
+    // max deviation
+    RainbowGenerator& maxDeviation(radian_t max) noexcept;
 
     // number of samples for the calculation
     RainbowGenerator& samples(uint32_t count) noexcept;
-
-    // whether we compute the secondary rainbow
-    RainbowGenerator& secondary(bool enabled) noexcept;
 
     // air temperature
     RainbowGenerator& temperature(celcius_t t) noexcept;
@@ -67,13 +70,13 @@ public:
     Rainbow build(utils::JobSystem& js);
 
 private:
-    size_t mAngleCount = 256;
+    size_t mLutSize = 256;
     radian_t mMinDeviation = 30.0f * filament::math::f::DEG_TO_RAD;
     radian_t mMaxDeviation = 60.0f * filament::math::f::DEG_TO_RAD;
     radian_t mSunArc = 1.0f * filament::math::f::DEG_TO_RAD;
     uint32_t mSampleCount = 65536;
-    bool mSecondaryRainbow = true;
     float mAirTemperature = 20.0f;
+    bool mCosine = false;
 };
 
 #endif //TNT_RAINBOWGENERATOR_H

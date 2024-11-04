@@ -46,19 +46,15 @@ inline radian_t maxIncidentAngle(float n) noexcept {
 
 // deviation: angle between ray exiting the droplet and the ground
 // impactAngle: angle between the ground and the incident ray
-inline radian_t deviation(int order, radian_t incident, radian_t refracted, radian_t impactAngle) noexcept  {
-    if (order == 0) {
-        return 4.0f * refracted - 2.0f * incident - impactAngle;
-    }
-    if (order == 1) {
-        return f::PI + 6.0f * refracted - 2.0f * incident - impactAngle;
-    }
-    return -1;
+inline radian_t deviation(int bounces, radian_t incident, radian_t refracted) noexcept  {
+    // each bounce adds 180 degrees as well as 2*refracted
+    return ((bounces & 1) ? 0.0f : f::PI) +
+           float(2 + 2 * bounces) * refracted - 2.0f * incident;
 }
 
 // deviation: angle between ray entering the droplet and ray exiting the droplet
 inline radian_t deviation(float n, radian_t incident) noexcept  {
-    return deviation(0, incident, refract(n, incident), 0.0f);
+    return deviation(1, incident, refract(n, incident));
 }
 
 // index of refraction for a wavelength

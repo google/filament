@@ -6,14 +6,14 @@ set(TARGET rainbowgen)
 # ==================================================================================================
 # Source files
 # ==================================================================================================
-set(SRCS src/rainbowgen.cpp src/RainbowGenerator.cpp
-        src/targa.h)
+set(SRCS src/rainbowgen.cpp
+         src/RainbowGenerator.cpp)
 
 # ==================================================================================================
 # Target definitions
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
-target_link_libraries(${TARGET} PRIVATE math utils getopt)
+target_link_libraries(${TARGET} PRIVATE math utils getopt image imageio)
 set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================

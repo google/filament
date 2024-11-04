@@ -17,9 +17,13 @@
 #include "RainbowGenerator.h"
 #include "CIE.h"
 #include "rainbow.h"
+#include "srgb.h"
 
 #include <utils/JobSystem.h>
 
+#include <math/vec3.h>
+
+#include <algorithm>
 #include <cmath>
 #include <random>
 #include <vector>
@@ -36,23 +40,27 @@ RainbowGenerator::RainbowGenerator() = default;
 RainbowGenerator::~RainbowGenerator() = default;
 
 RainbowGenerator& RainbowGenerator::lut(uint32_t count) noexcept {
-    mAngleCount = count;
+    mLutSize = count;
     return *this;
 }
 
-RainbowGenerator& RainbowGenerator::deviation(radian_t min, radian_t max) noexcept {
+RainbowGenerator& RainbowGenerator::cosine(bool enabled) noexcept {
+    mCosine = enabled;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::minDeviation(radian_t min) noexcept {
     mMinDeviation = min;
+    return *this;
+}
+
+RainbowGenerator& RainbowGenerator::maxDeviation(radian_t max) noexcept {
     mMaxDeviation = max;
     return *this;
 }
 
 RainbowGenerator& RainbowGenerator::samples(uint32_t count) noexcept {
     mSampleCount = count;
-    return *this;
-}
-
-RainbowGenerator& RainbowGenerator::secondary(bool enabled) noexcept {
-    mSecondaryRainbow = enabled;
     return *this;
 }
 
@@ -67,22 +75,35 @@ RainbowGenerator& RainbowGenerator::sunArc(radian_t arc) noexcept {
 }
 
 Rainbow RainbowGenerator::build(JobSystem&) {
-    uint32_t const angleCount = mAngleCount;
+    uint32_t const lutsize = mLutSize;
     float const minDeviation = mMinDeviation;
     float const maxDeviation = mMaxDeviation;
-
-    Rainbow rainbow{
-            .minDeviation = minDeviation,
-            .maxDeviation = maxDeviation,
-            .data = std::vector<Rainbow::linear_sRGB_t>(angleCount, Rainbow::linear_sRGB_t{})
-    };
 
     // The sun appears as about a degree in the sky
     std::default_random_engine rng{ std::random_device{}() };
     std::uniform_real_distribution<float> dist{ -mSunArc * 0.5f, mSunArc * 0.5f };
 
     int32_t const count = int32_t(mSampleCount);
-    float const s = float(2 * angleCount) / float((maxDeviation - minDeviation) * float(count) * CIE_XYZ_COUNT);
+
+    float C0, C1;
+    if (mCosine) {
+        float const min = 1.0f - std::cos(minDeviation);
+        float const max = 1.0f - std::cos(maxDeviation);
+        C0 = -1.0f / (max - min);
+        C1 = (1.0f - min) / (max - min);
+    } else {
+        C0 = 1.0f / (maxDeviation - minDeviation);
+        C1 = -minDeviation * C0;
+    }
+
+    Rainbow rainbow{
+            .s = C0,
+            .o = C1,
+            .scale = 1.0f,
+            .data = std::vector<Rainbow::linear_sRGB_t>(lutsize, Rainbow::linear_sRGB_t{})
+    };
+
+    float const s = float(2 * lutsize) / float((maxDeviation - minDeviation) * float(count) * CIE_XYZ_COUNT);
 
     for (size_t j = 0; j < CIE_XYZ_COUNT; j++) {
         // Current wavelength
@@ -110,19 +131,32 @@ Rainbow RainbowGenerator::build(JobSystem&) {
             // intensity transmitted at water-air interface
             float const Twa = 1 - Rwa;
 
-            for (int order = 0; order < 2; order++) {
-                float const internalBounces = float(order + 1);
-                radian_t const phi = rainbow::deviation(order, incident, refracted, impactAngle);
+            for (int const bounces: { 1, 2 }) {
+                radian_t const phi = rainbow::deviation(bounces, incident, refracted) - impactAngle;
                 if (phi >= minDeviation && phi < maxDeviation) {
-                    size_t const index = (size_t)std::round(
-                            ((phi - minDeviation) / (maxDeviation - minDeviation)) * float(angleCount));
-                    if (index < angleCount) {
-                        float const T = Taw * std::pow(Rwa,  internalBounces) * Twa;
+                    float const v = mCosine ? std::cos(phi) : phi;
+                    size_t const index = size_t(std::floor(float(lutsize) * (v * C0 + C1)));
+                    if (index < lutsize) {
+                        float const T = Taw * std::pow(Rwa,  float(bounces)) * Twa;
                         rainbow.data[index] += (T * s) * (CIE_XYZ[j] / 118.518f);
                     }
                 }
             }
         }
+    }
+
+    // convert to sRGB linear and find the largest value
+    rainbow.scale = 0.0f;
+    for (size_t index = 0; index < lutsize; index++) {
+        float3 c = rainbow.data[index];
+        c = srgb::XYZ_to_sRGB(c);
+        rainbow.data[index] = c;
+        rainbow.scale = std::max({ rainbow.scale, c.r, c.g, c.b });
+    }
+
+    // rescale everything to the [0, 1] range
+    for (size_t index = 0; index < lutsize; index++) {
+        rainbow.data[index] *= 1.0f / rainbow.scale;
     }
 
     return rainbow;
