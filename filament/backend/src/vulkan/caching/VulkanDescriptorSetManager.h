@@ -61,6 +61,8 @@ public:
 
     void bind(uint8_t setIndex, VulkanDescriptorSet* set, backend::DescriptorSetOffsetArray&& offsets);
 
+    void unbind(uint8_t setIndex);
+
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
             DescriptorSetMask const& setMask);
 
@@ -74,43 +76,26 @@ public:
     void initVkLayout(VulkanDescriptorSetLayout* layout);
 
 private:
-    class DescriptorSetHistory;
     class DescriptorSetLayoutManager;
     class DescriptorInfinitePool;
 
     void eraseSetFromHistory(VulkanDescriptorSet* set);
 
-    using DescriptorSetHistoryArray =
-            std::array<DescriptorSetHistory*, UNIQUE_DESCRIPTOR_SET_COUNT>;
-
-    struct BoundInfo {
-        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-        DescriptorSetMask setMask;
-        DescriptorSetHistoryArray boundSets;
-
-        bool operator==(BoundInfo const& info) const {
-            if (pipelineLayout != info.pipelineLayout || setMask != info.setMask) {
-                return false;
-            }
-            bool equal = true;
-            setMask.forEachSetBit([&](size_t i) {
-                if (boundSets[i] != info.boundSets[i]) {
-                    equal = false;
-                }
-            });
-            return equal;
-        }
-    };
+    using DescriptorSetArray =
+            std::array<VulkanDescriptorSet*, UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     VkDevice mDevice;
     VulkanResourceAllocator* mResourceAllocator;
     std::unique_ptr<DescriptorSetLayoutManager> mLayoutManager;
     std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
-    std::unordered_map<VulkanDescriptorSet*, std::unique_ptr<DescriptorSetHistory>> mHistory;
-    DescriptorSetHistoryArray mStashedSets = {};
+    DescriptorSetArray mStashedSets = {};
 
-    BoundInfo mLastBoundInfo;
+    struct {
+        VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+        DescriptorSetMask setMask;
+        DescriptorSetArray boundSets;
+    } mLastBoundInfo;
 };
 
 }// namespace filament::backend

@@ -623,6 +623,8 @@ const char* toString(DescriptorType type) {
             return "SAMPLER";
         case DescriptorType::INPUT_ATTACHMENT:
             return "INPUT_ATTACHMENT";
+        case DescriptorType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
     }
 }
 
@@ -819,17 +821,24 @@ void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
-    if (sch) {
-        auto* swapChain = handle_cast<MetalSwapChain>(sch);
-        // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
-        // complete before destroying it. This is because pixel buffer SwapChains hold a
-        // MetalExternalImage that could still being rendered into.
-        if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
-            executeAfterCurrentCommandBufferCompletes(
-                    [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
-        } else {
-            destruct_handle<MetalSwapChain>(sch);
-        }
+    if (UTILS_UNLIKELY(!sch)) {
+        return;
+    }
+    auto* swapChain = handle_cast<MetalSwapChain>(sch);
+    if (mContext->currentDrawSwapChain == swapChain) {
+        mContext->currentDrawSwapChain = nullptr;
+    }
+    if (mContext->currentReadSwapChain == swapChain) {
+        mContext->currentReadSwapChain = nullptr;
+    }
+    // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
+    // complete before destroying it. This is because pixel buffer SwapChains hold a
+    // MetalExternalImage that could still being rendered into.
+    if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
+        executeAfterCurrentCommandBufferCompletes(
+                [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
+    } else {
+        destruct_handle<MetalSwapChain>(sch);
     }
 }
 
@@ -1227,6 +1236,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
     mContext->windingState.invalidate();
+    mContext->scissorRectState.invalidate();
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedDescriptorSets.clear();
@@ -1793,6 +1803,16 @@ void MetalDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+
+    if (UTILS_UNLIKELY(!dsh)) {
+        DEBUG_LOG("bindDescriptorSet(dsh = null, set = %d, offsets = [])\n", set);
+        mContext->currentDescriptorSets[set] = nullptr;
+        mContext->vertexDescriptorBindings.setBuffer(nil, 0, set);
+        mContext->fragmentDescriptorBindings.setBuffer(nil, 0, set);
+        mContext->dynamicOffsets.setOffsets(set, nullptr, 0);
+        return;
+    }
+
     auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
     utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);
@@ -1953,7 +1973,11 @@ void MetalDriver::scissor(Viewport scissorBox) {
             .height = static_cast<NSUInteger>(bottom - top)
     };
 
-    [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
+    auto& srs = mContext->scissorRectState;
+    srs.updateState(scissorRect);
+    if (srs.stateChanged()) {
+        [mContext->currentRenderPassEncoder setScissorRect:scissorRect];
+    }
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

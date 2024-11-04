@@ -54,7 +54,7 @@ public:
         uint8_t usesLazilyAllocatedMemory; // 1 byte
         uint8_t subpassMask; // 1 byte
         uint8_t viewCount; // 1 byte
-		uint8_t padding[2];
+        uint8_t padding[2];
     };
     struct RenderPassVal {
         VkRenderPass handle;
@@ -98,10 +98,10 @@ public:
     ~VulkanFboCache();
 
     // Retrieves or creates a VkFramebuffer handle.
-    VkFramebuffer getFramebuffer(FboKey config) noexcept;
+    VkFramebuffer getFramebuffer(FboKey const& config) noexcept;
 
     // Retrieves or creates a VkRenderPass handle.
-    VkRenderPass getRenderPass(RenderPassKey config) noexcept;
+    VkRenderPass getRenderPass(RenderPassKey const& config) noexcept;
 
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;
@@ -111,7 +111,9 @@ public:
 
 private:
     VkDevice mDevice;
-    tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn> mFramebufferCache;
+    using FboMap = tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn>;
+    FboMap mFramebufferCache;
+
     tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq> mRenderPassCache;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
     uint32_t mCurrentTime = 0;

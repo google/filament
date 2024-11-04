@@ -314,9 +314,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [this, &engine, &view, vsmShadowOptions,
-                scene, mainCameraInfo, userTime, passBuilder = passBuilder](
-                    FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
+            [=, passBuilder = passBuilder,
+                    &engine = const_cast<FEngine /*const*/ &>(engine), // FIXME: we want this const
+                    &view = const_cast<FView const&>(view)]
+                    (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
                 // that updatePrimitivesLod() updates temporary global state.
@@ -363,7 +364,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
                     auto transaction = ShadowMap::open(driver);
-                    ShadowMap::prepareCamera(transaction, engine, cameraInfo);
+                    ShadowMap::prepareCamera(transaction, driver, cameraInfo);
                     ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                     ShadowMap::prepareTime(transaction, engine, userTime);
                     ShadowMap::prepareShadowMapping(transaction,
@@ -371,8 +372,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     shadowMap.commit(transaction, engine, driver);
 
                     // updatePrimitivesLod must be run before RenderPass::appendCommands.
-                    view.updatePrimitivesLod(engine,
-                            cameraInfo, scene->getRenderableData(), entry.range);
+                    FView::updatePrimitivesLod(scene->getRenderableData(),
+                            engine, cameraInfo, entry.range);
 
                     // generate and sort the commands for rendering the shadow map
 
@@ -394,7 +395,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
-                            .build(engine);
+                            .build(engine, driver);
 
                     entry.executor = pass.getExecutor();
 
@@ -525,7 +526,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     if (entry.shadowMap->hasVisibleShadows()) {
                         entry.shadowMap->bind(driver);
                         entry.executor.overrideScissor(entry.shadowMap->getScissor());
-                        entry.executor.execute(engine, "Shadow Pass");
+                        entry.executor.execute(engine, driver);
                     }
                     driver.endRenderPass();
                 });
@@ -791,9 +792,10 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
     }
 }
 
-void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap, FEngine& engine, FView& view,
+void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
+        FEngine const& engine, FView const& view,
         FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-        FScene::LightSoa& lightData) noexcept {
+        FScene::LightSoa const& lightData) noexcept {
     auto& lcm = engine.getLightManager();
 
     const size_t lightIndex = shadowMap.getLightIndex();
@@ -881,23 +883,23 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
     }
 }
 
-void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView& view,
+void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
         FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-        FScene::LightSoa& lightData) noexcept {
+        FScene::LightSoa const& lightData) noexcept {
 
-    const uint8_t face = shadowMap.getFace();
-    const size_t lightIndex = shadowMap.getLightIndex();
+    uint8_t const face = shadowMap.getFace();
+    size_t const lightIndex = shadowMap.getLightIndex();
 
     // compute the frustum for this light
     // for spotlights, we cull shadow casters first because we already know the frustum,
     // this will help us find better near/far plane later
-    const auto position = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).xyz;
-    const auto radius = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).w;
+    auto const position = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).xyz;
+    auto const radius = lightData.elementAt<FScene::POSITION_RADIUS>(lightIndex).w;
 
     // compute shadow map frustum for culling
-    const mat4f Mv = ShadowMap::getPointLightViewMatrix(TextureCubemapFace(face), position);
-    const mat4f Mp = mat4f::perspective(90.0f, 1.0f, 0.01f, radius);
-    const Frustum frustum{ math::highPrecisionMultiply(Mp, Mv) };
+    mat4f const Mv = ShadowMap::getPointLightViewMatrix(TextureCubemapFace(face), position);
+    mat4f const Mp = mat4f::perspective(90.0f, 1.0f, 0.01f, radius);
+    Frustum const frustum{ math::highPrecisionMultiply(Mp, Mv) };
 
     // Cull shadow casters
     float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();

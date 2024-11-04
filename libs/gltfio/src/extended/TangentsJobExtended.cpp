@@ -26,6 +26,7 @@
 #include <utils/Log.h>
 #include <utils/StructureOfArrays.h>
 
+#include <cstring>
 #include <memory>
 #include <unordered_map>
 

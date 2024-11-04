@@ -165,17 +165,17 @@ private:
             FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
     static void cullSpotShadowMap(ShadowMap const& map,
-            FEngine& engine, FView& view,
+            FEngine const& engine, FView const& view,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-            FScene::LightSoa& lightData) noexcept;
+            FScene::LightSoa const& lightData) noexcept;
 
     void preparePointShadowMap(ShadowMap& map,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::LightSoa& lightData) noexcept;
 
-    static void cullPointShadowMap(ShadowMap const& shadowMap, FView& view,
+    static void cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-            FScene::LightSoa& lightData) noexcept;
+            FScene::LightSoa const& lightData) noexcept;
 
     static void updateSpotVisibilityMasks(
             uint8_t visibleLayers,
@@ -253,8 +253,8 @@ private:
         return const_cast<ShadowMapManager*>(this)->getCascadedShadowMap();
     }
 
-    utils::Slice<ShadowMap> getSpotShadowMaps() noexcept {
-        ShadowMap* const p = &getShadowMap(CONFIG_MAX_SHADOW_CASCADES);
+    utils::Slice<ShadowMap> getSpotShadowMaps() const noexcept {
+        ShadowMap const* const p = &getShadowMap(CONFIG_MAX_SHADOW_CASCADES);
         return { p, mSpotShadowMapCount };
     }
 };

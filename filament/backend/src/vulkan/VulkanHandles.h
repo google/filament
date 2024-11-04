@@ -21,6 +21,7 @@
 #include "DriverBase.h"
 
 #include "VulkanBuffer.h"
+#include "VulkanFboCache.h"
 #include "VulkanResources.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
@@ -135,9 +136,13 @@ public:
     using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
     VulkanDescriptorSet(VulkanResourceAllocator* allocator, VkDescriptorSet rawSet,
+            UniformBufferBitmask const& dynamicUboMask,
+            uint8_t uniqueDynamicUboCount,
             OnRecycle&& onRecycleFn)
         : VulkanResource(VulkanResourceType::DESCRIPTOR_SET),
           vkSet(rawSet),
+          dynamicUboMask(dynamicUboMask),
+          uniqueDynamicUboCount(uniqueDynamicUboCount),
           mResources(allocator),
           mOnRecycleFn(std::move(onRecycleFn)) {}
 
@@ -147,13 +152,24 @@ public:
         }
     }
 
+    void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
+        mOffsets = std::move(offsets);
+    }
+
+    backend::DescriptorSetOffsetArray const* getOffsets() {
+        return &mOffsets;
+    }
+
     void acquire(VulkanTexture* texture);
 
     void acquire(VulkanBufferObject* texture);
 
     VkDescriptorSet const vkSet;
+    UniformBufferBitmask const dynamicUboMask;
+    uint8_t const uniqueDynamicUboCount;
 
 private:
+    backend::DescriptorSetOffsetArray mOffsets;
     VulkanAcquireOnlyResourceManager mResources;
     OnRecycle mOnRecycleFn;
 };
@@ -194,10 +210,6 @@ struct VulkanProgram : public HwProgram, VulkanResource {
 
     inline VkShaderModule getFragmentShader() const { return mInfo->shaders[1]; }
 
-    // Get a list of the sampler binding indices so that we don't have to loop through all possible
-    // samplers.
-    inline BindingList const& getBindings() const { return mInfo->bindings; }
-
     inline uint32_t getPushConstantRangeCount() const {
         return mInfo->pushConstantDescription.getVkRangeCount();
     }
@@ -225,22 +237,10 @@ private:
     struct PipelineInfo {
         explicit PipelineInfo(backend::Program const& program) noexcept
             : pushConstantDescription(program)
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-            , bindingToName(MAX_SAMPLER_COUNT, "")
-#endif
             {}
 
-        BindingList bindings;
-
         VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
-
         PushConstantDescription pushConstantDescription;
-
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-        // We store the sampler name mapped from binding index (only for debug purposes).
-        utils::FixedCapacityVector<std::string> bindingToName;
-#endif
-
     };
 
     PipelineInfo* mInfo;
@@ -269,28 +269,70 @@ struct VulkanRenderTarget : private HwRenderTarget, VulkanResource {
     explicit VulkanRenderTarget();
 
     void transformClientRectToPlatform(VkRect2D* bounds) const;
-    void transformClientRectToPlatform(VkViewport* bounds) const;
-    VkExtent2D getExtent() const;
-    // We return references in the following methods to avoid a copy.
-    VulkanAttachment& getColor(int target);
-    VulkanAttachment& getMsaaColor(int target);
-    VulkanAttachment& getDepth();
-    VulkanAttachment& getMsaaDepth();
-    uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
-    uint8_t getSamples() const { return mSamples; }
-    uint8_t getLayerCount() const { return mLayerCount; }
-    bool hasDepth() const { return mDepth.texture; }
-    bool isSwapChain() const { return !mOffscreen; }
+
+    void transformViewportToPlatform(VkViewport* bounds) const;
+
+    inline VkExtent2D getExtent() const {
+        return {width, height};
+    }
+
+    inline VulkanAttachment const& getColor0() const {
+        assert_invariant(mInfo->colors[0]);
+        return mInfo->attachments[0];
+    }
+
+    inline VulkanAttachment const& getDepth() const {
+        assert_invariant(hasDepth());
+        if (mInfo->fbkey.samples == 1) {
+            return mInfo->attachments[mInfo->depthIndex];
+        }
+        return mInfo->attachments[mInfo->msaaDepthIndex];
+    }
+
+    inline VulkanFboCache::RenderPassKey const& getRenderPassKey() const {
+        return mInfo->rpkey;
+    }
+
+    inline VulkanFboCache::FboKey const& getFboKey() const {
+        return mInfo->fbkey;
+    }
+
+    inline uint8_t getSamples() const {
+        return mInfo->fbkey.samples;
+    }
+
+    uint8_t getColorTargetCount(VulkanRenderPass const& pass) const;
+
+    inline bool hasDepth() const { return mInfo->depthIndex != Auxiliary::UNDEFINED_INDEX; }
+
+    inline bool isSwapChain() const { return !mOffscreen; }
+    inline bool isProtected() const { return mProtected; }
+
     void bindToSwapChain(VulkanSwapChain& surf);
 
+    void emitBarriersBeginRenderPass(VulkanCommandBuffer& commands);
+
+    void emitBarriersEndRenderPass(VulkanCommandBuffer& commands);
+
 private:
-    VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    VulkanAttachment mDepth = {};
-    VulkanAttachment mMsaaAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    VulkanAttachment mMsaaDepthAttachment = {};
-    const bool mOffscreen : 1;
-    uint8_t mSamples : 7;
-    uint8_t mLayerCount = 1;
+    struct Auxiliary {
+        static constexpr int8_t UNDEFINED_INDEX = -1;
+
+        explicit Auxiliary() noexcept = default;
+
+        VulkanFboCache::RenderPassKey rpkey = {};
+        VulkanFboCache::FboKey fbkey = {};
+        std::vector<VulkanAttachment> attachments;
+        utils::bitset32 colors;
+        int8_t depthIndex = UNDEFINED_INDEX;
+        int8_t msaaDepthIndex = UNDEFINED_INDEX;
+        int8_t msaaIndex = UNDEFINED_INDEX;
+    };
+    bool const mOffscreen;
+    bool mProtected;
+
+    VulkanAcquireOnlyResourceManager mResources;
+    std::unique_ptr<Auxiliary> mInfo;
 };
 
 struct VulkanBufferObject;
@@ -407,42 +449,6 @@ private:
     // Keep references to the vertex buffer and the index buffer.
     FixedSizeVulkanResourceManager<2> mResources;
 };
-
-struct VulkanFence : public HwFence, VulkanResource {
-    VulkanFence()
-        : VulkanResource(VulkanResourceType::FENCE) {}
-
-    explicit VulkanFence(std::shared_ptr<VulkanCmdFence> fence)
-        : VulkanResource(VulkanResourceType::FENCE),
-          fence(fence) {}
-
-    std::shared_ptr<VulkanCmdFence> fence;
-};
-
-struct VulkanTimerQuery : public HwTimerQuery, VulkanThreadSafeResource {
-    explicit VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices);
-    ~VulkanTimerQuery();
-
-    void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept;
-
-    bool isCompleted() noexcept;
-
-    uint32_t getStartingQueryIndex() const {
-        return mStartingQueryIndex;
-    }
-
-    uint32_t getStoppingQueryIndex() const {
-        return mStoppingQueryIndex;
-    }
-
-private:
-    uint32_t mStartingQueryIndex;
-    uint32_t mStoppingQueryIndex;
-
-    std::shared_ptr<VulkanCmdFence> mFence;
-    utils::Mutex mFenceMutex;
-};
-
 
 inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
         BufferObjectBinding bindingType) noexcept {

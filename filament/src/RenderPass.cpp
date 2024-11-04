@@ -68,7 +68,6 @@ namespace filament {
 using namespace backend;
 
 RenderPassBuilder& RenderPassBuilder::customCommand(
-        FEngine& engine,
         uint8_t channel,
         RenderPass::Pass pass,
         RenderPass::CustomCommand custom,
@@ -76,17 +75,17 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
         RenderPass::Executor::CustomCommandFn const& command) {
     if (!mCustomCommands.has_value()) {
         // construct the vector the first time
-        mCustomCommands.emplace(engine.getPerRenderPassArena());
+        mCustomCommands.emplace();
     }
     mCustomCommands->emplace_back(channel, pass, custom, order, command);
     return *this;
 }
 
-RenderPass RenderPassBuilder::build(FEngine& engine) {
+RenderPass RenderPassBuilder::build(FEngine const& engine, backend::DriverApi& driver) const {
     assert_invariant(mRenderableSoa);
     assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
     assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
-    return RenderPass{ engine, *this };
+    return RenderPass{ engine, driver, *this };
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -107,11 +106,11 @@ void RenderPass::DescriptorSetHandleDeleter::operator()(
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexcept
+RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
+        RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
           mColorPassDescriptorSet(builder.mColorPassDescriptorSet),
-          mScissorViewport(builder.mScissorViewport),
-          mCustomCommands(engine.getPerRenderPassArena()) {
+          mScissorViewport(builder.mScissorViewport) {
 
     // compute the number of commands we need
     updateSummedPrimitiveCounts(
@@ -127,10 +126,12 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
     uint32_t const customCommandCount =
             builder.mCustomCommands.has_value() ? builder.mCustomCommands->size() : 0;
 
+    // FIXME: builder.mArena must be thread safe eventually
     Command* const commandBegin = builder.mArena.alloc<Command>(commandCount + customCommandCount);
     Command* commandEnd = commandBegin + (commandCount + customCommandCount);
     assert_invariant(commandBegin);
 
+    // FIXME: builder.mArena must be thread safe eventually
     if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(commandBegin))) {
         static bool sLogOnce = true;
         if (UTILS_UNLIKELY(sLogOnce)) {
@@ -150,6 +151,7 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
             builder.mCameraForwardVector);
 
     if (builder.mCustomCommands.has_value()) {
+        mCustomCommands.reserve(customCommandCount);
         Command* p = commandBegin + commandCount;
         for (auto const& [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
             appendCustomCommand(p++, channel, passId, command, order, fn);
@@ -166,7 +168,9 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
             stereoscopicEyeCount *= engine.getConfig().stereoscopicEyeCount;
         }
         commandEnd = resize(builder.mArena,
-                instanceify(engine, commandBegin, commandEnd, stereoscopicEyeCount));
+                instanceify(driver,
+                        engine.getPerRenderableDescriptorSetLayout().getHandle(),
+                        commandBegin, commandEnd, stereoscopicEyeCount));
     }
 
     // these are `const` from this point on...
@@ -182,7 +186,7 @@ RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexc
     return last;
 }
 
-void RenderPass::appendCommands(FEngine& engine,
+void RenderPass::appendCommands(FEngine const& engine,
         Slice<Command> commands,
         utils::Range<uint32_t> const vr,
         CommandTypeFlags const commandTypeFlags,
@@ -283,17 +287,8 @@ RenderPass::Command* RenderPass::sortCommands(
     return last;
 }
 
-void RenderPass::execute(RenderPass const& pass,
-        FEngine& engine, const char* name,
-        backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams params) noexcept {
-    DriverApi& driver = engine.getDriverApi();
-    driver.beginRenderPass(renderTarget, params);
-    pass.getExecutor().execute(engine, name);
-    driver.endRenderPass();
-}
-
-RenderPass::Command* RenderPass::instanceify(FEngine& engine,
+RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
+        DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
         Command* curr, Command* const last,
         int32_t eyeCount) const noexcept {
     SYSTRACE_NAME("instanceify");
@@ -352,8 +347,6 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
         if (UTILS_UNLIKELY(instanceCount > 1)) {
             drawCallsSavedCount += instanceCount - 1;
 
-            auto& driver = engine.getDriverApi();
-
             // allocate our staging buffer only if needed
             if (UTILS_UNLIKELY(!stagingBuffer)) {
                 // Create a temporary UBO for holding the per-renderable data of each primitive,
@@ -382,8 +375,7 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
                 // in this case we would need to preserve the default descriptor-set content).
                 // This has the same lifetime as the UBO (see above).
                 mInstancedDescriptorSetHandle = DescriptorSetSharedHandle{
-                        driver.createDescriptorSet(
-                                engine.getPerRenderableDescriptorSetLayout().getHandle()),
+                        driver.createDescriptorSet(perRenderableDescriptorSetLayoutHandle),
                         driver
                 };
                 driver.updateDescriptorSetBuffer(mInstancedDescriptorSetHandle,
@@ -418,10 +410,7 @@ RenderPass::Command* RenderPass::instanceify(FEngine& engine,
     if (UTILS_UNLIKELY(firstSentinel)) {
         //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
         //       << count << io::endl;
-
         // we have instanced primitives
-        DriverApi& driver = engine.getDriverApi();
-
         // copy our instanced ubo data
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
                 stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
@@ -817,13 +806,15 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 const BlendingMode blendingMode = ma->getBlendingMode();
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
+                const bool isPickingVariant = Variant::isPickingVariant(variant);
 
                 cmd.key |= mi->getSortingKey(); // already all set-up for direct or'ing
                 cmd.info.rasterState.culling = mi->getCullingMode();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmd.info.rasterState.depthWrite = (1 // only keep bit 0
-                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
+                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE)
+                                                     | isPickingVariant)
                                                    & !(filterTranslucentObjects & translucent)
                                                    & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                                                   | writeDepthForShadowCasters;
@@ -859,19 +850,13 @@ void RenderPass::Executor::overridePolygonOffset(backend::PolygonOffset const* p
     }
 }
 
-void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noexcept {
-    if ((mScissorOverride = (scissor != nullptr))) { // NOLINT(*-assignment-in-if-condition)
-        mScissor = *scissor;
-    }
-}
-
 void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noexcept {
     mScissorOverride = true;
     mScissor = scissor;
 }
 
-void RenderPass::Executor::execute(FEngine& engine, const char*) const noexcept {
-    execute(engine, mCommands.begin(), mCommands.end());
+void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& driver) const noexcept {
+    execute(engine, driver, mCommands.begin(), mCommands.end());
 }
 
 UTILS_NOINLINE // no need to be inlined
@@ -881,15 +866,15 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
     // clang vectorizes this!
     constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
     // compute new left/bottom, assume no overflow
-    int32_t l = scissor.left + scissorViewport.left;
-    int32_t b = scissor.bottom + scissorViewport.bottom;
+    int32_t const l = scissor.left + scissorViewport.left;
+    int32_t const b = scissor.bottom + scissorViewport.bottom;
     // compute right/top without overflowing, scissor.width/height guaranteed
     // to convert to int32
     int32_t r = (l > maxvali - int32_t(scissor.width)) ? maxvali : l + int32_t(scissor.width);
     int32_t t = (b > maxvali - int32_t(scissor.height)) ? maxvali : b + int32_t(scissor.height);
     // clip to the viewport
-    l = std::max(l, scissorViewport.left);
-    b = std::max(b, scissorViewport.bottom);
+    assert_invariant(l == std::max(l, scissorViewport.left));
+    assert_invariant(b == std::max(b, scissorViewport.bottom));
     r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
     t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
     assert_invariant(r >= l && t >= b);
@@ -897,13 +882,11 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::execute(FEngine& engine,
-        const Command* first, const Command* last) const noexcept {
+void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& driver,
+        Command const* first, Command const* last) const noexcept {
 
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
-
-    DriverApi& driver = engine.getDriverApi();
 
     size_t const capacity = engine.getMinCommandBufferSize();
     CircularBuffer const& circularBuffer = driver.getCircularBuffer();
@@ -911,9 +894,14 @@ void RenderPass::Executor::execute(FEngine& engine,
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
 
-        bool const scissorOverride = mScissorOverride;
-        if (UTILS_UNLIKELY(scissorOverride)) {
-            // initialize with scissor override
+        // The scissor rectangle is associated to a render pass, so the tracking can be local.
+        backend::Viewport currentScissor{ 0, 0, INT32_MAX, INT32_MAX };
+        bool const hasScissorOverride = mScissorOverride;
+        bool const hasScissorViewport = mHasScissorViewport;
+        if (UTILS_UNLIKELY(hasScissorViewport || hasScissorOverride)) {
+            // we should never have both an override and scissor-viewport
+            assert_invariant(!hasScissorViewport || !hasScissorOverride);
+            currentScissor = mScissor;
             driver.scissor(mScissor);
         }
 
@@ -964,7 +952,9 @@ void RenderPass::Executor::execute(FEngine& engine,
             // check we have enough capacity to write these commandCount commands, if not,
             // request a new CircularBuffer allocation of `capacity` bytes.
             if (UTILS_UNLIKELY(circularBuffer.getUsed() > capacity - commandSizeInBytes)) {
-                engine.flush(); // TODO: we should use a "fast" flush if possible
+                // FIXME: eventually we can't flush here because this will be a secondary
+                //        command buffer. We will need another solution for overflows.
+                const_cast<FEngine&>(engine).flush();
             }
 
             first--;
@@ -997,17 +987,24 @@ void RenderPass::Executor::execute(FEngine& engine,
 
                 if (UTILS_UNLIKELY(mi != info.mi)) {
                     // this is always taken the first time
-                    mi = info.mi;
-                    assert_invariant(mi);
+                    assert_invariant(info.mi);
 
+                    mi = info.mi;
                     ma = mi->getMaterial();
 
-                    if (UTILS_LIKELY(!scissorOverride)) {
+                    // if we have the scissor override, the material instance and scissor-viewport
+                    // are ignored (typically used for shadow maps).
+                    if (!hasScissorOverride) {
+                        // apply the MaterialInstance scissor
                         backend::Viewport scissor = mi->getScissor();
-                        if (UTILS_UNLIKELY(mi->hasScissor())) {
-                            scissor = applyScissorViewport(mScissorViewport, scissor);
+                        if (hasScissorViewport) {
+                            // apply the scissor viewport if any
+                            scissor = applyScissorViewport(mScissor, scissor);
                         }
-                        driver.scissor(scissor);
+                        if (scissor != currentScissor) {
+                            currentScissor = scissor;
+                            driver.scissor(scissor);
+                        }
                     }
 
                     if (UTILS_LIKELY(!polygonOffsetOverride)) {
@@ -1085,7 +1082,9 @@ void RenderPass::Executor::execute(FEngine& engine,
         // If the remaining space is less than half the capacity, we flush right away to
         // allow some headroom for commands that might come later.
         if (UTILS_UNLIKELY(circularBuffer.getUsed() > capacity / 2)) {
-            engine.flush();
+            // FIXME: eventually we can't flush here because this will be a secondary
+            //        command buffer.
+            const_cast<FEngine&>(engine).flush();
         }
     }
 }
@@ -1098,16 +1097,18 @@ RenderPass::Executor::Executor(RenderPass const& pass, Command const* b, Command
           mInstancedUboHandle(pass.mInstancedUboHandle),
           mInstancedDescriptorSetHandle(pass.mInstancedDescriptorSetHandle),
           mColorPassDescriptorSet(pass.mColorPassDescriptorSet),
-          mScissorViewport(pass.mScissorViewport),
+          mScissor(pass.mScissorViewport),
           mPolygonOffsetOverride(false),
           mScissorOverride(false) {
+    mHasScissorViewport = mScissor != backend::Viewport{ 0, 0, INT32_MAX, INT32_MAX };
     assert_invariant(b >= pass.begin());
     assert_invariant(e <= pass.end());
 }
 
 RenderPass::Executor::Executor() noexcept
         : mPolygonOffsetOverride(false),
-          mScissorOverride(false) {
+          mScissorOverride(false),
+          mHasScissorViewport(false) {
 }
 
 RenderPass::Executor::Executor(Executor&& rhs) noexcept = default;

@@ -407,6 +407,9 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
+    FILAMENT_CHECK_PRECONDITION(engine.isValid(mSwapChain))
+            << "SwapChain must remain valid until endFrame is called.";
+
     if (mSwapChain) {
         mSwapChain->commit(driver);
         mSwapChain = nullptr;
@@ -918,8 +921,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    view.updatePrimitivesLod(engine, cameraInfo,
-            scene.getRenderableData(), view.getVisibleRenderables());
+    FView::updatePrimitivesLod(scene.getRenderableData(),
+            engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo);
     passBuilder.geometry(scene.getRenderableData(), view.getVisibleRenderables());
@@ -962,17 +965,74 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // --------------------------------------------------------------------------------------------
     // structure pass -- automatically culled if not used
     // Currently it consists of a simple depth pass.
-    // This is normally used by SSAO and contact-shadows
+    // This is normally used by SSAO and contact-shadows.
+    // Also, picking is handled here if transparent picking is disabled.
 
     // TODO: the scaling should depends on all passes that need the structure pass
     const auto [structure, picking_] = ppm.structure(fg,
             passBuilder, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
-            .picking = view.hasPicking()
+            .picking = view.hasPicking() && !view.isTransparentPickingEnabled()
     });
-    const auto picking = picking_;
+    auto picking = picking_;
+
+    // --------------------------------------------------------------------------------------------
+    // Picking pass -- automatically culled if not used
+    // Picking is handled here if transparent picking is enabled.
 
     if (view.hasPicking()) {
+        if (view.isTransparentPickingEnabled()) {
+            struct PickingRenderPassData {
+                FrameGraphId<FrameGraphTexture> depth;
+                FrameGraphId<FrameGraphTexture> picking;
+            };
+            auto& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    bool const isFL0 = mEngine.getDriverApi().getFeatureLevel() == 
+                        FeatureLevel::FEATURE_LEVEL_0;
+
+                    // TODO: Specify the precision for picking pass
+                    uint32_t const width = std::max(32u,
+                        (uint32_t)std::ceil(float(svp.width) * aoOptions.resolution));
+                    uint32_t const height = std::max(32u,
+                        (uint32_t)std::ceil(float(svp.height) * aoOptions.resolution));
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
+
+                    data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                    data.picking = builder.createTexture("Picking Buffer", {
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+
+                    data.picking = builder.write(data.picking,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                    builder.declareRenderPass("Picking Render Target", {
+                            .attachments = {.color = { data.picking }, .depth = data.depth },
+                            .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
+                        });
+                },
+                [=, passBuilder = passBuilder](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) mutable {
+                        Variant pickingVariant(Variant::DEPTH_VARIANT);
+                        pickingVariant.setPicking(true);
+
+                        auto out = resources.getRenderPassInfo();
+                        passBuilder.renderFlags(renderFlags);
+                        passBuilder.variant(pickingVariant);
+                        passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
+
+                        RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                        driver.beginRenderPass(out.target, out.params);
+                        pass.getExecutor().execute(mEngine, driver);
+                        driver.endRenderPass();
+                });
+            picking = pickingRenderPass->picking;
+        }
+
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
@@ -1053,7 +1113,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
     //        know at this point. This will usually be the case when post-process is disabled.
     // FIXME: we probably should take the dynamic scaling into account too
-    passBuilder.scissorViewport(hasPostProcess ? xvp : vp);
+    // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
+    // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
+    const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
+          (isRenderingMultiview && engine.debug.stereo.combine_multiview_images);
+    passBuilder.scissorViewport(useIntermediateBuffer ? xvp : vp);
 
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
@@ -1068,7 +1132,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        passBuilder.customCommand(engine, 3,
+        passBuilder.customCommand(3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor]() {
@@ -1076,7 +1140,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     } else if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        passBuilder.customCommand(engine, 3,
+        passBuilder.customCommand(3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver]() {
@@ -1094,7 +1158,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         passBuilder.renderFlags(renderFlags);
     }
 
-    RenderPass const pass{ passBuilder.build(engine) };
+    RenderPass const pass{ passBuilder.build(engine, driver) };
 
     FrameGraphTexture::Descriptor colorBufferDesc = {
             .width = config.physicalViewport.width,

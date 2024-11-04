@@ -69,7 +69,9 @@ public:
         assert_invariant(set < MAX_DESCRIPTOR_SET_COUNT);
         assert_invariant(binding < MAX_DESCRIPTOR_COUNT);
         assert_invariant(entry.binding < 128); // we reserve 1 bit for the type right now
-        mStorage[set][binding] = { (uint8_t)entry.binding, entry.type == DescriptorType::SAMPLER };
+        mStorage[set][binding] = { (uint8_t)entry.binding,
+                                   entry.type == DescriptorType::SAMPLER ||
+                                   entry.type == DescriptorType::SAMPLER_EXTERNAL };
         mActiveDescriptors[set].set(binding);
     }
 

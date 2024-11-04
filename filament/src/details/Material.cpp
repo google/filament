@@ -346,8 +346,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 FMaterial::~FMaterial() noexcept = default;
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
+    DriverApi& driverApi = mEngine.getDriverApi();
     if (mMaterialDomain == MaterialDomain::SURFACE) {
-        DriverApi& driverApi = mEngine.getDriverApi();
         auto& cachedPrograms = mCachedPrograms;
         for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
             Variant const variant(k);
@@ -377,7 +377,6 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
             }
         }
     } else if (mMaterialDomain == MaterialDomain::POST_PROCESS) {
-        DriverApi& driverApi = mEngine.getDriverApi();
         auto& cachedPrograms = mCachedPrograms;
         for (size_t k = 0, n = POST_PROCESS_VARIANT_COUNT; k < n; ++k) {
             if ((k & variantMask) == variantValue) {
@@ -462,13 +461,13 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
         return FMaterialInstance::duplicate(mDefaultMaterialInstance, name);
     } else {
         // but if we don't, just create an instance with all the default parameters
-        return mEngine.createMaterialInstance(this);
+        return mEngine.createMaterialInstance(this, name);
     }
 }
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance = mEngine.createMaterialInstance(this);
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mName.c_str());
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;
