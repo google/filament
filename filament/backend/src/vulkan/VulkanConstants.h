@@ -77,8 +77,12 @@
 // order of calls).
 #define FVK_DEBUG_FORCE_LOG_TO_I          0x00020000
 
+// Enable a minimal set of traces to assess the performance of the backend.
+// All other debug features must be disabled.
+#define FVK_DEBUG_PROFILING               0x00040000
+
 // Useful default combinations
-#define FVK_DEBUG_EVERYTHING              0xFFFFFFFF
+#define FVK_DEBUG_EVERYTHING              (0xFFFFFFFF & ~FVK_DEBUG_PROFILING)
 #define FVK_DEBUG_PERFORMANCE     \
     FVK_DEBUG_SYSTRACE
 
@@ -112,6 +116,10 @@ static_assert(FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS));
 static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 #endif
 
+#if FVK_ENABLED(FVK_DEBUG_PROFILING) && FVK_DEBUG_FLAGS != FVK_DEBUG_PROFILING
+#error PROFILING is exclusive; all other debug features must be disabled.
+#endif
+
 // end dependcy checks
 
 // Shorthand for combination of enabled debug flags
@@ -123,17 +131,30 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 
 // end shorthands
 
-#if FVK_ENABLED(FVK_DEBUG_SYSTRACE)
+#if FVK_DEBUG_FLAGS == FVK_DEBUG_PROFILING
 
-#include <utils/Systrace.h>
+    #define FVK_SYSTRACE_CONTEXT()
+    #define FVK_SYSTRACE_START(marker)
+    #define FVK_SYSTRACE_END()
+    #define FVK_SYSTRACE_SCOPE()
+    #define FVK_PROFILE_MARKER(marker)  PROFILE_SCOPE(marker)
 
-#define FVK_SYSTRACE_CONTEXT()      SYSTRACE_CONTEXT()
-#define FVK_SYSTRACE_START(marker)  SYSTRACE_NAME_BEGIN(marker)
-#define FVK_SYSTRACE_END()          SYSTRACE_NAME_END()
+#elif FVK_ENABLED(FVK_DEBUG_SYSTRACE)
+
+    #include <utils/Systrace.h>
+    
+    #define FVK_SYSTRACE_CONTEXT()      SYSTRACE_CONTEXT()
+    #define FVK_SYSTRACE_START(marker)  SYSTRACE_NAME_BEGIN(marker)
+    #define FVK_SYSTRACE_END()          SYSTRACE_NAME_END()
+    #define FVK_SYSTRACE_SCOPE()        SYSTRACE_NAME(__func__)
+    #define FVK_PROFILE_MARKER(marker)  FVK_SYSTRACE_SCOPE()
+
 #else
-#define FVK_SYSTRACE_CONTEXT()
-#define FVK_SYSTRACE_START(marker)
-#define FVK_SYSTRACE_END()
+    #define FVK_SYSTRACE_CONTEXT()
+    #define FVK_SYSTRACE_START(marker)
+    #define FVK_SYSTRACE_END()
+    #define FVK_SYSTRACE_SCOPE()
+    #define FVK_PROFILE_MARKER(marker)
 #endif
 
 #ifndef FVK_HANDLE_ARENA_SIZE_IN_MB

@@ -23,6 +23,7 @@
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
 #include "OpenGLTimerQuery.h"
+#include "SystraceProfile.h"
 #include "gl_headers.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
@@ -91,24 +92,35 @@
 #define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
 #define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
 #define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
-#define DEBUG_GROUP_MARKER_ALL        0x03    // all markers
+#define DEBUG_GROUP_MARKER_ALL        0xFF    // all markers
 
 #define DEBUG_MARKER_NONE             0x00    // no debug marker
 #define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
 #define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_ALL              0x03    // all markers
+#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (systrace)
+#define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
 #define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_ALL
 
 // set to the desired debug level (for internal debugging [Default: None])
-#define DEBUG_MARKER_LEVEL      DEBUG_MARKER_NONE
+#define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
 
-#if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
-#   define DEBUG_MARKER() \
-        DebugMarker _debug_marker(*this, __func__);
+#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
+#   define DEBUG_MARKER()
+#   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker);
+#   if DEBUG_GROUP_MARKER_LEVEL != DEBUG_GROUP_MARKER_NONE
+#       error PROFILING is exclusive; group markers must be disabled.
+#   endif
+#elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
+#   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
+#   define PROFILE_MARKER(marker) DEBUG_MARKER()
+#   if DEBUG_MARKER_LEVEL & DEBUG_MARKER_PROFILE
+#       error PROFILING is exclusive; all other debug features must be disabled.
+#   endif
 #else
 #   define DEBUG_MARKER()
+#   define PROFILE_MARKER(marker)
 #endif
 
 using namespace filament::math;
@@ -3448,7 +3460,7 @@ void OpenGLDriver::beginFrame(
         UTILS_UNUSED int64_t monotonic_clock_ns,
         UTILS_UNUSED int64_t refreshIntervalNs,
         UTILS_UNUSED uint32_t frameId) {
-    DEBUG_MARKER()
+    PROFILE_MARKER(PROFILE_NAME_BEGINFRAME)
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     mPlatform.beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
@@ -3483,7 +3495,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
-    DEBUG_MARKER()
+    PROFILE_MARKER(PROFILE_NAME_ENDFRAME)
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
     // done with the frame. We do NOT officially support using Filament in this way, but we can
