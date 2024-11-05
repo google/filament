@@ -275,6 +275,9 @@ public:
     AtomicFreeList(const AtomicFreeList& rhs) = delete;
     AtomicFreeList& operator=(const AtomicFreeList& rhs) = delete;
 
+    // TSAN complains about a race on the memory used by the atomic mHead and the user
+    // (see b/377369108). There is a race, but it is handled below.
+    UTILS_NO_SANITIZE_THREAD
     void* pop() noexcept {
         Node* const pStorage = mStorage;
 
