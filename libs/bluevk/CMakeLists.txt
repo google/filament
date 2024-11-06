@@ -25,7 +25,10 @@ add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_link_libraries(${TARGET} utils math)
 
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(${TARGET} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
 # test_bluevk is not supported on mobile or Windows

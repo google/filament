@@ -174,7 +174,10 @@ set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(uberarchive ${DUMMY_SRC} ${RESGEN_SOURCE})
-target_include_directories(uberarchive PUBLIC ${RESOURCE_DIR})
+target_include_directories(uberarchive PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 set_target_properties(uberarchive PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
@@ -186,7 +189,10 @@ link_libraries(math utils filament cgltf stb ktxreader geometry tsl uberzlib)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(gltfio_core PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 set_target_properties(gltfio_core PROPERTIES FOLDER Libs)
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
@@ -213,7 +219,10 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/JitShaderProvider.cpp)
     target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
-    target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+    target_include_directories(${TARGET} PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+        $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+    )
     set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
     if (NOT MSVC)
         target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)

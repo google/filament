@@ -254,7 +254,10 @@ include_directories(${GENERATION_ROOT})
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 # specify where the public headers of this library are
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(${TARGET} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 
 # add this subproject to the Filament folder
 set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
@@ -264,7 +267,10 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Filament)
 # ==================================================================================================
 
 add_library(${TARGET}_headers INTERFACE)
-target_include_directories(${TARGET}_headers INTERFACE ${PUBLIC_HDR_DIR})
+target_include_directories(${TARGET}_headers INTERFACE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 
 # ==================================================================================================
 # Build SPIRV snippets used by the Vulkan backend.

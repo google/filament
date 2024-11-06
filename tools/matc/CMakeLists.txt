@@ -41,7 +41,10 @@ set(SRCS
 # ==================================================================================================
 add_library(${TARGET} STATIC ${SRCS} ${HDRS})
 
-target_include_directories(${TARGET} PUBLIC src)
+target_include_directories(${TARGET} PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:src>
+)
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 target_link_libraries(${TARGET} getopt filamat filabridge utils)
