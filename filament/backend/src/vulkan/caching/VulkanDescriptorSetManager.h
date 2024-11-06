@@ -94,7 +94,7 @@ private:
     struct {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         DescriptorSetMask setMask;
-        DescriptorSetArray boundSets;
+        DescriptorSetArray boundSets = {};
     } mLastBoundInfo;
 };
 
