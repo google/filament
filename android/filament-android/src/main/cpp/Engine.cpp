@@ -499,6 +499,37 @@ Java_com_google_android_filament_Engine_nGetActiveFeatureLevel(JNIEnv *, jclass,
     return (jint)engine->getActiveFeatureLevel();
 }
 
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nHasFeatureFlag(JNIEnv *env, jclass clazz,
+        jlong nativeEngine, jstring name_) {
+    Engine* engine = (Engine*) nativeEngine;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    std::optional<bool> result = engine->getFeatureFlag(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result.has_value();
+}
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nSetFeatureFlag(JNIEnv *env, jclass clazz,
+        jlong nativeEngine, jstring name_, jboolean value) {
+    Engine* engine = (Engine*) nativeEngine;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    jboolean result = engine->setFeatureFlag(name, (bool)value);
+    env->ReleaseStringUTFChars(name_, name);
+    return result;
+}
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nGetFeatureFlag(JNIEnv *env, jclass clazz,
+        jlong nativeEngine, jstring name_) {
+    Engine* engine = (Engine*) nativeEngine;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    std::optional<bool> result = engine->getFeatureFlag(name);
+    env->ReleaseStringUTFChars(name_, name);
+    return result.value_or(false); // we should never fail here
+}
+
 extern "C" JNIEXPORT jlong JNICALL Java_com_google_android_filament_Engine_nCreateBuilder(JNIEnv*,
         jclass) {
     Engine::Builder* builder = new Engine::Builder{};
@@ -563,6 +594,16 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         JNIEnv*, jclass, jlong nativeBuilder, jboolean paused) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     builder->paused((bool) paused);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nSetBuilderFeature(JNIEnv *env, jclass clazz,
+        jlong nativeBuilder, jstring name_, jboolean value) {
+    Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    builder->feature(name, (bool)value);
+    env->ReleaseStringUTFChars(name_, name);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
