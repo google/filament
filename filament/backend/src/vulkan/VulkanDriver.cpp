@@ -201,7 +201,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mResourceManager(&mResourceAllocator),
       mThreadSafeResourceManager(&mResourceAllocator),
       mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
-              mPlatform->getGraphicsQueueFamilyIndex(), &mContext, &mResourceAllocator),
+              mPlatform->getGraphicsQueueFamilyIndex(),
+              nullptr, 0, &mContext, &mResourceAllocator),
       mPipelineLayoutCache(mPlatform->getDevice(), &mResourceAllocator),
       mPipelineCache(mPlatform->getDevice(), mAllocator),
       mStagePool(mAllocator, &mCommands),
@@ -681,8 +682,8 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
-    VulkanCommandBuffer const& commandBuffer = mCommands.get();
-    mResourceAllocator.construct<VulkanFence>(fh, commandBuffer.fence);
+    VulkanCommandBuffer* cmdbuf = &mCommands.get();
+    mResourceAllocator.construct<VulkanFence>(fh, cmdbuf->getFenceStatus());
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {

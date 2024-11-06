@@ -30,43 +30,20 @@ namespace filament::backend {
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    struct SetValueScope {
-    public:
-        ~SetValueScope() {
-            mHolder->mutex.unlock();
-            mHolder->condition.notify_all();
-        }
+    VulkanCmdFence(VkResult initialStatus) {
+        // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
+        // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
+        // finishes executing the command buffer, the status changes to VK_SUCCESS.
+        status.store(initialStatus);
+    }
 
-    private:
-        SetValueScope(VulkanCmdFence* fenceHolder, VkResult result) :
-            mHolder(fenceHolder) {
-            mHolder->mutex.lock();
-            mHolder->status.store(result);
-        }
-        VulkanCmdFence* mHolder;
-        friend struct VulkanCmdFence;
-    };
-
-    VulkanCmdFence(VkFence ifence);
     ~VulkanCmdFence() = default;
 
-    SetValueScope setValue(VkResult value) {
-        return {this, value};
-    }
+    void setStatus(VkResult value) { status.store(value); }
 
-    VkFence& getFence() {
-        return fence;
-    }
-
-    VkResult getStatus() {
-        std::unique_lock<utils::Mutex> lock(mutex);
-        return status.load(std::memory_order_acquire);
-    }
+    VkResult getStatus() { return status.load(std::memory_order_acquire); }
 
 private:
-    VkFence fence;
-    utils::Condition condition;
-    utils::Mutex mutex;
     std::atomic<VkResult> status;
 };
 
