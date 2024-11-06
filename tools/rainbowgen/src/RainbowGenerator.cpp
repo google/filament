@@ -27,6 +27,7 @@
 #include <cmath>
 #include <random>
 #include <vector>
+#include <iostream>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -81,7 +82,9 @@ Rainbow RainbowGenerator::build(JobSystem&) {
 
     // The sun appears as about a degree in the sky
     std::default_random_engine rng{ std::random_device{}() };
-    std::uniform_real_distribution<float> dist{ -mSunArc * 0.5f, mSunArc * 0.5f };
+    std::uniform_real_distribution<float> distImpactAngle{ -mSunArc * 0.5f, mSunArc * 0.5f };
+    std::uniform_real_distribution<float> distImpact{ -1.0f, 1.0f };
+    std::uniform_int_distribution<int> distWavelengthIndex{ 0, CIE_XYZ_COUNT - 1 };
 
     int32_t const count = int32_t(mSampleCount);
 
@@ -99,65 +102,69 @@ Rainbow RainbowGenerator::build(JobSystem&) {
     Rainbow rainbow{
             .s = C0,
             .o = C1,
-            .scale = 1.0f,
+            .scale = 0.0f,
             .data = std::vector<Rainbow::linear_sRGB_t>(lutsize, Rainbow::linear_sRGB_t{})
     };
 
-    float const s = float(2 * lutsize) / float((maxDeviation - minDeviation) * float(count) * CIE_XYZ_COUNT);
-
-    for (size_t j = 0; j < CIE_XYZ_COUNT; j++) {
-        // Current wavelength
+    for (size_t i = 0; i < count; i++) {
+        // pick a random ray
+        float const impact = distImpact(rng);
+        radian_t const impactAngle = distImpactAngle(rng);
+        size_t const j = distWavelengthIndex(rng);
         float const w = float(CIE_XYZ_START + j);
         float const n = indexOfRefraction(w);
 
-        for (int32_t i = 0; i < count; i++) {
-            float const impact = float(i * 2 - count) / float(count);
-            radian_t const impactAngle = dist(rng);
-            radian_t const incident = std::asin(impact) - impactAngle;
+        // incident = asin(impact) - impactAngle. However, because we're integrating
+        // over all impact values at all impact-angles, we don't need to subtract
+        // the impactAngle, because there will always be another {impact, impact-angle}
+        // that will produce the same result
+        radian_t const incident = std::asin(impact);
+        radian_t const refracted = refractFromImpact(n, impact);
+        // water-air fresnel is equal to 1 - air-water fresnel, so we only need to
+        // air-water non-polarized fresnel
 
-            radian_t const refracted = refract(n, incident);
-            // water-air fresnel is equal to 1 - air-water fresnel, so we only need to
-            // air-water non-polarized fresnel
+        // intensity reflected upon entering the droplet (air-water)
+        float const Raw = fresnel(incident, refracted);
 
-            // intensity reflected upon entering the droplet (air-water)
-            float const Raw = fresnel(incident, refracted);
+        // intensity reflected upon exiting the droplet (water-air)
+        float const Rwa = fresnel(refracted, incident);
 
-            // intensity reflected upon exiting the droplet (water-air)
-            float const Rwa = fresnel(refracted, incident);
+        // intensity transmitted at air-water interface
+        float const Taw = 1 - Raw;
 
-            // intensity transmitted at air-water interface
-            float const Taw = 1 - Raw;
+        // intensity transmitted at water-air interface
+        float const Twa = 1 - Rwa;
 
-            // intensity transmitted at water-air interface
-            float const Twa = 1 - Rwa;
-
-            for (int const bounces: { 1, 2 }) {
-                radian_t const phi = rainbow::deviation(bounces, incident, refracted) - impactAngle;
-                if (phi >= minDeviation && phi < maxDeviation) {
-                    float const v = mCosine ? std::cos(phi) : phi;
-                    size_t const index = size_t(std::floor(float(lutsize) * (v * C0 + C1)));
-                    if (index < lutsize) {
-                        float const T = Taw * std::pow(Rwa,  float(bounces)) * Twa;
-                        rainbow.data[index] += (T * s) * (CIE_XYZ[j] / 118.518f);
-                    }
+        for (int const bounces: { 1, 2 }) {
+            radian_t const phi = rainbow::deviation(bounces, incident, refracted) - impactAngle;
+            if (phi >= minDeviation && phi < maxDeviation) {
+                float const v = mCosine ? std::cos(phi) : phi;
+                size_t const index = size_t(std::floor(float(lutsize) * (v * C0 + C1)));
+                if (index < lutsize) {
+                    float const T = Taw * std::pow(Rwa, float(bounces)) * Twa;
+                    rainbow.data[index] += T * CIE_XYZ[j];
                 }
             }
         }
     }
 
     // convert to sRGB linear and find the largest value
-    rainbow.scale = 0.0f;
-    for (size_t index = 0; index < lutsize; index++) {
-        float3 c = rainbow.data[index];
+    for (float3& c : rainbow.data) {
         c = srgb::XYZ_to_sRGB(c);
-        rainbow.data[index] = c;
         rainbow.scale = std::max({ rainbow.scale, c.r, c.g, c.b });
     }
 
     // rescale everything to the [0, 1] range
-    for (size_t index = 0; index < lutsize; index++) {
-        rainbow.data[index] *= 1.0f / rainbow.scale;
+    for (float3& c : rainbow.data) {
+        c *= 1.0f / rainbow.scale;
     }
+
+    // integration scale factor (118.518 comes from CIE_XYZ[])
+    double const s = (double(2 * lutsize) /
+            (double(maxDeviation - minDeviation) * double(count * CIE_XYZ_COUNT))) / 118.518;
+
+    rainbow.scale *= float(s);
+    //std::cout << 1/rainbow.scale << std::endl;
 
     return rainbow;
 }

@@ -67,7 +67,7 @@ Options:
         Maximum deviation in degrees encoded in the texture, 60 by default.
 
     --samples=integer, -S integer
-        Number of samples for the simulation, 65536 by default.
+        Number of samples for the simulation, 10,000,000 by default.
 
 Private use only:
     --debug, -d

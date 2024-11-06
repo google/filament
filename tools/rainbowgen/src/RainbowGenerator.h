@@ -74,7 +74,7 @@ private:
     radian_t mMinDeviation = 30.0f * filament::math::f::DEG_TO_RAD;
     radian_t mMaxDeviation = 60.0f * filament::math::f::DEG_TO_RAD;
     radian_t mSunArc = 1.0f * filament::math::f::DEG_TO_RAD;
-    uint32_t mSampleCount = 65536;
+    uint32_t mSampleCount = 10'000'000;
     float mAirTemperature = 20.0f;
     bool mCosine = false;
 };

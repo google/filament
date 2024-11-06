@@ -39,22 +39,21 @@ inline radian_t refract(float n, radian_t incident) noexcept {
     return std::asin(std::sin(incident) / n);
 }
 
+inline radian_t refractFromImpact(float n, float impact) noexcept {
+    return std::asin(impact / n);
+}
+
 // max incident angle for a given index of refraction
 inline radian_t maxIncidentAngle(float n) noexcept {
     return std::acos(std::sqrt((n * n - 1.0f) / 3.0f));
 }
 
-// deviation: angle between ray exiting the droplet and the ground
+// deviation: angle between the ray exiting the droplet and the ground
 // impactAngle: angle between the ground and the incident ray
 inline radian_t deviation(int bounces, radian_t incident, radian_t refracted) noexcept  {
     // each bounce adds 180 degrees as well as 2*refracted
     return ((bounces & 1) ? 0.0f : f::PI) +
            float(2 + 2 * bounces) * refracted - 2.0f * incident;
-}
-
-// deviation: angle between ray entering the droplet and ray exiting the droplet
-inline radian_t deviation(float n, radian_t incident) noexcept  {
-    return deviation(1, incident, refract(n, incident));
 }
 
 // index of refraction for a wavelength
