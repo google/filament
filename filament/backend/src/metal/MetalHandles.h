@@ -202,6 +202,7 @@ public:
     MetalProgram(MetalContext& context, Program&& program) noexcept;
 
     const MetalShaderCompiler::MetalFunctionBundle& getFunctions();
+    const MetalShaderCompiler::MetalFunctionBundle& getFunctionsIfPresent() const;
 
 private:
     void initialize();

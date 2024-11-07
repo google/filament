@@ -83,6 +83,10 @@ public:
             return std::get<Compute>(mPrograms);
         }
 
+        bool isRaster() const { return std::holds_alternative<Raster>(mPrograms); }
+
+        bool isCompute() const { return std::holds_alternative<Compute>(mPrograms); }
+
         static MetalFunctionBundle none() {
             return MetalFunctionBundle(None{});
         }
