@@ -100,6 +100,7 @@
 
 // Override the debug flags if we are forcing profiling mode
 #if defined(FILAMENT_FORCE_PROFILING_MODE)
+#undef FVK_DEBUG_FLAGS
 #define FVK_DEBUG_FLAGS (FVK_DEBUG_PROFILING)
 #endif
 

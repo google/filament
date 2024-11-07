@@ -108,6 +108,9 @@
 
 // Override the debug markers if we are forcing profiling mode
 #if defined(FILAMENT_FORCE_PROFILING_MODE)
+#   undef DEBUG_GROUP_MARKER_LEVEL
+#   undef DEBUG_MARKER_LEVEL
+
 #   define DEBUG_GROUP_MARKER_LEVEL   DEBUG_GROUP_MARKER_NONE
 #   define DEBUG_MARKER_LEVEL         DEBUG_MARKER_PROFILE
 #endif
