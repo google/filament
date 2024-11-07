@@ -21,7 +21,7 @@
 
 #include "bluegl/BlueGL.h"
 
-#include "osmesa.h"
+#include <osmesa.h>
 
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
@@ -56,6 +56,7 @@ protected:
 
 private:
     OSMesaContext mContext;
+    void* mOsMesaApi = nullptr;
 };
 
 } // namespace filament::backend
