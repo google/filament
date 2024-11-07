@@ -162,6 +162,8 @@ template<typename StateType,
          typename HashFn = utils::hash::MurmurHashFn<StateType>>
 class StateCache {
 
+    using MapType = tsl::robin_map<StateType, MetalType, HashFn>;
+
 public:
 
     StateCache() = default;
@@ -172,10 +174,13 @@ public:
     void setDevice(id<MTLDevice> device) noexcept { mDevice = device; }
 
     void removeIf(utils::Invocable<bool(const StateType&)> fn) noexcept {
-        for (auto it = mStateCache.begin(); it != mStateCache.end(); it++) {
+        typename MapType::const_iterator it = mStateCache.begin();
+        while (it != mStateCache.end()) {
             const auto& [key, _] = *it;
             if (UTILS_UNLIKELY(fn(key))) {
-                mStateCache.erase(it);
+                it = mStateCache.erase(it);
+            } else {
+                ++it;
             }
         }
     }
@@ -207,7 +212,7 @@ private:
     StateCreator creator;
     id<MTLDevice> mDevice = nil;
 
-    tsl::robin_map<StateType, MetalType, HashFn> mStateCache;
+    MapType mStateCache;
 
 };
 
