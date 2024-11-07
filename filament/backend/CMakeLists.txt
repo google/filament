@@ -371,10 +371,6 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
 if (LINUX AND FILAMENT_SUPPORTS_OSMESA)
     set(OSMESA_COMPILE_FLAGS
         -I${FILAMENT_OSMESA_PATH}/include/GL)
-    set(OSMESA_LINKER_FLAGS
-        -Wl,-L${FILAMENT_OSMESA_PATH}/lib/x86_64-linux-gnu/
-        -lOSMesa
-    )
 endif()
 
 if (MSVC)
