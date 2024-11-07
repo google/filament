@@ -98,6 +98,11 @@
 #define FVK_DEBUG_FLAGS 0
 #endif
 
+// Override the debug flags if we are forcing profiling mode
+#if defined(FILAMENT_FORCE_PROFILING_MODE)
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_PROFILING)
+#endif
+
 #define FVK_ENABLED(flags) (((FVK_DEBUG_FLAGS) & (flags)) == (flags))
 
 // Group marker only works only if validation or debug utils is enabled since it uses
@@ -132,6 +137,10 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 // end shorthands
 
 #if FVK_DEBUG_FLAGS == FVK_DEBUG_PROFILING
+
+    #ifndef NDEBUG
+        #error PROFILING is meaningless in DEBUG mode.
+    #endif
 
     #define FVK_SYSTRACE_CONTEXT()
     #define FVK_SYSTRACE_START(marker)
