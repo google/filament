@@ -156,9 +156,6 @@ private:
 
     bool const mIsSRGBSwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
-
-    // Between the begin and end command render pass we cache the command buffer
-    VulkanCommandBuffer* mCurrentCommandBuffer;
 };
 
 } // namespace filament::backend

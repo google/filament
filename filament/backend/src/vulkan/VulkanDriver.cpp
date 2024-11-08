@@ -683,8 +683,8 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
     VulkanCommandBuffer* cmdbuf;
-    if (mCurrentCommandBuffer) {
-        cmdbuf = mCurrentCommandBuffer;
+    if (mCurrentRenderPass.commandBuffer) {
+        cmdbuf = mCurrentRenderPass.commandBuffer;
     } else {
         cmdbuf = &mCommands.get();
     }
@@ -1249,9 +1249,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
     if (rt->isProtected()) {
-        mCurrentCommandBuffer = &mCommands.getProtected();
+        mCurrentRenderPass.commandBuffer = &mCommands.getProtected();
     } else {
-        mCurrentCommandBuffer = &mCommands.get();
+        mCurrentRenderPass.commandBuffer = &mCommands.get();
     }
 
     // Filament has the expectation that the contents of the swap chain are not preserved on the
@@ -1278,7 +1278,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // If that's the case, we need to change the layout of the texture to DEPTH_SAMPLER, which is a
     // more general layout. Otherwise, we prefer the DEPTH_ATTACHMENT layout, which is optimal for
     // the non-sampling case.
-    VkCommandBuffer const cmdbuffer = mCurrentCommandBuffer->buffer();
+    VkCommandBuffer const cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
     // Scissor is reset with each render pass
     // This also takes care of VUID-vkCmdDrawIndexed-None-07832.
@@ -1313,7 +1313,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     fbkey.renderPass = renderPass;
     fbkey.layers = 1;
 
-    rt->emitBarriersBeginRenderPass(*mCurrentCommandBuffer);
+    rt->emitBarriersBeginRenderPass(*mCurrentRenderPass.commandBuffer);
 
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
@@ -1327,7 +1327,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 #endif
 
     // The current command buffer now has references to the render target and its attachments.
-    mCurrentCommandBuffer->acquire(rt);
+    mCurrentRenderPass.commandBuffer->acquire(rt);
 
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
@@ -1396,7 +1396,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 void VulkanDriver::endRenderPass(int) {
     FVK_SYSTRACE_SCOPE();
 
-    VkCommandBuffer cmdbuffer = mCurrentCommandBuffer->buffer();
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     vkCmdEndRenderPass(cmdbuffer);
 
     VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
@@ -1404,13 +1404,13 @@ void VulkanDriver::endRenderPass(int) {
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
     // pipeline barrier between framebuffer writes and shader reads.
-    rt->emitBarriersEndRenderPass(*mCurrentCommandBuffer);
+    rt->emitBarriersEndRenderPass(*mCurrentRenderPass.commandBuffer);
 
     mRenderPassFboInfo = {};
     mCurrentRenderPass.renderTarget = nullptr;
     mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
 
-    mCurrentCommandBuffer = nullptr;
+    mCurrentRenderPass.commandBuffer = nullptr;
 }
 
 void VulkanDriver::nextSubpass(int) {
@@ -1421,7 +1421,8 @@ void VulkanDriver::nextSubpass(int) {
     assert_invariant(renderTarget);
     assert_invariant(mCurrentRenderPass.params.subpassMask);
 
-    vkCmdNextSubpass(mCurrentCommandBuffer->buffer(), VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdNextSubpass(mCurrentRenderPass.commandBuffer->buffer(), 
+            VK_SUBPASS_CONTENTS_INLINE);
 
     mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
             ++mCurrentRenderPass.currentSubpass);
@@ -1464,8 +1465,8 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
     assert_invariant(mBoundPipeline.program && "Expect a program when writing to push constants");
-    mBoundPipeline.program->writePushConstant(mCurrentCommandBuffer, mBoundPipeline.pipelineLayout, stage, index,
-            value);
+    mBoundPipeline.program->writePushConstant(mCurrentRenderPass.commandBuffer, 
+            mBoundPipeline.pipelineLayout, stage, index, value);
 }
 
 void VulkanDriver::insertEventMarker(char const* string) {
@@ -1653,7 +1654,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     PolygonOffset const& depthOffset = pipelineState.polygonOffset;
 
     auto* program = mResourceAllocator.handle_cast<VulkanProgram*>(programHandle);
-    mCurrentCommandBuffer->acquire(program);
+    mCurrentRenderPass.commandBuffer->acquire(program);
 
     // Update the VK raster state.
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
@@ -1717,16 +1718,16 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     };
 
     mPipelineCache.bindLayout(pipelineLayout);
-    mPipelineCache.bindPipeline(mCurrentCommandBuffer);
+    mPipelineCache.bindPipeline(mCurrentRenderPass.commandBuffer);
 }
 
 void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     FVK_SYSTRACE_SCOPE();
 
-    VkCommandBuffer cmdbuffer = mCurrentCommandBuffer->buffer();
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
     const VulkanRenderPrimitive& prim = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
-    mCurrentCommandBuffer->acquire(prim.indexBuffer);
-    mCurrentCommandBuffer->acquire(prim.vertexBuffer);
+    mCurrentRenderPass.commandBuffer->acquire(prim.indexBuffer);
+    mCurrentRenderPass.commandBuffer->acquire(prim.vertexBuffer);
 
     // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
     // to allow to call this before bindPipeline(), so the validation can only happen in draw()
@@ -1759,9 +1760,10 @@ void VulkanDriver::bindDescriptorSet(
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
-    VkCommandBuffer cmdbuffer = mCurrentCommandBuffer->buffer();
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
-    mDescriptorSetManager.commit(mCurrentCommandBuffer, mBoundPipeline.pipelineLayout,
+    mDescriptorSetManager.commit(mCurrentRenderPass.commandBuffer, 
+            mBoundPipeline.pipelineLayout,
             mBoundPipeline.descriptorSetMask);
 
     // Finally, make the actual draw call. TODO: support subranges
@@ -1787,7 +1789,7 @@ void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 }
 
 void VulkanDriver::scissor(Viewport scissorBox) {
-    VkCommandBuffer cmdbuffer = mCurrentCommandBuffer->buffer();
+    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
 
     // TODO: it's a common case that scissor() is called with (0, 0, maxint, maxint)
     //       we should maybe have a fast path for this and avoid vkCmdSetScissor() if possible

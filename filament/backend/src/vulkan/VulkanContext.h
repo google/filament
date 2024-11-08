@@ -82,6 +82,8 @@ private:
 };
 
 struct VulkanRenderPass {
+    // Between the begin and end command render pass we cache the command buffer
+    VulkanCommandBuffer* commandBuffer;
     VulkanRenderTarget* renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
