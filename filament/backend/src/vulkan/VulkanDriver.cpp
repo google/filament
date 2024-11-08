@@ -1414,7 +1414,7 @@ void VulkanDriver::nextSubpass(int) {
     assert_invariant(renderTarget);
     assert_invariant(mCurrentRenderPass.params.subpassMask);
 
-    vkCmdNextSubpass(mCommands.get().buffer(), VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdNextSubpass(mCurrentCommandBuffer->buffer(), VK_SUBPASS_CONTENTS_INLINE);
 
     mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
             ++mCurrentRenderPass.currentSubpass);
@@ -1457,8 +1457,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
         backend::PushConstantVariant value) {
     assert_invariant(mBoundPipeline.program && "Expect a program when writing to push constants");
-    VulkanCommands* commands = &mCommands;
-    mBoundPipeline.program->writePushConstant(commands, mBoundPipeline.pipelineLayout, stage, index,
+    mBoundPipeline.program->writePushConstant(mCurrentCommandBuffer, mBoundPipeline.pipelineLayout, stage, index,
             value);
 }
 
