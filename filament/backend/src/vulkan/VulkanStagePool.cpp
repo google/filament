@@ -37,6 +37,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     if (iter != mFreeStages.end()) {
         auto stage = iter->second;
         mFreeStages.erase(iter);
+        stage->lastAccessed = mCurrentFrame;
         mUsedStages.insert(stage);
         return stage;
     }
@@ -74,6 +75,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     for (auto image : mFreeImages) {
         if (image->format == vkformat && image->width == width && image->height == height) {
             mFreeImages.erase(image);
+            image->lastAccessed = mCurrentFrame;
             mUsedImages.insert(image);
             return image;
         }
