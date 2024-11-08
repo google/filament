@@ -64,7 +64,7 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
         (isProtected ? VK_MEMORY_PROPERTY_PROTECTED_BIT : 0U);
     uint32_t memoryTypeIndex
-            = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            = context.selectMemoryType(memReqs.memoryTypeBits, requiredMemoryFlags);
 
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
             << "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.";
