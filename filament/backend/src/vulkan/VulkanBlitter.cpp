@@ -126,8 +126,7 @@ struct BlitterUniforms {
 }// anonymous namespace
 
 VulkanBlitter::VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept
-    : mPhysicalDevice(physicalDevice),
-      mCommands(commands) {}
+        : mPhysicalDevice(physicalDevice), mCommands(commands) {}
 
 void VulkanBlitter::resolve(VulkanAttachment dst, VulkanAttachment src) {
 

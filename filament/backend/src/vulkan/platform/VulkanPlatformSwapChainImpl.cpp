@@ -115,7 +115,8 @@ void VulkanPlatformSwapChainImpl::destroy() {
     mSwapChainBundle.colors.clear();
 }
 
-VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format, bool isProtected) {
+VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format, 
+        bool isProtected) {
     auto [image, memory] = createImageAndMemory(mContext, mDevice, extent, format, isProtected);
     mMemory.insert({image, memory});
     return image;
@@ -253,7 +254,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
-    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat, mIsProtected);
+    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, 
+            mSwapChainBundle.depthFormat, mIsProtected);
     mSwapChainBundle.isProtected = mIsProtected;
 
     FVK_LOGI << "vkCreateSwapchain"
