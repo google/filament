@@ -1248,11 +1248,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkExtent2D const& extent = rt->getExtent();
     assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
-    if (rt->isProtected()) {
-        mCurrentRenderPass.commandBuffer = &mCommands.getProtected();
-    } else {
-        mCurrentRenderPass.commandBuffer = &mCommands.get();
-    }
+    VulkanCommandBuffer* commandBuffer = rt->isProtected() ? 
+           &mCommands.getProtected() : &mCommands.get();
 
     // Filament has the expectation that the contents of the swap chain are not preserved on the
     // first render pass. Note however that its contents are often preserved on subsequent render
@@ -1278,7 +1275,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // If that's the case, we need to change the layout of the texture to DEPTH_SAMPLER, which is a
     // more general layout. Otherwise, we prefer the DEPTH_ATTACHMENT layout, which is optimal for
     // the non-sampling case.
-    VkCommandBuffer const cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
+    VkCommandBuffer const cmdbuffer = commandBuffer->buffer();
 
     // Scissor is reset with each render pass
     // This also takes care of VUID-vkCmdDrawIndexed-None-07832.
@@ -1386,6 +1383,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     vkCmdSetViewport(cmdbuffer, 0, 1, &viewport);
 
     mCurrentRenderPass = {
+        .commandBuffer = commandBuffer,
         .renderTarget = rt,
         .renderPass = renderPassInfo.renderPass,
         .params = params,
