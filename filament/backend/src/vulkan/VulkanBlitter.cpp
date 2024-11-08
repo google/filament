@@ -151,7 +151,8 @@ void VulkanBlitter::resolve(VulkanAttachment dst, VulkanAttachment src) {
     }
 #endif
 
-    VulkanCommandBuffer& commands = mCommands->get();
+    VulkanCommandBuffer& commands = dst.texture->getIsProtected() ?
+    mCommands->getProtected() : mCommands->get();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
     resolveFast(&commands, aspect, src, dst);
@@ -176,7 +177,8 @@ void VulkanBlitter::blit(VkFilter filter,
 #endif
     // src and dst should have the same aspect here
     VkImageAspectFlags const aspect = src.texture->getImageAspect();
-    VulkanCommandBuffer& commands = mCommands->get();
+    VulkanCommandBuffer& commands = dst.texture->getIsProtected() ?
+        mCommands->getProtected() : mCommands->get();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
     blitFast(&commands, aspect, filter, src, dst, srcRectPair, dstRectPair);
