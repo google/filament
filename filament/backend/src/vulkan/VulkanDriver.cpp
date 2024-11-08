@@ -700,6 +700,13 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
             mAllocator, &mCommands, &mResourceAllocator, mStagePool, nativeWindow, flags);
     mResourceManager.acquire(swapChain);
+
+    if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
+        if (!isProtectedContentSupported()) {
+            utils::slog.w << "protected swapchain requested, but Vulkan does not support it"
+                << utils::io::endl;
+        }
+    }
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,

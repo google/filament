@@ -340,6 +340,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             continue;
         }
 
+        mProtected |= texture->getIsProtected();
+
         attachments.push_back(attachment);
         mInfo->colors.set(index);
 
