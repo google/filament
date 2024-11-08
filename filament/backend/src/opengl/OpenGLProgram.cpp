@@ -255,7 +255,9 @@ void OpenGLProgram::updateUniforms(
     for (size_t i = 0, c = records.uniforms.size(); i < c; i++) {
         Program::Uniform const& u = records.uniforms[i];
         GLint const loc = records.locations[i];
-        if (loc < 0) {
+        // mRec709Location is special, it is handled by setRec709ColorSpace() and the corresponding
+        // entry in `buffer` is typically not initialized, so we skip it.
+        if (loc < 0 || loc == mRec709Location) {
             continue;
         }
         // u.offset is in 'uint32_t' units

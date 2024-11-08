@@ -614,7 +614,7 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
                 featureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
                     gets.max_combined_texture_image_units >=
-                    (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                            (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
                     featureLevel = FeatureLevel::FEATURE_LEVEL_3;
                 }
             }
@@ -623,15 +623,13 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
 #   ifndef IOS // IOS is guaranteed to have ES3.x
     else if (UTILS_UNLIKELY(major == 2)) {
         // Runtime OpenGL version is ES 2.x
-#       if defined(BACKEND_OPENGL_LEVEL_GLES30)
-        // mandatory extensions (all supported by Mali-400 and Adreno 304)
-        assert_invariant(exts.OES_depth_texture);
-        assert_invariant(exts.OES_depth24);
-        assert_invariant(exts.OES_packed_depth_stencil);
-        assert_invariant(exts.OES_rgb8_rgba8);
-        assert_invariant(exts.OES_standard_derivatives);
-        assert_invariant(exts.OES_texture_npot);
-#       endif
+        // note: mandatory extensions (all supported by Mali-400 and Adreno 304)
+        //      OES_depth_texture
+        //      OES_depth24
+        //      OES_packed_depth_stencil
+        //      OES_rgb8_rgba8
+        //      OES_standard_derivatives
+        //      OES_texture_npot
         featureLevel = FeatureLevel::FEATURE_LEVEL_0;
     }
 #   endif // IOS
