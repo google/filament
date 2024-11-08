@@ -1310,7 +1310,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     fbkey.renderPass = renderPass;
     fbkey.layers = 1;
 
-    rt->emitBarriersBeginRenderPass(*mCurrentRenderPass.commandBuffer);
+    rt->emitBarriersBeginRenderPass(*commandBuffer);
 
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
@@ -1324,7 +1324,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 #endif
 
     // The current command buffer now has references to the render target and its attachments.
-    mCurrentRenderPass.commandBuffer->acquire(rt);
+    commandBuffer->acquire(rt);
 
     // Populate the structures required for vkCmdBeginRenderPass.
     VkRenderPassBeginInfo renderPassInfo {
