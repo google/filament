@@ -60,6 +60,9 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     VkMemoryRequirements memReqs;
     vkGetImageMemoryRequirements(device, image, &memReqs);
 
+    const VkFlags requiredMemoryFlags =
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+        (isProtected ? VK_MEMORY_PROPERTY_PROTECTED_BIT : 0U);
     uint32_t memoryTypeIndex
             = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
