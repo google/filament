@@ -19,7 +19,7 @@
 
 float sampleDepth(const mediump sampler2DArrayShadow map,
         const highp vec4 scissorNormalized,
-        const uint layer,  highp vec2 uv, float depth) {
+        const uint layer,  highp vec2 uv, highp float depth) {
 
     // clamp needed for directional lights and/or large kernels
     uv = clamp(uv, scissorNormalized.xy, scissorNormalized.zw);
@@ -51,7 +51,7 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map,
     highp vec2 texelSize = vec2(1.0) / size;
 
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
-    float depth = position.z;
+    highp float depth = position.z;
 
     // clamp position to avoid overflows below, which cause some GPUs to abort
     position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
