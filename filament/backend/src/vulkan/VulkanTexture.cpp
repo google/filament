@@ -174,8 +174,8 @@ VulkanTextureState const* VulkanTexture::getSharedState() const {
 // Constructor for internally passed VkImage
 VulkanTexture::VulkanTexture(
         VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanResourceAllocator* handleAllocator,
-        VkImage image, VkFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        VulkanResourceAllocator* handleAllocator, VkImage image, 
+        VkDeviceMemory memory, VkFormat format, uint8_t samples, uint32_t width, uint32_t height,
         TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated)
         : HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, 1, TextureFormat::UNUSED,
                 tusage),
@@ -189,6 +189,7 @@ VulkanTexture::VulkanTexture(
                   any(usage& TextureUsage::PROTECTED))) {
     auto* const state = getSharedState();
     state->mTextureImage = image;
+    state->mTextureImageMemory = memory;
     mPrimaryViewRange = state->mFullViewRange;
 }
 

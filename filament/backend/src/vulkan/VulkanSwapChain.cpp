@@ -71,11 +71,11 @@ void VulkanSwapChain::update() {
     }
     for (auto const color: bundle.colors) {
         mColors.push_back(std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
-                color, bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
+                color, nullptr, bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
                 colorUsage, mStagePool, true /* heap allocated */));
     }
     mDepth = std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
-            bundle.depth, bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
+            bundle.depth, nullptr, bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
             depthUsage, mStagePool, true /* heap allocated */);
 
     mExtent = bundle.extent;

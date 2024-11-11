@@ -97,7 +97,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // The texture will never destroy the given VkImage, but it does manages its subresources.
     VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
             VulkanResourceAllocator* handleAllocator,
-            VkImage image,
+            VkImage image, VkDeviceMemory memory,
             VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
             VulkanStagePool& stagePool, bool heapAllocated = false);
 

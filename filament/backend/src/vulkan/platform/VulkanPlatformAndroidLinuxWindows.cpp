@@ -201,7 +201,9 @@ namespace filament::backend {
 #endif //__ANDROID__
         return bits;
     }
-    void VulkanPlatform::createExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, VkImage* pImage) {
+    void VulkanPlatform::createExternalImageImpl(void* externalBuffer, VkDevice device, 
+            const VkAllocationCallbacks* allocator, VkImage& pImage,
+            uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected) {
 #if defined(__ANDROID__)
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
         AHardwareBuffer_Desc buffer_desc;
@@ -211,7 +213,6 @@ namespace filament::backend {
         VkImageUsageFlags usage;
         //technically we don't need the format (since whe will query it in the following APIs
         //directly from VK). But we still need to check the format to differenciate DS from Color
-        bool isProtected;
         GetVKFormatAndUsage(buffer_desc, format, usage, isProtected);
 
         // All this work now is for external formats (query the underlying VK for the format)
@@ -255,12 +256,17 @@ namespace filament::backend {
             (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | usage);
 
         VkResult const result =
-            vkCreateImage(device, &imageInfo, allocator, pImage);
+            vkCreateImage(device, &imageInfo, allocator, &pImage);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS);
+
+        width = buffer_desc.width;
+        height = buffer_desc.height;
+        format = format_info.format;
 #endif
     }
-    void VulkanPlatform::allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, VkImage pImage, uint32_t memoryTypeIndex, VkDeviceMemory* pMemory) {
+    void VulkanPlatform::allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, VkImage pImage, VkDeviceMemory pMemory) {
 #if defined(__ANDROID__)
+        uint32_t memoryTypeIndex = getExternalImageMemoryBits(externalBuffer, device);
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
         VkAndroidHardwareBufferFormatPropertiesANDROID format_info = {
         .sType =
@@ -291,7 +297,7 @@ namespace filament::backend {
             .allocationSize = properties.allocationSize,
             .memoryTypeIndex = memoryTypeIndex };
         VkResult const result =
-            vkAllocateMemory(device, &alloc_info, allocator, pMemory);
+            vkAllocateMemory(device, &alloc_info, allocator, &pMemory);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS);
 #endif
     }

@@ -945,13 +945,16 @@ VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
     return mImpl->mProtectedGraphicsQueue;
 }
 
-void VulkanPlatform::createExternalImage(void* imageBuffer, VkImage* pImage, 
-        VkDeviceMemory* pMemory) const noexcept {
-    createExternalImage(imageBuffer, mImpl->mDevice, nullptr, pImage);
-    uint32_t bits = getExternalImageMemoryBits(imageBuffer, mImpl->mDevice);
-    allocateExternalImage(imageBuffer, mImpl->mDevice, nullptr, *pImage, bits, pMemory);
-    VkResult result = vkBindImageMemory(mImpl->mDevice, *pImage, *pMemory, 0);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error=" << result << ".";
+void VulkanPlatform::createExternalImage(void* imageBuffer, VkImage& pImage, 
+        VkDeviceMemory& pMemory, uint32_t& width, uint32_t& height, 
+        VkFormat& format, bool& isProtected)  const noexcept {
+    createExternalImageImpl(imageBuffer, mImpl->mDevice, nullptr, pImage, 
+        width, height, format, isProtected);
+    allocateExternalImage(imageBuffer, mImpl->mDevice, nullptr,
+        pImage, pMemory);
+    VkResult result = vkBindImageMemory(mImpl->mDevice, pImage, pMemory, 0);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
+        << result << ".";
 }
 
 #undef SWAPCHAIN_RET_FUNC

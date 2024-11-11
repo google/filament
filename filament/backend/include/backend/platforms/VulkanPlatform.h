@@ -295,17 +295,18 @@ public:
     /**
     * @return an image created from the external buffer
     */
-    void createExternalImage(void* imageBuffer, VkImage* pImage, VkDeviceMemory* pMemory)
-            const noexcept;
+    void createExternalImage(void* imageBuffer, VkImage& pImage, VkDeviceMemory& pMemory,
+            uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected) const noexcept;
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
 
     static uint32_t getExternalImageMemoryBits(void* externalBuffer, VkDevice device);
-    static void createExternalImage(void* externalBuffer, VkDevice device, 
-        const VkAllocationCallbacks* allocator, VkImage* pImage);
+    static void createExternalImageImpl(void* externalBuffer, VkDevice device, 
+        const VkAllocationCallbacks* allocator, VkImage& pImage,
+        uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected);
     static void allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, 
-        VkImage pImage, uint32_t memoryTypeIndex, VkDeviceMemory* pMemory);
+        VkImage pImage, VkDeviceMemory pMemory);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
