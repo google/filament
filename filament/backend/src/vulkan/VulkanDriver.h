@@ -24,13 +24,14 @@
 #include "VulkanHandles.h"
 #include "VulkanPipelineCache.h"
 #include "VulkanReadPixels.h"
-#include "VulkanResourceAllocator.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanUtility.h"
 #include "backend/DriverEnums.h"
 #include "caching/VulkanDescriptorSetManager.h"
 #include "caching/VulkanPipelineLayoutCache.h"
+#include "memory/ResourceManager.h"
+#include "memory/ResourcePointer.h"
 
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
@@ -77,6 +78,9 @@ public:
 #endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 private:
+    template<typename D>
+    using resource_ptr = fvkmemory::resource_ptr<D>;
+
     static constexpr uint8_t MAX_SAMPLER_BINDING_COUNT = Program::SAMPLER_BINDING_COUNT;
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous,
@@ -113,21 +117,16 @@ private:
     void collectGarbage();
 
     VulkanPlatform* mPlatform = nullptr;
+    fvkmemory::ResourceManager mResourceManager;
     std::unique_ptr<VulkanTimestamps> mTimestamps;
 
-    VulkanSwapChain* mCurrentSwapChain = nullptr;
-    VulkanRenderTarget* mDefaultRenderTarget = nullptr;
+    resource_ptr<VulkanSwapChain> mCurrentSwapChain;
+    resource_ptr<VulkanRenderTarget> mDefaultRenderTarget;
     VulkanRenderPass mCurrentRenderPass = {};
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
 
     VulkanContext mContext = {};
-    VulkanResourceAllocator mResourceAllocator;
-    VulkanResourceManager mResourceManager;
-
-    // Used for resources that are created synchronously and used and destroyed on the backend
-    // thread.
-    VulkanThreadSafeResourceManager mThreadSafeResourceManager;
 
     VulkanCommands mCommands;
     VulkanPipelineLayoutCache mPipelineLayoutCache;
@@ -142,7 +141,7 @@ private:
 
     // This is necessary for us to write to push constants after binding a pipeline.
     struct {
-        VulkanProgram* program;
+        resource_ptr<VulkanProgram> program;
         VkPipelineLayout pipelineLayout;
         DescriptorSetMask descriptorSetMask;
     } mBoundPipeline = {};

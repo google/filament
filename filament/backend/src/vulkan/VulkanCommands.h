@@ -23,8 +23,8 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
-#include "VulkanResources.h"
 #include "VulkanUtility.h"
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <utils/Condition.h>
 #include <utils/FixedCapacityVector.h>
@@ -38,6 +38,8 @@
 #include <utility>
 
 namespace filament::backend {
+
+using namespace fvkmemory;
 
 struct VulkanContext;
 
@@ -65,7 +67,7 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext* mContext, VulkanResourceAllocator* allocator,
+    VulkanCommandBuffer(VulkanContext* mContext,
             VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
@@ -73,13 +75,10 @@ struct VulkanCommandBuffer {
 
     ~VulkanCommandBuffer();
 
-    inline void acquire(VulkanResource* resource) {
-        mResourceManager.acquire(resource);
+    inline void acquire(fvkmemory::resource_ptr<fvkmemory::Resource> resource) {
+        mResources.push_back(resource);
     }
 
-    inline void acquire(VulkanAcquireOnlyResourceManager* srcResources) {
-        mResourceManager.acquireAll(srcResources);
-    }
     void reset() noexcept;
 
     inline void insertWait(VkSemaphore sem) {
@@ -119,21 +118,20 @@ private:
     bool const isProtected;
     VkDevice mDevice;
     VkQueue mQueue;
-    VulkanAcquireOnlyResourceManager mResourceManager;
     CappedArray<VkSemaphore, 2> mWaitSemaphores;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
-
+    std::vector<fvkmemory::resource_ptr<Resource>> mResources;    
 };
 
 struct CommandBufferPool {
     using ActiveBuffers = utils::bitset32;
     static constexpr int8_t INVALID = -1;
 
-    CommandBufferPool(VulkanContext* context, VulkanResourceAllocator* allocator, VkDevice device,
-            VkQueue queue, uint8_t queueFamilyIndex, bool isProtected);
+    CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
+            uint8_t queueFamilyIndex, bool isProtected);
     ~CommandBufferPool();
 
     VulkanCommandBuffer& getRecording();
@@ -189,8 +187,7 @@ private:
 class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context,
-            VulkanResourceAllocator* allocator);
+            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context);
 
     void terminate();
 
@@ -241,7 +238,6 @@ private:
     VkQueue const mProtectedQueue;
     // For defered initialization if/when we need protected content
     uint32_t const mProtectedQueueFamilyIndex;
-    VulkanResourceAllocator* mAllocator;
     VulkanContext* mContext;
 
     std::unique_ptr<CommandBufferPool> mPool;
