@@ -394,24 +394,21 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
-    if (UTILS_UNLIKELY(mBoundProgram == p)) {
-        // program didn't change, don't do anything.
-        return true;
-    }
+    bool success = true;
+    if (mBoundProgram != p) {
+        // compile/link the program if needed and call glUseProgram
+        success = p->use(this, mContext);
+        assert_invariant(success == p->isValid());
+        if (success) {
+            // TODO: we could even improve this if the program could tell us which of the descriptors
+            //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
+            //       change often.
+            decltype(mInvalidDescriptorSetBindings) changed;
+            changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+            mInvalidDescriptorSetBindings |= changed;
 
-    // compile/link the program if needed and call glUseProgram
-    bool const success = p->use(this, mContext);
-    assert_invariant(success == p->isValid());
-  
-    if (success) {
-        // TODO: we could even improve this if the program could tell us which of the descriptors
-        //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
-        //       change often.
-        decltype(mInvalidDescriptorSetBindings) changed;
-        changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
-        mInvalidDescriptorSetBindings |= changed;
-
-        mBoundProgram = p;
+            mBoundProgram = p;
+        }
     }
 
     if (UTILS_UNLIKELY(mContext.isES2() && success)) {
@@ -1673,7 +1670,7 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
-        sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
+        sc->rec709 = ((flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) &&
                 !mPlatform.isSRGBSwapChainSupported());
     }
 }
