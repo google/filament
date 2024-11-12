@@ -19,8 +19,7 @@
 namespace filament::backend {
 
 VulkanTimerQuery::VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices)
-    : VulkanThreadSafeResource(VulkanResourceType::TIMER_QUERY),
-      mStartingQueryIndex(std::get<0>(indices)),
+    : mStartingQueryIndex(std::get<0>(indices)),
       mStoppingQueryIndex(std::get<1>(indices)) {}
 
 void VulkanTimerQuery::setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {

@@ -95,7 +95,6 @@ private:
     AllocatorImpl mHandleAllocatorImpl;
 
     using GcList = std::vector<std::pair<ResourceType, HandleId>>;
-
     utils::Mutex mThreadSafeGcListMutex;
     GcList mThreadSafeGcList;
     GcList mGcList;

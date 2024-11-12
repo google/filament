@@ -221,9 +221,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanSwapChain.h
             src/vulkan/VulkanReadPixels.cpp
             src/vulkan/VulkanReadPixels.h
-            src/vulkan/VulkanResourceAllocator.h
-            src/vulkan/VulkanResources.cpp
-            src/vulkan/VulkanResources.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp

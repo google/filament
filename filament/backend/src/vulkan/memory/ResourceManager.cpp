@@ -22,7 +22,7 @@
 namespace filament::backend::fvkmemory {
 
 namespace {
-#if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
+#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
 uint32_t COUNTER[(size_t) ResourceType::UNDEFINED_TYPE] = {};
 #endif
 }
@@ -47,8 +47,7 @@ void ResourceManager::gc() noexcept {
     }
 
     GcList gcs;
-    gcs.insert(gcs.end(), mGcList.begin(), mGcList.end());
-    mGcList.clear();
+    std::swap(gcs, mGcList);
     destroyAll(gcs);
 }
 
@@ -105,20 +104,20 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::UNDEFINED_TYPE:
             break;
     }
-#if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
+#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     COUNTER[(size_t) type]--;
 #endif
 }
 
 void ResourceManager::traceConstruction(ResourceType type, HandleId id) {
-#if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
+#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     assert_invariant(type != ResourceType::UNDEFINED_TYPE);
     COUNTER[(size_t) type]++;
 #endif
 }
 
 void ResourceManager::print() const noexcept {
-#if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
+#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     utils::slog.e << "-------------------" << utils::io::endl;
     for (size_t i = 0; i < (size_t) ResourceType::UNDEFINED_TYPE; ++i) {
         utils::slog.e <<"    " << getTypeStr((ResourceType) i) << "=" << COUNTER[i] << utils::io::endl;
