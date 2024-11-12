@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2021 The Android Open Source Project
  *
-* Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -63,7 +63,7 @@
 #define FVK_DEBUG_SHADER_MODULE           0x00000800
 #define FVK_DEBUG_READ_PIXELS             0x00001000
 #define FVK_DEBUG_PIPELINE_CACHE          0x00002000
-#define FVK_DEBUG_ALLOCATION              0x00004000
+#define FVK_DEBUG_STAGING_ALLOCATION      0x00004000
 
 // Enable the debug utils extension if it is available.
 #define FVK_DEBUG_DEBUG_UTILS             0x00008000

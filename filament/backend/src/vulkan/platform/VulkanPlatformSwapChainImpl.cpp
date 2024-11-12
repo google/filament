@@ -29,7 +29,8 @@ namespace filament::backend {
 namespace {
 
 std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& context,
-        VkDevice device, VkExtent2D extent, VkFormat format) {
+        VkDevice device, VkExtent2D extent, VkFormat format,
+        bool isProtected) {
     bool const isDepth = isVkDepthFormat(format);
     // Filament expects blit() to work with any texture, so we almost always set these usage flags
     // (see copyFrame() and readPixels()).
@@ -38,6 +39,7 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
 
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .flags = isProtected ? VK_IMAGE_CREATE_PROTECTED_BIT : VkImageCreateFlags(0),
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
         .extent = {extent.width, extent.height, 1},
@@ -58,8 +60,11 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     VkMemoryRequirements memReqs;
     vkGetImageMemoryRequirements(device, image, &memReqs);
 
+    const VkFlags requiredMemoryFlags =
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+        (isProtected ? VK_MEMORY_PROPERTY_PROTECTED_BIT : 0U);
     uint32_t memoryTypeIndex
-            = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+            = context.selectMemoryType(memReqs.memoryTypeBits, requiredMemoryFlags);
 
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
             << "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.";
@@ -110,8 +115,9 @@ void VulkanPlatformSwapChainImpl::destroy() {
     mSwapChainBundle.colors.clear();
 }
 
-VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format) {
-    auto [image, memory] = createImageAndMemory(mContext, mDevice, extent, format);
+VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format, 
+        bool isProtected) {
+    auto [image, memory] = createImageAndMemory(mContext, mDevice, extent, format, isProtected);
     mMemory.insert({image, memory});
     return image;
 }
@@ -248,7 +254,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
-    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
+    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, 
+            mSwapChainBundle.depthFormat, mIsProtected);
     mSwapChainBundle.isProtected = mIsProtected;
 
     FVK_LOGI << "vkCreateSwapchain"
@@ -356,13 +363,13 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
     images.reserve(HEADLESS_SWAPCHAIN_SIZE);
     images.resize(HEADLESS_SWAPCHAIN_SIZE);
     for (size_t i = 0; i < HEADLESS_SWAPCHAIN_SIZE; ++i) {
-        images[i] = createImage(extent, mSwapChainBundle.colorFormat);
+        images[i] = createImage(extent, mSwapChainBundle.colorFormat, false);
     }
 
     bool const hasStencil = (flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), hasStencil);
-    mSwapChainBundle.depth = createImage(extent, mSwapChainBundle.depthFormat);
+    mSwapChainBundle.depth = createImage(extent, mSwapChainBundle.depthFormat, false);
 }
 
 VulkanPlatformHeadlessSwapChain::~VulkanPlatformHeadlessSwapChain() {

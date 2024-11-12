@@ -110,14 +110,13 @@ bool VulkanGroupMarkers::empty() const noexcept {
 
 #endif // FVK_DEBUG_GROUP_MARKERS
 
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext* context, VulkanResourceAllocator* allocator,
-        VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected)
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext* context, VkDevice device, VkQueue queue,
+        VkCommandPool pool, bool isProtected)
     : mContext(context),
       mMarkerCount(0),
       isProtected(isProtected),
       mDevice(device),
       mQueue(queue),
-      mResourceManager(allocator),
       mBuffer(createCommandBuffer(device, pool)),
       mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)) {
     VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
@@ -134,7 +133,7 @@ VulkanCommandBuffer::~VulkanCommandBuffer() {
 
 void VulkanCommandBuffer::reset() noexcept {
     mMarkerCount = 0;
-    mResourceManager.clear();
+    mResources.clear();
     mWaitSemaphores.clear();
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
@@ -257,8 +256,8 @@ VkSemaphore VulkanCommandBuffer::submit() {
     return mSubmission;
 }
 
-CommandBufferPool::CommandBufferPool(VulkanContext* context, VulkanResourceAllocator* allocator,
-        VkDevice device, VkQueue queue, uint8_t queueFamilyIndex, bool isProtected)
+CommandBufferPool::CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
+        uint8_t queueFamilyIndex, bool isProtected)
     : mDevice(device),
       mRecording(INVALID) {
     VkCommandPoolCreateInfo createInfo = {
@@ -271,8 +270,8 @@ CommandBufferPool::CommandBufferPool(VulkanContext* context, VulkanResourceAlloc
     vkCreateCommandPool(device, &createInfo, VKALLOC, &mPool);
 
     for (size_t i = 0; i < CAPACITY; ++i) {
-        mBuffers.emplace_back(std::make_unique<VulkanCommandBuffer>(context, allocator, device,
-                queue, mPool, isProtected));
+        mBuffers.emplace_back(
+                std::make_unique<VulkanCommandBuffer>(context, device, queue, mPool, isProtected));
     }
 }
 
@@ -370,16 +369,12 @@ void CommandBufferPool::insertEvent(char const* marker) {
 }
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context,
-        VulkanResourceAllocator* allocator)
+        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context)
     : mDevice(device),
       mProtectedQueue(protectedQueue),
       mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
-      mAllocator(allocator),
       mContext(context),
-      mPool(std::make_unique<CommandBufferPool>(context, allocator, device, queue, queueFamilyIndex,
-                      false)) {
-}
+      mPool(std::make_unique<CommandBufferPool>(context, device, queue, queueFamilyIndex, false)) {}
 
 void VulkanCommands::terminate() {
     mPool.reset();
@@ -395,14 +390,19 @@ VulkanCommandBuffer& VulkanCommands::getProtected() {
     assert_invariant(mProtectedQueue != VK_NULL_HANDLE);
 
     if (!mProtectedPool) {
-        mProtectedPool = std::make_unique<CommandBufferPool>(mContext, mAllocator, mDevice,
-                mProtectedQueue, mProtectedQueueFamilyIndex, true);
+        mProtectedPool = std::make_unique<CommandBufferPool>(mContext, mDevice, mProtectedQueue,
+                mProtectedQueueFamilyIndex, true);
     }
     auto& ret = mProtectedPool->getRecording();
     return ret;
 }
 
 bool VulkanCommands::flush() {
+    // It's possible to call flush and wait at "terminate", in which case, we'll just return.
+    if (!mPool && !mProtectedPool) {
+        return false;
+    }
+
     VkSemaphore dependency = mInjectedDependency;
     VkSemaphore lastSubmit = mLastSubmit;
     bool hasFlushed = false;
@@ -434,6 +434,11 @@ bool VulkanCommands::flush() {
 }
 
 void VulkanCommands::wait() {
+    // It's possible to call flush and wait at "terminate", in which case, we'll just return.
+    if (!mPool && !mProtectedPool) {
+        return;
+    }
+
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("commands::wait");
 

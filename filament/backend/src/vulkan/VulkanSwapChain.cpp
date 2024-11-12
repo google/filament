@@ -15,6 +15,8 @@
  */
 
 #include "VulkanSwapChain.h"
+
+#include "VulkanCommands.h"
 #include "VulkanTexture.h"
 
 #include <utils/FixedCapacityVector.h>
@@ -26,19 +28,18 @@ using namespace utils;
 namespace filament::backend {
 
 VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context,
-        VmaAllocator allocator, VulkanCommands* commands, VulkanResourceAllocator* handleAllocator,
-        VulkanStagePool& stagePool,
-        void* nativeWindow, uint64_t flags, VkExtent2D extent)
-    : VulkanResource(VulkanResourceType::SWAP_CHAIN),
-      mPlatform(platform),
+        fvkmemory::ResourceManager* resourceManager, VmaAllocator allocator,
+        VulkanCommands* commands, VulkanStagePool& stagePool, void* nativeWindow, uint64_t flags,
+        VkExtent2D extent)
+    : mPlatform(platform),
+      mResourceManager(resourceManager),
       mCommands(commands),
       mAllocator(allocator),
-      mHandleAllocator(handleAllocator),
       mStagePool(stagePool),
       mHeadless(extent.width != 0 && extent.height != 0 && !nativeWindow),
       mFlushAndWaitOnResize(platform->getCustomization().flushAndWaitOnWindowResize),
       mTransitionSwapChainImageLayoutForPresent(
-            platform->getCustomization().transitionSwapChainImageLayoutForPresent),
+              platform->getCustomization().transitionSwapChainImageLayoutForPresent),
       mAcquired(false),
       mIsFirstRenderPass(true) {
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
@@ -52,6 +53,9 @@ VulkanSwapChain::~VulkanSwapChain() {
     // we're about to destroy.
     mCommands->flush();
     mCommands->wait();
+
+    mColors = {};
+    mDepth = {};
 
     mPlatform->destroy(swapChain);
 }
@@ -70,13 +74,16 @@ void VulkanSwapChain::update() {
         colorUsage |= TextureUsage::PROTECTED;
     }
     for (auto const color: bundle.colors) {
-        mColors.push_back(std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
-                color, bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
-                colorUsage, mStagePool, true /* heap allocated */));
+        auto colorTexture = fvkmemory::resource_ptr<VulkanTexture>::construct(mResourceManager,
+                device, mAllocator, mResourceManager, mCommands, color, bundle.colorFormat, 1,
+                bundle.extent.width, bundle.extent.height, TextureUsage::COLOR_ATTACHMENT,
+                mStagePool);
+        mColors.push_back(colorTexture);
     }
-    mDepth = std::make_unique<VulkanTexture>(device, mAllocator, mCommands, mHandleAllocator,
-            bundle.depth, bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
-            depthUsage, mStagePool, true /* heap allocated */);
+
+    mDepth = fvkmemory::resource_ptr<VulkanTexture>::construct(mResourceManager, device, mAllocator,
+            mResourceManager, mCommands, bundle.depth, bundle.depthFormat, 1, bundle.extent.width,
+            bundle.extent.height, TextureUsage::DEPTH_ATTACHMENT, mStagePool);
 
     mExtent = bundle.extent;
 }
@@ -95,7 +102,7 @@ void VulkanSwapChain::present() {
     }
 
     mCommands->flush();
-    
+
     // call the image ready wait function
     if (mExplicitImageReadyWait != nullptr) {
         mExplicitImageReadyWait(swapChain);
@@ -135,7 +142,7 @@ void VulkanSwapChain::acquire(bool& resized) {
     VkResult const result = mPlatform->acquire(swapChain, &imageSyncData);
     mCurrentSwapIndex = imageSyncData.imageIndex;
     mExplicitImageReadyWait = imageSyncData.explicitImageReadyWait;
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) 
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
         << "Cannot acquire in swapchain.";
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {
         mCommands->injectDependency(imageSyncData.imageReadySemaphore);

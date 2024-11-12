@@ -584,6 +584,10 @@ void FRenderer::render(FView const* view) {
 void FRenderer::renderInternal(FView const* view) {
     FEngine& engine = mEngine;
 
+    FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
+                                engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))
+                    << "post-processing is not supported at FEATURE_LEVEL_0";
+
     // per-renderpass data
     RootArenaScope rootArenaScope(engine.getPerRenderPassArena());
 
