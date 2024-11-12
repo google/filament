@@ -209,7 +209,6 @@ namespace filament::backend {
         AHardwareBuffer_Desc buffer_desc;
         AHardwareBuffer_describe(buffer, &buffer_desc);
 
-        VkFormat format;
         VkImageUsageFlags usage;
         //technically we don't need the format (since whe will query it in the following APIs
         //directly from VK). But we still need to check the format to differenciate DS from Color
