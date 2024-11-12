@@ -237,23 +237,23 @@ ostream::Buffer::~Buffer() noexcept {
 
 void ostream::Buffer::advance(ssize_t n) noexcept {
     if (n > 0) {
-        size_t const written = n < size ? size_t(n) : size;
+        size_t const written = n < sizeRemaining ? size_t(n) : sizeRemaining;
         curr += written;
-        size -= written;
+        sizeRemaining -= written;
     }
 }
 
-void ostream::Buffer::reserve(size_t newSize) noexcept {
+void ostream::Buffer::reserve(size_t newCapacity) noexcept {
     size_t const offset = curr - buffer;
     if (buffer == nullptr) {
-        buffer = (char*)malloc(newSize);
+        buffer = (char*)malloc(newCapacity);
     } else {
-        buffer = (char*)realloc(buffer, newSize);
+        buffer = (char*)realloc(buffer, newCapacity);
     }
     assert(buffer);
-    capacity = newSize;
+    capacity = newCapacity;
     curr = buffer + offset;
-    size = capacity - offset;
+    sizeRemaining = capacity - offset;
 }
 
 void ostream::Buffer::reset() noexcept {
@@ -264,7 +264,7 @@ void ostream::Buffer::reset() noexcept {
         capacity = 1024;
     }
     curr = buffer;
-    size = capacity;
+    sizeRemaining = capacity;
 }
 
 size_t ostream::Buffer::length() const noexcept {
@@ -272,13 +272,14 @@ size_t ostream::Buffer::length() const noexcept {
 }
 
 std::pair<char*, size_t> ostream::Buffer::grow(size_t s) noexcept {
-    if (UTILS_UNLIKELY(size < s)) {
-        size_t const used = curr - buffer;
-        size_t const newCapacity = std::max(size_t(32), used + (s * 3 + 1) / 2); // 32 bytes minimum
+    if (UTILS_UNLIKELY(sizeRemaining < s)) {
+        size_t const usedSize = curr - buffer;
+        size_t const neededCapacity = usedSize + s;
+        size_t const newCapacity = std::max(size_t(32), (neededCapacity * 3 + 1) / 2); // 32 bytes minimum
         reserve(newCapacity);
-        assert(size >= s);
+        assert(sizeRemaining >= s);
     }
-    return { curr, size };
+    return { curr, sizeRemaining };
 }
 
 } // namespace utils::io
