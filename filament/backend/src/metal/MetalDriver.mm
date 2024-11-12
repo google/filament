@@ -872,10 +872,20 @@ void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh)
 
 void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
     DEBUG_LOG("destroyDescriptorSet(dsh = %d)\n", dsh.getId());
-    if (dsh) {
-        executeAfterCurrentCommandBufferCompletes(
-                [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
+    if (!dsh) {
+        return;
     }
+
+    // Unbind this descriptor set.
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        if (UTILS_UNLIKELY(mContext->currentDescriptorSets[i] == descriptorSet)) {
+            mContext->currentDescriptorSets[i] = nullptr;
+        }
+    }
+
+    executeAfterCurrentCommandBufferCompletes(
+            [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
 }
 
 void MetalDriver::terminate() {
