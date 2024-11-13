@@ -127,7 +127,7 @@ private:
 };
 
 struct CommandBufferPool {
-    using ActiveBuffers = utils::bitset32;
+    using ActiveBuffers = utils::bitset64;
     static constexpr int8_t INVALID = -1;
 
     CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
@@ -153,6 +153,11 @@ private:
     static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
     // int8 only goes up to 127, therefore capacity must be less than that.
     static_assert(CAPACITY < 128);
+
+    // The number of bits in ActiveBuffers describe the usage of the buffers in the pool, so must be
+    // larger than the size of the pool.
+    static_assert(sizeof(ActiveBuffers) * 8 >= CAPACITY);
+
     using BufferList = utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>>;
     VkDevice mDevice;
     VkCommandPool mPool;
