@@ -51,14 +51,11 @@ public:
     void push(std::string const& marker, Timestamp start = {}) noexcept;
     std::pair<std::string, Timestamp> pop() noexcept;
     std::pair<std::string, Timestamp> pop_bottom() noexcept;
-    std::pair<std::string, Timestamp> top() const;
+    std::pair<std::string, Timestamp> const& top() const;
     bool empty() const noexcept;
 
 private:
-    std::list<std::string> mMarkers;
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    std::list<Timestamp> mTimestamps;
-#endif
+    std::list<std::pair<std::string, Timestamp>> mMarkers;
 };
 
 #endif // FVK_DEBUG_GROUP_MARKERS
@@ -123,7 +120,7 @@ private:
     VkSemaphore mSubmission;
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
-    std::vector<fvkmemory::resource_ptr<Resource>> mResources;    
+    std::vector<fvkmemory::resource_ptr<Resource>> mResources;
 };
 
 struct CommandBufferPool {
@@ -140,12 +137,14 @@ struct CommandBufferPool {
     void update();
     VkSemaphore flush();
     void wait();
-
     void waitFor(VkSemaphore previousAction);
 
-    void pushMarker(char const* marker);
-    void popMarker();
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+    std::string topMarker() const;
+    void pushMarker(char const* marker, VulkanGroupMarkers::Timestamp timestamp);
+    std::pair<std::string, VulkanGroupMarkers::Timestamp> popMarker();
     void insertEvent(char const* marker);
+#endif
 
     inline bool isRecording() const { return mRecording != INVALID; }
 
@@ -159,6 +158,10 @@ private:
     ActiveBuffers mSubmitted;
     std::vector<std::unique_ptr<VulkanCommandBuffer>> mBuffers;
     int8_t mRecording;
+
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+    std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
+#endif
 };
 
 // Manages a set of command buffers and semaphores, exposing an API that is significantly simpler
@@ -245,11 +248,6 @@ private:
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     VkSemaphore mLastSubmit = VK_NULL_HANDLE;
-
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
-    std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
-#endif
 };
 
 } // namespace filament::backend
