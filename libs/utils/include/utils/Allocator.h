@@ -278,18 +278,23 @@ public:
     void* pop() noexcept {
         Node* const pStorage = mStorage;
 
-        HeadPtr currentHead = mHead.load();
+        HeadPtr currentHead = mHead.load(std::memory_order_relaxed);
         while (currentHead.offset >= 0) {
             // The value of "pNext" we load here might already contain application data if another
             // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
-            // since compare_exchange_weak fails. Then this thread will loop with the updated
+            // since compare_exchange_weak() fails. Then this thread will loop with the updated
             // value of currentHead, and try again.
-            Node* const pNext = pStorage[currentHead.offset].next.load(std::memory_order_relaxed);
+            // TSAN complains if we don't use a local variable here.
+            Node const node = pStorage[currentHead.offset];
+            Node const* const pNext = node.next;
             const HeadPtr newHead{ pNext ? int32_t(pNext - pStorage) : -1, currentHead.tag + 1 };
-            // In the rare case that the other thread that raced ahead of us already returned the 
-            // same mHead we just loaded, but it now has a different "next" value, the tag field will not 
-            // match, and compare_exchange_weak will fail and prevent that particular race condition.
-            if (mHead.compare_exchange_weak(currentHead, newHead)) {
+            // In the rare case that the other thread that raced ahead of us already returned the
+            // same mHead we just loaded, but it now has a different "next" value, the tag field
+            // will not match, and compare_exchange_weak() will fail and prevent that particular
+            // race condition.
+            // acquire: no read/write can be reordered before this
+            if (mHead.compare_exchange_weak(currentHead, newHead,
+                    std::memory_order_acquire, std::memory_order_relaxed)) {
                 // This assert needs to occur after we have validated that there was no race condition
                 // Otherwise, next might already contain application data, if another thread
                 // raced ahead of us after we loaded mHead, but before we loaded mHead->next.
@@ -306,13 +311,15 @@ public:
         Node* const storage = mStorage;
         assert_invariant(p && p >= storage);
         Node* const node = static_cast<Node*>(p);
-        HeadPtr currentHead = mHead.load();
+        HeadPtr currentHead = mHead.load(std::memory_order_relaxed);
         HeadPtr newHead = { int32_t(node - storage), currentHead.tag + 1 };
         do {
             newHead.tag = currentHead.tag + 1;
-            Node* const n = (currentHead.offset >= 0) ? (storage + currentHead.offset) : nullptr;
-            node->next.store(n, std::memory_order_relaxed);
-        } while(!mHead.compare_exchange_weak(currentHead, newHead));
+            Node* const pNext = (currentHead.offset >= 0) ? (storage + currentHead.offset) : nullptr;
+            node->next = pNext; // could be a race with pop, corrected by CAS
+        } while(!mHead.compare_exchange_weak(currentHead, newHead,
+                std::memory_order_release, std::memory_order_relaxed));
+        // release: no read/write can be reordered after this
     }
 
     void* getFirst() noexcept {
@@ -320,10 +327,7 @@ public:
     }
 
     struct Node {
-        // This should be a regular (non-atomic) pointer, but this causes TSAN to complain
-        // about a data-race that exists but is benin. We always use this atomic<> in
-        // relaxed mode.
-        // The data race TSAN complains about is when a pop() is interrupted by a
+        // There is a benign data race when a pop() is interrupted by a
         // pop() + push() just after mHead->next is read -- it appears as though it is written
         // without synchronization (by the push), however in that case, the pop's CAS will fail
         // and things will auto-correct.
@@ -346,7 +350,7 @@ public:
         //     |
         //    CAS, tag++
         //
-        std::atomic<Node*> next;
+        Node* next = nullptr;
     };
 
 private:
