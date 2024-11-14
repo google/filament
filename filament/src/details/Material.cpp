@@ -347,6 +347,12 @@ FMaterial::~FMaterial() noexcept = default;
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
     DriverApi& driverApi = mEngine.getDriverApi();
+    FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+    auto hasDefaultDepthVariant = [pDefaultMaterial](Variant k) {
+        auto const& end = pDefaultMaterial->mDepthVariants.end();
+        return end != std::find(pDefaultMaterial->mDepthVariants.begin(), end, k);
+    };
+
     if (mMaterialDomain == MaterialDomain::SURFACE) {
         auto& cachedPrograms = mCachedPrograms;
         for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
@@ -355,8 +361,9 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
                 if (UTILS_LIKELY(!mIsDefaultMaterial)) {
                     // The depth variants may be shared with the default material, in which case
                     // we should not free it now.
-                    bool const isSharedVariant =
-                            Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
+                    bool const isSharedVariant = Variant::isValidDepthVariant(variant) &&
+                                                 !mHasCustomDepthShader &&
+                                                 hasDefaultDepthVariant(variant);
                     if (isSharedVariant) {
                         // we don't own this variant, skip.
                         continue;
@@ -367,8 +374,7 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
             }
         }
 
-         if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-            FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
             for (Variant const variant: pDefaultMaterial->mDepthVariants) {
                 pDefaultMaterial->prepareProgram(variant);
                 if (!cachedPrograms[variant.key]) {
@@ -626,6 +632,7 @@ Program FMaterial::getProgramWithVariants(
 }
 
 void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
+    assert_invariant(!mCachedPrograms[variant.key]);
     auto program = mEngine.getDriverApi().createProgram(std::move(p));
     mEngine.getDriverApi().setDebugTag(program.getId(), mName);
     assert_invariant(program);
@@ -737,12 +744,19 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
 void FMaterial::destroyPrograms(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
+
+    auto hasDefaultDepthVariant = [pDefaultMaterial = engine.getDefaultMaterial()](Variant k) {
+        auto const& end = pDefaultMaterial->mDepthVariants.end();
+        return end != std::find(pDefaultMaterial->mDepthVariants.begin(), end, k);
+    };
+
     for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
         const Variant variant(k);
         if (!mIsDefaultMaterial) {
             // The depth variants may be shared with the default material, in which case
             // we should not free it now.
-            bool const isSharedVariant = Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
+            bool const isSharedVariant = Variant::isValidDepthVariant(variant) &&
+                                         !mHasCustomDepthShader && hasDefaultDepthVariant(variant);
             if (isSharedVariant) {
                 // we don't own this variant, skip.
                 continue;
