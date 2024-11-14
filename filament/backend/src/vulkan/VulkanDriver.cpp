@@ -558,8 +558,25 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
 
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
-    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImage(th, image);
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("createTextureExternalImageR");
+
+    usage = backend::TextureUsage::SAMPLEABLE;
+
+    VkImage imageVk;
+    VkDeviceMemory memoryVk;
+    VkFormat formatVk; 
+    bool isProtected;
+    mPlatform->createExternalImage(image, imageVk, memoryVk, width, height, formatVk, isProtected);
+    if (isProtected) {
+        usage |= backend::TextureUsage::PROTECTED;
+    }
+    auto vktexture = mResourceAllocator.construct<VulkanTexture>(th, mPlatform->getDevice(),
+        mAllocator, &mCommands, &mResourceAllocator, imageVk, memoryVk, formatVk, 1, width, 
+        height, usage, mStagePool);
+    mResourceManager.acquire(vktexture);
+ 
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
