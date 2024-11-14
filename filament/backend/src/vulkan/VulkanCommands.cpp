@@ -58,56 +58,32 @@ VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
-    mMarkers.push_back(marker);
-
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    mTimestamps.push_back(start.time_since_epoch().count() > 0.0
-                                  ? start
-                                  : std::chrono::high_resolution_clock::now());
-#endif
+    mMarkers.push_back({marker,
+        start.time_since_epoch().count() > 0.0
+        ? start
+        : std::chrono::high_resolution_clock::now()});
 }
 
 std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
-    auto const marker = mMarkers.back();
+    auto ret = mMarkers.back();
     mMarkers.pop_back();
-
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    auto const timestamp = mTimestamps.back();
-    mTimestamps.pop_back();
-    return std::make_pair(marker, timestamp);
-#else
-    return std::make_pair(marker, Timestamp{});
-#endif
+    return ret;
 }
 
 std::pair<std::string, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
-    auto const marker = mMarkers.front();
+    auto ret = mMarkers.front();
     mMarkers.pop_front();
-
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    auto const timestamp = mTimestamps.front();
-    mTimestamps.pop_front();
-    return std::make_pair(marker, timestamp);
-#else
-    return std::make_pair(marker, Timestamp{});
-#endif
+    return ret;
 }
 
-std::pair<std::string, Timestamp> VulkanGroupMarkers::top() const {
+std::pair<std::string, Timestamp> const& VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
-    auto const marker = mMarkers.back();
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    auto const topTimestamp = mTimestamps.front();
-    return std::make_pair(marker, topTimestamp);
-#else
-    return std::make_pair(marker, Timestamp{});
-#endif
+    return mMarkers.back();
 }
 
 bool VulkanGroupMarkers::empty() const noexcept {
     return mMarkers.empty();
 }
-
 #endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext* context, VkDevice device, VkQueue queue,
@@ -302,6 +278,19 @@ VulkanCommandBuffer& CommandBufferPool::getRecording() {
 
     auto& recording = *mBuffers[mRecording];
     recording.begin();
+
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+    if (mGroupMarkers) {
+        std::unique_ptr<VulkanGroupMarkers> markers = std::make_unique<VulkanGroupMarkers>();
+        while (!mGroupMarkers->empty()) {
+            auto [marker, timestamp] = mGroupMarkers->pop_bottom();
+            recording.pushMarker(marker.c_str());
+            markers->push(marker, timestamp);
+        }
+        std::swap(mGroupMarkers, markers);
+    }
+#endif
+
     return recording;
 }
 
@@ -356,17 +345,38 @@ void CommandBufferPool::waitFor(VkSemaphore previousAction) {
     recording->insertWait(previousAction);
 }
 
-void CommandBufferPool::pushMarker(char const* marker) {
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+std::string CommandBufferPool::topMarker() const {
+    if (!mGroupMarkers || mGroupMarkers->empty()) {
+        return "";
+    }
+    return std::get<0>(mGroupMarkers->top());
+}
+
+void CommandBufferPool::pushMarker(char const* marker, VulkanGroupMarkers::Timestamp timestamp) {
+    if (!mGroupMarkers) {
+        mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
+    }
+    mGroupMarkers->push(marker, timestamp);
     getRecording().pushMarker(marker);
 }
 
-void CommandBufferPool::popMarker() {
-    getRecording().popMarker();
+std::pair<std::string, VulkanGroupMarkers::Timestamp> CommandBufferPool::popMarker() {
+    assert_invariant(mGroupMarkers && !mGroupMarkers->empty());
+    auto ret = mGroupMarkers->pop();
+
+    // Note that if we're popping a marker while not recording, we would just pop the conceptual
+    // stack of marker (i.e. mGroupMarkers) and not carry out the pop on the command buffer.
+    if (isRecording()) {
+        getRecording().popMarker();
+    }
+    return ret;
 }
 
 void CommandBufferPool::insertEvent(char const* marker) {
     getRecording().insertEvent(marker);
 }
+#endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
         VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context)
@@ -470,47 +480,31 @@ void VulkanCommands::updateFences() {
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 
 void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp) {
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    // If the timestamp is not 0, then we are carrying over a marker across buffer submits.
-    // If it is 0, then this is a normal marker push and we should just print debug line as usual.
-    if (timestamp.time_since_epoch().count() == 0.0) {
-        FVK_LOGD << "----> " << str << utils::io::endl;
-    }
-#endif
-    if (!mGroupMarkers) {
-        mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
-    }
-    mGroupMarkers->push(str, timestamp);
-
-    mPool->pushMarker(str);
+    mPool->pushMarker(str, timestamp);
     if (mProtectedPool) {
-        mProtectedPool->pushMarker(str);
+        mProtectedPool->pushMarker(str, timestamp);
     }
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
+    FVK_LOGD << "----> " << str << utils::io::endl;
+#endif
 }
 
 void VulkanCommands::popGroupMarker() {
-    assert_invariant(mGroupMarkers);
 
-    if (!mGroupMarkers->empty()) {
-        VkCommandBuffer const cmdbuffer = get().buffer();
 #if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-        auto const [marker, startTime] = mGroupMarkers->pop();
-        auto const endTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> diff = endTime - startTime;
-        FVK_LOGD << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms"
-                      << utils::io::endl;
+    auto ret = mPool->popMarker();
+    auto const& marker = ret.first;
+    auto const& startTime = ret.second;
+    auto const endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = endTime - startTime;
+    FVK_LOGD << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms"
+             << utils::io::endl;
 #else
-        mGroupMarkers->pop();
-#endif
-        mPool->popMarker();
-        if (mProtectedPool) {
-            mProtectedPool->popMarker();
-        }
-    } else if (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
-        // It could be that pop is called between flush() and get() (new command buffer), in which
-        // case the marker is in "carried over" state, we'd just remove that. Since the
-        // mCarriedOverMarkers is in the opposite order, we pop the bottom instead of the top.
-        mCarriedOverMarkers->pop_bottom();
+    mPool->popMarker();
+#endif // FVK_DEBUG_PRINT_GROUP_MARKERS
+
+    if (mProtectedPool) {
+        mProtectedPool->popMarker();
     }
 }
 
@@ -522,10 +516,10 @@ void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
 }
 
 std::string VulkanCommands::getTopGroupMarker() const {
-    if (!mGroupMarkers || mGroupMarkers->empty()) {
-        return "";
+    if (mProtectedPool) {
+        return mProtectedPool->topMarker();
     }
-    return std::get<0>(mGroupMarkers->top());
+    return mPool->topMarker();
 }
 #endif // FVK_DEBUG_GROUP_MARKERS
 
