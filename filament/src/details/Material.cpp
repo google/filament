@@ -765,7 +765,7 @@ void FMaterial::destroyPrograms(FEngine& engine,
                 // we should not free them now.
 
                 // During Engine::shutdown(), auto-cleanup destroys the default material first,
-                // so this can be null, but yhis is only used for debugging.
+                // so this can be null, but this is only used for debugging.
                 UTILS_UNUSED_IN_RELEASE
                 auto UTILS_NULLABLE pDefaultMaterial = engine.getDefaultMaterial();
 
