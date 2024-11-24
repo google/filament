@@ -172,6 +172,7 @@ VULKAN_ANDROID_GRADLE_OPTION=""
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
+FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=OFF"
 MATDBG_GRADLE_OPTION=""
 
 MATOPT_OPTION=""
@@ -240,6 +241,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE="$1" \
             -DCMAKE_INSTALL_PREFIX="../${lc_target}/filament" \
             ${EGL_ON_LINUX_OPTION} \
+            ${FGVIEWER_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
@@ -376,6 +378,7 @@ function build_android_target {
             -DFILAMENT_NDK_VERSION="${FILAMENT_NDK_VERSION}" \
             -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
+            ${FGVIEWER_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
@@ -613,6 +616,7 @@ function build_ios_target {
             -DPLATFORM_NAME="${platform}" \
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
+            ${FGVIEWER_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${STEREOSCOPIC_OPTION} \
@@ -820,6 +824,7 @@ while getopts ":hacCfgijmp:q:uvslwedk:bx:S:X:" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
+            FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=ON"
             MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_BUILD_FILAMAT=ON"
             MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
             ;;
