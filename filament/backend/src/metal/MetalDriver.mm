@@ -797,9 +797,20 @@ void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
-    if (ph) {
-        destruct_handle<MetalProgram>(ph);
+    if (UTILS_UNLIKELY(!ph)) {
+        return;
     }
+    // Remove any cached pipeline states that refer to these programs.
+    auto* metalProgram = handle_cast<MetalProgram>(ph);
+    const auto& functions = metalProgram->getFunctionsIfPresent();
+    if (UTILS_LIKELY(functions.isRaster())) { // only raster pipelines are cached
+        const auto& raster = functions.getRasterFunctions();
+        mContext->pipelineStateCache.removeIf([&](const MetalPipelineState& state) {
+            const auto& [fragment, vertex] = raster;
+            return state.fragmentFunction == fragment || state.vertexFunction == vertex;
+        });
+    }
+    destruct_handle<MetalProgram>(ph);
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {

@@ -106,17 +106,29 @@
 // set to the desired debug level (for internal debugging [Default: None])
 #define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
 
+// Override the debug markers if we are forcing profiling mode
+#if defined(FILAMENT_FORCE_PROFILING_MODE)
+#   undef DEBUG_GROUP_MARKER_LEVEL
+#   undef DEBUG_MARKER_LEVEL
+
+#   define DEBUG_GROUP_MARKER_LEVEL   DEBUG_GROUP_MARKER_NONE
+#   define DEBUG_MARKER_LEVEL         DEBUG_MARKER_PROFILE
+#endif
+
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
 #   define DEBUG_MARKER()
 #   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker);
 #   if DEBUG_GROUP_MARKER_LEVEL != DEBUG_GROUP_MARKER_NONE
-#       error PROFILING is exclusive; group markers must be disabled.
+#      error PROFILING is exclusive; group markers must be disabled.
+#   endif
+#   ifndef NDEBUG
+#      error PROFILING is meaningless in DEBUG mode.
 #   endif
 #elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
 #   define PROFILE_MARKER(marker) DEBUG_MARKER()
 #   if DEBUG_MARKER_LEVEL & DEBUG_MARKER_PROFILE
-#       error PROFILING is exclusive; all other debug features must be disabled.
+#      error PROFILING is exclusive; all other debug features must be disabled.
 #   endif
 #else
 #   define DEBUG_MARKER()
@@ -1670,7 +1682,7 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
-        sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
+        sc->rec709 = ((flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) &&
                 !mPlatform.isSRGBSwapChainSupported());
     }
 }

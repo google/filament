@@ -73,7 +73,7 @@ protected:
     // Non-virtual override-able method
     void destroy();
 
-    VkImage createImage(VkExtent2D extent, VkFormat format);
+    VkImage createImage(VkExtent2D extent, VkFormat format, bool isProtected);
 
     VulkanContext const& mContext;
     VkDevice mDevice;
