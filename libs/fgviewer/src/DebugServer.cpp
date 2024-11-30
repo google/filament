@@ -39,7 +39,7 @@ DebugServer::DebugServer(int port) {
     /// establish multiple connections to load a single web page, including all linked documents
     // (CSS, JavaScript, images, ...)."  If this count is too small, the web app basically hangs.
     const char* kServerOptions[] = {
-        "listening_ports", "8080",
+        "listening_ports", "8090",
         "num_threads", "10",
         "error_log_file", "civetweb.txt",
         nullptr
@@ -64,19 +64,28 @@ DebugServer::~DebugServer() {
     delete mServer;
 }
 
+FrameGraphInfoKey DebugServer::getKeybyString(const utils::CString& input, 
+        uint32_t seed){
+    return utils::hash::murmurSlow(reinterpret_cast<uint8_t const*>(
+        input.c_str()), input.size(), 0);
+}
+
 void DebugServer::addView(const utils::CString& name, FrameGraphInfo info) {    
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    mViews.insert({name, info});
+    const FrameGraphInfoKey key = getKeybyString(name, 0);
+    mViews.insert({key, info});
 }
 
 void DebugServer::removeView(const utils::CString& name) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    mViews.erase(name);
+    const FrameGraphInfoKey key = getKeybyString(name, 0);
+    mViews.erase(key);
 }   
 
 void DebugServer::updateView(const utils::CString& name, FrameGraphInfo info) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    mViews[name] = info;
+    const FrameGraphInfoKey key = getKeybyString(name, 0);
+    mViews[key] = info;
 }   
 
 } // namespace filament::fgviewer

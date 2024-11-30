@@ -19,10 +19,6 @@
 
 #include <utils/CString.h>
 
-#include <backend/DriverEnums.h>
-
-#include <private/filament/Variant.h>
-
 #include <tsl/robin_map.h>
 #include <utils/Mutex.h>
 
@@ -30,13 +26,15 @@ class CivetServer;
 
 namespace filament::fgviewer {
 
-struct FrameGraphInfo {
-    utils::CString view_name;
-    std::vector<FrameGraphPassInfo> passes;
-};
+using FrameGraphInfoKey = uint32_t;
 
 struct FrameGraphPassInfo {
     utils::CString pass_name;
+};
+
+struct FrameGraphInfo {
+    utils::CString view_name;
+    std::vector<FrameGraphPassInfo> passes;
 };
 
 /**
@@ -71,9 +69,12 @@ public:
     bool isReady() const { return mServer; }
 
 private:
+    static FrameGraphInfoKey getKeybyString(const utils::CString& input, 
+        uint32_t seed);
+
     CivetServer* mServer;
 
-    tsl::robin_map<utils::CString, FrameGraphInfo> mViews;
+    tsl::robin_map<FrameGraphInfoKey, FrameGraphInfo> mViews;
     mutable utils::Mutex mViewsMutex;
 
     // utils::CString mHtml;
