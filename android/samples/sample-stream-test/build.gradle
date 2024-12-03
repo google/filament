@@ -25,7 +25,7 @@ android {
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.streamtest"
-        minSdkVersion 23
+        minSdkVersion 26
         targetSdkVersion versions.targetSdk
     }
 

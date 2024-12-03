@@ -196,7 +196,10 @@ namespace filament::backend {
             .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
             .pNext = &format_info,
         };
-        vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer, &properties);
+        VkResult prop_res = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer,
+            &properties);
+        FILAMENT_CHECK_POSTCONDITION(prop_res == VK_SUCCESS);
+
         bits = properties.memoryTypeBits;
 #endif //__ANDROID__
         return bits;
@@ -224,7 +227,9 @@ namespace filament::backend {
             .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
             .pNext = &format_info,
         };
-        vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer, &properties);
+        VkResult prop_res = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer,
+            &properties);
+        FILAMENT_CHECK_POSTCONDITION(prop_res == VK_SUCCESS);
 
         //if external format we need to specifiy it in the allocation
         const bool use_external_format = format_info.format == VK_FORMAT_UNDEFINED;
@@ -241,18 +246,24 @@ namespace filament::backend {
                 VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,
         };
 
-        VkImageCreateInfo imageInfo{ .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .pNext = nullptr };
+        VkImageCreateInfo imageInfo{ .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.pNext = &external_create_info;
         imageInfo.format = format_info.format;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
         imageInfo.extent =
         {
             buffer_desc.width,
             buffer_desc.height,
             1u,
-        },
+        };
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
         imageInfo.arrayLayers = buffer_desc.layers;
-        imageInfo.usage =
-            (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | usage);
+        imageInfo.usage = usage;
+        // In the unprotected case add R/W capabilities
+        if (isProtected == false)
+            imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
         VkResult const result =
             vkCreateImage(device, &imageInfo, allocator, &pImage);
@@ -276,7 +287,9 @@ namespace filament::backend {
             .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
             .pNext = &format_info,
         };
-        vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer, &properties);
+        VkResult prop_res = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer,
+            &properties);
+        FILAMENT_CHECK_POSTCONDITION(prop_res == VK_SUCCESS);
 
         // Now handle the allocation
         VkImportAndroidHardwareBufferInfoANDROID android_hardware_buffer_info = {
