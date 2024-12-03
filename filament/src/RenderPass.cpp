@@ -864,21 +864,44 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
         backend::Viewport const& scissorViewport, backend::Viewport const& scissor) noexcept {
     // scissor is set, we need to apply the offset/clip
     // clang vectorizes this!
-    constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
-    // compute new left/bottom, assume no overflow
-    int32_t const l = scissor.left + scissorViewport.left;
-    int32_t const b = scissor.bottom + scissorViewport.bottom;
-    // compute right/top without overflowing, scissor.width/height guaranteed
-    // to convert to int32
-    int32_t r = (l > maxvali - int32_t(scissor.width)) ? maxvali : l + int32_t(scissor.width);
-    int32_t t = (b > maxvali - int32_t(scissor.height)) ? maxvali : b + int32_t(scissor.height);
-    // clip to the viewport
-    assert_invariant(l == std::max(l, scissorViewport.left));
-    assert_invariant(b == std::max(b, scissorViewport.bottom));
-    r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
-    t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
-    assert_invariant(r >= l && t >= b);
-    return { l, b, uint32_t(r - l), uint32_t(t - b) };
+    constexpr int64_t maxvali = std::numeric_limits<int32_t>::max();
+
+    // we do all the offsetting/clipping math in 64 bits below to avoid overflows
+    struct {
+        int64_t l;
+        int64_t b;
+        int64_t r;
+        int64_t t;
+    } svp, s;
+
+    // convert scissorViewport to {left,bottom,right,top} format
+    svp.l = scissorViewport.left;
+    svp.b = scissorViewport.bottom;
+    svp.r = svp.l + scissorViewport.width;
+    svp.t = svp.b + scissorViewport.height;
+
+    // convert scissor to {left,bottom,right,top} format and offset by scissorViewport's left,bottom
+    s.l = svp.l + scissor.left;
+    s.b = svp.b + scissor.bottom;
+    s.r = s.l + scissor.width;
+    s.t = s.b + scissor.height;
+
+    // clip to the scissorViewport
+    s.l = std::max(s.l, svp.l);
+    s.b = std::max(s.b, svp.b);
+    s.r = std::min(s.r, svp.r);
+    s.t = std::min(s.t, svp.t);
+
+    // clip to positive int32_t
+    s.l = std::max(s.l, int64_t(0));
+    s.b = std::max(s.b, int64_t(0));
+    s.r = std::min(s.r, maxvali);
+    s.t = std::min(s.t, maxvali);
+
+    assert_invariant(s.r >= s.l && s.t >= s.b);
+
+    // convert back to Viewport format
+    return { int32_t(s.l), int32_t(s.b), uint32_t(s.r - s.l), uint32_t(s.t - s.b) };
 }
 
 UTILS_NOINLINE // no need to be inlined
