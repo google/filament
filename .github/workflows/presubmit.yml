@@ -52,8 +52,8 @@ jobs:
         # Only build 1 64 bit target during presubmit to cut down build times during presubmit
         # Continuous builds will build everything
         run: |
-          cd build/android && printf "y" | ./build.sh presubmit arm64-v8a
-
+            echo "Print machine ip" && ip a && cd build/android && printf "y" | ./build.sh presubmit arm64-v8a
+            
   build-ios:
     name: build-iOS
     runs-on: macos-14-xlarge
