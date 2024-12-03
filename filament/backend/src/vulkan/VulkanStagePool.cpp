@@ -16,6 +16,7 @@
 
 #include "VulkanStagePool.h"
 
+#include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
@@ -37,6 +38,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     if (iter != mFreeStages.end()) {
         auto stage = iter->second;
         mFreeStages.erase(iter);
+        stage->lastAccessed = mCurrentFrame;
         mUsedStages.insert(stage);
         return stage;
     }
@@ -59,7 +61,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mAllocator, &bufferInfo,
             &allocInfo, &stage->buffer, &stage->memory, nullptr);
 
-#if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
+#if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
     if (result != VK_SUCCESS) {
         FVK_LOGE << "Allocation error: " << result << utils::io::endl;
     }
@@ -74,6 +76,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     for (auto image : mFreeImages) {
         if (image->format == vkformat && image->width == width && image->height == height) {
             mFreeImages.erase(image);
+            image->lastAccessed = mCurrentFrame;
             mUsedImages.insert(image);
             return image;
         }

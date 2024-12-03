@@ -1043,6 +1043,8 @@ int main(int argc, char** argv) {
         delete app.resourceLoader;
         delete app.stbDecoder;
         delete app.ktxDecoder;
+        delete app.automationSpec;
+        delete app.automationEngine;
 
         AssetLoader::destroy(&app.assetLoader);
     };

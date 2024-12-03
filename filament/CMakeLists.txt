@@ -308,6 +308,11 @@ if (FILAMENT_ENABLE_MULTIVIEW)
     add_definitions(-DFILAMENT_ENABLE_MULTIVIEW)
 endif()
 
+# Whether to force the profiling mode.
+if (FILAMENT_FORCE_PROFILING_MODE)
+    add_definitions(-DFILAMENT_FORCE_PROFILING_MODE)
+endif()
+
 # ==================================================================================================
 # Definitions
 # ==================================================================================================

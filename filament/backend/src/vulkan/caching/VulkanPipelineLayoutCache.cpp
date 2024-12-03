@@ -16,12 +16,11 @@
 
 #include "VulkanPipelineLayoutCache.h"
 
-#include <vulkan/VulkanResourceAllocator.h>
-
 namespace filament::backend {
 
 VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
-        DescriptorSetLayoutArray const& descriptorSetLayouts, VulkanProgram* program) {
+        DescriptorSetLayoutArray const& descriptorSetLayouts,
+        fvkmemory::resource_ptr<VulkanProgram> program) {
     PipelineLayoutKey key = {};
     uint8_t descSetLayoutCount = 0;
     key.descSetLayouts = descriptorSetLayouts;
@@ -40,13 +39,13 @@ VkPipelineLayout VulkanPipelineLayoutCache::getLayout(
         for (uint8_t i = 0; i < pushConstantRangeCount; ++i) {
             auto const& range = pushConstantRanges[i];
             auto& pushConstant = key.pushConstant[i];
-            if (range.stageFlags &  VK_SHADER_STAGE_VERTEX_BIT) {
+            if (range.stageFlags & VK_SHADER_STAGE_VERTEX_BIT) {
                 pushConstant.stage = static_cast<uint8_t>(ShaderStage::VERTEX);
             }
-            if (range.stageFlags &  VK_SHADER_STAGE_FRAGMENT_BIT) {
+            if (range.stageFlags & VK_SHADER_STAGE_FRAGMENT_BIT) {
                 pushConstant.stage = static_cast<uint8_t>(ShaderStage::FRAGMENT);
             }
-            if (range.stageFlags &  VK_SHADER_STAGE_COMPUTE_BIT) {
+            if (range.stageFlags & VK_SHADER_STAGE_COMPUTE_BIT) {
                 pushConstant.stage = static_cast<uint8_t>(ShaderStage::COMPUTE);
             }
             pushConstant.size = range.size;
