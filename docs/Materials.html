@@ -1787,7 +1787,12 @@ non-shader data.
       declare a variable called <code>eyeDirection</code> you can access it in the fragment shader using
       <code>variable_eyeDirection</code>. In the vertex shader, the interpolant name is simply a member of
       the <code>MaterialVertexInputs</code> structure (<code>material.eyeDirection</code> in your example). Each
-      interpolant is of type <code>float4</code> (<code>vec4</code>) in the shaders.
+      interpolant is of type <code>float4</code> (<code>vec4</code>) in the shaders. By default the precision of the
+      interpolant is <code>highp</code> in <em class="asterisk">both</em> the vertex and fragment shaders.
+      An alternate syntax can be used to specify both the name and precision of the interpolant.
+      In this case the specified precision is used as-is in both fragment and vertex stages, in
+      particular if <code>default</code> is specified the default precision is used is the fragment shader
+      (<code>mediump</code>) and in the vertex shader (<code>highp</code>).
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    name : Skybox,</span>
@@ -1798,7 +1803,11 @@ non-shader data.
 <span class="line">        }</span>
 <span class="line">    ],</span>
 <span class="line">    variables : [</span>
-<span class="line">         eyeDirection</span>
+<span class="line">         eyeDirection,</span>
+<span class="line">         {</span>
+<span class="line">            name : eyeColor,</span>
+<span class="line">            precision : medium</span>
+<span class="line">         }</span>
 <span class="line">    ],</span>
 <span class="line">    vertexDomain : device,</span>
 <span class="line">    depthWrite : <span class="hljs-literal">false</span>,</span>
