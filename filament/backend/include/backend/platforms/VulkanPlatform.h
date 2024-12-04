@@ -327,13 +327,7 @@ public:
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
-
-    static uint32_t getExternalImageMemoryBits(void* externalBuffer, VkDevice device);
-    static void createExternalImageImpl(void* externalBuffer, VkDevice device, 
-        const VkAllocationCallbacks* allocator, VkImage& pImage,
-        uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected);
-    static void allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, 
-        VkImage pImage, VkDeviceMemory& pMemory);
+    static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

@@ -231,6 +231,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
     elseif (APPLE OR IOS)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
     endif()
+    if (ANDROID)
+        list(APPEND SRCS src/vulkan/platform/VulkanAndroidHardwareBuffer.cpp)
+    endif()
 endif()
 
 # ==================================================================================================

@@ -954,16 +954,7 @@ VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
         void* externalImage) {
-    ExternalImageMetadata metadata;
-    createExternalImageImpl(externalImage, mImpl->mDevice, nullptr, metadata.image,
-        metadata.width, metadata.height, metadata.format, metadata.isProtected);
-    allocateExternalImage(externalImage, mImpl->mDevice, nullptr,
-        metadata.image, metadata.memory);
-    VkResult result = vkBindImageMemory(mImpl->mDevice, metadata.image,
-        metadata.memory, 0);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
-        << result << ".";
-    return metadata;
+    return getExternalImageMetadataImpl(externalImage);
 }
 
 #undef SWAPCHAIN_RET_FUNC
