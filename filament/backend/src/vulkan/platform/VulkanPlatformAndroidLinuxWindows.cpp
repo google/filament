@@ -97,14 +97,7 @@ using namespace bluevk;
 namespace filament::backend {
     VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
             void* externalImage, VkDevice device) {
-        VulkanPlatform::ExternalImageMetadata metadata = {
-            .image = VK_NULL_HANDLE,
-            .memory = VK_NULL_HANDLE,
-            .width = 0,
-            .height = 0,
-            .format = VK_FORMAT_UNDEFINED,
-            .isProtected = false
-        };
+        VulkanPlatform::ExternalImageMetadata metadata;
     #if defined(__ANDROID__)
         createExternalImage(externalImage, device, nullptr, metadata.image,
             metadata.width, metadata.height, metadata.format, metadata.isProtected);
@@ -114,6 +107,13 @@ namespace filament::backend {
             metadata.memory, 0);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
             << result << ".";
+    #else
+        metadata.image = VK_NULL_HANDLE;
+        metadata.memory = VK_NULL_HANDLE;
+        metadata.width = 0;
+        metadata.height = 0;
+        metadata.format = VK_FORMAT_UNDEFINED;
+        metadata.isProtected = false;
     #endif
         return metadata;
     }
