@@ -101,7 +101,7 @@ namespace filament::backend {
         }
     }
 
-    uint32_t VulkanPlatform::getExternalImageMemoryBits(void* externalBuffer,
+    uint32_t getExternalImageMemoryBits(void* externalBuffer,
             VkDevice device) {
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
         VkAndroidHardwareBufferFormatPropertiesANDROID format_info = {
