@@ -292,11 +292,38 @@ public:
      */
     VkQueue getProtectedGraphicsQueue() const noexcept;
 
-    /**
-    * @return an image created from the external buffer
-    */
-    void createExternalImage(void* imageBuffer, VkImage& pImage, VkDeviceMemory& pMemory,
-            uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected) const noexcept;
+    struct ExternalImageMetadata {
+        /**
+         * The vulkan image of the external image
+         */
+        VkImage image;
+
+        /**
+         * The memory of the external image
+         */
+        VkDeviceMemory memory;
+
+        /**
+         * The width of the external image
+         */
+        uint32_t width;
+
+        /**
+         * The height of the external image
+         */
+        uint32_t height;
+
+        /**
+         * The format of the external image
+         */
+        VkFormat format;
+
+        /**
+         * An external buffer can be protected. This tells you if it is.
+         */
+        bool isProtected;
+    };
+    virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
