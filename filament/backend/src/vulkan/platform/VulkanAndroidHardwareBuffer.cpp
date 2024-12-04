@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <utils/Panic.h>
+
 #include <bluevk/BlueVK.h>
 
 #include <android/hardware_buffer.h>
@@ -99,7 +101,7 @@ namespace filament::backend {
         }
     }
 
-    uint32_t VulkanPlatform::getExternalImageMemoryBits(void* externalBuffer, 
+    uint32_t VulkanPlatform::getExternalImageMemoryBits(void* externalBuffer,
             VkDevice device) {
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
         VkAndroidHardwareBufferFormatPropertiesANDROID format_info = {
@@ -118,7 +120,7 @@ namespace filament::backend {
         return properties.memoryTypeBits;
     }
 
-    void VulkanPlatform::createExternalImage(void* externalBuffer, VkDevice device, 
+    void createExternalImage(void* externalBuffer, VkDevice device,
             const VkAllocationCallbacks* allocator, VkImage& pImage,
             uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected) {
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
@@ -186,7 +188,7 @@ namespace filament::backend {
         height = buffer_desc.height;
         format = format_info.format;
     }
-    void VulkanPlatform::allocateExternalImage(void* externalBuffer, VkDevice device, 
+    void allocateExternalImage(void* externalBuffer, VkDevice device,
             const VkAllocationCallbacks* allocator, VkImage pImage, VkDeviceMemory& pMemory) {
         uint32_t memoryTypeIndex = getExternalImageMemoryBits(externalBuffer, device);
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);

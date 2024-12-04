@@ -327,7 +327,8 @@ public:
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
-    static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage);
+    static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
+            VkDevice device);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

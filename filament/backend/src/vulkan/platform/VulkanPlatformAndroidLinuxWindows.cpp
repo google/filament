@@ -83,18 +83,20 @@ namespace {
 #endif
 
 #if defined(__ANDROID__)
-extern void VulkanPlatform::createExternalImage(void* externalBuffer, VkDevice device,
-    const VkAllocationCallbacks* allocator, VkImage& pImage,
-    uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected);
-extern void VulkanPlatform::allocateExternalImage(void* externalBuffer, VkDevice device,
-    const VkAllocationCallbacks* allocator, VkImage pImage, VkDeviceMemory& pMemory);
+namespace filament::backend {
+    extern void createExternalImage(void* externalBuffer, VkDevice device,
+        const VkAllocationCallbacks* allocator, VkImage& pImage,
+        uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected);
+    extern void allocateExternalImage(void* externalBuffer, VkDevice device,
+        const VkAllocationCallbacks* allocator, VkImage pImage, VkDeviceMemory& pMemory);
+}
 #endif
 
 using namespace bluevk;
 
 namespace filament::backend {
     VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-            void* externalImage) {
+            void* externalImage, VkDevice device) {
         VulkanPlatform::ExternalImageMetadata metadata = {
             .image = VK_NULL_HANDLE,
             .memory = VK_NULL_HANDLE,
@@ -104,11 +106,11 @@ namespace filament::backend {
             .isProtected = false
         };
     #if defined(__ANDROID__)
-        createExternalImage(externalImage, mImpl->mDevice, nullptr, metadata.image,
+        createExternalImage(externalImage, device, nullptr, metadata.image,
             metadata.width, metadata.height, metadata.format, metadata.isProtected);
-        allocateExternalImage(externalImage, mImpl->mDevice, nullptr,
+        allocateExternalImage(externalImage, device, nullptr,
             metadata.image, metadata.memory);
-        VkResult result = vkBindImageMemory(mImpl->mDevice, metadata.image,
+        VkResult result = vkBindImageMemory(device, metadata.image,
             metadata.memory, 0);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
             << result << ".";

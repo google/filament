@@ -954,7 +954,7 @@ VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
         void* externalImage) {
-    return getExternalImageMetadataImpl(externalImage);
+    return getExternalImageMetadataImpl(externalImage, mImpl->mDevice);
 }
 
 #undef SWAPCHAIN_RET_FUNC
