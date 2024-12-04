@@ -174,6 +174,7 @@ public:
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
     void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
+    void unbindSamplers(backend::DriverApi& driver) noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
