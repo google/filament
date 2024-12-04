@@ -912,6 +912,10 @@ void FView::commitUniformsAndSamplers(DriverApi& driver) const noexcept {
     mColorPassDescriptorSet.commit(driver);
 }
 
+void FView::unbindSamplers(DriverApi& driver) noexcept {
+    mColorPassDescriptorSet.unbindSamplers(driver);
+}
+
 void FView::commitFroxels(DriverApi& driverApi) const noexcept {
     if (mHasDynamicLighting) {
         mFroxelizer.commit(driverApi);

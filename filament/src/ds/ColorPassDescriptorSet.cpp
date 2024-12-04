@@ -541,6 +541,17 @@ void ColorPassDescriptorSet::commit(backend::DriverApi& driver) noexcept {
     }
 }
 
+void ColorPassDescriptorSet::unbindSamplers(DriverApi&) noexcept {
+    // this needs to reset the sampler that are only set in RendererUtils::colorPass(), because
+    // this descriptor-set is also used for ssr/picking/structure and these could be stale
+    // it would be better to use a separate descriptor-set for those two cases so that we don't
+    // have to do this
+    setSampler(+PerViewBindingPoints::STRUCTURE, {}, {});
+    setSampler(+PerViewBindingPoints::SHADOW_MAP, {}, {});
+    setSampler(+PerViewBindingPoints::SSAO, {}, {});
+    setSampler(+PerViewBindingPoints::SSR, {}, {});
+}
+
 void ColorPassDescriptorSet::setSampler(backend::descriptor_binding_t binding,
         TextureHandle th, SamplerParams params) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
