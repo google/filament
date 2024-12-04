@@ -272,9 +272,15 @@ namespace filament::backend {
         width = buffer_desc.width;
         height = buffer_desc.height;
         format = format_info.format;
+#else
+        pImage = VK_NULL_HANDLE;
+        width = 0;
+        height = 0;
+        format = VK_FORMAT_UNDEFINED;
+        isProtected = false;
 #endif
     }
-    void VulkanPlatform::allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, VkImage pImage, VkDeviceMemory pMemory) {
+    void VulkanPlatform::allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, VkImage pImage, VkDeviceMemory& pMemory) {
 #if defined(__ANDROID__)
         uint32_t memoryTypeIndex = getExternalImageMemoryBits(externalBuffer, device);
         AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
@@ -311,6 +317,8 @@ namespace filament::backend {
         VkResult const result =
             vkAllocateMemory(device, &alloc_info, allocator, &pMemory);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS);
+#else
+        pMemory = VK_NULL_HANDLE;
 #endif
     }
 

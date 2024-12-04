@@ -333,7 +333,7 @@ private:
         const VkAllocationCallbacks* allocator, VkImage& pImage,
         uint32_t& width, uint32_t& height, VkFormat& format, bool& isProtected);
     static void allocateExternalImage(void* externalBuffer, VkDevice device, const VkAllocationCallbacks* allocator, 
-        VkImage pImage, VkDeviceMemory pMemory);
+        VkImage pImage, VkDeviceMemory& pMemory);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
