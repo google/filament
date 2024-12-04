@@ -21,7 +21,7 @@
 
 #include "DriverBase.h"
 
-#include "VulkanResources.h"
+#include "vulkan/memory/Resource.h"
 
 #include <utils/Mutex.h>
 #include <utils/Condition.h>
@@ -47,17 +47,12 @@ private:
     std::atomic<VkResult> status;
 };
 
-struct VulkanFence : public HwFence, VulkanResource {
-    VulkanFence() : VulkanResource(VulkanResourceType::FENCE) {}
-
-    explicit VulkanFence(std::shared_ptr<VulkanCmdFence> fence)
-        : VulkanResource(VulkanResourceType::FENCE),
-          fence(fence) {}
-
+struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
+    VulkanFence() {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
-struct VulkanTimerQuery : public HwTimerQuery, VulkanThreadSafeResource {
+struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
     explicit VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices);
     ~VulkanTimerQuery();
 

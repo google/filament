@@ -20,8 +20,9 @@
 #include "DriverBase.h"
 
 #include "VulkanBuffer.h"
-#include "VulkanResources.h"
 #include "VulkanImageUtility.h"
+#include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <utils/Hash.h>
 #include <utils/RangeMap.h>
@@ -30,12 +31,12 @@
 
 namespace filament::backend {
 
-class VulkanResourceAllocator;
-
-struct VulkanTextureState : public VulkanResource {
+struct VulkanTextureState : public fvkmemory::Resource {
     VulkanTextureState(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
             VulkanStagePool& stagePool, VkFormat format, VkImageViewType viewType, uint8_t levels,
             uint8_t layerCount, VulkanLayout defaultLayout, bool isProtected);
+
+    ~VulkanTextureState();
 
     struct ImageViewKey {
         VkImageSubresourceRange range;  // 4 * 5 bytes
@@ -58,10 +59,8 @@ struct VulkanTextureState : public VulkanResource {
 
     using ImageViewHash = utils::hash::MurmurHashFn<ImageViewKey>;
 
-    uint32_t refs = 1;
-
     // The texture with the sidecar owns the sidecar.
-    std::unique_ptr<VulkanTexture> mSidecarMSAA;
+    fvkmemory::resource_ptr<VulkanTexture> mSidecarMSAA;
     VkDeviceMemory mTextureImageMemory = VK_NULL_HANDLE;
 
     VkFormat const mVkFormat;
@@ -83,37 +82,32 @@ struct VulkanTextureState : public VulkanResource {
     bool mIsTransientAttachment;
 };
 
-
-struct VulkanTexture : public HwTexture, VulkanResource {
+struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     // Standard constructor for user-facing textures.
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
-            VmaAllocator allocator, VulkanCommands* commands,
-            VulkanResourceAllocator* handleAllocator,
-            SamplerType target, uint8_t levels,
-            TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-            TextureUsage tusage, VulkanStagePool& stagePool, bool heapAllocated = false);
+            VmaAllocator allocator, fvkmemory::ResourceManager* resourceManager,
+            VulkanCommands* commands, SamplerType target, uint8_t levels, TextureFormat tformat,
+            uint8_t samples, uint32_t w, uint32_t h, uint32_t depth, TextureUsage tusage,
+            VulkanStagePool& stagePool);
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     // The texture will never destroy the given VkImage, but it does manages its subresources.
-    VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanCommands* commands,
-            VulkanResourceAllocator* handleAllocator,
-            VkImage image, VkDeviceMemory memory,
-            VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
-            VulkanStagePool& stagePool, bool heapAllocated = false);
+    VulkanTexture(VkDevice device, VmaAllocator allocator,
+            fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
+            VkDeviceMemory memory, VkFormat format, uint8_t samples, uint32_t width, uint32_t height,
+            TextureUsage tusage, VulkanStagePool& stagePool);
 
     // Constructor for creating a texture view for wrt specific mip range
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
             VmaAllocator allocator, VulkanCommands* commands,
-            VulkanResourceAllocator* handleAllocator,
-            VulkanTexture const* src, uint8_t baseLevel, uint8_t levelCount);
+            fvkmemory::resource_ptr<VulkanTexture> src, uint8_t baseLevel, uint8_t levelCount);
 
     // Constructor for creating a texture view for swizzle.
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
             VmaAllocator allocator, VulkanCommands* commands,
-            VulkanResourceAllocator* handleAllocator,
-            VulkanTexture const* src, VkComponentMapping swizzle);
+            fvkmemory::resource_ptr<VulkanTexture> src, VkComponentMapping swizzle);
 
-    ~VulkanTexture();
+    ~VulkanTexture() = default;
 
     // Uploads data into a subregion of a 2D or 3D texture.
     void updateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
@@ -121,16 +115,14 @@ struct VulkanTexture : public HwTexture, VulkanResource {
 
     // Returns the primary image view, which is used for shader sampling.
     VkImageView getPrimaryImageView() {
-        VulkanTextureState* state = getSharedState();
-        return getImageView(mPrimaryViewRange, state->mViewType, mSwizzle);
+        return getImageView(mPrimaryViewRange, mState->mViewType, mSwizzle);
     }
 
     VkImageViewType getViewType() const {
-        VulkanTextureState const* state = getSharedState();
-        return state->mViewType;
+        return mState->mViewType;
     }
 
-    VkImageSubresourceRange getPrimaryViewRange() const { return mPrimaryViewRange; }
+    VkImageSubresourceRange const& getPrimaryViewRange() const { return mPrimaryViewRange; }
 
     VulkanLayout getPrimaryImageLayout() const {
         return getLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
@@ -156,34 +148,28 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     VkImageView getViewForType(VkImageSubresourceRange const& range, VkImageViewType type);
 
     VkFormat getVkFormat() const {
-        VulkanTextureState const* state = getSharedState();
-        return state->mVkFormat;
+        return mState->mVkFormat;
     }
     VkImage getVkImage() const {
-        VulkanTextureState const* state = getSharedState();
-        return state->mTextureImage;
+        return mState->mTextureImage;
     }
 
     VulkanLayout getLayout(uint32_t layer, uint32_t level) const;
 
-    void setSidecar(VulkanTexture* sidecar) {
-        VulkanTextureState* state = getSharedState();
-        state->mSidecarMSAA.reset(sidecar);
+    void setSidecar(fvkmemory::resource_ptr<VulkanTexture> sidecar) {
+        mState->mSidecarMSAA = sidecar;
     }
 
-    VulkanTexture* getSidecar() const {
-        VulkanTextureState const* state = getSharedState();
-        return state->mSidecarMSAA.get();
+    fvkmemory::resource_ptr<VulkanTexture> getSidecar() const {
+        return mState->mSidecarMSAA;
     }
 
     bool isTransientAttachment() const {
-        VulkanTextureState const* state = getSharedState();
-        return state->mIsTransientAttachment;
+        return mState->mIsTransientAttachment;
     }
 
     bool getIsProtected() const {
-        VulkanTextureState const* state = getSharedState();
-        return state->mIsProtected;
+        return mState->mIsProtected;
     }
 
     bool transitionLayout(VulkanCommandBuffer* commands, VkImageSubresourceRange const& range,
@@ -211,9 +197,6 @@ struct VulkanTexture : public HwTexture, VulkanResource {
 #endif
 
 private:
-    VulkanTextureState* getSharedState();
-    VulkanTextureState const* getSharedState() const;
-
     // Gets or creates a cached VkImageView for a range of miplevels, array layers, viewType, and
     // swizzle (or not).
     VkImageView getImageView(VkImageSubresourceRange range, VkImageViewType viewType,
@@ -222,9 +205,7 @@ private:
     void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width, uint32_t height,
             uint32_t depth, uint32_t miplevel);
 
-    VulkanResourceAllocator* const mAllocator;
-
-    Handle<VulkanTextureState> mState;
+    fvkmemory::resource_ptr<VulkanTextureState> mState;
 
     // Track the range of subresources that define the "primary" image view, which is the special
     // image view that gets bound to an actual texture sampler.

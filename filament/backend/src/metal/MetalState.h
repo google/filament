@@ -28,7 +28,9 @@
 
 #include <memory>
 #include <tsl/robin_map.h>
+
 #include <utils/Hash.h>
+#include <utils/Invocable.h>
 
 namespace filament {
 namespace backend {
@@ -160,6 +162,8 @@ template<typename StateType,
          typename HashFn = utils::hash::MurmurHashFn<StateType>>
 class StateCache {
 
+    using MapType = tsl::robin_map<StateType, MetalType, HashFn>;
+
 public:
 
     StateCache() = default;
@@ -168,6 +172,18 @@ public:
     StateCache& operator=(const StateCache&) = delete;
 
     void setDevice(id<MTLDevice> device) noexcept { mDevice = device; }
+
+    void removeIf(utils::Invocable<bool(const StateType&)> fn) noexcept {
+        typename MapType::const_iterator it = mStateCache.begin();
+        while (it != mStateCache.end()) {
+            const auto& [key, _] = *it;
+            if (UTILS_UNLIKELY(fn(key))) {
+                it = mStateCache.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
     MetalType getOrCreateState(const StateType& state) noexcept {
         assert_invariant(mDevice);
@@ -196,7 +212,7 @@ private:
     StateCreator creator;
     id<MTLDevice> mDevice = nil;
 
-    tsl::robin_map<StateType, MetalType, HashFn> mStateCache;
+    MapType mStateCache;
 
 };
 

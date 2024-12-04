@@ -797,9 +797,20 @@ void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
-    if (ph) {
-        destruct_handle<MetalProgram>(ph);
+    if (UTILS_UNLIKELY(!ph)) {
+        return;
     }
+    // Remove any cached pipeline states that refer to these programs.
+    auto* metalProgram = handle_cast<MetalProgram>(ph);
+    const auto& functions = metalProgram->getFunctionsIfPresent();
+    if (UTILS_LIKELY(functions.isRaster())) { // only raster pipelines are cached
+        const auto& raster = functions.getRasterFunctions();
+        mContext->pipelineStateCache.removeIf([&](const MetalPipelineState& state) {
+            const auto& [fragment, vertex] = raster;
+            return state.fragmentFunction == fragment || state.vertexFunction == vertex;
+        });
+    }
+    destruct_handle<MetalProgram>(ph);
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
@@ -861,10 +872,20 @@ void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh)
 
 void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
     DEBUG_LOG("destroyDescriptorSet(dsh = %d)\n", dsh.getId());
-    if (dsh) {
-        executeAfterCurrentCommandBufferCompletes(
-                [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
+    if (!dsh) {
+        return;
     }
+
+    // Unbind this descriptor set.
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        if (UTILS_UNLIKELY(mContext->currentDescriptorSets[i] == descriptorSet)) {
+            mContext->currentDescriptorSets[i] = nullptr;
+        }
+    }
+
+    executeAfterCurrentCommandBufferCompletes(
+            [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
 }
 
 void MetalDriver::terminate() {
