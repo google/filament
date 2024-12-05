@@ -67,10 +67,9 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
         void* externalImage, VkDevice device) {
     return {};
 }
-VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
-        const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
-        VkDeviceMemory& memory) {
-    return VK_NULL_HANDLE;
+VulkanPlatform::imageData VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
+        const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata) {
+    return {VK_NULL_HANDLE, VK_NULL_HANDLE};
 }
 VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {

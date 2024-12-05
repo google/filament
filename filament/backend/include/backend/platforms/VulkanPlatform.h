@@ -339,15 +339,17 @@ public:
         uint32_t memoryTypeBits;
     };
     virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
-    virtual VkImage createExternalImage(void* externalImage, const ExternalImageMetadata& metadata, VkDeviceMemory& memory);
+
+    typedef std::pair<VkImage, VkDeviceMemory> imageData;
+    virtual imageData createExternalImage(void* externalImage,
+            const ExternalImageMetadata& metadata);
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
     static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
             VkDevice device);
-    static VkImage createExternalImageImpl(void* externalImage, VkDevice device,
-            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
-            VkDeviceMemory& memory);
+    static imageData createExternalImageImpl(void* externalImage, VkDevice device,
+            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

@@ -26,8 +26,8 @@
 
 using namespace bluevk;
 
-namespace filament::backend {
-void GetVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
+namespace {
+void getVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
         VkFormat& format,
         VkImageUsageFlags& usage,
         bool& isProtected) {
@@ -104,49 +104,10 @@ void GetVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
     }
 }
 
-void describeExternalImage(void* externalBuffer, VkDevice device,
-        VulkanPlatform::ExternalImageMetadata& metadata) {
-    AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
-    if (__builtin_available(android 26, *)) {
-        AHardwareBuffer_Desc buffer_desc;
-        AHardwareBuffer_describe(buffer, &buffer_desc);
-        metadata.width = buffer_desc.width;
-        metadata.height = buffer_desc.height;
-        metadata.layers = buffer_desc.layers;
-
-        GetVKFormatAndUsage(buffer_desc, metadata.format, metadata.usage,
-            metadata.isProtected);
-    }
-    // In the unprotected case add R/W capabilities
-    if (metadata.isProtected == false) {
-        metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-        VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    }
-
-    VkAndroidHardwareBufferFormatPropertiesANDROID format_info = {
-        .sType =
-            VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
-        .pNext = nullptr,
-    };
-    VkAndroidHardwareBufferPropertiesANDROID properties = {
-        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
-        .pNext = &format_info,
-    };
-    VkResult prop_res = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer,
-        &properties);
-    FILAMENT_CHECK_POSTCONDITION(prop_res == VK_SUCCESS);
-
-    FILAMENT_CHECK_POSTCONDITION(metadata.format == format_info.format);
-    metadata.externalFormat = format_info.externalFormat;
-    metadata.allocationSize = properties.allocationSize;
-    metadata.memoryTypeBits = properties.memoryTypeBits;
-}
-
-VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
+VulkanPlatform::imageData allocateExternalImage(void* externalBuffer, VkDevice device,
         const VkAllocationCallbacks* allocator,
-        const VulkanPlatform::ExternalImageMetadata& metadata,
-        VkDeviceMemory& memory) {
-    VkImage image;
+        const VulkanPlatform::ExternalImageMetadata& metadata) {
+    VulkanPlatform::imageData data;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
 
     //if external format we need to specifiy it in the allocation
@@ -183,7 +144,7 @@ VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
     VkResult const result =
-        vkCreateImage(device, &imageInfo, allocator, &image);
+        vkCreateImage(device, &imageInfo, allocator, &data.first);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS);
 
     // Allocate the memory
@@ -195,7 +156,7 @@ VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
     VkMemoryDedicatedAllocateInfo memory_dedicated_allocate_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
         .pNext = &android_hardware_buffer_info,
-        .image = image,
+        .image = data.first,
         .buffer = VK_NULL_HANDLE,
     };
     VkMemoryAllocateInfo alloc_info = {
@@ -204,37 +165,59 @@ VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
         .allocationSize = metadata.allocationSize,
         .memoryTypeIndex = metadata.memoryTypeBits };
     VkResult const result_alloc =
-        vkAllocateMemory(device, &alloc_info, allocator, &memory);
+        vkAllocateMemory(device, &alloc_info, allocator, &data.second);
     FILAMENT_CHECK_POSTCONDITION(result_alloc == VK_SUCCESS);
 
-    return image;
+    return data;
 }
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
         void* externalImage, VkDevice device) {
-    VulkanPlatform::ExternalImageMetadata metadata = {
-        .width = 0,
-        .height = 0,
-        .format = VK_FORMAT_UNDEFINED,
-        .isProtected = false,
-        .externalFormat = 0,
-        .usage = 0,
-        .allocationSize = 0,
-        .memoryTypeBits = 0,
+    VulkanPlatform::ExternalImageMetadata metadata;
+    AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalImage);
+    if (__builtin_available(android 26, *)) {
+        AHardwareBuffer_Desc buffer_desc;
+        AHardwareBuffer_describe(buffer, &buffer_desc);
+        metadata.width = buffer_desc.width;
+        metadata.height = buffer_desc.height;
+        metadata.layers = buffer_desc.layers;
+
+        getVKFormatAndUsage(buffer_desc, metadata.format, metadata.usage,
+            metadata.isProtected);
+    }
+    // In the unprotected case add R/W capabilities
+    if (metadata.isProtected == false) {
+        metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    VkAndroidHardwareBufferFormatPropertiesANDROID format_info = {
+        .sType =
+            VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID,
+        .pNext = nullptr,
     };
-    describeExternalImage(externalImage, device, metadata);
+    VkAndroidHardwareBufferPropertiesANDROID properties = {
+        .sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+        .pNext = &format_info,
+    };
+    VkResult prop_res = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer,
+        &properties);
+    FILAMENT_CHECK_POSTCONDITION(prop_res == VK_SUCCESS);
+
+    FILAMENT_CHECK_POSTCONDITION(metadata.format == format_info.format);
+    metadata.externalFormat = format_info.externalFormat;
+    metadata.allocationSize = properties.allocationSize;
+    metadata.memoryTypeBits = properties.memoryTypeBits;
     return metadata;
 }
 
-VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
-        const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
-        VkDeviceMemory& memory) {
-    VkImage image = allocateExternalImage(externalImage, device, allocator, metadata,
-        memory);
-    VkResult result = vkBindImageMemory(device, image, memory, 0);
+VulkanPlatform::imageData VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
+        const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata) {
+    imageData data = allocateExternalImage(externalImage, device, allocator, metadata);
+    VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
         << result << ".";
-    return image;
+    return data;
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {

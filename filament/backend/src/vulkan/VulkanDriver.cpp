@@ -547,7 +547,6 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Te
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 
-    usage = backend::TextureUsage::SAMPLEABLE;
     const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
     if (metadata.isProtected) {
         usage |= backend::TextureUsage::PROTECTED;
@@ -557,11 +556,10 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Te
     assert_invariant(height == metadata.height);
     assert_invariant(getVkFormat(format) == metadata.format);
 
-    VkDeviceMemory memory;
-    VkImage image = mPlatform->createExternalImage(externalImage, metadata, memory);
+    const auto& data = mPlatform->createExternalImage(externalImage, metadata);
 
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
-        mAllocator, &mResourceManager, &mCommands, image, memory, metadata.format,
+        mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
         1, metadata.width, metadata.height, usage, mStagePool);
 
     texture.inc();
