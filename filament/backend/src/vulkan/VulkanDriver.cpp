@@ -553,6 +553,10 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Te
         usage |= backend::TextureUsage::PROTECTED;
     }
 
+    assert_invariant(width == metadata.width);
+    assert_invariant(height == metadata.height);
+    assert_invariant(getVkFormat(format) == metadata.format);
+
     VkDeviceMemory memory;
     VkImage image = mPlatform->createExternalImage(externalImage, metadata, memory);
 
