@@ -114,7 +114,7 @@ namespace filament::backend {
 
     VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
             const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
-        VkImage image;
+        VkImage image = VK_NULL_HANDLE;
     #if defined(__ANDROID__)
         image = createExternalImage(externalBuffer, device, metadata, memory);
         VkResult result = vkBindImageMemory(device, metadata.image,
