@@ -60,11 +60,10 @@ public:
     static enabled_resource_ptr<B> cast(ResourceManager* resManager,
             Handle<B> const& handle) noexcept {
         D* ptr = resManager->handle_cast<D*, B>(handle);
-        if (UTILS_UNLIKELY(ptr->isHandleConsideredDestroyed())) {
-            FILAMENT_CHECK_PRECONDITION(!ptr->isHandleConsideredDestroyed())
-                    << "Handle id=" << ptr->id << " (" << getTypeStr(ptr->restype)
-                    << ") is being used after it has been freed";
-        }
+        FILAMENT_CHECK_PRECONDITION(!ptr->isHandleConsideredDestroyed())
+                << "Handle id=" << ptr->id << " (" << getTypeStr(ptr->restype)
+                << ") is being used after it has been freed";
+
         return {ptr};
     }
 
