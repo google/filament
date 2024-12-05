@@ -15,6 +15,8 @@
  */
 #include <backend/platforms/VulkanPlatform.h>
 
+#include "vulkan/VulkanConstants.h"
+
 #include <utils/Panic.h>
 
 #include <bluevk/BlueVK.h>
