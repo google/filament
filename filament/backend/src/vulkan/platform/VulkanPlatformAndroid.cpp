@@ -361,4 +361,26 @@ VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice de
         << result << ".";
     return image;
 }
+
+VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
+    VulkanPlatform::ExtensionSet const ret = {
+        VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+    };
+    return ret;
+}
+
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+    VkInstance instance, uint64_t flags) noexcept {
+    VkSurfaceKHR surface;
+    VkExtent2D extent;
+
+    VkAndroidSurfaceCreateInfoKHR const createInfo{
+            .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
+            .window = (ANativeWindow*)nativeWindow,
+    };
+    VkResult const result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC,
+        (VkSurfaceKHR*)&surface);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateAndroidSurfaceKHR error.";
+    return std::make_tuple(surface, extent);
+}
 }
