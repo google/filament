@@ -104,10 +104,10 @@ void getVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
     }
 }
 
-VulkanPlatform::imageData allocateExternalImage(void* externalBuffer, VkDevice device,
-        const VkAllocationCallbacks* allocator,
+filament::backend::VulkanPlatform::imageData allocateExternalImage(void* externalBuffer,
+        VkDevice device, const VkAllocationCallbacks* allocator,
         const VulkanPlatform::ExternalImageMetadata& metadata) {
-    VulkanPlatform::imageData data;
+    filament::backend::VulkanPlatform::imageData data;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
 
     //if external format we need to specifiy it in the allocation
@@ -171,9 +171,10 @@ VulkanPlatform::imageData allocateExternalImage(void* externalBuffer, VkDevice d
     return data;
 }
 
-VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
-        void* externalImage, VkDevice device) {
-    VulkanPlatform::ExternalImageMetadata metadata;
+filament::backend::VulkanPlatform::ExternalImageMetadata 
+        VulkanPlatform::getExternalImageMetadataImpl(void* externalImage,
+        VkDevice device) {
+    filament::backend::VulkanPlatform::ExternalImageMetadata metadata;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalImage);
     if (__builtin_available(android 26, *)) {
         AHardwareBuffer_Desc buffer_desc;
