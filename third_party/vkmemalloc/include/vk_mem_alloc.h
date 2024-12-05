@@ -126,8 +126,6 @@ See documentation chapter: \ref statistics.
 extern "C" {
 #endif
 
-#include <stdio.h>
-
 #ifndef VULKAN_H_
     #include <vulkan/vulkan.h>
 #endif
@@ -294,6 +292,10 @@ extern "C" {
 
 #ifndef VMA_STATS_STRING_ENABLED
     #define VMA_STATS_STRING_ENABLED 1
+#endif
+
+#if VMA_STATS_STRING_ENABLED
+    #include <cstdio> // For snprintf
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
