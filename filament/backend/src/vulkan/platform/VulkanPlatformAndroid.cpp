@@ -170,9 +170,10 @@ filament::backend::VulkanPlatform::imageData allocateExternalImage(void* externa
 
     return data;
 }
+}
 
-filament::backend::VulkanPlatform::ExternalImageMetadata 
-        VulkanPlatform::getExternalImageMetadataImpl(void* externalImage,
+namespace filament::backend { 
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(void* externalImage,
         VkDevice device) {
     filament::backend::VulkanPlatform::ExternalImageMetadata metadata;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalImage);
