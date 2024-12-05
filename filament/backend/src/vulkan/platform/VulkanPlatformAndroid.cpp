@@ -106,7 +106,7 @@ void getVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
 
 filament::backend::VulkanPlatform::imageData allocateExternalImage(void* externalBuffer,
         VkDevice device, const VkAllocationCallbacks* allocator,
-        const VulkanPlatform::ExternalImageMetadata& metadata) {
+        const filament::backend::VulkanPlatform::ExternalImageMetadata& metadata) {
     filament::backend::VulkanPlatform::imageData data;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
 
