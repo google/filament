@@ -161,7 +161,8 @@ void describeExternalImage(void* externalBuffer, VkDevice device,
 
 VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
         const VkAllocationCallbacks* allocator,
-        VulkanPlatform::ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
+        const VulkanPlatform::ExternalImageMetadata& metadata,
+        VkDeviceMemory& memory) {
     VkImage image;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
 
@@ -222,6 +223,8 @@ VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
     VkResult const result_alloc =
         vkAllocateMemory(device, &alloc_info, allocator, &memory);
     FILAMENT_CHECK_POSTCONDITION(result_alloc == VK_SUCCESS);
+
+    return image;
 }
 #if 0
 void createExternalImage(void* externalBuffer, VkDevice device,
