@@ -80,7 +80,7 @@ buildscript {
 
     ext.versions = [
         'jdk': 17,
-        'minSdk': 26,
+        'minSdk': 21,
         'targetSdk': 34,
         'compileSdk': 34,
         'kotlin': '2.0.21',
@@ -111,7 +111,7 @@ buildscript {
     ext.cmakeArgs = [
         "--no-warn-unused-cli",
         "-DANDROID_PIE=ON",
-        "-DANDROID_PLATFORM=26",
+        "-DANDROID_PLATFORM=21",
         "-DANDROID_STL=c++_static",
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
         "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),

@@ -21,7 +21,7 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_VERSION 1)
 
 # android
-set(API_LEVEL 26)
+set(API_LEVEL 21)
 
 # architecture
 set(ARCH x86_64-linux-android)
