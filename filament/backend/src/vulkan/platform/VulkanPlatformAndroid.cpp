@@ -154,7 +154,7 @@ void describeExternalImage(void* externalBuffer, VkDevice device,
     FILAMENT_CHECK_POSTCONDITION(prop_res == VK_SUCCESS);
 
     FILAMENT_CHECK_POSTCONDITION(metadata.format == format_info.format);
-    metadata.externalFormat = format_info.externalFormat
+    metadata.externalFormat = format_info.externalFormat;
     metadata.allocationSize = properties.allocationSize;
     metadata.memoryTypeBits = properties.memoryTypeBits;
 }
