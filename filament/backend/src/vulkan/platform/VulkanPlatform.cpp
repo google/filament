@@ -959,7 +959,7 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
 
 VkImage VulkanPlatform::createExternalImage(void* externalImage,
         const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
-    return createExternalImageImpl(externalImage, mImpl->mDevice, metadata,
+    return createExternalImageImpl(externalImage, mImpl->mDevice, nullptr, metadata,
         memory);
 }
 

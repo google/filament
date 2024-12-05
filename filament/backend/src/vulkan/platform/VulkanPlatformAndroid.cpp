@@ -159,7 +159,8 @@ void describeExternalImage(void* externalBuffer, VkDevice device,
     metadata.memoryTypeBits = properties.memoryTypeBits;
 }
 
-VkImage createExternalImage(void* externalBuffer, VkDevice device,
+VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
+        const VkAllocationCallbacks* allocator,
         VulkanPlatform::ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
     VkImage image;
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
@@ -193,7 +194,7 @@ VkImage createExternalImage(void* externalBuffer, VkDevice device,
     imageInfo.arrayLayers = metadata.layers;
     imageInfo.usage = metadata.usage;
     // In the unprotected case add R/W capabilities
-    if (isProtected == false)
+    if (metadata.isProtected == false)
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT |
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
@@ -348,8 +349,10 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
 }
 
 VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
-        const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
-    VkImage image = createExternalImage(externalBuffer, device, metadata, memory);
+        const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
+        kDeviceMemory& memory) {
+    VkImage image = allocateExternalImage(externalBuffer, device, allocator, metadata,
+        memory);
     VkResult result = vkBindImageMemory(device, metadata.image,
         metadata.memory, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="

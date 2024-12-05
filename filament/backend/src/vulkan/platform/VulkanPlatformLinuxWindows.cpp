@@ -90,7 +90,8 @@ namespace filament::backend {
         return {};
     }
     VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
-            const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
+            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
+            VkDeviceMemory& memory) {
         return VK_NULL_HANDLE;
     }
 

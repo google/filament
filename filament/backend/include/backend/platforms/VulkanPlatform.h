@@ -346,7 +346,8 @@ private:
     static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
             VkDevice device);
     static VkImage createExternalImageImpl(void* externalImage, VkDevice device,
-            const ExternalImageMetadata& metadata, VkDeviceMemory& memory);
+            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
+            VkDeviceMemory& memory);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
