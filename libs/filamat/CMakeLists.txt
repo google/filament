@@ -81,7 +81,10 @@ include_directories(${CMAKE_BINARY_DIR})
 
 # Filamat
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(${TARGET} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} backend_headers shaders filabridge utils smol-v)
 

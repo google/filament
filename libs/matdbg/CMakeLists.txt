@@ -88,7 +88,10 @@ target_link_libraries(${TARGET} PUBLIC
 
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(${TARGET} PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/${PUBLIC_HDR_DIR}>
+    $<INSTALL_INTERFACE:${PUBLIC_HDR_DIR}>
+)
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
