@@ -294,16 +294,6 @@ public:
 
     struct ExternalImageMetadata {
         /**
-         * The vulkan image of the external image
-         */
-        VkImage image;
-
-        /**
-         * The memory of the external image
-         */
-        VkDeviceMemory memory;
-
-        /**
          * The width of the external image
          */
         uint32_t width;
@@ -322,13 +312,36 @@ public:
          * An external buffer can be protected. This tells you if it is.
          */
         bool isProtected;
+
+        /**
+         * The type of external format (opaque int) if used.
+         */
+        uint64_t externalFormat;
+
+        /**
+         * Image usage
+         */
+        VkImageUsageFlags usage;
+
+        /**
+         * Allocation size
+         */
+        VkDeviceSize allocationSize;
+
+        /**
+         * Heap information
+         */
+        uint32_t memoryTypeBits;
     };
     virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
+    virtual VkImage createExternalImage(void* externalImage, const ExternalImageMetadata& metadata, VkDeviceMemory& memory);
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
     static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
             VkDevice device);
+    static VkImage createExternalImageImpl(void* externalImage, VkDevice device,
+            const ExternalImageMetadata& metadata, VkDeviceMemory& memory);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

@@ -957,6 +957,12 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
     return getExternalImageMetadataImpl(externalImage, mImpl->mDevice);
 }
 
+VkImage VulkanPlatform::createExternalImage(void* externalImage,
+        const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
+    return createExternalImageImpl(externalImage, mImpl->mDevice, metadata,
+        memory);
+}
+
 #undef SWAPCHAIN_RET_FUNC
 
 }// namespace filament::backend

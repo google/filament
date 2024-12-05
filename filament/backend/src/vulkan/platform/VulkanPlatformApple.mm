@@ -65,15 +65,11 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
 
 VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
         void* externalImage, VkDevice device) {
-    VulkanPlatform::ExternalImageMetadata metadata = {
-        .image = VK_NULL_HANDLE,
-        .memory = VK_NULL_HANDLE,
-        .width = 0,
-        .height = 0,
-        .format = VK_FORMAT_UNDEFINED,
-        .isProtected = false
-    };
-    return metadata;
+    return {};
+}
+VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
+    return VK_NULL_HANDLE;
 }
 VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
