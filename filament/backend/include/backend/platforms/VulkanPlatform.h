@@ -304,6 +304,11 @@ public:
         uint32_t height;
 
         /**
+         * The layer count of the external image
+         */
+        uint32_t layers;
+
+        /**
          * The format of the external image
          */
         VkFormat format;

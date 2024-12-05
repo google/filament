@@ -130,6 +130,7 @@ void describeExternalImage(void* externalBuffer, VkDevice device,
     AHardwareBuffer_describe(buffer, &buffer_desc);
     metadata.width = buffer_desc.width;
     metadata.height = buffer_desc.height;
+    metadata.layers = buffer_desc.layers;
 
     GetVKFormatAndUsage(buffer_desc, metadata.format, metadata.usage,
         metadata.isProtected);
@@ -189,8 +190,7 @@ VkImage createExternalImage(void* externalBuffer, VkDevice device,
         1u,
     };
     imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.arrayLayers = 1;
+    imageInfo.arrayLayers = metadata.layers;
     imageInfo.usage = metadata.usage;
     // In the unprotected case add R/W capabilities
     if (isProtected == false)
@@ -330,4 +330,30 @@ void allocateExternalImage(void* externalBuffer, VkDevice device,
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS);
 }
 #endif
+
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
+        void* externalImage, VkDevice device) {
+    VulkanPlatform::ExternalImageMetadata metadata = {
+        .width = 0,
+        .height = 0,
+        .format = VK_FORMAT_UNDEFINED,
+        .isProtected = false,
+        .externalFormat = 0,
+        .usage = 0,
+        .allocationSize = 0,
+        .memoryTypeBits = 0,
+    };
+    describeExternalImage(externalBuffer, device, metadata);
+    return metadata;
+}
+
+VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
+        const ExternalImageMetadata& metadata, VkDeviceMemory& memory) {
+    VkImage image = createExternalImage(externalBuffer, device, metadata, memory);
+    VkResult result = vkBindImageMemory(device, metadata.image,
+        metadata.memory, 0);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
+        << result << ".";
+    return image;
+}
 }
