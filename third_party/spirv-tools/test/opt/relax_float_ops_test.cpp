@@ -18,7 +18,6 @@
 #include <string>
 #include <vector>
 
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 

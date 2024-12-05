@@ -14,7 +14,6 @@
 
 #include "source/opt/folding_rules.h"
 
-#include <climits>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -1656,8 +1655,11 @@ std::vector<Operand> GetExtractOperandsForElementOfCompositeConstruct(
 
   analysis::Type* result_type = type_mgr->GetType(inst->type_id());
   if (result_type->AsVector() == nullptr) {
-    uint32_t id = inst->GetSingleWordInOperand(result_index);
-    return {Operand(SPV_OPERAND_TYPE_ID, {id})};
+    if (result_index < inst->NumInOperands()) {
+      uint32_t id = inst->GetSingleWordInOperand(result_index);
+      return {Operand(SPV_OPERAND_TYPE_ID, {id})};
+    }
+    return {};
   }
 
   // If the result type is a vector, then vector operands are concatenated.
@@ -2065,7 +2067,8 @@ FoldingRule FMixFeedingExtract() {
 }
 
 // Returns the number of elements in the composite type |type|.  Returns 0 if
-// |type| is a scalar value.
+// |type| is a scalar value. Return UINT32_MAX when the size is unknown at
+// compile time.
 uint32_t GetNumberOfElements(const analysis::Type* type) {
   if (auto* vector_type = type->AsVector()) {
     return vector_type->element_count();
@@ -2077,21 +2080,27 @@ uint32_t GetNumberOfElements(const analysis::Type* type) {
     return static_cast<uint32_t>(struct_type->element_types().size());
   }
   if (auto* array_type = type->AsArray()) {
-    return array_type->length_info().words[0];
+    if (array_type->length_info().words[0] ==
+            analysis::Array::LengthInfo::kConstant &&
+        array_type->length_info().words.size() == 2) {
+      return array_type->length_info().words[1];
+    }
+    return UINT32_MAX;
   }
   return 0;
 }
 
 // Returns a map with the set of values that were inserted into an object by
 // the chain of OpCompositeInsertInstruction starting with |inst|.
-// The map will map the index to the value inserted at that index.
+// The map will map the index to the value inserted at that index. An empty map
+// will be returned if the map could not be properly generated.
 std::map<uint32_t, uint32_t> GetInsertedValues(Instruction* inst) {
   analysis::DefUseManager* def_use_mgr = inst->context()->get_def_use_mgr();
   std::map<uint32_t, uint32_t> values_inserted;
   Instruction* current_inst = inst;
   while (current_inst->opcode() == spv::Op::OpCompositeInsert) {
     if (current_inst->NumInOperands() > inst->NumInOperands()) {
-      // This is the catch the case
+      // This is to catch the case
       //   %2 = OpCompositeInsert %m2x2int %v2int_1_0 %m2x2int_undef 0
       //   %3 = OpCompositeInsert %m2x2int %int_4 %2 0 0
       //   %4 = OpCompositeInsert %m2x2int %v2int_2_3 %3 1
@@ -2882,8 +2891,12 @@ FoldingRule UpdateImageOperands() {
                "Offset and ConstOffset may not be used together");
         if (offset_operand_index < inst->NumOperands()) {
           if (constants[offset_operand_index]) {
-            image_operands =
-                image_operands | uint32_t(spv::ImageOperandsMask::ConstOffset);
+            if (constants[offset_operand_index]->IsZero()) {
+              inst->RemoveInOperand(offset_operand_index);
+            } else {
+              image_operands = image_operands |
+                               uint32_t(spv::ImageOperandsMask::ConstOffset);
+            }
             image_operands =
                 image_operands & ~uint32_t(spv::ImageOperandsMask::Offset);
             inst->SetInOperand(operand_index, {image_operands});

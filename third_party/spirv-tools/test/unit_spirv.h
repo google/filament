@@ -202,9 +202,8 @@ inline std::vector<spv_target_env> AllTargetEnvironments() {
 // Returns the capabilities in a CapabilitySet as an ordered vector.
 inline std::vector<spv::Capability> ElementsIn(
     const spvtools::CapabilitySet& capabilities) {
-  std::vector<spv::Capability> result;
-  capabilities.ForEach([&result](spv::Capability c) { result.push_back(c); });
-  return result;
+  return std::vector<spv::Capability>(capabilities.cbegin(),
+                                      capabilities.cend());
 }
 
 }  // namespace spvtest

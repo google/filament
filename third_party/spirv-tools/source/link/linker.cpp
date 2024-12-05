@@ -91,7 +91,8 @@ spv_result_t ShiftIdsInModules(const MessageConsumer& consumer,
 // should be non-null. |max_id_bound| should be strictly greater than 0.
 spv_result_t GenerateHeader(const MessageConsumer& consumer,
                             const std::vector<opt::Module*>& modules,
-                            uint32_t max_id_bound, opt::ModuleHeader* header);
+                            uint32_t max_id_bound, opt::ModuleHeader* header,
+                            const LinkerOptions& options);
 
 // Merge all the modules from |in_modules| into a single module owned by
 // |linked_context|.
@@ -202,7 +203,8 @@ spv_result_t ShiftIdsInModules(const MessageConsumer& consumer,
 
 spv_result_t GenerateHeader(const MessageConsumer& consumer,
                             const std::vector<opt::Module*>& modules,
-                            uint32_t max_id_bound, opt::ModuleHeader* header) {
+                            uint32_t max_id_bound, opt::ModuleHeader* header,
+                            const LinkerOptions& options) {
   spv_position_t position = {};
 
   if (modules.empty())
@@ -212,10 +214,12 @@ spv_result_t GenerateHeader(const MessageConsumer& consumer,
     return DiagnosticStream(position, consumer, "", SPV_ERROR_INVALID_DATA)
            << "|max_id_bound| of GenerateHeader should not be null.";
 
-  const uint32_t linked_version = modules.front()->version();
+  uint32_t linked_version = modules.front()->version();
   for (std::size_t i = 1; i < modules.size(); ++i) {
     const uint32_t module_version = modules[i]->version();
-    if (module_version != linked_version)
+    if (options.GetUseHighestVersion()) {
+      linked_version = std::max(linked_version, module_version);
+    } else if (module_version != linked_version) {
       return DiagnosticStream({0, 0, 1}, consumer, "", SPV_ERROR_INTERNAL)
              << "Conflicting SPIR-V versions: "
              << SPV_SPIRV_VERSION_MAJOR_PART(linked_version) << "."
@@ -224,6 +228,7 @@ spv_result_t GenerateHeader(const MessageConsumer& consumer,
              << SPV_SPIRV_VERSION_MAJOR_PART(module_version) << "."
              << SPV_SPIRV_VERSION_MINOR_PART(module_version)
              << " (input module " << (i + 1) << ").";
+    }
   }
 
   header->magic_number = spv::MagicNumber;
@@ -753,7 +758,7 @@ spv_result_t Link(const Context& context, const uint32_t* const* binaries,
 
   // Phase 2: Generate the header
   opt::ModuleHeader header;
-  res = GenerateHeader(consumer, modules, max_id_bound, &header);
+  res = GenerateHeader(consumer, modules, max_id_bound, &header, options);
   if (res != SPV_SUCCESS) return res;
   IRContext linked_context(c_context->target_env, consumer);
   linked_context.module()->SetHeader(header);

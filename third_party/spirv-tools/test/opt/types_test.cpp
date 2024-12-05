@@ -391,18 +391,13 @@ TEST(Types, IsUniqueType) {
       case Type::kArray:
       case Type::kRuntimeArray:
       case Type::kStruct:
+      case Type::kPointer:
         expectation = false;
         break;
       default:
         break;
     }
-    EXPECT_EQ(t->IsUniqueType(false), expectation)
-        << "expected '" << t->str() << "' to be a "
-        << (expectation ? "" : "non-") << "unique type";
-
-    // Allowing variables pointers.
-    if (t->AsPointer()) expectation = false;
-    EXPECT_EQ(t->IsUniqueType(true), expectation)
+    EXPECT_EQ(t->IsUniqueType(), expectation)
         << "expected '" << t->str() << "' to be a "
         << (expectation ? "" : "non-") << "unique type";
   }

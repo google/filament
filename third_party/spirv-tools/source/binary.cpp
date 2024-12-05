@@ -546,6 +546,13 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
       parsed_operand.number_bit_width = 32;
       break;
 
+    case SPV_OPERAND_TYPE_LITERAL_FLOAT:
+      // These are regular single-word literal float operands.
+      parsed_operand.type = SPV_OPERAND_TYPE_LITERAL_FLOAT;
+      parsed_operand.number_kind = SPV_NUMBER_FLOATING;
+      parsed_operand.number_bit_width = 32;
+      break;
+
     case SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER:
     case SPV_OPERAND_TYPE_OPTIONAL_TYPED_LITERAL_INTEGER:
       parsed_operand.type = SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER;
@@ -626,7 +633,6 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
     } break;
 
     case SPV_OPERAND_TYPE_CAPABILITY:
-    case SPV_OPERAND_TYPE_SOURCE_LANGUAGE:
     case SPV_OPERAND_TYPE_EXECUTION_MODEL:
     case SPV_OPERAND_TYPE_ADDRESSING_MODEL:
     case SPV_OPERAND_TYPE_MEMORY_MODEL:
@@ -664,7 +670,8 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
     case SPV_OPERAND_TYPE_QUANTIZATION_MODES:
     case SPV_OPERAND_TYPE_OVERFLOW_MODES:
     case SPV_OPERAND_TYPE_PACKED_VECTOR_FORMAT:
-    case SPV_OPERAND_TYPE_OPTIONAL_PACKED_VECTOR_FORMAT: {
+    case SPV_OPERAND_TYPE_OPTIONAL_PACKED_VECTOR_FORMAT:
+    case SPV_OPERAND_TYPE_NAMED_MAXIMUM_NUMBER_OF_REGISTERS: {
       // A single word that is a plain enum value.
 
       // Map an optional operand type to its corresponding concrete type.
@@ -683,22 +690,44 @@ spv_result_t Parser::parseOperand(size_t inst_offset,
       spvPushOperandTypes(entry->operandTypes, expected_operands);
     } break;
 
+    case SPV_OPERAND_TYPE_SOURCE_LANGUAGE: {
+      spv_operand_desc entry;
+      if (grammar_.lookupOperand(type, word, &entry)) {
+        return diagnostic()
+               << "Invalid " << spvOperandTypeStr(parsed_operand.type)
+               << " operand: " << word
+               << ", if you are creating a new source language please use "
+                  "value 0 "
+                  "(Unknown) and when ready, add your source language to "
+                  "SPRIV-Headers";
+      }
+      // Prepare to accept operands to this operand, if needed.
+      spvPushOperandTypes(entry->operandTypes, expected_operands);
+    } break;
+
     case SPV_OPERAND_TYPE_FP_FAST_MATH_MODE:
     case SPV_OPERAND_TYPE_FUNCTION_CONTROL:
     case SPV_OPERAND_TYPE_LOOP_CONTROL:
     case SPV_OPERAND_TYPE_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_IMAGE:
     case SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS:
+    case SPV_OPERAND_TYPE_OPTIONAL_RAW_ACCESS_CHAIN_OPERANDS:
     case SPV_OPERAND_TYPE_SELECTION_CONTROL:
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
-    case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS: {
+    case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
+    case SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_OPERANDS:
+    case SPV_OPERAND_TYPE_OPTIONAL_COOPERATIVE_MATRIX_OPERANDS: {
       // This operand is a mask.
 
       // Map an optional operand type to its corresponding concrete type.
       if (type == SPV_OPERAND_TYPE_OPTIONAL_IMAGE)
         parsed_operand.type = SPV_OPERAND_TYPE_IMAGE;
-      else if (type == SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS)
+      if (type == SPV_OPERAND_TYPE_OPTIONAL_MEMORY_ACCESS)
         parsed_operand.type = SPV_OPERAND_TYPE_MEMORY_ACCESS;
+      if (type == SPV_OPERAND_TYPE_OPTIONAL_COOPERATIVE_MATRIX_OPERANDS)
+        parsed_operand.type = SPV_OPERAND_TYPE_COOPERATIVE_MATRIX_OPERANDS;
+      if (type == SPV_OPERAND_TYPE_OPTIONAL_RAW_ACCESS_CHAIN_OPERANDS)
+        parsed_operand.type = SPV_OPERAND_TYPE_RAW_ACCESS_CHAIN_OPERANDS;
 
       // Check validity of set mask bits. Also prepare for operands for those
       // masks if they have any.  To get operand order correct, scan from

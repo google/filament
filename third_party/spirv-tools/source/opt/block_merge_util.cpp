@@ -98,6 +98,17 @@ bool CanMergeWithSuccessor(IRContext* context, BasicBlock* block) {
     return false;
   }
 
+  // Note: This means that the instructions in a break block will execute as if
+  // they were still diverged according to the loop iteration. This restricts
+  // potential transformations an implementation may perform on the IR to match
+  // shader author expectations. Similarly, instructions in the loop construct
+  // cannot be moved into the continue construct unless it can be proven that
+  // invocations are always converged.
+  if (succ_is_merge && context->get_feature_mgr()->HasExtension(
+                           kSPV_KHR_maximal_reconvergence)) {
+    return false;
+  }
+
   if (pred_is_merge && IsContinue(context, lab_id)) {
     // Cannot merge a continue target with a merge block.
     return false;
