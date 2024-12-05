@@ -107,14 +107,16 @@ void GetVKFormatAndUsage(const AHardwareBuffer_Desc& desc,
 void describeExternalImage(void* externalBuffer, VkDevice device,
         VulkanPlatform::ExternalImageMetadata& metadata) {
     AHardwareBuffer* buffer = static_cast<AHardwareBuffer*>(externalBuffer);
-    AHardwareBuffer_Desc buffer_desc;
-    AHardwareBuffer_describe(buffer, &buffer_desc);
-    metadata.width = buffer_desc.width;
-    metadata.height = buffer_desc.height;
-    metadata.layers = buffer_desc.layers;
+    if (__builtin_available(android 26, *)) {
+        AHardwareBuffer_Desc buffer_desc;
+        AHardwareBuffer_describe(buffer, &buffer_desc);
+        metadata.width = buffer_desc.width;
+        metadata.height = buffer_desc.height;
+        metadata.layers = buffer_desc.layers;
 
-    GetVKFormatAndUsage(buffer_desc, metadata.format, metadata.usage,
-        metadata.isProtected);
+        GetVKFormatAndUsage(buffer_desc, metadata.format, metadata.usage,
+            metadata.isProtected);
+    }
     // In the unprotected case add R/W capabilities
     if (metadata.isProtected == false) {
         metadata.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT |
