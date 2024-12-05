@@ -219,9 +219,9 @@ VkImage allocateExternalImage(void* externalBuffer, VkDevice device,
         .pNext = &memory_dedicated_allocate_info,
         .allocationSize = metadata.allocationSize,
         .memoryTypeIndex = metadata.memoryTypeBits };
-    VkResult const result =
+    VkResult const result_alloc =
         vkAllocateMemory(device, &alloc_info, allocator, &memory);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS);
+    FILAMENT_CHECK_POSTCONDITION(result_alloc == VK_SUCCESS);
 }
 #if 0
 void createExternalImage(void* externalBuffer, VkDevice device,
@@ -344,17 +344,16 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
         .allocationSize = 0,
         .memoryTypeBits = 0,
     };
-    describeExternalImage(externalBuffer, device, metadata);
+    describeExternalImage(externalImage, device, metadata);
     return metadata;
 }
 
 VkImage VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
         const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata,
-        kDeviceMemory& memory) {
-    VkImage image = allocateExternalImage(externalBuffer, device, allocator, metadata,
+        VkDeviceMemory& memory) {
+    VkImage image = allocateExternalImage(externalImage, device, allocator, metadata,
         memory);
-    VkResult result = vkBindImageMemory(device, metadata.image,
-        metadata.memory, 0);
+    VkResult result = vkBindImageMemory(device, image, memory, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkBindImageMemory error="
         << result << ".";
     return image;
