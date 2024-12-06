@@ -64,10 +64,14 @@ public:
                 break;
             }
         }
-        FILAMENT_CHECK_PRECONDITION(mLib)
-                << "Unable to dlopen libOSMesa to create a software GL context";
+        if (mLib) {
+            OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(mLib, "OSMesaGetProcAddress");
+        } else {
+            OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
+        }
 
-        OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(mLib, "OSMesaGetProcAddress");
+        FILAMENT_CHECK_PRECONDITION(OSMesaGetProcAddress)
+                << "Unable to against libOSMesa to create a software GL context";
 
         OSMesaCreateContext = (CreateContextFunc) OSMesaGetProcAddress("OSMesaCreateContext");
         OSMesaDestroyContext =
@@ -76,7 +80,9 @@ public:
     }
 
     ~OSMesaAPI() {
-        dlclose(mLib);
+        if (mLib) {
+            dlclose(mLib);
+        }
     }
 private:
     void* mLib = nullptr;
