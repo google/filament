@@ -23,8 +23,8 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
-#include "VulkanUtility.h"
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/CappedArray.h"
 
 #include <utils/Condition.h>
 #include <utils/FixedCapacityVector.h>
@@ -115,7 +115,7 @@ private:
     bool const isProtected;
     VkDevice mDevice;
     VkQueue mQueue;
-    CappedArray<VkSemaphore, 2> mWaitSemaphores;
+    fvkutils::CappedArray<VkSemaphore, 2> mWaitSemaphores;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
     VkFence mFence;

@@ -26,8 +26,10 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
-#include "memory/ResourceManager.h"
-#include "memory/ResourcePointer.h"
+#include "vulkan/memory/ResourceManager.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Conversion.h"
+#include "vulkan/utils/Definitions.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -536,7 +538,7 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a) {
    TextureSwizzle const swizzleArray[] = {r, g, b, a};
-   VkComponentMapping const swizzle = getSwizzleMap(swizzleArray);
+   VkComponentMapping const swizzle = fvkutils::getSwizzleMap(swizzleArray);
    auto src = resource_ptr<VulkanTexture>::cast(&mResourceManager, srch);
    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, src, swizzle);
@@ -906,7 +908,7 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
-    VkFormat vkformat = getVkFormat(format);
+    VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -933,7 +935,7 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
 }
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
-    VkFormat vkformat = getVkFormat(format);
+    VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -991,12 +993,11 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
 
 bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
     auto const& formats = mContext.getBlittableDepthStencilFormats();
-    return std::find(formats.begin(), formats.end(), getVkFormat(format)) != formats.end();
+    return std::find(formats.begin(), formats.end(), fvkutils::getVkFormat(format)) !=
+           formats.end();
 }
 
-bool VulkanDriver::isProtectedTexturesSupported() {
-    return false;
-}
+bool VulkanDriver::isProtectedTexturesSupported() { return false; }
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
@@ -1655,25 +1656,25 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     auto rt = mCurrentRenderPass.renderTarget;
 
     VulkanPipelineCache::RasterState const vulkanRasterState{
-        .cullMode = getCullMode(rasterState.culling),
-        .frontFace = getFrontFace(rasterState.inverseFrontFaces),
+        .cullMode = fvkutils::getCullMode(rasterState.culling),
+        .frontFace = fvkutils::getFrontFace(rasterState.inverseFrontFaces),
         .depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false,
         .blendEnable = rasterState.hasBlending(),
         .depthWriteEnable = rasterState.depthWrite,
         .alphaToCoverageEnable = rasterState.alphaToCoverage,
-        .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
-        .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
-        .srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha),
-        .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
+        .srcColorBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcRGB),
+        .dstColorBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstRGB),
+        .srcAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcAlpha),
+        .dstAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
         .rasterizationSamples = rt->getSamples(),
         .depthClamp = rasterState.depthClamp,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,
-        .alphaBlendOp =  rasterState.blendEquationAlpha,
+        .alphaBlendOp = rasterState.blendEquationAlpha,
         .depthCompareOp = rasterState.depthFunc,
         .depthBiasConstantFactor = depthOffset.constant,
-        .depthBiasSlopeFactor = depthOffset.slope
+        .depthBiasSlopeFactor = depthOffset.slope,
     };
 
     // unfortunately in Vulkan the topology is per pipeline
@@ -1710,7 +1711,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     mBoundPipeline = {
         .program = program,
         .pipelineLayout = pipelineLayout,
-        .descriptorSetMask = DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
+        .descriptorSetMask = fvkutils::DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
     };
 
     mPipelineCache.bindLayout(pipelineLayout);
