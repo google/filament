@@ -107,13 +107,13 @@ DebugServer::~DebugServer() {
     delete mServer;
 }
 
-FrameGraphInfoKey DebugServer::getKeybyString(const utils::CString& input, 
-        uint32_t seed){
+FrameGraphInfoKey DebugServer::getKeybyString(const utils::CString &input,
+                                              uint32_t seed) {
     return utils::hash::murmurSlow(reinterpret_cast<uint8_t const*>(
         input.c_str()), input.size(), 0);
 }
 
-void DebugServer::addView(const utils::CString& name, FrameGraphInfo info) {    
+void DebugServer::addView(const utils::CString &name, FrameGraphInfo info) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
     const FrameGraphInfoKey key = getKeybyString(name, 0);
     mViews.insert({key, info});
@@ -123,12 +123,12 @@ void DebugServer::removeView(const utils::CString& name) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
     const FrameGraphInfoKey key = getKeybyString(name, 0);
     mViews.erase(key);
-}   
+}
 
 void DebugServer::updateView(const utils::CString& name, FrameGraphInfo info) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
     const FrameGraphInfoKey key = getKeybyString(name, 0);
     mViews[key] = info;
-}   
+}
 
 } // namespace filament::fgviewer

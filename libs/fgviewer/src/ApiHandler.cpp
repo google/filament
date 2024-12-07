@@ -38,8 +38,6 @@ auto const& kErrorHeader = DebugServer::kErrorHeader;
 
 } // anonymous
 
-using utils::FixedCapacityVector;
-
 static auto const error = [](int line, std::string const& uri) {
     utils::slog.e << "DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
     return false;

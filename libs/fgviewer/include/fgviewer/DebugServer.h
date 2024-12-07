@@ -30,6 +30,7 @@ using FrameGraphInfoKey = uint32_t;
 
 struct FrameGraphPassInfo {
     utils::CString pass_name;
+    // TODO: Add struct detail properties
 };
 
 struct FrameGraphInfo {
@@ -69,8 +70,8 @@ public:
     bool isReady() const { return mServer; }
 
 private:
-    static FrameGraphInfoKey getKeybyString(const utils::CString& input, 
-        uint32_t seed);
+    static FrameGraphInfoKey getKeybyString(const utils::CString &input,
+                                            uint32_t seed);
 
     CivetServer* mServer;
 
