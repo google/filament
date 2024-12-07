@@ -16,6 +16,8 @@
 
 #include <fgviewer/DebugServer.h>
 
+#include "ApiHandler.h"
+
 #include <CivetServer.h>
 
 #include <utils/FixedCapacityVector.h>
@@ -28,10 +30,43 @@
 #include <string>
 #include <string_view>
 
+namespace {
+std::string const BASE_URL = "libs/matdbg/web";
+} // anonymous
 
 namespace filament::fgviewer {
 
 using namespace utils;
+
+std::string_view const DebugServer::kSuccessHeader =
+        "HTTP/1.1 200 OK\r\nContent-Type: %s\r\n"
+        "Connection: close\r\n\r\n";
+
+std::string_view const DebugServer::kErrorHeader =
+        "HTTP/1.1 404 Not Found\r\nContent-Type: %s\r\n"
+        "Connection: close\r\n\r\n";
+
+class FileRequestHandler : public CivetHandler {
+public:
+    FileRequestHandler(DebugServer* server) : mServer(server) {}
+    bool handleGet(CivetServer *server, struct mg_connection *conn) {
+        auto const& kSuccessHeader = DebugServer::kSuccessHeader;
+        struct mg_request_info const* request = mg_get_request_info(conn);
+        std::string uri(request->request_uri);
+        if (uri == "/") {
+            uri = "/index.html";
+        }
+
+        if (uri == "/index.html" || uri == "/app.js" || uri == "/api.js") {
+            mg_send_file(conn, (BASE_URL + uri).c_str());
+            return true;
+        }
+        slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        return false;
+    }
+private:
+    DebugServer* mServer;
+};
 
 DebugServer::DebugServer(int port) {
     // By default the server spawns 50 threads so we override this to 10. According to the civetweb
@@ -55,12 +90,20 @@ DebugServer::DebugServer(int port) {
         return;
     }
 
+    mFileHandler = new FileRequestHandler(this);
+    mApiHandler = new ApiHandler(this);
+
+    mServer->addHandler("/api", mApiHandler);
+    mServer->addHandler("", mFileHandler);
+
     slog.i << "DebugServer listening at http://localhost:" << port << io::endl;
 }
 
 DebugServer::~DebugServer() {
     mServer->close();
 
+    delete mFileHandler;
+    delete mApiHandler;
     delete mServer;
 }
 

@@ -77,18 +77,11 @@ private:
     tsl::robin_map<FrameGraphInfoKey, FrameGraphInfo> mViews;
     mutable utils::Mutex mViewsMutex;
 
-    // utils::CString mHtml;
-    // utils::CString mJavascript;
-    // utils::CString mCss;
+    class FileRequestHandler* mFileHandler = nullptr;
+    class ApiHandler* mApiHandler = nullptr;
 
-    // utils::CString mChunkedMessage;
-    // size_t mChunkedMessageRemaining = 0;
-
-    // class FileRequestHandler* mFileHandler = nullptr;
-    // class ApiHandler* mApiHandler = nullptr;
-
-    // friend class FileRequestHandler;
-    // friend class ApiHandler;
+    friend class FileRequestHandler;
+    friend class ApiHandler;
 };
 
 } // namespace filament::fgviewer

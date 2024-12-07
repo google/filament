@@ -14,9 +14,12 @@ endif()
 
 set(PUBLIC_HDRS
     include/fgviewer/DebugServer.h
+    include/fgviewer/JsonWriter.h
 )
 
 set(SRCS
+    src/ApiHandler.cpp
+    src/ApiHandler.h
     src/DebugServer.cpp
 )
 
