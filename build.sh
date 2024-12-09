@@ -824,7 +824,8 @@ while getopts ":hacCfgijmp:q:uvslwedk:bx:S:X:" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
-            FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=ON"
+            # TODO: Uncomment below when fgviewer is ready
+            # FGVIEWER_OPTION="-DFILAMENT_ENABLE_FGVIEWER=ON"
             MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_BUILD_FILAMAT=ON"
             MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
             ;;

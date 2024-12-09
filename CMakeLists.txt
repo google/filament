@@ -528,7 +528,8 @@ endif()
 # By default, link in matdbg/fgviewer for Desktop + Debug only since it pulls in filamat and a web server.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND IS_HOST_PLATFORM)
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
-    option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" ON)
+    # TODO: Uncomment below when fgviewer is ready
+    # option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" ON)
 else()
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
     option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
@@ -781,9 +782,10 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/matdbg)
     endif()
 
-    if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
-        add_subdirectory(${LIBRARIES}/fgviewer)
-    endif()
+    # TODO: Uncomment below when fgviewer is ready
+    # if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
+    #     add_subdirectory(${LIBRARIES}/fgviewer)
+    # endif()
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
