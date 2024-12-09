@@ -336,6 +336,10 @@ void Animator::updateBoneMatrices() {
     }
 }
 
+void Animator::updateBoneMatricesForInstance(FilamentInstance* instance) {
+    mImpl->updateBoneMatrices(downcast(instance));
+}
+
 float Animator::getAnimationDuration(size_t animationIndex) const {
     return mImpl->animations[animationIndex].duration;
 }
