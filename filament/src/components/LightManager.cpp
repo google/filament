@@ -427,7 +427,7 @@ float FLightManager::getSpotLightInnerCone(Instance i) const noexcept {
 
 void LightManager::ShadowCascades::computeUniformSplits(float splitPositions[3], uint8_t cascades) {
     size_t s = 0;
-    cascades = max(cascades, (uint8_t) 4u);
+    cascades = min(cascades, (uint8_t) 4u);
     for (size_t c = 1; c < cascades; c++) {
         splitPositions[s++] = float(c) / float(cascades);
     }
@@ -436,7 +436,7 @@ void LightManager::ShadowCascades::computeUniformSplits(float splitPositions[3],
 void LightManager::ShadowCascades::computeLogSplits(float splitPositions[3], uint8_t cascades,
         float near, float far) {
     size_t s = 0;
-    cascades = max(cascades, (uint8_t) 4u);
+    cascades = min(cascades, (uint8_t) 4u);
     for (size_t c = 1; c < cascades; c++) {
         splitPositions[s++] =
             (near * std::pow(far / near, float(c) / float(cascades)) - near) / (far - near);
@@ -447,7 +447,7 @@ void LightManager::ShadowCascades::computePracticalSplits(float splitPositions[3
         float near, float far, float lambda) {
     float uniformSplits[3];
     float logSplits[3];
-    cascades = max(cascades, (uint8_t) 4u);
+    cascades = min(cascades, (uint8_t) 4u);
     computeUniformSplits(uniformSplits, cascades);
     computeLogSplits(logSplits, cascades, near, far);
     size_t s = 0;
