@@ -88,9 +88,11 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
         void* externalImage, VkDevice device) {
     return {};
 }
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage, VkDevice device,
-        const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata) {
-    return {VK_NULL_HANDLE, VK_NULL_HANDLE};
+
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
+        VkDevice device, const VkAllocationCallbacks* allocator,
+        const ExternalImageMetadata& metadata) {
+    return {};
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
