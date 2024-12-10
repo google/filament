@@ -340,15 +340,15 @@ public:
     };
     virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
 
-    typedef std::pair<VkImage, VkDeviceMemory> imageData;
-    virtual imageData createExternalImage(void* externalImage,
+    using ImageData = std::pair<VkImage, VkDeviceMemory>;
+    virtual ImageData createExternalImage(void* externalImage,
             const ExternalImageMetadata& metadata);
 
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
     static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
             VkDevice device);
-    static imageData createExternalImageImpl(void* externalImage, VkDevice device,
+    static ImageData createExternalImageImpl(void* externalImage, VkDevice device,
             const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata);
 
     // Platform dependent helper methods
