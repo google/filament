@@ -63,6 +63,8 @@ bool isPerspectiveProjection() {
     return frameUniforms.clipFromViewMatrix[2].w != 0.0;
 }
 
+#if defined(HAS_ATTRIBUTE_TANGENTS)
+
 /** @public-api */
 vec3 getWorldNormalVector() {
     return shading_normal;
@@ -82,6 +84,8 @@ vec3 getWorldReflectedVector() {
 float getNdotV() {
     return shading_NoV;
 }
+
+#endif
 
 highp vec3 getNormalizedPhysicalViewportCoord() {
     // make sure to handle our reversed-z
