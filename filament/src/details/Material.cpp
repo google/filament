@@ -321,17 +321,19 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
         parser->getSpecularAntiAliasingThreshold(&mSpecularAntiAliasingThreshold);
     }
 
-    processBlendingMode(parser);
-    processSpecializationConstants(engine, builder, parser);
-    processPushConstants(engine, parser);
-    processDepthVariants(engine, parser);
-    processDescriptorSets(engine, parser);
+    parser->hasCustomDepthShader(&mHasCustomDepthShader);
 
     mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(
             mIsVariantLit,
             mReflectionMode == ReflectionMode::SCREEN_SPACE ||
             mRefractionMode == RefractionMode::SCREEN_SPACE,
             !(mVariantFilterMask & +UserVariantFilterBit::FOG));
+
+    processBlendingMode(parser);
+    processSpecializationConstants(engine, builder, parser);
+    processPushConstants(engine, parser);
+    processDescriptorSets(engine, parser);
+    precacheDepthVariants(engine);
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
@@ -346,47 +348,21 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
 FMaterial::~FMaterial() noexcept = default;
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
-    DriverApi& driverApi = mEngine.getDriverApi();
-    if (mMaterialDomain == MaterialDomain::SURFACE) {
-        auto& cachedPrograms = mCachedPrograms;
-        for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
-            Variant const variant(k);
-            if ((k & variantMask) == variantValue) {
-                if (UTILS_LIKELY(!mIsDefaultMaterial)) {
-                    // The depth variants may be shared with the default material, in which case
-                    // we should not free it now.
-                    bool const isSharedVariant =
-                            Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
-                    if (isSharedVariant) {
-                        // we don't own this variant, skip.
-                        continue;
-                    }
-                }
-                driverApi.destroyProgram(cachedPrograms[k]);
-                cachedPrograms[k].clear();
-            }
+    // Note: This API is not public at the moment, so it's okay to have some debugging logs
+    // and extra checks.
+    if (mMaterialDomain == MaterialDomain::SURFACE &&
+        !mIsDefaultMaterial &&
+        !mHasCustomDepthShader) {
+        // it would be unsafe to invalidate any of the cached depth variant
+        if (UTILS_UNLIKELY(!((variantMask & Variant::DEP) && !(variantValue & Variant::DEP)))) {
+            slog.w << io::hex << "FMaterial::invalidate("
+                   << +variantMask << ", " << +variantValue
+                   << ") would corrupt the depth variant cache" << io::endl;
         }
-
-         if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-            FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
-            for (Variant const variant: pDefaultMaterial->mDepthVariants) {
-                pDefaultMaterial->prepareProgram(variant);
-                if (!cachedPrograms[variant.key]) {
-                    cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
-                }
-            }
-        }
-    } else if (mMaterialDomain == MaterialDomain::POST_PROCESS) {
-        auto& cachedPrograms = mCachedPrograms;
-        for (size_t k = 0, n = POST_PROCESS_VARIANT_COUNT; k < n; ++k) {
-            if ((k & variantMask) == variantValue) {
-                driverApi.destroyProgram(cachedPrograms[k]);
-                cachedPrograms[k].clear();
-            }
-        }
-    } else if (mMaterialDomain == MaterialDomain::COMPUTE) {
-        // TODO: handle compute variants if any
+        variantMask |= Variant::DEP;
+        variantValue &= ~Variant::DEP;
     }
+    destroyPrograms(mEngine, variantMask, variantValue);
 }
 
 void FMaterial::terminate(FEngine& engine) {
@@ -626,10 +602,42 @@ Program FMaterial::getProgramWithVariants(
 }
 
 void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
-    auto program = mEngine.getDriverApi().createProgram(std::move(p));
-    mEngine.getDriverApi().setDebugTag(program.getId(), mName);
+    FEngine const& engine = mEngine;
+    DriverApi& driverApi = mEngine.getDriverApi();
+
+    bool const isSharedVariant =
+            (mMaterialDomain == MaterialDomain::SURFACE) &&
+            !mIsDefaultMaterial && !mHasCustomDepthShader &&
+            Variant::isValidDepthVariant(variant);
+
+    // Check if the default material has this program cached
+    if (isSharedVariant) {
+        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
+        if (pDefaultMaterial) {
+            auto program = pDefaultMaterial->mCachedPrograms[variant.key];
+            if (program) {
+                mCachedPrograms[variant.key] = program;
+                return;
+            }
+        }
+    }
+
+    auto program = driverApi.createProgram(std::move(p));
+    driverApi.setDebugTag(program.getId(), mName);
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
+
+    // If the default material doesn't already have this program cached, and all caching conditions
+    // are met (Surface Domain and no custom depth shader), cache it now.
+    // New Materials will inherit these program automatically.
+    if (isSharedVariant) {
+        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
+        if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
+            // set the tag to the default material name
+            driverApi.setDebugTag(program.getId(), mName);
+            pDefaultMaterial->mCachedPrograms[variant.key] = program;
+        }
+    }
 }
 
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
@@ -734,22 +742,76 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
 #endif // FILAMENT_ENABLE_MATDBG
 
 
-void FMaterial::destroyPrograms(FEngine& engine) {
+void FMaterial::destroyPrograms(FEngine& engine,
+        Variant::type_t const variantMask, Variant::type_t const variantValue) {
+
     DriverApi& driverApi = engine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
-    for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
-        const Variant variant(k);
-        if (!mIsDefaultMaterial) {
-            // The depth variants may be shared with the default material, in which case
-            // we should not free it now.
-            bool const isSharedVariant = Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
-            if (isSharedVariant) {
-                // we don't own this variant, skip.
-                continue;
+
+    switch (mMaterialDomain) {
+        case MaterialDomain::SURFACE: {
+            if (mIsDefaultMaterial || mHasCustomDepthShader) {
+                // default material or we have custom depth shaders, we destroy all variants
+                for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+                    if ((k & variantMask) == variantValue) {
+                        // Only destroy if the handle is valid. Not strictly needed, but we have a lot
+                        // of variants, and this generates traffic in the command queue.
+                        if (cachedPrograms[k]) {
+                            driverApi.destroyProgram(std::move(cachedPrograms[k]));
+                        }
+                    }
+                }
+            } else {
+                // The depth variants may be shared with the default material, in which case
+                // we should not free them now.
+
+                // During Engine::shutdown(), auto-cleanup destroys the default material first,
+                // so this can be null, but this is only used for debugging.
+                UTILS_UNUSED_IN_RELEASE
+                auto UTILS_NULLABLE pDefaultMaterial = engine.getDefaultMaterial();
+
+                for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+                    if ((k & variantMask) == variantValue) {
+                        // Only destroy if the handle is valid. Not strictly needed, but we have a lot
+                        // of variant, and this generates traffic in the command queue.
+                        if (cachedPrograms[k]) {
+                            if (Variant::isValidDepthVariant(Variant(k))) {
+                                // By construction this should always be true, because this
+                                // field is populated only when a material creates the program
+                                // for this variant.
+                                // During Engine::shutdown, auto-cleanup destroys the
+                                // default material first
+                                assert_invariant(!pDefaultMaterial ||
+                                        pDefaultMaterial->mCachedPrograms[k]);
+                                // we don't own this variant, skip, but clear the entry.
+                                cachedPrograms[k].clear();
+                                continue;
+                            }
+
+                            driverApi.destroyProgram(std::move(cachedPrograms[k]));
+                        }
+                    }
+                }
             }
+            break;
         }
-        driverApi.destroyProgram(cachedPrograms[k]);
-        cachedPrograms[k].clear();
+        case MaterialDomain::POST_PROCESS: {
+            for (size_t k = 0, n = POST_PROCESS_VARIANT_COUNT; k < n; ++k) {
+                if ((k & variantMask) == variantValue) {
+                    // Only destroy if the handle is valid. Not strictly needed, but we have a lot
+                    // of variant, and this generates traffic in the command queue.
+                    if (cachedPrograms[k]) {
+                        driverApi.destroyProgram(std::move(cachedPrograms[k]));
+                    }
+                }
+            }
+            break;
+        }
+        case MaterialDomain::COMPUTE: {
+            // Compute programs don't have variants
+            driverApi.destroyProgram(std::move(cachedPrograms[0]));
+            break;
+        }
     }
 }
 
@@ -1014,34 +1076,32 @@ void FMaterial::processPushConstants(FEngine& engine, MaterialParser const* pars
             });
 }
 
-void FMaterial::processDepthVariants(FEngine& engine, MaterialParser const* const parser) {
-    parser->hasCustomDepthShader(&mHasCustomDepthShader);
-
+void FMaterial::precacheDepthVariants(FEngine& engine) {
+    // pre-cache all depth variants inside the default material. Note that this should be
+    // entirely optional; if we remove this pre-caching, these variants will be populated
+    // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
+    // memory and increases init time, but reduces hiccups during the first frame.
     if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
-        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
-        filaflat::MaterialChunk const& materialChunk{ parser->getMaterialChunk() };
-        auto variants = FixedCapacityVector<Variant>::with_capacity(materialChunk.getShaderCount());
-        materialChunk.visitShaders([&variants](
-                ShaderModel, Variant variant, ShaderStage) {
-            if (Variant::isValidDepthVariant(variant)) {
-                variants.push_back(variant);
+        auto const allDepthVariants = VariantUtils::getDepthVariants();
+        for (auto const variant: allDepthVariants) {
+            assert_invariant(Variant::isValidDepthVariant(variant));
+            if (hasVariant(variant)) {
+                prepareProgram(variant);
             }
-        });
-        std::sort(variants.begin(), variants.end(),
-                [](Variant lhs, Variant rhs) { return lhs.key < rhs.key; });
-        auto pos = std::unique(variants.begin(), variants.end());
-        variants.resize(std::distance(variants.begin(), pos));
-        std::swap(mDepthVariants, variants);
+        }
+        return;
     }
 
-    if (mMaterialDomain == MaterialDomain::SURFACE) {
-        if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-            FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
-            auto& cachedPrograms = mCachedPrograms;
-            for (Variant const variant: pDefaultMaterial->mDepthVariants) {
-                pDefaultMaterial->prepareProgram(variant);
-                cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
-            }
+    // if possible pre-cache all depth variants from the default material
+    if (mMaterialDomain == MaterialDomain::SURFACE &&
+            !mIsDefaultMaterial &&
+            !mHasCustomDepthShader) {
+        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
+        assert_invariant(pDefaultMaterial);
+        auto const allDepthVariants = VariantUtils::getDepthVariants();
+        for (auto const variant: allDepthVariants) {
+            assert_invariant(Variant::isValidDepthVariant(variant));
+            mCachedPrograms[variant.key] = pDefaultMaterial->mCachedPrograms[variant.key];
         }
     }
 }

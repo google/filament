@@ -218,7 +218,9 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
-    void destroyPrograms(FEngine& engine);
+    void destroyPrograms(FEngine& engine,
+            Variant::type_t variantMask = 0,
+            Variant::type_t variantValue = 0);
 
     // return the id of a specialization constant specified by name for this material
     std::optional<uint32_t> getSpecializationConstantId(std::string_view name) const noexcept ;
@@ -282,7 +284,7 @@ private:
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);
 
-    void processDepthVariants(FEngine& engine, MaterialParser const* parser);
+    void precacheDepthVariants(FEngine& engine);
 
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 
@@ -331,7 +333,6 @@ private:
     SamplerInterfaceBlock mSamplerInterfaceBlock;
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
-    utils::FixedCapacityVector<Variant> mDepthVariants; // only populated with default material
 
     using BindingUniformInfoContainer = utils::FixedCapacityVector<std::tuple<
             uint8_t, utils::CString, backend::Program::UniformInfo>>;

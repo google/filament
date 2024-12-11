@@ -529,19 +529,31 @@ void FEngine::shutdown() {
     mPerViewDescriptorSetLayoutSsrVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
     mPerRenderableDescriptorSetLayout.terminate(mHwDescriptorSetLayoutFactory, driver);
 
-    driver.destroyRenderPrimitive(mFullScreenTriangleRph);
+    driver.destroyRenderPrimitive(std::move(mFullScreenTriangleRph));
 
     destroy(mFullScreenTriangleIb);
+    mFullScreenTriangleIb = nullptr;
+
     destroy(mFullScreenTriangleVb);
+    mFullScreenTriangleVb = nullptr;
+
     destroy(mDummyMorphTargetBuffer);
+    mDummyMorphTargetBuffer = nullptr;
+
     destroy(mDefaultIblTexture);
+    mDefaultIblTexture = nullptr;
+
     destroy(mDefaultIbl);
+    mDefaultIbl = nullptr;
 
     destroy(mDefaultColorGrading);
+    mDefaultColorGrading = nullptr;
 
     destroy(mDefaultMaterial);
+    mDefaultMaterial = nullptr;
 
     destroy(mUnprotectedDummySwapchain);
+    mUnprotectedDummySwapchain = nullptr;
 
     /*
      * clean-up after the user -- we call terminate on each "leaked" object and clear each list.
@@ -558,6 +570,7 @@ void FEngine::shutdown() {
 
     // this must be done after Skyboxes and before materials
     destroy(mSkyboxMaterial);
+    mSkyboxMaterial = nullptr;
 
     cleanupResourceList(std::move(mBufferObjects));
     cleanupResourceList(std::move(mIndexBuffers));
@@ -574,12 +587,12 @@ void FEngine::shutdown() {
 
     cleanupResourceListLocked(mFenceListLock, std::move(mFences));
 
-    driver.destroyTexture(mDummyOneTexture);
-    driver.destroyTexture(mDummyOneTextureArray);
-    driver.destroyTexture(mDummyZeroTexture);
-    driver.destroyTexture(mDummyZeroTextureArray);
+    driver.destroyTexture(std::move(mDummyOneTexture));
+    driver.destroyTexture(std::move(mDummyOneTextureArray));
+    driver.destroyTexture(std::move(mDummyZeroTexture));
+    driver.destroyTexture(std::move(mDummyZeroTextureArray));
 
-    driver.destroyRenderTarget(mDefaultRenderTarget);
+    driver.destroyRenderTarget(std::move(mDefaultRenderTarget));
 
     /*
      * Shutdown the backend...
