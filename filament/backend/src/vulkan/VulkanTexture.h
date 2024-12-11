@@ -94,8 +94,8 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     // The texture will never destroy the given VkImage, but it does manages its subresources.
     VulkanTexture(VkDevice device, VmaAllocator allocator,
             fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
-            VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
-            VulkanStagePool& stagePool);
+            VkDeviceMemory memory, VkFormat format, uint8_t samples, uint32_t width, uint32_t height,
+            TextureUsage tusage, VulkanStagePool& stagePool);
 
     // Constructor for creating a texture view for wrt specific mip range
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,

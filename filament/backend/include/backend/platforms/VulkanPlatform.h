@@ -292,8 +292,64 @@ public:
      */
     VkQueue getProtectedGraphicsQueue() const noexcept;
 
+    struct ExternalImageMetadata {
+        /**
+         * The width of the external image
+         */
+        uint32_t width;
+
+        /**
+         * The height of the external image
+         */
+        uint32_t height;
+
+        /**
+         * The layer count of the external image
+         */
+        uint32_t layers;
+
+        /**
+         * The format of the external image
+         */
+        VkFormat format;
+
+        /**
+         * An external buffer can be protected. This tells you if it is.
+         */
+        bool isProtected;
+
+        /**
+         * The type of external format (opaque int) if used.
+         */
+        uint64_t externalFormat;
+
+        /**
+         * Image usage
+         */
+        VkImageUsageFlags usage;
+
+        /**
+         * Allocation size
+         */
+        VkDeviceSize allocationSize;
+
+        /**
+         * Heap information
+         */
+        uint32_t memoryTypeBits;
+    };
+    virtual ExternalImageMetadata getExternalImageMetadata(void* externalImage);
+
+    using ImageData = std::pair<VkImage, VkDeviceMemory>;
+    virtual ImageData createExternalImage(void* externalImage,
+            const ExternalImageMetadata& metadata);
+
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
+    static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
+            VkDevice device);
+    static ImageData createExternalImageImpl(void* externalImage, VkDevice device,
+            const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

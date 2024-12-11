@@ -544,7 +544,25 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
 }
 
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+        uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
+    FVK_SYSTRACE_SCOPE();
+
+    const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
+    if (metadata.isProtected) {
+        usage |= backend::TextureUsage::PROTECTED;
+    }
+
+    assert_invariant(width == metadata.width);
+    assert_invariant(height == metadata.height);
+    assert_invariant(getVkFormat(format) == metadata.format);
+
+    const auto& data = mPlatform->createExternalImage(externalImage, metadata);
+
+    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
+        mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
+        1, metadata.width, metadata.height, usage, mStagePool);
+
+    texture.inc();
 }
 
 void VulkanDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
@@ -1172,6 +1190,7 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+
 }
 
 void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {

@@ -34,9 +34,7 @@
 #endif
 
 // Platform specific includes and defines
-#if defined(__ANDROID__)
-    #include <android/native_window.h>
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
+#if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
     #include <dlfcn.h>
     namespace {
         typedef struct _wl {
@@ -86,11 +84,20 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
+        void* externalImage, VkDevice device) {
+    return {};
+}
+
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
+        VkDevice device, const VkAllocationCallbacks* allocator,
+        const ExternalImageMetadata& metadata) {
+    return {};
+}
+
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
     VulkanPlatform::ExtensionSet const ret = {
-#if defined(__ANDROID__)
-        VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
+#if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
 #elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11)
     #if defined(FILAMENT_SUPPORTS_XCB)
@@ -116,15 +123,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
     // swap chain extent.
     VkExtent2D extent;
 
-    #if defined(__ANDROID__)
-        VkAndroidSurfaceCreateInfoKHR const createInfo{
-                .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
-                .window = (ANativeWindow*) nativeWindow,
-        };
-        VkResult const result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &surface);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateAndroidSurfaceKHR error.";
-    #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
+    #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
         extent.width = ptrval->width;
         extent.height = ptrval->height;
