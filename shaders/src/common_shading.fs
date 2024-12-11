@@ -3,6 +3,7 @@
 highp mat3  shading_tangentToWorld;   // TBN matrix
 highp vec3  shading_position;         // position of the fragment in world space
       vec3  shading_view;             // normalized vector from the fragment to the eye
+#if defined(HAS_ATTRIBUTE_TANGENTS)
       vec3  shading_normal;           // normalized transformed normal, in world space
       vec3  shading_geometricNormal;  // normalized geometric normal, in world space
       vec3  shading_reflected;        // reflection of view about normal
@@ -14,6 +15,7 @@ highp vec3  shading_position;         // position of the fragment in world space
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
       vec3  shading_clearCoatNormal;  // normalized clear coat layer normal, in world space
+#endif
 #endif
 
 highp vec2 shading_normalizedViewportCoord;

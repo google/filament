@@ -660,11 +660,13 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         CodeGenerator::generateDepthShaderMain(fs, ShaderStage::FRAGMENT);
     } else {
         appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
-        if (filament::Variant::isSSRVariant(variant)) {
-            CodeGenerator::generateShaderReflections(fs, ShaderStage::FRAGMENT);
-        } else if (material.isLit) {
-            CodeGenerator::generateShaderLit(fs, ShaderStage::FRAGMENT, variant,
-                    material.shading,material.hasCustomSurfaceShading);
+        if (material.isLit) {
+            if (filament::Variant::isSSRVariant(variant)) {
+                CodeGenerator::generateShaderReflections(fs, ShaderStage::FRAGMENT);
+            } else {
+                CodeGenerator::generateShaderLit(fs, ShaderStage::FRAGMENT, variant,
+                        material.shading,material.hasCustomSurfaceShading);
+            }
         } else {
             CodeGenerator::generateShaderUnlit(fs, ShaderStage::FRAGMENT, variant,
                     material.hasShadowMultiplier);
