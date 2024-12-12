@@ -161,7 +161,7 @@ private:
     // only be used from VulkanDriver.
     inline void dec() {
         assert_invariant(mRef);
-        assert_invariant(!mRef->isHandleConsiderDestroyed());
+        assert_invariant(!mRef->isHandleConsideredDestroyed());
         mRef->setHandleConsiderDestroyed();
         mRef->dec();
     }
