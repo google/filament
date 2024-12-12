@@ -158,6 +158,8 @@ public:
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;
 
+    void unbindSamplers(backend::DriverApi& driver) noexcept;
+
     // bind this UBO
     void bind(backend::DriverApi& driver, uint8_t index) const noexcept {
         mDescriptorSet[index].bind(driver, DescriptorSetBindingPoints::PER_VIEW);
