@@ -17,10 +17,6 @@
 #ifndef FGVIEWER_APIHANDLER_H
 #define FGVIEWER_APIHANDLER_H
 
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-
 #include <CivetServer.h>
 
 namespace filament::fgviewer {

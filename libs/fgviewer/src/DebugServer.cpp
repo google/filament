@@ -24,17 +24,20 @@
 #include <utils/Hash.h>
 #include <utils/Log.h>
 
-#include <tsl/robin_set.h>
-
-#include <sstream>
 #include <string>
 #include <string_view>
 
-namespace {
-std::string const BASE_URL = "libs/matdbg/web";
-} // anonymous
-
 namespace filament::fgviewer {
+
+namespace {
+std::string const BASE_URL = "libs/fgviewer/web";
+
+FrameGraphInfoKey getKeybyString(const utils::CString &input,
+                                              uint32_t seed) {
+    return utils::hash::murmurSlow(reinterpret_cast<uint8_t const*>(
+        input.c_str()), input.size(), 0);
+}
+} // anonymous
 
 using namespace utils;
 
@@ -61,7 +64,7 @@ public:
             mg_send_file(conn, (BASE_URL + uri).c_str());
             return true;
         }
-        slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        slog.e << "fgviewer DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
         return false;
     }
 private:
@@ -74,7 +77,7 @@ DebugServer::DebugServer(int port) {
     /// establish multiple connections to load a single web page, including all linked documents
     // (CSS, JavaScript, images, ...)."  If this count is too small, the web app basically hangs.
     const char* kServerOptions[] = {
-        "listening_ports", "8090",
+        "listening_ports", "8085",
         "num_threads", "10",
         "error_log_file", "civetweb.txt",
         nullptr
@@ -86,7 +89,7 @@ DebugServer::DebugServer(int port) {
     if (!mServer->getContext()) {
         delete mServer;
         mServer = nullptr;
-        slog.e << "Unable to start DebugServer, see civetweb.txt for details." << io::endl;
+        slog.e << "Unable to start fgviewer DebugServer, see civetweb.txt for details." << io::endl;
         return;
     }
 
@@ -96,7 +99,7 @@ DebugServer::DebugServer(int port) {
     mServer->addHandler("/api", mApiHandler);
     mServer->addHandler("", mFileHandler);
 
-    slog.i << "DebugServer listening at http://localhost:" << port << io::endl;
+    slog.i << "fgviewer DebugServer listening at http://localhost:" << port << io::endl;
 }
 
 DebugServer::~DebugServer() {
@@ -105,12 +108,6 @@ DebugServer::~DebugServer() {
     delete mFileHandler;
     delete mApiHandler;
     delete mServer;
-}
-
-FrameGraphInfoKey DebugServer::getKeybyString(const utils::CString &input,
-                                              uint32_t seed) {
-    return utils::hash::murmurSlow(reinterpret_cast<uint8_t const*>(
-        input.c_str()), input.size(), 0);
 }
 
 void DebugServer::addView(const utils::CString &name, FrameGraphInfo info) {

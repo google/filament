@@ -17,9 +17,10 @@
 #ifndef FGVIEWER_DEBUGSERVER_H
 #define FGVIEWER_DEBUGSERVER_H
 
-#include <utils/CString.h>
+#include <unordered_map>
+#include <vector>
 
-#include <tsl/robin_map.h>
+#include <utils/CString.h>
 #include <utils/Mutex.h>
 
 class CivetServer;
@@ -70,12 +71,9 @@ public:
     bool isReady() const { return mServer; }
 
 private:
-    static FrameGraphInfoKey getKeybyString(const utils::CString &input,
-                                            uint32_t seed);
-
     CivetServer* mServer;
 
-    tsl::robin_map<FrameGraphInfoKey, FrameGraphInfo> mViews;
+    std::unordered_map<FrameGraphInfoKey, FrameGraphInfo> mViews;
     mutable utils::Mutex mViewsMutex;
 
     class FileRequestHandler* mFileHandler = nullptr;

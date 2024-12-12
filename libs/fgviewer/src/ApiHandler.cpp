@@ -24,9 +24,6 @@
 
 #include <CivetServer.h>
 
-#include <sstream>
-#include <chrono>
-
 namespace filament::fgviewer {
 
 using namespace std::chrono_literals;
