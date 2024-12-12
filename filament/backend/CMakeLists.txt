@@ -187,7 +187,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
-            src/vulkan/utils/CappedArray.h
             src/vulkan/utils/Conversion.cpp
             src/vulkan/utils/Conversion.h
             src/vulkan/utils/Definitions.h
@@ -196,6 +195,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Image.cpp
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/Spirv.cpp
+            src/vulkan/utils/StaticVector.h
             src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp

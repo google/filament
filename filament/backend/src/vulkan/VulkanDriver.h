@@ -151,7 +151,7 @@ private:
     // renderpass.
     struct {
         using AttachmentArray =
-                fvkutils::CappedArray<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
+                fvkutils::StaticVector<VulkanAttachment, MAX_RENDERTARGET_ATTACHMENT_TEXTURES>;
         AttachmentArray attachments;
     } mRenderPassFboInfo = {};
 

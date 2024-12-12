@@ -26,7 +26,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
 #include "vulkan/memory/Resource.h"
-#include "vulkan/utils/CappedArray.h"
+#include "vulkan/utils/StaticVector.h"
 #include "vulkan/utils/Definitions.h"
 
 #include <backend/Program.h>
@@ -194,7 +194,7 @@ private:
 };
 
 struct VulkanProgram : public HwProgram, fvkmemory::Resource {
-    using BindingList = fvkutils::CappedArray<uint16_t, MAX_SAMPLER_COUNT>;
+    using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
 
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();

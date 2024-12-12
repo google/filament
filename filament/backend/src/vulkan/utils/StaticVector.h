@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_CAPPEDARRAY_H
-#define TNT_FILAMENT_BACKEND_VULKAN_UTILS_CAPPEDARRAY_H
+#ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_STATICVECTOR_H
+#define TNT_FILAMENT_BACKEND_VULKAN_UTILS_STATICVECTOR_H
 
 // An Array that will be statically fixed in capacity, but the "size" (as in user added elements) is
 // variable. Note that this class is movable.
@@ -27,101 +27,89 @@
 namespace filament::backend::fvkutils {
 
 template<typename T, uint16_t CAPACITY>
-class CappedArray {
+class StaticVector {
 private:
     using FixedSizeArray = std::array<T, CAPACITY>;
+
+    static_assert(CAPACITY <= (1LL << (8 * sizeof(uint16_t))));
 
 public:
     using const_iterator = typename FixedSizeArray::const_iterator;
     using iterator = typename FixedSizeArray::iterator;
 
-    CappedArray() = default;
+    StaticVector() = default;
 
     // Delete copy constructor/assignment.
-    CappedArray(CappedArray const& rhs) = delete;
-    CappedArray& operator=(CappedArray& rhs) = delete;
+    StaticVector(StaticVector const& rhs) = delete;
+    StaticVector& operator=(StaticVector& rhs) = delete;
 
-    CappedArray(CappedArray&& rhs) noexcept {
-        this->swap(rhs);
+    StaticVector(StaticVector&& rhs) noexcept {
+        std::swap(mSize, rhs.mSize);
+        std::swap(mArray, rhs.mArray);
     }
 
-    CappedArray& operator=(CappedArray&& rhs) noexcept {
-        this->swap(rhs);
+    StaticVector& operator=(StaticVector&& rhs) noexcept {
+        std::swap(mSize, rhs.mSize);
+        std::swap(mArray, rhs.mArray);
         return *this;
     }
 
-    inline ~CappedArray() {
+    inline ~StaticVector() {
         clear();
     }
 
     inline const_iterator begin() const {
-        if (mInd == 0) {
-            return mArray.cend();
-        }
         return mArray.cbegin();
     }
 
     inline const_iterator end() const {
-        if (mInd > 0 && mInd < CAPACITY) {
-            return mArray.begin() + mInd;
-        }
-        return mArray.cend();
+        assert_invariant(mSize <= CAPACITY);
+        return mArray.begin() + mSize;
     }
 
     inline iterator begin() {
-        if (mInd == 0) {
-            return mArray.end();
-        }
         return mArray.begin();
     }
 
     inline iterator end() {
-        if (mInd > 0 && mInd < CAPACITY) {
-            return mArray.begin() + mInd;
-        }
-        return mArray.end();
+        assert_invariant(mSize <= CAPACITY);
+        return mArray.begin() + mSize;
     }
 
     inline T back() {
-        assert_invariant(mInd > 0);
-        return *(mArray.begin() + mInd);
+        assert_invariant(mSize > 0);
+        return *(mArray.begin() + mSize);
     }
 
     inline void pop_back() {
-        assert_invariant(mInd > 0);
-        mInd--;
+        assert_invariant(mSize > 0);
+        mSize--;
     }
 
     inline const_iterator find(T item) {
         return std::find(begin(), end(), item);
     }
 
-    inline void insert(T item) {
-        assert_invariant(mInd < CAPACITY);
-        mArray[mInd++] = item;
-    }
-
-    inline void erase(T item) {
-        PANIC_PRECONDITION("CappedArray::erase should not be called");
+    inline void push_back(T item) {
+        assert_invariant(mSize < CAPACITY);
+        mArray[mSize++] = item;
     }
 
     inline void clear() {
-        if (mInd == 0) {
-            return;
-        }
-        mInd = 0;
+        mSize = 0;
     }
 
-    inline T& operator[](uint16_t ind) {
-        return mArray[ind];
+    inline T& operator[](size_t index) {
+        assert_invariant(index < mSize);
+        return mArray[index];
     }
 
-    inline T const& operator[](uint16_t ind) const {
-        return mArray[ind];
+    inline T const& operator[](size_t index) const {
+        return mArray[index];
     }
 
-    inline uint32_t size() const {
-        return mInd;
+    inline uint16_t size() const {
+        return mSize;
     }
 
     T* data() {
@@ -132,20 +120,15 @@ public:
         return mArray.data();
     }
 
-    bool operator==(CappedArray const& b) const {
-        return this->mArray == b.mArray;
+    bool operator==(StaticVector const& b) const {
+        return this->mArray == b.mArray && this->mSize == b.mSize;
     }
 
 private:
-    void swap(CappedArray& rhs) {
-        std::swap(mArray, rhs.mArray);
-        std::swap(mInd, rhs.mInd);
-    }
-
     FixedSizeArray mArray;
-    uint32_t mInd = 0;
+    uint16_t mSize = 0;
 };
 
 } // namespace filament::backend::fvkutils
 
-#endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_CAPPEDARRAY_H
+#endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_STATICVECTOR_H
