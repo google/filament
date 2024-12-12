@@ -194,6 +194,15 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
             VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
+    // We only support external image for Android for now, but nothing bars us from 
+    // supporting other platforms.
+#if defined(__ANDROID__)
+            VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+            VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+            VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
+            VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
+ #endif
+
             VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
             VK_KHR_MAINTENANCE1_EXTENSION_NAME,
             VK_KHR_MAINTENANCE2_EXTENSION_NAME,
@@ -943,6 +952,16 @@ uint32_t VulkanPlatform::getProtectedGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
     return mImpl->mProtectedGraphicsQueue;
+}
+
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadata(
+        void* externalImage) {
+    return getExternalImageMetadataImpl(externalImage, mImpl->mDevice);
+}
+
+VulkanPlatform::ImageData VulkanPlatform::createExternalImage(void* externalImage,
+            const ExternalImageMetadata& metadata) {
+    return createExternalImageImpl(externalImage, mImpl->mDevice, nullptr, metadata);
 }
 
 #undef SWAPCHAIN_RET_FUNC
