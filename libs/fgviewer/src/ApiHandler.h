@@ -44,6 +44,6 @@ private:
     DebugServer* mServer;
 };
 
-} // filament::matdbg
+} // filament::fgviewer
 
-#endif // MATDBG_APIHANDLER_H
+#endif // FGVIEWER_APIHANDLER_H

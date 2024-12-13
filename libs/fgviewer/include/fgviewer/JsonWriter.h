@@ -19,8 +19,7 @@
 
 #include <utils/CString.h>
 
-namespace filament {
-namespace fgviewer {
+namespace filament::fgviewer {
 
 struct FrameGraphInfo;
 
@@ -41,7 +40,6 @@ private:
     utils::CString mJsonString;
 };
 
-} // namespace fgviewer
-} // namespace filament
+} // namespace filament::fgviewer
 
 #endif  // FGVIEWER_JSONWRITER_H

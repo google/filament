@@ -17,11 +17,11 @@
 #ifndef FGVIEWER_DEBUGSERVER_H
 #define FGVIEWER_DEBUGSERVER_H
 
-#include <unordered_map>
-#include <vector>
-
 #include <utils/CString.h>
 #include <utils/Mutex.h>
+
+#include <unordered_map>
+#include <vector>
 
 class CivetServer;
 

@@ -33,12 +33,12 @@ namespace {
 auto const& kSuccessHeader = DebugServer::kSuccessHeader;
 auto const& kErrorHeader = DebugServer::kErrorHeader;
 
-} // anonymous
-
-static auto const error = [](int line, std::string const& uri) {
+auto const error = [](int line, std::string const& uri) {
     utils::slog.e << "DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
     return false;
 };
+
+} // anonymous
 
 bool ApiHandler::handleGetApiFgInfo(struct mg_connection* conn,
         struct mg_request_info const* request) {
