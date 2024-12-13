@@ -34,7 +34,7 @@ auto const& kSuccessHeader = DebugServer::kSuccessHeader;
 auto const& kErrorHeader = DebugServer::kErrorHeader;
 
 auto const error = [](int line, std::string const& uri) {
-    utils::slog.e << "DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
+    utils::slog.e << "[fgviewer] DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
     return false;
 };
 
@@ -43,7 +43,7 @@ auto const error = [](int line, std::string const& uri) {
 bool ApiHandler::handleGetApiFgInfo(struct mg_connection* conn,
         struct mg_request_info const* request) {
     auto const softError = [conn, request](char const* msg) {
-        utils::slog.e << "DebugServer: " << msg << ": " << request->query_string << utils::io::endl;
+        utils::slog.e << "[fgviewer] DebugServer: " << msg << ": " << request->query_string << utils::io::endl;
         mg_printf(conn, kErrorHeader.data(), "application/txt");
         mg_write(conn, msg, strlen(msg));
         return true;

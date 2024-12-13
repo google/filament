@@ -64,7 +64,7 @@ public:
             mg_send_file(conn, (BASE_URL + uri).c_str());
             return true;
         }
-        slog.e << "fgviewer DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        slog.e << "[fgviewer] DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
         return false;
     }
 private:
@@ -89,7 +89,7 @@ DebugServer::DebugServer(int port) {
     if (!mServer->getContext()) {
         delete mServer;
         mServer = nullptr;
-        slog.e << "Unable to start fgviewer DebugServer, see civetweb.txt for details." << io::endl;
+        slog.e << "[fgviewer] Unable to start DebugServer, see civetweb.txt for details." << io::endl;
         return;
     }
 
@@ -99,7 +99,7 @@ DebugServer::DebugServer(int port) {
     mServer->addHandler("/api", mApiHandler);
     mServer->addHandler("", mFileHandler);
 
-    slog.i << "fgviewer DebugServer listening at http://localhost:" << port << io::endl;
+    slog.i << "[fgviewer] DebugServer listening at http://localhost:" << port << io::endl;
 }
 
 DebugServer::~DebugServer() {
