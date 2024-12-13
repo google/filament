@@ -123,6 +123,7 @@ struct Material::BuilderDetails {
     size_t mSize = 0;
     bool mDefaultMaterial = false;
     int32_t mShBandsCount = 3;
+    Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
     std::unordered_map<
         utils::CString,
         std::variant<int32_t, float, bool>,
@@ -149,6 +150,11 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 
 Material::Builder& Material::Builder::sphericalHarmonicsBandCount(size_t shBandCount) noexcept {
     mImpl->mShBandsCount = math::clamp(shBandCount, size_t(1), size_t(3));
+    return *this;
+}
+
+Material::Builder& Material::Builder::shadowSamplingQuality(ShadowSamplingQuality quality) noexcept {
+    mImpl->mShadowSamplingQuality = quality;
     return *this;
 }
 
@@ -999,7 +1005,11 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
             +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
             (int)engine.getConfig().stereoscopicEyeCount });
     mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT, builder->mShBandsCount });
+            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT,
+            builder->mShBandsCount });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD,
+            (int32_t)builder->mShadowSamplingQuality });
     if (UTILS_UNLIKELY(parser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({
