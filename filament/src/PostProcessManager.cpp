@@ -2622,7 +2622,7 @@ void PostProcessManager::TaaJitterCamera(
     current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
-    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t frameIndex){
+    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t frameIndex) -> float2 {
         using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
         switch (pattern) {
             case JitterPattern::RGSS_X4:
@@ -2636,6 +2636,7 @@ void PostProcessManager::TaaJitterCamera(
             case JitterPattern::HALTON_23_X32:
                 return sHaltonSamples(frameIndex);
         }
+        return { 0.0f, 0.0f };
     };
 
     // sample position within a pixel [-0.5, 0.5]
@@ -2759,15 +2760,31 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 }};
 
                 constexpr float2 sampleOffsets[9] = {
-                        { -1.0f, -1.0f }, {  0.0f, -1.0f }, {  1.0f, -1.0f },
-                        { -1.0f,  0.0f }, {  0.0f,  0.0f }, {  1.0f,  0.0f },
-                        { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
+                        { -1.0f, -1.0f }, {  0.0f, -1.0f }, {  1.0f, -1.0f }, { -1.0f,  0.0f },
+                        {  0.0f,  0.0f },
+                        {  1.0f,  0.0f }, { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
                 };
 
                 constexpr float2 subSampleOffsets[4] = {
-                        { -0.25f, 0.25f }, {  0.25f, 0.25f }, { 0.25f, -0.25f }, { -0.25f, -0.25f }
+                        { -0.25f,  0.25f },
+                        {  0.25f,  0.25f },
+                        {  0.25f, -0.25f },
+                        { -0.25f, -0.25f }
                 };
 
+                UTILS_UNUSED
+                auto const lanczos = [](float x, float a) -> float {
+                    if (x <= std::numeric_limits<float>::epsilon()) {
+                        return 1.0f;
+                    }
+                    if (std::abs(x) <= a) {
+                        return (a * std::sin(f::PI * x) * std::sin(f::PI * x / a))
+                               / ((f::PI * f::PI) * (x * x));
+                    }
+                    return 0.0f;
+                };
+
+                float const filterWidth = std::clamp(taaOptions.filterWidth, 1.0f, 2.0f);
                 float4 sum = 0.0;
                 float4 weights[9];
 
@@ -2777,11 +2794,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 for (size_t i = 0; i < 9; i++) {
                     float2 const o = sampleOffsets[i];
                     for (size_t j = 0; j < 4; j++) {
-                        float2 const s = taaOptions.upscaling ? subSampleOffsets[j] : float2{ 0 };
-                        float2 const d = (o - current.jitter - s) / taaOptions.filterWidth;
-                        // This is a gaussian fit of a 3.3-wide Blackman-Harris window
-                        // see: "High Quality Temporal Supersampling" by Brian Karis
-                        weights[i][j] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                        float2 const subPixelOffset = taaOptions.upscaling ? subSampleOffsets[j] : float2{ 0 };
+                        float2 const d = (o - (current.jitter - subPixelOffset)) / filterWidth;
+                        weights[i][j] = lanczos(length(d), filterWidth);
                     }
                     sum += weights[i];
                 }
