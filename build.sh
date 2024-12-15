@@ -829,7 +829,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgijmp:q:uvslwedk:bx:S:X:" opt; do
+while getopts ":hacCfgijmp:q:uvslwedtk:bx:S:X:" opt; do
     case ${opt} in
         h)
             print_help
