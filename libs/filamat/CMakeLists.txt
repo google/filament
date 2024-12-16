@@ -144,6 +144,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
+if(FILAMENT_TESTS)
 project(test_filamat)
 set(TARGET test_filamat)
 set(SRCS
@@ -159,4 +160,4 @@ target_include_directories(${TARGET} PRIVATE src)
 target_link_libraries(${TARGET} filamat gtest)
 
 set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
-
+endif()

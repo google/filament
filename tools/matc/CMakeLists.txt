@@ -81,6 +81,7 @@ install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
+if(FILAMENT_TESTS)
 project(test_matc)
 set(TARGET test_matc)
 set(SRCS
@@ -96,3 +97,4 @@ add_executable(${TARGET} ${SRCS})
 target_link_libraries(${TARGET} matlang gtest)
 
 set_target_properties(test_matc PROPERTIES FOLDER Tests)
+endif()

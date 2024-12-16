@@ -19,6 +19,10 @@ project(TNT)
 # ==================================================================================================
 # Options
 # ==================================================================================================
+option(FILAMENT_TESTS "Build tests" ON)
+
+option(FILAMENT_BENCHMARKS "Build benchmarks" ON)
+
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
@@ -731,7 +735,9 @@ endfunction()
 # ==================================================================================================
 
 # Common to all platforms
+if(FILAMENT_TESTS)
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
+endif()
 add_subdirectory(${LIBRARIES}/camutils)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
@@ -754,7 +760,9 @@ add_subdirectory(${EXTERNAL}/civetweb/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
 add_subdirectory(${EXTERNAL}/smol-v/tnt)
+if(FILAMENT_BENCHMARKS)
 add_subdirectory(${EXTERNAL}/benchmark/tnt)
+endif()
 add_subdirectory(${EXTERNAL}/meshoptimizer/tnt)
 add_subdirectory(${EXTERNAL}/mikktspace)
 add_subdirectory(${EXTERNAL}/cgltf/tnt)
