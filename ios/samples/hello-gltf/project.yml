@@ -10,10 +10,16 @@ targets:
               buildPhase: resources
         templates:
             - FilamentApp
-        settings:
-            base:
-                OTHER_LDFLAGS: ["-lgltfio_core", "-luberarchive", "-limage", "-ldracodec", "-lmeshoptimizer",
-                                "-lbasis_transcoder", "-lstb", "-lzstd", "-luberzlib"]
+        dependencies:
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libgltfio_core.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libuberarchive.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libimage.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libstb.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libbasis_transcoder.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libzstd.xcframework            
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libdracodec.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libmeshoptimizer.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libuberzlib.xcframework        
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources
