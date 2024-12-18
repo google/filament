@@ -61,7 +61,7 @@ namespace filament {
  *  filament::Camera* myCamera = engine->createCamera(myCameraEntity);
  *  myCamera->setProjection(45, 16.0/9.0, 0.1, 1.0);
  *  myCamera->lookAt({0, 1.60, 1}, {0, 0, 0});
- *  engine->destroyCameraComponent(myCamera);
+ *  engine->destroyCameraComponent(myCameraEntity);
  * ~~~~~~~~~~~
  *
  *

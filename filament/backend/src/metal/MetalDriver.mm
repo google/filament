@@ -151,6 +151,11 @@ MetalDriver::MetalDriver(
             mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
     }
 
+    mContext->supportsDepthClamp = false;
+    if (@available(macOS 10.11, iOS 11.0, *)) {
+        mContext->supportsDepthClamp = true;
+    }
+
     // In order to support resolve store action on depth attachment, the GPU needs to support it.
     // Note that support for depth resolve implies support for stencil resolve using .sample0 resolve filter.
     // (Other resolve filters are supported starting .apple5 and .mac2 families).
@@ -1063,7 +1068,7 @@ bool MetalDriver::isProtectedTexturesSupported() {
 }
 
 bool MetalDriver::isDepthClampSupported() {
-    return true;
+    return mContext->supportsDepthClamp;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1258,6 +1263,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->cullModeState.invalidate();
     mContext->windingState.invalidate();
     mContext->scissorRectState.invalidate();
+    mContext->depthClampState.invalidate();
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedDescriptorSets.clear();
@@ -1729,10 +1735,12 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     }
 
     // depth clip mode
-    MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
-    mContext->depthClampState.updateState(depthClipMode);
-    if (mContext->depthClampState.stateChanged()) {
-        [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
+    if (mContext->supportsDepthClamp) {
+        MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
+        mContext->depthClampState.updateState(depthClipMode);
+        if (mContext->depthClampState.stateChanged()) {
+            [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
+        }
     }
 
     // Set the depth-stencil state, if a state change is needed.

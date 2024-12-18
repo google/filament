@@ -1159,8 +1159,13 @@ bool FEngine::destroy(const FMaterial* ptr) {
             if (!ASSERT_PRECONDITION_NON_FATAL(pos->second.empty(),
                     "destroying material \"%s\" but %u instances still alive",
                     ptr->getName().c_str(), (*pos).second.size())) {
-                return false;
+                // We return true here, because the material has been destroyed. However, this
+                // leaks this material's ResourceList<FMaterialInstance> until the engine
+                // is shut down. Note that it's still possible for the MaterialInstances to be
+                // destroyed manually.
+                return true;
             }
+            mMaterialInstances.erase(pos);
         }
     }
     return success;

@@ -500,11 +500,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // qualcomm seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
 
+#ifndef __EMSCRIPTEN__
             // Older Adreno devices that support ES3.0 only tend to be extremely buggy, so we
             // fall back to ES2.0.
             if (major == 3 && minor == 0) {
                 bugs->force_feature_level0 = true;
             }
+#endif
         } else if (strstr(renderer, "Mali")) {
             // ARM GPU
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
