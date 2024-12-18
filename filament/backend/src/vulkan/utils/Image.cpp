@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "VulkanImageUtility.h"
+#include "vulkan/utils/Image.h"
 
-#include "VulkanTexture.h"
+#include "vulkan/VulkanTexture.h"
 
 #include <utils/Panic.h>
 #include <utils/algorithm.h>
@@ -26,7 +26,7 @@
 
 using namespace bluevk;
 
-namespace filament::backend::imgutil {
+namespace filament::backend::fvkutils {
 
 namespace {
 
@@ -159,7 +159,41 @@ bool transitionLayout(VkCommandBuffer cmdbuffer,
     return true;
 }
 
-}// namespace filament::backend
+VkImageAspectFlags getImageAspect(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        case VK_FORMAT_D16_UNORM:
+        case VK_FORMAT_X8_D24_UNORM_PACK32:
+        case VK_FORMAT_D32_SFLOAT:
+            return VK_IMAGE_ASPECT_DEPTH_BIT;
+        case VK_FORMAT_S8_UINT:
+            return VK_IMAGE_ASPECT_STENCIL_BIT;
+        default:
+            return VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+}
+
+bool isVkDepthFormat(VkFormat format) {
+    return (getImageAspect(format) & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
+}
+
+bool isVkStencilFormat(VkFormat format) {
+    return (getImageAspect(format) & VK_IMAGE_ASPECT_STENCIL_BIT) != 0;
+}
+
+static uint32_t mostSignificantBit(uint32_t x) { return 1ul << (31ul - utils::clz(x)); }
+
+uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
+    if (sampleCount & mask) {
+        return sampleCount;
+    }
+    return mostSignificantBit((sampleCount - 1) & mask);
+}
+
+} // namespace filament::backend::fvkutils
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b) {
     if (a.aspectMask < b.aspectMask) return true;

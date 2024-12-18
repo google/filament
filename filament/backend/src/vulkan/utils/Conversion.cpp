@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-#include "VulkanUtility.h"
+#include "vulkan/utils/Conversion.h"
 
-#include <utils/algorithm.h>
-#include <utils/debug.h>
 #include <utils/Panic.h>
 
 #include "private/backend/BackendUtils.h"
 
-using namespace bluevk;
-
-namespace filament::backend {
+namespace filament::backend::fvkutils {
 
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer) {
     using ElementType = ElementType;
@@ -235,12 +231,6 @@ VkFormat getVkFormat(TextureFormat format) {
     }
 }
 
-// Converts PixelBufferDescriptor format + type pair into a VkFormat.
-//
-// NOTE: This function only returns formats that support VK_FORMAT_FEATURE_BLIT_SRC_BIT as per
-// "Required Format Support" in the Vulkan specification. These are the only formats that can be
-// used for format conversion. If the requested format does not support this feature, then
-// VK_FORMAT_UNDEFINED is returned.
 VkFormat getVkFormat(PixelDataFormat format, PixelDataType type) {
     if (type == PixelDataType::USHORT_565) return VK_FORMAT_R5G6B5_UNORM_PACK16;
     if (type == PixelDataType::UINT_2_10_10_10_REV) return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
@@ -284,10 +274,6 @@ VkFormat getVkFormat(PixelDataFormat format, PixelDataType type) {
     return VK_FORMAT_UNDEFINED;
 }
 
-// Converts an SRGB Vulkan format identifier into its corresponding canonical UNORM format. If the
-// given format is not an SRGB format, it is returned unmodified. This function is useful when
-// determining if blit-based conversion is needed, since SRGB is orthogonal to the actual bit layout
-// of color components.
 VkFormat getVkFormatLinear(VkFormat format) {
     switch (format) {
         case VK_FORMAT_R8_SRGB: return VK_FORMAT_R8_UNORM;
@@ -328,8 +314,6 @@ VkFormat getVkFormatLinear(VkFormat format) {
     return format;
 }
 
-// See also FTexture::computeTextureDataSize, which takes a public-facing Texture format rather
-// than a driver-level Texture format, and can account for a specified byte alignment.
 uint32_t getBytesPerPixel(TextureFormat format) {
     return (uint32_t) getFormatSize(format);
 }
@@ -611,48 +595,4 @@ VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
     return flags;
 }
 
-bool equivalent(const VkRect2D& a, const VkRect2D& b) {
-    // These are all integers so there's no need for an epsilon.
-    return a.extent.width == b.extent.width && a.extent.height == b.extent.height &&
-            a.offset.x == b.offset.x && a.offset.y == b.offset.y;
-}
-
-bool equivalent(const VkExtent2D& a, const VkExtent2D& b) {
-    return a.height == b.height && a.width == b.width;
-}
-
-VkImageAspectFlags getImageAspect(VkFormat format) {
-    switch (format) {
-        case VK_FORMAT_D16_UNORM_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-            return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_X8_D24_UNORM_PACK32:
-        case VK_FORMAT_D32_SFLOAT:
-            return VK_IMAGE_ASPECT_DEPTH_BIT;
-        case VK_FORMAT_S8_UINT:
-            return VK_IMAGE_ASPECT_STENCIL_BIT;
-        default:
-            return VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-}
-
-bool isVkDepthFormat(VkFormat format) {
-    return (getImageAspect(format) & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
-}
-
-bool isVkStencilFormat(VkFormat format) {
-    return (getImageAspect(format) & VK_IMAGE_ASPECT_STENCIL_BIT) != 0;
-}
-
-static uint32_t mostSignificantBit(uint32_t x) { return 1ul << (31ul - utils::clz(x)); }
-
-uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
-    if (sampleCount & mask) {
-        return sampleCount;
-    }
-    return mostSignificantBit((sampleCount - 1) & mask);
-}
-
-} // namespace filament::backend
+} // namespace filament::backend::fvkutils

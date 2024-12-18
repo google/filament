@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_VULKANSPIRVUTILS_H
-#define TNT_FILAMENT_BACKEND_VULKANSPIRVUTILS_H
+#ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_SPIRV_H
+#define TNT_FILAMENT_BACKEND_VULKAN_UTILS_SPIRV_H
 
 #include <backend/Program.h>
 
@@ -24,7 +24,7 @@
 #include <tuple>
 #include <vector>
 
-namespace filament::backend {
+namespace filament::backend::fvkutils {
 
 using SpecConstantValue = Program::SpecializationConstant::Type;
 
@@ -44,8 +44,9 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
         std::vector<uint32_t>& output);
 
 // bindings for UBO, samplers, input attachment
-std::tuple<uint32_t, uint32_t, uint32_t> getProgramBindings(Program::ShaderBlob const& blob);
+// This is no longer needed after the descriptor set refactor, but the code is good for reference. 
+// std::tuple<uint32_t, uint32_t, uint32_t> getProgramBindings(Program::ShaderBlob const& blob);
 
-} // namespace filament::backend
+} // namespace filament::backend::fvkutils
 
-#endif // TNT_FILAMENT_BACKEND_VULKANSPIRVUTILS_H
+#endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_SPIRV_H
