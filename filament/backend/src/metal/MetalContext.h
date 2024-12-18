@@ -155,6 +155,7 @@ struct MetalContext {
 
     RenderPassFlags currentRenderPassFlags;
     MetalRenderTarget* currentRenderTarget = nullptr;
+    bool validPipelineBound = false;
 
     // State trackers.
     PipelineStateTracker pipelineState;
