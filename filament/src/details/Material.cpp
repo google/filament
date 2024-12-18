@@ -605,13 +605,10 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexce
     FEngine const& engine = mEngine;
     DriverApi& driverApi = mEngine.getDriverApi();
 
-    bool const isSharedVariant =
-            (mMaterialDomain == MaterialDomain::SURFACE) &&
-            !mIsDefaultMaterial && !mHasCustomDepthShader &&
-            Variant::isValidDepthVariant(variant);
+    bool const isShared = isSharedVariant(variant);
 
     // Check if the default material has this program cached
-    if (isSharedVariant) {
+    if (isShared) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial) {
             auto program = pDefaultMaterial->mCachedPrograms[variant.key];
@@ -630,7 +627,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexce
     // If the default material doesn't already have this program cached, and all caching conditions
     // are met (Surface Domain and no custom depth shader), cache it now.
     // New Materials will inherit these program automatically.
-    if (isSharedVariant) {
+    if (isShared) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
             // set the tag to the default material name
