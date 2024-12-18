@@ -193,8 +193,17 @@ DebugServer::addMaterial(const CString& name, const void* data, size_t size, voi
         return {};
     }
 
-    const uint32_t seed = 42;
-    const MaterialKey key = utils::hash::murmurSlow((const uint8_t*) data, size, seed);
+    // Note that it's possible to have two materials with the exact same content (however wasteful),
+    // but they refer to different instantiation of FMaterial. For that case, we need to make sure
+    // that the key for the hash is different by relying on the user provided pointer. Hence we run
+    // the hash function twice.
+    constexpr uint32_t seed = 42;
+    uint64_t appendedData[2] = {
+        utils::hash::murmurSlow((const uint8_t*) data, size, seed),
+        (uint64_t) userdata,
+    };
+    const uint32_t key =
+            utils::hash::murmurSlow((const uint8_t*) appendedData, sizeof(appendedData), seed);
 
     // Retain a copy of the package to permit queries after the client application has
     // freed up the original material package.
