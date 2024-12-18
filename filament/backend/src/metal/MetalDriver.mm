@@ -1191,10 +1191,6 @@ void MetalDriver::setupExternalImage(void* image) {
     CVPixelBufferRetain(pixelBuffer);
 }
 
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
-
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
-
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 

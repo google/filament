@@ -1054,15 +1054,25 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
 
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
+    DEBUG_MARKER()
     createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImage(th, image);
+
+    GLTexture* t = handle_cast<GLTexture*>(th);
+    assert_invariant(t);
+    assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
+
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+        // the target and id can be reset each time
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+    }
 }
 
 void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, uint32_t plane) {
-    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImagePlane(th, image, plane);
+    // not relevant for the OpenGL backend
 }
 
 void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
@@ -2772,25 +2782,6 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
 
 void OpenGLDriver::setupExternalImage(void* image) {
     mPlatform.retainExternalImage(image);
-}
-
-void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    DEBUG_MARKER()
-    GLTexture* t = handle_cast<GLTexture*>(th);
-    assert_invariant(t);
-    assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
-
-    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    if (mPlatform.setExternalImage(image, t->externalTexture)) {
-        // the target and id can be reset each time
-        t->gl.target = t->externalTexture->target;
-        t->gl.id = t->externalTexture->id;
-        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    }
-}
-
-void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-    DEBUG_MARKER()
 }
 
 void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
