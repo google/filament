@@ -680,8 +680,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmd.info.hasMorphing = (bool)morphing.handle;
         cmd.info.hasSkinning = (bool)skinning.handle;
 
-        assert_invariant(cmd.info.hasHybridInstancing || cmd.info.instanceCount <= 1);
-
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
