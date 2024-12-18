@@ -1189,13 +1189,6 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
     return TimerQueryResult::AVAILABLE;
 }
 
-void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-
-}
-
-void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-}
-
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
