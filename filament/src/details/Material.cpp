@@ -556,7 +556,7 @@ Program FMaterial::getProgramWithVariants(
             << "The material '" << mName.c_str()
             << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
                "vertex shader (variant="
-            << variant.key << ", filtered=" << vertexVariant.key << ").";
+            << +variant.key << ", filtered=" << +vertexVariant.key << ").";
 
     /*
      * Fragment shader
@@ -571,7 +571,7 @@ Program FMaterial::getProgramWithVariants(
             << "The material '" << mName.c_str()
             << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
                "fragment shader (variant="
-            << variant.key << ", filtered=" << ").";
+            << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
