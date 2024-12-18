@@ -17,9 +17,10 @@
 #ifndef TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
 #define TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
 
-#include <vulkan/VulkanResourceAllocator.h>
-#include <vulkan/VulkanTexture.h>
-#include <vulkan/VulkanUtility.h>
+#include "vulkan/VulkanHandles.h"
+#include "vulkan/VulkanTexture.h"
+#include "vulkan/VulkanUtility.h"
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -46,44 +47,45 @@ public:
 
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
 
-    VulkanDescriptorSetManager(VkDevice device, VulkanResourceAllocator* resourceAllocator);
+    VulkanDescriptorSetManager(VkDevice device, fvkmemory::ResourceManager* resourceManager);
     ~VulkanDescriptorSetManager();
 
     void terminate() noexcept;
 
-    void updateBuffer(VulkanDescriptorSet* set, uint8_t binding,
-            VulkanBufferObject* bufferObject, VkDeviceSize offset, VkDeviceSize size) noexcept;
+    void updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
+            fvkmemory::resource_ptr<VulkanBufferObject> bufferObject, VkDeviceSize offset,
+            VkDeviceSize size) noexcept;
 
-    void updateSampler(VulkanDescriptorSet* set, uint8_t binding,
-            VulkanTexture* texture, VkSampler sampler) noexcept;
+    void updateSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
+            fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;
 
-    void updateInputAttachment(VulkanDescriptorSet* set, VulkanAttachment attachment) noexcept;
+    void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+            VulkanAttachment const& attachment) noexcept;
 
-    void bind(uint8_t setIndex, VulkanDescriptorSet* set, backend::DescriptorSetOffsetArray&& offsets);
+    void bind(uint8_t setIndex, fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+            backend::DescriptorSetOffsetArray&& offsets);
+
+    void unbind(uint8_t setIndex);
 
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
             DescriptorSetMask const& setMask);
 
-    void setPlaceHolders(VkSampler sampler, VulkanTexture* texture,
-            VulkanBufferObject* bufferObject) noexcept;
+    fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void createSet(Handle<HwDescriptorSet> handle, VulkanDescriptorSetLayout* layout);
+    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void destroySet(Handle<HwDescriptorSet> handle);
-
-    void initVkLayout(VulkanDescriptorSetLayout* layout);
+    void clearHistory();
 
 private:
     class DescriptorSetLayoutManager;
     class DescriptorInfinitePool;
 
-    void eraseSetFromHistory(VulkanDescriptorSet* set);
-
     using DescriptorSetArray =
-            std::array<VulkanDescriptorSet*, UNIQUE_DESCRIPTOR_SET_COUNT>;
+            std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>, UNIQUE_DESCRIPTOR_SET_COUNT>;
 
     VkDevice mDevice;
-    VulkanResourceAllocator* mResourceAllocator;
+    fvkmemory::ResourceManager* mResourceManager;
     std::unique_ptr<DescriptorSetLayoutManager> mLayoutManager;
     std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
@@ -92,7 +94,7 @@ private:
     struct {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         DescriptorSetMask setMask;
-        DescriptorSetArray boundSets;
+        DescriptorSetArray boundSets = {};
     } mLastBoundInfo;
 };
 

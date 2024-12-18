@@ -7,6 +7,22 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.56.4
+
+
+## v1.56.3
+
+
+## v1.56.2
+
+- vk: fix stage pool gc logic
+
+## v1.56.1
+
+## v1.56.0
+
+- backend: descriptor layouts distinguish samplers and external samplers (b/376089915) [⚠️ **New Material Version**]
+
 ## v1.55.1
 
 
@@ -654,7 +670,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 
 - engine: Binary size improvements.
 - engine: Add basic support for instanced renderables [**NEW API**].
-- engine: Fix, first imaged passsed to `Stream::SetAcquiredImage` is ignored and leaked.
+- engine: Fix, first imaged passed to `Stream::SetAcquiredImage` is ignored and leaked.
 - Vulkan: Robustness improvements.
 - Java: Fix, lookAt z axis negated.
 - gltfio: Be graceful when model has > 4 weights per vert.

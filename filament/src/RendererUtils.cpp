@@ -251,7 +251,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 }
 
                 driver.beginRenderPass(out.target, out.params);
-                passExecutor.execute(engine, resources.getPassName());
+                passExecutor.execute(engine, driver);
                 driver.endRenderPass();
 
                 // color pass is typically heavy, and we don't have much CPU work left after

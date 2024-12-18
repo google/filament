@@ -63,7 +63,7 @@ using filamat::ChunkType;
 using utils::FixedCapacityVector;
 
 static auto const error = [](int line, std::string const& uri) {
-    utils::slog.e << "DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
+    utils::slog.e << "[matdbg] DebugServer: 404 at line " << line << ": " << uri << utils::io::endl;
     return false;
 };
 
@@ -80,7 +80,7 @@ MaterialRecord const* ApiHandler::getMaterialRecord(struct mg_request_info const
 bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
         struct mg_request_info const* request) {
     auto const softError = [conn, request](char const* msg) {
-        utils::slog.e << "DebugServer: " << msg << ": " << request->query_string << utils::io::endl;
+        utils::slog.e << "[matdbg] DebugServer: " << msg << ": " << request->query_string << utils::io::endl;
         mg_printf(conn, kErrorHeader.data(), "application/txt");
         mg_write(conn, msg, strlen(msg));
         return true;
@@ -266,7 +266,7 @@ bool ApiHandler::handlePost(CivetServer* server, struct mg_connection* conn) {
         while (readLen < msgLen) {
             int const res = mg_read(conn, buf, sizeof(buf));
             if (res < 0) {
-                utils::slog.e << "civet error parsing /api/edit body: " << res << utils::io::endl;
+                utils::slog.e << "[matdbg] civet error parsing /api/edit body: " << res << utils::io::endl;
                 break;
             }
             if (res == 0) {

@@ -61,7 +61,7 @@ PerViewUib& ShadowMapDescriptorSet::edit(Transaction const& transaction) noexcep
 }
 
 void ShadowMapDescriptorSet::prepareCamera(Transaction const& transaction,
-        FEngine& engine, const CameraInfo& camera) noexcept {
+        backend::DriverApi& driver, const CameraInfo& camera) noexcept {
     mat4f const& viewFromWorld = camera.view;
     mat4f const& worldFromView = camera.model;
     mat4f const& clipFromView  = camera.projection;
@@ -85,7 +85,7 @@ void ShadowMapDescriptorSet::prepareCamera(Transaction const& transaction,
 
     // with a clip-space of [-w, w] ==> z' = -z
     // with a clip-space of [0,  w] ==> z' = (w - z)/2
-    s.clipControl = engine.getDriverApi().getClipSpaceParams();
+    s.clipControl = driver.getClipSpaceParams();
 }
 
 void ShadowMapDescriptorSet::prepareLodBias(Transaction const& transaction, float bias) noexcept {
@@ -103,7 +103,7 @@ void ShadowMapDescriptorSet::prepareViewport(Transaction const& transaction,
 }
 
 void ShadowMapDescriptorSet::prepareTime(Transaction const& transaction,
-        FEngine& engine, math::float4 const& userTime) noexcept {
+        FEngine const& engine, math::float4 const& userTime) noexcept {
     auto& s = edit(transaction);
     const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1'000'000'000;
     const float fraction = float(double(oneSecondRemainder) / 1'000'000'000.0);

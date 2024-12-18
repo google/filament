@@ -179,11 +179,18 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/caching/VulkanDescriptorSetManager.h
             src/vulkan/caching/VulkanPipelineLayoutCache.cpp
             src/vulkan/caching/VulkanPipelineLayoutCache.h
+            src/vulkan/memory/ResourceManager.cpp
+            src/vulkan/memory/ResourceManager.h
+            src/vulkan/memory/ResourcePointer.h
+            src/vulkan/memory/Resource.cpp
+            src/vulkan/memory/Resource.h
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
             src/vulkan/spirv/VulkanSpirvUtils.cpp
             src/vulkan/spirv/VulkanSpirvUtils.h
+            src/vulkan/VulkanAsyncHandles.cpp
+            src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
@@ -214,18 +221,17 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanSwapChain.h
             src/vulkan/VulkanReadPixels.cpp
             src/vulkan/VulkanReadPixels.h
-            src/vulkan/VulkanResourceAllocator.h
-            src/vulkan/VulkanResources.cpp
-            src/vulkan/VulkanResources.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp
             src/vulkan/VulkanUtility.h
     )
-    if (ANDROID OR LINUX OR WIN32)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroidLinuxWindows.cpp)
+    if (LINUX OR WIN32)
+        list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)
     elseif (APPLE OR IOS)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
+    elseif (ANDROID)
+        list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroid.cpp)
     endif()
 endif()
 
@@ -371,10 +377,6 @@ set(LINUX_LINKER_OPTIMIZATION_FLAGS
 if (LINUX AND FILAMENT_SUPPORTS_OSMESA)
     set(OSMESA_COMPILE_FLAGS
         -I${FILAMENT_OSMESA_PATH}/include/GL)
-    set(OSMESA_LINKER_FLAGS
-        -Wl,-L${FILAMENT_OSMESA_PATH}/lib/x86_64-linux-gnu/
-        -lOSMesa
-    )
 endif()
 
 if (MSVC)
@@ -388,6 +390,9 @@ else()
             -Wover-aligned
             -Werror
     )
+    if (CMAKE_CXX_STANDARD EQUAL 20)
+        list(APPEND FILAMENT_WARNINGS -Wno-deprecated-this-capture)
+    endif()
 endif()
 
 if (APPLE)

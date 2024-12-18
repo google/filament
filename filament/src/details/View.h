@@ -174,6 +174,7 @@ public:
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
     void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
+    void unbindSamplers(backend::DriverApi& driver) noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
@@ -203,9 +204,9 @@ public:
             CameraInfo const& cameraInfo, math::float4 const& userTime,
             RenderPassBuilder const& passBuilder) noexcept;
 
-    void updatePrimitivesLod(
-            FEngine& engine, const CameraInfo& camera,
-            FScene::RenderableSoa& renderableData, Range visible) noexcept;
+    static void updatePrimitivesLod(FScene::RenderableSoa& renderableData,
+            FEngine const& engine, CameraInfo const& camera,
+            Range visible) noexcept;
 
     void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
@@ -534,7 +535,7 @@ private:
     Viewport mViewport;
     bool mCulling = true;
     bool mFrontFaceWindingInverted = false;
-    bool mIsTransparentPickingEnabled = true;
+    bool mIsTransparentPickingEnabled = false;
 
     FRenderTarget* mRenderTarget = nullptr;
 

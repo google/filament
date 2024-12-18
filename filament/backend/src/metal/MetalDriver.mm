@@ -151,6 +151,11 @@ MetalDriver::MetalDriver(
             mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
     }
 
+    mContext->supportsDepthClamp = false;
+    if (@available(macOS 10.11, iOS 11.0, *)) {
+        mContext->supportsDepthClamp = true;
+    }
+
     // In order to support resolve store action on depth attachment, the GPU needs to support it.
     // Note that support for depth resolve implies support for stencil resolve using .sample0 resolve filter.
     // (Other resolve filters are supported starting .apple5 and .mac2 families).
@@ -623,6 +628,8 @@ const char* toString(DescriptorType type) {
             return "SAMPLER";
         case DescriptorType::INPUT_ATTACHMENT:
             return "INPUT_ATTACHMENT";
+        case DescriptorType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
     }
 }
 
@@ -795,9 +802,20 @@ void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
-    if (ph) {
-        destruct_handle<MetalProgram>(ph);
+    if (UTILS_UNLIKELY(!ph)) {
+        return;
     }
+    // Remove any cached pipeline states that refer to these programs.
+    auto* metalProgram = handle_cast<MetalProgram>(ph);
+    const auto& functions = metalProgram->getFunctionsIfPresent();
+    if (UTILS_LIKELY(functions.isRaster())) { // only raster pipelines are cached
+        const auto& raster = functions.getRasterFunctions();
+        mContext->pipelineStateCache.removeIf([&](const MetalPipelineState& state) {
+            const auto& [fragment, vertex] = raster;
+            return state.fragmentFunction == fragment || state.vertexFunction == vertex;
+        });
+    }
+    destruct_handle<MetalProgram>(ph);
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
@@ -819,17 +837,24 @@ void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
-    if (sch) {
-        auto* swapChain = handle_cast<MetalSwapChain>(sch);
-        // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
-        // complete before destroying it. This is because pixel buffer SwapChains hold a
-        // MetalExternalImage that could still being rendered into.
-        if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
-            executeAfterCurrentCommandBufferCompletes(
-                    [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
-        } else {
-            destruct_handle<MetalSwapChain>(sch);
-        }
+    if (UTILS_UNLIKELY(!sch)) {
+        return;
+    }
+    auto* swapChain = handle_cast<MetalSwapChain>(sch);
+    if (mContext->currentDrawSwapChain == swapChain) {
+        mContext->currentDrawSwapChain = nullptr;
+    }
+    if (mContext->currentReadSwapChain == swapChain) {
+        mContext->currentReadSwapChain = nullptr;
+    }
+    // If the SwapChain is a pixel buffer, we need to wait for the current command buffer to
+    // complete before destroying it. This is because pixel buffer SwapChains hold a
+    // MetalExternalImage that could still being rendered into.
+    if (UTILS_UNLIKELY(swapChain->isPixelBuffer())) {
+        executeAfterCurrentCommandBufferCompletes(
+                [this, sch]() mutable { destruct_handle<MetalSwapChain>(sch); });
+    } else {
+        destruct_handle<MetalSwapChain>(sch);
     }
 }
 
@@ -852,10 +877,20 @@ void MetalDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> dslh)
 
 void MetalDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
     DEBUG_LOG("destroyDescriptorSet(dsh = %d)\n", dsh.getId());
-    if (dsh) {
-        executeAfterCurrentCommandBufferCompletes(
-                [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
+    if (!dsh) {
+        return;
     }
+
+    // Unbind this descriptor set.
+    auto* descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        if (UTILS_UNLIKELY(mContext->currentDescriptorSets[i] == descriptorSet)) {
+            mContext->currentDescriptorSets[i] = nullptr;
+        }
+    }
+
+    executeAfterCurrentCommandBufferCompletes(
+            [this, dsh]() mutable { destruct_handle<MetalDescriptorSet>(dsh); });
 }
 
 void MetalDriver::terminate() {
@@ -1033,7 +1068,7 @@ bool MetalDriver::isProtectedTexturesSupported() {
 }
 
 bool MetalDriver::isDepthClampSupported() {
-    return true;
+    return mContext->supportsDepthClamp;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1228,6 +1263,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->cullModeState.invalidate();
     mContext->windingState.invalidate();
     mContext->scissorRectState.invalidate();
+    mContext->depthClampState.invalidate();
     mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedDescriptorSets.clear();
@@ -1699,10 +1735,12 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     }
 
     // depth clip mode
-    MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
-    mContext->depthClampState.updateState(depthClipMode);
-    if (mContext->depthClampState.stateChanged()) {
-        [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
+    if (mContext->supportsDepthClamp) {
+        MTLDepthClipMode depthClipMode = rs.depthClamp ? MTLDepthClipModeClamp : MTLDepthClipModeClip;
+        mContext->depthClampState.updateState(depthClipMode);
+        if (mContext->depthClampState.stateChanged()) {
+            [mContext->currentRenderPassEncoder setDepthClipMode:depthClipMode];
+        }
     }
 
     // Set the depth-stencil state, if a state change is needed.
@@ -1794,6 +1832,16 @@ void MetalDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+
+    if (UTILS_UNLIKELY(!dsh)) {
+        DEBUG_LOG("bindDescriptorSet(dsh = null, set = %d, offsets = [])\n", set);
+        mContext->currentDescriptorSets[set] = nullptr;
+        mContext->vertexDescriptorBindings.setBuffer(nil, 0, set);
+        mContext->fragmentDescriptorBindings.setBuffer(nil, 0, set);
+        mContext->dynamicOffsets.setOffsets(set, nullptr, 0);
+        return;
+    }
+
     auto descriptorSet = handle_cast<MetalDescriptorSet>(dsh);
     const size_t dynamicBindings = descriptorSet->layout->getDynamicOffsetCount();
     utils::FixedCapacityVector<size_t> offsetsVector(dynamicBindings, 0);

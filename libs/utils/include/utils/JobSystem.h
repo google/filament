@@ -446,7 +446,7 @@ private:
     Condition mWaiterCondition;
 
     std::atomic<int32_t> mActiveJobs = { 0 };
-    utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
+    utils::Arena<utils::ObjectPoolAllocator<Job>, LockingPolicy::Mutex> mJobPool;
 
     template <typename T>
     using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;

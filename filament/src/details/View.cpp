@@ -912,6 +912,10 @@ void FView::commitUniformsAndSamplers(DriverApi& driver) const noexcept {
     mColorPassDescriptorSet.commit(driver);
 }
 
+void FView::unbindSamplers(DriverApi& driver) noexcept {
+    mColorPassDescriptorSet.unbindSamplers(driver);
+}
+
 void FView::commitFroxels(DriverApi& driverApi) const noexcept {
     if (mHasDynamicLighting) {
         mFroxelizer.commit(driverApi);
@@ -1065,8 +1069,8 @@ inline void FView::computeLightCameraDistances(
     }
 }
 
-void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
-        FScene::RenderableSoa& renderableData, Range visible) noexcept {
+void FView::updatePrimitivesLod(FScene::RenderableSoa& renderableData,
+        FEngine const& engine, CameraInfo const&, Range visible) noexcept {
     FRenderableManager const& rcm = engine.getRenderableManager();
     for (uint32_t const index : visible) {
         uint8_t const level = 0; // TODO: pick the proper level of detail

@@ -19,7 +19,6 @@
 
 #include "VulkanCommands.h"
 #include "VulkanMemory.h"
-#include "VulkanResources.h"
 #include "VulkanUtility.h"
 
 #include <backend/DriverEnums.h>
@@ -44,7 +43,6 @@ namespace filament::backend {
 struct VulkanProgram;
 struct VulkanBufferObject;
 struct VulkanTexture;
-class VulkanResourceAllocator;
 
 // VulkanPipelineCache manages a cache of descriptor sets and pipelines.
 //
@@ -122,7 +120,7 @@ public:
     void bindPipeline(VulkanCommandBuffer* commands);
 
     // Each of the following methods are fast and do not make Vulkan calls.
-    void bindProgram(VulkanProgram* program) noexcept;
+    void bindProgram(fvkmemory::resource_ptr<VulkanProgram> program) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;

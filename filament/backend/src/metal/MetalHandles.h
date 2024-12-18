@@ -202,6 +202,7 @@ public:
     MetalProgram(MetalContext& context, Program&& program) noexcept;
 
     const MetalShaderCompiler::MetalFunctionBundle& getFunctions();
+    const MetalShaderCompiler::MetalFunctionBundle& getFunctionsIfPresent() const;
 
 private:
     void initialize();
@@ -437,7 +438,7 @@ struct MetalTimerQuery : public HwTimerQuery {
 
     struct Status {
         std::atomic<bool> available {false};
-        uint64_t elapsed {0};   // only valid if available is true
+        std::atomic<uint64_t> elapsed {0};   // only valid if available is true
     };
 
     std::shared_ptr<Status> status;

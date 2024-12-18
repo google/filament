@@ -495,6 +495,10 @@ const MetalShaderCompiler::MetalFunctionBundle& MetalProgram::getFunctions() {
     return mFunctionBundle;
 }
 
+const MetalShaderCompiler::MetalFunctionBundle& MetalProgram::getFunctionsIfPresent() const {
+    return mFunctionBundle;
+}
+
 void MetalProgram::initialize() {
     if (!mToken) {
         return;
@@ -1290,7 +1294,8 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                 [arguments addObject:bufferArgument];
                 break;
             }
-            case DescriptorType::SAMPLER: {
+            case DescriptorType::SAMPLER:
+            case DescriptorType::SAMPLER_EXTERNAL: {
                 MTLArgumentDescriptor* textureArgument = [MTLArgumentDescriptor argumentDescriptor];
                 textureArgument.index = binding.binding * 2;
                 textureArgument.dataType = MTLDataTypeTexture;
@@ -1405,7 +1410,8 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
                            atIndex:binding.binding * 2];
                 break;
             }
-            case DescriptorType::SAMPLER: {
+            case DescriptorType::SAMPLER:
+            case DescriptorType::SAMPLER_EXTERNAL: {
                 auto found = textures.find(binding.binding);
                 if (found == textures.end()) {
                     [encoder setTexture:driver->mContext->emptyTexture atIndex:binding.binding * 2];

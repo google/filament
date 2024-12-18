@@ -19,6 +19,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
+#include <dlfcn.h>
 #include <memory>
 
 namespace filament::backend {
@@ -41,13 +42,62 @@ struct OSMesaSwapchain {
     std::unique_ptr<uint8_t[]> buffer;
 };
 
-} // anonymous namespace
+struct OSMesaAPI {
+private:
+    using CreateContextFunc = OSMesaContext (*)(GLenum format, OSMesaContext);
+    using DestroyContextFunc = GLboolean (*)(OSMesaContext);
+    using MakeCurrentFunc = GLboolean (*)(OSMesaContext ctx, void* buffer, GLenum type,
+            GLsizei width, GLsizei height);
+    using GetProcAddressFunc = OSMESAproc (*)(const char* funcName);
+
+public:
+    CreateContextFunc OSMesaCreateContext;
+    DestroyContextFunc OSMesaDestroyContext;
+    MakeCurrentFunc OSMesaMakeCurrent;
+    GetProcAddressFunc OSMesaGetProcAddress;
+
+    OSMesaAPI() {
+        constexpr char const* libraryNames[] = {"libOSMesa.so", "libosmesa.so"};
+        for (char const* libName: libraryNames) {
+            mLib = dlopen(libName, RTLD_GLOBAL | RTLD_NOW);
+            if (mLib) {
+                break;
+            }
+        }
+        if (mLib) {
+            OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(mLib, "OSMesaGetProcAddress");
+        } else {
+            OSMesaGetProcAddress = (GetProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
+        }
+
+        FILAMENT_CHECK_PRECONDITION(OSMesaGetProcAddress)
+                << "Unable to against libOSMesa to create a software GL context";
+
+        OSMesaCreateContext = (CreateContextFunc) OSMesaGetProcAddress("OSMesaCreateContext");
+        OSMesaDestroyContext =
+                (DestroyContextFunc) OSMesaGetProcAddress("OSMesaDestroyContext");
+        OSMesaMakeCurrent = (MakeCurrentFunc) OSMesaGetProcAddress("OSMesaMakeCurrent");
+    }
+
+    ~OSMesaAPI() {
+        if (mLib) {
+            dlclose(mLib);
+        }
+    }
+private:
+    void* mLib = nullptr;
+};
+
+}// anonymous namespace
 
 Driver* PlatformOSMesa::createDriver(void* const sharedGLContext,
         const DriverConfig& driverConfig) noexcept {
+    OSMesaAPI* api = new OSMesaAPI();
+    mOsMesaApi = api;
+
     FILAMENT_CHECK_PRECONDITION(sharedGLContext == nullptr)
             << "shared GL context is not supported with PlatformOSMesa";
-    mContext = OSMesaCreateContext(GL_RGBA, NULL);
+    mContext = api->OSMesaCreateContext(GL_RGBA, NULL);
 
     // We need to do a no-op makecurrent here so that the context will be in a correct state before
     // any GL calls.
@@ -62,7 +112,11 @@ Driver* PlatformOSMesa::createDriver(void* const sharedGLContext,
 }
 
 void PlatformOSMesa::terminate() noexcept {
-    OSMesaDestroyContext(mContext);
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
+    api->OSMesaDestroyContext(mContext);
+    delete api;
+    mOsMesaApi = nullptr;
+
     bluegl::unbind();
 }
 
@@ -84,11 +138,12 @@ void PlatformOSMesa::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 
 bool PlatformOSMesa::makeCurrent(ContextType type, SwapChain* drawSwapChain,
         SwapChain* readSwapChain) noexcept {
+    OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
     OSMesaSwapchain* impl = (OSMesaSwapchain*) drawSwapChain;
 
-    auto result = OSMesaMakeCurrent(mContext, (BackingType*) impl->buffer.get(), BACKING_GL_TYPE,
-            impl->width, impl->height);
-    FILAMENT_CHECK_POSTCONDITION(result) << "OSMesaMakeCurrent failed!";
+    auto result = api->OSMesaMakeCurrent(mContext, (BackingType*) impl->buffer.get(),
+            BACKING_GL_TYPE, impl->width, impl->height);
+    FILAMENT_CHECK_POSTCONDITION(result == GL_TRUE) << "OSMesaMakeCurrent failed!";
 
     return true;
 }

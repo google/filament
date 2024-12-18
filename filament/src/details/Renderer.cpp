@@ -407,6 +407,9 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
+    FILAMENT_CHECK_PRECONDITION(engine.isValid(mSwapChain))
+            << "SwapChain must remain valid until endFrame is called.";
+
     if (mSwapChain) {
         mSwapChain->commit(driver);
         mSwapChain = nullptr;
@@ -580,6 +583,10 @@ void FRenderer::render(FView const* view) {
 
 void FRenderer::renderInternal(FView const* view) {
     FEngine& engine = mEngine;
+
+    FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
+                                engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))
+                    << "post-processing is not supported at FEATURE_LEVEL_0";
 
     // per-renderpass data
     RootArenaScope rootArenaScope(engine.getPerRenderPassArena());
@@ -918,8 +925,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // updatePrimitivesLod must be run before appendCommands and once for each set
     // of RenderPass::setCamera / RenderPass::setGeometry calls.
-    view.updatePrimitivesLod(engine, cameraInfo,
-            scene.getRenderableData(), view.getVisibleRenderables());
+    FView::updatePrimitivesLod(scene.getRenderableData(),
+            engine, cameraInfo, view.getVisibleRenderables());
 
     passBuilder.camera(cameraInfo);
     passBuilder.geometry(scene.getRenderableData(), view.getVisibleRenderables());
@@ -956,6 +963,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                             uint32_t(float(xvp.width ) * aoOptions.resolution),
                             uint32_t(float(xvp.height) * aoOptions.resolution)});
 
+                // this needs to reset the sampler that are only set in RendererUtils::colorPass(), because
+                // this descriptor-set is also used for ssr/picking/structure and these could be stale
+                // it would be better to use a separate desriptor-set for those two cases so that we don't
+                // have to do this
+                view.unbindSamplers(driver);
                 view.commitUniformsAndSamplers(driver);
             });
 
@@ -1022,8 +1034,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                         passBuilder.variant(pickingVariant);
                         passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
 
-                        RenderPass const pass{ passBuilder.build(mEngine) };
-                        RenderPass::execute(pass, mEngine, resources.getPassName(), out.target, out.params);
+                        RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                        driver.beginRenderPass(out.target, out.params);
+                        pass.getExecutor().execute(mEngine, driver);
+                        driver.endRenderPass();
                 });
             picking = pickingRenderPass->picking;
         }
@@ -1127,7 +1141,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        passBuilder.customCommand(engine, 3,
+        passBuilder.customCommand(3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor]() {
@@ -1135,7 +1149,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     } else if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        passBuilder.customCommand(engine, 3,
+        passBuilder.customCommand(3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver]() {
@@ -1153,7 +1167,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         passBuilder.renderFlags(renderFlags);
     }
 
-    RenderPass const pass{ passBuilder.build(engine) };
+    RenderPass const pass{ passBuilder.build(engine, driver) };
 
     FrameGraphTexture::Descriptor colorBufferDesc = {
             .width = config.physicalViewport.width,

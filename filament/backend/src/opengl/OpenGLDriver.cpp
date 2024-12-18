@@ -23,6 +23,7 @@
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
 #include "OpenGLTimerQuery.h"
+#include "SystraceProfile.h"
 #include "gl_headers.h"
 
 #include <backend/platforms/OpenGLPlatform.h>
@@ -91,24 +92,47 @@
 #define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
 #define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
 #define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
-#define DEBUG_GROUP_MARKER_ALL        0x03    // all markers
+#define DEBUG_GROUP_MARKER_ALL        0xFF    // all markers
 
 #define DEBUG_MARKER_NONE             0x00    // no debug marker
 #define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
 #define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_ALL              0x03    // all markers
+#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (systrace)
+#define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
 #define DEBUG_GROUP_MARKER_LEVEL      DEBUG_GROUP_MARKER_ALL
 
 // set to the desired debug level (for internal debugging [Default: None])
-#define DEBUG_MARKER_LEVEL      DEBUG_MARKER_NONE
+#define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
 
-#if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
-#   define DEBUG_MARKER() \
-        DebugMarker _debug_marker(*this, __func__);
+// Override the debug markers if we are forcing profiling mode
+#if defined(FILAMENT_FORCE_PROFILING_MODE)
+#   undef DEBUG_GROUP_MARKER_LEVEL
+#   undef DEBUG_MARKER_LEVEL
+
+#   define DEBUG_GROUP_MARKER_LEVEL   DEBUG_GROUP_MARKER_NONE
+#   define DEBUG_MARKER_LEVEL         DEBUG_MARKER_PROFILE
+#endif
+
+#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
+#   define DEBUG_MARKER()
+#   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker);
+#   if DEBUG_GROUP_MARKER_LEVEL != DEBUG_GROUP_MARKER_NONE
+#      error PROFILING is exclusive; group markers must be disabled.
+#   endif
+#   ifndef NDEBUG
+#      error PROFILING is meaningless in DEBUG mode.
+#   endif
+#elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
+#   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
+#   define PROFILE_MARKER(marker) DEBUG_MARKER()
+#   if DEBUG_MARKER_LEVEL & DEBUG_MARKER_PROFILE
+#      error PROFILING is exclusive; all other debug features must be disabled.
+#   endif
 #else
 #   define DEBUG_MARKER()
+#   define PROFILE_MARKER(marker)
 #endif
 
 using namespace filament::math;
@@ -382,24 +406,21 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
-    if (UTILS_UNLIKELY(mBoundProgram == p)) {
-        // program didn't change, don't do anything.
-        return true;
-    }
+    bool success = true;
+    if (mBoundProgram != p) {
+        // compile/link the program if needed and call glUseProgram
+        success = p->use(this, mContext);
+        assert_invariant(success == p->isValid());
+        if (success) {
+            // TODO: we could even improve this if the program could tell us which of the descriptors
+            //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
+            //       change often.
+            decltype(mInvalidDescriptorSetBindings) changed;
+            changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+            mInvalidDescriptorSetBindings |= changed;
 
-    // compile/link the program if needed and call glUseProgram
-    bool const success = p->use(this, mContext);
-    assert_invariant(success == p->isValid());
-  
-    if (success) {
-        // TODO: we could even improve this if the program could tell us which of the descriptors
-        //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
-        //       change often.
-        decltype(mInvalidDescriptorSetBindings) changed;
-        changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
-        mInvalidDescriptorSetBindings |= changed;
-
-        mBoundProgram = p;
+            mBoundProgram = p;
+        }
     }
 
     if (UTILS_UNLIKELY(mContext.isES2() && success)) {
@@ -1661,7 +1682,7 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
-        sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
+        sc->rec709 = ((flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) &&
                 !mPlatform.isSRGBSwapChainSupported());
     }
 }
@@ -3448,7 +3469,7 @@ void OpenGLDriver::beginFrame(
         UTILS_UNUSED int64_t monotonic_clock_ns,
         UTILS_UNUSED int64_t refreshIntervalNs,
         UTILS_UNUSED uint32_t frameId) {
-    DEBUG_MARKER()
+    PROFILE_MARKER(PROFILE_NAME_BEGINFRAME)
     auto& gl = mContext;
     insertEventMarker("beginFrame");
     mPlatform.beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
@@ -3483,7 +3504,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
-    DEBUG_MARKER()
+    PROFILE_MARKER(PROFILE_NAME_ENDFRAME)
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
     // done with the frame. We do NOT officially support using Filament in this way, but we can
@@ -3875,6 +3896,14 @@ void OpenGLDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
+
+    if (UTILS_UNLIKELY(!dsh)) {
+        mBoundDescriptorSets[set].dsh = dsh;
+        mInvalidDescriptorSetBindings.set(set, true);
+        mInvalidDescriptorSetBindingOffsets.set(set, true);
+        return;
+    }
+
     // handle_cast<> here also serves to validate the handle (it actually cannot return nullptr)
     GLDescriptorSet const* const ds = handle_cast<GLDescriptorSet*>(dsh);
     if (ds) {

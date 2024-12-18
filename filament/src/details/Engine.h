@@ -56,21 +56,24 @@
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Material.h>
-#include <filament/MaterialEnums.h>
 #include <filament/Skybox.h>
 #include <filament/Stream.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
 #include <utils/Allocator.h>
+#include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
-#include <utils/compiler.h>
+#include <utils/Slice.h>
 
+#include <array>
 #include <chrono>
 #include <memory>
 #include <new>
+#include <optional>
+#include <string_view>
 #include <random>
 #include <thread>
 #include <type_traits>
@@ -208,7 +211,15 @@ public:
         return mRenderableManager;
     }
 
+    FRenderableManager const& getRenderableManager() const noexcept {
+        return mRenderableManager;
+    }
+
     FLightManager& getLightManager() noexcept {
+        return mLightManager;
+    }
+
+    FLightManager const& getLightManager() const noexcept {
         return mLightManager;
     }
 
@@ -423,8 +434,11 @@ public:
 
     bool execute();
 
-    utils::JobSystem& getJobSystem() noexcept {
-        return mJobSystem;
+    utils::JobSystem& getJobSystem() const noexcept {
+        // JobSystem is thread-safe, and it's always okay to return a non-const one,
+        // it's conceptually the same as if we were holding a non-const reference, as opposed
+        // to by-value class attribute.
+        return const_cast<utils::JobSystem&>(mJobSystem);
     }
 
     std::default_random_engine& getRandomEngine() {
@@ -661,6 +675,36 @@ public:
         } stereo;
         matdbg::DebugServer* server = nullptr;
     } debug;
+
+    struct {
+        struct {
+            struct {
+                bool assert_native_window_is_valid = false;
+            } opengl;
+            bool disable_parallel_shader_compile = false;
+            bool disable_handle_use_after_free_check = false;
+        } backend;
+    } features;
+
+    std::array<Engine::FeatureFlag, sizeof(features)> const mFeatures{{
+            { "backend.disable_parallel_shader_compile",
+              "Disable parallel shader compilation in GL and Metal backends.",
+              &features.backend.disable_parallel_shader_compile, true },
+            { "backend.disable_handle_use_after_free_check",
+              "Disable Handle<> use-after-free checks.",
+              &features.backend.disable_handle_use_after_free_check, true },
+            { "backend.opengl.assert_native_window_is_valid",
+              "Asserts that the ANativeWindow is valid when rendering starts.",
+              &features.backend.opengl.assert_native_window_is_valid, true }
+    }};
+
+    utils::Slice<const Engine::FeatureFlag> getFeatureFlags() const noexcept {
+        return { mFeatures.data(), mFeatures.size() };
+    }
+
+    bool setFeatureFlag(char const* name, bool value) noexcept;
+    std::optional<bool> getFeatureFlag(char const* name) const noexcept;
+    bool* getFeatureFlagPtr(std::string_view name, bool allowConstant = false) const noexcept;
 };
 
 FILAMENT_DOWNCAST(Engine)

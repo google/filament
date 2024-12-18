@@ -259,6 +259,17 @@ public class Engine {
         }
 
         /**
+         * Set a feature flag value. This is the only way to set constant feature flags.
+         * @param name feature name
+         * @param value true to enable, false to disable
+         * @return A reference to this Builder for chaining calls.
+         */
+        public Builder feature(@NonNull String name, boolean value) {
+            nSetBuilderFeature(mNativeBuilder, name, value);
+            return this;
+        }
+
+        /**
          * Creates an instance of Engine
          *
          * @return A newly created <code>Engine</code>, or <code>null</code> if the GPU driver couldn't
@@ -393,6 +404,7 @@ public class Engine {
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
          * Currently only honored by the GL backend.
+         * @Deprecated use "backend.disable_parallel_shader_compile" feature flag instead
          */
         public boolean disableParallelShaderCompile = false;
 
@@ -433,6 +445,7 @@ public class Engine {
 
         /**
          * Disable backend handles use-after-free checks.
+         * @Deprecated use "backend.disable_handle_use_after_free_check" feature flag instead
          */
         public boolean disableHandleUseAfterFreeCheck = false;
 
@@ -469,6 +482,7 @@ public class Engine {
          * Assert the native window associated to a SwapChain is valid when calling makeCurrent().
          * This is only supported for:
          *      - PlatformEGLAndroid
+         * @Deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
         public boolean assertNativeWindowIsValid = false;
     }
@@ -693,11 +707,11 @@ public class Engine {
 
     /**
      * Returns the maximum number of stereoscopic eyes supported by Filament. The actual number of
-     * eyes rendered is set at Engine creation time with the {@link
-     * Engine#Config#stereoscopicEyeCount} setting.
+     * eyes rendered is set at Engine creation time with the {@link Config#stereoscopicEyeCount}
+     * setting.
      *
      * @return the max number of stereoscopic eyes supported
-     * @see Engine#Config#stereoscopicEyeCount
+     * @see Config#stereoscopicEyeCount
      */
     public long getMaxStereoscopicEyes() {
         return nGetMaxStereoscopicEyes(getNativeObject());
@@ -894,7 +908,8 @@ public class Engine {
 
     /**
      * Returns whether the object is valid.
-     * @param object Object to check for validity
+     * @param ma Material
+     * @param mi MaterialInstance to check for validity
      * @return returns true if the specified object is valid.
      */
     public boolean isValidMaterialInstance(@NonNull Material ma, MaterialInstance mi) {
@@ -1316,6 +1331,39 @@ public class Engine {
      */
     public static native long getSteadyClockTimeNano();
 
+
+    /**
+     * Checks if a feature flag exists
+     * @param name name of the feature flag to check
+     * @return true if it exists false otherwise
+     */
+    public boolean hasFeatureFlag(@NonNull String name) {
+        return nHasFeatureFlag(mNativeObject, name);
+    }
+
+    /**
+     * Set the value of a non-constant feature flag.
+     * @param name name of the feature flag to set
+     * @param value value to set
+     * @return true if the value was set, false if the feature flag is constant or doesn't exist.
+     */
+    public boolean setFeatureFlag(@NonNull String name, boolean value) {
+        return nSetFeatureFlag(mNativeObject, name, value);
+    }
+
+    /**
+     * Retrieves the value of any feature flag.
+     * @param name name of the feature flag
+     * @return the value of the flag if it exists
+     * @exception IllegalArgumentException is thrown if the feature flag doesn't exist
+     */
+    public boolean getFeatureFlag(@NonNull String name) {
+        if (!hasFeatureFlag(name)) {
+            throw new IllegalArgumentException("The feature flag \"" + name + "\" doesn't exist");
+        }
+        return nGetFeatureFlag(mNativeObject, name);
+    }
+
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1405,6 +1453,9 @@ public class Engine {
     private static native int nGetSupportedFeatureLevel(long nativeEngine);
     private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);
     private static native int nGetActiveFeatureLevel(long nativeEngine);
+    private static native boolean nHasFeatureFlag(long nativeEngine, String name);
+    private static native boolean nSetFeatureFlag(long nativeEngine, String name, boolean value);
+    private static native boolean nGetFeatureFlag(long nativeEngine, String name);
 
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
@@ -1420,5 +1471,6 @@ public class Engine {
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
+    private static native void nSetBuilderFeature(long nativeBuilder, String name, boolean value);
     private static native long nBuilderBuild(long nativeBuilder);
 }

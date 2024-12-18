@@ -34,9 +34,7 @@
 #endif
 
 // Platform specific includes and defines
-#if defined(__ANDROID__)
-    #include <android/native_window.h>
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
+#if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
     #include <dlfcn.h>
     namespace {
         typedef struct _wl {
@@ -86,11 +84,20 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataImpl(
+        void* externalImage, VkDevice device) {
+    return {};
+}
+
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
+        VkDevice device, const VkAllocationCallbacks* allocator,
+        const ExternalImageMetadata& metadata) {
+    return {};
+}
+
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
     VulkanPlatform::ExtensionSet const ret = {
-#if defined(__ANDROID__)
-        VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
+#if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
 #elif defined(LINUX_OR_FREEBSD) && defined(FILAMENT_SUPPORTS_X11)
     #if defined(FILAMENT_SUPPORTS_XCB)
@@ -116,15 +123,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
     // swap chain extent.
     VkExtent2D extent;
 
-    #if defined(__ANDROID__)
-        VkAndroidSurfaceCreateInfoKHR const createInfo{
-                .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
-                .window = (ANativeWindow*) nativeWindow,
-        };
-        VkResult const result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &surface);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateAndroidSurfaceKHR error.";
-    #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
+    #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
         extent.width = ptrval->width;
         extent.height = ptrval->height;
@@ -195,6 +194,15 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
             }
         #endif
     #elif defined(WIN32)
+        // On (at least) NVIDIA drivers, the Vulkan implementation (specifically the call to
+        // vkGetPhysicalDeviceSurfaceCapabilitiesKHR()) does not correctly handle the fact that
+        // each native window has its own DPI_AWARENESS_CONTEXT, and erroneously uses the context
+        // of the calling thread. As a workaround, we set the current thread's DPI_AWARENESS_CONTEXT
+        // to that of the native window we've been given. This isn't a perfect solution, because an
+        // application could create swap chains on multiple native windows with varying DPI-awareness,
+        // but even then, at least one of the windows would be guaranteed to work correctly.
+        SetThreadDpiAwarenessContext(GetWindowDpiAwarenessContext((HWND) nativeWindow));
+
         VkWin32SurfaceCreateInfoKHR const createInfo = {
             .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
             .hinstance = GetModuleHandle(nullptr),

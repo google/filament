@@ -112,7 +112,13 @@ class MainActivity : Activity() {
     }
 
     private fun setupFilament() {
-        engine = Engine.Builder().featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0).build()
+        val config = Engine.Config()
+        //config.forceGLES2Context = true
+
+        engine = Engine.Builder()
+            .config(config)
+            .featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0)
+            .build()
         renderer = engine.createRenderer()
         scene = engine.createScene()
         view = engine.createView()
@@ -123,7 +129,9 @@ class MainActivity : Activity() {
         scene.skybox = Skybox.Builder().color(0.035f, 0.035f, 0.035f, 1.0f).build(engine)
 
         // post-processing is not supported at feature level 0
-        view.isPostProcessingEnabled = false
+        if (engine.activeFeatureLevel == Engine.FeatureLevel.FEATURE_LEVEL_0) {
+            view.isPostProcessingEnabled = false
+        }
 
         // Tell the view which camera we want to use
         view.camera = camera

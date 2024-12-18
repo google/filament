@@ -81,7 +81,9 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP = 6,
     CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
-    CONFIG_SH_BANDS_COUNT = 9
+    CONFIG_SH_BANDS_COUNT = 9,
+    CONFIG_SHADOW_SAMPLING_METHOD = 10
+    // check CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
 };
 
 enum class PushConstantIds : uint8_t  {

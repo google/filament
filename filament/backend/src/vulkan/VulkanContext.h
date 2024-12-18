@@ -21,6 +21,8 @@
 #include "VulkanImageUtility.h"
 #include "VulkanUtility.h"
 
+#include "vulkan/memory/ResourcePointer.h"
+
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
@@ -41,10 +43,10 @@ struct VulkanTimerQuery;
 struct VulkanCommandBuffer;
 
 struct VulkanAttachment {
-    VulkanTexture* texture = nullptr;
+    fvkmemory::resource_ptr<VulkanTexture> texture;
     uint8_t level = 0;
     uint8_t layerCount = 1;
-    uint16_t layer = 0;
+    uint8_t layer = 0;
 
     bool isDepth() const;
     VkImage getImage() const;
@@ -70,9 +72,11 @@ public:
     std::tuple<uint32_t, uint32_t> getNextQuery();
     void clearQuery(uint32_t queryIndex);
 
-    void beginQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery* query);
-    void endQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery const* query);
-    QueryResult getResult(VulkanTimerQuery const* query);
+    void beginQuery(VulkanCommandBuffer const* commands,
+            fvkmemory::resource_ptr<VulkanTimerQuery> query);
+    void endQuery(VulkanCommandBuffer const* commands,
+            fvkmemory::resource_ptr<VulkanTimerQuery> query);
+    QueryResult getResult(fvkmemory::resource_ptr<VulkanTimerQuery> query);
 
 private:
     VkDevice mDevice;
@@ -82,7 +86,9 @@ private:
 };
 
 struct VulkanRenderPass {
-    VulkanRenderTarget* renderTarget;
+    // Between the begin and end command render pass we cache the command buffer
+    VulkanCommandBuffer* commandBuffer;
+    fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
     int currentSubpass;
@@ -93,6 +99,9 @@ struct VulkanRenderPass {
 struct VulkanContext {
 public:
     inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
+        if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
+            assert_invariant(isProtectedMemorySupported() == true);
+        }
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
             if (flags & 1) {
                 if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
@@ -113,19 +122,19 @@ public:
     }
 
     inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
-        return mPhysicalDeviceProperties.limits;
+        return mPhysicalDeviceProperties.properties.limits;
     }
 
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
-        return mPhysicalDeviceProperties.vendorID;
+        return mPhysicalDeviceProperties.properties.vendorID;
     }
 
     inline bool isImageCubeArraySupported() const noexcept {
-        return mPhysicalDeviceFeatures.imageCubeArray == VK_TRUE;
+        return mPhysicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
     }
 
     inline bool isDepthClampSupported() const noexcept {
-        return mPhysicalDeviceFeatures.depthClamp == VK_TRUE;
+        return mPhysicalDeviceFeatures.features.depthClamp == VK_TRUE;
     }
 
     inline bool isDebugMarkersSupported() const noexcept {
@@ -141,21 +150,30 @@ public:
     }
 
     inline bool isClipDistanceSupported() const noexcept {
-        return mPhysicalDeviceFeatures.shaderClipDistance == VK_TRUE;
+        return mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
     }
 
     inline bool isLazilyAllocatedMemorySupported() const noexcept {
         return mLazilyAllocatedMemorySupported;
     }
 
+    inline bool isProtectedMemorySupported() const noexcept {
+        return mProtectedMemorySupported;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
-    VkPhysicalDeviceProperties mPhysicalDeviceProperties = {};
-    VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
+    VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+    };
+    VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
+    };
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
     bool mMultiviewEnabled = false;
     bool mLazilyAllocatedMemorySupported = false;
+    bool mProtectedMemorySupported = false;
 
     VkFormatList mDepthStencilFormats;
     VkFormatList mBlittableDepthStencilFormats;
