@@ -265,12 +265,6 @@ TimerQueryResult NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64
     return TimerQueryResult::ERROR;
 }
 
-void NoopDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-}
-
-void NoopDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-}
-
 void NoopDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
