@@ -111,7 +111,9 @@ private:
 
     // A sampler descriptor
     struct Sampler {
-        GLenum target = 0;                      // 4
+        uint16_t target;                        // 2 (GLenum)
+        bool external = false;                  // 1
+        bool reserved = false;                  // 1
         GLuint id = 0;                          // 4
         GLuint sampler = 0;                     // 4
         Handle<GLTextureRef> ref;               // 4
@@ -126,7 +128,9 @@ private:
     };
 
     struct SamplerWithAnisotropyWorkaround {
-        GLenum target = 0;                      // 4
+        uint16_t target;                        // 2 (GLenum)
+        bool external = false;                  // 1
+        bool reserved = false;                  // 1
         GLuint id = 0;                          // 4
         GLuint sampler = 0;                     // 4
         Handle<GLTextureRef> ref;               // 4
@@ -143,7 +147,9 @@ private:
 
     // A sampler descriptor for ES2
     struct SamplerGLES2 {
-        GLenum target = 0;                      // 4
+        uint16_t target;                        // 2 (GLenum)
+        bool external = false;                  // 1
+        bool reserved = false;                  // 1
         GLuint id = 0;                          // 4
         SamplerParams params{};                 // 4
         float anisotropy = 1.0f;                // 4
