@@ -103,6 +103,11 @@ public:
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
 
+        enum class ShadowSamplingQuality : uint8_t {
+            HARD,   // 2x2 PCF
+            LOW     // 3x3 gaussian filter
+        };
+
         /**
          * Specifies the material data. The material data is a binary blob produced by
          * libfilamat or by matc.
@@ -151,6 +156,14 @@ public:
          * @see IndirectLight
          */
         Builder& sphericalHarmonicsBandCount(size_t shBandCount) noexcept;
+
+        /**
+         * Set the quality of shadow sampling. This is only taken into account
+         * if this material is lit and in the surface domain.
+         * @param quality
+         * @return
+         */
+        Builder& shadowSamplingQuality(ShadowSamplingQuality quality) noexcept;
 
         /**
          * Creates the Material object and returns a pointer to it.
