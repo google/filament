@@ -337,6 +337,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_SH_BANDS_COUNT",
             +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT, 3);
 
+    generateSpecializationConstant(out, "CONFIG_SHADOW_SAMPLING_METHOD",
+            +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD, 1);
+
     // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for
     // example), we'd run into a GPU crash.
