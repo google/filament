@@ -543,7 +543,8 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,  backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 

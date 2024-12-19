@@ -214,6 +214,7 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
         backend::TextureSwizzle, a)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
+        backend::SamplerType, target,
         backend::TextureFormat, format,
         uint32_t, width,
         uint32_t, height,
