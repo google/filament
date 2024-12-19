@@ -561,6 +561,13 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC ibl-lite)
 
+if (FILAMENT_ENABLE_FGVIEWER)
+    target_link_libraries(${TARGET} PUBLIC fgviewer)
+    add_definitions(-DFILAMENT_ENABLE_FGVIEWER=1)
+else()
+    add_definitions(-DFILAMENT_ENABLE_FGVIEWER=0)
+endif()
+
 if (FILAMENT_ENABLE_MATDBG)
     target_link_libraries(${TARGET} PUBLIC matdbg)
     add_definitions(-DFILAMENT_ENABLE_MATDBG=1)

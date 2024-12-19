@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.19)
 project(filament-android)
 
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
+# TODO: Uncomment below when fgviewer is ready
+# option(FILAMENT_ENABLE_FGVIEWER "Enables Frame Graph Viewer" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
 
@@ -50,6 +52,13 @@ set_target_properties(vkshaders PROPERTIES IMPORTED_LOCATION
 add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
+
+# TODO: Uncomment below when fgviewer is ready
+# if (FILAMENT_ENABLE_FGVIEWER)
+#     add_library(fgviewer STATIC IMPORTED)
+#     set_target_properties(fgviewer PROPERTIES IMPORTED_LOCATION
+#             ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfgviewer.a)
+# endif()
 
 if (FILAMENT_ENABLE_MATDBG)
     add_library(matdbg STATIC IMPORTED)
@@ -117,6 +126,8 @@ target_link_libraries(filament-jni
     # libgeometry is PUBLIC because gltfio uses it.
     PUBLIC geometry
 
+    # TODO: Uncomment below when fgviewer is ready
+    # $<$<STREQUAL:${FILAMENT_ENABLE_FGVIEWER},ON>:fgviewer>
     $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
     $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
