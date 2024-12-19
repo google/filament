@@ -214,6 +214,7 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
         backend::TextureSwizzle, a)
 
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
+        backend::SamplerType, target,
         backend::TextureFormat, format,
         uint32_t, width,
         uint32_t, height,
@@ -398,17 +399,6 @@ DECL_DRIVER_API_N(update3DImage,
 
 DECL_DRIVER_API_N(generateMipmaps,
         backend::TextureHandle, th)
-
-// Deprecated
-DECL_DRIVER_API_N(setExternalImage,
-        backend::TextureHandle, th,
-        void*, image)
-
-// Deprecated
-DECL_DRIVER_API_N(setExternalImagePlane,
-        backend::TextureHandle, th,
-        void*, image,
-        uint32_t, plane)
 
 DECL_DRIVER_API_N(setExternalStream,
         backend::TextureHandle, th,
