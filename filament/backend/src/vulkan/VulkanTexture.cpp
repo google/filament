@@ -164,14 +164,15 @@ VulkanTextureState::VulkanTextureState(VkDevice device, VmaAllocator allocator,
 // Constructor for internally passed VkImage
 VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
-        VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
-        VulkanStagePool& stagePool)
+        VkDeviceMemory memory, VkFormat format, uint8_t samples, uint32_t width,
+        uint32_t height, TextureUsage tusage, VulkanStagePool& stagePool)
     : HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, 1, TextureFormat::UNUSED,
               tusage),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, device,
               allocator, commands, stagePool, format, imgutil::getViewType(SamplerType::SAMPLER_2D),
               1, 1, getDefaultLayoutImpl(tusage), any(usage & TextureUsage::PROTECTED))) {
     mState->mTextureImage = image;
+    mState->mTextureImageMemory = memory;
     mPrimaryViewRange = mState->mFullViewRange;
 }
 

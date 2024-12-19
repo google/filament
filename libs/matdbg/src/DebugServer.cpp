@@ -115,7 +115,7 @@ public:
             return true;
         }
 #endif
-        slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        slog.e << "[matdbg] DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
         return false;
     }
 private:
@@ -156,7 +156,7 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     if (!mServer->getContext()) {
         delete mServer;
         mServer = nullptr;
-        slog.e << "Unable to start DebugServer, see civetweb.txt for details." << io::endl;
+        slog.e << "[matdbg] Unable to start DebugServer, see civetweb.txt for details." << io::endl;
         return;
     }
 
@@ -166,7 +166,7 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     mServer->addHandler("/api", mApiHandler);
     mServer->addHandler("", mFileHandler);
 
-    slog.i << "DebugServer listening at http://localhost:" << port << io::endl;
+    slog.i << "[matdbg] DebugServer listening at http://localhost:" << port << io::endl;
     filamat::GLSLTools::init();
 }
 
@@ -189,7 +189,7 @@ MaterialKey
 DebugServer::addMaterial(const CString& name, const void* data, size_t size, void* userdata) {
     filaflat::ChunkContainer* container = new filaflat::ChunkContainer(data, size);
     if (!container->parse()) {
-        slog.e << "DebugServer: unable to parse material package: " << name.c_str() << io::endl;
+        slog.e << "[matdbg] DebugServer: unable to parse material package: " << name.c_str() << io::endl;
         return {};
     }
 
@@ -236,7 +236,7 @@ void DebugServer::updateActiveVariants() {
 bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api, int shaderIndex,
             const char* source, size_t size) {
     const auto error = [](int line) {
-        slog.e << "DebugServer: Unable to apply shader edit at line " << line << io::endl;
+        slog.e << "[matdbg] DebugServer: Unable to apply shader edit at line " << line << io::endl;
         return false;
     };
 

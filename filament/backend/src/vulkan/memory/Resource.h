@@ -66,7 +66,8 @@ struct Resource {
         : resManager(nullptr),
           id(HandleBase::nullid),
           mCount(0),
-          restype(ResourceType::UNDEFINED_TYPE) {}
+          restype(ResourceType::UNDEFINED_TYPE),
+          mHandleConsideredDestroyed(false) {}
 
 private:
     inline void inc() noexcept {
@@ -78,6 +79,16 @@ private:
         if (--mCount == 0) {
             destroy(restype, id);
         }
+    }
+
+    // To be able to detect use-after-free, we need a bit to signify if the handle should be
+    // consider destroyed (from Filament's perspective).
+    inline void setHandleConsiderDestroyed() noexcept {
+        mHandleConsideredDestroyed = true;
+    }
+
+    inline bool isHandleConsideredDestroyed() const {
+        return mHandleConsideredDestroyed;
     }
 
     template <typename T>
@@ -92,7 +103,9 @@ private:
     ResourceManager* resManager; // 8
     HandleId id;                 // 4
     uint32_t mCount      : 24;
-    ResourceType restype : 6;    // restype + mCount is 4 bytes.
+    ResourceType restype : 7;
+    bool mHandleConsideredDestroyed : 1;  // restype + mCount + mHandleConsideredDestroyed
+                                          //   is 4 bytes.
 
     friend class ResourceManager;
 
@@ -105,7 +118,8 @@ struct ThreadSafeResource {
         : resManager(nullptr),
           id(HandleBase::nullid),
           mCount(0),
-          restype(ResourceType::UNDEFINED_TYPE) {}
+          restype(ResourceType::UNDEFINED_TYPE),
+          mHandleConsideredDestroyed(false) {}
 
 private:
     inline void inc() noexcept {
@@ -116,6 +130,16 @@ private:
         if (mCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
             destroy(restype, id);
         }
+    }
+
+    // To be able to detect use-after-free, we need a bit to signify if the handle should be
+    // consider destroyed (from Filament's perspective).
+    inline void setHandleConsiderDestroyed() noexcept {
+        mHandleConsideredDestroyed = true;
+    }
+
+    inline bool isHandleConsideredDestroyed() const {
+        return mHandleConsideredDestroyed;
     }
 
     template <typename T>
@@ -130,7 +154,8 @@ private:
     ResourceManager* resManager;  // 8
     HandleId id;                  // 4
     std::atomic<uint32_t> mCount; // 4
-    ResourceType restype;         // 1
+    ResourceType restype : 7;
+    bool mHandleConsideredDestroyed : 1;  // restype + mHandleConsideredDestroyed is 1 byte
 
     friend class ResourceManager;
 

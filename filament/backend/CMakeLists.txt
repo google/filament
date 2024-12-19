@@ -226,10 +226,12 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanUtility.cpp
             src/vulkan/VulkanUtility.h
     )
-    if (ANDROID OR LINUX OR WIN32)
-        list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroidLinuxWindows.cpp)
+    if (LINUX OR WIN32)
+        list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)
     elseif (APPLE OR IOS)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformApple.mm)
+    elseif (ANDROID)
+        list(APPEND SRCS src/vulkan/platform/VulkanPlatformAndroid.cpp)
     endif()
 endif()
 

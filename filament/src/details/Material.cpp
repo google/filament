@@ -123,6 +123,7 @@ struct Material::BuilderDetails {
     size_t mSize = 0;
     bool mDefaultMaterial = false;
     int32_t mShBandsCount = 3;
+    Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
     std::unordered_map<
         utils::CString,
         std::variant<int32_t, float, bool>,
@@ -149,6 +150,11 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 
 Material::Builder& Material::Builder::sphericalHarmonicsBandCount(size_t shBandCount) noexcept {
     mImpl->mShBandsCount = math::clamp(shBandCount, size_t(1), size_t(3));
+    return *this;
+}
+
+Material::Builder& Material::Builder::shadowSamplingQuality(ShadowSamplingQuality quality) noexcept {
+    mImpl->mShadowSamplingQuality = quality;
     return *this;
 }
 
@@ -550,7 +556,7 @@ Program FMaterial::getProgramWithVariants(
             << "The material '" << mName.c_str()
             << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
                "vertex shader (variant="
-            << variant.key << ", filtered=" << vertexVariant.key << ").";
+            << +variant.key << ", filtered=" << +vertexVariant.key << ").";
 
     /*
      * Fragment shader
@@ -565,7 +571,7 @@ Program FMaterial::getProgramWithVariants(
             << "The material '" << mName.c_str()
             << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
                "fragment shader (variant="
-            << variant.key << ", filtered=" << ").";
+            << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
 
     Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
@@ -605,10 +611,13 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexce
     FEngine const& engine = mEngine;
     DriverApi& driverApi = mEngine.getDriverApi();
 
-    // Check if the default material has this program cached
-    if (mMaterialDomain == MaterialDomain::SURFACE &&
+    bool const isSharedVariant =
+            (mMaterialDomain == MaterialDomain::SURFACE) &&
             !mIsDefaultMaterial && !mHasCustomDepthShader &&
-            Variant::isValidDepthVariant(variant)) {
+            Variant::isValidDepthVariant(variant);
+
+    // Check if the default material has this program cached
+    if (isSharedVariant) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial) {
             auto program = pDefaultMaterial->mCachedPrograms[variant.key];
@@ -627,9 +636,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexce
     // If the default material doesn't already have this program cached, and all caching conditions
     // are met (Surface Domain and no custom depth shader), cache it now.
     // New Materials will inherit these program automatically.
-    if (mMaterialDomain == MaterialDomain::SURFACE &&
-            !mIsDefaultMaterial && !mHasCustomDepthShader &&
-            Variant::isValidDepthVariant(variant)) {
+    if (isSharedVariant) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
             // set the tag to the default material name
@@ -998,7 +1005,11 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
             +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
             (int)engine.getConfig().stereoscopicEyeCount });
     mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT, builder->mShBandsCount });
+            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT,
+            builder->mShBandsCount });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD,
+            (int32_t)builder->mShadowSamplingQuality });
     if (UTILS_UNLIKELY(parser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({
@@ -1076,6 +1087,21 @@ void FMaterial::processPushConstants(FEngine& engine, MaterialParser const* pars
 }
 
 void FMaterial::precacheDepthVariants(FEngine& engine) {
+    // pre-cache all depth variants inside the default material. Note that this should be
+    // entirely optional; if we remove this pre-caching, these variants will be populated
+    // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
+    // memory and increases init time, but reduces hiccups during the first frame.
+    if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+        auto const allDepthVariants = VariantUtils::getDepthVariants();
+        for (auto const variant: allDepthVariants) {
+            assert_invariant(Variant::isValidDepthVariant(variant));
+            if (hasVariant(variant)) {
+                prepareProgram(variant);
+            }
+        }
+        return;
+    }
+
     // if possible pre-cache all depth variants from the default material
     if (mMaterialDomain == MaterialDomain::SURFACE &&
             !mIsDefaultMaterial &&
