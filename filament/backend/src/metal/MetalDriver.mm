@@ -482,7 +482,9 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
-void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
     mContext->textures.insert(construct_handle<MetalTexture>(
             th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
@@ -1190,10 +1192,6 @@ void MetalDriver::setupExternalImage(void* image) {
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
 }
-
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
-
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }

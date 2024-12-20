@@ -543,7 +543,8 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,  backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 
@@ -1187,13 +1188,6 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
     uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
     *elapsedTime = delta;
     return TimerQueryResult::AVAILABLE;
-}
-
-void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-
-}
-
-void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
