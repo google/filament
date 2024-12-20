@@ -37,7 +37,7 @@ install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT IOS AND NOT WEBGL AND NOT ANDROID)
+if(FILAMENT_TESTS AND NOT IOS AND NOT WEBGL AND NOT ANDROID)
     add_executable(test_${TARGET} tests/test_filamesh.cpp )
     target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
     set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
