@@ -11,6 +11,9 @@
 // com.google.android.filament.exclude-vulkan
 //     When set, support for Vulkan will be excluded.
 //
+// com.google.android.filament.fgviewer
+//     When set, enables fgviewer
+//
 // com.google.android.filament.matdbg
 //     When set, enables matdbg
 //
@@ -60,6 +63,11 @@ buildscript {
     def excludeVulkan = providers
             .gradleProperty("com.google.android.filament.exclude-vulkan")
             .isPresent()
+
+    // TODO: Uncomment below when fgviewer is ready
+    // def fgviewer = providers
+    //         .gradleProperty("com.google.android.filament.fgviewer")
+    //         .isPresent()
 
     def matdbg = providers
             .gradleProperty("com.google.android.filament.matdbg")
@@ -115,6 +123,8 @@ buildscript {
         "-DANDROID_STL=c++_static",
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
         "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
+        // TODO: Uncomment below when fgviewer is ready
+        // "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
         "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString()
     ]
