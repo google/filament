@@ -662,8 +662,8 @@ class MaterialSidePanel extends LitElement {
                 let name = material.name || kUntitledPlaceholder;
                 if (name in duplicatedLabels) {
                     const index = duplicatedLabels[name];
-                    name = `${name} (${index})`;
                     duplicatedLabels[name] = index + 1;
+                    name = `${name} (${index})`;
                 }
                 return {
                     matid: matid,

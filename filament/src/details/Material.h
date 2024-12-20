@@ -156,6 +156,13 @@ public:
         std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
         mActivePrograms.set(variant.key);
         lock.unlock();
+
+        if (isSharedVariant(variant)) {
+            FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+            if (pDefaultMaterial && pDefaultMaterial->mCachedPrograms[variant.key]) {
+                return pDefaultMaterial->getProgram(variant);
+            }
+        }
 #endif
         assert_invariant(mCachedPrograms[variant.key]);
         return mCachedPrograms[variant.key];
@@ -289,6 +296,11 @@ private:
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
+
+    inline bool isSharedVariant(Variant variant) const {
+        return (mMaterialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
+               !mHasCustomDepthShader && Variant::isValidDepthVariant(variant);
+    }
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
