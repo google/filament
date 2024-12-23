@@ -54,7 +54,7 @@ public:
     // Resources and passes will be stored inside the impl class.
     void setResources(std::unordered_map<ResourceId, Resource> resources);
     // The incoming passes should be sorted by the execution order.
-    void setPasses(std::vector<Pass> passes);
+    void setPasses(std::vector<Pass> sortedPasses);
 
 private:
     class FrameGraphInfoImpl;
