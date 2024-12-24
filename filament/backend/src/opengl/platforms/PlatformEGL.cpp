@@ -715,14 +715,16 @@ void PlatformEGL::destroyExternalImage(ExternalTexture* texture) noexcept {
 
 bool PlatformEGL::setExternalImage(void* externalImage,
         UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
-    if (UTILS_LIKELY(ext.gl.OES_EGL_image_external_essl3)) {
-        assert_invariant(texture->target == GL_TEXTURE_EXTERNAL_OES);
+
+    // OES_EGL_image_external_essl3 must be present if the target is TEXTURE_EXTERNAL_OES
+    // GL_OES_EGL_image must be present if TEXTURE_2D is used
+
+#if defined(GL_OES_EGL_image) || defined(GL_OES_EGL_image_external_essl3)
         // the texture is guaranteed to be bound here.
-#ifdef GL_OES_EGL_image
-        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES,
+        glEGLImageTargetTexture2DOES(texture->target,
                 static_cast<GLeglImageOES>(externalImage));
 #endif
-    }
+
     return true;
 }
 
