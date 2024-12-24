@@ -1,0 +1,505 @@
+/*
+ * Style sheet for the CSS3 specification,
+ * to be used in addition to http://www.w3.org/StyleSheets/TR/W3C-{WD,PR,REC}
+ * $Id: default.css,v 1.1 2009-02-10 23:20:44 dean Exp $
+ */
+
+@media print {
+
+    /* the following doesn't work for now,
+       instead we rely on a patched version of html2ps which has this built-in */
+    .dlink { display: none }
+
+    /* the following doesn't work for now,
+       instead we rely on a patched version of html2ps which has this built-in */
+    div.navbar {
+       display: none;
+    }
+
+    html { margin: 0 !important }
+    body { font-family: serif }
+    th, td { font-family: inherit }
+    a { color: inherit !important }
+    div.example:before { font-family: serif !important }
+    pre.example:before { font-family: serif !important }
+    a:link, a:visited { text-decoration: none !important }
+    a:link:after, a:visited:after { /* create a cross-ref "see..." */ }
+}
+@page {
+    margin: 1.5cm 1.1cm;
+}
+
+/* html body { margin-left: 8.5em } /* Overrides 70px in base.css */
+
+body {counter-reset: exampleno figure}
+
+h2, h3, h5, h6 { margin-top: 2em }
+h1, h2, h3, h4, h5, h6 { page-break-after: avoid; font-family: inherit }
+div.figure, div.sidefigure, pre, table.propdef, table.propdef-extra,
+div.example { page-break-inside: avoid }
+dt { page-break-after: avoid }
+
+span.id {float: right; font-weight: bold}
+
+p, p.testlink + p, p.mtb {
+    text-indent: 0;
+    margin-bottom: 0.8em;
+    margin-top: 0.8em
+}
+p + p, p + div.sidefigure + p {
+    text-indent: 0em;
+    margin-top: 0.8em
+}
+dd > p:first-child, li > p:first-child {
+    margin-top: 0
+}
+
+h1 + h2 {
+    margin-top: 0;
+}
+
+pre {
+    text-align: left; /* fixes justification in Mac IE 5 */
+    text-indent: 0;   /* fixes indent in Mac Netscape 6 */
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+/*
+var {
+    font-style: normal;
+}
+*/
+img {
+    border-style: none;
+    color: white;
+}
+.toc {
+    text-indent: 0;
+}
+
+
+@media all { /* NS < 6 doesn't like borders around inline elements... */
+
+    body {
+        line-height: 1.3;
+        -webkit-text-size-adjust:none;
+    }
+
+    a:link, a:visited {
+        color: inherit;
+        text-decoration: underline;
+    }
+
+    a.logo:link, a.logo:visited {
+        padding: 0;
+        border-style: none;
+    }
+
+    /* Hmm, this seems to confuse many browsers... */
+    dt { margin-left: 0 }
+    dd { margin-left: 2em }
+    dl, ul, ol { margin-left: 0; padding-left: 0 }
+    li { margin-left: 2em; padding-left: 0 }
+
+}
+ul.indexlist { margin-left: 0; /*column-width: 13em; columns: 13em*/ }
+ul.indexlist li { margin-left: 0; list-style: none }
+ul.indexlist li li { margin-left: 1em }
+
+.example {
+    counter-increment: exampleno;
+}
+div.example:before {
+    content: "Example";
+    content: "Example " counter(exampleno, upper-roman);
+    font: bold small sans-serif;
+    /*float: left;*/
+    position: absolute;
+    top: -0.6em;
+    left: -2.5em;
+    width: 7.5em;
+    text-align: center;
+    line-height: 1em;
+    color: #FFF8DD;
+    background: #600;
+    padding: 0.1em;
+    border: thin solid #999;
+    /*margin: -1.3em 0 0.3em -2.5em;*/
+}
+pre.example:before {
+    content: "Example";
+    content: "Example " counter(exampleno, upper-roman);
+    font: bold small sans-serif;
+    /*float: left;*/
+    position: absolute;
+    top: -0.6em;
+    left: -2.5em;
+    width: 7.5em;
+    text-align: center;
+    line-height: 1em;
+    color: #FFF8DD;
+    background: #600;
+    padding: 0.1em;
+    border: thin solid #999;
+    /*margin: -1.3em 0 0.3em -2.5em;*/
+}
+div.example, div.illegal-example, div.html, div.illegal-html, div.xml,
+div.illegal-xml, pre.example, pre.illegal-example, pre.html,
+pre.illegal-html, pre.xml, pre.illegal-xml {
+    background: #FFF8DD;
+    padding: 0.5em;
+    margin: 1em 0;
+    border: thin solid #999;
+    position: relative;
+}
+pre.example, pre.illegal-example, pre.html,
+pre.illegal-html, pre.xml, pre.illegal-xml {
+    padding-top: 1.5em;
+}
+div.example { color: #600 }
+pre.example { color: #600 }
+pre.illegal-example { color: red }
+div.illegal-example { color: red }
+div.illegal-example p { color: black }
+
+div.html { color: #600 }
+pre.html { color: #600 }
+pre.illegal-html { color: red }
+div.illegal-html { color: red }
+div.illegal-html p { color: black }
+pre.deprecated-html { color: red }
+div.deprecated-html { color: red }
+div.deprecated-html p { color: black }
+
+div.xml { color: #600 }
+pre.xml { color: #600 }
+pre.illegal-xml { color: red }
+div.illegal-xml { color: red }
+div.illegal-xml p { color: black }
+
+/* code { font-size: 90% } */
+.css { color: #800 }		/* inline CSS code (SPAN/CODE) */
+code.css { font-family: inherit; font-size: 100% }
+code.html { color: #600 }	/* inline HTML */
+code.xml { color: #600 }	/* inline XML */
+.property { font: inherit; }	/* name of a CSS property (SPAN) */
+.descriptor { }			/* name of a CSS descriptor (SPAN) */
+.issue { color: #c00 }		/* editorial remark, open issue */
+.type { font-style: italic }	/* A <type> value for a property */
+
+dfn { font-weight: bolder; /*font-size: 1em*/ }
+
+/* Class note is a non-normative note. May be inline or a P or DIV */
+div.note:before {
+    content: "Note";
+    font: bold small sans-serif;
+    /*float: left;*/
+    position: absolute;
+    top: -0.9em;
+    left: -2.5em;
+    width: 7.5em;
+    text-align: center;
+    line-height: 1em;
+    color: #F8FFDD;
+    background: #060;
+    padding: 0.1em;
+    border: thin solid #999;
+    /*margin: -1.3em 0 0.3em -2.5em;*/
+}
+div.note, pre.note {
+    background: #F8FFDD;
+	color: rgb(0, 102, 0);
+    padding: 0.5em;
+    margin: 1em 0;
+    border: thin solid #999;
+    position: relative;
+}
+pre.note {
+    padding-top: 1.5em;
+}
+
+.normref { color: red }	
+.informref { color: green }	
+
+
+/* ToC not indented, but font style shows hierarchy */
+//ul.toc {margin: 1em 0; padding: 0; font-weight: bold}
+//ul.toc ul {margin: 0; padding: 0; font-weight: normal}
+//ul.toc ul ul {margin: 0 /*0 0 2em*/; font-style: italic}
+//ul.toc ul ul ul {margin: 0}
+//ul.toc li {margin: 0.6em 0; padding: 0}
+//ul.toc li li {margin: 0}
+/*
+ul.toc li li li, ul.toc li li li ul {margin-left: 0; display: inline}
+ul.toc li li li ul, ul.toc li li li ul li {margin-left: 0; display: inline}
+*/
+
+.toc-h2 {margin: 0.5em 0; padding: 0; font-weight: bold; font-style: normal; }
+.toc-h3 {margin: 0.2em 0.5em; padding: 0; font-weight: normal; font-style: normal; }
+.toc-h4 {margin: 0.2em 1em; padding: 0; font-weight: normal; font-style: italic; }
+.toc-h5 {margin: 0.2em 1.5em; padding: 0; font-weight: normal; font-style: italic; font-size:0.9em; }
+
+@media all { /* NS4 doesn't align the floats properly :-( */
+
+  /* Section numbers in a column of their own */
+  ul.toc span.secno {margin-right: 1em} /* workaround for Opera6 */
+  ul.toc span.secno {float: left; width: 4em; margin-left: -5em}
+  /*ul.toc span.secno {text-align: right}*/
+  ul.toc li {clear: both}
+  ul.toc {margin-left: 5em}
+  /* If we had 'tab', floats would not be needed here:
+       ul.toc span.secno {tab: 5em right; margin-right: 1em}
+       ul.toc li {text-indent: 5em hanging}
+     The second line in case items wrap
+  */
+}
+
+ul.index {
+  list-style: disc;		/* Mac NS has problem with 'none' */
+  list-style: none;
+}
+
+s, del {text-decoration: line-through; color: red}
+u, ins {text-decoration: underline; background: #bfa}
+
+div.figure, div.sidefigure {
+    text-align: center;
+    margin: 2.5em 0;
+}
+div.sidefigure {
+    float: right;
+    width: 50%;
+    margin: 0 0 0.5em 0.5em
+}
+div.figure img, div.sidefigure img {
+    display: block;
+    margin: auto;
+    max-width: 100%
+}
+p.caption, caption {
+    text-align: center;
+    font-style: italic;
+    font-size: 90%;
+    margin: 1.5em 2em;
+    text-indent: 0;
+}
+p.caption:before {
+    content: "Figure " counter(figure) ". ";
+    font-weight: bold;
+}
+p.caption {
+    counter-increment: figure;
+}
+
+/* DL list is indented, but figure inside it is not */
+dd { margin-left: 2em }
+dd div.figure { margin-left: -2em }
+
+sup {
+    vertical-align: super;
+    font-size: 80%
+}
+
+/* "Equations" (not real MathML, but simple HTML) are put in a
+blockquote and may have an equation number. We make sure the
+blockquote has enough margin on the right and then put the equation
+number there. */
+
+blockquote {
+    margin: 0.5em 4em 0.5em 2em;
+    text-indent: 0;
+}
+.eqno {
+    text-align: right;
+    float: right;
+    width: 3em;
+    margin: 0 -4em 0 0;
+    font-weight: bold;
+    /* background: silver; color: black; padding: 0.1em */
+}
+
+table.equiv-table { border-spacing: 0; margin: 0.5em 0 }
+table.equiv-table th, table.equiv-table td { padding: 0.3em }
+table.equiv-table th { text-align: left }
+/* table.equiv-table th:first-child { text-align: right } */
+table.equiv-table td, table.equiv-table th { border-bottom: thin solid #666 }
+table.equiv-table { border-bottom: hidden }
+table.equiv-table { empty-cells: show }
+table.equiv-table caption { margin: 0.5em 0 0 0 }
+
+/* Style for table of properties */
+table.proptable {
+    font-size: small;
+    border-collapse: collapse;
+    border-spacing: 0;
+    text-align: left;
+    margin: 1em 0;
+}
+
+table.proptable td, table.proptable th {
+    padding: 0.4em;
+    border-style: solid none none dotted;
+    border-width: thin;
+    border-color: red;
+}
+table.proptable th:first-child, table.proptable td:first-child {
+    border-left-style: none;
+}
+
+
+/* Style for table that defines a property or a descriptor */
+table.propdef, table.propdef-extra, table.descdef {
+    border-spacing: 0;
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+    background: #DEF;
+    margin-top: 1.2em;
+    margin-bottom: 1.2em
+}
+
+/* Since Jan 2008, some CSS modules use <th> instead of <td> in the
+first column of a table.propdef. These rules handle both. As of Jan
+2008, http://www.w3.org/Style/spec-mark-up still only documents <td>
+*/
+
+table.propdef td, table.propdef-extra td, table.descdef td,
+table.propdef th, table.propdef-extra th, table.descdef th {
+    padding: 0 0.3em;
+    vertical-align: baseline;
+}
+/*
+table.propdef dfn, table.propdef-extra dfn, table.descdef dfn {
+    font-weight: bold;
+    font-style: normal
+}
+*/
+table.propdef td:first-child,
+table.propdef-extra td:first-child,
+table.descdef td:first-child,
+table.propdef th:first-child,
+table.propdef-extra th:first-child,
+table.descdef th:first-child {
+    font-style: italic;
+    font-weight: normal;
+    text-align: left;
+    width: 8.3em
+}
+table.propdef td[colspan]:first-child,
+table.propdef-extra td[colspan]:first-child,
+table.descdef td[colspan]:first-child,
+table.propdef th[colspan]:first-child,
+table.propdef-extra th[colspan]:first-child,
+table.descdef th[colspan]:first-child {
+    font-style: inherit
+}
+table.propdef tr:first-child,
+table.propdef-extra tr:first-child,
+table.descdef tr:first-child {
+    background: #005A9C;
+    color: white
+}
+/* table.propdef tr:first-child td { padding-top: 0.1em; padding-bottom: 0.1em } */
+
+/* This would replace :first-child for Opera, but it confuses WinIE :-( */
+/*
+table.propdef td { width: 8em }
+table.propdef td + td { width: auto }
+table.propdef tr { background: #005A9C; color: white }
+table.propdef tr + tr { background: transparent; color: black }
+*/
+
+/* CSS modules typically don't use MUST, SHOULD etc. from RFC 2119,
+or, if they do, they don't put them in uppercase. But the following
+class is provided in case a spec wants to use RFC 2119 terms in
+uppercase in the source. */
+
+em.rfc2119 {
+    text-transform: lowercase;
+    font-variant: small-caps;
+    font-style: normal
+}
+
+/* In Profile specs, a table of required features: */
+
+table.foo
+{
+    width: 100%;
+}
+
+table.features th {
+    background: #00589f;
+    color: #fff;
+    text-align: left;
+    padding: 0.2em 0.2em 0.2em 0.5em;
+}
+table.features td {
+    vertical-align: top;
+    border-bottom: 1px solid #ccc;
+    padding: 0.3em 0.3em 0.3em 0.7em;
+}
+
+
+/* Style for data tables (and properly marked-up proptables) */
+
+    .data, .proptable {
+      margin: 1em auto;
+      border-collapse: collapse;
+      border: solid #005A9B;
+    }
+    .data caption {
+      width: 100%;
+      text-align: center;
+    }
+    .data td, .data th,
+    .proptable td, .proptable th {
+      border: thin solid;
+      padding: 0.2em;
+      text-align: center;
+    }
+    .data thead th[scope="row"],
+    .proptable thead th[scope="row"] {
+      text-align: right;
+      background: #A4C8E2;
+      color: inherit;
+    }
+    .data thead,
+    .proptable thead {
+      background: #EEEEEE;
+      color: inherit;
+    }
+    .data tbody th:first-child,
+    .proptable tbody th:first-child {
+      text-align: right;
+      background: #EEEEEE;
+      color: inherit;
+    }
+    .data thead,
+    .data tbody,
+    .data tfoot,
+    .data colgroup {
+      border: solid;
+    }
+
+    .data img {
+      vertical-align: middle;
+    }
+
+    table.propdef {
+      table-layout: auto;
+    }
+    .propdef th {
+      font-style: italic;
+      font-weight: normal;
+      text-align: left;
+      width: 3em;
+    }
+    dt dfn code {
+      font-size: inherit;
+    }
+
+/* This is mostly to make the list inside the CR exit criteria more compact. */
+dl ol, dl li {display: inline; padding: 0; margin: 0}
+dl ol {counter-reset: list-item}
+dl li {counter-increment: list-item}
+dl li:before {content: "(" counter(list-item) ") "; font-weight: bold}

@@ -1,0 +1,171 @@
+/* Style for an approved specification */
+
+/*
+   Adapted for Khronos from http://www.w3.org/StyleSheets/TR/W3C-WD.css by Chris Marrin (cmarrin@apple.com)
+   
+   Copyright 1997-2003 W3C (MIT, ERCIM, Keio). All Rights Reserved.
+   The following software licensing rules apply:
+   http://www.w3.org/Consortium/Legal/copyright-software */
+
+/* $Id: base.css,v 1.25 2006/04/18 08:42:53 bbos Exp $ */
+
+body {
+  padding: 2em 1em 2em 70px;
+  margin: 0;
+  max-width: 50em;
+  font-family: sans-serif;
+  color: black;
+  background: white;
+  background-position: top left;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+:link { color: #00C; background: transparent }
+:visited { color: #609; background: transparent }
+a:active { color: #C00; background: transparent }
+
+a:link img, a:visited img { border-style: none } /* no border on img links */
+
+a img { color: white; }        /* trick to hide the border in Netscape 4 */
+@media all {                   /* hide the next rule from Netscape 4 */
+  a img { color: inherit; }    /* undo the color change above */
+}
+
+table {
+    border-width:1px;
+    border-style:solid;
+    border-spacing:2px;
+    border-collapse:collapse;
+    padding:3;
+}
+
+th, td { /* ns 4 */
+    border-width:1px;
+    border-style:solid;
+   font-family: sans-serif;
+   padding:4px;
+   text-align:left;
+}
+
+th {
+    color:#115511;
+    border-bottom:3px solid;
+    background-color:#CCEECC;
+}
+
+h1, h2, h3, h4, h5, h6 { text-align: left }
+/* background should be transparent, but WebTV has a bug */
+h1, h2, h3 { color: #005A9C; background: white }
+h1 { font: 170% sans-serif }
+h2 { font: 140% sans-serif }
+h3 { font: 120% sans-serif }
+h4 { font: bold 100% sans-serif }
+h5 { font: italic 100% sans-serif }
+h6 { font: small-caps 100% sans-serif }
+
+.hide { display: none }
+
+div.head { margin-bottom: 1em }
+div.head h1 { margin-top: 2em; clear: both }
+div.head table { margin-left: 2em; margin-top: 2em }
+
+p.copyright { font-size: small;	color: #666666 }
+p.copyright small { font-size: small; color: #666666 }
+
+@media screen {  /* hide from IE3 */
+a[href]:hover { background: #ffa }
+}
+
+pre { margin-left: 0em }
+/*
+p {
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+}
+*/
+dt, dd { margin-top: 0; margin-bottom: 0 } /* opera 3.50 */
+dt { font-weight: bold }
+
+pre, code { font-size: 1.2em; font-family: monospace; } /* navigator 4 requires this */
+
+pre.pseudo-code, pre.pseudo-code { border: solid thin; background: #EEEEEE; color: black; padding: 0.5em 1em; min-width: 45em;}
+pre.pseudo-code :link, pre.idl :visited { color: inherit; background: transparent; }
+
+dl.methods {
+    color: green;
+    margin: 2em 0 2em 2em; 
+    padding: 0.5em 1em; 
+    border: none; 
+    background: #EEFFEE;
+}
+
+.idl-code {
+  color:black;
+  font-size: 125%;
+  font-family: monospace;
+  text-indent: -1.5em;
+  margin-left: 1.5em;
+}
+
+p.idl-code {
+  margin-top: 0.0em;
+  margin-bottom: 0.0em;
+}
+
+a.gl-spec:link, a.gl-spec:visited {
+  color: green;
+  font-family: sans-serif;
+  font-size: 60%;
+  font-style:italic;
+  font-weight:normal;
+}
+
+ul.toc, ol.toc {
+  list-style: disc;		/* Mac NS has problem with 'none' */
+  list-style: none;
+}
+
+@media aural {  
+  h1, h2, h3 { stress: 20; richness: 90 }
+  .hide { speak: none }
+  p.copyright { volume: x-soft; speech-rate: x-fast; }
+  dt { pause-before: 20% }
+  pre { speak-punctuation: code } 
+}
+
+
+
+body {
+  background-image: url(logo-spec.png);
+}
+
+/******************************************************************
+ * MikeSmith (2008-06-07)
+ * Because our current online HTML diff tool[1] doesn't output
+ * colored diffs, I the following rules for .diff-* classes so
+ * I can get colored output in HTML diffs for Editor's Drafts.
+ * [1] http://www.w3.org/2007/10/htmldiff
+ ******************************************************************/
+.diff-new {
+  background-color: yellow;
+}
+.diff-chg {
+  background-color: lime;
+}
+.diff-new:before,
+.diff-new:after {
+  content: "\2191";
+}
+.diff-chg:before,
+.diff-chg:after {
+  content: "\2195";
+}
+.diff-old {
+  text-decoration: line-through;
+  background-color: #FBB;
+}
+.diff-old:before,
+.diff-old:after {
+  content: "\2193";
+}
+/* end MikeSmith (2008-06-07) additions */

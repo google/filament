@@ -1,0 +1,69 @@
+.tabs, .tabs2, .tabs3 {
+    background-image: -moz-linear-gradient(center top, #FFFFFF 0%, #FFFFFF 5%, #FFDDEE 95%, #FFDDEE);
+    background-image: -webkit-gradient(linear,center top,center bottom,from(#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.95,#FFF0F4), to(#FFF0F4));
+    background-color:#FFF0F8;
+
+    width: 100%;
+    z-index: 101;
+    font-size: 13px;
+    font-family: 'Lucida Grande',Geneva,Helvetica,Arial,sans-serif;
+}
+
+.tabs2 {
+    font-size: 10px;
+}
+.tabs3 {
+    font-size: 9px;
+}
+
+.tablist {
+    margin: 0;
+    padding: 0;
+    display: table;
+}
+
+.tablist li {
+    float: left;
+    display: table-cell;
+    background-image: -moz-linear-gradient(center top, #FFFFFF 0%, #FFFFFF 5%, #FFF0F4 95%, #FFF0F4);
+    background-image: -webkit-gradient(linear,center top,center bottom,from(#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.95,#FFF0F4), to(#FFF0F4));
+
+    line-height: 36px;
+    list-style: none;
+}
+
+.tablist a {
+    display: block;
+    padding: 0 20px;
+    font-weight: bold;
+    background-image: -moz-linear-gradient(center top, #FFFFFF 0%, #FFFFFF 5%, #FFF0F4 95%, #FFF0F4);
+    background-image: -webkit-gradient(linear,center top,center bottom,from(#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.95,#FFF0F4), to(#FFF0F4));
+
+    background-repeat:no-repeat;
+    background-position:right;
+    background-color:#FFF0F4;
+    color: #990026;
+    text-decoration: none;
+    outline: none;
+}
+
+.tabs3 .tablist a {
+    padding: 0 10px;
+}
+
+.tablist a:hover {
+    background-image: -moz-linear-gradient(center top, #FFFFFF 0%, #FFFFFF 5%, #FFF0F8 95%, #FFF0F8);
+    background-image: -webkit-gradient(linear,center top,center bottom,from(#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.95,#FFF0F8), to(#FF0040));
+
+    background-color:#FFF0F8;
+    color: #BB0040;
+    text-decoration: none;
+}
+
+.tablist li.current a {
+    background-image: -moz-linear-gradient(center top, #FFFFFF 0%, #FFFFFF 5%, #FFF8FC 95%, #FFF8FC);
+    background-image: -webkit-gradient(linear,center top,center bottom,from(#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.05,#FFFFFF), color-stop(0.95,#FFF8FC), to(#FFF8FC));
+
+    background-color:#FFF8FC;
+    color: #990026;
+}
