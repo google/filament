@@ -179,6 +179,12 @@ TextureProvider* createStbProvider(filament::Engine* engine);
  */
 TextureProvider* createKtx2Provider(filament::Engine* engine);
 
+/**
+ * Creates a decoder that can handle certain types of "image/vnd-ms.dds" and "image/dds"
+ * content as specified in the MSFT_texture_dds specification.
+ */
+TextureProvider* createDdsProvider(filament::Engine* engine);
+
 } // namespace filament::gltfio
 
 template<> struct utils::EnableBitMaskOperators<filament::gltfio::TextureProvider::TextureFlags>

@@ -357,6 +357,9 @@ static bool isTexture(const char* uri) {
     if (endsWith(urisv, ".jpg"sv) || endsWith(urisv, ".jpeg"sv)) {
         return true;
     }
+    if (endsWith(urisv, ".dds"sv)) {
+        return true;
+    }
     return false;
 }
 
