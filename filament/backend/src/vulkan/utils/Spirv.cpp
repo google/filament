@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "VulkanSpirvUtils.h"
+#include "vulkan/utils/Spirv.h"
 
 #include <utils/compiler.h>   // UTILS_UNUSED_IN_RELEASE, UTILS_FALLTHROUGH
 #include <utils/debug.h>      // assert_invariant
@@ -22,12 +22,11 @@
 
 #include <spirv/unified1/spirv.hpp>
 
-#include <unordered_map>
-#include <variant>
-#include <vector>
 #include <cstring>
+#include <unordered_map>
+#include <vector>
 
-namespace filament::backend {
+namespace filament::backend::fvkutils {
 
 namespace {
 
@@ -99,7 +98,7 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
     uint32_t const* data = (uint32_t*) blob.data();
     uint32_t* outputData = output.data();
 
-    std::memcpy(&outputData[0], &data[0], HEADER_SIZE * 4);
+    memcpy(&outputData[0], &data[0], HEADER_SIZE * 4);
     size_t outputCursor = HEADER_SIZE;
 
     for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
@@ -147,61 +146,4 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
     output.resize(outputCursor);
 }
 
-std::tuple<uint32_t,uint32_t, uint32_t> getProgramBindings(Program::ShaderBlob const& blob) {
-    std::unordered_map<uint32_t, uint32_t> targetToSet, targetToBinding;
-
-    constexpr size_t HEADER_SIZE = 5;
-
-    size_t const dataSize = blob.size() / 4;
-    uint32_t const* data = (uint32_t*) blob.data();
-
-    for (uint32_t cursor = HEADER_SIZE, cursorEnd = dataSize; cursor < cursorEnd;) {
-        uint32_t const firstWord = data[cursor];
-        uint32_t const wordCount = firstWord >> 16;
-        uint32_t const op = firstWord & 0x0000FFFF;
-
-        switch(op) {
-            case spv::Op::OpDecorate: {
-                if (data[cursor + 2] == spv::Decoration::DecorationDescriptorSet) {
-                    uint32_t const targetVar = data[cursor + 1];
-                    uint32_t const setId = data[cursor + 3];
-                    targetToSet[targetVar] = setId;
-                } else if (data[cursor + 2] == spv::Decoration::DecorationBinding) {
-                    uint32_t const targetVar = data[cursor + 1];
-                    uint32_t const binding = data[cursor + 3];
-                    targetToBinding[targetVar] = binding;
-                }
-                break;
-            }
-            default:
-                break;
-        }
-        cursor += wordCount;
-    }
-
-    constexpr uint32_t UBO = 0;
-    constexpr uint32_t SAMPLER = 1;
-    constexpr uint32_t IATTACHMENT = 2;
-    uint32_t ubo = 0, sampler = 0, inputAttachment = 0;
-
-    for (auto const& [target, setId]: targetToSet) {
-        uint32_t const binding = targetToBinding[target];
-        assert_invariant(binding < 32);
-        switch(setId) {
-            case UBO:
-                ubo |= (1 << binding);
-                break;
-            case SAMPLER:
-                sampler |= (1 << binding);
-                break;
-            case IATTACHMENT:
-                inputAttachment |= (1 << binding);
-                break;
-            default:
-                PANIC_POSTCONDITION("unexpected %d", (int) setId);
-        }
-    }
-    return {ubo, sampler, inputAttachment};
-}
-
-} // namespace filament::backend
+} // namespace filament::backend::fvkutils
