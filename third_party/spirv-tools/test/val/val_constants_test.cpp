@@ -478,6 +478,22 @@ OpName %ptr "ptr"
                         "a null value"));
 }
 
+TEST_F(ValidateConstant, VectorMismatchedConstituents) {
+  std::string spirv = kShaderPreamble kBasicTypes R"(
+%int = OpTypeInt 32 1
+%int_0 = OpConstantNull %int
+%const_vector = OpConstantComposite %uint2 %uint_0 %int_0
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpConstantComposite Constituent <id> '13[%13]'s type "
+          "does not match Result Type <id> '3[%v2uint]'s vector element type"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

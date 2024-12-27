@@ -1318,7 +1318,7 @@ TEST_F(ValidateArithmetics, CoopMatComponentTypeNotScalarNumeric) {
   CompileSuccessfully(GenerateCoopMatCode(types, "").c_str());
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("OpTypeCooperativeMatrixNV Component Type <id> "
+              HasSubstr("OpTypeCooperativeMatrix Component Type <id> "
                         "'4[%bool]' is not a scalar numerical type."));
 }
 
@@ -1331,7 +1331,7 @@ TEST_F(ValidateArithmetics, CoopMatScopeNotConstantInt) {
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("OpTypeCooperativeMatrixNV Scope <id> '17[%float_1]' is not a "
+      HasSubstr("OpTypeCooperativeMatrix Scope <id> '17[%float_1]' is not a "
                 "constant instruction with scalar integer type."));
 }
 
@@ -1344,7 +1344,7 @@ TEST_F(ValidateArithmetics, CoopMatRowsNotConstantInt) {
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("OpTypeCooperativeMatrixNV Rows <id> '17[%float_1]' is not a "
+      HasSubstr("OpTypeCooperativeMatrix Rows <id> '17[%float_1]' is not a "
                 "constant instruction with scalar integer type."));
 }
 
@@ -1357,7 +1357,7 @@ TEST_F(ValidateArithmetics, CoopMatColumnsNotConstantInt) {
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("OpTypeCooperativeMatrixNV Cols <id> '17[%float_1]' is not a "
+      HasSubstr("OpTypeCooperativeMatrix Cols <id> '17[%float_1]' is not a "
                 "constant instruction with scalar integer type."));
 }
 
@@ -1467,6 +1467,149 @@ TEST_F(ValidateArithmetics, SMulExtendedResultTypeMembersNotIdentical) {
       getDiagnosticString(),
       HasSubstr("Expected Result Type struct member types to be identical: "
                 "SMulExtended"));
+}
+
+std::string GenerateCoopMatKHRCode(const std::string& extra_types,
+                                   const std::string& main_body) {
+  const std::string prefix = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+%s32 = OpTypeInt 32 1
+
+%u32_16 = OpConstant %u32 16
+%u32_4 = OpConstant %u32 4
+%subgroup = OpConstant %u32 3
+%useA = OpConstant %u32 0
+%useB = OpConstant %u32 1
+%useC = OpConstant %u32 2
+
+%f16matA = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useA
+%u32matA = OpTypeCooperativeMatrixKHR %u32 %subgroup %u32_16 %u32_16 %useA
+%s32matA = OpTypeCooperativeMatrixKHR %s32 %subgroup %u32_16 %u32_16 %useA
+
+%f16matB = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useB
+%u32matB = OpTypeCooperativeMatrixKHR %u32 %subgroup %u32_16 %u32_16 %useB
+%s32matB = OpTypeCooperativeMatrixKHR %s32 %subgroup %u32_16 %u32_16 %useB
+
+%f16matC = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useC
+%f32matC = OpTypeCooperativeMatrixKHR %f32 %subgroup %u32_16 %u32_16 %useC
+%u32matC = OpTypeCooperativeMatrixKHR %u32 %subgroup %u32_16 %u32_16 %useC
+%s32matC = OpTypeCooperativeMatrixKHR %s32 %subgroup %u32_16 %u32_16 %useC
+
+%f16_1 = OpConstant %f16 1
+%f32_1 = OpConstant %f32 1
+%u32_1 = OpConstant %u32 1
+%s32_1 = OpConstant %s32 1
+
+%f16mat_A_1 = OpConstantComposite %f16matA %f16_1
+%u32mat_A_1 = OpConstantComposite %u32matA %u32_1
+%s32mat_A_1 = OpConstantComposite %s32matA %s32_1
+
+%f16mat_B_1 = OpConstantComposite %f16matB %f16_1
+%u32mat_B_1 = OpConstantComposite %u32matB %u32_1
+%s32mat_B_1 = OpConstantComposite %s32matB %s32_1
+
+%f16mat_C_1 = OpConstantComposite %f16matC %f16_1
+%u32mat_C_1 = OpConstantComposite %u32matC %u32_1
+%s32mat_C_1 = OpConstantComposite %s32matC %s32_1
+
+)";
+
+  const std::string func_begin = R"(
+%main = OpFunction %void None %func
+%main_entry = OpLabel)";
+
+  const std::string suffix = R"(
+OpReturn
+OpFunctionEnd)";
+
+  return prefix + extra_types + func_begin + main_body + suffix;
+}
+
+TEST_F(ValidateArithmetics, CoopMatKHRSuccess) {
+  const std::string body = R"(
+%val1 = OpFAdd %f16matA %f16mat_A_1 %f16mat_A_1
+%val2 = OpFSub %f16matA %f16mat_A_1 %f16mat_A_1
+%val3 = OpFMul %f16matA %f16mat_A_1 %f16mat_A_1
+%val4 = OpFDiv %f16matA %f16mat_A_1 %f16mat_A_1
+%val5 = OpFNegate %f16matA %f16mat_A_1
+%val6 = OpIAdd %u32matA %u32mat_A_1 %u32mat_A_1
+%val7 = OpISub %u32matA %u32mat_A_1 %u32mat_A_1
+%val8 = OpUDiv %u32matA %u32mat_A_1 %u32mat_A_1
+%val9 = OpIAdd %s32matA %s32mat_A_1 %s32mat_A_1
+%val10 = OpISub %s32matA %s32mat_A_1 %s32mat_A_1
+%val11 = OpSDiv %s32matA %s32mat_A_1 %s32mat_A_1
+%val12 = OpSNegate %s32matA %s32mat_A_1
+%val13 = OpMatrixTimesScalar %f16matA %f16mat_A_1 %f16_1
+%val14 = OpMatrixTimesScalar %u32matA %u32mat_A_1 %u32_1
+%val15 = OpMatrixTimesScalar %s32matA %s32mat_A_1 %s32_1
+%val16 = OpCooperativeMatrixMulAddKHR %f32matC %f16mat_A_1 %f16mat_B_1 %f16mat_C_1
+%val17 = OpCooperativeMatrixMulAddKHR %s32matC %s32mat_A_1 %s32mat_B_1 %s32mat_C_1
+  MatrixASignedComponentsKHR|MatrixBSignedComponentsKHR|MatrixCSignedComponentsKHR|MatrixResultSignedComponentsKHR
+%val18 = OpCooperativeMatrixMulAddKHR %u32matC %u32mat_A_1 %u32mat_B_1 %u32mat_C_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatKHRCode("", body).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateArithmetics, CoopMatMatrixKHRTimesScalarMismatchFail) {
+  const std::string body = R"(
+%val1 = OpMatrixTimesScalar %f16matA %f16mat_A_1 %f32_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatKHRCode("", body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scalar operand type to be equal to the component "
+                "type of the matrix operand: MatrixTimesScalar"));
+}
+
+TEST_F(ValidateArithmetics, CoopMatKHRScopeFail) {
+  const std::string types = R"(
+%workgroup = OpConstant %u32 2
+%mat16x16_wg = OpTypeCooperativeMatrixKHR %f16 %workgroup %u32_16 %u32_16 %useC
+%f16matwg_16x16_1 = OpConstantComposite %mat16x16_wg %f16_1
+)";
+
+  const std::string body = R"(
+%val1 = OpFAdd %f16matA %f16matwg_16x16_1 %f16mat_A_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatKHRCode(types, body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected scopes of Matrix and Result Type to be identical"));
+}
+
+TEST_F(ValidateArithmetics, CoopMatKHRDimFail) {
+  const std::string types = R"(
+%mat16x4 = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_4 %useC
+%mat16x4_C_1 = OpConstantComposite %mat16x4 %f16_1
+)";
+
+  const std::string body = R"(
+%val1 = OpCooperativeMatrixMulAddKHR %mat16x4 %f16mat_A_1 %f16mat_B_1 %mat16x4_C_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatKHRCode(types, body).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Cooperative matrix 'N' mismatch: CooperativeMatrixMulAddKHR"));
 }
 
 }  // namespace

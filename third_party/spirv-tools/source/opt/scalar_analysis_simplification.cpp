@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "source/opt/scalar_analysis.h"
-
 #include <functional>
 #include <map>
 #include <memory>
 #include <set>
-#include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "source/opt/scalar_analysis.h"
 
 // Simplifies scalar analysis DAGs.
 //

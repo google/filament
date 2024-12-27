@@ -31,11 +31,6 @@ class ValidationState_t;
 class BasicBlock;
 class Instruction;
 
-/// A function that returns a vector of BasicBlocks given a BasicBlock. Used to
-/// get the successor and predecessor nodes of a CFG block
-using get_blocks_func =
-    std::function<const std::vector<BasicBlock*>*(const BasicBlock*)>;
-
 /// @brief Performs the Control Flow Graph checks
 ///
 /// @param[in] _ the validation state of the module
@@ -86,6 +81,25 @@ spv_result_t ValidateAdjacency(ValidationState_t& _);
 ///
 /// @return SPV_SUCCESS if no errors are found.
 spv_result_t ValidateInterfaces(ValidationState_t& _);
+
+/// @brief Validates entry point call tree requirements of
+/// SPV_KHR_float_controls2
+///
+/// Checks that no entry point using FPFastMathDefault uses:
+/// * FPFastMathMode Fast
+/// * NoContraction
+///
+/// @param[in] _ the validation state of the module
+///
+/// @return SPV_SUCCESS if no errors are found.
+spv_result_t ValidateFloatControls2(ValidationState_t& _);
+
+/// @brief Validates duplicated execution modes for each entry point.
+///
+/// @param[in] _ the validation state of the module
+///
+/// @return SPV_SUCCESS if no errors are found.
+spv_result_t ValidateDuplicateExecutionModes(ValidationState_t& _);
 
 /// @brief Validates memory instructions
 ///
@@ -224,6 +238,14 @@ spv_result_t ValidateExecutionLimitations(ValidationState_t& _,
 /// capabilities only have appropriate uses of those types.
 spv_result_t ValidateSmallTypeUses(ValidationState_t& _,
                                    const Instruction* inst);
+
+/// Validates restricted uses of QCOM decorated textures
+///
+/// The textures that are decorated with some of QCOM image processing
+/// decorations must be used in the specified QCOM image processing built-in
+/// functions and not used in any other image functions.
+spv_result_t ValidateQCOMImageProcessingTextureUsages(ValidationState_t& _,
+                                                      const Instruction* inst);
 
 /// @brief Validate the ID's within a SPIR-V binary
 ///

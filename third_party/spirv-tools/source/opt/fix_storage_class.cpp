@@ -318,7 +318,13 @@ uint32_t FixStorageClass::WalkAccessChainType(Instruction* inst, uint32_t id) {
         const analysis::Constant* index_const =
             context()->get_constant_mgr()->FindDeclaredConstant(
                 inst->GetSingleWordInOperand(i));
-        uint32_t index = index_const->GetU32();
+        // It is highly unlikely that any type would have more fields than could
+        // be indexed by a 32-bit integer, and GetSingleWordInOperand only takes
+        // a 32-bit value, so we would not be able to handle it anyway. But the
+        // specification does allow any scalar integer type, treated as signed,
+        // so we simply downcast the index to 32-bits.
+        uint32_t index =
+            static_cast<uint32_t>(index_const->GetSignExtendedValue());
         id = type_inst->GetSingleWordInOperand(index);
         break;
       }

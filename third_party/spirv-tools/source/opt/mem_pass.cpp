@@ -22,9 +22,7 @@
 
 #include "source/cfa.h"
 #include "source/opt/basic_block.h"
-#include "source/opt/dominator_analysis.h"
 #include "source/opt/ir_context.h"
-#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {
@@ -78,6 +76,11 @@ bool MemPass::IsNonPtrAccessChain(const spv::Op opcode) const {
 bool MemPass::IsPtr(uint32_t ptrId) {
   uint32_t varId = ptrId;
   Instruction* ptrInst = get_def_use_mgr()->GetDef(varId);
+  if (ptrInst->opcode() == spv::Op::OpFunction) {
+    // A function is not a pointer, but it's return type could be, which will
+    // erroneously lead to this function returning true later on
+    return false;
+  }
   while (ptrInst->opcode() == spv::Op::OpCopyObject) {
     varId = ptrInst->GetSingleWordInOperand(kCopyObjectOperandInIdx);
     ptrInst = get_def_use_mgr()->GetDef(varId);

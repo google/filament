@@ -14,26 +14,20 @@
 
 // Performs validation on instructions that appear inside of a SPIR-V block.
 
-#include <algorithm>
 #include <cassert>
-#include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "source/binary.h"
-#include "source/diagnostic.h"
 #include "source/enum_set.h"
 #include "source/enum_string_mapping.h"
 #include "source/extensions.h"
 #include "source/opcode.h"
 #include "source/operand.h"
 #include "source/spirv_constant.h"
-#include "source/spirv_definition.h"
 #include "source/spirv_target_env.h"
 #include "source/spirv_validator_options.h"
 #include "source/util/string_utils.h"
-#include "source/val/function.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
@@ -44,14 +38,14 @@ namespace {
 std::string ToString(const CapabilitySet& capabilities,
                      const AssemblyGrammar& grammar) {
   std::stringstream ss;
-  capabilities.ForEach([&grammar, &ss](spv::Capability cap) {
+  for (auto capability : capabilities) {
     spv_operand_desc desc;
     if (SPV_SUCCESS == grammar.lookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
-                                             uint32_t(cap), &desc))
+                                             uint32_t(capability), &desc))
       ss << desc->name << " ";
     else
-      ss << uint32_t(cap) << " ";
-  });
+      ss << uint32_t(capability) << " ";
+  }
   return ss.str();
 }
 
@@ -184,10 +178,11 @@ spv_result_t CheckRequiredCapabilities(ValidationState_t& state,
 
       // Vulkan API requires more capabilities on rounding mode.
       if (spvIsVulkanEnv(state.context()->target_env)) {
-        enabling_capabilities.Add(spv::Capability::StorageUniformBufferBlock16);
-        enabling_capabilities.Add(spv::Capability::StorageUniform16);
-        enabling_capabilities.Add(spv::Capability::StoragePushConstant16);
-        enabling_capabilities.Add(spv::Capability::StorageInputOutput16);
+        enabling_capabilities.insert(
+            spv::Capability::StorageUniformBufferBlock16);
+        enabling_capabilities.insert(spv::Capability::StorageUniform16);
+        enabling_capabilities.insert(spv::Capability::StoragePushConstant16);
+        enabling_capabilities.insert(spv::Capability::StorageInputOutput16);
       }
     } else {
       enabling_capabilities = state.grammar().filterCapsAgainstTargetEnv(
@@ -201,7 +196,7 @@ spv_result_t CheckRequiredCapabilities(ValidationState_t& state,
     if (inst->opcode() != spv::Op::OpCapability) {
       const bool enabled_by_cap =
           state.HasAnyOfCapabilities(enabling_capabilities);
-      if (!enabling_capabilities.IsEmpty() && !enabled_by_cap) {
+      if (!enabling_capabilities.empty() && !enabled_by_cap) {
         return state.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
                << "Operand " << which_operand << " of "
                << spvOpcodeString(inst->opcode())
@@ -309,7 +304,7 @@ spv_result_t VersionCheck(ValidationState_t& _, const Instruction* inst) {
   }
 
   ExtensionSet exts(inst_desc->numExtensions, inst_desc->extensions);
-  if (exts.IsEmpty()) {
+  if (exts.empty()) {
     // If no extensions can enable this instruction, then emit error
     // messages only concerning core SPIR-V versions if errors happen.
     if (min_version == ~0u) {
@@ -475,7 +470,8 @@ spv_result_t InstructionPass(ValidationState_t& _, const Instruction* inst) {
     }
     _.set_addressing_model(inst->GetOperandAs<spv::AddressingModel>(0));
     _.set_memory_model(inst->GetOperandAs<spv::MemoryModel>(1));
-  } else if (opcode == spv::Op::OpExecutionMode) {
+  } else if (opcode == spv::Op::OpExecutionMode ||
+             opcode == spv::Op::OpExecutionModeId) {
     const uint32_t entry_point = inst->word(1);
     _.RegisterExecutionModeForEntryPoint(entry_point,
                                          spv::ExecutionMode(inst->word(2)));

@@ -1,27 +1,24 @@
 load(
     ":build_defs.bzl",
+    "CLDEBUGINFO100_GRAMMAR_JSON_FILE",
     "COMMON_COPTS",
     "DEBUGINFO_GRAMMAR_JSON_FILE",
-    "CLDEBUGINFO100_GRAMMAR_JSON_FILE",
     "SHDEBUGINFO100_GRAMMAR_JSON_FILE",
     "TEST_COPTS",
-    "base_test",
     "generate_core_tables",
     "generate_enum_string_mapping",
     "generate_extinst_lang_headers",
     "generate_glsl_tables",
     "generate_opencl_tables",
     "generate_vendor_tables",
-    "link_test",
-    "lint_test",
-    "opt_test",
-    "reduce_test",
-    "util_test",
-    "val_test",
+    "incompatible_with",
 )
 
 package(
     default_visibility = ["//visibility:private"],
+    features = [
+        "layering_check",
+    ],
 )
 
 licenses(["notice"])
@@ -41,35 +38,52 @@ py_binary(
     srcs = ["utils/generate_language_headers.py"],
 )
 
-generate_core_tables("unified1")
+generate_core_tables(version = "unified1")
 
-generate_enum_string_mapping("unified1")
+generate_enum_string_mapping(version = "unified1")
 
-generate_opencl_tables("unified1")
+generate_opencl_tables(version = "unified1")
 
-generate_glsl_tables("unified1")
+generate_glsl_tables(version = "unified1")
 
-generate_vendor_tables("spv-amd-shader-explicit-vertex-parameter")
+generate_vendor_tables(extension = "spv-amd-shader-explicit-vertex-parameter")
 
-generate_vendor_tables("spv-amd-shader-trinary-minmax")
+generate_vendor_tables(extension = "spv-amd-shader-trinary-minmax")
 
-generate_vendor_tables("spv-amd-gcn-shader")
+generate_vendor_tables(extension = "spv-amd-gcn-shader")
 
-generate_vendor_tables("spv-amd-shader-ballot")
+generate_vendor_tables(extension = "spv-amd-shader-ballot")
 
-generate_vendor_tables("debuginfo")
+generate_vendor_tables(extension = "debuginfo")
 
-generate_vendor_tables("opencl.debuginfo.100", "CLDEBUG100_")
+generate_vendor_tables(extension = "nonsemantic.clspvreflection")
 
-generate_vendor_tables("nonsemantic.shader.debuginfo.100", "SHDEBUG100_")
+generate_vendor_tables(extension = "nonsemantic.vkspreflection")
 
-generate_vendor_tables("nonsemantic.clspvreflection")
+generate_vendor_tables(
+    extension = "opencl.debuginfo.100",
+    operand_kind_prefix = "CLDEBUG100_",
+)
 
-generate_extinst_lang_headers("DebugInfo", DEBUGINFO_GRAMMAR_JSON_FILE)
+generate_vendor_tables(
+    extension = "nonsemantic.shader.debuginfo.100",
+    operand_kind_prefix = "SHDEBUG100_",
+)
 
-generate_extinst_lang_headers("OpenCLDebugInfo100", CLDEBUGINFO100_GRAMMAR_JSON_FILE)
+generate_extinst_lang_headers(
+    name = "DebugInfo",
+    grammar = DEBUGINFO_GRAMMAR_JSON_FILE,
+)
 
-generate_extinst_lang_headers("NonSemanticShaderDebugInfo100", SHDEBUGINFO100_GRAMMAR_JSON_FILE)
+generate_extinst_lang_headers(
+    name = "OpenCLDebugInfo100",
+    grammar = CLDEBUGINFO100_GRAMMAR_JSON_FILE,
+)
+
+generate_extinst_lang_headers(
+    name = "NonSemanticShaderDebugInfo100",
+    grammar = SHDEBUGINFO100_GRAMMAR_JSON_FILE,
+)
 
 py_binary(
     name = "generate_registry_tables",
@@ -77,12 +91,12 @@ py_binary(
 )
 
 genrule(
-    name = "gen_registry_tables",
+    name = "generators_inc",
     srcs = ["@spirv_headers//:spirv_xml_registry"],
     outs = ["generators.inc"],
-    cmd = "$(location generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
-    cmd_bat = "$(location //:generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
-    exec_tools = [":generate_registry_tables"],
+    cmd = "$(location :generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
+    cmd_bat = "$(location :generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
+    tools = [":generate_registry_tables"],
 )
 
 py_binary(
@@ -91,120 +105,104 @@ py_binary(
 )
 
 genrule(
-    name = "gen_build_version",
+    name = "build_version_inc",
     srcs = ["CHANGES"],
     outs = ["build-version.inc"],
-    cmd = "SOURCE_DATE_EPOCH=0 $(location update_build_version) $(location CHANGES) $(location build-version.inc)",
-    cmd_bat = "set SOURCE_DATE_EPOCH=0  && $(location //:update_build_version) $(location CHANGES) $(location build-version.inc)",
-    exec_tools = [":update_build_version"],
+    cmd = "SOURCE_DATE_EPOCH=0 $(location :update_build_version) $(location CHANGES) $(location build-version.inc)",
+    cmd_bat = "set SOURCE_DATE_EPOCH=0  && $(location :update_build_version) $(location CHANGES) $(location build-version.inc)",
+    local = True,
+    tools = [":update_build_version"],
 )
 
 # Libraries
 
 cc_library(
-    name = "generated_headers",
+    name = "spirv_tools",
     hdrs = [
-        ":gen_build_version",
+        "include/spirv-tools/libspirv.h",
+        "include/spirv-tools/libspirv.hpp",
+    ],
+    copts = COMMON_COPTS,
+    includes = ["include"],
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":spirv_tools_internal",
+    ],
+)
+
+cc_library(
+    name = "spirv_tools_internal",
+    srcs = glob([
+        "source/*.cpp",
+        "source/util/*.cpp",
+        "source/val/*.cpp",
+    ]) + [
+        ":build_version_inc",
         ":gen_core_tables_unified1",
         ":gen_enum_string_mapping",
         ":gen_extinst_lang_headers_DebugInfo",
-        ":gen_extinst_lang_headers_OpenCLDebugInfo100",
         ":gen_extinst_lang_headers_NonSemanticShaderDebugInfo100",
+        ":gen_extinst_lang_headers_OpenCLDebugInfo100",
         ":gen_glsl_tables_unified1",
         ":gen_opencl_tables_unified1",
-        ":gen_registry_tables",
         ":gen_vendor_tables_debuginfo",
         ":gen_vendor_tables_nonsemantic_clspvreflection",
-        ":gen_vendor_tables_opencl_debuginfo_100",
+        ":gen_vendor_tables_nonsemantic_vkspreflection",
         ":gen_vendor_tables_nonsemantic_shader_debuginfo_100",
+        ":gen_vendor_tables_opencl_debuginfo_100",
         ":gen_vendor_tables_spv_amd_gcn_shader",
         ":gen_vendor_tables_spv_amd_shader_ballot",
         ":gen_vendor_tables_spv_amd_shader_explicit_vertex_parameter",
         ":gen_vendor_tables_spv_amd_shader_trinary_minmax",
+        ":generators_inc",
     ],
-    copts = COMMON_COPTS,
-)
-
-cc_library(
-    name = "spirv_tools_headers",
-    hdrs = glob([
+    hdrs = [
         "include/spirv-tools/libspirv.h",
         "include/spirv-tools/libspirv.hpp",
+        ":gen_extinst_lang_headers_DebugInfo",
+        ":gen_extinst_lang_headers_NonSemanticShaderDebugInfo100",
+        ":gen_extinst_lang_headers_OpenCLDebugInfo100",
+    ] + glob([
         "source/*.h",
         "source/util/*.h",
         "source/val/*.h",
     ]),
     copts = COMMON_COPTS,
-    includes = ["source"],
-    deps = [
-        "@spirv_headers//:spirv_cpp11_headers",
-    ],
-)
-
-cc_library(
-    name = "spirv_tools",
-    srcs = glob([
-        "source/*.cpp",
-        "source/util/*.cpp",
-        "source/val/*.cpp",
-    ]),
-    hdrs = [
-        "include/spirv-tools/libspirv.h",
-        "include/spirv-tools/libspirv.hpp",
-    ],
-    copts = COMMON_COPTS + select({
-        "@bazel_tools//src/conditions:windows": [""],
-        "//conditions:default": ["-Wno-implicit-fallthrough"],
-    }),
     includes = ["include"],
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
     deps = [
-        ":generated_headers",
-        ":spirv_tools_headers",
+        "@spirv_headers//:spirv_common_headers",
         "@spirv_headers//:spirv_cpp11_headers",
-        "@spirv_headers//:spirv_common_headers",
     ],
-)
-
-cc_library(
-    name = "spirv_tools_comp",
-    srcs = glob([
-        "source/comp/*.cpp",
-        "source/comp/*.h",
-    ]),
-    copts = COMMON_COPTS,
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":generated_headers",
-        ":spirv_tools",
-        ":spirv_tools_headers",
-        "@spirv_headers//:spirv_common_headers",
-    ],
-)
-
-cc_library(
-    name = "spirv_tools_opt_headers",
-    hdrs = glob(["source/opt/*.h"]),
-    copts = COMMON_COPTS,
 )
 
 cc_library(
     name = "spirv_tools_opt",
-    srcs = glob(["source/opt/*.cpp"]),
     hdrs = [
         "include/spirv-tools/instrument.hpp",
         "include/spirv-tools/optimizer.hpp",
     ],
     copts = COMMON_COPTS,
-    includes = ["include"],
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
         ":spirv_tools",
-        ":spirv_tools_headers",
-        ":spirv_tools_opt_headers",
+        ":spirv_tools_opt_internal",
+    ],
+)
+
+cc_library(
+    name = "spirv_tools_opt_internal",
+    srcs = glob(["source/opt/*.cpp"]) + [
+        ":gen_vendor_tables_spv_amd_shader_ballot",
+    ],
+    hdrs = glob(["source/opt/*.h"]) + [
+        "include/spirv-tools/instrument.hpp",
+        "include/spirv-tools/optimizer.hpp",
+    ],
+    copts = COMMON_COPTS,
+    deps = [
+        ":spirv_tools_internal",
         "@spirv_headers//:spirv_common_headers",
     ],
 )
@@ -214,11 +212,9 @@ cc_library(
     srcs = glob(["source/reduce/*.cpp"]),
     hdrs = glob(["source/reduce/*.h"]),
     copts = COMMON_COPTS,
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
-        ":spirv_tools_opt",
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
     ],
 )
 
@@ -230,21 +226,38 @@ cc_library(
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
-        ":spirv_tools_opt",
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
+    ],
+)
+
+cc_library(
+    name = "spirv_tools_lint_internal",
+    srcs = glob([
+        "source/lint/*.cpp",
+        "source/lint/*.h",
+    ]),
+    hdrs = ["include/spirv-tools/linter.hpp"] + glob([
+        "source/lint/*.h",
+    ]),
+    copts = COMMON_COPTS,
+    includes = ["include"],
+    deps = [
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
     ],
 )
 
 cc_library(
     name = "spirv_tools_lint",
-    srcs = glob(["source/lint/*.cpp", "source/lint/*.h"]),
     hdrs = ["include/spirv-tools/linter.hpp"],
     copts = COMMON_COPTS,
+    includes = ["include"],
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
         ":spirv_tools",
-        ":spirv_tools_opt",
+        ":spirv_tools_lint_internal",
     ],
 )
 
@@ -253,9 +266,13 @@ cc_library(
     srcs = glob(["tools/util/*.cpp"]),
     hdrs = glob(["tools/util/*.h"]),
     copts = COMMON_COPTS,
-    linkstatic = 1,
-    visibility = ["//visibility:public"],
     deps = [":spirv_tools"],
+)
+
+cc_library(
+    name = "tools_io",
+    hdrs = ["tools/io.h"],
+    copts = COMMON_COPTS,
 )
 
 # Tools
@@ -264,12 +281,13 @@ cc_binary(
     name = "spirv-as",
     srcs = [
         "tools/as/as.cpp",
-        "tools/io.h",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
+        ":spirv_tools_internal",
+        ":tools_io",
+        ":tools_util",
     ],
 )
 
@@ -277,25 +295,44 @@ cc_binary(
     name = "spirv-dis",
     srcs = [
         "tools/dis/dis.cpp",
-        "tools/io.h",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
         ":spirv_tools",
+        ":tools_io",
+        ":tools_util",
+    ],
+)
+
+cc_binary(
+    name = "spirv-objdump",
+    srcs = [
+        "tools/objdump/extract_source.cpp",
+        "tools/objdump/extract_source.h",
+        "tools/objdump/objdump.cpp",
+    ],
+    copts = COMMON_COPTS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
+        ":tools_io",
+        ":tools_util",
+        "@spirv_headers//:spirv_cpp_headers",
     ],
 )
 
 cc_binary(
     name = "spirv-val",
     srcs = [
-        "tools/io.h",
         "tools/val/val.cpp",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
+        ":spirv_tools_internal",
+        ":tools_io",
         ":tools_util",
     ],
 )
@@ -303,14 +340,14 @@ cc_binary(
 cc_binary(
     name = "spirv-opt",
     srcs = [
-        "tools/io.h",
         "tools/opt/opt.cpp",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
-        ":spirv_tools_opt",
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
+        ":tools_io",
         ":tools_util",
     ],
 )
@@ -318,15 +355,15 @@ cc_binary(
 cc_binary(
     name = "spirv-reduce",
     srcs = [
-        "tools/io.h",
         "tools/reduce/reduce.cpp",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
-        ":spirv_tools_opt",
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
         ":spirv_tools_reduce",
+        ":tools_io",
         ":tools_util",
     ],
 )
@@ -334,28 +371,29 @@ cc_binary(
 cc_binary(
     name = "spirv-link",
     srcs = [
-        "tools/io.h",
         "tools/link/linker.cpp",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
+        ":spirv_tools_internal",
         ":spirv_tools_link",
+        ":tools_io",
+        ":tools_util",
     ],
 )
 
 cc_binary(
     name = "spirv-lint",
     srcs = [
-        "tools/io.h",
         "tools/lint/lint.cpp",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
     deps = [
-        ":spirv_tools",
         ":spirv_tools_lint",
+        ":spirv_tools_opt_internal",
+        ":tools_io",
         ":tools_util",
     ],
 )
@@ -366,50 +404,143 @@ cc_binary(
         "tools/cfg/bin_to_dot.cpp",
         "tools/cfg/bin_to_dot.h",
         "tools/cfg/cfg.cpp",
-        "tools/io.h",
     ],
     copts = COMMON_COPTS,
     visibility = ["//visibility:public"],
-    deps = [":spirv_tools"],
+    deps = [
+        ":spirv_tools_internal",
+        ":tools_io",
+        ":tools_util",
+    ],
 )
 
 # Unit tests
 
 cc_library(
-    name = "test_common",
+    name = "test_lib",
     testonly = 1,
     srcs = [
-        "test/test_fixture.h",
         "test/unit_spirv.cpp",
+    ],
+    hdrs = [
+        "test/test_fixture.h",
         "test/unit_spirv.h",
     ],
-    compatible_with = [],
     copts = TEST_COPTS,
-    includes = ["test"],
+    deps = [
+        ":spirv_tools_internal",
+        "@googletest//:gtest",
+    ],
+)
+
+# PCH (precompiled header) tests only work when using CMake and MSVC on Windows,
+# so they will be skipped in the Bazel builds.
+
+[cc_test(
+    name = "base_{testcase}_test".format(testcase = f[len("test/"):-len("_test.cpp")]),
+    size = "small",
+    srcs = [f],
+    copts = TEST_COPTS + ["-DTESTING"],
+    linkstatic = 1,
+    target_compatible_with = {
+        "test/timer_test.cpp": incompatible_with(["@bazel_tools//src/conditions:windows"]),
+    }.get(f, []),
+    deps = [
+        "tools_util",
+        ":spirv_tools_internal",
+        ":test_lib",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+) for f in glob(
+    [
+        "test/*_test.cpp",
+        "test/tools/*_test.cpp",
+    ],
+    exclude = [
+        "test/cpp_interface_test.cpp",
+        "test/pch_test.cpp",
+    ],
+)]
+
+cc_test(
+    name = "base_cpp_interface_test",
+    size = "small",
+    srcs = ["test/cpp_interface_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":spirv_tools_opt_internal",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@spirv_headers//:spirv_cpp11_headers",
+    ],
+)
+
+cc_test(
+    name = "base_ilist_test",
+    size = "small",
+    srcs = ["test/util/ilist_test.cpp"],
+    copts = TEST_COPTS,
+    linkstatic = 1,
+    deps = [
+        ":spirv_tools_internal",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "link_test_lib",
+    testonly = 1,
+    hdrs = ["test/link/linker_fixture.h"],
+    copts = TEST_COPTS,
+    deps = [
+        ":spirv_tools_internal",
+        ":spirv_tools_link",
+        ":test_lib",
+        "@com_google_effcee//:effcee",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+[cc_test(
+    name = "link_{testcase}_test".format(testcase = f[len("test/link/"):-len("_test.cpp")]),
+    size = "small",
+    srcs = [f],
+    copts = TEST_COPTS,
+    linkstatic = 1,
+    deps = [
+        ":link_test_lib",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+) for f in glob(
+    ["test/link/*_test.cpp"],
+)]
+
+[cc_test(
+    name = "lint_{testcase}_test".format(testcase = f[len("test/lint/"):-len("_test.cpp")]),
+    size = "small",
+    srcs = [f],
+    copts = TEST_COPTS,
     linkstatic = 1,
     deps = [
         ":spirv_tools",
-        "@com_google_googletest//:gtest",
+        ":spirv_tools_lint_internal",
+        ":spirv_tools_opt_internal",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
-)
+) for f in glob(
+    ["test/lint/*_test.cpp"],
+)]
 
 cc_library(
-    name = "link_test_common",
+    name = "opt_test_lib",
     testonly = 1,
-    srcs = ["test/link/linker_fixture.h"],
-    compatible_with = [],
-    copts = TEST_COPTS,
-    linkstatic = 1,
-    deps = [
-        ":spirv_tools_link",
-        ":test_common",
+    srcs = [
+        "test/opt/pass_utils.cpp",
     ],
-)
-
-cc_library(
-    name = "opt_test_common",
-    testonly = 1,
-    srcs = ["test/opt/pass_utils.cpp"],
     hdrs = [
         "test/opt/assembly_builder.h",
         "test/opt/function_utils.h",
@@ -417,143 +548,181 @@ cc_library(
         "test/opt/pass_fixture.h",
         "test/opt/pass_utils.h",
     ],
-    compatible_with = [],
+    copts = TEST_COPTS,
+    deps = [
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
+        "@com_google_effcee//:effcee",
+        "@googletest//:gtest",
+    ],
+)
+
+[cc_test(
+    name = "opt_{testcase}_test".format(testcase = f[len("test/opt/"):-len("_test.cpp")]),
+    size = "small",
+    srcs = [f],
     copts = TEST_COPTS,
     linkstatic = 1,
     deps = [
-        ":spirv_tools_opt",
-        ":test_common",
+        ":opt_test_lib",
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
+        ":test_lib",
+        "@com_google_effcee//:effcee",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
-)
+) for f in glob(["test/opt/*_test.cpp"])]
 
-cc_library(
-    name = "reduce_test_common",
-    testonly = 1,
-    srcs = [
-        "test/reduce/reduce_test_util.cpp",
-        "tools/io.h",
-    ],
-    hdrs = ["test/reduce/reduce_test_util.h"],
-    compatible_with = [],
+[cc_test(
+    name = "opt_dom_tree_{testcase}_test".format(testcase = f[len("test/opt/dominator_tree/"):-len(".cpp")]),
+    size = "small",
+    srcs = [f],
     copts = TEST_COPTS,
     linkstatic = 1,
     deps = [
-        ":spirv_tools_reduce",
-        ":test_common",
+        ":opt_test_lib",
+        ":spirv_tools_opt_internal",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
-)
-
-cc_library(
-    name = "val_test_common",
-    testonly = 1,
-    srcs = [
-        "test/val/val_code_generator.cpp",
-        "test/val/val_fixtures.h",
-    ],
-    hdrs = [
-        "test/val/val_code_generator.h",
-    ],
-    compatible_with = [],
-    copts = TEST_COPTS,
-    linkstatic = 1,
-    deps = [":test_common"],
-)
-
-# PCH (precompiled header) tests only work when using CMake and MSVC on Windows,
-# so they will be skipped in the Bazel builds.
-
-[base_test(
-    name = f[5:-4],  # strip test/, .cpp
-    srcs = [f],
-) for f in glob(
-    ["test/*.cpp"],
-    exclude = [
-        "test/cpp_interface_test.cpp", # has its own base_test below.
-        "test/log_test.cpp", # has its own base_test below.
-        "test/pch_test.cpp", # pch tests are skipped.
-        "test/timer_test.cpp", # has its own base_test below.
-    ],
-)]
-
-# This test uses unistd.h and does not run on Windows.
-base_test(
-    name = "timer_test",
-    srcs = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "//conditions:default": ["test/timer_test.cpp"],
-    }),
-)
-
-base_test(
-    name = "cpp_interface_test",
-    srcs = ["test/cpp_interface_test.cpp"],
-    deps = [":spirv_tools_opt"],
-)
-
-base_test(
-    name = "log_test",
-    srcs = ["test/log_test.cpp"],
-    deps = [":spirv_tools_opt"],
-)
-
-[link_test(
-    name = f[10:-4],  # strip test/link/, .cpp
-    srcs = [f],
-) for f in glob(
-    ["test/link/*.cpp"],
-)]
-
-[lint_test(
-    name = f[10:-4],  # strip test/lint/, .cpp
-    srcs = [f],
-) for f in glob(
-    ["test/lint/*.cpp"],
-)]
-
-[opt_test(
-    name = f[9:-4],  # strip test/opt/, .cpp
-    srcs = [f],
-) for f in glob(
-    ["test/opt/*.cpp"],
-    # pch tests are skipped.
-    exclude = ["test/opt/pch_test_opt.cpp"],
-)]
-
-[opt_test(
-    name = "dom_tree_" + f[24:-4],  # strip test/opt/dominator_tree/, .cpp
-    srcs = [f],
 ) for f in glob(
     ["test/opt/dominator_tree/*.cpp"],
-    # pch tests are skipped.
     exclude = ["test/opt/dominator_tree/pch_test_opt_dom.cpp"],
 )]
 
-[opt_test(
-    name = "loop_" + f[28:-4],  # strip test/opt/loop_optimizations/, .cpp
+[cc_test(
+    name = "opt_loop_{testcase}_test".format(testcase = f[len("test/opt/loop_optimizations/"):-len(".cpp")]),
+    size = "small",
     srcs = [f],
+    copts = TEST_COPTS,
+    linkstatic = 1,
+    deps = [
+        ":opt_test_lib",
+        ":spirv_tools",
+        ":spirv_tools_opt_internal",
+        "@com_google_effcee//:effcee",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
 ) for f in glob(
     ["test/opt/loop_optimizations/*.cpp"],
-    # pch tests are skipped.
     exclude = ["test/opt/loop_optimizations/pch_test_opt_loop.cpp"],
 )]
 
-[reduce_test(
-    name = f[12:-4],  # strip test/reduce/, .cpp
-    srcs = [f],
-) for f in glob(["test/reduce/*.cpp"])]
+cc_library(
+    name = "reduce_test_lib",
+    testonly = 1,
+    srcs = [
+        "test/reduce/reduce_test_util.cpp",
+    ],
+    hdrs = ["test/reduce/reduce_test_util.h"],
+    copts = TEST_COPTS,
+    deps = [
+        ":spirv_tools",
+        ":spirv_tools_opt_internal",
+        ":spirv_tools_reduce",
+        ":test_lib",
+        ":tools_io",
+        "@googletest//:gtest",
+    ],
+)
 
-[util_test(
-    name = f[10:-4],  # strip test/util/, .cpp
+[cc_test(
+    name = "reduce_{testcase}_test".format(testcase = f[len("test/reduce/"):-len("_test.cpp")]),
+    size = "small",
     srcs = [f],
-) for f in glob(["test/util/*.cpp"])]
+    copts = TEST_COPTS,
+    linkstatic = 1,
+    deps = [
+        ":reduce_test_lib",
+        ":spirv_tools_internal",
+        ":spirv_tools_opt_internal",
+        ":spirv_tools_reduce",
+        "@googletest//:gtest_main",
+    ],
+) for f in glob(["test/reduce/*_test.cpp"])]
 
-[val_test(
-    name = f[9:-4],  # strip test/val/, .cpp
+[cc_test(
+    name = "util_{testcase}_test".format(testcase = f[len("test/util/"):-len("_test.cpp")]),
+    size = "small",
     srcs = [f],
+    copts = TEST_COPTS,
+    linkstatic = 1,
+    deps = [
+        ":spirv_tools_internal",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+) for f in glob(["test/util/*_test.cpp"])]
+
+cc_library(
+    name = "val_test_lib",
+    testonly = 1,
+    srcs = [
+        "test/val/val_code_generator.cpp",
+    ],
+    hdrs = [
+        "test/val/val_code_generator.h",
+        "test/val/val_fixtures.h",
+    ],
+    copts = TEST_COPTS,
+    deps = [
+        ":spirv_tools_internal",
+        ":test_lib",
+    ],
+)
+
+[cc_test(
+    name = "val_{testcase}_test".format(testcase = f[len("test/val/val_"):-len("_test.cpp")]),
+    size = "small",
+    srcs = [f],
+    copts = TEST_COPTS,
+    linkstatic = 1,
+    deps = [
+        ":spirv_tools_internal",
+        ":test_lib",
+        ":val_test_lib",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
 ) for f in glob(
-    ["test/val/*.cpp"],
+    ["test/val/val_*_test.cpp"],
     exclude = [
-        "test/val/pch_test_val.cpp", # pch tests are skipped.
+        "test/val/val_capability_test.cpp",
+        "test/val/val_limits_test.cpp",
     ],
 )]
 
+cc_test(
+    name = "val_capability_test",
+    size = "large",
+    timeout = "long",
+    srcs = ["test/val/val_capability_test.cpp"],
+    copts = TEST_COPTS + ["-O3"],
+    linkstatic = 1,
+    deps = [
+        ":spirv_tools_internal",
+        ":test_lib",
+        ":val_test_lib",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "val_limits_test",
+    size = "large",
+    timeout = "long",
+    srcs = ["test/val/val_limits_test.cpp"],
+    copts = TEST_COPTS + [
+        "-O3",
+    ],
+    linkstatic = 1,
+    deps = [
+        ":test_lib",
+        ":val_test_lib",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
