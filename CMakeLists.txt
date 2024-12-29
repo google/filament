@@ -6,10 +6,6 @@ cmake_minimum_required(VERSION 3.19)
 # ==================================================================================================
 # Toolchain configuration
 # ==================================================================================================
-if (APPLE AND NOT IOS)
-    # This must be set before project() is called
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15 CACHE STRING "")
-endif()
 
 # ==================================================================================================
 # Project declaration
