@@ -599,6 +599,7 @@ if (FILAMENT_DISABLE_MATOPT)
     set(MATC_OPT_FLAGS ${MATC_OPT_FLAGS} -g)
 endif()
 
+#-a opengl -p desktop D:/Project/filament/samples/materials/bakedColor.mat
 set(MATC_BASE_FLAGS ${MATC_API_FLAGS} -p ${MATC_TARGET} ${MATC_OPT_FLAGS})
 
 # ==================================================================================================

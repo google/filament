@@ -339,6 +339,7 @@ endif()
 set(MATERIAL_BINS)
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
+##-a opengl -p desktop -o test.filamat D:/Project/filament/samples/materials/bakedColor.mat
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
