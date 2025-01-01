@@ -44,7 +44,7 @@ public:
     static std::string_view const kSuccessHeader;
     static std::string_view const kErrorHeader;
 
-    DebugServer(int port);
+    explicit DebugServer(int port);
     ~DebugServer();
 
     /**

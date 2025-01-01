@@ -32,7 +32,7 @@ public:
 
     explicit FrameGraphInfo(utils::CString viewName);
     ~FrameGraphInfo();
-    FrameGraphInfo(FrameGraphInfo&& rhs);
+    FrameGraphInfo(FrameGraphInfo&& rhs) noexcept;
     FrameGraphInfo(FrameGraphInfo const&) = delete;
 
     struct Pass {
@@ -44,7 +44,9 @@ public:
     struct Resource {
         ResourceId id;
         utils::CString name;
-        // We use a vector of string pair here to store the resource properties, so different kinds of resources could choose different types of properties to send
+        // We use a vector of string pair here to store the resource properties,
+        // so different kinds of resources could choose different types of
+        // properties to record.
         // ex.
         // Texture2D --> { {"name","XXX"}, {"sizeX", "1024"}, {"sizeY", "768"} }
         // Buffer1D --> { {"name", "XXX"}, {"size", "512"} }

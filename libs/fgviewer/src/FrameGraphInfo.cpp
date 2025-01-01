@@ -48,7 +48,7 @@ FrameGraphInfo::FrameGraphInfo(utils::CString viewName)
 
 FrameGraphInfo::~FrameGraphInfo() = default;
 
-FrameGraphInfo::FrameGraphInfo(FrameGraphInfo&& rhs) = default;
+FrameGraphInfo::FrameGraphInfo(FrameGraphInfo&& rhs) noexcept = default;
 
 void FrameGraphInfo::setResources(
     std::unordered_map<ResourceId, Resource> resources) {
