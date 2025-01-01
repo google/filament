@@ -479,6 +479,59 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) {
     mGraph.export_graphviz(out, name);
 }
 
+fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) const {
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::FrameGraphInfo info{utils::CString(viewName)};
+    std::vector<fgviewer::FrameGraphInfo::Pass> passes;
+
+    auto first = mPassNodes.begin();
+    const auto activePassNodesEnd = mActivePassNodesEnd;
+    while (first != activePassNodesEnd) {
+        PassNode *const pass = *first;
+        first++;
+
+        assert_invariant(!pass->isCulled());
+        std::vector<fgviewer::ResourceId> reads;
+        auto const &readEdges = mGraph.getIncomingEdges(pass);
+        for (auto const &edge: readEdges) {
+            // all incoming edges should be valid by construction
+            assert_invariant(mGraph.isEdgeValid(edge));
+            reads.push_back(edge->from);
+        }
+
+        std::vector<fgviewer::ResourceId> writes;
+        auto const &writeEdges = mGraph.getOutgoingEdges(pass);
+        for (auto const &edge: writeEdges) {
+            // It is possible that the node we're writing to has been culled.
+            // In this case we'd like to ignore the edge.
+            if (!mGraph.isEdgeValid(edge)) {
+                continue;
+            }
+            writes.push_back(edge->to);
+        }
+        passes.emplace_back(utils::CString(pass->getName()), std::move(reads), std::move(writes));
+    }
+
+    std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
+    for (const auto &resource: mResourceNodes) {
+        std::vector<std::pair<utils::CString, utils::CString> > resourceProps;
+        // TODO: Fill in resource properties
+        fgviewer::ResourceId id = resource->getId();
+        resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
+                              id, utils::CString(resource->getName()), std::move(resourceProps))
+        );
+    }
+
+    info.setResources(std::move(resources));
+    info.setPasses(std::move(passes));
+
+    return info;
+#else
+    return fgviewer::FrameGraphInfo();
+#endif
+}
+
+
 // ------------------------------------------------------------------------------------------------
 
 /*
