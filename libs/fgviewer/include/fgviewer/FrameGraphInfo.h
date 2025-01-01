@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef FGVIEWER_FRAME_GRAPH_INFO_H
-#define FGVIEWER_FRAME_GRAPH_INFO_H
+#ifndef FGVIEWER_FRAMEGRAPHINFO_H
+#define FGVIEWER_FRAMEGRAPHINFO_H
 
 #include <utils/CString.h>
 
@@ -78,4 +78,4 @@ namespace filament::fgviewer {
     };
 } // namespace filament::fgviewer
 
-#endif //FGVIEWER_FRAME_GRAPH_INFO_H
+#endif //FGVIEWER_FRAMEGRAPHINFO_H
