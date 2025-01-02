@@ -377,7 +377,7 @@ void BlobIndex::writeChunks(ostream& stream) {
     for (auto& record : mShaderRecords) {
         const auto& src = mDataBlobs[record.dictionaryIndex];
         assert(src.size() % 4 == 0);
-        const uint32_t* ptr = (const uint32_t*) src.data();
+        uint8_t const* ptr = (uint8_t const*) src.data();
         record.dictionaryIndex = blobs.addBlob(vector<uint8_t>(ptr, ptr + src.size()));
     }
 
