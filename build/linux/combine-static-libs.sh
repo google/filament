@@ -131,7 +131,7 @@ if [[ "${has_universal}" == "true" ]]; then
             archives+=("$REPLY")
         done < <(find "$(pwd)/${archs_temp_dir}/${arch}" -iname '*.a' -print0)
 
-        combine_static_libs "$arch_output" "$archives"
+        combine_static_libs "$arch_output" "${archives[@]}"
     done
 
     # Finally, combine the single-architecture archives into a universal binary.
