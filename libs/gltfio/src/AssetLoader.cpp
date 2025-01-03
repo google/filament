@@ -300,6 +300,7 @@ struct FAssetLoader : public AssetLoader {
     }
 
 private:
+    void elevateTextures(cgltf_data* srcAsset);
     void importSkins(FFilamentInstance* instance, const cgltf_data* srcAsset);
 
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
@@ -395,6 +396,7 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
         slog.e << "Unable to parse glTF file." << io::endl;
         return nullptr;
     }
+    elevateTextures(sourceAsset);
 
     FFilamentAsset* fAsset = createRootAsset(sourceAsset);
     if (mError) {
@@ -415,6 +417,33 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
 
     std::copy_n(fAsset->mInstances.data(), numInstances, instances);
     return fAsset;
+}
+
+void FAssetLoader::elevateTextures(cgltf_data* srcAsset) {
+    for (cgltf_size i = 0; i < srcAsset->textures_count; i ++) {
+        cgltf_texture* texture = &srcAsset->textures[i];
+        for (cgltf_size j = 0; j < texture->extensions_count; j ++) {
+            cgltf_extension& extension = texture->extensions[j];
+            if (0 == strcmp(extension.name, "MSFT_texture_dds")) {
+                std::string jsonString(extension.data);
+                size_t startPos = jsonString.find("\"source\"") + 8;
+                startPos = jsonString.find(':', startPos) + 1;
+                while (startPos < jsonString.length() && std::isspace(jsonString[startPos])) {
+                    ++startPos;
+                }
+
+                // 解析数字，假设它是一个非负整数
+                std::size_t endPos = startPos;
+                while (endPos < jsonString.length() && std::isdigit(jsonString[endPos])) {
+                    ++endPos;
+                }
+
+                const int index = std::stoi(jsonString.substr(startPos, endPos - startPos));
+                texture->image = &srcAsset->images[index];
+                break;
+            }
+        }
+    }
 }
 
 FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {

@@ -27,6 +27,7 @@ set(SRCS
         src/ArchiveCache.h
         src/Animator.cpp
         src/AssetLoader.cpp
+        src/DdsProvider.cpp
         src/DependencyGraph.cpp
         src/DependencyGraph.h
         src/DracoCache.cpp
@@ -187,6 +188,8 @@ link_libraries(math utils filament cgltf stb ktxreader geometry tsl uberzlib)
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+target_include_directories(gltfio_core PUBLIC ${ROOT_DIR}/third_party/gli)
+target_include_directories(gltfio_core PUBLIC ${ROOT_DIR}/third_party/gli/external)
 set_target_properties(gltfio_core PROPERTIES FOLDER Libs)
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)

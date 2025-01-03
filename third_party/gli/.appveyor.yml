@@ -1,0 +1,17 @@
+clone_folder: c:\dev\gli-cmake
+
+os:
+  - Visual Studio 2013
+
+platform:
+  - x86
+  - x86_64
+
+build_script:
+- md build
+- cd build
+- cmake -DCMAKE_CXX_COMPILER=$COMPILER ..
+- cmake --build . --config Debug
+- cmake --build . --config Release
+- cd ..
+

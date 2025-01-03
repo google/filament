@@ -1,0 +1,780 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>KMG File Format</title>
+<link rel="stylesheet" type="text/css" href="Khronos-App.css" />
+<link rel="stylesheet" type="text/css" href="default.css" />
+<script src="jquery-1.3.2.min.js" type="text/javascript"></script>
+<script src="generateTOC.js" type="text/javascript"></script>
+</head>
+<body onload="generateTOC(document.getElementById('toc'))">
+<!--begin-logo-->
+<div class=head>
+  <p> <a href="http://www.khronos.org/"> <img alt=Khronos height=60 src="KhronosGroup-3D.png" width=220> </a> </p>
+</div>
+<div class=head> </div>
+
+<!--end-logo-->
+
+<h1>Khronos Image (KMG) File Format Specification</h1>
+<h2 class="no-toc">Version 1.0.0 draft, 9 September 2015</h2>
+<dl>
+    <dt>This version:
+        <dd>
+            <a href="https://www.khronos.org/opengles/sdk/tools/KMG/1.0/">
+                https://www.khronos.org/opengles/sdk/tools/KMG/1.0/
+            </a>
+        </dd>
+    <dt>Latest version:
+        <dd>
+            <a href="https://www.khronos.org/opengles/sdk/tools/KMG/1.0/">
+                https://www.khronos.org/opengles/sdk/tools/KMG/1.0/
+            </a>
+        </dd>
+    <dt>Previous version:
+        <dd>
+            <a href="https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/">
+                https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
+            </a>
+        </dd>
+    <dt>Editor:
+    <dd>Christophe Riccio (<a href="http://www.unity3d.com">Unity</a>)</dd>
+</dl>
+
+<span style="font-size: x-small; font-style: oblique">Copyright &copy; 2015 Khronos Group. See <a href="#license">license</a>.</span>
+
+<hr />
+<h2 class="no-toc">Abstract</h2>
+<p>
+  KMG is a standard graphics API independent container file format for storing textures used by GPUs.
+</p>
+
+<h2 class="no-toc">Motivations</h2>
+<p>
+  
+</p>
+<ul>
+  <li>KTX depends on OpenGL and OpenGL ES</li>
+  <li>KTX doesn't distinguish OpenGL profiles</li>
+  <li>KTX doesn't support texture swizzle</li>
+  <li>KTX doesn't explicitly export texture target, no texture rectangle support</li>
+  <li>KTX doesn't support texture formats from others graphics APIs than OpenGL</li>
+  <li>KTX doesn't make it easy to load only a subset of layers</li>
+  <li>KTX doesn't store faces continuously in memory</li>
+</ul>
+<p>
+  All these issues have been addressed by KMG file format.
+</p>
+
+<h2 class="no-toc">Status of this document</h2>
+
+<!--begin-status-->
+
+<p>Proposal draft.</p>
+<!--end-status-->
+
+<h2 class="no-toc">Table of contents</h2>
+<div id="toc"></div>
+<h2>File Structure</h2>
+<pre class="pseudo-code">
+Byte[12] Identifier
+UInt32 Endianness
+UInt32 Target
+UInt32 Format
+UInt32 SwizzleRed
+UInt32 SwizzleGreen
+UInt32 SwizzleBlue
+Uint32 SwizzleAlpha
+UInt32 PixelWidth
+UInt32 PixelHeight
+UInt32 PixelDepth
+UInt32 Layers
+UInt32 Levels
+UInt32 Faces
+UInt32 GenerateMipmaps
+UInt32 BaseLevel
+UInt32 MaxLevel
+
+for each Layer in Layers<sup></sup>
+  for each Level in Levels<sup></sup>
+     for each Face in Faces
+         for each Depth in PixelDepth<sup></sup>
+             for each row or RowOfBlocks in PixelHeight<sup></sup>
+                 for each pixel or BlockOfPixels in PixelWidth
+                     Byte data[format-specific-number-of-bytes]<sup></sup>
+                 end
+             end
+         end
+     end
+  end
+end
+</pre>
+
+<h2>Field Descriptions</h2>
+<h3>Identifier</h3>
+<p>
+  The file identifier is a unique set of bytes that will differentiate the file 
+  from other types of files. It consists of 12 bytes, as follows:
+</p>
+<blockquote>
+  <pre>Byte[12] FileIdentifier = {
+   0xAB, 0x4B, 0x4D, 0x4A, 0x31, 0x30, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
+}</pre>
+</blockquote>
+<p>This can also be expressed using C-style character definitions as: </p>
+<blockquote>
+  <pre>Byte[12] FileIdentifier = {
+    '&laquo;', 'K', 'M', 'G', '1', '0', '0', '&raquo;', '\r', '\n', '\x1A', '\n'
+}</pre>
+</blockquote>
+<p>
+  The rationale behind the choice values in the identifier is based on the rationale 
+  for the identifier in the PNG specification. This identifier both identifies 
+  the file as a KMG file and provides for immediate detection of common file-transfer 
+  problems.
+</p>
+<ul>
+  <li>Byte [0] is chosen as a non-ASCII value to reduce the probability that a 
+    text file may be misrecognized as a KMG file.</li>
+  <li>Byte [0] also catches bad file transfers that clear bit 7.</li>
+  <li>Bytes [1..6] identify the format, and are the ascii values for the string 
+    "KMG100".</li>
+  <li>Byte [7] is for aesthetic balance with byte 1 (they are a matching pair 
+    of double-angle quotation marks).</li>
+  <li>Bytes [8..9] form a CR-LF sequence which catches bad file transfers that 
+    alter newline sequences.</li>
+  <li>Byte [10] is a control-Z character, which stops file display under MS-DOS, 
+    and further reduces the chance that a text file will be falsely recognised.</li>
+  <li>Byte [11] is a final line feed, which checks for the inverse of the CR-LF 
+    translation problem.</li>
+</ul>
+
+<h3>Endianness</h3>
+<p>
+  <code>Endianness</code> contains the number <code>0x04030201</code> written as a 32 bit integer. If the file is little endian then this is represented as the bytes <code>0x01 0x02 0x03 0x04</code>. If the file is big endian then this is represented as the bytes <code>0x04 0x03 0x02 0x01</code>. When reading endianness as a 32 bit integer produces the value 0x04030201 then the endianness of the file matches the endianness of the program that is reading the file and no conversion is necessary. When reading endianness as a 32 bit integer produces the value <code>0x01020304</code> then the endianness of the file is opposite the endianness of the program that is reading the file, and in that case the program reading the file must endian convert all header bytes to the endianness of the program (i.e. a little endian program must convert from big endian, and a big endian program must convert to little endian).
+</p>
+
+<h3>Target</h3>
+<p>
+  <code>Target</code> must be one of the following values:
+</p>
+<table class="foo">
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+    <tr><td><code>TARGET_1D</code></td><td>0</td><td>Images in this texture all are 1-dimensional. They have width, but no height or depth</td></tr>
+    <tr><td><code>TARGET_1D_ARRAY</code></td><td>1</td><td>Images in this texture all are 1-dimensional. However, it contains multiple sets of 1-dimensional images, all within one texture. The array length is part of the texture's size.</td></tr>
+    <tr><td><code>TARGET_2D</code></td><td>2</td><td>Images in this texture all are 1-dimensional. However, it contains multiple sets of 1-dimensional images, all within one texture. The array length is part of the texture's size.</td></tr>
+    <tr><td><code>TARGET_2D_ARRAY</code></td><td>3</td><td>Images in this texture all are 1-dimensional. However, it contains multiple sets of 1-dimensional images, all within one texture. The array length is part of the texture's size.</td></tr>
+    <tr><td><code>TARGET_3D</code></td><td>4</td><td>Images in this texture all are 3-dimensional. They have width, height, and depth.</td></tr>
+    <tr><td><code>TARGET_BUFFER</code></td><td>5</td><td>The image in this texture (only one image. No mipmapping) is 1-dimensional. The storage for this data comes from a Buffer Object.</td></tr>
+    <tr><td><code>TARGET_CUBE</code></td><td>6</td><td>There are exactly 6 distinct sets of 2D images, all of the same size. They act as 6 faces of a cube.</td></tr>
+    <tr><td><code>TARGET_CUBE_ARRAY</code></td><td>7</td><td>Images in this texture are all cube maps. It contains multiple sets of cube maps, all within one texture. The array length * 6 (number of cube faces) is part of the texture size.</td></tr>
+    <tr><td><code>TARGET_RECTANGLE</code></td><td>8</td><td>The image in this texture (only one image. No mipmapping) is 2-dimensional. Texture coordinates used for these textures are not normalized.</td></tr>
+</table>
+
+<h3>Format</h3>
+<p>
+  <code>Format</code> must be one of the following values:
+</p>
+<table class="foo">
+    <tr><th>Name</th><th>Value</th><th>Comment</th><th>Reference</th></tr>
+    <tr><td><code>FORMAT_RG4_UNORM</code></td><td>1</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG4_USCALED</code></td><td>2</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA4_UNORM</code></td><td>3</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA4_USCALED</code></td><td>4</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R5G6B5_UNORM</code></td><td>5</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R5G6B5_USCALED</code></td><td>6</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB5A1_UNORM</code></td><td>7</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB5A1_USCALED</code></td><td>8</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_UNORM</code></td><td>9</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_SNORM</code></td><td>10</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_USCALED</code></td><td>11</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_SSCALED</code></td><td>12</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_UINT</code></td><td>13</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_SINT</code></td><td>14</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_SRGB</code></td><td>15</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG8_UNORM</code></td><td>16</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG8_SNORM</code></td><td>17</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG8_USCALED</code></td><td>18</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R8_SSCALED</code></td><td>19</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG8_UINT</code></td><td>20</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG8_SINT</code></td><td>21</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG8_SRGB</code></td><td>22</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_UNORM</code></td><td>23</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_SNORM</code></td><td>24</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_USCALED</code></td><td>25</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_SSCALED</code></td><td>26</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_UINT</code></td><td>27</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_SINT</code></td><td>28</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB8_SRGB</code></td><td>29</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_UNORM</code></td><td>30</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_SNORM</code></td><td>31</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_USCALED</code></td><td>32</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_SSCALED</code></td><td>33</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_UINT</code></td><td>34</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_SINT</code></td><td>35</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA8_SRGB</code></td><td>36</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB10A2_UNORM</code></td><td>37</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB10A2_SNORM</code></td><td>38</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB10A2_USCALED</code></td><td>39</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB10A2_SSCALED</code></td><td>40</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB10A2_UINT</code></td><td>41</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB10A2_SINT</code></td><td>42</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_UNORM</code></td><td>43</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_SNORM</code></td><td>44</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_USCALED</code></td><td>45</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_SSCALED</code></td><td>46</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_UINT</code></td><td>47</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_SINT</code></td><td>48</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R16_SFLOAT</code></td><td>49</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_UNORM</code></td><td>50</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_SNORM</code></td><td>51</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_USCALED</code></td><td>52</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_SSCALED</code></td><td>53</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_UINT</code></td><td>54</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_SINT</code></td><td>55</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG16_SFLOAT</code></td><td>56</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_UNORM</code></td><td>57</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_SNORM</code></td><td>58</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_USCALED</code></td><td>59</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_SSCALED</code></td><td>60</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_UINT</code></td><td>61</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_SINT</code></td><td>62</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB16_SFLOAT</code></td><td>63</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_UNORM</code></td><td>64</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_SNORM</code></td><td>65</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_USCALED</code></td><td>66</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_SSCALED</code></td><td>67</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_UINT</code></td><td>68</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_SINT</code></td><td>69</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA16_SFLOAT</code></td><td>70</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R32_UINT</code></td><td>71</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R32_SINT</code></td><td>72</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R32_SFLOAT</code></td><td>73</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG32_UINT</code></td><td>74</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG32_SINT</code></td><td>75</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG32_SFLOAT</code></td><td>76</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB32_UINT</code></td><td>77</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB32_SINT</code></td><td>78</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB32_SFLOAT</code></td><td>79</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA32_UINT</code></td><td>80</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA32_SINT</code></td><td>81</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA32_SFLOAT</code></td><td>82</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R64_SFLOAT</code></td><td>83</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG64_SFLOAT</code></td><td>84</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB64_SFLOAT</code></td><td>85</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA64_SFLOAT</code></td><td>86</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_R64_SFLOAT</code></td><td>83</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG64_SFLOAT</code></td><td>84</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB64_SFLOAT</code></td><td>85</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGBA64_SFLOAT</code></td><td>86</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG11B10_UFLOAT</code></td><td>87</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB9E5_UFLOAT</code></td><td>88</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_D16_UNORM</code></td><td>89</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_D24_UNORM</code></td><td>90</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_D32_SFLOAT</code></td><td>91</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_S8_UINT</code></td><td>92</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_D16_UNORM_S8_UINT</code></td><td>93</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_D24_UNORM_S8_UINT</code></td><td>94</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_D32_SFLOAT_S8_UINT</code></td><td>95</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB_DXT1_UNORM</code></td><td>96</td><td></td><td><a href="#refsS3TC">[S3TC]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_DXT1_SRGB</code></td><td>97</td><td></td><td><a href="#refsS3TCSRGB">[S3TC_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_DXT1_UNORM</code></td><td>98</td><td></td><td><a href="#refsS3TC">[S3TC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_DXT1_SRGB</code></td><td>99</td><td></td><td><a href="#refsS3TCSRGB">[S3TC_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_DXT3_UNORM</code></td><td>100</td><td></td><td><a href="#refsS3TC">[S3TC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_DXT3_SRGB</code></td><td>101</td><td></td><td><a href="#refsS3TCSRGB">[S3TC_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_DXT5_UNORM</code></td><td>102</td><td></td><td><a href="#refsS3TC">[S3TC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_DXT5_SRGB</code></td><td>103</td><td></td><td><a href="#refsS3TCSRGB">[S3TC_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_R_ATI1N_UNORM</code></td><td>104</td><td></td><td><a href="#refsRGTC">[RGTC]</a></td></tr>
+    <tr><td><code>FORMAT_R_ATI1N_SNORM</code></td><td>105</td><td></td><td><a href="#refsRGTC">[RGTC]</a></td></tr>
+    <tr><td><code>FORMAT_RG_ATI2N_UNORM</code></td><td>106</td><td></td><td><a href="#refsRGTC">[RGTC]</a></td></tr>
+    <tr><td><code>FORMAT_RG_ATI2N_SNORM</code></td><td>107</td><td></td><td><a href="#refsRGTC">[RGTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_BP_UFLOAT</code></td><td>108</td><td></td><td><a href="#refsBPTC">[BPTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_BP_SFLOAT</code></td><td>109</td><td></td><td><a href="#refsBPTC">[BPTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_BP_UNORM</code></td><td>110</td><td></td><td><a href="#refsBPTC">[BPTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_BP_SRGB</code></td><td>111</td><td></td><td><a href="#refsBPTC">[BPTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_ETC2_UNORM</code></td><td>112</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_ETC2_SRGB</code></td><td>113</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ETC2_A1_UNORM</code></td><td>114</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ETC2_A1_SRGB</code></td><td>115</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ETC2_UNORM</code></td><td>116</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ETC2_SRGB</code></td><td>117</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_R_EAC_UNORM</code></td><td>118</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_R_EAC_SNORM</code></td><td>119</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RG_EAC_UNORM</code></td><td>120</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RG_EAC_SNORM</code></td><td>121</td><td></td><td><a href="#refsETC2">[ETC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_4X4_UNORM</code></td><td>122</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_4X4_SRGB</code></td><td>123</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_5X4_UNORM</code></td><td>124</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_5X4_SRGB</code></td><td>125</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_5X5_UNORM</code></td><td>126</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_5X5_SRGB</code></td><td>127</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_6X5_UNORM</code></td><td>128</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_6X5_SRGB</code></td><td>129</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_6X6_UNORM</code></td><td>130</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_6X6_SRGB</code></td><td>131</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_8X5_UNORM</code></td><td>132</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_8X5_SRGB</code></td><td>133</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_8X6_UNORM</code></td><td>134</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_8X6_SRGB</code></td><td>135</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_8X8_UNORM</code></td><td>136</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_8X8_SRGB</code></td><td>137</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X5_UNORM</code></td><td>138</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X5_SRGB</code></td><td>139</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X6_UNORM</code></td><td>140</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X6_SRGB</code></td><td>141</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X8_UNORM</code></td><td>142</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X8_SRGB</code></td><td>143</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X10_UNORM</code></td><td>144</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_10X10_SRGB</code></td><td>145</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_12X10_UNORM</code></td><td>146</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_12X10_SRGB</code></td><td>147</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_12X12_UNORM</code></td><td>148</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ASTC_12X12_SRGB</code></td><td>149</td><td></td><td><a href="#refsASTC">[ASTC]</a></td></tr>
+    <tr><td><code>FORMAT_BGRA4_UNORM</code></td><td>150</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA4_USCALED</code></td><td>151</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_B5G6R5_UNORM</code></td><td>152</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_B5G6R5_USCALED</code></td><td>153</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR5A1_UNORM</code></td><td>154</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR5A1_USCALED</code></td><td>155</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_UNORM</code></td><td>156</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_SNORM</code></td><td>157</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_USCALED</code></td><td>158</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_SSCALED</code></td><td>159</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_UINT</code></td><td>160</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_SINT</code></td><td>161</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR8_SRGB</code></td><td>162</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_UNORM</code></td><td>163</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_SNORM</code></td><td>164</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_USCALED</code></td><td>165</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_SSCALED</code></td><td>166</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_UINT</code></td><td>167</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_SINT</code></td><td>168</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRA8_SRGB</code></td><td>169</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR10A2_UNORM</code></td><td>170</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR10A2_SNORM</code></td><td>171</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR10A2_USCALED</code></td><td>172</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR10A2_SSCALED</code></td><td>173</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR10A2_UINT</code></td><td>174</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGR10A2_SINT</code></td><td>175</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RG3B2_UNORM</code></td><td>176</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRX8_UNORM</code></td><td>177</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_BGRX8_SRGB</code></td><td>178</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_L8_UNORM</code></td><td>179</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_A8_UNORM</code></td><td>180</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_LA8_UNORM</code></td><td>181</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_L16_UNORM</code></td><td>182</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_A16_UNORM</code></td><td>183</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_LA16_UNORM</code></td><td>184</td><td></td><td></td></tr>
+    <tr><td><code>FORMAT_RGB_PVRTC1_8X8_UNORM</code></td><td>185</td><td>4 bits per pixel format</td><td> <a href="#refsPVRTC1">[PVRTC1]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_PVRTC1_8X8_SRGB</code></td><td>186</td><td>4 bits per pixel format</td><td> <a href="#refsPVRTC1SRGB">[PVRTC1_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_PVRTC1_16X8_UNORM</code></td><td>187</td><td>2 bits per pixel format</td><td> <a href="#refsPVRTC1">[PVRTC1]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_PVRTC1_16X8_SRGB</code></td><td>188</td><td>2 bits per pixel format</td><td> <a href="#refsPVRTC1SRGB">[PVRTC1_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC1_8X8_UNORM</code></td><td>189</td><td>4 bits per pixel format</td><td> <a href="#refsPVRTC1">[PVRTC1]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC1_8X8_SRGB</code></td><td>190</td><td>4 bits per pixel format</td><td> <a href="#refsPVRTC1SRGB">[PVRTC1_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC1_16X8_UNORM</code></td><td>191</td><td>2 bits per pixel format</td><td> <a href="#refsPVRTC1">[PVRTC1]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC1_16X8_SRGB</code></td><td>192</td><td>2 bits per pixel format</td><td> <a href="#refsPVRTC1SRGB">[PVRTC1_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC2_4X4_UNORM</code></td><td>193</td><td>4 bits per pixel format</td><td> <a href="#refsPVRTC2">[PVRTC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC2_4X4_SRGB</code></td><td>194</td><td>4 bits per pixel format</td><td> <a href="#refsPVRTC2SRGB">[PVRTC2_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC2_8X4_UNORM</code></td><td>195</td><td>2 bits per pixel format</td><td> <a href="#refsPVRTC2">[PVRTC2]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_PVRTC2_8X4_SRGB</code></td><td>196</td><td>2 bits per pixel format</td><td> <a href="#refsPVRTC2SRGB">[PVRTC2_SRGB]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_ETC_UNORM</code></td><td>197</td><td></td><td> <a href="#refsETC1">[ETC1]</a></td></tr>
+    <tr><td><code>FORMAT_RGB_ATC_UNORM</code></td><td>198</td><td></td><td> <a href="#refsATC">[ATC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ATC_EXPLICIT_UNORM</code></td><td>199</td><td></td><td> <a href="#refsATC">[ATC]</a></td></tr>
+    <tr><td><code>FORMAT_RGBA_ATC_INTERPOLATED_UNORM</code></td><td>200</td><td></td><td> <a href="#refsATC">[ATC]</a></td></tr>
+</table>
+
+<p>
+  The per block storage for compressed formats is described in reference documents.
+</p>
+
+<p>
+  The channels exposed by the formats are exposed using the following letters:
+</p>
+<ul>
+<li><code>R</code>: Red channel.</li>
+<li><code>G</code>: Green channel.</li>
+<li><code>B</code>: Blue channel.</li>
+<li><code>A</code>: Alpha channel.</li>
+<li><code>D</code>: Depth channel.</li>
+<li><code>S</code>: Stencil channel.</li>
+<li><code>L</code>: Luminance channel. When converted to RGB, the channel value is copied to each RGB component.</li>
+<li><code>X</code>: Memory padding, eg: BGR 8 bits per channel stored in 32 bits where 8 bits are meant to be ignored.</li>
+</ul>
+<p>
+  The order of the components in the formats follows the order of the component in memory.
+</p>
+
+<p>
+  The following postfixs are used to describ properties of the format:
+</p>
+<ul>
+<li><code>UNORM</code>: Unsigned integer data sampled with border values clamped as unsigned normalized float</li>
+<li><code>SNORM</code>: Signed integer data sampled with border values clamped as signed normalized float</li>
+<li><code>USCALE</code>: Unsigned integer data sampled with border values clamped as unsigned scaled float</li>
+<li><code>SSCALE</code>: Signed integer data sampled with border values clamped as signed scaled float</li>
+<li><code>UINT</code>: Unsigned integer data sampled as unsigned integer</li>
+<li><code>SINT</code>: Signed integer data sampled as signed integer</li>
+<li><code>UFLOAT</code>: Floating point value without signed bit data</li>
+<li><code>SFLOAT</code>: Floating point value data</li>
+<li><code>SRGB</code>: Standardized non-linear unsigned integer data with roughly a 2.2 gamma correction data (IEC 61966-2-1) sampled with border values clamped as unsigned normalized float</li>
+</ul>
+
+<h3>SwizzleRed, SwizzleGreen, SwizzleBlue, SwizzleAlpha</h3>
+<p>
+  Swizzle is a mechanism to swizzle the components of a texture before they are applied as they are returned to the shader.
+  <code>SwizzleRed</code>, <code>SwizzleGreen</code>, <code>SwizzleBlue</code> and <code>SwizzleAlpha</code> must take one of the following values:
+</p>
+<table class="foo">
+    <tr><th>Name</th><th>Value</th></tr>
+    <tr><td><code>SWIZZLE_RED</code></td><td>0</td></tr>
+    <tr><td><code>SWIZZLE_GREEN</code></td><td>1</td></tr>
+    <tr><td><code>SWIZZLE_BLUE</code></td><td>2</td></tr>
+    <tr><td><code>SWIZZLE_ALPHA</code></td><td>3</td></tr>
+    <tr><td><code>SWIZZLE_ZERO</code></td><td>4</td></tr>
+    <tr><td><code>SWIZZLE_ONE</code></td><td>5</td></tr>
+</table>
+<p>
+  The first swizzle parameter affects the first component of Cs as:
+</p>
+<pre>
+    if (SwizzleRed == SWIZZLE_RED) {
+        TexelDestination[0] = TexelSource[0];
+    } else if (SwizzleRed == SWIZZLE_GREEN) {
+        TexelDestination[0] = TexelSource[1];
+    } else if (SwizzleRed == SWIZZLE_BLUE) {
+        TexelDestination[0] = TexelSource[2];
+    } else if (SwizzleRed == SWIZZLE_ALPHA) {
+        TexelDestination[0] = TexelSource[3];
+    } else if (SwizzleRed == SWIZZLE_ZERO) {
+        TexelDestination[0] = 0;
+    } else if (SwizzleRed == SWIZZLE_ONE) {
+        TexelDestination[0] = 1; // float or int depending on texture component type
+    }
+
+    and similarly for the other components.
+</pre>
+<h3>PixelWidth, PixelHeight, PixelDepth</h3>
+<p>
+  The size of the texture image for level 0, in pixels. No rounding to block
+  sizes should be applied for block compressed textures.
+</p>
+<p>
+  For 1D textures <code>PixelHeight</code> and <code>PixelDepth</code> must be 1.
+  For 2D and cube textures <code>PixelDepth</code> must be 1.
+</p>
+<h3>Layers</h3>
+<p>
+  <code>Layers</code> specifies the number of layers in a texture array. The minimum value is 1.
+</p>
+
+<h3>Levels</h3>
+<p>
+  <code>Levels</code> must equal 1 for non-mipmapped textures. For 
+  mipmapped textures, it equals the number of mipmaps. Mipmaps are stored 
+  in order from largest size to smallest size. The first mipmap level is 
+  always level 0. A KMG file does not need to contain a complete mipmap 
+  pyramid. If <code>Levels</code> equals 0, it indicates that a full 
+  mipmap pyramid should be generated from level 0 at load time (this is 
+  usually not allowed for compressed formats).
+</p>
+
+<h3>Faces</h3>
+<p>
+  <code>Faces</code> specifies the number of cubemap faces. For cubemaps and cubemap arrays this should be 6.
+  For non cubemaps this should be 1. Cube map faces are stored in the order: +X, -X, +Y, -Y, +Z, -Z.
+</p>
+
+<h3>GenerateMipmaps</h3>
+<p>
+  Mipmap generation replaces texel image levels <code>baselevel + 1</code> through <code>q</code> with images derived from the <code>baselevel</code> image, regardless of their previous contents. All other mimap images, including the <code>baselevel + 1</code> image, are left unchanged by this computation.
+</p>
+<p>
+  The internal formats of the derived mipmap images all match those of the <code>baselevel</code> image. The contents of the derived images are computed by repeated, filtered reduction of the <code>baselevel + 1</code> image. For one- and two-dimensional array and cube map array textures, each layer is filtered independently.
+</p>
+<table class="foo">
+    <tr><th>Name</th><th>Value</th></tr>
+    <tr><td><code>FILTER_NONE</code></td><td>0</td></tr>
+    <tr><td><code>FILTER_NEAREST</code></td><td>1</td></tr>
+    <tr><td><code>FILTER_LINEAR</code></td><td>2</td></tr>
+</table>
+<p>
+  If the texture format is compressed, <code>GenerateMipmaps</code> must be <code>FILTER_NONE</code>.
+</p>
+
+<h3>BaseLevel</h3>
+<p>
+  Specifies the index of the lowest defined mipmap level.
+  The minimum value is 0. The maximum value is <code>log2(max(width, height, depth)) + 1</code>.
+  <code>BaseLevel</code> must be lower or equal to <code>MaxLevel</code>.
+</p>
+
+<h3>MaxLevel</h3>
+<p>
+  Sets the index of the highest defined mipmap level. This is an integer value.
+  The minimum value is 0. The maximum value is <code>log2(max(width, height, depth)) + 1</code>.
+  <code>BaseLevel</code> must be lower or equal to <code>MaxLevel</code>.
+</p>
+
+<h2>General comments</h2>
+<p>
+  The unpack alignment is 4. I.e. uncompressed pixel data is packed according 
+  to the rules described in <a href=    "http://www.opengl.org/registry/doc/glspec44.core.pdf#nameddest=section-8.4.4.1">section 8.4.4.1</a> of the OpenGL 4.4 specification <a href="#refsGL44">[OPENGL44]</a> for a GL_UNPACK_ALIGNMENT of 4.
+</p>
+<p>
+  Values listed in tables referred to in the OpenGL 4.4 specification <a href="#refsGL44">[OPENGL44]</a> may be 
+  supplemented by extensions. The references are given as examples and do not 
+  imply that all of those texture types can be loaded in OpenGL ES or earlier 
+  versions of OpenGL.
+</p>
+<p>
+  Texture data in a KMG file are arranged so that the first pixel in the data 
+  stream for each face and/or array element is closest to the origin of the texture 
+  coordinate system. In OpenGL that origin is conventionally described as being 
+  at the lower left, but this convention is not shared by all image file formats 
+  and content creation tools, so there is abundant room for confusion.
+</p>
+<p>
+  The desired texture axis orientation is often predetermined by, e.g. a content 
+  creation tool's or existing application's use of the image. Therefore it is 
+  strongly recommended that tools for generating KMG files clearly describe their 
+  behaviour, and provide an option to specify the texture axis origin and orientation 
+  relative to the logical orientation of the source image. At minimum they should 
+  provide a choice between top-left and bottom-left as origin for 2D source images, 
+  with the positive S axis pointing right. Where possible, the preferred default 
+  is to use the logical upper-left corner of the image as the texture origin. 
+  Note that this is contrary to the standard interpretation of GL texture coordinates. 
+  However, the majority of texture compression tools use this convention.
+</p>
+<p>
+  As an aid to writing image manipulation tools and viewers, the logical orientation 
+  of the data in a KMG file may be indicated in the file's key/value metadata. 
+  Note that this metadata affects only the logical interpretation of the data, 
+  has no effect on the mapping from pixels in the file byte stream to texture 
+  coordinates. The recommended key to use is:
+</p>
+<ul>
+  <a name="keys" id="keys"></a>
+  <li>KMGorientation </li>
+</ul>
+<p>It is recommended that viewing and editing tools support at least the following 
+  values:</p>
+<ul>
+  <li> S=r,T=d</li>
+  <li>S=r,T=u</li>
+  <li>S=r,T=d,R=i</li>
+  <li>S=r,T=u,R=o</li>
+</ul>
+<p>where</p>
+<ul>
+  <li>S indicates the direction of increasing S values</li>
+  <li>T indicates the direction of increasing T values</li>
+  <li>R indicates the direction of increasing R values</li>
+  <li>r indicates increasing to the right</li>
+  <li>l indicates increasing to the left</li>
+  <li>d indicates increasing downwards</li>
+  <li>u indicates increasing upwards</li>
+  <li>o indicates increasing out from the screen (moving towards viewer)</li>
+  <li>i indicates increasing in towards the screen (moving away from viewer) </li>
+</ul>
+<p>Although other orientations can be represented, it is recommended that tools 
+  that create KMG files use only the values listed above as other values may not 
+  be widely supported by other tools.</p>
+<h2>An example KMG 1.0 file:</h2>
+<pre class="example">// HEADER
+0xAB, 0x4B, 0x54, 0x58, // first four bytes of Byte[12] identifier
+0x20, 0x32, 0x30, 0xBB, // next four bytes of Byte[12] identifier
+0x0D, 0x0A, 0x1A, 0x0A. // final four bytes of Byte[12] identifier
+0x04, 0x03, 0x02, 0x01, // Byte[4] endianness (Big endian in this case)
+0x00, 0x00, 0x00, 0x02, // UInt32 Target = TARGET_2D
+0x00, 0x00, 0x00, 0x24, // UInt32 Format = FORMAT_RGBA8_SRGB
+0x00, 0x00, 0x00, 0x00, // UInt32 SwizzleRed = SWIZZLE_RED
+0x00, 0x00, 0x8D, 0x64, // UInt32 SwizzleGreen = SWIZZLE_GREEN
+0x00, 0x00, 0x19, 0x07, // UInt32 SwizzleBlue = SWIZZLE_BLUE
+0x00, 0x00, 0x19, 0x07, // UInt32 SwizzleAlpha = SWIZZLE_ALPHA
+0x00, 0x00, 0x00, 0x20, // UInt32 PixelWidth = 32
+0x00, 0x00, 0x00, 0x20, // UInt32 PixelHeight = 32
+0x00, 0x00, 0x00, 0x00, // UInt32 PixelDepth = 1
+0x00, 0x00, 0x00, 0x00, // UInt32 Layers = 1
+0x00, 0x00, 0x00, 0x01, // UInt32 Faces = 1
+0x00, 0x00, 0x00, 0x01, // UInt32 Levels = 1
+0x00, 0x00, 0x00, 0x00, // UInt32 GenerateMipmaps = FILTER_NONE
+// TEXTURE DATA
+0xD8, 0xD8, 0xD8, 0xDA, // Byte[512] RGBA8 texture data...
+...</pre>
+<a name="mimeregistration" id="mimeregistration"></a>
+<h2>IANA Mime-Type Registration Information</h2>
+<p class="copyright"><em>Permission is expressly granted to IANA to copy this 
+  section as necessary for managing the MIME types registry.</em></p>
+<p> Type name: Image</p>
+<p> Subtype name: kmg</p>
+<p> Required parameters: none</p>
+<p> Optional parameters: none</p>
+<p> Encoding considerations: binary</p>
+<p>Security considerations:</p>
+<blockquote>
+  <p>
+    The kmg type is a binary data stream which contains no executable code that 
+    could disrupt a client processor. There is no provision in the type specification 
+    that would allow authors to insert executable code that would present any 
+    security risk to a client machine.
+  </p>
+  <p>
+    Because every item's length is available at its beginning, there is robust 
+    defense against corrupted or fraudulent data that might overflow a decoder's 
+    buffer. Also the signature bytes provide early detection of common file transmission 
+    errors.
+  </p>
+  <p>
+    The kmg type may contain texture data compressed using OpenGL standard or 
+    vendor-specific schemes. These compression schemes are designed so small blocks 
+    of data (typically around 64 bits) can be decompressed in real time into a 
+    small block of pixels (typically 4x4) during texel fetch. In such schemes 
+    it is not possible for a small amount of data to expand enormously because 
+    the level of compression is limited; the compressed size is related directly 
+    to the number of pixels in the uncompressed image and not to the content of 
+    the data.
+  </p>
+  <p>
+    The kmg type does not provide encryption of the data payload. Users or applications 
+    wishing or needing to keep their images confidential must overlay their own 
+    encryption on the kmg data during transmission.
+  </p>
+</blockquote>
+<p> Interoperability considerations:</p>
+<blockquote>
+  <p>
+    The kmg type includes a field identifying the endianness of the machine which 
+    created the data. Applications reading the data are expected to check this 
+    field and convert the endianness, if necessary. The texture data payload may 
+    be compressed using an OpenGL-vendor-specific scheme. In this case, only devices 
+    or applications having a matching decompressor will be able to display the 
+    data. The compression scheme is identified in the kmg data so applications 
+    can quickly reject data using unsupported schemes.
+  </p>
+</blockquote>
+
+<h2>References</h2>
+<dl>
+  <dt id="refsS3TC">[S3TC]</dt>
+  <dd><cite><a href="https://www.opengl.org/registry/specs/EXT/texture_compression_s3tc.txt">GL_EXT_texture_compression_s3tc</a></cite>, 
+    Pat Brown, Slawomir Grajewski, July 2013.</dd>
+</dl>
+<dl>
+  <dt id="refsS3TCSRGB">[S3TC_SRGB]</dt>
+  <dd><cite><a href="https://www.opengl.org/registry/specs/EXT/texture_sRGB.txt">GL_EXT_texture_sRGB</a></cite>, 
+    Mark J. Kilgard, January 2007.</dd>
+</dl>
+<dl>
+  <dt id="refsRGTC">[RGTC]</dt>
+  <dd><cite><a href="https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt">GL_ARB_texture_compression_rgtc</a></cite>, 
+    Mark J. Kilgard, January 2015.</dd>
+</dl>
+<dl>
+  <dt id="refsBPTC">[BPTC]</dt>
+  <dd><cite><a href="https://www.opengl.org/registry/specs/ARB/texture_compression_bptc.txt">GL_ARB_texture_compression_bptc</a></cite>, 
+    Eric Werness, Piers Daniell, January 2011.</dd>
+</dl>
+<dl>
+  <dt id="refsETC1">[ETC1]</dt>
+  <dd><cite><a href="https://www.khronos.org/registry/gles/extensions/OES/OES_compressed_ETC1_RGB8_texture.txt">GL_OES_compressed_ETC1_RGB8_texture</a></cite>, 
+    Jacob Strom, April 2008.</dd>
+</dl>
+<dl>
+  <dt id="refsETC2">[ETC2]</dt>
+  <dd><cite><a href="https://www.opengl.org/registry/specs/ARB/ES3_compatibility.txt">GL_ARB_ES3_compatibility</a></cite>, 
+    Piers Daniell, October 2013.</dd>
+</dl>
+<dl>
+  <dt id="refsASTC">[ASTC]</dt>
+  <dd><cite><a href="https://www.opengl.org/registry/specs/KHR/texture_compression_astc_hdr.txt">GL_KHR_texture_compression_astc_hdr</a></cite>, 
+    Sean Ellis, Jon Leech, September 2012.</dd>
+</dl>
+<dl>
+  <dt id="refsPVRTC1">[PVRTC1]</dt>
+  <dd><cite><a href="https://www.khronos.org/registry/gles/extensions/IMG/IMG_texture_compression_pvrtc.txt">GL_IMG_texture_compression_pvrtc</a></cite>, 
+    Graham Connor, June 2012.</dd>
+</dl>
+<dl>
+  <dt id="refsPVRTC2">[PVRTC2]</dt>
+  <dd><cite><a href="https://www.khronos.org/registry/gles/extensions/IMG/IMG_texture_compression_pvrtc2.txt">GL_IMG_texture_compression_pvrtc2</a></cite>, 
+    Ben Bowman, December 2012.</dd>
+</dl>
+<dl>
+  <dt id="refsPVRTC_SRGB">[PVRTC_SRGB]</dt>
+  <dd><cite><a href="https://www.khronos.org/registry/gles/extensions/EXT/EXT_pvrtc_sRGB.txt">GL_EXT_pvrtc_sRGB</a></cite>, 
+    Benj Lipchak, June 2013.</dd>
+</dl>
+<dl>
+  <dt id="refsATC">[ATC]</dt>
+  <dd><cite><a href="https://www.khronos.org/registry/gles/extensions/AMD/AMD_compressed_ATC_texture.txt">GL_AMD_compressed_ATC_texture</a></cite>, 
+    Maurice Ribble, February 2008.</dd>
+</dl>
+
+<h2>Acknowledgements</h2>
+<h2>Revision History</h2>
+<dl>
+  <dt>2015-09-09</dt>
+  <dd>Initial draft</dd>
+</dl>
+<hr />
+<h3 class="no-toc"><a name="license" id="license"/>License</h3>
+<p class="copyright">
+  This specification is protected by copyright laws and contains 
+  material proprietary to the Khronos Group, Inc. It or any components may not 
+  be reproduced, republished, distributed, transmitted, displayed, broadcast or 
+  otherwise exploited in any manner without the express prior written permission 
+  of Khronos Group. You may use this specification for implementing the functionality 
+  therein, without altering or removing any trademark, copyright or other notice 
+  from the specification, but the receipt or possession of this specification 
+  does not convey any rights to reproduce, disclose, or distribute its contents, 
+  or to manufacture, use, or sell anything that it may describe, in whole or in 
+  part.
+</p>
+<p class="copyright">
+  Khronos Group grants express permission to any current Promoter, 
+  Contributor or Adopter member of Khronos to copy and redistribute UNMODIFIED 
+  versions of this specification in any fashion, provided that NO CHARGE is made 
+  for the specification and the latest available update of the specification for 
+  any version of the API is used whenever possible. Such distributed specification 
+  may be re-formatted AS LONG AS the contents of the specification are not changed 
+  in any way. The specification may be incorporated into a product that is sold 
+  as long as such product includes significant independent work developed by the 
+  seller. A link to the current version of this specification on the Khronos Group 
+  web-site should be included whenever possible with specification distributions.
+</p>
+<p class="copyright">
+  Khronos Group also grants express permission to the Internet 
+  Assigned Numbers Authority (IANA) to make archival copies of this specification, 
+  and to redistribute such a copy in the event that the link to the specification 
+  on the Khronos Group web-site becomes inoperative and it is determined that 
+  it will not be repaired. Outside of this exceptional circumstance, IANA should 
+  refer to the specification by providing a link to the current version on the 
+  Khronos Group web-site.
+</p>
+<p class="copyright">
+  Khronos Group makes no, and expressly disclaims any, representations 
+  or warranties, express or implied, regarding this specification, including, 
+  without limitation, any implied warranties of merchantability or fitness for 
+  a particular purpose or non-infringement of any intellectual property. Khronos 
+  Group makes no, and expressly disclaims any, warranties, express or implied, 
+  regarding the correctness, accuracy, completeness, timeliness, and reliability 
+  of the specification. Under no circumstances will the Khronos Group, or any 
+  of its Promoters, Contributors or Members or their respective partners, officers, 
+  directors, employees, agents or representatives be liable for any damages, whether 
+  direct, indirect, special or consequential damages for lost revenues, lost profits, 
+  or otherwise, arising from or in connection with these materials.
+</p>
+<p class="copyright">
+  Khronos, OpenKODE, OpenKOGS, OpenVG, OpenMAX, OpenSL ES and 
+  OpenWF are trademarks of the Khronos Group Inc. COLLADA is a trademark of Sony 
+  Computer Entertainment Inc. used by permission by Khronos. OpenGL and OpenML 
+  are registered trademarks and the OpenGL ES logo is a trademark of Silicon Graphics 
+  Inc. used by permission by Khronos. All other product names, trademarks, and/or 
+  company names are used solely for identification and belong to their respective 
+  owners.
+</p>
+</body>
+</html>

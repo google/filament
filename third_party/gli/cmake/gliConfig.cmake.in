@@ -1,0 +1,9 @@
+set(GLI_VERSION "@GLI_VERSION@")
+
+@PACKAGE_INIT@
+
+set_and_check(GLI_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+
+if (NOT CMAKE_VERSION VERSION_LESS "3.0")
+    include("${CMAKE_CURRENT_LIST_DIR}/gliTargets.cmake")
+endif()
