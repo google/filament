@@ -198,7 +198,7 @@ DebugServer::addMaterial(const CString& name, const void* data, size_t size, voi
     // material data.
     constexpr uint32_t seed = 42;
     uint64_t dataSpace[2] = {(uint64_t) data, (uint64_t) userdata};
-    uint32_t const key = utils::hash::murmur3((const uint32_t*) dataSpace, sizeof(dataSpace), seed);
+    uint32_t const key = utils::hash::murmurSlow((uint8_t const*) dataSpace, sizeof(dataSpace), seed);
 
     // Retain a copy of the package to permit queries after the client application has
     // freed up the original material package.
