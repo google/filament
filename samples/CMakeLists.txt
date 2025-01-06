@@ -18,6 +18,7 @@ set(RESOURCE_BINS)
 
 set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
+        materials/normalColor.mat
         materials/bakedColor.mat
         materials/bakedTexture.mat
         materials/pointSprites.mat
@@ -250,6 +251,7 @@ if (NOT ANDROID)
     add_demo(hellomorphing)
     add_demo(hellopbr)
     add_demo(hellotriangle)
+    add_demo(hellosphere)
     add_demo(helloskinning)
     add_demo(helloskinningbuffer)
     add_demo(helloskinningbuffer_morebones)

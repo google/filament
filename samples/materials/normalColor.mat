@@ -1,0 +1,25 @@
+material {
+    name : BakedColor,
+    requires : [
+        color,
+        custom0
+    ],
+    variables : [
+        customnormal
+    ],
+    shadingModel : unlit,
+    culling : none,
+    featureLevel : 0
+}
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.VARIABLE_CUSTOM0 =getCustom0();
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = getColor();//getCustom0();
+    }
+}
