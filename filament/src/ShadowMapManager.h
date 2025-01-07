@@ -17,12 +17,13 @@
 #ifndef TNT_FILAMENT_DETAILS_SHADOWMAPMANAGER_H
 #define TNT_FILAMENT_DETAILS_SHADOWMAPMANAGER_H
 
-#include "Culler.h"
+#include "AtlasAllocator.h"
 #include "ShadowMap.h"
 #include "ds/TypedBuffer.h"
 
 #include <filament/LightManager.h>
 #include <filament/Options.h>
+#include <filament/Viewport.h>
 
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>

@@ -179,7 +179,8 @@ public:
     LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
     size_t getLightIndex() const { return mLightIndex; }
     uint16_t getShadowIndex() const { return mShadowIndex; }
-    void setLayer(uint8_t layer) noexcept { mLayer = layer; }
+    void setAllocation(uint8_t layer, backend::Viewport viewport) noexcept;
+
     uint8_t getLayer() const noexcept { return mLayer; }
     backend::Viewport getViewport() const noexcept;
     backend::Viewport getScissor() const noexcept;
@@ -353,6 +354,7 @@ private:
     ShadowType mShadowType  : 2;                                            // :2
     bool mHasVisibleShadows : 2;                                            // :2
     uint8_t mFace           : 3;                                            // :3
+    math::ushort2 mOffset{};                                                // 4
 };
 
 } // namespace filament

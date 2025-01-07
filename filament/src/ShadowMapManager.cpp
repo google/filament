@@ -979,13 +979,13 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
         auto const& options = shadowMap.getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
         elvsm = elvsm || options->vsm.elvsm;
-        shadowMap.setLayer(layer++);
+        shadowMap.setAllocation(layer++, {});
     }
     for (ShadowMap& shadowMap : getSpotShadowMaps()) {
         auto const& options = shadowMap.getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
         elvsm = elvsm || options->vsm.elvsm;
-        shadowMap.setLayer(layer++);
+        shadowMap.setAllocation(layer++, {});
     }
 
     const uint8_t layersNeeded = layer;
@@ -1003,17 +1003,9 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     TextureFormat format = TextureFormat::DEPTH16;
     if (view.hasVSM()) {
         if (vsmShadowOptions.highPrecision) {
-            if (elvsm) {
-                format = TextureFormat::RGBA32F;
-            } else {
-                format = TextureFormat::RG32F;
-            }
+            format = elvsm ? TextureFormat::RGBA32F : TextureFormat::RG32F;
         } else {
-            if (elvsm) {
-                format = TextureFormat::RGBA16F;
-            } else {
-                format = TextureFormat::RG16F;
-            }
+            format = elvsm ? TextureFormat::RGBA16F : TextureFormat::RG16F;
         }
     }
 
