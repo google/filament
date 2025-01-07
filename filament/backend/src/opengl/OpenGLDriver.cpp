@@ -1381,13 +1381,13 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 
                 // TODO: support multiview for iOS and WebGL
-#if !defined(__EMSCRIPTEN__) && !defined(IOS)
+#if !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 if (layerCount > 1) {
                     // if layerCount > 1, it means we use the multiview extension.
                     glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
                         t->gl.id, 0, binfo.layer, layerCount);
                 } else
-#endif // !defined(__EMSCRIPTEN__) && !defined(IOS)
+#endif // !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 {
                     // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
                     glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
