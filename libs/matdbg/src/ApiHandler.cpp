@@ -43,19 +43,6 @@ namespace {
 auto const& kSuccessHeader = DebugServer::kSuccessHeader;
 auto const& kErrorHeader = DebugServer::kErrorHeader;
 
-void spirvToAsm(struct mg_connection* conn, uint32_t const* spirv, size_t size) {
-    auto spirvDisassembly = ShaderExtractor::spirvToText(spirv, size / 4);
-    mg_printf(conn, kSuccessHeader.data(), "application/txt");
-    mg_write(conn, spirvDisassembly.c_str(), spirvDisassembly.size());
-}
-
-void spirvToGlsl(ShaderModel shaderModel, struct mg_connection* conn, uint32_t const* spirv,
-        size_t size) {
-    auto glsl = ShaderExtractor::spirvToGLSL(shaderModel, spirv, size / 4);
-    mg_printf(conn, kSuccessHeader.data(), "application/txt");
-    mg_printf(conn, glsl.c_str(), glsl.size());
-}
-
 } // anonymous
 
 using filaflat::ChunkContainer;
@@ -145,8 +132,10 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
         filaflat::ShaderContent content;
         extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
+        std::string const shader = mFormatter.format((char const*) content.data());
         mg_printf(conn, kSuccessHeader.data(), "application/txt");
-        mg_write(conn, content.data(), content.size() - 1);
+        mg_write(conn, shader.c_str(), shader.size());
+
         return true;
     }
 
@@ -171,12 +160,19 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
         extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
         if (language == spirv) {
-            spirvToAsm(conn, (uint32_t const*) content.data(), content.size());
+            auto spirvDisassembly = ShaderExtractor::spirvToText((uint32_t const*) content.data(),
+                    content.size() / 4);
+            mg_printf(conn, kSuccessHeader.data(), "application/txt");
+            mg_write(conn, spirvDisassembly.c_str(), spirvDisassembly.size());
             return true;
         }
 
         if (language == glsl) {
-            spirvToGlsl(item.shaderModel, conn, (uint32_t const*) content.data(), content.size());
+            auto glsl = ShaderExtractor::spirvToGLSL(item.shaderModel,
+                    (uint32_t const*) content.data(), content.size() / 4);
+            std::string const shader = mFormatter.format((char const*) glsl.c_str());
+            mg_printf(conn, kSuccessHeader.data(), "application/txt");
+            mg_printf(conn, shader.c_str(), shader.size());
             return true;
         }
 
@@ -204,8 +200,9 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
         extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
         if (language == msl) {
+            std::string const shader = mFormatter.format((char const*) content.data());
             mg_printf(conn, kSuccessHeader.data(), "application/txt");
-            mg_write(conn, content.data(), content.size() - 1);
+            mg_write(conn, shader.c_str(), shader.size());
             return true;
         }
 
