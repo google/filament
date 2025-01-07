@@ -55,17 +55,72 @@ struct App {
 };
 
 struct Vertex {
-    filament::math::float2 position;
-    uint32_t color;
+    filament::math::float3 position;
+    filament::math::float3 normal;
 };
+std::vector<Vertex> vertices;
+std::vector<uint16_t>indices;
 
-static const Vertex TRIANGLE_VERTICES[3] = {
-    {{1, 0}, 0xffff0000u},
-    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
-    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
-};
+void CreateSphere(float radius) {
+    constexpr float PI = 3.141592654;
+    constexpr float PI_2 = 3.141592654 / 2;
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+    // default LOD = 100x100 mesh grid size
+    unsigned int n_rows = 100;
+    unsigned int n_cols = 100;
+    unsigned int n_verts = (n_rows + 1) * (n_cols + 1);
+    unsigned int n_tris = n_rows * n_cols * 2;
+
+
+    vertices.reserve(n_verts);
+    indices.reserve(n_tris * 3);
+
+    for (unsigned int col = 0; col <= n_cols; ++col) {
+        for (unsigned int row = 0; row <= n_rows; ++row) {
+            // unscaled uv coordinates ~ [0, 1]
+            float u = static_cast<float>(col) / n_cols;
+            float v = static_cast<float>(row) / n_rows;
+
+            float theta = PI * v - PI_2;  // ~ [-PI/2, PI/2], latitude from south to north pole
+            float phi = PI * 2 * u;       // ~ [0, 2PI], longitude around the equator circle
+
+            float x = cos(phi) * cos(theta);
+            float y = sin(theta);
+            float z = sin(phi) * cos(theta) * (-1);
+
+            // for a unit sphere centered at the origin, normal = position
+            // binormal is normal rotated by 90 degrees along the latitude (+theta)
+            theta += PI_2;
+            float r = cos(phi) * cos(theta);
+            float s = sin(theta);
+            float t = sin(phi) * cos(theta) * (-1);
+
+            Vertex vertex{};
+            vertex.position = filament::math::float3(x, y, z) * radius;
+            vertex.normal = filament::math::float3(x, y, z);
+            vertices.push_back(vertex);
+        }
+    }
+
+    for (unsigned int col = 0; col < n_cols; ++col) {
+        for (unsigned int row = 0; row < n_rows; ++row) {
+            auto index = col * (n_rows + 1);
+
+            // counter-clockwise winding order
+            indices.push_back(index + row + 1);
+            indices.push_back(index + row);
+            indices.push_back(index + row + 1 + n_rows);
+
+            // counter-clockwise winding order
+            indices.push_back(index + row + 1 + n_rows + 1);
+            indices.push_back(index + row + 1);
+            indices.push_back(index + row + 1 + n_rows);
+        }
+    }
+
+
+}
+
 
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
@@ -124,38 +179,37 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 
 int main(int argc, char** argv) {
     App app{};
-    app.config.title = "hellotriangle";
+    app.config.title = "hellosphere";
     app.config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
     handleCommandLineArguments(argc, argv, &app);
-
+    CreateSphere(1.0);
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
         scene->setSkybox(app.skybox);
         view->setPostProcessingEnabled(false);
-        static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
+
         app.vb = VertexBuffer::Builder()
-            .vertexCount(3)
+            .vertexCount(vertices.size())
             .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-            .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-            .normalized(VertexAttribute::COLOR)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, 24)
+            .attribute(VertexAttribute::CUSTOM0, 0, VertexBuffer::AttributeType::FLOAT3, 12, 24)
             .build(*engine);
         app.vb->setBufferAt(*engine, 0,
-            VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
+            VertexBuffer::BufferDescriptor(vertices.data(), vertices.size() * 24, nullptr));
         app.ib = IndexBuffer::Builder()
-            .indexCount(3)
+            .indexCount(indices.size())
             .bufferType(IndexBuffer::IndexType::USHORT)
             .build(*engine);
         app.ib->setBuffer(*engine,
-            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+            IndexBuffer::BufferDescriptor(indices.data(), indices.size() * 2, nullptr));
         app.mat = Material::Builder()
-            .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
+            .package(RESOURCES_NORMALCOLOR_DATA, RESOURCES_NORMALCOLOR_SIZE)
             .build(*engine);
         app.renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
             .boundingBox({ { -1, -1, -1 }, { 1, 1, 1 } })
             .material(0, app.mat->getDefaultInstance())
-            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
+            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, indices.size())
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)

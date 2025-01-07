@@ -13,13 +13,14 @@ material {
 }
 vertex {
     void materialVertex(inout MaterialVertexInputs material) {
-        material.VARIABLE_CUSTOM0 =getCustom0();
+        material.customnormal =getCustom0();
     }
 }
 
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        material.baseColor = getColor();//getCustom0();
+        vec3 c=vec3(variable_customnormal.xyz+1.0)/2.0;
+        material.baseColor = vec4(c,1.0);
     }
 }
