@@ -81,6 +81,7 @@ struct Texture::BuilderDetails {
     Usage mUsage = Usage::NONE;
     bool mHasBlitSrc = false;
     bool mTextureIsSwizzled = false;
+    bool mExternal = false;
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
@@ -136,6 +137,11 @@ Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
     return *this;
 }
 
+Texture::Builder& Texture::Builder::external() noexcept {
+    mImpl->mExternal = true;
+    return *this;
+}
+
 Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept {
     mImpl->mTextureIsSwizzled = true;
     mImpl->mSwizzle = { r, g, b, a };
@@ -153,6 +159,11 @@ Texture* Texture::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(
             (isProtectedTexturesSupported && useProtectedMemory) || !useProtectedMemory)
             << "Texture is PROTECTED but protected textures are not supported";
+
+    // SAMPLER_EXTERNAL implies imported.
+    if (mImpl->mTarget == SamplerType::SAMPLER_EXTERNAL) {
+        mImpl->mExternal = true;
+    }
 
     uint8_t maxLevelCount;
     switch (mImpl->mTarget) {
@@ -174,7 +185,7 @@ Texture* Texture::Builder::build(Engine& engine) {
         mImpl->mUsage = TextureUsage::DEFAULT;
         if (mImpl->mLevels > 1 &&
             (mImpl->mWidth > 1 || mImpl->mHeight > 1) &&
-            mImpl->mTarget != SamplerType::SAMPLER_EXTERNAL) {
+            !mImpl->mExternal) {
             const bool formatMipmappable =
                     downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
             if (formatMipmappable) {
@@ -243,9 +254,10 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
     mHasBlitSrc = builder->mHasBlitSrc;
+    mExternal = builder->mExternal;
 
     bool const isImported = builder->mImportedId != 0;
-    if (mTarget == SamplerType::SAMPLER_EXTERNAL && !isImported) {
+    if (mExternal && !isImported) {
         // mHandle and mHandleForSampling will be created in setExternalImage()
         // If this Texture is used for sampling before setExternalImage() is called,
         // we'll lazily create a 1x1 placeholder texture.
@@ -318,8 +330,8 @@ void FTexture::setImage(FEngine& engine, size_t level,
             << "level=" << unsigned(level) << " is >= to levelCount=" << unsigned(mLevelCount)
             << ".";
 
-    FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL)
-            << "Texture SamplerType::SAMPLER_EXTERNAL not supported for this operation.";
+    FILAMENT_CHECK_PRECONDITION(!mExternal)
+            << "External Texture not supported for this operation.";
 
     FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1) << "Operation not supported with multisample ("
                                                    << unsigned(mSampleCount) << ") texture.";
@@ -454,15 +466,14 @@ void FTexture::setImage(FEngine& engine, size_t level,
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
-    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
-        return;
-    }
+    FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
+
     // The call to setupExternalImage is synchronous, and allows the driver to take ownership of the
     // external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
     api.setupExternalImage(image);
 
-    auto texture = api.createTextureExternalImage(mFormat, mWidth, mHeight, mUsage, image);
+    auto texture = api.createTextureExternalImage(mTarget, mFormat, mWidth, mHeight, mUsage, image);
 
     if (mTextureIsSwizzled) {
         auto const& s = mSwizzle;
@@ -475,9 +486,8 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
 }
 
 void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
-    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
-        return;
-    }
+    FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
+
     // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
     // the external image on this thread, if necessary.
     auto& api = engine.getDriverApi();
@@ -497,9 +507,7 @@ void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noex
 }
 
 void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
-    if (mTarget != Sampler::SAMPLER_EXTERNAL) {
-        return;
-    }
+    FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
 
     auto& api = engine.getDriverApi();
     auto texture = api.createTexture(
@@ -524,7 +532,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
 }
 
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
-    FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_EXTERNAL)
+    FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Textures are not mipmappable.";
 
     FILAMENT_CHECK_PRECONDITION(mTarget != SamplerType::SAMPLER_3D)
@@ -544,12 +552,11 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
 }
 
 bool FTexture::textureHandleCanMutate() const noexcept {
-    return (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) ||
-            mTarget == SamplerType::SAMPLER_EXTERNAL;
+    return (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) || mExternal;
 }
 
 void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
-    assert_invariant(mTarget != SamplerType::SAMPLER_EXTERNAL);
+    assert_invariant(!mExternal);
     if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
         auto& range = mLodRange;
         uint8_t const last = int8_t(baseLevel + levelCount);
@@ -601,7 +608,7 @@ backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
 }
 
 backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
-    if (UTILS_UNLIKELY(mTarget == SamplerType::SAMPLER_EXTERNAL && !mHandleForSampling)) {
+    if (UTILS_UNLIKELY(mExternal && !mHandleForSampling)) {
         return setHandleForSampling(createPlaceholderTexture(*mDriver));
     }
     auto const& range = mLodRange;
@@ -610,9 +617,10 @@ backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noe
     if (UTILS_UNLIKELY(lodRangeChanged)) {
         activeRange = range;
         if (range.empty() || hasAllLods(range)) {
-            setHandleForSampling(mHandle);
+            std::ignore = setHandleForSampling(mHandle);
         } else {
-            setHandleForSampling(mDriver->createTextureView(mHandle, range.first, range.size()));
+            std::ignore = setHandleForSampling(mDriver->createTextureView(
+                mHandle, range.first, range.size()));
         }
     }
     return mHandleForSampling;

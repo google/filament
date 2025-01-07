@@ -1489,6 +1489,8 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->sampler(target); })
     .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
         return &builder->format(fmt); })
+    .BUILDER_FUNCTION("external", TexBuilder, (TexBuilder* builder), {
+        return &builder->external(); })
 
     // This takes a bitfield that can be composed by or'ing constants.
     // - JS clients should use the value member, as in: "Texture$Usage.SAMPLEABLE.value".

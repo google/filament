@@ -173,7 +173,8 @@ private:
     // Indicates whether the user has set the TextureUsage::BLIT_SRC usage. This will be used to
     // temporarily validate whether this texture can be used for readPixels.
     bool mHasBlitSrc = false;
-    // there is 5 bytes of padding here
+    bool mExternal = false;
+    // there is 4 bytes of padding here
 
     FStream* mStream = nullptr; // only needed for streaming textures
 };
