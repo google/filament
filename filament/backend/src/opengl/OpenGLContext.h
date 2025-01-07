@@ -153,7 +153,7 @@ public:
 
           void pixelStore(GLenum, GLint) noexcept;
     inline void activeTexture(GLuint unit) noexcept;
-    inline void bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
+    inline void bindTexture(GLuint unit, GLuint target, GLuint texId, bool external) noexcept;
 
            void unbindTexture(GLenum target, GLuint id) noexcept;
            void unbindTextureUnit(GLuint unit) noexcept;
@@ -761,7 +761,9 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
 #endif
 }
 
-void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
+void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, bool external) noexcept {
+    //  another texture is bound to the same unit with a different target,
+    //  unbind the texture from the current target
     update_state(state.textures.units[unit].target, target, [&]() {
         activeTexture(unit);
         glBindTexture(state.textures.units[unit].target, 0);
@@ -769,7 +771,7 @@ void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexce
     update_state(state.textures.units[unit].id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
-    }, target == GL_TEXTURE_EXTERNAL_OES);
+    }, external);
 }
 
 void OpenGLContext::useProgram(GLuint program) noexcept {
