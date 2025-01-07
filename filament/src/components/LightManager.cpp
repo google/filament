@@ -19,14 +19,26 @@
 #include "components/LightManager.h"
 
 #include "details/Engine.h"
+#include "utils/ostream.h"
 
 #include <filament/LightManager.h>
 
+#include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
 
 #include <math/fast.h>
 #include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+
+#include <stddef.h>
+#include <stdint.h>
+
+#include <algorithm>
+#include <cmath>
+#include <utility>
 
 using namespace filament::math;
 using namespace utils;
@@ -58,12 +70,12 @@ struct LightManager::BuilderDetails {
 };
 
 using BuilderType = LightManager;
-BuilderType::Builder::Builder(Type type) noexcept: BuilderBase<LightManager::BuilderDetails>(type) {}
+BuilderType::Builder::Builder(Type type) noexcept: BuilderBase<BuilderDetails>(type) {}
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 LightManager::Builder& LightManager::Builder::castShadows(bool enable) noexcept {
     mImpl->mCastShadows = enable;
@@ -167,7 +179,7 @@ FLightManager::~FLightManager() {
 void FLightManager::init(FEngine&) noexcept {
 }
 
-void FLightManager::create(const FLightManager::Builder& builder, utils::Entity entity) {
+void FLightManager::create(const Builder& builder, Entity entity) {
     auto& manager = mManager;
 
     if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
@@ -206,7 +218,7 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
 void FLightManager::prepare(backend::DriverApi&) const noexcept {
 }
 
-void FLightManager::destroy(utils::Entity e) noexcept {
+void FLightManager::destroy(Entity e) noexcept {
     Instance const i = getInstance(e);
     if (i) {
         auto& manager = mManager;
@@ -227,13 +239,13 @@ void FLightManager::terminate() noexcept {
         }
     }
 }
-void FLightManager::gc(utils::EntityManager& em) noexcept {
+void FLightManager::gc(EntityManager& em) noexcept {
     mManager.gc(em, [this](Entity e) {
         destroy(e);
     });
 }
 
-void FLightManager::setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
+void FLightManager::setShadowOptions(Instance const i, ShadowOptions const& options) noexcept {
     ShadowParams& params = mManager[i].shadowParams;
     params.options = options;
     params.options.mapSize = clamp(options.mapSize, 8u, 2048u);
@@ -294,7 +306,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
     if (i) {
         Type const type = getLightType(i).type;
         float luminousPower = intensity;
-        float luminousIntensity;
+        float luminousIntensity = 0.0f;
         switch (type) {
             case Type::SUN:
             case Type::DIRECTIONAL:
@@ -335,7 +347,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
                     luminousIntensity = luminousPower * f::ONE_OVER_PI;
                 } else {
                     assert_invariant(unit == IntensityUnit::CANDELA);
-                    // intensity specified directly in candela, no conversion needed
+                    // intensity specified directly in Candela, no conversion needed
                     luminousIntensity = luminousPower;
                 }
                 break;

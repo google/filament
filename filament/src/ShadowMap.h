@@ -340,7 +340,7 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                     // 4
+    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                   // 48
 
     FCamera* mCamera = nullptr;                                             //  8
     FCamera* mDebugCamera = nullptr;                                        //  8
@@ -352,9 +352,10 @@ private:
     uint16_t mShadowIndex = 0;  // our index in the shadowMap vector        // 2
     uint8_t mLayer = 0;         // our layer in the shadowMap texture       // 1
     ShadowType mShadowType  : 2;                                            // :2
-    bool mHasVisibleShadows : 2;                                            // :2
+    bool mHasVisibleShadows : 1;                                            // :1
     uint8_t mFace           : 3;                                            // :3
     math::ushort2 mOffset{};                                                // 4
+    UTILS_UNUSED uint8_t reserved[4];                                       // 4
 };
 
 } // namespace filament
