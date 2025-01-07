@@ -247,6 +247,8 @@ public:
         return mPlatform;
     }
 
+    size_t getMaxShadowMapCount() const noexcept;
+
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
         switch (mBackend) {
@@ -679,6 +681,11 @@ public:
     struct {
         struct {
             struct {
+                bool use_shadow_atlas = false;
+            } shadows;
+        } engine;
+        struct {
+            struct {
                 bool assert_native_window_is_valid = false;
             } opengl;
             bool disable_parallel_shader_compile = false;
@@ -686,7 +693,7 @@ public:
         } backend;
     } features;
 
-    std::array<Engine::FeatureFlag, sizeof(features)> const mFeatures{{
+    std::array<FeatureFlag, sizeof(features)> const mFeatures{{
             { "backend.disable_parallel_shader_compile",
               "Disable parallel shader compilation in GL and Metal backends.",
               &features.backend.disable_parallel_shader_compile, true },
@@ -695,10 +702,13 @@ public:
               &features.backend.disable_handle_use_after_free_check, true },
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
-              &features.backend.opengl.assert_native_window_is_valid, true }
+              &features.backend.opengl.assert_native_window_is_valid, true },
+            { "engine.shadows.use_shadow_atlas",
+              "Uses an array of atlases to store shadow maps.",
+              &features.engine.shadows.use_shadow_atlas, true }
     }};
 
-    utils::Slice<const Engine::FeatureFlag> getFeatureFlags() const noexcept {
+    utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
         return { mFeatures.data(), mFeatures.size() };
     }
 
