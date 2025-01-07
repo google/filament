@@ -580,7 +580,7 @@ class AdvancedOptions extends LitElement {
             <div class="option borderless">
                 <!--<div class="option-heading">Current Backend</div>-->
                 <form action="" id="hide-inactive-variants-form">
-                    <input type="checkbox" name="Hello"
+                    <input type="checkbox" name="InactiveVariants"
                        ?checked=${this.hideInactiveVariants} @change=${onChange}/>
                     Hide Inactive Variants
                 </form>
