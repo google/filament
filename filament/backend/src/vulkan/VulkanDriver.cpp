@@ -288,7 +288,7 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
-#if defined(__ANDROID__) || defined(IOS)
+#if defined(__ANDROID__) || defined(FILAMENT_IOS)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;

@@ -31,7 +31,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef IOS
+#ifndef FILAMENT_IOS
 #include <imageio/ImageEncoder.h>
 #include <image/ColorTransform.h>
 
@@ -112,7 +112,7 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
         int w = kTexWidth, h = kTexHeight;
         const uint32_t* texels = (uint32_t*) buffer;
         sPixelHashResult = utils::hash::murmur3(texels, size / 4, 0);
-#ifndef IOS
+#ifndef FILAMENT_IOS
         LinearImage image(w, h, 4);
         image = toLinearWithAlpha<uint8_t>(w, h, w * 4, (uint8_t*) buffer);
         std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);

@@ -131,7 +131,7 @@ public:
     }
 
     inline bool isES2() const noexcept {
-#if defined(BACKEND_OPENGL_VERSION_GLES) && !defined(IOS)
+#if defined(BACKEND_OPENGL_VERSION_GLES) && !defined(FILAMENT_IOS)
 #   ifndef BACKEND_OPENGL_LEVEL_GLES30
             return true;
 #   else
