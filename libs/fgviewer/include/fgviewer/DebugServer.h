@@ -68,7 +68,7 @@ private:
     CivetServer* mServer;
 
     std::unordered_map<ViewHandle, FrameGraphInfo> mViews;
-    uint32_t viewCounter = 0;
+    uint32_t mViewCounter = 0;
     mutable utils::Mutex mViewsMutex;
 
     class FileRequestHandler* mFileHandler = nullptr;

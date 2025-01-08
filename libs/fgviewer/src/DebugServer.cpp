@@ -108,7 +108,7 @@ DebugServer::~DebugServer() {
 
 ViewHandle DebugServer::createView(utils::CString name) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    ViewHandle handle = viewCounter++;
+    ViewHandle handle = mViewCounter++;
     mViews.emplace(handle, FrameGraphInfo(std::move(name)));
 
     return handle;

@@ -25,57 +25,57 @@
 #include <unordered_map>
 
 namespace filament::fgviewer {
-    using ResourceId = uint32_t;
+using ResourceId = uint32_t;
 
-    class FrameGraphInfo {
-    public:
-        explicit FrameGraphInfo(utils::CString viewName);
+class FrameGraphInfo {
+public:
+    explicit FrameGraphInfo(utils::CString viewName);
 
-        ~FrameGraphInfo();
+    ~FrameGraphInfo();
 
-        FrameGraphInfo(FrameGraphInfo &&rhs) noexcept;
+    FrameGraphInfo(FrameGraphInfo &&rhs) noexcept;
 
-        FrameGraphInfo(FrameGraphInfo const &) = delete;
+    FrameGraphInfo(FrameGraphInfo const &) = delete;
 
-        struct Pass {
-            Pass(utils::CString name, std::vector<ResourceId> reads,
-                 std::vector<ResourceId> writes): name(std::move(name)), reads(std::move(reads)),
-                                                  writes(std::move(writes)) {
-            }
+    struct Pass {
+        Pass(utils::CString name, std::vector<ResourceId> reads,
+             std::vector<ResourceId> writes): name(std::move(name)), reads(std::move(reads)),
+                                              writes(std::move(writes)) {
+        }
 
-            utils::CString name;
-            std::vector<ResourceId> reads;
-            std::vector<ResourceId> writes;
-        };
-
-        struct Resource {
-            Resource(ResourceId id, utils::CString name,
-                     std::vector<std::pair<utils::CString, utils::CString> > properties): id(id),
-                name(std::move(name)),
-                resourceProperties(std::move(properties)) {
-            }
-
-            ResourceId id;
-            utils::CString name;
-            // We use a vector of string pair here to store the resource properties,
-            // so different kinds of resources could choose different types of
-            // properties to record.
-            // ex.
-            // Texture2D --> { {"name","XXX"}, {"sizeX", "1024"}, {"sizeY", "768"} }
-            // Buffer1D --> { {"name", "XXX"}, {"size", "512"} }
-            std::vector<std::pair<utils::CString, utils::CString> > resourceProperties;
-        };
-
-        // Resources and passes will be stored inside the impl class.
-        void setResources(std::unordered_map<ResourceId, Resource> resources);
-
-        // The incoming passes should be sorted by the execution order.
-        void setPasses(std::vector<Pass> sortedPasses);
-
-    private:
-        class FrameGraphInfoImpl;
-        std::unique_ptr<FrameGraphInfoImpl> pImpl;
+        utils::CString name;
+        std::vector<ResourceId> reads;
+        std::vector<ResourceId> writes;
     };
+
+    struct Resource {
+        Resource(ResourceId id, utils::CString name,
+                 std::vector<std::pair<utils::CString, utils::CString> > properties): id(id),
+            name(std::move(name)),
+            properties(std::move(properties)) {
+        }
+
+        ResourceId id;
+        utils::CString name;
+        // We use a vector of string pair here to store the resource properties,
+        // so different kinds of resources could choose different types of
+        // properties to record.
+        // ex.
+        // Texture2D --> { {"name","XXX"}, {"sizeX", "1024"}, {"sizeY", "768"} }
+        // Buffer1D --> { {"name", "XXX"}, {"size", "512"} }
+        std::vector<std::pair<utils::CString, utils::CString> > properties;
+    };
+
+    // Resources and passes will be stored inside the impl class.
+    void setResources(std::unordered_map<ResourceId, Resource> resources);
+
+    // The incoming passes should be sorted by the execution order.
+    void setPasses(std::vector<Pass> sortedPasses);
+
+private:
+    class FrameGraphInfoImpl;
+    std::unique_ptr<FrameGraphInfoImpl> pImpl;
+};
 } // namespace filament::fgviewer
 
 #endif //FGVIEWER_FRAMEGRAPHINFO_H
