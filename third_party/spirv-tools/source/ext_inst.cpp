@@ -30,6 +30,7 @@
 #include "glsl.std.450.insts.inc"
 #include "nonsemantic.clspvreflection.insts.inc"
 #include "nonsemantic.shader.debuginfo.100.insts.inc"
+#include "nonsemantic.vkspreflection.insts.inc"
 #include "opencl.debuginfo.100.insts.inc"
 #include "opencl.std.insts.inc"
 
@@ -62,6 +63,9 @@ static const spv_ext_inst_group_t kGroups_1_0[] = {
     {SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
      ARRAY_SIZE(nonsemantic_clspvreflection_entries),
      nonsemantic_clspvreflection_entries},
+    {SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION,
+     ARRAY_SIZE(nonsemantic_vkspreflection_entries),
+     nonsemantic_vkspreflection_entries},
 };
 
 static const spv_ext_inst_table_t kTable_1_0 = {ARRAY_SIZE(kGroups_1_0),
@@ -138,6 +142,9 @@ spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name) {
   if (!strncmp("NonSemantic.ClspvReflection.", name, 28)) {
     return SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION;
   }
+  if (!strncmp("NonSemantic.VkspReflection.", name, 27)) {
+    return SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION;
+  }
   // ensure to add any known non-semantic extended instruction sets
   // above this point, and update spvExtInstIsNonSemantic()
   if (!strncmp("NonSemantic.", name, 12)) {
@@ -149,7 +156,8 @@ spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name) {
 bool spvExtInstIsNonSemantic(const spv_ext_inst_type_t type) {
   if (type == SPV_EXT_INST_TYPE_NONSEMANTIC_UNKNOWN ||
       type == SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100 ||
-      type == SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION) {
+      type == SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION ||
+      type == SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION) {
     return true;
   }
   return false;

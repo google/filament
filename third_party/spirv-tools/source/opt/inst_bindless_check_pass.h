@@ -28,16 +28,8 @@ namespace opt {
 // external design may change as the layer evolves.
 class InstBindlessCheckPass : public InstrumentPass {
  public:
-  InstBindlessCheckPass(uint32_t desc_set, uint32_t shader_id,
-                        bool desc_idx_enable, bool desc_init_enable,
-                        bool buffer_bounds_enable, bool texel_buffer_enable,
-                        bool opt_direct_reads)
-      : InstrumentPass(desc_set, shader_id, kInstValidationIdBindless,
-                       opt_direct_reads),
-        desc_idx_enabled_(desc_idx_enable),
-        desc_init_enabled_(desc_init_enable),
-        buffer_bounds_enabled_(buffer_bounds_enable),
-        texel_buffer_enabled_(texel_buffer_enable) {}
+  InstBindlessCheckPass(uint32_t shader_id)
+      : InstrumentPass(0, shader_id, true, true) {}
 
   ~InstBindlessCheckPass() override = default;
 
@@ -47,91 +39,31 @@ class InstBindlessCheckPass : public InstrumentPass {
   const char* name() const override { return "inst-bindless-check-pass"; }
 
  private:
-  // These functions do bindless checking instrumentation on a single
-  // instruction which references through a descriptor (ie references into an
-  // image or buffer). Refer to Vulkan API for further information on
-  // descriptors. GenDescIdxCheckCode checks that an index into a descriptor
-  // array (array of images or buffers) is in-bounds. GenDescInitCheckCode
-  // checks that the referenced descriptor has been initialized, if the
-  // SPV_EXT_descriptor_indexing extension is enabled, and initialized large
-  // enough to handle the reference, if RobustBufferAccess is disabled.
-  // GenDescInitCheckCode checks for uniform and storage buffer overrun.
-  // GenTexBuffCheckCode checks for texel buffer overrun and should be
-  // run after GenDescInitCheckCode to first make sure that the descriptor
-  // is initialized because it uses OpImageQuerySize on the descriptor.
-  //
-  // The functions are designed to be passed to
-  // InstrumentPass::InstProcessEntryPointCallTree(), which applies the
-  // function to each instruction in a module and replaces the instruction
-  // if warranted.
-  //
-  // If |ref_inst_itr| is a bindless reference, return in |new_blocks| the
-  // result of instrumenting it with validation code within its block at
-  // |ref_block_itr|.  The validation code first executes a check for the
-  // specific condition called for. If the check passes, it executes
-  // the remainder of the reference, otherwise writes a record to the debug
-  // output buffer stream including |function_idx, instruction_idx, stage_idx|
-  // and replaces the reference with the null value of the original type. The
-  // block at |ref_block_itr| can just be replaced with the blocks in
-  // |new_blocks|, which will contain at least two blocks. The last block will
-  // comprise all instructions following |ref_inst_itr|,
-  // preceded by a phi instruction.
-  //
-  // These instrumentation functions utilize GenDebugDirectRead() to read data
-  // from the debug input buffer, specifically the lengths of variable length
-  // descriptor arrays, and the initialization status of each descriptor.
-  // The format of the debug input buffer is documented in instrument.hpp.
-  //
-  // These instrumentation functions utilize GenDebugStreamWrite() to write its
-  // error records. The validation-specific part of the error record will
-  // have the format:
-  //
-  //    Validation Error Code (=kInstErrorBindlessBounds)
-  //    Descriptor Index
-  //    Descriptor Array Size
-  //
-  // The Descriptor Index is the index which has been determined to be
-  // out-of-bounds.
-  //
-  // The Descriptor Array Size is the size of the descriptor array which was
-  // indexed.
-  void GenDescIdxCheckCode(
-      BasicBlock::iterator ref_inst_itr,
-      UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
-      std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
+  void GenDescCheckCode(BasicBlock::iterator ref_inst_itr,
+                        UptrVectorIterator<BasicBlock> ref_block_itr,
+                        uint32_t stage_idx,
+                        std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
-  void GenDescInitCheckCode(
-      BasicBlock::iterator ref_inst_itr,
-      UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
-      std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
+  uint32_t GenDescCheckFunctionId();
 
-  void GenTexBuffCheckCode(
-      BasicBlock::iterator ref_inst_itr,
-      UptrVectorIterator<BasicBlock> ref_block_itr, uint32_t stage_idx,
-      std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
-
-  // Generate instructions into |builder| to read length of runtime descriptor
-  // array |var_id| from debug input buffer and return id of value.
-  uint32_t GenDebugReadLength(uint32_t var_id, InstructionBuilder* builder);
-
-  // Generate instructions into |builder| to read initialization status of
-  // descriptor array |image_id| at |index_id| from debug input buffer and
-  // return id of value.
-  uint32_t GenDebugReadInit(uint32_t image_id, uint32_t index_id,
-                            InstructionBuilder* builder);
+  uint32_t GenDescCheckCall(uint32_t inst_idx, uint32_t stage_idx,
+                            uint32_t var_id, uint32_t index_id,
+                            uint32_t byte_offset, InstructionBuilder* builder);
 
   // Analysis data for descriptor reference components, generated by
   // AnalyzeDescriptorReference. It is necessary and sufficient for further
   // analysis and regeneration of the reference.
   typedef struct RefAnalysis {
-    uint32_t desc_load_id;
-    uint32_t image_id;
-    uint32_t load_id;
-    uint32_t ptr_id;
-    uint32_t var_id;
-    uint32_t desc_idx_id;
-    uint32_t strg_class;
-    Instruction* ref_inst;
+    uint32_t desc_load_id{0};
+    uint32_t image_id{0};
+    uint32_t load_id{0};
+    uint32_t ptr_id{0};
+    uint32_t var_id{0};
+    uint32_t set{0};
+    uint32_t binding{0};
+    uint32_t desc_idx_id{0};
+    uint32_t strg_class{0};
+    Instruction* ref_inst{nullptr};
   } RefAnalysis;
 
   // Return size of type |ty_id| in bytes. Use |matrix_stride| and |col_major|
@@ -173,8 +105,7 @@ class InstBindlessCheckPass : public InstrumentPass {
   // writes debug error output utilizing |ref|, |error_id|, |length_id| and
   // |stage_idx|. Generate merge block for valid and invalid branches. Kill
   // original reference.
-  void GenCheckCode(uint32_t check_id, uint32_t error_id, uint32_t offset_id,
-                    uint32_t length_id, uint32_t stage_idx, RefAnalysis* ref,
+  void GenCheckCode(uint32_t check_id, RefAnalysis* ref,
                     std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
   // Initialize state for instrumenting bindless checking
@@ -184,23 +115,13 @@ class InstBindlessCheckPass : public InstrumentPass {
   // GenDescInitCheckCode to every instruction in module.
   Pass::Status ProcessImpl();
 
-  // Enable instrumentation of runtime array length checking
-  bool desc_idx_enabled_;
-
-  // Enable instrumentation of descriptor initialization checking
-  bool desc_init_enabled_;
-
-  // Enable instrumentation of uniform and storage buffer overrun checking
-  bool buffer_bounds_enabled_;
-
-  // Enable instrumentation of texel buffer overrun checking
-  bool texel_buffer_enabled_;
-
   // Mapping from variable to descriptor set
   std::unordered_map<uint32_t, uint32_t> var2desc_set_;
 
   // Mapping from variable to binding
   std::unordered_map<uint32_t, uint32_t> var2binding_;
+
+  uint32_t check_desc_func_id_{0};
 };
 
 }  // namespace opt

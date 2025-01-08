@@ -14,8 +14,6 @@
 
 #include <string>
 
-#include "gmock/gmock.h"
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 
@@ -870,6 +868,47 @@ TEST_F(FixTypeTest, FixPhiInLoop) {
          %21 = OpPtrAccessChain %_ptr_Function__struct_9 %20 %int_1
                OpBranch %18
          %24 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<FixStorageClass>(text, false);
+}
+TEST_F(FixStorageClassTest, SupportsU64Index) {
+  const std::string text = R"(
+; CHECK: OpAccessChain %_ptr_Uniform_float
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "testMain" %gl_LocalInvocationID
+               OpExecutionMode %1 LocalSize 8 8 1
+               OpDecorate %gl_LocalInvocationID BuiltIn LocalInvocationId
+               OpDecorate %8 DescriptorSet 0
+               OpDecorate %8 Binding 0
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %_struct_7 0 Offset 0
+               OpDecorate %_struct_7 BufferBlock
+      %ulong = OpTypeInt 64 0
+    %ulong_0 = OpConstant %ulong 0
+      %float = OpTypeFloat 32
+  %float_123 = OpConstant %float 123
+       %uint = OpTypeInt 32 0
+    %uint_10 = OpConstant %uint 10
+%_runtimearr_float = OpTypeRuntimeArray %float
+  %_struct_7 = OpTypeStruct %_runtimearr_float
+%_ptr_Uniform__struct_7 = OpTypePointer Uniform %_struct_7
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+       %void = OpTypeVoid
+         %30 = OpTypeFunction %void
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+          %8 = OpVariable %_ptr_Uniform__struct_7 Uniform
+%gl_LocalInvocationID = OpVariable %_ptr_Input_v3uint Input
+          %1 = OpFunction %void None %30
+         %38 = OpLabel
+         %44 = OpLoad %v3uint %gl_LocalInvocationID
+         %59 = OpCompositeExtract %uint %44 0
+         %60 = OpAccessChain %_ptr_Uniform_float %8 %ulong_0 %59
+               OpStore %60 %float_123
                OpReturn
                OpFunctionEnd
 )";

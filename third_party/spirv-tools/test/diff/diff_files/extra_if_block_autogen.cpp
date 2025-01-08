@@ -303,7 +303,7 @@ TEST(DiffTest, ExtraIfBlock) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 69
-+; Bound: 81
++; Bound: 77
  ; Schema: 0
  OpCapability Shader
  %1 = OpExtInstImport "GLSL.std.450"
@@ -352,10 +352,10 @@ TEST(DiffTest, ExtraIfBlock) {
  OpDecorate %54 RelaxedPrecision
  OpDecorate %55 RelaxedPrecision
  OpDecorate %56 RelaxedPrecision
-+OpDecorate %72 RelaxedPrecision
++OpDecorate %70 RelaxedPrecision
  OpDecorate %57 RelaxedPrecision
-+OpDecorate %77 RelaxedPrecision
-+OpDecorate %78 RelaxedPrecision
++OpDecorate %75 RelaxedPrecision
++OpDecorate %76 RelaxedPrecision
  OpDecorate %58 RelaxedPrecision
  OpDecorate %63 RelaxedPrecision
  OpDecorate %63 Location 0
@@ -383,7 +383,7 @@ TEST(DiffTest, ExtraIfBlock) {
  %32 = OpConstant %19 1
  %49 = OpConstant %6 10
  %52 = OpConstant %6 0.5
-+%76 = OpConstant %6 0.100000001
++%74 = OpConstant %6 0.100000001
  %53 = OpConstant %6 0.699999988
  %61 = OpTypeVector %6 4
  %62 = OpTypePointer Output %61
@@ -439,20 +439,20 @@ TEST(DiffTest, ExtraIfBlock) {
  %55 = OpLoad %6 %45
  %56 = OpFMul %6 %55 %54
  OpStore %45 %56
-+%71 = OpAccessChain %21 %18 %32
-+%72 = OpLoad %15 %71
-+%73 = OpINotEqual %25 %72 %24
-+OpSelectionMerge %75 None
-+OpBranchConditional %73 %74 %75
-+%74 = OpLabel
++%69 = OpAccessChain %21 %18 %32
++%70 = OpLoad %15 %69
++%71 = OpINotEqual %25 %70 %24
++OpSelectionMerge %73 None
++OpBranchConditional %71 %72 %73
++%72 = OpLabel
  %57 = OpLoad %6 %45
-+%77 = OpFSub %6 %57 %76
-+OpStore %45 %77
-+OpBranch %75
-+%75 = OpLabel
-+%78 = OpLoad %6 %45
++%75 = OpFSub %6 %57 %74
++OpStore %45 %75
++OpBranch %73
++%73 = OpLabel
++%76 = OpLoad %6 %45
 -%58 = OpExtInst %6 %1 Exp %57
-+%58 = OpExtInst %6 %1 Exp %78
++%58 = OpExtInst %6 %1 Exp %76
  OpReturnValue %58
  OpFunctionEnd
 )";
@@ -716,7 +716,7 @@ TEST(DiffTest, ExtraIfBlockNoDebug) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 69
-+; Bound: 81
++; Bound: 77
  ; Schema: 0
  OpCapability Shader
  %1 = OpExtInstImport "GLSL.std.450"
@@ -754,10 +754,10 @@ TEST(DiffTest, ExtraIfBlockNoDebug) {
  OpDecorate %54 RelaxedPrecision
  OpDecorate %55 RelaxedPrecision
  OpDecorate %56 RelaxedPrecision
-+OpDecorate %72 RelaxedPrecision
++OpDecorate %70 RelaxedPrecision
  OpDecorate %57 RelaxedPrecision
-+OpDecorate %77 RelaxedPrecision
-+OpDecorate %78 RelaxedPrecision
++OpDecorate %75 RelaxedPrecision
++OpDecorate %76 RelaxedPrecision
  OpDecorate %58 RelaxedPrecision
  OpDecorate %63 RelaxedPrecision
  OpDecorate %63 Location 0
@@ -785,7 +785,7 @@ TEST(DiffTest, ExtraIfBlockNoDebug) {
  %32 = OpConstant %19 1
  %49 = OpConstant %6 10
  %52 = OpConstant %6 0.5
-+%76 = OpConstant %6 0.100000001
++%74 = OpConstant %6 0.100000001
  %53 = OpConstant %6 0.699999988
  %61 = OpTypeVector %6 4
  %62 = OpTypePointer Output %61
@@ -841,20 +841,20 @@ TEST(DiffTest, ExtraIfBlockNoDebug) {
  %55 = OpLoad %6 %45
  %56 = OpFMul %6 %55 %54
  OpStore %45 %56
-+%71 = OpAccessChain %21 %18 %32
-+%72 = OpLoad %15 %71
-+%73 = OpINotEqual %25 %72 %24
-+OpSelectionMerge %75 None
-+OpBranchConditional %73 %74 %75
-+%74 = OpLabel
++%69 = OpAccessChain %21 %18 %32
++%70 = OpLoad %15 %69
++%71 = OpINotEqual %25 %70 %24
++OpSelectionMerge %73 None
++OpBranchConditional %71 %72 %73
++%72 = OpLabel
  %57 = OpLoad %6 %45
-+%77 = OpFSub %6 %57 %76
-+OpStore %45 %77
-+OpBranch %75
-+%75 = OpLabel
-+%78 = OpLoad %6 %45
++%75 = OpFSub %6 %57 %74
++OpStore %45 %75
++OpBranch %73
++%73 = OpLabel
++%76 = OpLoad %6 %45
 -%58 = OpExtInst %6 %1 Exp %57
-+%58 = OpExtInst %6 %1 Exp %78
++%58 = OpExtInst %6 %1 Exp %76
  OpReturnValue %58
  OpFunctionEnd
 )";

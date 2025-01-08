@@ -1570,6 +1570,218 @@ TEST_F(ConvertToHalfTest, HandleNonRelaxedPhi) {
   EXPECT_EQ(Pass::Status::SuccessWithChange, std::get<1>(result));
 }
 
+TEST_F(ConvertToHalfTest, DoNotReplaceStructMember) {
+  // See https://github.com/KhronosGroup/SPIRV-Tools/issues/4814
+
+  // This test is a case with a non-relaxed phi with a relaxed operand.
+  // A convert must be inserted at the end of the block associated with
+  // the operand.
+  const std::string test =
+      R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %PSMain "PSMain" %out_var_SV_TARGET %MyConstants
+OpExecutionMode %PSMain OriginUpperLeft
+OpSource HLSL 600
+OpName %type_ConstantBuffer_myStruct "type.ConstantBuffer.myStruct"
+OpMemberName %type_ConstantBuffer_myStruct 0 "f"
+OpName %MyConstants "MyConstants"
+OpName %out_var_SV_TARGET "out.var.SV_TARGET"
+OpName %PSMain "PSMain"
+OpDecorate %out_var_SV_TARGET Location 0
+OpDecorate %MyConstants DescriptorSet 1
+OpDecorate %MyConstants Binding 2
+OpMemberDecorate %type_ConstantBuffer_myStruct 0 Offset 0
+OpDecorate %type_ConstantBuffer_myStruct Block
+%float = OpTypeFloat 32
+%type_ConstantBuffer_myStruct = OpTypeStruct %float
+%_ptr_Uniform_type_ConstantBuffer_myStruct = OpTypePointer Uniform %type_ConstantBuffer_myStruct
+%_ptr_Output_float = OpTypePointer Output %float
+%void = OpTypeVoid
+%9 = OpTypeFunction %void
+%MyConstants = OpVariable %_ptr_Uniform_type_ConstantBuffer_myStruct Uniform
+%out_var_SV_TARGET = OpVariable %_ptr_Output_float Output
+%PSMain = OpFunction %void None %9
+%10 = OpLabel
+%11 = OpLoad %type_ConstantBuffer_myStruct %MyConstants
+%12 = OpCompositeExtract %float %11 0
+OpStore %out_var_SV_TARGET %12
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<ConvertToHalfPass>(test, test, true);
+}
+
+TEST_F(ConvertToHalfTest, PreserveImageOperandPrecision) {
+  // Ensure that a non-relaxed texture coordinate does not get relaxed nor
+  // converted to half precision if the image instruction is marked relaxed.
+
+  // Also ensure that a relaxed local variable does get converted to half
+  // precision before being passed to an image opeartor.
+
+  // #version 310 es
+  //
+  // precision mediump float;
+  //
+  // layout(location = 10) in highp vec4 vertex_uv01;
+  // layout(binding = 0, set = 3) uniform sampler2D materialParams_baseColorMap;
+  //
+  // layout(location = 0) out vec4 fragColor;
+  //
+  // void main() {
+  //   vec4 uv = vec4(2.0);
+  //   fragColor = texture(materialParams_baseColorMap, uv.xy);
+  //   fragColor = texture(materialParams_baseColorMap, vertex_uv01.xy);
+  // }
+  const std::string test = R"(
+               OpCapability Shader
+               OpCapability Float16
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main" %13 %25
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource ESSL 310
+               OpDecorate %9 RelaxedPrecision
+;CHECK: OpDecorate [[uv:%\w+]] RelaxedPrecision
+               OpDecorate %13 Location 0
+               OpDecorate %17 DescriptorSet 3
+               OpDecorate %17 Binding 0
+               OpDecorate %18 RelaxedPrecision
+               OpDecorate %23 RelaxedPrecision
+               OpDecorate %25 Location 10
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+;CHECK: [[float32_t:%\w+]] = OpTypeFloat 32
+          %7 = OpTypeVector %6 4
+;CHECK: [[vec4_t:%\w+]] = OpTypeVector [[float32_t]] 4
+          %8 = OpTypePointer Function %7
+         %10 = OpConstant %6 2
+         %11 = OpConstantComposite %7 %10 %10 %10 %10
+         %12 = OpTypePointer Output %7
+;CHECK: [[output_ptr_t:%\w+]] = OpTypePointer Output [[vec4_t]]
+         %13 = OpVariable %12 Output
+;CHECK: [[output:%\w+]] = OpVariable [[output_ptr_t]] Output
+         %14 = OpTypeImage %6 2D 0 0 0 1 Unknown
+         %15 = OpTypeSampledImage %14
+         %16 = OpTypePointer UniformConstant %15
+         %17 = OpVariable %16 UniformConstant
+         %19 = OpTypeVector %6 2
+;CHECK: [[vec2_t:%\w+]] = OpTypeVector [[float32_t]] 2
+         %24 = OpTypePointer Input %7
+;CHECK: [[input_ptr_t:%\w+]] = OpTypePointer Input [[vec4_t]]
+         %25 = OpVariable %24 Input
+         %29 = OpTypeFloat 16
+;CHECK: [[float16_t:%\w+]] = OpTypeFloat 16
+         %30 = OpTypeVector %29 4
+         %33 = OpTypeVector %29 2
+;CHECK: [[vec2_16b_t:%\w+]] = OpTypeVector [[float16_t]] 2
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+
+; The only Function storage variable is marked as relaxed
+          %9 = OpVariable %8 Function
+;CHECK: [[uv]] = OpVariable {{%\w+}} Function
+               OpStore %9 %11
+         %18 = OpLoad %15 %17
+         %20 = OpLoad %7 %9
+         %31 = OpFConvert %30 %20
+         %32 = OpFConvert %30 %20
+
+; The first sample op should get a 16b coordinate
+         %21 = OpVectorShuffle %33 %31 %32 0 1
+;CHECK: [[uv_16b:%\w+]] = OpVectorShuffle [[vec2_16b_t]]
+         %22 = OpImageSampleImplicitLod %7 %18 %21
+;CHECK: OpImageSampleImplicitLod [[vec4_t]] {{%\w+}} [[uv_16b]]
+
+               OpStore %13 %22
+         %23 = OpLoad %15 %17
+         %26 = OpLoad %7 %25
+
+; The second sample op should get a 32b coordinate
+         %27 = OpVectorShuffle %19 %26 %26 0 1
+;CHECK: [[uv_32b:%\w+]] = OpVectorShuffle [[vec2_t]]
+         %28 = OpImageSampleImplicitLod %7 %23 %27
+;CHECK: OpImageSampleImplicitLod [[vec4_t]] {{%\w+}} [[uv_32b]]
+
+               OpStore %13 %28
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<ConvertToHalfPass>(test, true);
+}
+
+TEST_F(ConvertToHalfTest, DontRelaxDecoratedOpCompositeExtract) {
+  // This test checks that a OpCompositeExtract with a Struct operand won't be
+  // relaxed, even if it is explicitly decorated with RelaxedPrecision.
+  const std::string test =
+      R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+OpDecorate %9 RelaxedPrecision
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_struct_6 = OpTypeStruct %v4float
+%7 = OpUndef %_struct_6
+%1 = OpFunction %void None %3
+%8 = OpLabel
+%9 = OpCompositeExtract %float %7 0 3
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string expected =
+      R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_struct_6 = OpTypeStruct %v4float
+%7 = OpUndef %_struct_6
+%1 = OpFunction %void None %3
+%8 = OpLabel
+%9 = OpCompositeExtract %float %7 0 3
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<ConvertToHalfPass>(test, expected, true);
+}
+
+TEST_F(ConvertToHalfTest, DontRelaxOpCompositeExtract) {
+  // This test checks that a OpCompositeExtract with a Struct operand won't be
+  // relaxed, even if its result has no uses.
+  const std::string test =
+      R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_struct_6 = OpTypeStruct %v4float
+%7 = OpUndef %_struct_6
+%1 = OpFunction %void None %3
+%8 = OpLabel
+%9 = OpCompositeExtract %float %7 0 3
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<ConvertToHalfPass>(test, test, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

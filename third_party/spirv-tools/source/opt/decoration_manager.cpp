@@ -461,7 +461,7 @@ std::vector<T> DecorationManager::InternalGetDecorationsFor(
 
 bool DecorationManager::WhileEachDecoration(
     uint32_t id, uint32_t decoration,
-    std::function<bool(const Instruction&)> f) {
+    std::function<bool(const Instruction&)> f) const {
   for (const Instruction* inst : GetDecorationsFor(id, true)) {
     switch (inst->opcode()) {
       case spv::Op::OpMemberDecorate:
@@ -485,14 +485,19 @@ bool DecorationManager::WhileEachDecoration(
 
 void DecorationManager::ForEachDecoration(
     uint32_t id, uint32_t decoration,
-    std::function<void(const Instruction&)> f) {
+    std::function<void(const Instruction&)> f) const {
   WhileEachDecoration(id, decoration, [&f](const Instruction& inst) {
     f(inst);
     return true;
   });
 }
 
-bool DecorationManager::HasDecoration(uint32_t id, uint32_t decoration) {
+bool DecorationManager::HasDecoration(uint32_t id,
+                                      spv::Decoration decoration) const {
+  return HasDecoration(id, static_cast<uint32_t>(decoration));
+}
+
+bool DecorationManager::HasDecoration(uint32_t id, uint32_t decoration) const {
   bool has_decoration = false;
   ForEachDecoration(id, decoration, [&has_decoration](const Instruction&) {
     has_decoration = true;
