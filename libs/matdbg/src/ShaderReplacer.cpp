@@ -200,7 +200,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
                 SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS, &binary, &diagnostic);
         spvContextDestroy(context);
         if (error) {
-            slog.e << "ShaderReplacer spirv-as failed (spv_result_t: " << error << ")" << io::endl;
+            slog.e << "[matdbg] ShaderReplacer spirv-as failed (spv_result_t: " << error << ")" << io::endl;
             spvDiagnosticPrint(diagnostic);
             spvDiagnosticDestroy(diagnostic);
             return false;
@@ -227,7 +227,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
 
         const bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
         if (!ok) {
-            slog.e << "ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
+            slog.e << "[matdbg] ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
             return false;
         }
 
@@ -235,7 +235,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
         program.addShader(&tShader);
         const bool linkOk = program.link(msg);
         if (!linkOk) {
-            slog.e << "ShaderReplacer link:\n" << program.getInfoLog() << io::endl;
+            slog.e << "[matdbg] ShaderReplacer link:\n" << program.getInfoLog() << io::endl;
             return false;
         }
 
@@ -247,7 +247,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     source = (const char*) spirv.data();
     sourceLength = spirv.size() * 4;
 
-    slog.i << "Success re-generating SPIR-V. (" << sourceLength << " bytes)" << io::endl;
+    slog.i << "[matdbg] Success re-generating SPIR-V. (" << sourceLength << " bytes)" << io::endl;
 
     // Clone all chunks except Dictionary* and Material*.
     filaflat::ChunkContainer const& cc = mOriginalPackage;
@@ -349,7 +349,7 @@ void ShaderIndex::replaceShader(backend::ShaderModel model, Variant variant,
             return;
         }
     }
-    slog.e << "Failed to replace shader." << io::endl;
+    slog.e << "[matdbg] Failed to replace shader." << io::endl;
 }
 
 BlobIndex::BlobIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc) :
@@ -426,7 +426,7 @@ void BlobIndex::replaceShader(ShaderModel model, Variant variant,
             return;
         }
     }
-    slog.e << "Unable to replace shader." << io::endl;
+    slog.e << "[matdbg] Unable to replace shader." << io::endl;
 }
 
 } // namespace filament::matdbg
