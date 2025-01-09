@@ -117,6 +117,32 @@ TEST(AtlasAllocator, AllocateMixed2) {
     EXPECT_TRUE(c7.l == 2 && c7.code == 15);
 }
 
+TEST(AtlasAllocator, AllocateFourCascades_Test) {
+    Viewport vp(0,0,1024,1024);
+    AtlasAllocator allocator(1024);
+    auto e0 = allocator.allocate(1024);
+    EXPECT_EQ(e0.viewport, vp);
+    EXPECT_EQ(e0.layer, 0);
+
+    auto e1 = allocator.allocate(1024);
+    EXPECT_EQ(e1.viewport, vp);
+    EXPECT_EQ(e1.layer, 1);
+
+    auto e2 = allocator.allocate(1024);
+    EXPECT_EQ(e2.viewport, vp);
+    EXPECT_EQ(e2.layer, 2);
+
+    auto e3 = allocator.allocate(1024);
+    EXPECT_EQ(e3.viewport, vp);
+    EXPECT_EQ(e3.layer, 3);
+
+    auto e4 = allocator.allocate(128);
+    EXPECT_EQ(e4.layer, 4);
+
+    auto e5 = allocator.allocate(128);
+    EXPECT_EQ(e5.layer, 4);
+}
+
 TEST(AtlasAllocator, AllocateBySize) {
     AtlasAllocator allocator(256);
 
