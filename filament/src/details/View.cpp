@@ -109,6 +109,10 @@ FView::FView(FEngine& engine)
     }
 #endif
 
+#if FILAMENT_ENABLE_FGVIEWER
+    view_handle = engine.debug.fgviewer_server->createView(utils::CString(getName()));
+#endif
+
     // allocate UBOs
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
@@ -152,6 +156,10 @@ void FView::terminate(FEngine& engine) {
     if (UTILS_UNLIKELY(mDebugState->owner)) {
         engine.getDebugRegistry().unregisterDataSource("d.view.frame_info");
     }
+#endif
+
+#if FILAMENT_ENABLE_FGVIEWER
+    engine.debug.fgviewer_server->destroyView(view_handle);
 #endif
 }
 

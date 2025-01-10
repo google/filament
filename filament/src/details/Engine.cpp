@@ -749,6 +749,25 @@ int FEngine::loop() {
     }
 #endif
 
+#if FILAMENT_ENABLE_FGVIEWER
+#ifdef __ANDROID__
+    const char* fgviewer_portString = "8085";
+#else
+    const char *fgviewer_portString = getenv("FILAMENT_FGVIEWER_PORT");
+#endif
+    if (fgviewer_portString != nullptr) {
+        const int fgviewer_port = atoi(fgviewer_portString);
+        debug.fgviewer_server = new fgviewer::DebugServer(fgviewer_port);
+
+        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
+        // When this occurs, carry onward, developers can look at civetweb.txt for details.
+        if (!debug.fgviewer_server->isReady()) {
+            delete debug.fgviewer_server;
+            debug.fgviewer_server = nullptr;
+        }
+    }
+#endif
+
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
