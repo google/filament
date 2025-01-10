@@ -1733,7 +1733,7 @@ void FAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* gl
 }
 
 bool AssetConfigurationExtended::isSupported() {
-#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(FILAMENT_IOS) || defined(__EMSCRIPTEN__)
     return false;
 #else
     return true;

@@ -37,7 +37,7 @@ Driver* MetalPlatform::createDriver(void* /*sharedContext*/, const Platform::Dri
 id<MTLDevice> MetalPlatform::createDevice() noexcept {
     id<MTLDevice> result;
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
     const bool forceIntegrated =
             NSProcessInfo.processInfo.environment[@"FILAMENT_FORCE_INTEGRATED_GPU"] != nil;
     if (forceIntegrated) {

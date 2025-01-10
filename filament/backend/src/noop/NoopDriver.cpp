@@ -32,7 +32,7 @@ Dispatcher NoopDriver::getDispatcher() const noexcept {
 }
 
 ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(FILAMENT_IOS) || defined(__EMSCRIPTEN__)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
@@ -263,12 +263,6 @@ void NoopDriver::setupExternalImage(void* image) {
 
 TimerQueryResult NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     return TimerQueryResult::ERROR;
-}
-
-void NoopDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-}
-
-void NoopDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void NoopDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {

@@ -402,7 +402,7 @@ void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     assert_invariant(t != nullptr);
-    mContext.bindTexture(unit, t->gl.target, t->gl.id);
+    mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
@@ -1052,17 +1052,49 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
-    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImage(th, image);
+void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType target,
+    TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage, void* image) {
+    DEBUG_MARKER()
+
+    usage |= TextureUsage::SAMPLEABLE;
+    usage &= ~TextureUsage::UPLOADABLE;
+
+    auto& gl = mContext;
+    GLenum internalFormat = getInternalFormat(format);
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        // on ES2, format and internal format must match
+        // FIXME: handle compressed texture format
+        internalFormat = textureFormatToFormatAndType(format).first;
+    }
+    assert_invariant(internalFormat);
+
+    GLTexture* const t = construct<GLTexture>(th, target, 1, 1, width, height, 1, format, usage);
+    assert_invariant(t);
+
+    t->externalTexture = mPlatform.createExternalImageTexture();
+    if (t->externalTexture) {
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+        // internalFormat actually depends on the external image, but it doesn't matter
+        // because it's not used anywhere for anything important.
+        t->gl.internalFormat = internalFormat;
+        t->gl.baseLevel = 0;
+        t->gl.maxLevel = 0;
+        t->gl.external = true; // forces bindTexture() call (they're never cached)
+    }
+
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+        // the target and id can be reset each time
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+    }
 }
 
 void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, uint32_t plane) {
-    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImagePlane(th, image, plane);
+    // not relevant for the OpenGL backend
 }
 
 void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
@@ -1082,6 +1114,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     switch (target) {
         case SamplerType::SAMPLER_EXTERNAL:
             t->gl.target = GL_TEXTURE_EXTERNAL_OES;
+            t->gl.external = true; // forces bindTexture() call (they're never cached)
             break;
         case SamplerType::SAMPLER_2D:
             t->gl.target = GL_TEXTURE_2D;
@@ -1348,13 +1381,13 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 
                 // TODO: support multiview for iOS and WebGL
-#if !defined(__EMSCRIPTEN__) && !defined(IOS)
+#if !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 if (layerCount > 1) {
                     // if layerCount > 1, it means we use the multiview extension.
                     glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
                         t->gl.id, 0, binfo.layer, layerCount);
                 } else
-#endif // !defined(__EMSCRIPTEN__) && !defined(IOS)
+#endif // !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 {
                     // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
                     glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
@@ -2774,25 +2807,6 @@ void OpenGLDriver::setupExternalImage(void* image) {
     mPlatform.retainExternalImage(image);
 }
 
-void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    DEBUG_MARKER()
-    GLTexture* t = handle_cast<GLTexture*>(th);
-    assert_invariant(t);
-    assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
-
-    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    if (mPlatform.setExternalImage(image, t->externalTexture)) {
-        // the target and id can be reset each time
-        t->gl.target = t->externalTexture->target;
-        t->gl.id = t->externalTexture->id;
-        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    }
-}
-
-void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-    DEBUG_MARKER()
-}
-
 void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
     auto& gl = mContext;
     if (gl.ext.OES_EGL_image_external_essl3) {
@@ -3512,7 +3526,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     auto& gl = mContext;
     gl.bindVertexArray(nullptr);
     for (int unit = OpenGLContext::DUMMY_TEXTURE_BINDING; unit >= 0; unit--) {
-        gl.bindTexture(unit, GL_TEXTURE_2D, 0);
+        gl.bindTexture(unit, GL_TEXTURE_2D, 0, false);
     }
     gl.disable(GL_CULL_FACE);
     gl.depthFunc(GL_LESS);

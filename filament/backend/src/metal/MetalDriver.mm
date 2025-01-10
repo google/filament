@@ -482,7 +482,9 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
-void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
     mContext->textures.insert(construct_handle<MetalTexture>(
             th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
@@ -907,7 +909,7 @@ void MetalDriver::terminate() {
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
@@ -981,7 +983,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
         case MTLPixelFormatRGBA16Float:
             return true;
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
         // Mipmappable only on desktop:
         case MTLPixelFormatR32Float:
         case MTLPixelFormatRG32Float:
@@ -989,7 +991,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
             return true;
 #endif
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         // Mipmappable only on iOS:
         case MTLPixelFormatRGB9E5Float:
             return true;
@@ -1191,10 +1193,6 @@ void MetalDriver::setupExternalImage(void* image) {
     CVPixelBufferRetain(pixelBuffer);
 }
 
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
-
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
-
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
@@ -1366,7 +1364,7 @@ void MetalDriver::startCapture(int) {
     if (@available(iOS 13, *)) {
         MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
         descriptor.captureObject = mContext->device;
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         descriptor.destination = MTLCaptureDestinationDeveloperTools;
 #else
         descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
@@ -1430,7 +1428,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                                                                width:srcTextureSize.width
                                                               height:srcTextureSize.height
                                                            mipmapped:NO];
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     textureDescriptor.storageMode = MTLStorageModeShared;
 #else
     textureDescriptor.storageMode = MTLStorageModeManaged;
@@ -1449,7 +1447,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
     id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
     [blitEncoder synchronizeResource:readPixelsTexture];

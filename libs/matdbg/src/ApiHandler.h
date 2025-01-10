@@ -17,6 +17,8 @@
 #ifndef MATDBG_APIHANDLER_H
 #define MATDBG_APIHANDLER_H
 
+#include "SourceFormatter.h"
+
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
@@ -63,6 +65,8 @@ private:
     // will always block until statusMaterialId is updated again. The client is expected to keep
     // calling /api/status (a constant "pull" to simulate a push).
     std::atomic<uint64_t> mCurrentStatus = 0;
+
+    SourceFormatter mFormatter;
 };
 
 } // filament::matdbg

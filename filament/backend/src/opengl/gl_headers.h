@@ -56,7 +56,7 @@
     #   define FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     #endif
 
-#elif defined(IOS)
+#elif defined(FILAMENT_IOS)
 
     #define GLES_SILENCE_DEPRECATION
 
@@ -81,7 +81,7 @@
 #if defined(GL_VERSION_4_5)
 #elif defined(GL_ES_VERSION_3_1)
 #elif defined(GL_ES_VERSION_3_0)
-#   if !defined(IOS) && !defined(__EMSCRIPTEN__)
+#   if !defined(FILAMENT_IOS) && !defined(__EMSCRIPTEN__)
 #       error "GLES 3.0 headers only supported on iOS and WebGL2"
 #   endif
 #elif defined(GL_ES_VERSION_2_0)
@@ -98,7 +98,7 @@
 
 #if defined(GL_ES_VERSION_2_0)  // this basically means all versions of GLES
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
 
 // iOS headers only provide prototypes, nothing to do.
 
@@ -271,7 +271,7 @@ void glGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, void *d
 #endif
 
 #ifdef GL_ES_VERSION_2_0
-#   ifndef IOS
+#   ifndef FILAMENT_IOS
 #      ifndef GL_OES_vertex_array_object
 #          error "Headers with GL_OES_vertex_array_object are mandatory unless on iOS"
 #      endif

@@ -157,7 +157,7 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         textureDescriptor.height = headlessHeight;
         // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
         textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         textureDescriptor.storageMode = MTLStorageModeShared;
 #else
         textureDescriptor.storageMode = MTLStorageModeManaged;
@@ -520,7 +520,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     const BOOL mipmapped = levels > 1;
     const BOOL multisampled = samples > 1;
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
     FILAMENT_CHECK_PRECONDITION(!textureArray || !multisampled)
             << "iOS does not support multisampled texture arrays.";
@@ -533,7 +533,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         switch (target) {
             case SamplerType::SAMPLER_2D:
                 return MTLTextureType2DMultisample;
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
             case SamplerType::SAMPLER_2D_ARRAY:
                 return MTLTextureType2DMultisampleArray;
 #endif
@@ -856,7 +856,7 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     descriptor.height = region.size.height;
     descriptor.depth = region.size.depth;
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     descriptor.storageMode = MTLStorageModeShared;
 #else
     descriptor.storageMode = MTLStorageModeManaged;
