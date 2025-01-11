@@ -137,7 +137,7 @@ public:
 
     auto& getShadowUniformsHandle() const { return mShadowUbh; }
 
-    bool hasSpotShadows() const { return !mSpotShadowMapCount; }
+    bool hasSpotShadows() const { return mSpotShadowMapCount > 0; }
 
     // for debugging only
     utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
