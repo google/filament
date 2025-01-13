@@ -174,7 +174,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 VkResult const result = vkCreateXcbSurfaceKHR(instance, &createInfo, VKALLOC,
                         (VkSurfaceKHR*) &surface);
                 FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                        << "vkCreateXcbSurfaceKHR error.";
+                        << "vkCreateXcbSurfaceKHR error=" << static_cast<int32_t>(result);
             }
         #endif
         #if defined(FILAMENT_SUPPORTS_XLIB)
@@ -190,7 +190,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 VkResult const result = vkCreateXlibSurfaceKHR(instance, &createInfo, VKALLOC,
                         (VkSurfaceKHR*) &surface);
                 FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                        << "vkCreateXlibSurfaceKHR error.";
+                        << "vkCreateXlibSurfaceKHR error=" << static_cast<int32_t>(result);
             }
         #endif
     #elif defined(WIN32)
@@ -210,9 +210,11 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         };
         VkResult const result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr,
                 (VkSurfaceKHR*) &surface);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateWin32SurfaceKHR error.";
-    #endif
-    return std::make_tuple(surface, extent);
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "vkCreateWin32SurfaceKHR failed."
+                << " error=" << static_cast<int32_t>(result);
+#endif
+        return std::make_tuple(surface, extent);
 }
 
 } // namespace filament::backend
