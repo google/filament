@@ -89,22 +89,24 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         createInfo.pView = (__bridge void*) nsview;
         VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateMacOSSurfaceMVK error.";
-    #elif defined(FILAMENT_IOS) && defined(METAL_AVAILABLE)
-        CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
-        // Create the VkSurface.
-        FILAMENT_CHECK_POSTCONDITION(vkCreateIOSSurfaceMVK)
-                << "Unable to load vkCreateIOSSurfaceMVK function.";
-        VkIOSSurfaceCreateInfoMVK createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
-        createInfo.pNext = NULL;
-        createInfo.flags = 0;
-        createInfo.pView = metalLayer;
-        VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &surface);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateIOSSurfaceMVK error.";
-    #endif
-    return std::make_tuple(surface, VkExtent2D {});
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "vkCreateMacOSSurfaceMVK. error=" << static_cast<int32_t>(result);
+#elif defined(FILAMENT_IOS) && defined(METAL_AVAILABLE)
+    CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
+    // Create the VkSurface.
+    FILAMENT_CHECK_POSTCONDITION(vkCreateIOSSurfaceMVK)
+            << "Unable to load vkCreateIOSSurfaceMVK function.";
+    VkIOSSurfaceCreateInfoMVK createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.pView = metalLayer;
+    VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
+            (VkSurfaceKHR*) &surface);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkCreateIOSSurfaceMVK failed. error=" << static_cast<int32_t>(result);
+#endif
+        return std::make_tuple(surface, VkExtent2D{});
 }
 
 } // namespace filament::backend
