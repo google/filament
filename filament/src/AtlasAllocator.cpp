@@ -151,6 +151,17 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
             }
         } else if (candidate.l < int8_t(QuadTree::height())) {
             // we need to create the hierarchy down to the level we need
+
+            if (candidate.l > 0) {
+                // first thing to do is to update our parent's children count (the first node
+                // doesn't have a parent).
+                size_t const pi = QuadTreeUtils::parent(candidate.l, candidate.code);
+                Node& parentNode = mQuadTree[pi];
+                assert_invariant(!parentNode.isAllocated());
+                assert_invariant(!parentNode.hasAllChildren());
+                parentNode.children++;
+            }
+
             NodeId found{ -1, 0 };
             QuadTree::traverse(candidate.l, candidate.code,
                     [this, n, &found](NodeId const& curr) -> QuadTree::TraversalResult {

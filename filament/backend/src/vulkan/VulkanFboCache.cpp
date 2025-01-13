@@ -116,7 +116,8 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey const& config) noexcept {
     mRenderPassRefCount[info.renderPass]++;
     VkFramebuffer framebuffer;
     VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
-    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create framebuffer.";
+    FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create framebuffer."
+                                                     << " error=" << static_cast<int32_t>(error);
     mFramebufferCache[config] = {framebuffer, mCurrentTime};
     return framebuffer;
 }
@@ -324,10 +325,11 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey const& config) noexcept
     // Finally, create the VkRenderPass.
     VkRenderPass renderPass;
     VkResult error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
-    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create render pass.";
+    FILAMENT_CHECK_POSTCONDITION(error == VK_SUCCESS) << "Unable to create render pass."
+                                                      << " error=" << error;
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
-    #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
+#if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
     FVK_LOGD << "Created render pass " << renderPass << " with "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (hasDepth ? 1 : 0) << ", "

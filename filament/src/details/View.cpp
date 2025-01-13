@@ -364,21 +364,23 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         if (UTILS_LIKELY(!lcm.isShadowCaster(li))) {
             // Because we early exit here, we need to make sure we mark the light as non-casting.
             // See `ShadowMapManager::updateSpotShadowMaps` for const_cast<> justification.
-            const_cast<FScene::ShadowInfo&>(
-                    lightData.elementAt<FScene::SHADOW_INFO>(l)).castsShadows = false;
+            auto& shadowInfo = const_cast<FScene::ShadowInfo&>(
+                lightData.elementAt<FScene::SHADOW_INFO>(l));
+            shadowInfo.castsShadows = false;
             continue; // doesn't cast shadows
         }
 
         const bool spotLight = lcm.isSpotLight(li);
 
+        const size_t maxShadowMapCount = engine.getMaxShadowMapCount();
         const size_t shadowMapCountNeeded = spotLight ? 1 : 6;
-        if (shadowMapCount + shadowMapCountNeeded <= CONFIG_MAX_SHADOWMAPS) {
+        if (shadowMapCount + shadowMapCountNeeded <= maxShadowMapCount) {
             shadowMapCount += shadowMapCountNeeded;
             const auto& shadowOptions = lcm.getShadowOptions(li);
             builder.shadowMap(l, spotLight, &shadowOptions);
         }
 
-        if (shadowMapCount >= CONFIG_MAX_SHADOWMAPS) {
+        if (shadowMapCount >= maxShadowMapCount) {
             break; // we ran out of spotlight shadow casting
         }
     }

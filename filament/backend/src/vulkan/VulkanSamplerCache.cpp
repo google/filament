@@ -121,8 +121,9 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
         .unnormalizedCoordinates = VK_FALSE
     };
     VkSampler sampler;
-    VkResult error = vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &sampler);
-    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create sampler.";
+    VkResult result = vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &sampler);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create sampler."
+                                                       << " error=" << static_cast<int32_t>(result);
     mCache.insert({params, sampler});
     return sampler;
 }
