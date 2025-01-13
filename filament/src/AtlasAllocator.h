@@ -23,6 +23,9 @@
 
 #include <private/filament/EngineEnums.h>
 
+#include <stdint.h>
+#include <stddef.h>
+
 class AtlasAllocator_AllocateFirstLevel_Test;
 class AtlasAllocator_AllocateSecondLevel_Test;
 class AtlasAllocator_AllocateMixed0_Test;
@@ -45,11 +48,11 @@ class AtlasAllocator {
      * track which children though.
      */
     struct Node {
-        // whether this node is allocated. Implies no children.
+        // Whether this node is allocated. Implies no children.
         constexpr bool isAllocated() const noexcept { return allocated; }
-        // whether this node has children. Implies it's not allocated.
+        // Whether this node has children. Implies it's not allocated.
         constexpr bool hasChildren() const noexcept { return children != 0; }
-        // whether this node has all four children. Implies hasChildren().
+        // Whether this node has all four children. Implies hasChildren().
         constexpr bool hasAllChildren() const noexcept { return children == 4; }
         bool allocated      : 1;    // true / false
         uint8_t children    : 3;    // 0, 1, 2, 3, 4

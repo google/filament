@@ -39,6 +39,7 @@
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/DescriptorSets.h>
+#include <private/filament/EngineEnums.h>
 
 #include <private/backend/PlatformFactory.h>
 
@@ -1304,6 +1305,11 @@ size_t FEngine::getTextureCount() const noexcept { return mTextures.size(); }
 size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
+
+size_t FEngine::getMaxShadowMapCount() const noexcept {
+    return features.engine.shadows.use_shadow_atlas ?
+        CONFIG_MAX_SHADOWMAPS : CONFIG_MAX_SHADOW_LAYERS;
+}
 
 void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     // we allow this only for small allocations
