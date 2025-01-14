@@ -1296,6 +1296,10 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
             }
     );
 }
+void ShadowMap::setAllocation(uint8_t layer, backend::Viewport viewport) noexcept {
+    mLayer = layer;
+    mOffset = { viewport.left, viewport.bottom };
+}
 
 backend::Viewport ShadowMap::getViewport() const noexcept {
     // We set a viewport with a 1-texel border for when we index outside the texture.
@@ -1305,7 +1309,7 @@ backend::Viewport ShadowMap::getViewport() const noexcept {
     // can work properly if the shadowmap is in an atlas (and we can't rely on h/w clamp).
     const uint32_t dim = mOptions->mapSize;
     const uint16_t border = 1u;
-    return { border, border, dim - 2u * border, dim - 2u * border };
+    return { mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border };
 }
 
 backend::Viewport ShadowMap::getScissor() const noexcept {
@@ -1319,10 +1323,10 @@ backend::Viewport ShadowMap::getScissor() const noexcept {
     const uint16_t border = 1u;
     switch (mShadowType) {
         case ShadowType::DIRECTIONAL:
-            return { border, border, dim - 2u * border, dim - 2u * border };
+            return { mOffset.x + border, mOffset.y + border, dim - 2u * border, dim - 2u * border };
         case ShadowType::SPOT:
         case ShadowType::POINT:
-            return { 0, 0, dim, dim };
+            return { mOffset.x, mOffset.y, dim, dim };
     }
 }
 
@@ -1345,8 +1349,8 @@ math::float4 ShadowMap::getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo)
 
     float const texel = 1.0f / float(shadowMapInfo.atlasDimension);
     float const dim = float(mOptions->mapSize);
-    float const l = border;
-    float const b = border;
+    float const l = float(mOffset.x) + border;
+    float const b = float(mOffset.y) + border;
     float const w = dim - 2.0f * border;
     float const h = dim - 2.0f * border;
     float4 const v = float4{ l, b, l + w, b + h } * texel;
