@@ -3,33 +3,111 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 51;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0DE5DD77BF1B9049D63B76D0 /* libutils.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7C969D515221A7739C68F3AC /* libutils.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		20863805FC626BF952BA3275 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33D80A4472074C601C57C773 /* ViewController.mm */; };
+		2AABB2C1262EBA9553666078 /* libsmol-v.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		32AC9F2183DD11F130D4A91D /* libfilament.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 912652335565C18B252345DE /* libfilament.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		376F63E72973F07BF618082D /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */; };
+		3D73E90782CC3A2124DF046F /* libfilaflat.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */; };
 		477A2A67D32B7A3AF2E7B2F4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EB0A767D257F3D05BE9F0960 /* LaunchScreen.storyboard */; };
+		66014C413BCBF00E8E6DAF76 /* libgeometry.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */; };
+		6A5D5E984CA862B943742745 /* libgeometry.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		7D8D3494388D7BF4D9FE4FCE /* libfilamat.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */; };
+		7E671E777FDB5F34AAA13D5A /* libutils.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C969D515221A7739C68F3AC /* libutils.xcframework */; };
+		8095A6D37F6F1C9C13BBFEA8 /* libfilamat.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8402B2AC6D081D1E8E065552 /* libbackend.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8632D4625CFCBD32A46772B5 /* libbackend.xcframework */; };
+		88C039F10343B8598FD5FF7F /* libfilabridge.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */; };
 		91CCBA3BA96DC289D0E8E975 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = AE6C78F32A0494087B0CEF32 /* main.mm */; };
+		AA5AB498C5A6117057B06824 /* libfilaflat.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AE63AFEA7E7D507BB677C158 /* libbackend.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8632D4625CFCBD32A46772B5 /* libbackend.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B3684DB18E82C867020294F1 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5FDB89AD408A508D6CB74C32 /* AppDelegate.m */; };
+		B73B15843FCEEEB637C636F4 /* libbackend_test.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 01B66093324E8D661CBEBB0F /* libbackend_test.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BFE92829375EE1DBA1E4A689 /* libfilabridge.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C74DDEF71B6F3C060BB56189 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B63A6E45E40F58037ABD8F84 /* Main.storyboard */; };
+		C8C8BF3416B9B37003F1031E /* libktxreader.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D0E54C592A378E549C96A54D /* libibl.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D1E30700B368B5F84196FD97 /* libibl.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D472EB54D462394FE99DCE2B /* libibl.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1E30700B368B5F84196FD97 /* libibl.xcframework */; };
+		D5B2F0A85F7C6F352AA99DF1 /* libsmol-v.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */; };
+		F571BE7CBFBADBDF42C7C23F /* libbackend_test.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01B66093324E8D661CBEBB0F /* libbackend_test.xcframework */; };
+		F5E844BFD77174F770543A87 /* libfilament.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 912652335565C18B252345DE /* libfilament.xcframework */; };
+		FB393C813D7A30404A2DEF23 /* libktxreader.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */; };
 		FC9D623AC5CF31BA9FB0C47B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93394D7D4A78C56A2BD31A7D /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		0ABB76F2D4011A4AF5186FCA /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AE63AFEA7E7D507BB677C158 /* libbackend.xcframework in Embed Frameworks */,
+				32AC9F2183DD11F130D4A91D /* libfilament.xcframework in Embed Frameworks */,
+				AA5AB498C5A6117057B06824 /* libfilaflat.xcframework in Embed Frameworks */,
+				C8C8BF3416B9B37003F1031E /* libktxreader.xcframework in Embed Frameworks */,
+				BFE92829375EE1DBA1E4A689 /* libfilabridge.xcframework in Embed Frameworks */,
+				0DE5DD77BF1B9049D63B76D0 /* libutils.xcframework in Embed Frameworks */,
+				2AABB2C1262EBA9553666078 /* libsmol-v.xcframework in Embed Frameworks */,
+				6A5D5E984CA862B943742745 /* libgeometry.xcframework in Embed Frameworks */,
+				D0E54C592A378E549C96A54D /* libibl.xcframework in Embed Frameworks */,
+				B73B15843FCEEEB637C636F4 /* libbackend_test.xcframework in Embed Frameworks */,
+				8095A6D37F6F1C9C13BBFEA8 /* libfilamat.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		01B66093324E8D661CBEBB0F /* libbackend_test.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libbackend_test.xcframework; path = "$(SRCROOT)/../../../out/ios-release/filament/lib/libbackend_test.xcframework"; sourceTree = "<group>"; };
 		056C16E7805E8D33D4C8F7B4 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
 		13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "backend-test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		17364ECD407006EEBDC06024 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libktxreader.xcframework; path = "../../../out/ios-release/filament/lib/libktxreader.xcframework"; sourceTree = "<group>"; };
 		276A0ADD5B521719BBB1DA21 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		33D80A4472074C601C57C773 /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
 		5FDB89AD408A508D6CB74C32 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		603475CEE63507AA04A9B21A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		7C969D515221A7739C68F3AC /* libutils.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libutils.xcframework; path = "../../../out/ios-release/filament/lib/libutils.xcframework"; sourceTree = "<group>"; };
+		8632D4625CFCBD32A46772B5 /* libbackend.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libbackend.xcframework; path = "../../../out/ios-release/filament/lib/libbackend.xcframework"; sourceTree = "<group>"; };
+		8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "libsmol-v.xcframework"; path = "../../../out/ios-release/filament/lib/libsmol-v.xcframework"; sourceTree = "<group>"; };
+		912652335565C18B252345DE /* libfilament.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilament.xcframework; path = "../../../out/ios-release/filament/lib/libfilament.xcframework"; sourceTree = "<group>"; };
 		93394D7D4A78C56A2BD31A7D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilaflat.xcframework; path = "../../../out/ios-release/filament/lib/libfilaflat.xcframework"; sourceTree = "<group>"; };
 		A283B2D6DB365368855E2D7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AE6C78F32A0494087B0CEF32 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilabridge.xcframework; path = "../../../out/ios-release/filament/lib/libfilabridge.xcframework"; sourceTree = "<group>"; };
 		B54DFEB4DB6ACC0289FA3046 /* FilamentView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
+		C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilamat.xcframework; path = "$(SRCROOT)/../../../out/ios-release/filament/lib/libfilamat.xcframework"; sourceTree = "<group>"; };
 		C76230D48038E8109EC121B0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		D1E30700B368B5F84196FD97 /* libibl.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libibl.xcframework; path = "../../../out/ios-release/filament/lib/libibl.xcframework"; sourceTree = "<group>"; };
+		DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgeometry.xcframework; path = "../../../out/ios-release/filament/lib/libgeometry.xcframework"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5E31B50ED1338E6ADE1FA49A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8402B2AC6D081D1E8E065552 /* libbackend.xcframework in Frameworks */,
+				F5E844BFD77174F770543A87 /* libfilament.xcframework in Frameworks */,
+				3D73E90782CC3A2124DF046F /* libfilaflat.xcframework in Frameworks */,
+				FB393C813D7A30404A2DEF23 /* libktxreader.xcframework in Frameworks */,
+				88C039F10343B8598FD5FF7F /* libfilabridge.xcframework in Frameworks */,
+				7E671E777FDB5F34AAA13D5A /* libutils.xcframework in Frameworks */,
+				D5B2F0A85F7C6F352AA99DF1 /* libsmol-v.xcframework in Frameworks */,
+				66014C413BCBF00E8E6DAF76 /* libgeometry.xcframework in Frameworks */,
+				D472EB54D462394FE99DCE2B /* libibl.xcframework in Frameworks */,
+				F571BE7CBFBADBDF42C7C23F /* libbackend_test.xcframework in Frameworks */,
+				7D8D3494388D7BF4D9FE4FCE /* libfilamat.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		05CA69F10D830E40A8FB561D /* Products */ = {
@@ -44,8 +122,27 @@
 			isa = PBXGroup;
 			children = (
 				FE198F0E1EF047534F8F3128 /* backend-test */,
+				81BF22C13654E58F622E6BEC /* Frameworks */,
 				05CA69F10D830E40A8FB561D /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		81BF22C13654E58F622E6BEC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				01B66093324E8D661CBEBB0F /* libbackend_test.xcframework */,
+				8632D4625CFCBD32A46772B5 /* libbackend.xcframework */,
+				B2A3753419FC4A7D4C039868 /* libfilabridge.xcframework */,
+				9E8375B927AFDFD1069016D1 /* libfilaflat.xcframework */,
+				C4BDDF85AADA2069C0F9FBAE /* libfilamat.xcframework */,
+				912652335565C18B252345DE /* libfilament.xcframework */,
+				DB3F32D8D3D7310FA3A0C1A1 /* libgeometry.xcframework */,
+				D1E30700B368B5F84196FD97 /* libibl.xcframework */,
+				19CBBB6C426E8D038BDAC97B /* libktxreader.xcframework */,
+				8F108854ADC54BBAA29C2055 /* libsmol-v.xcframework */,
+				7C969D515221A7739C68F3AC /* libutils.xcframework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		FE198F0E1EF047534F8F3128 /* backend-test */ = {
@@ -75,6 +172,8 @@
 			buildPhases = (
 				445863ED54C294354A388281 /* Sources */,
 				BD71575ED7ED3237FEFD94C7 /* Resources */,
+				5E31B50ED1338E6ADE1FA49A /* Frameworks */,
+				0ABB76F2D4011A4AF5186FCA /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -91,12 +190,13 @@
 		8A7A83D59A7827D3335343C2 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 				};
 			};
 			buildConfigurationList = E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -221,6 +321,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
 					"$(inherited)",
@@ -235,22 +340,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-debug/filament/lib/universal",
-				);
 				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilamat",
-					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
+					"-force_load ../../../out/ios-release/filament/lib/arm64/libbackend_test.xcframework",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -328,6 +419,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
 					"$(inherited)",
@@ -342,22 +438,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-release/filament/lib/universal",
-				);
 				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilamat",
-					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
+					"-force_load ../../../out/ios-release/filament/lib/arm64/libbackend_test.xcframework",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -428,6 +510,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_METAL=1",
 					"$(inherited)",
@@ -442,22 +529,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-debug/filament/lib/universal",
-				);
 				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilamat",
-					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
+					"-force_load ../../../out/ios-release/filament/lib/arm64/libbackend_test.xcframework",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -473,6 +546,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_METAL=1",
 					"$(inherited)",
@@ -487,22 +565,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-release/filament/lib/universal",
-				);
 				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilamat",
-					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
+					"-force_load ../../../out/ios-release/filament/lib/arm64/libbackend_test.xcframework",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.backend-test";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
