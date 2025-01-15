@@ -34,6 +34,7 @@ void writeJSONString(std::ostream& os, const char* str) {
             case '\t': os << "\\t"; break;
             default: os << *p; break;
         }
+        ++p;
     }
     os << '"';
 }
