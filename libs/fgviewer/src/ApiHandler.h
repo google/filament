@@ -17,6 +17,8 @@
 #ifndef FGVIEWER_APIHANDLER_H
 #define FGVIEWER_APIHANDLER_H
 
+#include <fgviewer/DebugServer.h>
+
 #include <CivetServer.h>
 
 namespace filament::fgviewer {
@@ -28,6 +30,7 @@ struct FrameGraphInfo;
 //
 //    GET /api/framegraphs
 //    GET /api/framegraph?fg={viewname}
+//    GET /api/status
 //
 class ApiHandler : public CivetHandler {
 public:
@@ -36,12 +39,25 @@ public:
     ~ApiHandler() = default;
 
     bool handleGet(CivetServer* server, struct mg_connection* conn);
-    void addFrameGraph(FrameGraphInfo const* frameGraph);
+
+    void addFrameGraph(ViewHandle view_handle);
 
 private:
-    bool handleGetApiFgInfo(struct mg_connection* conn, struct mg_request_info const* request);
+    bool handleGetFrameGraphInfo(struct mg_connection* conn, struct mg_request_info const* request);
+
+    bool handleGetStatus(struct mg_connection* conn,
+                         struct mg_request_info const* request);
 
     DebugServer* mServer;
+
+    std::mutex mStatusMutex;
+    std::condition_variable mStatusCondition;
+    char statusFrameGraphId[9] = {};
+
+    // This variable is to implement a *hanging* effect for /api/status. The call to /api/status
+    // will always block until statusMaterialId is updated again. The client is expected to keep
+    // calling /api/status (a constant "pull" to simulate a push).
+    std::atomic<uint64_t> mCurrentStatus = 0;
 };
 
 } // filament::fgviewer
