@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,12 @@ public:
 
     // The incoming passes should be sorted by the execution order.
     void setPasses(std::vector<Pass> sortedPasses);
+
+    const char* getViewName() const;
+
+    const std::vector<Pass>& getPasses() const;
+
+    const std::unordered_map<ResourceId, Resource>& getResources() const;
 
 private:
     utils::CString viewName;

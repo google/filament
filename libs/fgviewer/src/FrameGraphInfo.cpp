@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,19 @@ void FrameGraphInfo::setResources(
 
 void FrameGraphInfo::setPasses(std::vector<Pass> sortedPasses) {
     passes = std::move(sortedPasses);
+}
+
+const char* FrameGraphInfo::getViewName() const {
+    return pImpl->getViewName();
+}
+
+const std::vector<FrameGraphInfo::Pass>& FrameGraphInfo::getPasses() const {
+    return pImpl->getPasses();
+}
+
+const std::unordered_map<ResourceId, FrameGraphInfo::Resource>&
+    FrameGraphInfo::getResources() const {
+    return pImpl->getResources();
 }
 
 } // namespace filament::fgviewer
