@@ -110,7 +110,7 @@ void writeResources(std::ostream& os, const FrameGraphInfo &frameGraph) {
     }
     os << "  }\n";
 }
-}
+} // anonymous
 
 const char *JsonWriter::getJsonString() const {
     return mJsonString.c_str();
