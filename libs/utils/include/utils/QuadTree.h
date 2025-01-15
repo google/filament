@@ -80,6 +80,9 @@ static_assert(size(1) == 1);
 static_assert(size(2) == 5);
 static_assert(size(3) == 21);
 static_assert(size(4) == 85);
+static_assert(size(5) == 341);
+static_assert(size(6) == 1365);
+static_assert(size(7) == 5461);
 
 } // namespace QuadTreeUtils
 
@@ -114,11 +117,14 @@ class QuadTreeArray : public std::array<T, QuadTreeUtils::size(HEIGHT)> {
     };
 
 public:
-    using code_t = uint8_t;
+    // code_t needs to be able to encode the # of entries for the largest level supported
+    // the tree. With 7 levels, the largest one as 4096 entries, 0 to 4095 so 12 bits suffice.
+    using code_t = uint16_t;
 
     struct NodeId {
-        int8_t l;       // height of the node or -1 if invalid
-        code_t code;    // morton code of the node
+        int8_t l      :  4;     // height of the node or -1 if invalid
+        code_t   code : 12;     // morton code of the node
+        static_assert(12 >= (HEIGHT - 1) * 2);
     };
 
     enum class TraversalResult {
