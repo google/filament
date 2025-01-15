@@ -53,7 +53,6 @@ if (NOT MSVC)
     target_compile_options(${TARGET}
         PRIVATE -Wno-implicit-function-declaration
         PRIVATE -Wno-shift-negative-value
-        PRIVATE -Wno-deprecated-non-prototype # See https://github.com/madler/zlib/issues/633
     )
 endif()
 
