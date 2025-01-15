@@ -1154,19 +1154,9 @@ UTILS_NOINLINE
 bool FEngine::destroy(const FMaterial* ptr) {
     if (ptr == nullptr) return true;
     bool const success = terminateAndDestroy(ptr, mMaterials);
-    if (success) {
+    if (UTILS_LIKELY(success)) {
         auto pos = mMaterialInstances.find(ptr);
-        if (pos != mMaterialInstances.cend()) {
-            // ensure we've destroyed all instances before destroying the material
-            if (!ASSERT_PRECONDITION_NON_FATAL(pos->second.empty(),
-                    "destroying material \"%s\" but %u instances still alive",
-                    ptr->getName().c_str(), (*pos).second.size())) {
-                // We return true here, because the material has been destroyed. However, this
-                // leaks this material's ResourceList<FMaterialInstance> until the engine
-                // is shut down. Note that it's still possible for the MaterialInstances to be
-                // destroyed manually.
-                return true;
-            }
+        if (UTILS_LIKELY(pos != mMaterialInstances.cend())) {
             mMaterialInstances.erase(pos);
         }
     }
@@ -1176,6 +1166,39 @@ bool FEngine::destroy(const FMaterial* ptr) {
 UTILS_NOINLINE
 bool FEngine::destroy(const FMaterialInstance* ptr) {
     if (ptr == nullptr) return true;
+
+    // Check that the material instance we're destroying is not in use in the RenderableManager
+    // To do this, we currently need to inspect all render primitives in the RenderableManager
+    EntityManager const& em = mEntityManager;
+    FRenderableManager const& rcm = mRenderableManager;
+    Entity const* entities = rcm.getEntities();
+    size_t const count = rcm.getComponentCount();
+    for (size_t i = 0; i < count; i++) {
+        Entity const entity = entities[i];
+        if (em.isAlive(entity)) {
+            RenderableManager::Instance const ri = rcm.getInstance(entity);
+            size_t const primitiveCount = rcm.getPrimitiveCount(ri, 0);
+            for (size_t j = 0; j < primitiveCount; j++) {
+                auto const* const mi = rcm.getMaterialInstanceAt(ri, 0, j);
+                if (features.engine.debug.assert_material_instance_in_use) {
+                    FILAMENT_CHECK_PRECONDITION(mi != ptr)
+                            << "destroying MaterialInstance \""
+                            << mi->getName() << "\" which is still in use by Renderable (entity="
+                            << entity.getId() << ", instance="
+                            << ri.asValue() << ", index=" << j << ")";
+                } else {
+                    if (UTILS_UNLIKELY(mi == ptr)) {
+                        slog.e  << "destroying MaterialInstance \""
+                                << mi->getName() << "\" which is still in use by Renderable (entity="
+                                << entity.getId() << ", instance="
+                                << ri.asValue() << ", index=" << j << ")"
+                                << io::endl;
+                    }
+                }
+            }
+        }
+    }
+
     if (ptr->isDefaultInstance()) return false;
     auto pos = mMaterialInstances.find(ptr->getMaterial());
     assert_invariant(pos != mMaterialInstances.cend());

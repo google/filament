@@ -799,6 +799,13 @@ public:
             size_t primitiveIndex, MaterialInstance const* UTILS_NONNULL materialInstance);
 
     /**
+     * Clear the MaterialInstance for the given primitive.
+     * @param instance Renderable's instance
+     * @param primitiveIndex Primitive index
+     */
+    void clearMaterialInstanceAt(Instance instance, size_t primitiveIndex);
+
+    /**
      * Retrieves the material instance that is bound to the given primitive.
      */
     MaterialInstance* UTILS_NULLABLE getMaterialInstanceAt(

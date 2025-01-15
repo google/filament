@@ -373,6 +373,22 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
 
 void FMaterial::terminate(FEngine& engine) {
 
+    if (mDefaultMaterialInstance) {
+        mDefaultMaterialInstance->setDefaultInstance(false);
+        engine.destroy(mDefaultMaterialInstance);
+        mDefaultMaterialInstance = nullptr;
+    }
+
+    // ensure we've destroyed all instances before destroying the material
+    auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
+    auto pos = materialInstanceResourceList.find(this);
+    if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
+        FILAMENT_CHECK_PRECONDITION(pos->second.empty())
+                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                << pos->second.size() << " instances still alive.";
+    }
+
+
 #if FILAMENT_ENABLE_MATDBG
     // Unregister the material with matdbg.
     matdbg::DebugServer* server = engine.debug.server;
@@ -383,16 +399,9 @@ void FMaterial::terminate(FEngine& engine) {
 
     destroyPrograms(engine);
 
-    if (mDefaultMaterialInstance) {
-        mDefaultMaterialInstance->setDefaultInstance(false);
-        engine.destroy(mDefaultMaterialInstance);
-        mDefaultMaterialInstance = nullptr;
-    }
-
-    mPerViewDescriptorSetLayout.terminate(
-            engine.getDescriptorSetLayoutFactory(), engine.getDriverApi());
-    mDescriptorSetLayout.terminate(
-            engine.getDescriptorSetLayoutFactory(), engine.getDriverApi());
+    DriverApi& driver = engine.getDriverApi();
+    mPerViewDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+    mDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
 }
 
 void FMaterial::compile(CompilerPriorityQueue priority,

@@ -1100,6 +1100,7 @@ class_<RenderableManager>("RenderableManager")
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
+    .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
     .function("getMaterialInstanceAt", &RenderableManager::getMaterialInstanceAt,
             allow_raw_pointers())
 

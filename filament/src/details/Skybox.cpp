@@ -153,13 +153,13 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
 void FSkybox::terminate(FEngine& engine) noexcept {
     // use Engine::destroy because FEngine::destroy is inlined
     Engine& e = engine;
-    e.destroy(mSkyboxMaterialInstance);
     e.destroy(mSkybox);
+    e.destroy(mSkyboxMaterialInstance);
 
     engine.getEntityManager().destroy(mSkybox);
 
-    mSkyboxMaterialInstance = nullptr;
     mSkybox = {};
+    mSkyboxMaterialInstance = nullptr;
 }
 
 void FSkybox::setLayerMask(uint8_t select, uint8_t values) noexcept {

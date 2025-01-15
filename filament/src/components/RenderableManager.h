@@ -204,6 +204,7 @@ public:
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* materialInstance);
+    void clearMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex);
     MaterialInstance* getMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
     void setGeometryAt(Instance instance, uint8_t level, size_t primitiveIndex,
             PrimitiveType type, FVertexBuffer* vertices, FIndexBuffer* indices,
