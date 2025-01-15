@@ -248,7 +248,6 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    VulkanSamplerGroup            :  16       few
     //    HwStream                      :  24       few
     //    VulkanFence                   :  32       few
     //    VulkanProgram                 :  32       moderate
@@ -271,7 +270,6 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
            << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
            << "\nVulkanVertexBufferInfo: " << sizeof(VulkanVertexBufferInfo)
            << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
-           << "\nVulkanSamplerGroup: " << sizeof(VulkanSamplerGroup)
            << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
            << "\nVulkanTexture: " << sizeof(VulkanTexture)
            << "\nVulkanTimerQuery: " << sizeof(VulkanTimerQuery)
