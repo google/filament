@@ -457,6 +457,13 @@ if (NOT WEBGL)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
 
+# Prevents stacks from being made for executable by explicitly adding this linker flag. Otherwise,
+# it generates warnings newly introduced as of GNU LD 2.39. Modern security practices strongly
+# recommend marking the stack as non-executable using the -z noexecstack linker flag to prevent
+# stack-based buffer overflow exploits.
+# See: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ffcf9c5700e49c0aee42dcba9a12ba21338e8136
+set(NO_EXEC_STACK "-Wl,-z,noexecstack")
+
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (ANDROID)
@@ -475,7 +482,7 @@ if (APPLE)
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} -Wl,-z,noexecstack")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
 if (WEBGL_PTHREADS)
