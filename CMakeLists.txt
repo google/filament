@@ -462,12 +462,14 @@ endif()
 # recommend marking the stack as non-executable using the -z noexecstack linker flag to prevent
 # stack-based buffer overflow exploits.
 # See: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ffcf9c5700e49c0aee42dcba9a12ba21338e8136
-set(NO_EXEC_STACK "-Wl,-z,noexecstack")
+if (LINUX)
+    set(NO_EXEC_STACK "-Wl,-z,noexecstack")
+endif()
 
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (ANDROID)
-set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
+    set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
 endif()
 
 if (APPLE)
