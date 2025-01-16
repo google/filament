@@ -32,7 +32,7 @@
     #ifndef VK_MVK_macos_surface
          #error VK_MVK_macos_surface is not defined
     #endif
-#elif defined(IOS)
+#elif defined(FILAMENT_IOS)
     // Metal is not available when building for the iOS simulator on Desktop.
     #define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
     #if METAL_AVAILABLE
@@ -56,7 +56,7 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {
     ExtensionSet const ret = {
     #if defined(__APPLE__)
         VK_MVK_MACOS_SURFACE_EXTENSION_NAME,  // TODO: replace with VK_EXT_metal_surface
-    #elif defined(IOS) && defined(METAL_AVAILABLE)
+    #elif defined(FILAMENT_IOS) && defined(METAL_AVAILABLE)
         VK_MVK_IOS_SURFACE_EXTENSION_NAME,
     #endif
     };
@@ -90,7 +90,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateMacOSSurfaceMVK error.";
-    #elif defined(IOS) && defined(METAL_AVAILABLE)
+    #elif defined(FILAMENT_IOS) && defined(METAL_AVAILABLE)
         CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
         // Create the VkSurface.
         FILAMENT_CHECK_POSTCONDITION(vkCreateIOSSurfaceMVK)

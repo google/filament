@@ -13,7 +13,7 @@ set(CMAKE_OSX_ARCHITECTURES ${IOS_ARCH} CACHE STRING "Build architecture for iOS
 # Necessary for correct install location
 set(DIST_ARCH ${IOS_ARCH})
 
-add_definitions(-DIOS)
+add_definitions(-DFILAMENT_IOS)
 
 set(IOS_MIN_TARGET "11.0")
 

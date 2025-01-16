@@ -24,7 +24,7 @@
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "backend/platforms/PlatformEGLAndroid.h"
     #endif
-#elif defined(IOS)
+#elif defined(FILAMENT_IOS)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "backend/platforms/PlatformCocoaTouchGL.h"
     #endif
@@ -88,7 +88,7 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
         *backend = Backend::OPENGL;
 #elif defined(__ANDROID__)
         *backend = Backend::OPENGL;
-#elif defined(IOS) || defined(__APPLE__)
+#elif defined(FILAMENT_IOS) || defined(__APPLE__)
         *backend = Backend::METAL;
 #elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         *backend = Backend::VULKAN;
@@ -119,7 +119,7 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
             return nullptr;
         #elif defined(__ANDROID__)
             return new PlatformEGLAndroid();
-        #elif defined(IOS)
+        #elif defined(FILAMENT_IOS)
             return new PlatformCocoaTouchGL();
         #elif defined(__APPLE__)
             return new PlatformCocoaGL();

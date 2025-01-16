@@ -31,6 +31,8 @@ set(SRCS
     src/ShaderReplacer.cpp
     src/ShaderExtractor.cpp
     src/ShaderInfo.cpp
+    src/SourceFormatter.cpp
+    src/SourceFormatter.h
     src/TextWriter.cpp
 )
 
