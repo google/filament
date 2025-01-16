@@ -54,7 +54,7 @@ using namespace filamat;
 
 namespace filament {
 
-constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage language) {
+constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage const language) {
     switch (language) {
         case ShaderLanguage::ESSL3:
             return { MaterialGlsl, DictionaryText };
@@ -73,7 +73,7 @@ constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage la
 
 MaterialParser::MaterialParserDetails::MaterialParserDetails(
         FixedCapacityVector<ShaderLanguage> preferredLanguages, const void* data,
-        size_t size)
+        size_t const size)
     : mManagedBuffer(data, size),
       mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
       mPreferredLanguages(std::move(preferredLanguages)),
@@ -83,7 +83,7 @@ MaterialParser::MaterialParserDetails::MaterialParserDetails(
 template<typename T>
 UTILS_NOINLINE
 bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
-        ChunkType type, T* value) const noexcept {
+        ChunkType const type, T* value) const noexcept {
     ChunkContainer const& chunkContainer = mChunkContainer;
     ChunkContainer::ChunkDesc chunkDesc;
     if (chunkContainer.hasChunk(type, &chunkDesc)) {
@@ -93,7 +93,7 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
     return false;
 }
 
-MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(const void* start, size_t size)
+MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(const void* start, size_t const size)
         : mStart(malloc(size)), mSize(size) {
     memcpy(mStart, start, size);
 }
@@ -113,7 +113,7 @@ bool MaterialParser::get(typename T::Container* container) const noexcept {
 }
 
 MaterialParser::MaterialParser(FixedCapacityVector<ShaderLanguage> preferredLanguages,
-        const void* data, size_t size)
+        const void* data, size_t const size)
     : mImpl(std::move(preferredLanguages), data, size) {
 }
 
@@ -390,7 +390,7 @@ bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
 }
 
 bool MaterialParser::getShader(ShaderContent& shader,
-        ShaderModel shaderModel, Variant variant, ShaderStage stage) noexcept {
+        ShaderModel const shaderModel, Variant const variant, ShaderStage const stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
             mImpl.mBlobDictionary, shaderModel, variant, stage);
 }

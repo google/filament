@@ -34,7 +34,7 @@ struct InstanceBuffer::BuilderDetails {
 };
 
 using BuilderType = InstanceBuffer;
-BuilderType::Builder::Builder(size_t instanceCount) noexcept {
+BuilderType::Builder::Builder(size_t const instanceCount) noexcept {
     mImpl->mInstanceCount = instanceCount;
 }
 
@@ -50,7 +50,7 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
     return *this;
 }
 
-InstanceBuffer::Builder& InstanceBuffer::Builder::name(const char* name, size_t len) noexcept {
+InstanceBuffer::Builder& InstanceBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
 }
 
@@ -79,7 +79,7 @@ FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
 }
 
 void FInstanceBuffer::setLocalTransforms(
-        math::mat4f const* localTransforms, size_t count, size_t offset) {
+        math::mat4f const* localTransforms, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mInstanceCount)
             << "setLocalTransforms overflow. InstanceBuffer has only " << mInstanceCount
             << " instances, but trying to set " << count 

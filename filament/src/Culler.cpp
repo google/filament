@@ -64,7 +64,7 @@ void Culler::intersects(
         Frustum const& UTILS_RESTRICT frustum,
         float3 const* UTILS_RESTRICT center,
         float3 const* UTILS_RESTRICT extent,
-        size_t count, size_t bit) noexcept {
+        size_t count, size_t const bit) noexcept {
 
     float4 const * UTILS_RESTRICT const planes = frustum.mPlanes;
 
@@ -127,14 +127,14 @@ void Culler::Test::intersects(
         Frustum const& UTILS_RESTRICT frustum,
         float3 const* UTILS_RESTRICT c,
         float3 const* UTILS_RESTRICT e,
-        size_t count) noexcept {
+        size_t const count) noexcept {
     Culler::intersects(results, frustum, c, e, count, 0);
 }
 
 void Culler::Test::intersects(
         result_type* UTILS_RESTRICT results,
         Frustum const& UTILS_RESTRICT frustum,
-        float4 const* UTILS_RESTRICT b, size_t count) noexcept {
+        float4 const* UTILS_RESTRICT b, size_t const count) noexcept {
     Culler::intersects(results, frustum, b, count);
 }
 

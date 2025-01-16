@@ -143,7 +143,7 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     }
 }
 
-void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {
+void Froxelizer::setOptions(float const zLightNear, float const zLightFar) noexcept {
     if (UTILS_UNLIKELY(mZLightNear != zLightNear || mZLightFar != zLightFar)) {
         mZLightNear = zLightNear;
         mZLightFar = zLightFar;
@@ -160,7 +160,7 @@ void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
 }
 
 void Froxelizer::setProjection(const mat4f& projection,
-        float near, UTILS_UNUSED float far) noexcept {
+        float const near, UTILS_UNUSED float far) noexcept {
     if (UTILS_UNLIKELY(!fuzzyEqual(mProjection, projection))) {
         mProjection = projection;
         mNear = near;
@@ -171,7 +171,7 @@ void Froxelizer::setProjection(const mat4f& projection,
 bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, RootArenaScope& rootArenaScope,
         filament::Viewport const& viewport,
-        const mat4f& projection, float projectionNear, float projectionFar) noexcept {
+        const mat4f& projection, float const projectionNear, float const projectionFar) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 
@@ -223,9 +223,9 @@ bool Froxelizer::prepare(
 
 void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
-        size_t froxelBufferEntryCount, filament::Viewport const& viewport) noexcept {
+        size_t const froxelBufferEntryCount, filament::Viewport const& viewport) noexcept {
 
-    auto roundTo8 = [](uint32_t v) { return (v + 7u) & ~7u; };
+    auto roundTo8 = [](uint32_t const v) { return (v + 7u) & ~7u; };
 
     const uint32_t width  = std::max(16u, viewport.width);
     const uint32_t height = std::max(16u, viewport.height);
@@ -458,7 +458,7 @@ bool Froxelizer::update() noexcept {
     return uniformsNeedUpdating;
 }
 
-Froxel Froxelizer::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
+Froxel Froxelizer::getFroxelAt(size_t const x, size_t const y, size_t const z) const noexcept {
     assert_invariant(x < mFroxelCountX);
     assert_invariant(y < mFroxelCountY);
     assert_invariant(z < mFroxelCountZ);
@@ -473,7 +473,7 @@ Froxel Froxelizer::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
 }
 
 UTILS_NOINLINE
-size_t Froxelizer::findSliceZ(float z) const noexcept {
+size_t Froxelizer::findSliceZ(float const z) const noexcept {
     // The vastly common case is that z<0, so we always do the math for this case
     // and we "undo" it below otherwise. This works because we're using fast::log2 which
     // doesn't care if given a negative number (we'd have to use abs() otherwise).
@@ -563,7 +563,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 
     auto process = [ this, &froxelThreadData,
                      spheres, directions, instances, &viewMatrix, &lcm ]
-            (size_t count, size_t offset, size_t stride) {
+            (size_t const count, size_t const offset, size_t const stride) {
 
         SYSTRACE_NAME("FroxelizeLoop Job");
 
@@ -918,7 +918,7 @@ void Froxelizer::computeLightTree(
     auto const* UTILS_RESTRICT zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>() + 1;
     BinaryTreeArray::traverse(h,
             [lightTree, lightRecordsOffset, zrange, indices = lightList.data(), count]
-            (size_t index, size_t col, size_t next) {
+            (size_t const index, size_t const col, size_t const next) {
                 // indices[] cannot be accessed past 'col'
                 const float min = (col < count) ? zrange[indices[col]].x : 1.0f;
                 const float max = (col < count) ? zrange[indices[col]].y : 0.0f;
@@ -932,7 +932,7 @@ void Froxelizer::computeLightTree(
                         .reserved = 0,
                 };
             },
-            [lightTree](size_t index, size_t l, size_t r, size_t next) {
+            [lightTree](size_t const index, size_t const l, size_t const r, size_t const next) {
                 lightTree[index] = {
                         .min = std::min(lightTree[l].min, lightTree[r].min),
                         .max = std::max(lightTree[l].max, lightTree[r].max),

@@ -188,7 +188,7 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-TextureFormat FRenderer::getHdrFormat(const FView& view, bool translucent) const noexcept {
+TextureFormat FRenderer::getHdrFormat(const FView& view, bool const translucent) const noexcept {
     if (translucent) {
         return mHdrTranslucent;
     }
@@ -203,7 +203,7 @@ TextureFormat FRenderer::getHdrFormat(const FView& view, bool translucent) const
     }
 }
 
-TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
+TextureFormat FRenderer::getLdrFormat(bool const translucent) const noexcept {
     return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
@@ -233,12 +233,12 @@ void FRenderer::initializeClearFlags() noexcept {
     mClearFlags = getClearFlags();
 }
 
-void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
+void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     driver.setPresentationTime(monotonic_clock_ns);
 }
 
-void FRenderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
+void FRenderer::setVsyncTime(uint64_t const steadyClockTimeNano) noexcept {
     mVsyncSteadyClockTimeNano = steadyClockTimeNano;
 }
 
@@ -444,7 +444,7 @@ void FRenderer::endFrame() {
     js.waitAndRelease(job);
 }
 
-void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+void FRenderer::readPixels(uint32_t const xoffset, uint32_t const yoffset, uint32_t const width, uint32_t const height,
         PixelBufferDescriptor&& buffer) {
 #ifndef NDEBUG
     const bool withinFrame = mSwapChain != nullptr;
@@ -456,7 +456,7 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 }
 
 void FRenderer::readPixels(FRenderTarget* renderTarget,
-        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        uint32_t const xoffset, uint32_t const yoffset, uint32_t const width, uint32_t const height,
         PixelBufferDescriptor&& buffer) {
 
     // TODO: change the following to an assert when client call sites have addressed the issue.
@@ -472,7 +472,7 @@ void FRenderer::readPixels(FRenderTarget* renderTarget,
 }
 
 void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
-        filament::Viewport const& srcViewport, CopyFrameFlag flags) {
+        filament::Viewport const& srcViewport, CopyFrameFlag const flags) {
     SYSTRACE_CALL();
 
     assert_invariant(mSwapChain);
@@ -748,7 +748,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
 
-        auto round = [](uint32_t x) {
+        auto round = [](uint32_t const x) {
             constexpr uint32_t rounding = 16u;
             return (x + (rounding - 1u)) & ~(rounding - 1u);
         };

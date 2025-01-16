@@ -235,7 +235,7 @@ FEngine::FEngine(Builder const& builder) :
 {
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
-            [this, &builder](std::string_view name, bool value) {
+            [this, &builder](std::string_view const name, bool const value) {
         if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
@@ -956,21 +956,21 @@ FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t f
  */
 
 
-FCamera* FEngine::createCamera(Entity entity) noexcept {
+FCamera* FEngine::createCamera(Entity const entity) noexcept {
     return mCameraManager.create(*this, entity);
 }
 
-FCamera* FEngine::getCameraComponent(Entity entity) noexcept {
+FCamera* FEngine::getCameraComponent(Entity const entity) noexcept {
     auto ci = mCameraManager.getInstance(entity);
     return ci ? mCameraManager.getCamera(ci) : nullptr;
 }
 
-void FEngine::destroyCameraComponent(Entity entity) noexcept {
+void FEngine::destroyCameraComponent(Entity const entity) noexcept {
     mCameraManager.destroy(*this, entity);
 }
 
 
-void FEngine::createRenderable(const RenderableManager::Builder& builder, Entity entity) {
+void FEngine::createRenderable(const RenderableManager::Builder& builder, Entity const entity) {
     mRenderableManager.create(builder, entity);
     auto& tcm = mTransformManager;
     // if this entity doesn't have a transform component, add one.
@@ -979,7 +979,7 @@ void FEngine::createRenderable(const RenderableManager::Builder& builder, Entity
     }
 }
 
-void FEngine::createLight(const LightManager::Builder& builder, Entity entity) {
+void FEngine::createLight(const LightManager::Builder& builder, Entity const entity) {
     mLightManager.create(builder, entity);
 }
 
@@ -1210,7 +1210,7 @@ bool FEngine::destroy(const FMaterialInstance* ptr) {
 }
 
 UTILS_NOINLINE
-void FEngine::destroy(Entity e) {
+void FEngine::destroy(Entity const e) {
     mRenderableManager.destroy(e);
     mLightManager.destroy(e);
     mTransformManager.destroy(e);
@@ -1335,7 +1335,7 @@ size_t FEngine::getMaxShadowMapCount() const noexcept {
         CONFIG_MAX_SHADOWMAPS : CONFIG_MAX_SHADOW_LAYERS;
 }
 
-void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
+void* FEngine::streamAlloc(size_t const size, size_t const alignment) noexcept {
     // we allow this only for small allocations
     if (size > 65536) {
         return nullptr;
@@ -1373,7 +1373,7 @@ bool FEngine::isPaused() const noexcept {
     return mCommandBufferQueue.isPaused();
 }
 
-void FEngine::setPaused(bool paused) {
+void FEngine::setPaused(bool const paused) {
     mCommandBufferQueue.setPaused(paused);
 }
 
@@ -1403,7 +1403,7 @@ void FEngine::unprotected() noexcept {
     mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
 }
 
-bool FEngine::setFeatureFlag(char const* name, bool value) noexcept {
+bool FEngine::setFeatureFlag(char const* name, bool const value) noexcept {
     auto* const p = getFeatureFlagPtr(name);
     if (p) {
         *p = value;
@@ -1419,7 +1419,7 @@ std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
     return std::nullopt;
 }
 
-bool* FEngine::getFeatureFlagPtr(std::string_view name, bool allowConstant) const noexcept {
+bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
     auto pos = std::find_if(mFeatures.begin(), mFeatures.end(),
             [name](FeatureFlag const& entry) {
                 return name == entry.name;
@@ -1438,7 +1438,7 @@ Engine::Builder::Builder(Builder&& rhs) noexcept = default;
 Engine::Builder& Engine::Builder::operator=(Builder const& rhs) noexcept = default;
 Engine::Builder& Engine::Builder::operator=(Builder&& rhs) noexcept = default;
 
-Engine::Builder& Engine::Builder::backend(Backend backend) noexcept {
+Engine::Builder& Engine::Builder::backend(Backend const backend) noexcept {
     mImpl->mBackend = backend;
     return *this;
 }
@@ -1453,7 +1453,7 @@ Engine::Builder& Engine::Builder::config(Config const* config) noexcept {
     return *this;
 }
 
-Engine::Builder& Engine::Builder::featureLevel(FeatureLevel featureLevel) noexcept {
+Engine::Builder& Engine::Builder::featureLevel(FeatureLevel const featureLevel) noexcept {
     mImpl->mFeatureLevel = featureLevel;
     return *this;
 }
@@ -1463,17 +1463,17 @@ Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
     return *this;
 }
 
-Engine::Builder& Engine::Builder::paused(bool paused) noexcept {
+Engine::Builder& Engine::Builder::paused(bool const paused) noexcept {
     mImpl->mPaused = paused;
     return *this;
 }
 
-Engine::Builder& Engine::Builder::feature(char const* name, bool value) noexcept {
+Engine::Builder& Engine::Builder::feature(char const* name, bool const value) noexcept {
     mImpl->mFeatureFlags[name] = value;
     return *this;
 }
 
-Engine::Builder& Engine::Builder::features(std::initializer_list<char const *> list) noexcept {
+Engine::Builder& Engine::Builder::features(std::initializer_list<char const *> const list) noexcept {
     for (auto name : list) {
         if (name) {
             feature(name, true);

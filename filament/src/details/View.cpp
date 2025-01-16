@@ -185,7 +185,7 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
     }
 }
 
-void FView::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
+void FView::setDynamicLightingOptions(float const zLightNear, float const zLightFar) noexcept {
     mFroxelizer.setOptions(zLightNear, zLightFar);
 }
 
@@ -311,7 +311,7 @@ float2 FView::updateScale(FEngine& engine,
     return mScale;
 }
 
-void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
+void FView::setVisibleLayers(uint8_t const select, uint8_t const values) noexcept {
     mVisibleLayers = (mVisibleLayers & ~select) | (values & select);
 }
 
@@ -481,8 +481,8 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
 }
 
 void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootArenaScope,
-        filament::Viewport viewport, CameraInfo cameraInfo,
-        float4 const& userTime, bool needsAlphaChannel) noexcept {
+        filament::Viewport const viewport, CameraInfo cameraInfo,
+        float4 const& userTime, bool const needsAlphaChannel) noexcept {
 
         SYSTRACE_CALL();
         SYSTRACE_CONTEXT();
@@ -786,7 +786,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 }
 
 void FView::computeVisibilityMasks(
-        uint8_t visibleLayers,
+        uint8_t const visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
         FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
         Culler::result_type* UTILS_RESTRICT visibleMask, size_t count) {
@@ -818,8 +818,8 @@ void FView::computeVisibilityMasks(
 
 UTILS_NOINLINE
 /* static */ FScene::RenderableSoa::iterator FView::partition(
-        FScene::RenderableSoa::iterator begin,
-        FScene::RenderableSoa::iterator end,
+        FScene::RenderableSoa::iterator const begin,
+        FScene::RenderableSoa::iterator const end,
         Culler::result_type mask, Culler::result_type value) noexcept {
     return std::partition(begin, end, [mask, value](auto it) {
         // Mask VISIBLE_MASK to ignore higher bits related to spot shadows. We only partition based
@@ -828,7 +828,7 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareUpscaler(float2 scale,
+void FView::prepareUpscaler(float2 const scale,
         TemporalAntiAliasingOptions const& taaOptions,
         DynamicResolutionOptions const& dsrOptions) const noexcept {
     SYSTRACE_CALL();
@@ -865,8 +865,8 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 }
 
 void FView::prepareSSR(Handle<HwTexture> ssr,
-        bool disableSSR,
-        float refractionLodOffset,
+        bool const disableSSR,
+        float const refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
     mColorPassDescriptorSet.prepareSSR(ssr, disableSSR, refractionLodOffset, ssrOptions);
 }
@@ -902,7 +902,7 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     }
 }
 
-void FView::prepareShadowMapping(bool highPrecision) const noexcept {
+void FView::prepareShadowMapping(bool const highPrecision) const noexcept {
     if (mHasShadowing) {
         assert_invariant(mShadowMapManager);
         mColorPassDescriptorSet.prepareShadowMapping(
@@ -946,7 +946,7 @@ void FView::cullRenderables(JobSystem&,
 
     // culling job (this runs on multiple threads)
     auto functor = [&frustum, worldAABBCenter, worldAABBExtent, visibleArray, bit]
-            (uint32_t index, uint32_t c) {
+            (uint32_t const index, uint32_t const c) {
         Culler::intersects(
                 visibleArray + index,
                 frustum,
@@ -1113,7 +1113,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
 }
 
 void FView::executePickingQueries(DriverApi& driver,
-        RenderTargetHandle handle, float2 scale) noexcept {
+        RenderTargetHandle handle, float2 const scale) noexcept {
 
     while (mActivePickingQueriesList) {
         FPickingQuery* const pQuery = mActivePickingQueriesList;
@@ -1182,7 +1182,7 @@ void FView::setScreenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions optio
     mScreenSpaceReflectionsOptions = options;
 }
 
-void FView::setGuardBandOptions(GuardBandOptions options) noexcept {
+void FView::setGuardBandOptions(GuardBandOptions const options) noexcept {
     mGuardBandOptions = options;
 }
 
@@ -1250,8 +1250,8 @@ void FView::setVignetteOptions(VignetteOptions options) noexcept {
     mVignetteOptions = options;
 }
 
-View::PickingQuery& FView::pick(uint32_t x, uint32_t y, CallbackHandler* handler,
-        PickingQueryResultCallback callback) noexcept {
+View::PickingQuery& FView::pick(uint32_t const x, uint32_t const y, CallbackHandler* handler,
+        PickingQueryResultCallback const callback) noexcept {
     FPickingQuery* pQuery = FPickingQuery::get(x, y, handler, callback);
     pQuery->next = mActivePickingQueriesList;
     mActivePickingQueriesList = pQuery;
@@ -1262,13 +1262,13 @@ void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept 
     mStereoscopicOptions = options;
 }
 
-void FView::setMaterialGlobal(uint32_t index, float4 const& value) {
+void FView::setMaterialGlobal(uint32_t const index, float4 const& value) {
     FILAMENT_CHECK_PRECONDITION(index < 4)
             << "material global variable index (" << +index << ") out of range";
     mMaterialGlobals[index] = value;
 }
 
-float4 FView::getMaterialGlobal(uint32_t index) const {
+float4 FView::getMaterialGlobal(uint32_t const index) const {
     FILAMENT_CHECK_PRECONDITION(index < 4)
             << "material global variable index (" << +index << ") out of range";
     return mMaterialGlobals[index];

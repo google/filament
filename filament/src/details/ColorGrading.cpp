@@ -138,7 +138,7 @@ BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-ColorGrading::Builder& ColorGrading::Builder::quality(QualityLevel qualityLevel) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::quality(QualityLevel const qualityLevel) noexcept {
     switch (qualityLevel) {
         case QualityLevel::LOW:
             mImpl->format = LutFormat::INTEGER;
@@ -160,12 +160,12 @@ ColorGrading::Builder& ColorGrading::Builder::quality(QualityLevel qualityLevel)
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::format(LutFormat format) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::format(LutFormat const format) noexcept {
     mImpl->format = format;
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::dimensions(uint8_t dim) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::dimensions(uint8_t const dim) noexcept {
     mImpl->dimension = clamp(+dim, 16, 64);
     return *this;
 }
@@ -175,32 +175,32 @@ ColorGrading::Builder& ColorGrading::Builder::toneMapper(const ToneMapper* toneM
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping toneMapping) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::toneMapping(ToneMapping const toneMapping) noexcept {
     mImpl->toneMapping = toneMapping;
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::luminanceScaling(bool luminanceScaling) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::luminanceScaling(bool const luminanceScaling) noexcept {
     mImpl->luminanceScaling = luminanceScaling;
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::gamutMapping(bool gamutMapping) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::gamutMapping(bool const gamutMapping) noexcept {
     mImpl->gamutMapping = gamutMapping;
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::exposure(float exposure) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::exposure(float const exposure) noexcept {
     mImpl->exposure = exposure;
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::nightAdaptation(float adaptation) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::nightAdaptation(float const adaptation) noexcept {
     mImpl->nightAdaptation = saturate(adaptation);
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::whiteBalance(float temperature, float tint) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::whiteBalance(float const temperature, float const tint) noexcept {
     mImpl->whiteBalance = float2{
         clamp(temperature, -1.0f, 1.0f),
         clamp(tint, -1.0f, 1.0f)
@@ -239,17 +239,17 @@ ColorGrading::Builder& ColorGrading::Builder::slopeOffsetPower(
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::contrast(float contrast) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::contrast(float const contrast) noexcept {
     mImpl->contrast = clamp(contrast, 0.0f, 2.0f);
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::vibrance(float vibrance) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::vibrance(float const vibrance) noexcept {
     mImpl->vibrance = clamp(vibrance, 0.0f, 2.0f);
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::saturation(float saturation) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::saturation(float const saturation) noexcept {
     mImpl->saturation = clamp(saturation, 0.0f, 2.0f);
     return *this;
 }
@@ -316,7 +316,7 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
 //------------------------------------------------------------------------------
 
 UTILS_ALWAYS_INLINE
-inline float3 adjustExposure(float3 v, float exposure) {
+inline float3 adjustExposure(float3 const v, float const exposure) {
     return v * std::exp2(exposure);
 }
 
@@ -437,7 +437,7 @@ float3 scotopicAdaptation(float3 v, float nightAdaptation) noexcept {
 // the von Kries method, using the CIECAT16 transform.
 // See https://en.wikipedia.org/wiki/Chromatic_adaptation
 // See https://en.wikipedia.org/wiki/CIECAM02#Chromatic_adaptation
-constexpr mat3f adaptationTransform(float2 whiteBalance) noexcept {
+constexpr mat3f adaptationTransform(float2 const whiteBalance) noexcept {
     // See Mathematica notebook in docs/math/White Balance.nb
     float k = whiteBalance.x; // temperature
     float t = whiteBalance.y; // tint
@@ -450,7 +450,7 @@ constexpr mat3f adaptationTransform(float2 whiteBalance) noexcept {
 }
 
 UTILS_ALWAYS_INLINE
-inline float3 chromaticAdaptation(float3 v, mat3f adaptationTransform) {
+inline float3 chromaticAdaptation(float3 const v, mat3f adaptationTransform) {
     return adaptationTransform * v;
 }
 
@@ -499,7 +499,7 @@ inline float3 colorDecisionList(float3 v, float3 slope, float3 offset, float3 po
 }
 
 UTILS_ALWAYS_INLINE
-inline constexpr float3 contrast(float3 v, float contrast) {
+inline constexpr float3 contrast(float3 const v, float const contrast) {
     // Matches contrast as applied in DaVinci Resolve
     return MIDDLE_GRAY_ACEScct + contrast * (v - MIDDLE_GRAY_ACEScct);
 }
@@ -574,7 +574,7 @@ static float3 luminanceScaling(float3 x,
 //------------------------------------------------------------------------------
 
 static std::tuple<TextureFormat, PixelDataFormat, PixelDataType>
-        selectLutTextureParams(ColorGrading::LutFormat lutFormat) noexcept {
+        selectLutTextureParams(ColorGrading::LutFormat const lutFormat) noexcept {
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
     switch (lutFormat) {
@@ -592,21 +592,21 @@ static std::tuple<TextureFormat, PixelDataFormat, PixelDataType>
 // forces post-processing to be performed in sRGB to guarantee that the inverse tone
 // mapping function in the shaders will match the forward tone mapping step exactly.
 
-static mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping toneMapping) noexcept {
+static mat3f selectColorGradingTransformIn(ColorGrading::ToneMapping const toneMapping) noexcept {
     if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
         return mat3f{};
     }
     return sRGB_to_Rec2020;
 }
 
-static mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping toneMapping) noexcept {
+static mat3f selectColorGradingTransformOut(ColorGrading::ToneMapping const toneMapping) noexcept {
     if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
         return mat3f{};
     }
     return Rec2020_to_sRGB;
 }
 
-static float3 selectColorGradingLuminance(ColorGrading::ToneMapping toneMapping) noexcept {
+static float3 selectColorGradingLuminance(ColorGrading::ToneMapping const toneMapping) noexcept {
     if (toneMapping == ColorGrading::ToneMapping::FILMIC) {
         return LUMINANCE_Rec709;
     }

@@ -98,7 +98,7 @@ using namespace backend;
 static constexpr uint8_t kMaxBloomLevels = 12u;
 static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
 
-constexpr static float halton(unsigned int i, unsigned int b) noexcept {
+constexpr static float halton(unsigned int i, unsigned int const b) noexcept {
     // skipping a bunch of entries makes the average of the sequence closer to 0.5
     i += 409;
     float f = 1.0f;
@@ -183,7 +183,7 @@ FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
 
 UTILS_NOINLINE
 FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(FEngine& engine,
-        PostProcessMaterial const& material, PostProcessVariant variant) noexcept {
+        PostProcessMaterial const& material, PostProcessVariant const variant) noexcept {
     FMaterial const* ma = material.getMaterial(engine, variant);
     return getMaterialInstance(ma);
 }
@@ -238,14 +238,14 @@ void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const n
 }
 
 UTILS_NOINLINE
-void PostProcessManager::registerPostProcessMaterial(std::string_view name,
+void PostProcessManager::registerPostProcessMaterial(std::string_view const name,
         StaticMaterialInfo const& info) {
     mMaterialRegistry.try_emplace(name, info);
 }
 
 UTILS_NOINLINE
 PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(
-        std::string_view name) noexcept {
+        std::string_view const name) noexcept {
     auto pos = mMaterialRegistry.find(name);
     assert_invariant(pos != mMaterialRegistry.end());
     return pos.value();
@@ -446,7 +446,7 @@ void PostProcessManager::renderFullScreenQuadWithScissor(
 UTILS_NOINLINE
 void PostProcessManager::commitAndRenderFullScreenQuad(DriverApi& driver,
         FrameGraphResources::RenderPassInfo const& out, FMaterialInstance const* mi,
-        PostProcessVariant variant) const noexcept {
+        PostProcessVariant const variant) const noexcept {
     mi->commit(driver);
     mi->use(driver);
     FMaterial const* const ma = mi->getMaterial();
@@ -465,7 +465,7 @@ void PostProcessManager::commitAndRenderFullScreenQuad(DriverApi& driver,
 // ------------------------------------------------------------------------------------------------
 
 PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph& fg,
-        RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
+        RenderPassBuilder const& passBuilder, uint8_t const structureRenderFlags,
         uint32_t width, uint32_t height,
         StructurePassConfig const& config) noexcept {
 
@@ -588,7 +588,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
         RenderPassBuilder const& passBuilder,
         FrameHistory const& frameHistory,
         CameraInfo const& cameraInfo,
-        FrameGraphId<FrameGraphTexture> structure,
+        FrameGraphId<FrameGraphTexture> const structure,
         ScreenSpaceReflectionsOptions const& options,
         FrameGraphTexture::Descriptor const& desc) noexcept {
 
@@ -690,7 +690,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(FrameGraph& fg,
         filament::Viewport const&, const CameraInfo& cameraInfo,
-        FrameGraphId<FrameGraphTexture> depth,
+        FrameGraphId<FrameGraphTexture> const depth,
         AmbientOcclusionOptions const& options) noexcept {
     assert_invariant(depth);
 
@@ -938,9 +938,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> const input,
         FrameGraphId<FrameGraphTexture> depth,
-        int2 axis, float zf, TextureFormat format,
+        int2 const axis, float const zf, TextureFormat const format,
         BilateralPassConfig const& config) noexcept {
     assert_invariant(depth);
 
@@ -999,7 +999,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 // returns number of samples stored in the array (max 16)
                 constexpr size_t kernelArraySize = 16; // limited by bilateralBlur.mat
                 auto gaussianKernel =
-                        [kernelArraySize](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
+                        [kernelArraySize](float* outKernel, size_t const gaussianWidth, float const stdDev) -> uint32_t {
                     const size_t gaussianSampleCount = std::min(kernelArraySize, (gaussianWidth + 1u) / 2u);
                     for (size_t i = 0; i < gaussianSampleCount; i++) {
                         float const x = float(i);
@@ -1036,8 +1036,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(FrameGraph& fg,
-        const FrameGraphId<FrameGraphTexture> input, size_t levels,
-        bool reinhard, size_t kernelWidth, float sigma) noexcept {
+        const FrameGraphId<FrameGraphTexture> input, size_t const levels,
+        bool reinhard, size_t const kernelWidth, float const sigma) noexcept {
 
     auto const subResourceDesc = fg.getSubResourceDescriptor(input);
 
@@ -1071,12 +1071,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> const input,
         FrameGraphId<FrameGraphTexture> output,
-        bool reinhard, size_t kernelWidth, const float sigma) noexcept {
+        bool const reinhard, size_t kernelWidth, const float sigma) noexcept {
 
     auto computeGaussianCoefficients =
-            [kernelWidth, sigma](float2* kernel, size_t size) -> size_t {
+            [kernelWidth, sigma](float2* kernel, size_t const size) -> size_t {
         const float alpha = 1.0f / (2.0f * sigma * sigma);
 
         // number of positive-side samples needed, using linear sampling
@@ -1244,8 +1244,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 }
 
 PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(FrameGraph& fg,
-        uint32_t width, uint32_t height, TextureFormat format,
-        float verticalFieldOfView, float2 scale) noexcept {
+        uint32_t const width, uint32_t const height, TextureFormat const format,
+        float const verticalFieldOfView, float2 const scale) noexcept {
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
     // due to the down-sampling with a box filter (which happens implicitly).
@@ -1411,7 +1411,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
         PostProcessManager& ppm, FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> output,
-        bool needInputDuplication, ScreenSpaceRefConfig const& config) noexcept {
+        bool const needInputDuplication, ScreenSpaceRefConfig const& config) noexcept {
 
     // Descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
     auto const& desc = fg.getDescriptor(input);
@@ -1461,10 +1461,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        FrameGraphId<FrameGraphTexture> depth,
+        FrameGraphId<FrameGraphTexture> const input,
+        FrameGraphId<FrameGraphTexture> const depth,
         const CameraInfo& cameraInfo,
-        bool translucent,
+        bool const translucent,
         float2 bokehScale,
         const DepthOfFieldOptions& dofOptions) noexcept {
 
@@ -1775,7 +1775,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
      */
 
     // This is a small helper that does one round of dilate
-    auto dilate = [&](FrameGraphId<FrameGraphTexture> input) -> FrameGraphId<FrameGraphTexture> {
+    auto dilate = [&](FrameGraphId<FrameGraphTexture> const input) -> FrameGraphId<FrameGraphTexture> {
 
         struct PostProcessDofDilate {
             FrameGraphId<FrameGraphTexture> inTilesCocMinMax;
@@ -1979,9 +1979,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor const& outDesc,
-        bool threshold, float highlight, bool fireflies) noexcept {
+        bool const threshold, float const highlight, bool const fireflies) noexcept {
     struct DownsampleData {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
@@ -2014,10 +2014,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg
 }
 
 PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
+        FrameGraphId<FrameGraphTexture> input, TextureFormat const outFormat,
         BloomOptions& inoutBloomOptions,
         TemporalAntiAliasingOptions const& taaOptions,
-        float2 scale) noexcept {
+        float2 const scale) noexcept {
 
     // Figure out a good size for the bloom buffer. We must use a fixed bloom buffer size so
     // that the size/strength of the bloom doesn't vary much with the resolution, otherwise
@@ -2215,9 +2215,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
 
 UTILS_NOINLINE
 FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        uint32_t width, uint32_t height,
-        TextureFormat outFormat,
+        FrameGraphId<FrameGraphTexture> const input,
+        uint32_t const width, uint32_t const height,
+        TextureFormat const outFormat,
         BloomOptions const& bloomOptions) noexcept {
 
     struct FlarePassData {
@@ -2271,7 +2271,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
 
 UTILS_NOINLINE
 static float4 getVignetteParameters(VignetteOptions const& options,
-        uint32_t width, uint32_t height) noexcept {
+        uint32_t const width, uint32_t const height) noexcept {
     if (options.enabled) {
         // Vignette params
         // From 0.0 to 0.5 the vignette is a rounded rect that turns into an oval
@@ -2301,7 +2301,7 @@ static float4 getVignetteParameters(VignetteOptions const& options,
 
 void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
         const FColorGrading* colorGrading, ColorGradingConfig const& colorGradingConfig,
-        VignetteOptions const& vignetteOptions, uint32_t width, uint32_t height) noexcept {
+        VignetteOptions const& vignetteOptions, uint32_t const width, uint32_t const height) noexcept {
 
     float4 const vignetteParameters = getVignetteParameters(vignetteOptions, width, height);
 
@@ -2354,7 +2354,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
 }
 
-void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp op) noexcept {
+void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(mEngine, material);
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
@@ -2377,7 +2377,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> inout) noexcept {
+        FrameGraphId<FrameGraphTexture> const inout) noexcept {
     struct UncompressData {
         FrameGraphId<FrameGraphTexture> inout;
     };
@@ -2402,9 +2402,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-        FrameGraphId<FrameGraphTexture> bloom,
-        FrameGraphId<FrameGraphTexture> flare,
+        FrameGraphId<FrameGraphTexture> const input, filament::Viewport const& vp,
+        FrameGraphId<FrameGraphTexture> const bloom,
+        FrameGraphId<FrameGraphTexture> const flare,
         FColorGrading const* colorGrading,
         ColorGradingConfig const& colorGradingConfig,
         BloomOptions const& bloomOptions,
@@ -2559,8 +2559,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-        TextureFormat outFormat, bool translucent) noexcept {
+        FrameGraphId<FrameGraphTexture> const input, filament::Viewport const& vp,
+        TextureFormat const outFormat, bool const translucent) noexcept {
 
     struct PostProcessFXAA {
         FrameGraphId<FrameGraphTexture> input;
@@ -2622,7 +2622,7 @@ void PostProcessManager::TaaJitterCamera(
     current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
-    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t frameIndex) -> float2 {
+    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t const frameIndex) -> float2 {
         using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
         switch (pattern) {
             case JitterPattern::RGSS_X4:
@@ -2669,7 +2669,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     bool dirty = false;
 
     auto setConstantParameter =
-            [&dirty](FMaterial* const ma, std::string_view name, auto value) noexcept {
+            [&dirty](FMaterial* const ma, std::string_view const name, auto value) noexcept {
         auto id = ma->getSpecializationConstantId(name);
         if (id.has_value()) {
             if (ma->setConstant(id.value(), value)) {
@@ -2696,7 +2696,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
-        FrameGraphId<FrameGraphTexture> depth,
+        FrameGraphId<FrameGraphTexture> const depth,
         FrameHistory& frameHistory,
         FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
         TemporalAntiAliasingOptions const& taaOptions,
@@ -2773,7 +2773,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 };
 
                 UTILS_UNUSED
-                auto const lanczos = [](float x, float a) -> float {
+                auto const lanczos = [](float const x, float const a) -> float {
                     if (x <= std::numeric_limits<float>::epsilon()) {
                         return 1.0f;
                     }
@@ -2873,10 +2873,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
         FrameGraph& fg,
-        float sharpness,
-        FrameGraphId<FrameGraphTexture> input,
+        float const sharpness,
+        FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor const& outDesc,
-        bool translucent) {
+        bool const translucent) {
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -2918,7 +2918,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
-        DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
+        DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
 
@@ -3093,8 +3093,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool translucent,
-        FrameGraphId<FrameGraphTexture> input,
+FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool const translucent,
+        FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filterMag,
         SamplerMinFilter filterMin) noexcept {
@@ -3162,7 +3162,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool tr
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input) noexcept {
+        FrameGraphId<FrameGraphTexture> const input) noexcept {
     auto const& inputDesc = fg.getDescriptor(input);
     filament::Viewport const vp = {0, 0, inputDesc.width, inputDesc.height};
     bool const hardwareBlitSupported =
@@ -3245,7 +3245,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
-        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor outDesc) noexcept {
 
     // Don't do anything if we're not a MSAA buffer
@@ -3299,7 +3299,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
-        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor outDesc) noexcept {
 
     // Don't do anything if we're not a MSAA buffer
@@ -3346,7 +3346,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
+        FrameGraphId<FrameGraphTexture> const input, uint8_t layer, size_t const level,
         float4 clearColor) noexcept {
 
     struct VsmMipData {
@@ -3407,8 +3407,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        FrameGraphId<FrameGraphTexture> depth) noexcept {
+        FrameGraphId<FrameGraphTexture> const input,
+        FrameGraphId<FrameGraphTexture> const depth) noexcept {
 
     // new pass for showing the cascades
     struct DebugShadowCascadesData {
@@ -3441,7 +3441,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(FrameGraph& fg,
-    bool translucent, FrameGraphId<FrameGraphTexture> input,
+    bool const translucent, FrameGraphId<FrameGraphTexture> const input,
     filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
     SamplerMagFilter filterMag,
     SamplerMinFilter filterMin) noexcept {
@@ -3523,8 +3523,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
 FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
         FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
-        FrameGraphId<FrameGraphTexture> shadowmap, float scale,
-        uint8_t layer, uint8_t level, uint8_t channel, float power) noexcept {
+        FrameGraphId<FrameGraphTexture> const shadowmap, float const scale,
+        uint8_t const layer, uint8_t const level, uint8_t const channel, float const power) noexcept {
     if (shadowmap) {
         struct ShadowMapData {
             FrameGraphId<FrameGraphTexture> color;

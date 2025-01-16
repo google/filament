@@ -65,15 +65,15 @@ public:
 
     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
 
-    void setBlendOrder(uint16_t order) noexcept {
+    void setBlendOrder(uint16_t const order) noexcept {
         mBlendOrder = static_cast<uint16_t>(order & 0x7FFF);
     }
 
-    void setGlobalBlendOrderEnabled(bool enabled) noexcept {
+    void setGlobalBlendOrderEnabled(bool const enabled) noexcept {
         mGlobalBlendOrderEnabled = enabled;
     }
 
-    void setMorphingBufferOffset(uint32_t offset) noexcept {
+    void setMorphingBufferOffset(uint32_t const offset) noexcept {
         mMorphingBufferOffset = offset;
     }
 

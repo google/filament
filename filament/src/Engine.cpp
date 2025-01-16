@@ -104,15 +104,15 @@ Scene* Engine::createScene() noexcept {
     return downcast(this)->createScene();
 }
 
-Camera* Engine::createCamera(Entity entity) noexcept {
+Camera* Engine::createCamera(Entity const entity) noexcept {
     return downcast(this)->createCamera(entity);
 }
 
-Camera* Engine::getCameraComponent(Entity entity) noexcept {
+Camera* Engine::getCameraComponent(Entity const entity) noexcept {
     return downcast(this)->getCameraComponent(entity);
 }
 
-void Engine::destroyCameraComponent(Entity entity) noexcept {
+void Engine::destroyCameraComponent(Entity const entity) noexcept {
     downcast(this)->destroyCameraComponent(entity);
 }
 
@@ -120,11 +120,11 @@ Fence* Engine::createFence() noexcept {
     return downcast(this)->createFence();
 }
 
-SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
+SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t const flags) noexcept {
     return downcast(this)->createSwapChain(nativeWindow, flags);
 }
 
-SwapChain* Engine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
+SwapChain* Engine::createSwapChain(uint32_t const width, uint32_t const height, uint64_t const flags) noexcept {
     return downcast(this)->createSwapChain(width, height, flags);
 }
 
@@ -204,7 +204,7 @@ bool Engine::destroy(const InstanceBuffer* p) {
     return downcast(this)->destroy(downcast(p));
 }
 
-void Engine::destroy(Entity e) {
+void Engine::destroy(Entity const e) {
     downcast(this)->destroy(e);
 }
 
@@ -362,7 +362,7 @@ void Engine::enableAccurateTranslations() noexcept  {
     getTransformManager().setAccurateTranslationsEnabled(true);
 }
 
-void* Engine::streamAlloc(size_t size, size_t alignment) noexcept {
+void* Engine::streamAlloc(size_t const size, size_t const alignment) noexcept {
     return downcast(this)->streamAlloc(size, alignment);
 }
 
@@ -385,7 +385,7 @@ bool Engine::isPaused() const noexcept {
     return downcast(this)->isPaused();
 }
 
-void Engine::setPaused(bool paused) {
+void Engine::setPaused(bool const paused) {
     FILAMENT_CHECK_PRECONDITION(UTILS_HAS_THREADING)
             << "Pause is meant for multi-threaded platforms.";
     downcast(this)->setPaused(paused);
@@ -403,7 +403,7 @@ void Engine::unprotected() noexcept {
     downcast(this)->unprotected();
 }
 
-void Engine::setAutomaticInstancingEnabled(bool enable) noexcept {
+void Engine::setAutomaticInstancingEnabled(bool const enable) noexcept {
     downcast(this)->setAutomaticInstancingEnabled(enable);
 }
 
@@ -415,7 +415,7 @@ FeatureLevel Engine::getSupportedFeatureLevel() const noexcept {
     return downcast(this)->getSupportedFeatureLevel();
 }
 
-FeatureLevel Engine::setActiveFeatureLevel(FeatureLevel featureLevel) {
+FeatureLevel Engine::setActiveFeatureLevel(FeatureLevel const featureLevel) {
     return downcast(this)->setActiveFeatureLevel(featureLevel);
 }
 
@@ -447,7 +447,7 @@ Slice<const Engine::FeatureFlag> Engine::getFeatureFlags() const noexcept {
     return downcast(this)->getFeatureFlags();
 }
 
-bool Engine::setFeatureFlag(char const* name, bool value) noexcept {
+bool Engine::setFeatureFlag(char const* name, bool const value) noexcept {
     return downcast(this)->setFeatureFlag(name, value);
 }
 

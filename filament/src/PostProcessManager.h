@@ -428,7 +428,7 @@ private:
 
     template<size_t SIZE>
     struct JitterSequence {
-        math::float2 operator()(size_t i) const noexcept { return positions[i % SIZE] - 0.5f; }
+        math::float2 operator()(size_t const i) const noexcept { return positions[i % SIZE] - 0.5f; }
         const std::array<math::float2, SIZE> positions;
     };
 

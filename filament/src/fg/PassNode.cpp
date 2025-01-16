@@ -44,7 +44,7 @@ utils::CString PassNode::graphvizifyEdgeColor() const noexcept {
     return utils::CString{"red"};
 }
 
-void PassNode::registerResource(FrameGraphHandle resourceHandle) noexcept {
+void PassNode::registerResource(FrameGraphHandle const resourceHandle) noexcept {
     VirtualResource* resource = mFrameGraph.getResource(resourceHandle);
     resource->neededByPass(this);
     mDeclaredHandles.insert(resourceHandle.index);
@@ -288,7 +288,7 @@ void RenderPassNode::RenderPassData::destroy(
     }
 }
 
-RenderPassNode::RenderPassData const* RenderPassNode::getRenderPassData(uint32_t id) const noexcept {
+RenderPassNode::RenderPassData const* RenderPassNode::getRenderPassData(uint32_t const id) const noexcept {
     return id < mRenderTargetData.size() ? &mRenderTargetData[id] : nullptr;
 }
 

@@ -63,23 +63,23 @@ RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Textur
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t const level) noexcept {
     mImpl->mAttachments[(size_t)pt].mipLevel = level;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace face) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace const face) noexcept {
     mImpl->mAttachments[(size_t)pt].face = face;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t layer) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t const layer) noexcept {
     mImpl->mAttachments[(size_t)pt].layer = layer;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t layerCount,
-        uint8_t baseLayer/*= 0*/) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t const layerCount,
+        uint8_t const baseLayer/*= 0*/) noexcept {
     mImpl->mAttachments[(size_t)pt].layer = baseLayer;
     mImpl->mAttachments[(size_t)pt].layerCount = layerCount;
     return *this;

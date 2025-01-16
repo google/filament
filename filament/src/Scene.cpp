@@ -39,19 +39,19 @@ IndirectLight* Scene::getIndirectLight() const noexcept {
     return downcast(this)->getIndirectLight();
 }
 
-void Scene::addEntity(Entity entity) {
+void Scene::addEntity(Entity const entity) {
     downcast(this)->addEntity(entity);
 }
 
-void Scene::addEntities(const Entity* entities, size_t count) {
+void Scene::addEntities(const Entity* entities, size_t const count) {
     downcast(this)->addEntities(entities, count);
 }
 
-void Scene::remove(Entity entity) {
+void Scene::remove(Entity const entity) {
     downcast(this)->remove(entity);
 }
 
-void Scene::removeEntities(const Entity* entities, size_t count) {
+void Scene::removeEntities(const Entity* entities, size_t const count) {
     downcast(this)->removeEntities(entities, count);
 }
 
@@ -67,7 +67,7 @@ size_t Scene::getLightCount() const noexcept {
     return downcast(this)->getLightCount();
 }
 
-bool Scene::hasEntity(Entity entity) const noexcept {
+bool Scene::hasEntity(Entity const entity) const noexcept {
     return downcast(this)->hasEntity(entity);
 }
 

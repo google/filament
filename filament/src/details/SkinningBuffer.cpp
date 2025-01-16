@@ -50,17 +50,17 @@ BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexce
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 
-SkinningBuffer::Builder& SkinningBuffer::Builder::boneCount(uint32_t boneCount) noexcept {
+SkinningBuffer::Builder& SkinningBuffer::Builder::boneCount(uint32_t const boneCount) noexcept {
     mImpl->mBoneCount = boneCount;
     return *this;
 }
 
-SkinningBuffer::Builder& SkinningBuffer::Builder::initialize(bool initialize) noexcept {
+SkinningBuffer::Builder& SkinningBuffer::Builder::initialize(bool const initialize) noexcept {
     mImpl->mInitialize = initialize;
     return *this;
 }
 
-SkinningBuffer::Builder& SkinningBuffer::Builder::name(const char* name, size_t len) noexcept {
+SkinningBuffer::Builder& SkinningBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
 }
 
@@ -106,7 +106,7 @@ void FSkinningBuffer::terminate(FEngine& engine) {
 }
 
 void FSkinningBuffer::setBones(FEngine& engine,
-        RenderableManager::Bone const* transforms, size_t count, size_t offset) {
+        RenderableManager::Bone const* transforms, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
             << "SkinningBuffer (size=" << (unsigned)mBoneCount
             << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
@@ -116,7 +116,7 @@ void FSkinningBuffer::setBones(FEngine& engine,
 }
 
 void FSkinningBuffer::setBones(FEngine& engine,
-        mat4f const* transforms, size_t count, size_t offset) {
+        mat4f const* transforms, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION((offset + count) <= mBoneCount)
             << "SkinningBuffer (size=" << (unsigned)mBoneCount
             << ") overflow (boneCount=" << (unsigned)count << ", offset=" << (unsigned)offset
@@ -133,7 +133,7 @@ static uint32_t packHalf2x16(half2 v) noexcept {
 }
 
 void FSkinningBuffer::setBones(FEngine& engine, Handle<HwBufferObject> handle,
-        RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) noexcept {
+        RenderableManager::Bone const* transforms, size_t const boneCount, size_t const offset) noexcept {
     auto& driverApi = engine.getDriverApi();
     auto* UTILS_RESTRICT out = driverApi.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
@@ -162,7 +162,7 @@ PerRenderableBoneUib::BoneData FSkinningBuffer::makeBone(mat4f transform) noexce
 }
 
 void FSkinningBuffer::setBones(FEngine& engine, Handle<HwBufferObject> handle,
-        mat4f const* transforms, size_t boneCount, size_t offset) noexcept {
+        mat4f const* transforms, size_t const boneCount, size_t const offset) noexcept {
     auto& driverApi = engine.getDriverApi();
     auto* UTILS_RESTRICT out = driverApi.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
     for (size_t i = 0, c = boneCount; i < c; ++i) {
@@ -177,16 +177,16 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<HwBufferObject> handle,
 // When you change this value, you must change MAX_SKINNING_BUFFER_WIDTH at getters.vs
 constexpr size_t MAX_SKINNING_BUFFER_WIDTH = 2048;
 
-static inline size_t getSkinningBufferWidth(size_t pairCount) noexcept {
+static inline size_t getSkinningBufferWidth(size_t const pairCount) noexcept {
     return std::clamp(pairCount, size_t(1), MAX_SKINNING_BUFFER_WIDTH);
 }
 
-static inline size_t getSkinningBufferHeight(size_t pairCount) noexcept {
+static inline size_t getSkinningBufferHeight(size_t const pairCount) noexcept {
     return std::max(size_t(1),
             (pairCount + MAX_SKINNING_BUFFER_WIDTH - 1) / MAX_SKINNING_BUFFER_WIDTH);
 }
 
-inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
+inline size_t getSkinningBufferSize(size_t const pairCount) noexcept {
     const size_t stride = getSkinningBufferWidth(pairCount);
     const size_t height = getSkinningBufferHeight(pairCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
@@ -197,9 +197,9 @@ inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
 
 UTILS_NOINLINE
 void updateDataAt(DriverApi& driver,
-        Handle<HwTexture> handle, PixelDataFormat format, PixelDataType type,
+        Handle<HwTexture> handle, PixelDataFormat const format, PixelDataType const type,
         const utils::FixedCapacityVector<float2>& pairs,
-        size_t count) {
+        size_t const count) {
 
     size_t const elementSize = sizeof(float2);
     size_t const size = getSkinningBufferSize(count);
@@ -238,7 +238,7 @@ void updateDataAt(DriverApi& driver,
 }
 
 TextureHandle FSkinningBuffer::createIndicesAndWeightsHandle(
-        FEngine& engine, size_t count) {
+        FEngine& engine, size_t const count) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     // create a texture for skinning pairs data (bone index and weight)
     return driver.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -250,7 +250,7 @@ TextureHandle FSkinningBuffer::createIndicesAndWeightsHandle(
 
 void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
         Handle<HwTexture> textureHandle,
-        const utils::FixedCapacityVector<float2>& pairs, size_t count) {
+        const utils::FixedCapacityVector<float2>& pairs, size_t const count) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     updateDataAt(driver, textureHandle,

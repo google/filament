@@ -175,7 +175,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
     return shadowTechnique;
 }
 
-ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_t lightIndex,
+ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_t const lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
     // this updates getCascadedShadowMap()
@@ -191,7 +191,7 @@ ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_
     return *this;
 }
 
-ShadowMapManager::Builder& ShadowMapManager::Builder::shadowMap(size_t lightIndex, bool spotlight,
+ShadowMapManager::Builder& ShadowMapManager::Builder::shadowMap(size_t const lightIndex, bool const spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
         const size_t c = mSpotShadowMapCount++;
@@ -770,7 +770,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 }
 
 void ShadowMapManager::updateSpotVisibilityMasks(
-        uint8_t visibleLayers,
+        uint8_t const visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
         FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
         Culler::result_type* UTILS_RESTRICT visibleMask, size_t count) {
@@ -930,7 +930,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
 }
 
 void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
-        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> const range,
         FScene::LightSoa const& lightData) noexcept {
 
     uint8_t const face = shadowMap.getFace();

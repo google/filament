@@ -61,8 +61,8 @@ void HwVertexBufferInfoFactory::terminate(DriverApi&) noexcept {
 }
 
 auto HwVertexBufferInfoFactory::create(DriverApi& driver,
-        uint8_t bufferCount,
-        uint8_t attributeCount,
+        uint8_t const bufferCount,
+        uint8_t const attributeCount,
         AttributeArray attributes) noexcept -> Handle {
 
     Key const key({ bufferCount, attributeCount, {}, attributes });

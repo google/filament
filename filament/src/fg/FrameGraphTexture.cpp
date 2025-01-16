@@ -24,7 +24,7 @@ namespace filament {
 
 void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator, const char* name,
         Descriptor const& descriptor, Usage usage,
-        bool useProtectedMemory) noexcept {
+        bool const useProtectedMemory) noexcept {
     if (useProtectedMemory) {
         // FIXME: I think we should restrict this to attachments and blit destinations only
         usage |= Usage::PROTECTED;

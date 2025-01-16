@@ -239,12 +239,12 @@ private:
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
 
-    ShadowMap& getShadowMap(size_t index) noexcept {
+    ShadowMap& getShadowMap(size_t const index) noexcept {
         assert_invariant(index < mShadowMapCache.size());
         return *std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[index]));
     }
 
-    ShadowMap const& getShadowMap(size_t index) const noexcept {
+    ShadowMap const& getShadowMap(size_t const index) const noexcept {
         return const_cast<ShadowMapManager*>(this)->getShadowMap(index);
     }
 

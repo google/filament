@@ -45,17 +45,17 @@ BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::vertexCount(size_t vertexCount) noexcept {
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::vertexCount(size_t const vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
     return *this;
 }
 
-MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::count(size_t count) noexcept {
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::count(size_t const count) noexcept {
     mImpl->mCount = count;
     return *this;
 }
 
-MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(const char* name, size_t len) noexcept {
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
 }
 
@@ -69,11 +69,11 @@ MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
 // When you change this value, you must change MAX_MORPH_TARGET_BUFFER_WIDTH at getters.vs
 constexpr size_t MAX_MORPH_TARGET_BUFFER_WIDTH = 2048;
 
-static inline size_t getWidth(size_t vertexCount) noexcept {
+static inline size_t getWidth(size_t const vertexCount) noexcept {
     return std::min(vertexCount, MAX_MORPH_TARGET_BUFFER_WIDTH);
 }
 
-static inline size_t getHeight(size_t vertexCount) noexcept {
+static inline size_t getHeight(size_t const vertexCount) noexcept {
     return (vertexCount + MAX_MORPH_TARGET_BUFFER_WIDTH) / MAX_MORPH_TARGET_BUFFER_WIDTH;
 }
 
@@ -81,7 +81,7 @@ template<VertexAttribute A>
 inline size_t getSize(size_t vertexCount) noexcept;
 
 template<>
-inline size_t getSize<POSITION>(size_t vertexCount) noexcept {
+inline size_t getSize<POSITION>(size_t const vertexCount) noexcept {
     const size_t stride = getWidth(vertexCount);
     const size_t height = getHeight(vertexCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
@@ -91,7 +91,7 @@ inline size_t getSize<POSITION>(size_t vertexCount) noexcept {
 }
 
 template<>
-inline size_t getSize<TANGENTS>(size_t vertexCount) noexcept {
+inline size_t getSize<TANGENTS>(size_t const vertexCount) noexcept {
     const size_t stride = getWidth(vertexCount);
     const size_t height = getHeight(vertexCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
@@ -146,8 +146,8 @@ void FMorphTargetBuffer::terminate(FEngine& engine) {
     }
 }
 
-void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
-        float3 const* positions, size_t count, size_t offset) {
+void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetIndex,
+        float3 const* positions, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
@@ -169,8 +169,8 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
             count, offset);
 }
 
-void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
-        float4 const* positions, size_t count, size_t offset) {
+void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetIndex,
+        float4 const* positions, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
@@ -191,8 +191,8 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
             count, offset);
 }
 
-void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
-        short4 const* tangents, size_t count, size_t offset) {
+void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex,
+        short4 const* tangents, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
             << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
@@ -215,9 +215,9 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
 
 UTILS_NOINLINE
 void FMorphTargetBuffer::updateDataAt(DriverApi& driver,
-        Handle<HwTexture> handle, PixelDataFormat format, PixelDataType type,
-        const char* out, size_t elementSize,
-        size_t targetIndex, size_t count, size_t offset) {
+        Handle<HwTexture> handle, PixelDataFormat const format, PixelDataType const type,
+        const char* out, size_t const elementSize,
+        size_t const targetIndex, size_t const count, size_t const offset) {
 
     size_t yoffset              = offset / MAX_MORPH_TARGET_BUFFER_WIDTH;
     size_t const xoffset        = offset % MAX_MORPH_TARGET_BUFFER_WIDTH;

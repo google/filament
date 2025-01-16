@@ -52,11 +52,11 @@ public:
     * Component Manager APIs
     */
 
-    bool hasComponent(utils::Entity e) const noexcept {
+    bool hasComponent(utils::Entity const e) const noexcept {
         return mManager.hasComponent(e);
     }
 
-    Instance getInstance(utils::Entity e) const noexcept {
+    Instance getInstance(utils::Entity const e) const noexcept {
         return { mManager.getInstance(e) };
     }
 
@@ -68,7 +68,7 @@ public:
         return mManager.empty();
     }
 
-    utils::Entity getEntity(Instance i) const noexcept {
+    utils::Entity getEntity(Instance const i) const noexcept {
         return mManager.getEntity(i);
     }
 
@@ -76,7 +76,7 @@ public:
         return mManager.getEntities();
     }
 
-    FCamera* getCamera(Instance i) noexcept {
+    FCamera* getCamera(Instance const i) noexcept {
         return mManager.elementAt<CAMERA>(i);
     }
 

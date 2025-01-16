@@ -84,8 +84,8 @@ void ShadowMap::terminate(FEngine& engine) {
 
 ShadowMap::~ShadowMap() = default;
 
-void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType,
-        uint16_t shadowIndex, uint8_t face,
+void ShadowMap::initialize(size_t const lightIndex, ShadowType const shadowType,
+        uint16_t const shadowIndex, uint8_t const face,
         LightManager::ShadowOptions const* options) {
     mLightIndex = lightIndex;
     mShadowIndex = shadowIndex;
@@ -266,7 +266,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 }
 
 ShadowMap::ShaderParameters ShadowMap::updatePunctual(
-        mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
+        mat4f const& Mv, float const outerConeAngle, float const nearPlane, float const farPlane,
         const ShadowMapInfo& shadowMapInfo, const FLightManager::ShadowParams& params) noexcept {
     const mat4f Mp = mat4f::perspective(
             outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
@@ -363,7 +363,7 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
 }
 
 ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
-        const FScene::LightSoa& lightData, size_t index, CameraInfo const&,
+        const FScene::LightSoa& lightData, size_t const index, CameraInfo const&,
         const ShadowMapInfo& shadowMapInfo, FScene const& scene, uint8_t face) noexcept {
 
     // check if this shadow map has anything to render
@@ -712,7 +712,7 @@ ShadowMap::TextureCoordsMapping ShadowMap::getTextureCoordsMapping(ShadowMapInfo
 }
 
 mat4f ShadowMap::computeVsmLightSpaceMatrix(const mat4f& lightSpacePcf,
-        const mat4f& Mv, float znear, float zfar) noexcept {
+        const mat4f& Mv, float const znear, float const zfar) noexcept {
     // The lightSpacePcf matrix transforms coordinates from world space into (u, v, z) coordinates,
     // where (u, v) are used to access the shadow map, and z is the (non-linear) PCF comparison
     // value [0, 1].
@@ -732,7 +732,7 @@ mat4f ShadowMap::computeVsmLightSpaceMatrix(const mat4f& lightSpacePcf,
 
 // This construct a frustum (similar to glFrustum or frustum), except
 // it looks towards the +y axis, and assumes -1,1 for the left/right and bottom/top planes.
-mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
+mat4f ShadowMap::warpFrustum(float const n, float const f) noexcept {
     assert_invariant(f > n);
     const float d = 1 / (f - n);
     const float A = (f + n) * d;
@@ -746,7 +746,7 @@ mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
     return Wp;
 }
 
-mat4f ShadowMap::directionalLightFrustum(float near, float far) noexcept {
+mat4f ShadowMap::directionalLightFrustum(float const near, float const far) noexcept {
     const float d = far - near;
     mat4f m;
     m[2][2] = -2 / d;
@@ -755,7 +755,7 @@ mat4f ShadowMap::directionalLightFrustum(float near, float far) noexcept {
 }
 
 float2 ShadowMap::computeNearFar(const mat4f& view,
-        float3 const* wsVertices, size_t count) noexcept {
+        float3 const* wsVertices, size_t const count) noexcept {
     float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     for (size_t i = 0; i < count; i++) {
         // we're on the z axis in light space (looking down to -z)
@@ -767,7 +767,7 @@ float2 ShadowMap::computeNearFar(const mat4f& view,
 }
 
 float2 ShadowMap::computeNearFarOfWarpSpace(mat4f const& lightView,
-        float3 const* wsVertices, size_t count) noexcept {
+        float3 const* wsVertices, size_t const count) noexcept {
     float2 nearFar = { std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest() };
     #pragma nounroll
     for (size_t i = 0; i < count; i++) {
@@ -793,7 +793,7 @@ float4 ShadowMap::computeBoundingSphere(float3 const* vertices, size_t count) no
 }
 
 Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
-        float3 const* wsVertices, size_t count) noexcept {
+        float3 const* wsVertices, size_t const count) noexcept {
     Aabb bounds{};
     Slice<float3> const vertices{ wsVertices, count };
     for (auto const& vertice : vertices) {
@@ -849,7 +849,7 @@ ShadowMap::Corners ShadowMap::computeFrustumCorners(
 Aabb ShadowMap::computeLightFrustumBounds(mat4f const& lightView,
         Aabb const& wsShadowReceiversVolume, Aabb const& wsShadowCastersVolume,
         SceneInfo const& sceneInfo,
-        bool stable, bool focusShadowCasters, bool farUsesShadowCasters) noexcept {
+        bool const stable, bool const focusShadowCasters, bool const farUsesShadowCasters) noexcept {
     Aabb lsLightFrustumBounds{};
 
     float const receiversFar = sceneInfo.lsReceiversNearFar[1];
@@ -880,9 +880,9 @@ Aabb ShadowMap::computeLightFrustumBounds(mat4f const& lightView,
 }
 
 void ShadowMap::snapLightFrustum(float2& s, float2& o,
-        double2 lsRef, int2 resolution) noexcept {
+        double2 const lsRef, int2 const resolution) noexcept {
 
-    auto proj2 = [](mat4 m, double2 v) -> double2 {
+    auto proj2 = [](mat4 m, double2 const v) -> double2 {
         double2 p;
         p.x = dot(double2{ m[0].x, m[1].x }, v) + m[3].x;
         p.y = dot(double2{ m[0].y, m[1].y }, v) + m[3].y;
@@ -1198,7 +1198,7 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF,
 }
 
 template<typename Casters, typename Receivers>
-void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
+void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers,
         Casters casters, Receivers receivers) noexcept {
     SYSTRACE_CALL();
 
@@ -1225,7 +1225,7 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
 }
 
 ShadowMap::SceneInfo::SceneInfo(
-        FScene const& scene, uint8_t visibleLayers) noexcept
+        FScene const& scene, uint8_t const visibleLayers) noexcept
         : visibleLayers(visibleLayers) {
 
     // the code below only works with affine transforms
@@ -1263,7 +1263,7 @@ void ShadowMap::updateSceneInfoDirectional(mat4f const& Mv, FScene const& scene,
                 sceneInfo.lsCastersNearFar.x = max(sceneInfo.lsCastersNearFar.x, r.max.z);
                 sceneInfo.lsCastersNearFar.y = min(sceneInfo.lsCastersNearFar.y, r.min.z);
             },
-            [&](Aabb receiver, Culler::result_type vis) {
+            [&](Aabb receiver, Culler::result_type const vis) {
                 // account only for objects that are visible by the camera
                 auto mask = 1u << VISIBLE_RENDERABLE_BIT;
                 if ((vis & mask) == mask) {
@@ -1284,7 +1284,7 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
     sceneInfo.lsCastersNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     // account only for objects that are visible by both the camera and the light
     visitScene(scene, sceneInfo.visibleLayers,
-            [&](Aabb caster, Culler::result_type vis) {
+            [&](Aabb caster, Culler::result_type const vis) {
                 auto mask = VISIBLE_DYN_SHADOW_RENDERABLE;
                 if ((vis & mask) == mask) {
                     auto r = Aabb::transform(Mv.upperLeft(), Mv[3].xyz, caster);
@@ -1296,7 +1296,7 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
             }
     );
 }
-void ShadowMap::setAllocation(uint8_t layer, backend::Viewport viewport) noexcept {
+void ShadowMap::setAllocation(uint8_t const layer, backend::Viewport viewport) noexcept {
     mLayer = layer;
     mOffset = { viewport.left, viewport.bottom };
 }
@@ -1381,7 +1381,7 @@ void ShadowMap::prepareTime(Transaction const& transaction,
 }
 
 void ShadowMap::prepareShadowMapping(Transaction const& transaction,
-        bool highPrecision) noexcept {
+        bool const highPrecision) noexcept {
     ShadowMapDescriptorSet::prepareShadowMapping(transaction, highPrecision);
 }
 

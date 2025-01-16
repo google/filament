@@ -28,27 +28,27 @@ bool DebugRegistry::hasProperty(const char* name) const noexcept {
     return downcast(this)->hasProperty(name);
 }
 
-bool DebugRegistry::setProperty(const char* name, bool v) noexcept {
+bool DebugRegistry::setProperty(const char* name, bool const v) noexcept {
     return downcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, int v) noexcept {
+bool DebugRegistry::setProperty(const char* name, int const v) noexcept {
     return downcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, float v) noexcept {
+bool DebugRegistry::setProperty(const char* name, float const v) noexcept {
     return downcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, float2 v) noexcept {
+bool DebugRegistry::setProperty(const char* name, float2 const v) noexcept {
     return downcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, float3 v) noexcept {
+bool DebugRegistry::setProperty(const char* name, float3 const v) noexcept {
     return downcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, float4 v) noexcept {
+bool DebugRegistry::setProperty(const char* name, float4 const v) noexcept {
     return downcast(this)->setProperty(name, v);
 }
 

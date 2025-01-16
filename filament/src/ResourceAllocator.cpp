@@ -144,24 +144,24 @@ void ResourceAllocator::terminate() noexcept {
 }
 
 RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
-        TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, uint8_t layerCount, MRT color, TargetBufferInfo depth,
-        TargetBufferInfo stencil) noexcept {
+        TargetBufferFlags const targetBufferFlags, uint32_t const width, uint32_t const height,
+        uint8_t const samples, uint8_t const layerCount, MRT const color, TargetBufferInfo const depth,
+        TargetBufferInfo const stencil) noexcept {
     auto handle = mBackend.createRenderTarget(targetBufferFlags,
             width, height, samples ? samples : 1u, layerCount, color, depth, stencil);
     mBackend.setDebugTag(handle.getId(), CString{ name });
     return handle;
 }
 
-void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
+void ResourceAllocator::destroyRenderTarget(RenderTargetHandle const h) noexcept {
     mBackend.destroyRenderTarget(h);
 }
 
 TextureHandle ResourceAllocator::createTexture(const char* name,
-        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth,
-        std::array<TextureSwizzle, 4> swizzle,
-        TextureUsage usage) noexcept {
+        SamplerType const target, uint8_t const levels, TextureFormat const format, uint8_t samples,
+        uint32_t const width, uint32_t const height, uint32_t const depth,
+        std::array<TextureSwizzle, 4> const swizzle,
+        TextureUsage const usage) noexcept {
     // The frame graph descriptor uses "0" to mean "auto" but the sample count that is passed to the
     // backend should always be 1 or greater.
     samples = samples ? samples : uint8_t(1);
@@ -207,7 +207,7 @@ TextureHandle ResourceAllocator::createTexture(const char* name,
     return handle;
 }
 
-void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
+void ResourceAllocator::destroyTexture(TextureHandle const h) noexcept {
     auto const key = mDisposer->checkin(h);
     if constexpr (mEnabled) {
         if (UTILS_LIKELY(key.has_value())) {
@@ -225,7 +225,7 @@ ResourceAllocatorDisposerInterface& ResourceAllocator::getDisposer() noexcept {
     return *mDisposer;
 }
 
-void ResourceAllocator::gc(bool skippedFrame) noexcept {
+void ResourceAllocator::gc(bool const skippedFrame) noexcept {
     // this is called regularly -- usually once per frame
 
     // increase our age at each (non-skipped) frame
@@ -289,7 +289,7 @@ void ResourceAllocator::gc(bool skippedFrame) noexcept {
 }
 
 UTILS_NOINLINE
-void ResourceAllocator::dump(bool brief) const noexcept {
+void ResourceAllocator::dump(bool const brief) const noexcept {
     constexpr float MiB = 1.0f / float(1u << 20u);
     slog.d  << "# entries=" << mTextureCache.size()
             << ", sz=" << (float)mCacheSize * MiB << " MiB"
@@ -329,7 +329,7 @@ void ResourceAllocatorDisposer::terminate() noexcept {
     assert_invariant(mInUseTextures.empty());
 }
 
-void ResourceAllocatorDisposer::destroy(TextureHandle handle) noexcept {
+void ResourceAllocatorDisposer::destroy(TextureHandle const handle) noexcept {
     if (handle) {
         auto r = checkin(handle);
         if (r.has_value()) {

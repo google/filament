@@ -45,11 +45,11 @@ public:
     * Component Manager APIs
     */
 
-    bool hasComponent(utils::Entity e) const noexcept {
+    bool hasComponent(utils::Entity const e) const noexcept {
         return mManager.hasComponent(e);
     }
 
-    Instance getInstance(utils::Entity e) const noexcept {
+    Instance getInstance(utils::Entity const e) const noexcept {
         return { mManager.getInstance(e) };
     }
 
@@ -61,7 +61,7 @@ public:
         return mManager.empty();
     }
 
-    utils::Entity getEntity(Instance i) const noexcept {
+    utils::Entity getEntity(Instance const i) const noexcept {
         return mManager.getEntity(i);
     }
 
@@ -109,15 +109,15 @@ public:
 
     void setTransform(Instance ci, const math::mat4& model) noexcept;
 
-    const math::mat4f& getTransform(Instance ci) const noexcept {
+    const math::mat4f& getTransform(Instance const ci) const noexcept {
         return mManager[ci].local;
     }
 
-    const math::mat4f& getWorldTransform(Instance ci) const noexcept {
+    const math::mat4f& getWorldTransform(Instance const ci) const noexcept {
         return mManager[ci].world;
     }
 
-    math::mat4 getTransformAccurate(Instance ci) const noexcept {
+    math::mat4 getTransformAccurate(Instance const ci) const noexcept {
         math::mat4f const& local = mManager[ci].local;
         math::float3 const localTranslationLo = mManager[ci].localTranslationLo;
         math::mat4 r(local);
@@ -125,7 +125,7 @@ public:
         return r;
     }
 
-    math::mat4 getWorldTransformAccurate(Instance ci) const noexcept {
+    math::mat4 getWorldTransformAccurate(Instance const ci) const noexcept {
         math::mat4f const& world = mManager[ci].world;
         math::float3 const worldTranslationLo = mManager[ci].worldTranslationLo;
         math::mat4 r(world);

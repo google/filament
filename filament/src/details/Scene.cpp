@@ -428,7 +428,7 @@ void FScene::updateUBOs(
     driver.resetBufferObject(renderableUbh);
     driver.updateBufferObjectUnsynchronized(renderableUbh, {
             buffer, count * sizeof(PerRenderableData),
-            +[](void* p, size_t s, void* user) {
+            +[](void* p, size_t const s, void* user) {
                 std::weak_ptr<SharedState>* const weakShared =
                         static_cast<std::weak_ptr<SharedState>*>(user);
                 if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
@@ -525,22 +525,22 @@ inline void FScene::computeLightRanges(
 }
 
 UTILS_NOINLINE
-void FScene::addEntity(Entity entity) {
+void FScene::addEntity(Entity const entity) {
     mEntities.insert(entity);
 }
 
 UTILS_NOINLINE
-void FScene::addEntities(const Entity* entities, size_t count) {
+void FScene::addEntities(const Entity* entities, size_t const count) {
     mEntities.insert(entities, entities + count);
 }
 
 UTILS_NOINLINE
-void FScene::remove(Entity entity) {
+void FScene::remove(Entity const entity) {
     mEntities.erase(entity);
 }
 
 UTILS_NOINLINE
-void FScene::removeEntities(const Entity* entities, size_t count) {
+void FScene::removeEntities(const Entity* entities, size_t const count) {
     for (size_t i = 0; i < count; ++i, ++entities) {
         remove(*entities);
     }
@@ -573,7 +573,7 @@ size_t FScene::getLightCount() const noexcept {
 }
 
 UTILS_NOINLINE
-bool FScene::hasEntity(Entity entity) const noexcept {
+bool FScene::hasEntity(Entity const entity) const noexcept {
     return mEntities.find(entity) != mEntities.end();
 }
 

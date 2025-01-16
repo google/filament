@@ -88,7 +88,7 @@ void ShadowMapDescriptorSet::prepareCamera(Transaction const& transaction,
     s.clipControl = driver.getClipSpaceParams();
 }
 
-void ShadowMapDescriptorSet::prepareLodBias(Transaction const& transaction, float bias) noexcept {
+void ShadowMapDescriptorSet::prepareLodBias(Transaction const& transaction, float const bias) noexcept {
     auto& s = edit(transaction);
     s.lodBias = bias;
 }
@@ -112,7 +112,7 @@ void ShadowMapDescriptorSet::prepareTime(Transaction const& transaction,
 }
 
 void ShadowMapDescriptorSet::prepareShadowMapping(Transaction const& transaction,
-        bool highPrecision) noexcept {
+        bool const highPrecision) noexcept {
     auto& s = edit(transaction);
     constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
     constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;

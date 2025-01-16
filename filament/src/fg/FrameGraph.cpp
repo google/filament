@@ -52,7 +52,7 @@ void FrameGraph::Builder::sideEffect() noexcept {
     mPassNode->makeTarget();
 }
 
-const char* FrameGraph::Builder::getName(FrameGraphHandle handle) const noexcept {
+const char* FrameGraph::Builder::getName(FrameGraphHandle const handle) const noexcept {
     return mFrameGraph.getResource(handle)->name;
 }
 
@@ -74,7 +74,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator, Mode mode)
+FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator, Mode const mode)
         : mResourceAllocator(resourceAllocator),
           mArena("FrameGraph Arena", 262144),
           mMode(mode),
@@ -290,7 +290,7 @@ FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
     return handle;
 }
 
-FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* passNode,
+FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle const handle, PassNode* passNode,
         const std::function<bool(ResourceNode*, VirtualResource*)>& connect) {
 
     assertValid(handle);
@@ -397,8 +397,8 @@ FrameGraphHandle FrameGraph::writeInternal(FrameGraphHandle handle, PassNode* pa
     return {};
 }
 
-FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle resourceHandle,
-        FrameGraphHandle replaceResourceHandle) {
+FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle const resourceHandle,
+        FrameGraphHandle const replaceResourceHandle) {
 
     assertValid(resourceHandle);
 
@@ -449,7 +449,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::import(char const* name,
     return FrameGraphId<FrameGraphTexture>(addResourceInternal(vresource));
 }
 
-bool FrameGraph::isValid(FrameGraphHandle handle) const {
+bool FrameGraph::isValid(FrameGraphHandle const handle) const {
     // Code below is written this way so that we can set breakpoints easily.
     if (!handle.isInitialized()) {
         return false;
@@ -461,7 +461,7 @@ bool FrameGraph::isValid(FrameGraphHandle handle) const {
     return true;
 }
 
-void FrameGraph::assertValid(FrameGraphHandle handle) const {
+void FrameGraph::assertValid(FrameGraphHandle const handle) const {
     FILAMENT_CHECK_PRECONDITION(isValid(handle))
             << "Resource handle is invalid or uninitialized {id=" << (int)handle.index
             << ", version=" << (int)handle.version << "}";

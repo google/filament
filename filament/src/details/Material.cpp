@@ -78,7 +78,7 @@ using namespace backend;
 using namespace filaflat;
 using namespace utils;
 
-static std::unique_ptr<MaterialParser> createParser(Backend backend,
+static std::unique_ptr<MaterialParser> createParser(Backend const backend,
         FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
     auto materialParser = std::make_unique<MaterialParser>(languages, data, size);
@@ -142,18 +142,18 @@ BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-Material::Builder& Material::Builder::package(const void* payload, size_t size) {
+Material::Builder& Material::Builder::package(const void* payload, size_t const size) {
     mImpl->mPayload = payload;
     mImpl->mSize = size;
     return *this;
 }
 
-Material::Builder& Material::Builder::sphericalHarmonicsBandCount(size_t shBandCount) noexcept {
+Material::Builder& Material::Builder::sphericalHarmonicsBandCount(size_t const shBandCount) noexcept {
     mImpl->mShBandsCount = math::clamp(shBandCount, size_t(1), size_t(3));
     return *this;
 }
 
-Material::Builder& Material::Builder::shadowSamplingQuality(ShadowSamplingQuality quality) noexcept {
+Material::Builder& Material::Builder::shadowSamplingQuality(ShadowSamplingQuality const quality) noexcept {
     mImpl->mShadowSamplingQuality = quality;
     return *this;
 }
@@ -404,7 +404,7 @@ void FMaterial::terminate(FEngine& engine) {
     mDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
 }
 
-void FMaterial::compile(CompilerPriorityQueue priority,
+void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) noexcept {
@@ -475,11 +475,11 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 }
 
 BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
-        std::string_view name) const noexcept {
+        std::string_view const name) const noexcept {
     return mUniformInterfaceBlock.getFieldInfo(name);
 }
 
-bool FMaterial::hasVariant(Variant variant) const noexcept {
+bool FMaterial::hasVariant(Variant const variant) const noexcept {
     Variant vertexVariant, fragmentVariant;
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
@@ -503,8 +503,8 @@ bool FMaterial::hasVariant(Variant variant) const noexcept {
     return true;
 }
 
-void FMaterial::prepareProgramSlow(Variant variant,
-        backend::CompilerPriorityQueue priorityQueue) const noexcept {
+void FMaterial::prepareProgramSlow(Variant const variant,
+        backend::CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mEngine.hasFeatureLevel(mFeatureLevel));
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
@@ -519,8 +519,8 @@ void FMaterial::prepareProgramSlow(Variant variant,
     }
 }
 
-void FMaterial::getSurfaceProgramSlow(Variant variant,
-        CompilerPriorityQueue priorityQueue) const noexcept {
+void FMaterial::getSurfaceProgramSlow(Variant const variant,
+        CompilerPriorityQueue const priorityQueue) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
     assert_invariant(variant == Variant::filterVariant(variant, isVariantLit()) );
@@ -538,8 +538,8 @@ void FMaterial::getSurfaceProgramSlow(Variant variant,
     createAndCacheProgram(std::move(pb), variant);
 }
 
-void FMaterial::getPostProcessProgramSlow(Variant variant,
-        CompilerPriorityQueue priorityQueue) const noexcept {
+void FMaterial::getPostProcessProgramSlow(Variant const variant,
+        CompilerPriorityQueue const priorityQueue) const noexcept {
     Program pb{ getProgramWithVariants(variant, variant, variant) };
     pb.priorityQueue(priorityQueue);
     createAndCacheProgram(std::move(pb), variant);
@@ -616,7 +616,7 @@ Program FMaterial::getProgramWithVariants(
     return program;
 }
 
-void FMaterial::createAndCacheProgram(Program&& p, Variant variant) const noexcept {
+void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const noexcept {
     FEngine const& engine = mEngine;
     DriverApi& driverApi = mEngine.getDriverApi();
 
@@ -731,7 +731,7 @@ void FMaterial::latchPendingEdits() noexcept {
  */
 
 void FMaterial::onEditCallback(void* userdata, const CString&, const void* packageData,
-        size_t packageSize) {
+        size_t const packageSize) {
     FMaterial* material = downcast((Material*) userdata);
     FEngine const& engine = material->mEngine;
 
@@ -827,7 +827,7 @@ void FMaterial::destroyPrograms(FEngine& engine,
     }
 }
 
-std::optional<uint32_t> FMaterial::getSpecializationConstantId(std::string_view name) const noexcept {
+std::optional<uint32_t> FMaterial::getSpecializationConstantId(std::string_view const name) const noexcept {
     auto pos = mSpecializationConstantsNameToIndex.find(name);
     if (pos != mSpecializationConstantsNameToIndex.end()) {
         return pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;

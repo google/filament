@@ -55,7 +55,7 @@ public:
     size_t getBoneCount() const noexcept { return mBoneCount; }
 
     // round count to the size of the UBO in the shader
-    static size_t getPhysicalBoneCount(size_t count) noexcept {
+    static size_t getPhysicalBoneCount(size_t const count) noexcept {
         static_assert((CONFIG_MAX_BONE_COUNT & (CONFIG_MAX_BONE_COUNT - 1)) == 0);
         return (count + CONFIG_MAX_BONE_COUNT - 1) & ~(CONFIG_MAX_BONE_COUNT - 1);
     }

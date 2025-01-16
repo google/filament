@@ -219,14 +219,14 @@ public:
      *
      * The variant is inserted while building the commands, because we don't know it before that
      */
-    static CommandKey makeMaterialSortingKey(uint32_t materialId, uint32_t instanceId) noexcept {
+    static CommandKey makeMaterialSortingKey(uint32_t const materialId, uint32_t const instanceId) noexcept {
         CommandKey const key = ((materialId << MATERIAL_ID_SHIFT) & MATERIAL_ID_MASK) |
                          ((instanceId << MATERIAL_INSTANCE_ID_SHIFT) & MATERIAL_INSTANCE_ID_MASK);
         return (key << MATERIAL_SHIFT) & MATERIAL_MASK;
     }
 
     template<typename T>
-    static CommandKey makeField(T value, uint64_t mask, unsigned shift) noexcept {
+    static CommandKey makeField(T value, uint64_t const mask, unsigned const shift) noexcept {
         assert_invariant(!((uint64_t(value) << shift) & ~mask));
         return uint64_t(value) << shift;
     }
@@ -502,21 +502,21 @@ class RenderPassBuilder {
 public:
     explicit RenderPassBuilder(RenderPass::Arena& arena) : mArena(arena) { }
 
-    RenderPassBuilder& commandTypeFlags(RenderPass::CommandTypeFlags commandTypeFlags) noexcept {
+    RenderPassBuilder& commandTypeFlags(RenderPass::CommandTypeFlags const commandTypeFlags) noexcept {
         mCommandTypeFlags = commandTypeFlags;
         return *this;
     }
 
     // Specifies the viewport for the scissor rectangle, that is, the final scissor rect is
     // offset by the viewport's left-top and clipped to the viewport's width/height.
-    RenderPassBuilder& scissorViewport(backend::Viewport viewport) noexcept {
+    RenderPassBuilder& scissorViewport(backend::Viewport const viewport) noexcept {
         mScissorViewport = viewport;
         return *this;
     }
 
     // specifies the geometry to generate commands for
     RenderPassBuilder& geometry(
-            FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr) noexcept {
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> const vr) noexcept {
         mRenderableSoa = &soa;
         mVisibleRenderables = vr;
         return *this;
@@ -530,14 +530,14 @@ public:
     }
 
     //  flags controlling how commands are generated
-    RenderPassBuilder& renderFlags(RenderPass::RenderFlags flags) noexcept {
+    RenderPassBuilder& renderFlags(RenderPass::RenderFlags const flags) noexcept {
         mFlags = flags;
         return *this;
     }
 
     // like above but allows to set specific flags
     RenderPassBuilder& renderFlags(
-            RenderPass::RenderFlags mask, RenderPass::RenderFlags value) noexcept {
+            RenderPass::RenderFlags const mask, RenderPass::RenderFlags value) noexcept {
         value &= mask;
         mFlags &= ~mask;
         mFlags |= value;
@@ -545,7 +545,7 @@ public:
     }
 
     // variant to use
-    RenderPassBuilder& variant(Variant variant) noexcept {
+    RenderPassBuilder& variant(Variant const variant) noexcept {
         mVariant = variant;
         return *this;
     }
@@ -559,7 +559,7 @@ public:
     // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to
     // determine if the renderable is visible for this pass.
     // Defaults to all 1's, which means all renderables in this render pass will be rendered.
-    RenderPassBuilder& visibilityMask(FScene::VisibleMaskType mask) noexcept {
+    RenderPassBuilder& visibilityMask(FScene::VisibleMaskType const mask) noexcept {
         mVisibilityMask = mask;
         return *this;
     }

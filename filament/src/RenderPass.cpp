@@ -222,7 +222,7 @@ void RenderPass::appendCommands(FEngine const& engine,
     auto work = [commandTypeFlags, curr, &soa,
                  variant, renderFlags, visibilityMask,
                  cameraPosition, cameraForwardVector, stereoscopicEyeCount]
-            (uint32_t startIndex, uint32_t indexCount) {
+            (uint32_t const startIndex, uint32_t const indexCount) {
         generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount },
                 variant, renderFlags, visibilityMask,
@@ -253,7 +253,7 @@ void RenderPass::appendCommands(FEngine const& engine,
 }
 
 void RenderPass::appendCustomCommand(Command* commands,
-        uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+        uint8_t channel, Pass pass, CustomCommand custom, uint32_t const order,
         Executor::CustomCommandFn command) {
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
@@ -290,7 +290,7 @@ RenderPass::Command* RenderPass::sortCommands(
 RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
         DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
         Command* curr, Command* const last,
-        int32_t eyeCount) const noexcept {
+        int32_t const eyeCount) const noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -439,7 +439,7 @@ UTILS_ALWAYS_INLINE // This function exists only to make the code more readable.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
         FMaterialInstance const* const UTILS_RESTRICT mi,
-        bool inverseFrontFaces, bool hasDepthClamp) noexcept {
+        bool const inverseFrontFaces, bool const hasDepthClamp) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());

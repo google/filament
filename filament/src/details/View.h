@@ -127,13 +127,13 @@ public:
     }
     bool isSkyboxVisible() const noexcept;
 
-    void setFrustumCullingEnabled(bool culling) noexcept { mCulling = culling; }
+    void setFrustumCullingEnabled(bool const culling) noexcept { mCulling = culling; }
     bool isFrustumCullingEnabled() const noexcept { return mCulling; }
 
-    void setFrontFaceWindingInverted(bool inverted) noexcept { mFrontFaceWindingInverted = inverted; }
+    void setFrontFaceWindingInverted(bool const inverted) noexcept { mFrontFaceWindingInverted = inverted; }
     bool isFrontFaceWindingInverted() const noexcept { return mFrontFaceWindingInverted; }
 
-    void setTransparentPickingEnabled(bool enabled) noexcept { mIsTransparentPickingEnabled = enabled; }
+    void setTransparentPickingEnabled(bool const enabled) noexcept { mIsTransparentPickingEnabled = enabled; }
     bool isTransparentPickingEnabled() const noexcept { return mIsTransparentPickingEnabled; }
 
 
@@ -208,17 +208,17 @@ public:
             FEngine const& engine, CameraInfo const& camera,
             Range visible) noexcept;
 
-    void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
+    void setShadowingEnabled(bool const enabled) noexcept { mShadowingEnabled = enabled; }
 
     bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }
 
-    void setScreenSpaceRefractionEnabled(bool enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
+    void setScreenSpaceRefractionEnabled(bool const enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
 
     bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
 
     bool isScreenSpaceReflectionEnabled() const noexcept { return mScreenSpaceReflectionsOptions.enabled; }
 
-    void setStencilBufferEnabled(bool enabled) noexcept { mStencilBufferEnabled = enabled; }
+    void setStencilBufferEnabled(bool const enabled) noexcept { mStencilBufferEnabled = enabled; }
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
@@ -249,7 +249,7 @@ public:
         return mMultiSampleAntiAliasingOptions.sampleCount;
     }
 
-    void setAntiAliasing(AntiAliasing type) noexcept {
+    void setAntiAliasing(AntiAliasing const type) noexcept {
         mAntiAliasing = type;
     }
 
@@ -289,7 +289,7 @@ public:
         return mColorGrading;
     }
 
-    void setDithering(Dithering dithering) noexcept {
+    void setDithering(Dithering const dithering) noexcept {
         mDithering = dithering;
     }
 
@@ -326,11 +326,11 @@ public:
 
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
 
-    void setPostProcessingEnabled(bool enabled) noexcept {
+    void setPostProcessingEnabled(bool const enabled) noexcept {
         mHasPostProcessPass = enabled;
     }
 
-    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
+    void setAmbientOcclusion(AmbientOcclusion const ambientOcclusion) noexcept {
         mAmbientOcclusionOptions.enabled = ambientOcclusion == AmbientOcclusion::SSAO;
     }
 
@@ -344,7 +344,7 @@ public:
         return mShadowType;
     }
 
-    void setShadowType(ShadowType shadow) noexcept {
+    void setShadowType(ShadowType const shadow) noexcept {
         mShadowType = shadow;
     }
 
@@ -388,7 +388,7 @@ public:
         return mVignetteOptions;
     }
 
-    void setBlendMode(BlendMode blendMode) noexcept {
+    void setBlendMode(BlendMode const blendMode) noexcept {
         mBlendMode = blendMode;
     }
 
@@ -470,15 +470,15 @@ public:
 private:
     struct FPickingQuery : public PickingQuery {
     private:
-        FPickingQuery(uint32_t x, uint32_t y,
+        FPickingQuery(uint32_t const x, uint32_t const y,
                 backend::CallbackHandler* handler,
-                PickingQueryResultCallback callback) noexcept
+                PickingQueryResultCallback const callback) noexcept
                 : PickingQuery{}, x(x), y(y), handler(handler), callback(callback) {}
         ~FPickingQuery() noexcept = default;
     public:
         // TODO: use a small pool
-        static FPickingQuery* get(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-                PickingQueryResultCallback callback) noexcept {
+        static FPickingQuery* get(uint32_t const x, uint32_t const y, backend::CallbackHandler* handler,
+                PickingQueryResultCallback const callback) noexcept {
             return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
         static void put(FPickingQuery* pQuery) noexcept {

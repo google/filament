@@ -204,7 +204,7 @@ public:
          * @return          A new handle to the FrameGraphTexture.
          *                  The input handle is no-longer valid.
          */
-        FrameGraphId<FrameGraphTexture> sample(FrameGraphId<FrameGraphTexture> input) {
+        FrameGraphId<FrameGraphTexture> sample(FrameGraphId<FrameGraphTexture> const input) {
             return read(input, FrameGraphTexture::Usage::SAMPLEABLE);
         }
 
@@ -484,36 +484,36 @@ private:
     FrameGraphId<RESOURCE> write(PassNode* passNode,
             FrameGraphId<RESOURCE> input, typename RESOURCE::Usage usage);
 
-    ResourceSlot& getResourceSlot(FrameGraphHandle handle) noexcept {
+    ResourceSlot& getResourceSlot(FrameGraphHandle const handle) noexcept {
         assert_invariant((size_t)handle.index < mResourceSlots.size());
         assert_invariant((size_t)mResourceSlots[handle.index].rid < mResources.size());
         assert_invariant((size_t)mResourceSlots[handle.index].nid < mResourceNodes.size());
         return mResourceSlots[handle.index];
     }
 
-    ResourceSlot const& getResourceSlot(FrameGraphHandle handle) const noexcept {
+    ResourceSlot const& getResourceSlot(FrameGraphHandle const handle) const noexcept {
         return const_cast<FrameGraph*>(this)->getResourceSlot(handle);
     }
 
-    VirtualResource* getResource(FrameGraphHandle handle) noexcept {
+    VirtualResource* getResource(FrameGraphHandle const handle) noexcept {
         assert_invariant(handle.isInitialized());
         ResourceSlot const& slot = getResourceSlot(handle);
         assert_invariant((size_t)slot.rid < mResources.size());
         return mResources[slot.rid];
     }
 
-    ResourceNode* getActiveResourceNode(FrameGraphHandle handle) noexcept {
+    ResourceNode* getActiveResourceNode(FrameGraphHandle const handle) noexcept {
         assert_invariant(handle);
         ResourceSlot const& slot = getResourceSlot(handle);
         assert_invariant((size_t)slot.nid < mResourceNodes.size());
         return mResourceNodes[slot.nid];
     }
 
-    VirtualResource const* getResource(FrameGraphHandle handle) const noexcept {
+    VirtualResource const* getResource(FrameGraphHandle const handle) const noexcept {
         return const_cast<FrameGraph*>(this)->getResource(handle);
     }
 
-    ResourceNode const* getResourceNode(FrameGraphHandle handle) const noexcept {
+    ResourceNode const* getResourceNode(FrameGraphHandle const handle) const noexcept {
         return const_cast<FrameGraph*>(this)->getActiveResourceNode(handle);
     }
 

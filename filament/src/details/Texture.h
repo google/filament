@@ -72,7 +72,7 @@ public:
 
     void generateMipmaps(FEngine& engine) const noexcept;
 
-    void setSampleCount(size_t sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
+    void setSampleCount(size_t const sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
     size_t getSampleCount() const noexcept { return mSampleCount; }
     bool isMultisample() const noexcept { return mSampleCount > 1; }
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
@@ -102,17 +102,17 @@ public:
     static size_t getFormatSize(InternalFormat format) noexcept;
 
     // Returns the with or height for a given mipmap level from the base value.
-    static inline size_t valueForLevel(uint8_t level, size_t baseLevelValue) {
+    static inline size_t valueForLevel(uint8_t const level, size_t const baseLevelValue) {
         return std::max(size_t(1), baseLevelValue >> level);
     }
 
     // Returns the max number of levels for a texture of given max dimensions
-    static inline uint8_t maxLevelCount(uint32_t maxDimension) noexcept {
+    static inline uint8_t maxLevelCount(uint32_t const maxDimension) noexcept {
         return std::max(1, std::ilogbf(float(maxDimension)) + 1);
     }
 
     // Returns the max number of levels for a texture of given dimensions
-    static inline uint8_t maxLevelCount(uint32_t width, uint32_t height) noexcept {
+    static inline uint8_t maxLevelCount(uint32_t const width, uint32_t const height) noexcept {
         uint32_t const maxDimension = std::max(width, height);
         return maxLevelCount(maxDimension);
     }

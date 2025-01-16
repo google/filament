@@ -54,9 +54,9 @@ void FRenderPrimitive::terminate(HwRenderPrimitiveFactory& factory, backend::Dri
 }
 
 void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
-        RenderableManager::PrimitiveType type,
+        RenderableManager::PrimitiveType const type,
         FVertexBuffer* vertexBuffer, FIndexBuffer* indexBuffer,
-        size_t offset, size_t count) noexcept {
+        size_t const offset, size_t const count) noexcept {
     if (mHandle) {
         factory.destroy(driver, mHandle);
     }

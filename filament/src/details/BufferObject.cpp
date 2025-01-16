@@ -37,17 +37,17 @@ BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-BufferObject::Builder& BufferObject::Builder::size(uint32_t byteCount) noexcept {
+BufferObject::Builder& BufferObject::Builder::size(uint32_t const byteCount) noexcept {
     mImpl->mByteCount = byteCount;
     return *this;
 }
 
-BufferObject::Builder& BufferObject::Builder::bindingType(BindingType bindingType) noexcept {
+BufferObject::Builder& BufferObject::Builder::bindingType(BindingType const bindingType) noexcept {
     mImpl->mBindingType = bindingType;
     return *this;
 }
 
-BufferObject::Builder& BufferObject::Builder::name(const char* name, size_t len) noexcept {
+BufferObject::Builder& BufferObject::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
 }
 
@@ -72,7 +72,7 @@ void FBufferObject::terminate(FEngine& engine) {
     driver.destroyBufferObject(mHandle);
 }
 
-void FBufferObject::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset) {
+void FBufferObject::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t const byteOffset) {
     engine.getDriverApi().updateBufferObject(mHandle, std::move(buffer), byteOffset);
 }
 

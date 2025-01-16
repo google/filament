@@ -63,7 +63,7 @@ void HwRenderPrimitiveFactory::terminate(DriverApi&) noexcept {
 auto HwRenderPrimitiveFactory::create(DriverApi& driver,
         VertexBufferHandle vbh,
         IndexBufferHandle ibh,
-        PrimitiveType type) noexcept -> Handle {
+        PrimitiveType const type) noexcept -> Handle {
 
     // see if we already have seen this RenderPrimitive
     Key const key({ vbh, ibh, type });

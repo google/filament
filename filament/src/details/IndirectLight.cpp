@@ -110,7 +110,7 @@ IndirectLight::Builder& IndirectLight::Builder::radiance(uint8_t bands, float3 c
     // this is a way to "document" the actual value of these coefficients and at the same
     // time make sure the expression and values are always in sync.
     struct Debug {
-        static constexpr bool almost(float a, float b) {
+        static constexpr bool almost(float const a, float const b) {
             constexpr float e = 1e-6f;
             return (a > b - e) && (a < b + e);
         }
@@ -138,7 +138,7 @@ IndirectLight::Builder& IndirectLight::Builder::irradiance(Texture const* cubema
     return *this;
 }
 
-IndirectLight::Builder& IndirectLight::Builder::intensity(float envIntensity) noexcept {
+IndirectLight::Builder& IndirectLight::Builder::intensity(float const envIntensity) noexcept {
     mImpl->mIntensity = envIntensity;
     return *this;
 }
@@ -265,7 +265,7 @@ float3 FIndirectLight::getDirectionEstimate() const noexcept {
     return getDirectionEstimate(mIrradianceCoefs.data());
 }
 
-float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
+float4 FIndirectLight::getColorEstimate(float3 const direction) const noexcept {
    return getColorEstimate(mIrradianceCoefs.data(), direction);
 }
 

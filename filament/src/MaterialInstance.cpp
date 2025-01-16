@@ -29,7 +29,7 @@ using namespace backend;
 // vec4<float>. This must not be inlined (this is the whole point).
 template<size_t Size>
 UTILS_NOINLINE
-void FMaterialInstance::setParameterUntypedImpl(std::string_view name, const void* value) {
+void FMaterialInstance::setParameterUntypedImpl(std::string_view const name, const void* value) {
     ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     if (UTILS_LIKELY(offset >= 0)) {
         mUniforms.setUniformUntyped<Size>(size_t(offset), value);  // handles specialization for mat3f
@@ -41,14 +41,14 @@ void FMaterialInstance::setParameterUntypedImpl(std::string_view name, const voi
 // this converts typed calls into the untyped-sized call.
 template<typename T>
 UTILS_ALWAYS_INLINE
-inline void FMaterialInstance::setParameterImpl(std::string_view name, T const& value) {
+inline void FMaterialInstance::setParameterImpl(std::string_view const name, T const& value) {
     static_assert(!std::is_same_v<T, mat3f>);
     setParameterUntypedImpl<sizeof(T)>(name, &value);
 }
 
 // specialization for mat3f
 template<>
-inline void FMaterialInstance::setParameterImpl(std::string_view name, mat3f const& value) {
+inline void FMaterialInstance::setParameterImpl(std::string_view const name, mat3f const& value) {
     ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     if (UTILS_LIKELY(offset >= 0)) {
         mUniforms.setUniform(size_t(offset), value);
@@ -59,8 +59,8 @@ inline void FMaterialInstance::setParameterImpl(std::string_view name, mat3f con
 
 template<size_t Size>
 UTILS_NOINLINE
-void FMaterialInstance::setParameterUntypedImpl(std::string_view name,
-        const void* value, size_t count) {
+void FMaterialInstance::setParameterUntypedImpl(std::string_view const name,
+        const void* value, size_t const count) {
     ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     if (UTILS_LIKELY(offset >= 0)) {
         mUniforms.setUniformArrayUntyped<Size>(size_t(offset), value, count);
@@ -69,8 +69,8 @@ void FMaterialInstance::setParameterUntypedImpl(std::string_view name,
 
 template<typename T>
 UTILS_ALWAYS_INLINE
-inline void FMaterialInstance::setParameterImpl(std::string_view name,
-        const T* value, size_t count) {
+inline void FMaterialInstance::setParameterImpl(std::string_view const name,
+        const T* value, size_t const count) {
     static_assert(!std::is_same_v<T, mat3f>);
     setParameterUntypedImpl<sizeof(T)>(name, value, count);
 }
@@ -83,25 +83,25 @@ void MaterialInstance::setParameter(const char* name, size_t nameLength, T const
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool const& v) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, bool const& v) {
     // this kills tail-call optimization
     setParameter(name, nameLength, (uint32_t)v);
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool2 const& v) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, bool2 const& v) {
     // this kills tail-call optimization
     setParameter(name, nameLength, uint2(v));
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool3 const& v) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, bool3 const& v) {
     // this kills tail-call optimization
     setParameter(name, nameLength, uint3(v));
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool4 const& v) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, bool4 const& v) {
     // this kills tail-call optimization
     setParameter(name, nameLength, uint4(v));
 }
@@ -130,7 +130,7 @@ void MaterialInstance::setParameter(const char* name, size_t nameLength, const T
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool* v, size_t c) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, const bool* v, size_t const c) {
     auto* p = new uint32_t[c];
     std::copy_n(v, c, p);
     setParameter(name, nameLength, p, c);
@@ -138,7 +138,7 @@ UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLe
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool2* v, size_t c) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, const bool2* v, size_t const c) {
     auto* p = new uint2[c];
     std::copy_n(v, c, p);
     setParameter(name, nameLength, p, c);
@@ -146,7 +146,7 @@ UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLe
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool3* v, size_t c) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, const bool3* v, size_t const c) {
     auto* p = new uint3[c];
     std::copy_n(v, c, p);
     setParameter(name, nameLength, p, c);
@@ -154,7 +154,7 @@ UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLe
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool4* v, size_t c) {
+UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, const bool4* v, size_t const c) {
     auto* p = new uint4[c];
     std::copy_n(v, c, p);
     setParameter(name, nameLength, p, c);
@@ -162,7 +162,7 @@ UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLe
 }
 
 template<>
-UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>(const char* name, size_t nameLength, const mat3f* v, size_t c) {
+UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>(const char* name, size_t const nameLength, const mat3f* v, size_t const c) {
     // pretend each mat3 is an array of 3 float3
     setParameter(name, nameLength, reinterpret_cast<float3 const*>(v), c * 3);
 }
@@ -184,7 +184,7 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 // ------------------------------------------------------------------------------------------------
 
 template<typename T>
-T FMaterialInstance::getParameterImpl(std::string_view name) const {
+T FMaterialInstance::getParameterImpl(std::string_view const name) const {
     ssize_t offset = mMaterial->getUniformInterfaceBlock().getFieldOffset(name, 0);
     assert_invariant(offset>=0);
     return downcast(this)->getUniformBuffer().getUniform<T>(offset);
@@ -226,17 +226,17 @@ void MaterialInstance::setParameter(const char* name, size_t nameLength, Texture
 }
 
 void MaterialInstance::setParameter(
-        const char* name, size_t nameLength, RgbType type, float3 color) {
+        const char* name, size_t nameLength, RgbType const type, float3 const color) {
     downcast(this)->setParameterImpl<float3>({ name, nameLength }, Color::toLinear(type, color));
 }
 
 void MaterialInstance::setParameter(
-        const char* name, size_t nameLength, RgbaType type, float4 color) {
+        const char* name, size_t nameLength, RgbaType const type, float4 const color) {
     downcast(this)->setParameterImpl<float4>({ name, nameLength }, Color::toLinear(type, color));
 }
 
 void MaterialInstance::setScissor(
-        uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept {
+        uint32_t const left, uint32_t const bottom, uint32_t const width, uint32_t const height) noexcept {
     downcast(this)->setScissor(left, bottom, width, height);
 }
 
@@ -244,47 +244,47 @@ void MaterialInstance::unsetScissor() noexcept {
     downcast(this)->unsetScissor();
 }
 
-void MaterialInstance::setPolygonOffset(float scale, float constant) noexcept {
+void MaterialInstance::setPolygonOffset(float const scale, float const constant) noexcept {
     downcast(this)->setPolygonOffset(scale, constant);
 }
 
-void MaterialInstance::setMaskThreshold(float threshold) noexcept {
+void MaterialInstance::setMaskThreshold(float const threshold) noexcept {
     downcast(this)->setMaskThreshold(threshold);
 }
 
-void MaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
+void MaterialInstance::setSpecularAntiAliasingVariance(float const variance) noexcept {
     downcast(this)->setSpecularAntiAliasingVariance(variance);
 }
 
-void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
+void MaterialInstance::setSpecularAntiAliasingThreshold(float const threshold) noexcept {
     downcast(this)->setSpecularAntiAliasingThreshold(threshold);
 }
 
-void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
+void MaterialInstance::setDoubleSided(bool const doubleSided) noexcept {
     downcast(this)->setDoubleSided(doubleSided);
 }
 
-void MaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+void MaterialInstance::setTransparencyMode(TransparencyMode const mode) noexcept {
     downcast(this)->setTransparencyMode(mode);
 }
 
-void MaterialInstance::setCullingMode(CullingMode culling) noexcept {
+void MaterialInstance::setCullingMode(CullingMode const culling) noexcept {
     downcast(this)->setCullingMode(culling);
 }
 
-void MaterialInstance::setColorWrite(bool enable) noexcept {
+void MaterialInstance::setColorWrite(bool const enable) noexcept {
     downcast(this)->setColorWrite(enable);
 }
 
-void MaterialInstance::setDepthWrite(bool enable) noexcept {
+void MaterialInstance::setDepthWrite(bool const enable) noexcept {
     downcast(this)->setDepthWrite(enable);
 }
 
-void MaterialInstance::setDepthCulling(bool enable) noexcept {
+void MaterialInstance::setDepthCulling(bool const enable) noexcept {
     downcast(this)->setDepthCulling(enable);
 }
 
-void MaterialInstance::setDepthFunc(DepthFunc depthFunc) noexcept {
+void MaterialInstance::setDepthFunc(DepthFunc const depthFunc) noexcept {
     downcast(this)->setDepthFunc(depthFunc);
 }
 
@@ -292,35 +292,35 @@ MaterialInstance::DepthFunc MaterialInstance::getDepthFunc() const noexcept {
     return downcast(this)->getDepthFunc();
 }
 
-void MaterialInstance::setStencilWrite(bool enable) noexcept {
+void MaterialInstance::setStencilWrite(bool const enable) noexcept {
     downcast(this)->setStencilWrite(enable);
 }
 
-void MaterialInstance::setStencilCompareFunction(StencilCompareFunc func, StencilFace face) noexcept {
+void MaterialInstance::setStencilCompareFunction(StencilCompareFunc const func, StencilFace const face) noexcept {
     downcast(this)->setStencilCompareFunction(func, face);
 }
 
-void MaterialInstance::setStencilOpStencilFail(StencilOperation op, StencilFace face) noexcept {
+void MaterialInstance::setStencilOpStencilFail(StencilOperation const op, StencilFace const face) noexcept {
     downcast(this)->setStencilOpStencilFail(op, face);
 }
 
-void MaterialInstance::setStencilOpDepthFail(StencilOperation op, StencilFace face) noexcept {
+void MaterialInstance::setStencilOpDepthFail(StencilOperation const op, StencilFace const face) noexcept {
     downcast(this)->setStencilOpDepthFail(op, face);
 }
 
-void MaterialInstance::setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) noexcept {
+void MaterialInstance::setStencilOpDepthStencilPass(StencilOperation const op, StencilFace const face) noexcept {
     downcast(this)->setStencilOpDepthStencilPass(op, face);
 }
 
-void MaterialInstance::setStencilReferenceValue(uint8_t value, StencilFace face) noexcept {
+void MaterialInstance::setStencilReferenceValue(uint8_t const value, StencilFace const face) noexcept {
     downcast(this)->setStencilReferenceValue(value, face);
 }
 
-void MaterialInstance::setStencilReadMask(uint8_t readMask, StencilFace face) noexcept {
+void MaterialInstance::setStencilReadMask(uint8_t const readMask, StencilFace const face) noexcept {
     downcast(this)->setStencilReadMask(readMask, face);
 }
 
-void MaterialInstance::setStencilWriteMask(uint8_t writeMask, StencilFace face) noexcept {
+void MaterialInstance::setStencilWriteMask(uint8_t const writeMask, StencilFace const face) noexcept {
     downcast(this)->setStencilWriteMask(writeMask, face);
 }
 

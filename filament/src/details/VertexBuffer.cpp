@@ -72,25 +72,25 @@ BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-VertexBuffer::Builder& VertexBuffer::Builder::vertexCount(uint32_t vertexCount) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::vertexCount(uint32_t const vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::enableBufferObjects(bool enabled) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::enableBufferObjects(bool const enabled) noexcept {
     mImpl->mBufferObjectsEnabled = enabled;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::bufferCount(uint8_t bufferCount) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::bufferCount(uint8_t const bufferCount) noexcept {
     mImpl->mBufferCount = bufferCount;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribute,
-        uint8_t bufferIndex,
-        AttributeType attributeType,
-        uint32_t byteOffset,
+VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const attribute,
+        uint8_t const bufferIndex,
+        AttributeType const attributeType,
+        uint32_t const byteOffset,
         uint8_t byteStride) noexcept {
 
     size_t const attributeSize = Driver::getElementTypeSize(attributeType);
@@ -130,8 +130,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute,
-        bool normalized) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute const attribute,
+        bool const normalized) noexcept {
     if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT) {
         auto& entry = mImpl->mAttributes[attribute];
         if (normalized) {
@@ -143,12 +143,12 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool enabled) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool const enabled) noexcept {
     mImpl->mAdvancedSkinningEnabled = enabled;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t len) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t const len) noexcept {
     return BuilderNameMixin::name(name, len);
 }
 
@@ -164,7 +164,7 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     auto const& attributes = mImpl->mAttributes;
     utils::bitset32 attributedBuffers;
 
-    declaredAttributes.forEachSetBit([&](size_t j){
+    declaredAttributes.forEachSetBit([&](size_t const j){
         // update set of used buffers
         attributedBuffers.set(attributes[j].buffer);
 
@@ -339,8 +339,8 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
     return mVertexCount;
 }
 
-void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
-        backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
+void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
+        backend::BufferDescriptor&& buffer, uint32_t const byteOffset) {
     FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled) << "Please use setBufferObjectAt()";
     if (bufferIndex < mBufferCount) {
         assert_invariant(mBufferObjects[bufferIndex]);
@@ -352,7 +352,7 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
     }
 }
 
-void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
+void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex,
         FBufferObject const * bufferObject) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled) << "Please use setBufferAt()";
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)

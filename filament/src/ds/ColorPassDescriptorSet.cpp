@@ -65,7 +65,7 @@ using namespace backend;
 using namespace math;
 
 uint8_t ColorPassDescriptorSet::getIndex(
-        bool lit, bool ssr, bool fog) noexcept {
+        bool const lit, bool const ssr, bool const fog) noexcept {
 
     uint8_t index = 0;
 
@@ -183,13 +183,13 @@ void ColorPassDescriptorSet::prepareCamera(FEngine& engine, const CameraInfo& ca
     s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
-void ColorPassDescriptorSet::prepareLodBias(float bias, float2 derivativesScale) noexcept {
+void ColorPassDescriptorSet::prepareLodBias(float const bias, float2 const derivativesScale) noexcept {
     auto& s = mUniforms.edit();
     s.lodBias = bias;
     s.derivativesScale = derivativesScale;
 }
 
-void ColorPassDescriptorSet::prepareExposure(float ev100) noexcept {
+void ColorPassDescriptorSet::prepareExposure(float const ev100) noexcept {
     const float exposure = Exposure::exposure(ev100);
     auto& s = mUniforms.edit();
     s.exposure = exposure;
@@ -322,7 +322,7 @@ void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,
     s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
 }
 
-void ColorPassDescriptorSet::prepareBlending(bool needsAlphaChannel) noexcept {
+void ColorPassDescriptorSet::prepareBlending(bool const needsAlphaChannel) noexcept {
     mUniforms.edit().needsAlphaChannel = needsAlphaChannel ? 1.0f : 0.0f;
 }
 
@@ -335,8 +335,8 @@ void ColorPassDescriptorSet::prepareMaterialGlobals(
 }
 
 void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
-        bool disableSSR,
-        float refractionLodOffset,
+        bool const disableSSR,
+        float const refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
     setSampler(+PerViewBindingPoints::SSR, ssr, {
@@ -416,14 +416,14 @@ void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
 }
 
 void ColorPassDescriptorSet::prepareAmbientLight(FEngine& engine, FIndirectLight const& ibl,
-        float intensity, float exposure) noexcept {
+        float const intensity, float const exposure) noexcept {
     auto& s = mUniforms.edit();
 
     // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
     float const iblRoughnessOneLevel = float(ibl.getLevelCount() - 1);
     s.iblRoughnessOneLevel = iblRoughnessOneLevel;
     s.iblLuminance = intensity * exposure;
-    std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 v) {
+    std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 const v) {
         return float4(v, 0.0f);
     });
 
@@ -447,7 +447,7 @@ void ColorPassDescriptorSet::prepareDynamicLights(Froxelizer& froxelizer) noexce
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
-void ColorPassDescriptorSet::prepareShadowMapping(BufferObjectHandle shadowUniforms, bool highPrecision) noexcept {
+void ColorPassDescriptorSet::prepareShadowMapping(BufferObjectHandle shadowUniforms, bool const highPrecision) noexcept {
     auto& s = mUniforms.edit();
     constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
     constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
@@ -552,8 +552,8 @@ void ColorPassDescriptorSet::unbindSamplers(DriverApi&) noexcept {
     setSampler(+PerViewBindingPoints::SSR, {}, {});
 }
 
-void ColorPassDescriptorSet::setSampler(descriptor_binding_t binding,
-        TextureHandle th, SamplerParams params) noexcept {
+void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
+        TextureHandle th, SamplerParams const params) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto samplers = mDescriptorSetLayout[i].getSamplerDescriptors();
         if (samplers[binding]) {
@@ -562,8 +562,8 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t binding,
     }
 }
 
-void ColorPassDescriptorSet::setBuffer(descriptor_binding_t binding,
-        BufferObjectHandle boh, uint32_t offset, uint32_t size) noexcept {
+void ColorPassDescriptorSet::setBuffer(descriptor_binding_t const binding,
+        BufferObjectHandle boh, uint32_t const offset, uint32_t const size) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto ubos = mDescriptorSetLayout[i].getUniformBufferDescriptors();
         if (ubos[binding]) {

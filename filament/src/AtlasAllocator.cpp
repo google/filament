@@ -22,7 +22,7 @@ namespace filament {
 
 using namespace utils;
 
-static inline constexpr std::pair<uint8_t, uint8_t> unmorton(uint16_t m) noexcept {
+static inline constexpr std::pair<uint8_t, uint8_t> unmorton(uint16_t const m) noexcept {
     uint32_t r = (m | (uint32_t(m) << 15u)) & 0x55555555u;
     r = (r | (r >> 1u)) & 0x33333333u;
     r = (r | (r >> 2u)) & 0x0f0f0f0fu;
@@ -30,12 +30,12 @@ static inline constexpr std::pair<uint8_t, uint8_t> unmorton(uint16_t m) noexcep
     return { uint8_t(r), uint8_t(r >> 16u) };
 }
 
-AtlasAllocator::AtlasAllocator(size_t maxTextureSize) noexcept {
+AtlasAllocator::AtlasAllocator(size_t const maxTextureSize) noexcept {
     // round to power-of-two immediately inferior or equal to the size specified.
     mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - clz(maxTextureSize);
 }
 
-AtlasAllocator::Allocation AtlasAllocator::allocate(size_t textureSize) noexcept {
+AtlasAllocator::Allocation AtlasAllocator::allocate(size_t const textureSize) noexcept {
     Allocation result{};
     const size_t powerOfTwo = (sizeof(textureSize) * 8 - 1u) - clz(textureSize);
 
@@ -67,12 +67,12 @@ AtlasAllocator::Allocation AtlasAllocator::allocate(size_t textureSize) noexcept
     return result;
 }
 
-void AtlasAllocator::clear(size_t maxTextureSize) noexcept {
+void AtlasAllocator::clear(size_t const maxTextureSize) noexcept {
     std::fill(mQuadTree.begin(), mQuadTree.end(), Node{});
     mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - clz(maxTextureSize);
 }
 
-AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcept {
+AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t const maxHeight) noexcept {
     using namespace QuadTreeUtils;
 
     NodeId candidate{ -1, 0 };

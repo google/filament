@@ -34,7 +34,7 @@ uint32_t DependencyGraph::generateNodeId() noexcept {
     return mNodes.size();
 }
 
-void DependencyGraph::registerNode(Node* node, NodeID id) noexcept {
+void DependencyGraph::registerNode(Node* node, NodeID const id) noexcept {
     // Node* is not fully constructed here
     assert_invariant(id == mNodes.size());
 
@@ -93,11 +93,11 @@ DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
     return result;
 }
 
-DependencyGraph::Node const* DependencyGraph::getNode(NodeID id) const noexcept {
+DependencyGraph::Node const* DependencyGraph::getNode(NodeID const id) const noexcept {
     return mNodes[id];
 }
 
-DependencyGraph::Node* DependencyGraph::getNode(NodeID id) noexcept {
+DependencyGraph::Node* DependencyGraph::getNode(NodeID const id) noexcept {
     return mNodes[id];
 }
 

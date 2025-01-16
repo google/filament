@@ -214,13 +214,13 @@ void FMaterialInstance::commit(DriverApi& driver) const {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::setParameter(std::string_view name,
-        Handle<HwTexture> texture, SamplerParams params) {
+void FMaterialInstance::setParameter(std::string_view const name,
+        Handle<HwTexture> texture, SamplerParams const params) {
     auto binding = mMaterial->getSamplerBinding(name);
     mDescriptorSet.setSampler(binding, texture, params);
 }
 
-void FMaterialInstance::setParameterImpl(std::string_view name,
+void FMaterialInstance::setParameterImpl(std::string_view const name,
         FTexture const* texture, TextureSampler const& sampler) {
 
 #ifndef NDEBUG
@@ -258,7 +258,7 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
     }
 }
 
-void FMaterialInstance::setMaskThreshold(float threshold) noexcept {
+void FMaterialInstance::setMaskThreshold(float const threshold) noexcept {
     setParameter("_maskThreshold", saturate(threshold));
     mMaskThreshold = saturate(threshold);
 }
@@ -267,7 +267,7 @@ float FMaterialInstance::getMaskThreshold() const noexcept {
     return mMaskThreshold;
 }
 
-void FMaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
+void FMaterialInstance::setSpecularAntiAliasingVariance(float const variance) noexcept {
     setParameter("_specularAntiAliasingVariance", saturate(variance));
     mSpecularAntiAliasingVariance = saturate(variance);
 }
@@ -276,7 +276,7 @@ float FMaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
     return mSpecularAntiAliasingVariance;
 }
 
-void FMaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
+void FMaterialInstance::setSpecularAntiAliasingThreshold(float const threshold) noexcept {
     setParameter("_specularAntiAliasingThreshold", saturate(threshold * threshold));
     mSpecularAntiAliasingThreshold = std::sqrt(saturate(threshold * threshold));
 }
@@ -285,7 +285,7 @@ float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
     return mSpecularAntiAliasingThreshold;
 }
 
-void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
+void FMaterialInstance::setDoubleSided(bool const doubleSided) noexcept {
     if (UTILS_UNLIKELY(!mMaterial->hasDoubleSidedCapability())) {
         slog.w << "Parent material does not have double-sided capability." << io::endl;
         return;
@@ -301,11 +301,11 @@ bool FMaterialInstance::isDoubleSided() const noexcept {
     return mIsDoubleSided;
 }
 
-void FMaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+void FMaterialInstance::setTransparencyMode(TransparencyMode const mode) noexcept {
     mTransparencyMode = mode;
 }
 
-void FMaterialInstance::setDepthCulling(bool enable) noexcept {
+void FMaterialInstance::setDepthCulling(bool const enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 }
 

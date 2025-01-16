@@ -94,11 +94,11 @@ public:
      * Component Manager APIs
      */
 
-    bool hasComponent(utils::Entity e) const noexcept {
+    bool hasComponent(utils::Entity const e) const noexcept {
         return mManager.hasComponent(e);
     }
 
-    Instance getInstance(utils::Entity e) const noexcept {
+    Instance getInstance(utils::Entity const e) const noexcept {
         return { mManager.getInstance(e) };
     }
 
@@ -110,7 +110,7 @@ public:
         return mManager.empty();
     }
 
-    utils::Entity getEntity(Instance i) const noexcept {
+    utils::Entity getEntity(Instance const i) const noexcept {
         return mManager.getEntity(i);
     }
 
@@ -165,7 +165,7 @@ public:
 
 
     inline Box const& getAABB(Instance instance) const noexcept;
-    inline Box const& getAxisAlignedBoundingBox(Instance instance) const noexcept { return getAABB(instance); }
+    inline Box const& getAxisAlignedBoundingBox(Instance const instance) const noexcept { return getAABB(instance); }
     inline Visibility getVisibility(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
@@ -316,7 +316,7 @@ private:
 
 FILAMENT_DOWNCAST(RenderableManager)
 
-void FRenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box& aabb) {
+void FRenderableManager::setAxisAlignedBoundingBox(Instance const instance, const Box& aabb) {
     if (instance) {
         FILAMENT_CHECK_PRECONDITION(
                 static_cast<Visibility const&>(mManager[instance].visibility).geometryType ==
@@ -326,74 +326,74 @@ void FRenderableManager::setAxisAlignedBoundingBox(Instance instance, const Box&
     }
 }
 
-void FRenderableManager::setLayerMask(Instance instance,
-        uint8_t select, uint8_t values) noexcept {
+void FRenderableManager::setLayerMask(Instance const instance,
+        uint8_t const select, uint8_t const values) noexcept {
     if (instance) {
         uint8_t& layers = mManager[instance].layers;
         layers = (layers & ~select) | (values & select);
     }
 }
 
-void FRenderableManager::setLayerMask(Instance instance, uint8_t layerMask) noexcept {
+void FRenderableManager::setLayerMask(Instance const instance, uint8_t const layerMask) noexcept {
     if (instance) {
         mManager[instance].layers = layerMask;
     }
 }
 
-void FRenderableManager::setPriority(Instance instance, uint8_t priority) noexcept {
+void FRenderableManager::setPriority(Instance const instance, uint8_t const priority) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.priority = std::min(priority, uint8_t(0x7));
     }
 }
 
-void FRenderableManager::setChannel(Instance instance, uint8_t channel) noexcept {
+void FRenderableManager::setChannel(Instance const instance, uint8_t const channel) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.channel = std::min(channel, uint8_t(0x3));
     }
 }
 
-void FRenderableManager::setCastShadows(Instance instance, bool enable) noexcept {
+void FRenderableManager::setCastShadows(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.castShadows = enable;
     }
 }
 
-void FRenderableManager::setReceiveShadows(Instance instance, bool enable) noexcept {
+void FRenderableManager::setReceiveShadows(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.receiveShadows = enable;
     }
 }
 
-void FRenderableManager::setScreenSpaceContactShadows(Instance instance, bool enable) noexcept {
+void FRenderableManager::setScreenSpaceContactShadows(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.screenSpaceContactShadows = enable;
     }
 }
 
-void FRenderableManager::setCulling(Instance instance, bool enable) noexcept {
+void FRenderableManager::setCulling(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.culling = enable;
     }
 }
 
-void FRenderableManager::setFogEnabled(Instance instance, bool enable) noexcept {
+void FRenderableManager::setFogEnabled(Instance const instance, bool const enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.fog = enable;
     }
 }
 
-bool FRenderableManager::getFogEnabled(RenderableManager::Instance instance) const noexcept {
+bool FRenderableManager::getFogEnabled(RenderableManager::Instance const instance) const noexcept {
     return getVisibility(instance).fog;
 }
 
-void FRenderableManager::setSkinning(Instance instance, bool enable) {
+void FRenderableManager::setSkinning(Instance const instance, bool const enable) {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
 
@@ -404,7 +404,7 @@ void FRenderableManager::setSkinning(Instance instance, bool enable) {
     }
 }
 
-void FRenderableManager::setMorphing(Instance instance, bool enable) {
+void FRenderableManager::setMorphing(Instance const instance, bool const enable) {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
 
@@ -415,7 +415,7 @@ void FRenderableManager::setMorphing(Instance instance, bool enable) {
     }
 }
 
-void FRenderableManager::setPrimitives(Instance instance,
+void FRenderableManager::setPrimitives(Instance const instance,
         utils::Slice<FRenderPrimitive> const& primitives) noexcept {
     if (instance) {
         mManager[instance].primitives = primitives;
@@ -423,72 +423,72 @@ void FRenderableManager::setPrimitives(Instance instance,
 }
 
 FRenderableManager::Visibility
-FRenderableManager::getVisibility(Instance instance) const noexcept {
+FRenderableManager::getVisibility(Instance const instance) const noexcept {
     return mManager[instance].visibility;
 }
 
-bool FRenderableManager::isShadowCaster(Instance instance) const noexcept {
+bool FRenderableManager::isShadowCaster(Instance const instance) const noexcept {
     return getVisibility(instance).castShadows;
 }
 
-bool FRenderableManager::isShadowReceiver(Instance instance) const noexcept {
+bool FRenderableManager::isShadowReceiver(Instance const instance) const noexcept {
     return getVisibility(instance).receiveShadows;
 }
 
-bool FRenderableManager::isCullingEnabled(Instance instance) const noexcept {
+bool FRenderableManager::isCullingEnabled(Instance const instance) const noexcept {
     return getVisibility(instance).culling;
 }
 
-uint8_t FRenderableManager::getLayerMask(Instance instance) const noexcept {
+uint8_t FRenderableManager::getLayerMask(Instance const instance) const noexcept {
     return mManager[instance].layers;
 }
 
-uint8_t FRenderableManager::getPriority(Instance instance) const noexcept {
+uint8_t FRenderableManager::getPriority(Instance const instance) const noexcept {
     return getVisibility(instance).priority;
 }
 
-uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
+uint8_t FRenderableManager::getChannels(Instance const instance) const noexcept {
     return mManager[instance].channels;
 }
 
-Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
+Box const& FRenderableManager::getAABB(Instance const instance) const noexcept {
     return mManager[instance].aabb;
 }
 
 FRenderableManager::SkinningBindingInfo
-FRenderableManager::getSkinningBufferInfo(Instance instance) const noexcept {
+FRenderableManager::getSkinningBufferInfo(Instance const instance) const noexcept {
     Bones const& bones = mManager[instance].bones;
     return { bones.handle, bones.offset, bones.handleTexture };
 }
 
-inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexcept {
+inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const noexcept {
     Bones const& bones = mManager[instance].bones;
     return bones.count;
 }
 
 FRenderableManager::MorphingBindingInfo
-FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
+FRenderableManager::getMorphingBufferInfo(Instance const instance) const noexcept {
     MorphWeights const& morphWeights = mManager[instance].morphWeights;
     FMorphTargetBuffer const* const buffer = mManager[instance].morphTargetBuffer;
     return { morphWeights.handle, morphWeights.count, buffer  };
 }
 
 FRenderableManager::InstancesInfo
-FRenderableManager::getInstancesInfo(Instance instance) const noexcept {
+FRenderableManager::getInstancesInfo(Instance const instance) const noexcept {
     return mManager[instance].instances;
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
-        Instance instance, UTILS_UNUSED uint8_t level) const noexcept {
+        Instance const instance, UTILS_UNUSED uint8_t level) const noexcept {
     return mManager[instance].primitives;
 }
 
 utils::Slice<FRenderPrimitive>& FRenderableManager::getRenderPrimitives(
-        Instance instance, UTILS_UNUSED uint8_t level) noexcept {
+        Instance const instance, UTILS_UNUSED uint8_t level) noexcept {
     return mManager[instance].primitives;
 }
 
-DescriptorSet& FRenderableManager::getDescriptorSet(Instance instance) noexcept {
+DescriptorSet& FRenderableManager::getDescriptorSet(Instance const instance) noexcept {
     return mManager[instance].descriptorSet;
 }
 

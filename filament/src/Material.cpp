@@ -100,7 +100,7 @@ size_t Material::getParameterCount() const noexcept {
     return downcast(this)->getParameterCount();
 }
 
-size_t Material::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
+size_t Material::getParameters(ParameterInfo* parameters, size_t const count) const noexcept {
     return downcast(this)->getParameters(parameters, count);
 }
 
@@ -140,7 +140,7 @@ MaterialInstance const* Material::getDefaultInstance() const noexcept {
     return downcast(this)->getDefaultInstance();
 }
 
-void Material::compile(CompilerPriorityQueue priority, UserVariantFilterMask variantFilter,
+void Material::compile(CompilerPriorityQueue const priority, UserVariantFilterMask const variantFilter,
         CallbackHandler* handler, utils::Invocable<void(Material*)>&& callback) noexcept {
     downcast(this)->compile(priority, variantFilter, handler, std::move(callback));
 }

@@ -22,7 +22,7 @@ namespace filament {
 
 using namespace math;
 
-bool TransformManager::hasComponent(Entity e) const noexcept {
+bool TransformManager::hasComponent(Entity const e) const noexcept {
     return downcast(this)->hasComponent(e);
 }
 
@@ -34,7 +34,7 @@ bool TransformManager::empty() const noexcept {
     return downcast(this)->empty();
 }
 
-Entity TransformManager::getEntity(Instance i) const noexcept {
+Entity TransformManager::getEntity(Instance const i) const noexcept {
     return downcast(this)->getEntity(i);
 }
 
@@ -42,64 +42,64 @@ Entity const* TransformManager::getEntities() const noexcept {
     return downcast(this)->getEntities();
 }
 
-TransformManager::Instance TransformManager::getInstance(Entity e) const noexcept {
+TransformManager::Instance TransformManager::getInstance(Entity const e) const noexcept {
     return downcast(this)->getInstance(e);
 }
 
-void TransformManager::create(Entity entity, Instance parent, const mat4f& worldTransform) {
+void TransformManager::create(Entity const entity, Instance const parent, const mat4f& worldTransform) {
     downcast(this)->create(entity, parent, worldTransform);
 }
 
-void TransformManager::create(Entity entity, Instance parent, const mat4& worldTransform) {
+void TransformManager::create(Entity const entity, Instance const parent, const mat4& worldTransform) {
     downcast(this)->create(entity, parent, worldTransform);
 }
 
-void TransformManager::create(Entity entity, Instance parent) {
+void TransformManager::create(Entity const entity, Instance const parent) {
     downcast(this)->create(entity, parent, mat4f{});
 }
 
-void TransformManager::destroy(Entity e) noexcept {
+void TransformManager::destroy(Entity const e) noexcept {
     downcast(this)->destroy(e);
 }
 
-void TransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
+void TransformManager::setTransform(Instance const ci, const mat4f& model) noexcept {
     downcast(this)->setTransform(ci, model);
 }
 
-void TransformManager::setTransform(Instance ci, const mat4& model) noexcept {
+void TransformManager::setTransform(Instance const ci, const mat4& model) noexcept {
     downcast(this)->setTransform(ci, model);
 }
 
-const mat4f& TransformManager::getTransform(Instance ci) const noexcept {
+const mat4f& TransformManager::getTransform(Instance const ci) const noexcept {
     return downcast(this)->getTransform(ci);
 }
 
-mat4 TransformManager::getTransformAccurate(Instance ci) const noexcept {
+mat4 TransformManager::getTransformAccurate(Instance const ci) const noexcept {
     return downcast(this)->getTransformAccurate(ci);
 }
 
-const mat4f& TransformManager::getWorldTransform(Instance ci) const noexcept {
+const mat4f& TransformManager::getWorldTransform(Instance const ci) const noexcept {
     return downcast(this)->getWorldTransform(ci);
 }
 
-mat4 TransformManager::getWorldTransformAccurate(Instance ci) const noexcept {
+mat4 TransformManager::getWorldTransformAccurate(Instance const ci) const noexcept {
     return downcast(this)->getWorldTransformAccurate(ci);
 }
 
-void TransformManager::setParent(Instance i, Instance newParent) noexcept {
+void TransformManager::setParent(Instance const i, Instance const newParent) noexcept {
     downcast(this)->setParent(i, newParent);
 }
 
-Entity TransformManager::getParent(Instance i) const noexcept {
+Entity TransformManager::getParent(Instance const i) const noexcept {
     return downcast(this)->getParent(i);
 }
 
-size_t TransformManager::getChildCount(Instance i) const noexcept {
+size_t TransformManager::getChildCount(Instance const i) const noexcept {
     return downcast(this)->getChildCount(i);
 }
 
-size_t TransformManager::getChildren(Instance i, Entity* children,
-        size_t count) const noexcept {
+size_t TransformManager::getChildren(Instance const i, Entity* children,
+        size_t const count) const noexcept {
     return downcast(this)->getChildren(i, children, count);
 }
 
@@ -112,16 +112,16 @@ void TransformManager::commitLocalTransformTransaction() noexcept {
 }
 
 TransformManager::children_iterator TransformManager::getChildrenBegin(
-        Instance parent) const noexcept {
+        Instance const parent) const noexcept {
     return downcast(this)->getChildrenBegin(parent);
 }
 
 TransformManager::children_iterator TransformManager::getChildrenEnd(
-        Instance parent) const noexcept {
+        Instance const parent) const noexcept {
     return downcast(this)->getChildrenEnd(parent);
 }
 
-void TransformManager::setAccurateTranslationsEnabled(bool enable) noexcept {
+void TransformManager::setAccurateTranslationsEnabled(bool const enable) noexcept {
     downcast(this)->setAccurateTranslationsEnabled(enable);
 }
 
