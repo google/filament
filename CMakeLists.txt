@@ -457,10 +457,14 @@ if (NOT WEBGL)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
 
+if (LINUX)
+    set(NO_EXEC_STACK "-Wl,-z,noexecstack")
+endif()
+
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (ANDROID)
-set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
+    set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
 endif()
 
 if (APPLE)
@@ -475,8 +479,7 @@ if (APPLE)
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
 
-# reverted
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
 if (WEBGL_PTHREADS)
