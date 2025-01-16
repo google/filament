@@ -16,27 +16,47 @@
 
 #include "Froxelizer.h"
 
+#include "Allocators.h"
 #include "Intersections.h"
 
 #include "details/Engine.h"
 #include "details/Scene.h"
 
-#include "private/backend/DriverApi.h"
+#include <private/filament/EngineEnums.h>
+#include <private/backend/DriverApi.h>
 
+#include <filament/Box.h>
 #include <filament/Viewport.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/BinaryTreeArray.h>
+#include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/Slice.h>
 #include <utils/Systrace.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
 
-#include <math/mat4.h>
 #include <math/fast.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
 #include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <algorithm>
+#include <utils/architecture.h>
+#include <array>
+#include <cmath>
+#include <limits>
+#include <type_traits>
+#include <utility>
 
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -603,7 +623,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     JobSystem& js = engine.getJobSystem();
 
     constexpr bool SINGLE_THREADED = false;
-    if (!SINGLE_THREADED) {
+    if constexpr (!SINGLE_THREADED) {
         auto *parent = js.createJob();
         for (size_t i = 0; i < GROUP_COUNT; i++) {
             js.run(jobs::createJob(js, parent, std::cref(process),
@@ -737,7 +757,7 @@ out_of_memory:
     ;
 }
 
-static inline float2 project(mat4f const& p, float3 const& v) noexcept {
+static float2 project(mat4f const& p, float3 const& v) noexcept {
     const float vx = v[0];
     const float vy = v[1];
     const float vz = v[2];

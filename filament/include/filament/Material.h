@@ -177,7 +177,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Material* UTILS_NULLABLE build(Engine& engine);
+        Material* UTILS_NULLABLE build(Engine& engine) const;
     private:
         friend class FMaterial;
     };

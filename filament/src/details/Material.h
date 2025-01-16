@@ -110,7 +110,7 @@ public:
     }
 
     void compile(CompilerPriorityQueue priority,
-            UserVariantFilterMask variantFilter,
+            UserVariantFilterMask variantSpec,
             backend::CallbackHandler* handler,
             utils::Invocable<void(Material*)>&& callback) noexcept;
 
@@ -291,7 +291,7 @@ private:
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);
 
-    void precacheDepthVariants(FEngine& engine);
+    void precacheDepthVariants(FEngine const& engine);
 
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 
@@ -374,7 +374,7 @@ private:
     mutable utils::Mutex mPendingEditsLock;
     std::unique_ptr<MaterialParser> mPendingEdits;
     void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
-    bool hasPendingEdits() noexcept;
+    bool hasPendingEdits() const noexcept;
     void latchPendingEdits() noexcept;
 #endif
 

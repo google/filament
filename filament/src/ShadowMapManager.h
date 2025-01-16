@@ -158,14 +158,14 @@ private:
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
     ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FScene::LightSoa const& lightData) noexcept;
+            FScene::LightSoa const& lightData) const noexcept;
 
     void calculateTextureRequirements(FEngine&, FView& view,
             FScene::LightSoa const&) noexcept;
 
     void prepareSpotShadowMap(ShadowMap& shadowMap,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-            FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
+            FScene::LightSoa const& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
     static void cullSpotShadowMap(ShadowMap const& map,
             FEngine const& engine, FView const& view,
@@ -174,7 +174,7 @@ private:
 
     void preparePointShadowMap(ShadowMap& map,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-            FScene::LightSoa& lightData) noexcept;
+            FScene::LightSoa const& lightData) const noexcept;
 
     static void cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,

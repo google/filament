@@ -16,7 +16,21 @@
 
 #include "details/Material.h"
 
+#include <filament/Material.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
+
+#include <utils/Invocable.h>
+
+#include <utility>
+
+#include <stddef.h>
+
 namespace filament {
+
+class MaterialInstance;
 
 using namespace backend;
 
@@ -140,9 +154,9 @@ MaterialInstance const* Material::getDefaultInstance() const noexcept {
     return downcast(this)->getDefaultInstance();
 }
 
-void Material::compile(CompilerPriorityQueue const priority, UserVariantFilterMask const variantFilter,
+void Material::compile(CompilerPriorityQueue const priority, UserVariantFilterMask const variants,
         CallbackHandler* handler, utils::Invocable<void(Material*)>&& callback) noexcept {
-    downcast(this)->compile(priority, variantFilter, handler, std::move(callback));
+    downcast(this)->compile(priority, variants, handler, std::move(callback));
 }
 
 UserVariantFilterMask Material::getSupportedVariants() const noexcept {

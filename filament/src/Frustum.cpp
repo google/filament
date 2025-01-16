@@ -19,7 +19,13 @@
 #include "Culler.h"
 
 #include <utils/compiler.h>
-#include <utils/Log.h>
+#include <utils/ostream.h>
+
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat4.h>
+
+#include <algorithm>
 
 using namespace filament::math;
 

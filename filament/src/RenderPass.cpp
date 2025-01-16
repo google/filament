@@ -26,8 +26,6 @@
 
 #include "components/RenderableManager.h"
 
-#include "ds/DescriptorSet.h"
-
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
@@ -90,8 +88,7 @@ RenderPass RenderPassBuilder::build(FEngine const& engine, DriverApi& driver) co
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::BufferObjectHandleDeleter::operator()(
-        BufferObjectHandle handle) noexcept {
+void RenderPass::BufferObjectHandleDeleter::operator()(BufferObjectHandle handle) noexcept {
     if (handle) { // this is common case
         driver.get().destroyBufferObject(handle);
     }
@@ -188,19 +185,19 @@ RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexc
 
 void RenderPass::appendCommands(FEngine const& engine,
         Slice<Command> commands,
-        Range<uint32_t> const vr,
+        Range<uint32_t> const visibleRenderables,
         CommandTypeFlags const commandTypeFlags,
         RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
         Variant const variant,
         float3 const cameraPosition,
-        float3 const cameraForwardVector) noexcept {
+        float3 const cameraForwardVector) const noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
     // trace the number of visible renderables
-    SYSTRACE_VALUE32("visibleRenderables", vr.size());
-    if (UTILS_UNLIKELY(vr.empty())) {
+    SYSTRACE_VALUE32("visibleRenderables", visibleRenderables.size());
+    if (UTILS_UNLIKELY(visibleRenderables.empty())) {
         // no renderables, we still need the sentinel and the command buffer size should be
         // exactly 1.
         assert_invariant(commands.size() == 1);
@@ -229,10 +226,11 @@ void RenderPass::appendCommands(FEngine const& engine,
                 cameraPosition, cameraForwardVector, stereoscopicEyeCount);
     };
 
-    if (vr.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
-        work(vr.first, vr.size());
+    if (visibleRenderables.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
+        work(visibleRenderables.first, visibleRenderables.size());
     } else {
-        auto* jobCommandsParallel = parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
+        auto* jobCommandsParallel = parallel_for(js, nullptr,
+                visibleRenderables.first, uint32_t(visibleRenderables.size()),
                 std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT>());
         js.runAndWait(jobCommandsParallel);
     }
@@ -365,7 +363,7 @@ RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
                 // TODO: use a pool for larger heap buffers
                 // buffer large enough for all instances data
                 stagingBufferSize = count * sizeof(PerRenderableData);
-                stagingBuffer = (PerRenderableData*)malloc(stagingBufferSize);
+                stagingBuffer = static_cast<PerRenderableData*>(malloc(stagingBufferSize));
                 uboData = mRenderableSoa.data<FScene::UBO>();
                 assert_invariant(uboData);
 
@@ -422,7 +420,7 @@ RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
         stagingBuffer = nullptr;
 
         // remove all the canceled commands
-        auto lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
+        auto const lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
             return command.key == uint64_t(Pass::SENTINEL);
         });
 
@@ -492,7 +490,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         Variant const variant, RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
         float3 const cameraPosition, float3 const cameraForward,
-        uint8_t stereoEyeCount) noexcept {
+        uint8_t instancedStereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
 
@@ -525,13 +523,13 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range,
                     variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    stereoEyeCount);
+                    instancedStereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range,
                     variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    stereoEyeCount);
+                    instancedStereoEyeCount);
             break;
         default:
             // we should never end-up here
@@ -554,7 +552,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
+        float3 cameraPosition, float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept {
 
     constexpr bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
     constexpr bool isDepthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
@@ -675,16 +673,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         cmd.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmd.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmd.info.index = i;
-        cmd.info.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
+        cmd.info.hasHybridInstancing = bool(soaInstanceInfo[i].handle);
         cmd.info.instanceCount = soaInstanceInfo[i].count;
-        cmd.info.hasMorphing = (bool)morphing.handle;
-        cmd.info.hasSkinning = (bool)skinning.handle;
+        cmd.info.hasMorphing = bool(morphing.handle);
+        cmd.info.hasSkinning = bool(skinning.handle);
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
         if (hasInstancedStereo) {
-            cmd.info.instanceCount *= stereoEyeCount;
+            cmd.info.instanceCount *= instancedStereoEyeCount;
         }
 
         // soaDescriptorSet[i] is either populated with a common descriptor-set or truly with
@@ -958,7 +956,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
         // CommandStream protocol. Currently, the maximum is 248 bytes.
         // The batch size is calculated by adding the size of all commands that can possibly be
         // emitted per draw call:
-        constexpr size_t const maxCommandSizeInBytes =
+        constexpr size_t maxCommandSizeInBytes =
                 sizeof(COMMAND_TYPE(scissor)) +
                 sizeof(COMMAND_TYPE(bindDescriptorSet)) +
                 sizeof(COMMAND_TYPE(bindDescriptorSet)) +

@@ -131,7 +131,7 @@ public:
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
             Viewport const& svp, const CameraInfo& cameraInfo,
-            FrameGraphId<FrameGraphTexture> structure,
+            FrameGraphId<FrameGraphTexture> depth,
             AmbientOcclusionOptions const& options) noexcept;
 
     // Gaussian mipmap

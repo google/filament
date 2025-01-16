@@ -795,7 +795,7 @@ void ShadowMapManager::updateSpotVisibilityMasks(
 
 void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engine, FView& view,
         CameraInfo const& mainCameraInfo,
-        FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept {
+        FScene::LightSoa const& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept {
 
     const size_t lightIndex = shadowMap.getLightIndex();
     FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
@@ -886,7 +886,7 @@ void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
 
 void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-        FScene::LightSoa& lightData) noexcept {
+        FScene::LightSoa const& lightData) const noexcept {
 
     const uint8_t face = shadowMap.getFace();
     const size_t lightIndex = shadowMap.getLightIndex();
@@ -971,7 +971,7 @@ void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView cons
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
-        FScene::LightSoa const& lightData) noexcept {
+        FScene::LightSoa const& lightData) const noexcept {
 
     // The const_cast here is a little ugly, but conceptually lightData should be const,
     // it's just that we're using it to store some temporary data. With SoA we can't have
@@ -1088,7 +1088,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     if (useMipmapping) {
         // Limit the lowest mipmap level to 256x256.
         // This avoids artifacts on high derivative tangent surfaces.
-        int const lowMipmapLevel = 7;    // log2(256) - 1
+        constexpr int lowMipmapLevel = 7;    // log2(256) - 1
         mipLevels = std::max(1, FTexture::maxLevelCount(maxDimension) - lowMipmapLevel);
     }
 

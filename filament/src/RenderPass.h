@@ -273,7 +273,7 @@ public:
         PrimitiveInfo info;    // 56 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
-        inline void* operator new (size_t, void* ptr) {
+        void* operator new (size_t, void* ptr) {
             assert_invariant(ptr);
             return ptr;
         }
@@ -412,7 +412,7 @@ private:
             FScene::VisibleMaskType visibilityMask,
             Variant variant,
             math::float3 cameraPosition,
-            math::float3 cameraForwardVector) noexcept;
+            math::float3 cameraForwardVector) const noexcept;
 
     // Appends a custom command.
     void appendCustomCommand(Command* commands,
@@ -447,7 +447,7 @@ private:
             uint8_t instancedStereoEyeCount) noexcept;
 
     template<CommandTypeFlags commandTypeFlags>
-    static inline Command* generateCommandsImpl(CommandTypeFlags extraFlags,
+    static Command* generateCommandsImpl(CommandTypeFlags extraFlags,
             Command* curr, FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,

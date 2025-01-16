@@ -45,7 +45,7 @@ public:
 
     void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
             RenderableManager::PrimitiveType type,
-            FVertexBuffer* vertexBuffer, FIndexBuffer* indexBuffer, size_t offset,
+            FVertexBuffer const* vertexBuffer, FIndexBuffer const* indexBuffer, size_t offset,
             size_t count) noexcept;
 
     // frees driver resources, object becomes invalid
