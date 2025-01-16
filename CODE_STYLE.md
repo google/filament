@@ -121,9 +121,21 @@ private:
 - other headers are sorted in reverse order of their layering, that is, lower layer headers last
 - within a layer, headers are sorted alphabetically
 - strive for implementing one class per file
-- `STL` limited in public headers to:
-    - `type_traits`
+- `STL` limited in **filament** public headers to:
+    - `array`
+    - `initializer_list`
+    - `iterator`
     - `limits`
+    - `optional`
+    - `type_traits`
+    - `utility`
+    - `variant`
+
+For **libfilament** the rule of thumb is that STL headers that don't generate code are allowed (e.g. `type_traits`),
+conversely containers and algorithms are not allowed. There are exceptions such as `array`. See above for the full list.
+- The following `STL` headers a banned entirely, from public and private headers as well as implementation files:
+  - `iostream`
+
 
 *Sorting the headers is important to help catching missing `#include` directives.*
 
