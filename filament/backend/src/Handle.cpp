@@ -16,11 +16,15 @@
 
 #include <backend/Handle.h>
 
+#include <utils/compiler.h>
+#include <utils/CallStack.h>
+#include <utils/ostream.h>
+
 #ifndef NDEBUG
 #   include <string>
 #endif
 
-#include <utils/CallStack.h>
+#include <stddef.h>
 
 using namespace utils;
 
@@ -28,7 +32,7 @@ namespace filament::backend {
 
 #ifndef NDEBUG
 
-static char const * const kOurNamespace = "filament::backend";
+static char const * const kOurNamespace = "filament::backend::";
 
 // removes all occurrences of "what" from "str"
 UTILS_NOINLINE
@@ -67,6 +71,9 @@ template io::ostream& operator<<(io::ostream& out, const Handle<HwSwapChain>& h)
 template io::ostream& operator<<(io::ostream& out, const Handle<HwStream>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwTimerQuery>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwBufferObject>& h) noexcept;
+template io::ostream& operator<<(io::ostream& out, const Handle<HwDescriptorSet>& h) noexcept;
+template io::ostream& operator<<(io::ostream& out, const Handle<HwDescriptorSetLayout>& h) noexcept;
+template io::ostream& operator<<(io::ostream& out, const Handle<HwVertexBufferInfo>& h) noexcept;
 
 #endif
 
