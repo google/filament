@@ -46,14 +46,14 @@ void DependencyGraph::registerNode(Node* node, NodeID id) noexcept {
     nodes.push_back(node);
 }
 
-bool DependencyGraph::isEdgeValid(DependencyGraph::Edge const* edge) const noexcept {
+bool DependencyGraph::isEdgeValid(Edge const* edge) const noexcept {
     auto& nodes = mNodes;
     Node const* from = nodes[edge->from];
     Node const* to = nodes[edge->to];
     return !from->isCulled() && !to->isCulled();
 }
 
-void DependencyGraph::link(DependencyGraph::Edge* edge) noexcept {
+void DependencyGraph::link(Edge* edge) noexcept {
     // here we manually grow the fixed-size vector
     EdgeContainer& edges = mEdges;
     if (UTILS_UNLIKELY(edges.capacity() == edges.size())) {
@@ -72,7 +72,7 @@ DependencyGraph::NodeContainer const& DependencyGraph::getNodes() const noexcept
 }
 
 DependencyGraph::EdgeContainer DependencyGraph::getIncomingEdges(
-        DependencyGraph::Node const* node) const noexcept {
+        Node const* node) const noexcept {
     // TODO: we might need something more efficient
     auto result = EdgeContainer::with_capacity(mEdges.size());
     NodeID const nodeId = node->getId();
@@ -83,7 +83,7 @@ DependencyGraph::EdgeContainer DependencyGraph::getIncomingEdges(
 }
 
 DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
-        DependencyGraph::Node const* node) const noexcept {
+        Node const* node) const noexcept {
     // TODO: we might need something more efficient
     auto result = EdgeContainer::with_capacity(mEdges.size());
     NodeID const nodeId = node->getId();
@@ -93,11 +93,11 @@ DependencyGraph::EdgeContainer DependencyGraph::getOutgoingEdges(
     return result;
 }
 
-DependencyGraph::Node const* DependencyGraph::getNode(DependencyGraph::NodeID id) const noexcept {
+DependencyGraph::Node const* DependencyGraph::getNode(NodeID id) const noexcept {
     return mNodes[id];
 }
 
-DependencyGraph::Node* DependencyGraph::getNode(DependencyGraph::NodeID id) noexcept {
+DependencyGraph::Node* DependencyGraph::getNode(NodeID id) noexcept {
     return mNodes[id];
 }
 
@@ -197,7 +197,7 @@ bool DependencyGraph::isAcyclic() const noexcept {
     DependencyGraph graph;
     graph.mEdges = mEdges;
     graph.mNodes = mNodes;
-    return DependencyGraph::isAcyclicInternal(graph);
+    return isAcyclicInternal(graph);
 #else
     return true;
 #endif

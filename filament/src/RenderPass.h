@@ -426,7 +426,7 @@ private:
             Command* begin, Command* end) noexcept;
 
     // instanceify commands then trims sentinels
-    RenderPass::Command* instanceify(backend::DriverApi& driver,
+    Command* instanceify(backend::DriverApi& driver,
             backend::DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
             Command* begin, Command* end,
             int32_t eyeCount) const noexcept;
@@ -446,8 +446,8 @@ private:
             math::float3 cameraPosition, math::float3 cameraForward,
             uint8_t instancedStereoEyeCount) noexcept;
 
-    template<RenderPass::CommandTypeFlags commandTypeFlags>
-    static inline RenderPass::Command* generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
+    template<CommandTypeFlags commandTypeFlags>
+    static inline Command* generateCommandsImpl(CommandTypeFlags extraFlags,
             Command* curr, FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,

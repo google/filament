@@ -54,7 +54,7 @@ void Texture::setImage(Engine& engine, size_t level,
 }
 
 void Texture::setImage(Engine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
+        PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
     downcast(this)->setImage(downcast(engine), level, std::move(buffer), faceOffsets);
 }
 
@@ -86,13 +86,13 @@ bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
     return FTexture::isTextureSwizzleSupported(downcast(engine));
 }
 
-size_t Texture::computeTextureDataSize(Texture::Format format, Texture::Type type, size_t stride,
+size_t Texture::computeTextureDataSize(Format format, Type type, size_t stride,
         size_t height, size_t alignment) noexcept {
     return FTexture::computeTextureDataSize(format, type, stride, height, alignment);
 }
 
-void Texture::generatePrefilterMipmap(Engine& engine, Texture::PixelBufferDescriptor&& buffer,
-        const Texture::FaceOffsets& faceOffsets, PrefilterOptions const* options) {
+void Texture::generatePrefilterMipmap(Engine& engine, PixelBufferDescriptor&& buffer,
+        const FaceOffsets& faceOffsets, PrefilterOptions const* options) {
     downcast(this)->generatePrefilterMipmap(downcast(engine), std::move(buffer), faceOffsets, options);
 }
 

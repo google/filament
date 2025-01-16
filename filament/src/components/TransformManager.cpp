@@ -121,7 +121,7 @@ size_t FTransformManager::getChildCount(Instance i) const noexcept {
     return count;
 }
 
-size_t FTransformManager::getChildren(Instance i, utils::Entity* children,
+size_t FTransformManager::getChildren(Instance i, Entity* children,
         size_t count) const noexcept {
     Instance ci = mManager[i].firstChild;
     size_t numWritten = 0;
@@ -201,7 +201,7 @@ void FTransformManager::updateNodeTransform(Instance i) noexcept {
     // find our parent's world transform, if any
     // note: by using the raw_array() we don't need to check that parent is valid.
     Instance const parent = manager[i].parent;
-    FTransformManager::computeWorldTransform(
+    computeWorldTransform(
             manager[i].world, manager[i].worldTranslationLo,
             manager[parent].world, manager[i].local,
             manager[parent].worldTranslationLo, manager[i].localTranslationLo,
@@ -241,7 +241,7 @@ void FTransformManager::computeAllWorldTransforms() noexcept {
         Instance const parent = manager[i].parent;
         assert_invariant(parent < i);
 
-        FTransformManager::computeWorldTransform(
+        computeWorldTransform(
                 manager[i].world, manager[i].worldTranslationLo,
                 manager[parent].world, manager[i].local,
                 manager[parent].worldTranslationLo, manager[i].localTranslationLo,
@@ -376,7 +376,7 @@ void FTransformManager::transformChildren(Sim& manager, Instance i) noexcept {
     while (i) {
         // update child's world transform
         Instance const parent = manager[i].parent;
-        FTransformManager::computeWorldTransform(
+        computeWorldTransform(
                 manager[i].world, manager[i].worldTranslationLo,
                 manager[parent].world, manager[i].local,
                 manager[parent].worldTranslationLo, manager[i].localTranslationLo,
@@ -470,7 +470,7 @@ void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance i) noexcep
 #endif
 }
 
-void FTransformManager::gc(utils::EntityManager& em) noexcept {
+void FTransformManager::gc(EntityManager& em) noexcept {
     mManager.gc(em, [this](Entity e) {
                 destroy(e);
             });

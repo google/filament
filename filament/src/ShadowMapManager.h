@@ -77,7 +77,7 @@ struct ShadowMappingUniforms {
 class ShadowMapManager {
 public:
 
-    using ShadowMappingUniforms = filament::ShadowMappingUniforms;
+    using ShadowMappingUniforms = ShadowMappingUniforms;
 
     using ShadowType = ShadowMap::ShadowType;
 
@@ -123,7 +123,7 @@ public:
 
     // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowMapManager::ShadowTechnique update(Builder const& builder,
+    ShadowTechnique update(Builder const& builder,
             FEngine& engine, FView& view,
             CameraInfo const& cameraInfo,
             FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
@@ -153,11 +153,11 @@ private:
     static void updateNearFarPlanes(math::mat4f* projection,
             float nearDistance, float farDistance) noexcept;
 
-    ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
-    ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine,
             FScene::LightSoa const& lightData) noexcept;
 
     void calculateTextureRequirements(FEngine&, FView& view,

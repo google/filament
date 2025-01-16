@@ -79,7 +79,7 @@ using namespace filaflat;
 using namespace utils;
 
 static std::unique_ptr<MaterialParser> createParser(Backend backend,
-        utils::FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
+        FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
     // unique_ptr so we don't leak MaterialParser on failures below
     auto materialParser = std::make_unique<MaterialParser>(languages, data, size);
 
@@ -125,22 +125,22 @@ struct Material::BuilderDetails {
     int32_t mShBandsCount = 3;
     Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
     std::unordered_map<
-        utils::CString,
+        CString,
         std::variant<int32_t, float, bool>,
         CString::Hasher> mConstantSpecializations;
 };
 
-FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() : Material::Builder() {
+FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() : Builder() {
     mImpl->mDefaultMaterial = true;
 }
 
 using BuilderType = Material;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 Material::Builder& Material::Builder::package(const void* payload, size_t size) {
     mImpl->mPayload = payload;
@@ -180,7 +180,7 @@ Material* Material::Builder::build(Engine& engine) {
 
     uint32_t v = 0;
     materialParser->getShaderModels(&v);
-    utils::bitset32 shaderModels;
+    bitset32 shaderModels;
     shaderModels.setValue(v);
 
     ShaderModel const shaderModel = downcast(engine).getShaderModel();
@@ -228,7 +228,7 @@ Material* Material::Builder::build(Engine& engine) {
     return downcast(engine).createMaterial(*this, std::move(materialParser));
 }
 
-FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder,
+FMaterial::FMaterial(FEngine& engine, const Builder& builder,
         std::unique_ptr<MaterialParser> materialParser)
         : mIsDefaultMaterial(builder->mDefaultMaterial),
           mEngine(engine),
@@ -406,8 +406,8 @@ void FMaterial::terminate(FEngine& engine) {
 
 void FMaterial::compile(CompilerPriorityQueue priority,
         UserVariantFilterMask variantSpec,
-        backend::CallbackHandler* handler,
-        utils::Invocable<void(Material*)>&& callback) noexcept {
+        CallbackHandler* handler,
+        Invocable<void(Material*)>&& callback) noexcept {
 
     // Turn off the STE variant if stereo is not supported.
     if (!mEngine.getDriverApi().isStereoSupported()) {
@@ -467,7 +467,7 @@ FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
 bool FMaterial::hasParameter(const char* name) const noexcept {
     return mUniformInterfaceBlock.hasField(name) ||
            mSamplerInterfaceBlock.hasSampler(name) ||
-            mSubpassInfo.name == utils::CString(name);
+            mSubpassInfo.name == CString(name);
 }
 
 bool FMaterial::isSampler(const char* name) const noexcept {
@@ -611,7 +611,7 @@ Program FMaterial::getProgramWithVariants(
     program.pushConstants(ShaderStage::VERTEX, mPushConstants[(uint8_t) ShaderStage::VERTEX]);
     program.pushConstants(ShaderStage::FRAGMENT, mPushConstants[(uint8_t) ShaderStage::FRAGMENT]);
 
-    program.cacheId(utils::hash::combine(size_t(mCacheId), variant.key));
+    program.cacheId(hash::combine(size_t(mCacheId), variant.key));
 
     return program;
 }
@@ -730,7 +730,7 @@ void FMaterial::latchPendingEdits() noexcept {
  * @{
  */
 
-void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void* packageData,
+void FMaterial::onEditCallback(void* userdata, const CString&, const void* packageData,
         size_t packageSize) {
     FMaterial* material = downcast((Material*) userdata);
     FEngine const& engine = material->mEngine;
@@ -744,7 +744,7 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
     FMaterial* material = downcast((Material*) userdata);
-    std::lock_guard<utils::Mutex> const lock(material->mActiveProgramsLock);
+    std::lock_guard<Mutex> const lock(material->mActiveProgramsLock);
     *pVariants = material->mActivePrograms;
     material->mActivePrograms.reset();
 }
@@ -842,7 +842,7 @@ bool FMaterial::setConstant(uint32_t id, T value) noexcept {
         if (id >= CONFIG_MAX_RESERVED_SPEC_CONSTANTS) {
             // Constant from the material itself (as opposed to the reserved ones)
             auto& constant = mMaterialConstants[id - CONFIG_MAX_RESERVED_SPEC_CONSTANTS];
-            using ConstantType = backend::ConstantType;
+            using ConstantType = ConstantType;
             switch (constant.type) {
                 case ConstantType::INT:
                     if (!std::is_same_v<T, int32_t>) return false;
@@ -858,7 +858,7 @@ bool FMaterial::setConstant(uint32_t id, T value) noexcept {
 
         auto pos = std::find_if(
                 mSpecializationConstants.begin(), mSpecializationConstants.end(),
-                [id](backend::Program::SpecializationConstant const& specializationConstant) {
+                [id](Program::SpecializationConstant const& specializationConstant) {
                     return specializationConstant.id == id;
                 });
         if (pos != mSpecializationConstants.end()) {
@@ -956,7 +956,7 @@ void FMaterial::processBlendingMode(MaterialParser const* const parser) {
     }
 }
 
-void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
+void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& builder,
         MaterialParser const* const parser) {
     // Older materials won't have a constants chunk, but that's okay.
     parser->getConstants(&mMaterialConstants);
@@ -1057,13 +1057,13 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Material::Builde
 }
 
 void FMaterial::processPushConstants(FEngine& engine, MaterialParser const* parser) {
-    utils::FixedCapacityVector<backend::Program::PushConstant>& vertexConstants =
+    FixedCapacityVector<Program::PushConstant>& vertexConstants =
             mPushConstants[(uint8_t) ShaderStage::VERTEX];
-    utils::FixedCapacityVector<backend::Program::PushConstant>& fragmentConstants =
+    FixedCapacityVector<Program::PushConstant>& fragmentConstants =
             mPushConstants[(uint8_t) ShaderStage::FRAGMENT];
 
     CString structVarName;
-    utils::FixedCapacityVector<MaterialPushConstant> pushConstants;
+    FixedCapacityVector<MaterialPushConstant> pushConstants;
     parser->getPushConstants(&structVarName, &pushConstants);
 
     vertexConstants.reserve(pushConstants.size());
@@ -1079,11 +1079,11 @@ void FMaterial::processPushConstants(FEngine& engine, MaterialParser const* pars
 
                 switch (constant.stage) {
                     case ShaderStage::VERTEX:
-                        vertexConstants.push_back({utils::CString(buf), constant.type});
+                        vertexConstants.push_back({CString(buf), constant.type});
                         vertexCount++;
                         break;
                     case ShaderStage::FRAGMENT:
-                        fragmentConstants.push_back({utils::CString(buf), constant.type});
+                        fragmentConstants.push_back({CString(buf), constant.type});
                         fragmentCount++;
                         break;
                     case ShaderStage::COMPUTE:
@@ -1141,7 +1141,7 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
             engine.getDriverApi(), std::move(descriptorSetLayout[1]) };
 }
 
-backend::descriptor_binding_t FMaterial::getSamplerBinding(
+descriptor_binding_t FMaterial::getSamplerBinding(
         std::string_view const& name) const {
     return mSamplerInterfaceBlock.getSamplerInfo(name)->binding;
 }

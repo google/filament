@@ -99,7 +99,7 @@ public:
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass::Executor passExecutor) noexcept;
 
-    static std::optional<RendererUtils::ColorPassOutput> refractionPass(
+    static std::optional<ColorPassOutput> refractionPass(
             FrameGraph& fg, FEngine& engine, FView const& view,
             ColorPassInput colorPassInput,
             ColorPassConfig config,

@@ -39,10 +39,10 @@ BuilderType::Builder::Builder(size_t instanceCount) noexcept {
 }
 
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
         math::mat4f const* localTransforms) noexcept {
@@ -89,7 +89,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
 
     // TODO: allocate this staging buffer from a pool.
     uint32_t stagingBufferSize = sizeof(PerRenderableUib);
-    PerRenderableData* stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
+    PerRenderableData* stagingBuffer = (PerRenderableData*)malloc(stagingBufferSize);
     // TODO: consider using JobSystem to parallelize this.
     for (size_t i = 0, c = mInstanceCount; i < c; i++) {
         stagingBuffer[i] = ubo;
@@ -102,7 +102,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
     driver.updateBufferObject(handle, {
             stagingBuffer, stagingBufferSize,
             +[](void* buffer, size_t, void*) {
-                ::free(buffer);
+                free(buffer);
             }
     }, 0);
 }

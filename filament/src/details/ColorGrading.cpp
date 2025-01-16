@@ -133,26 +133,26 @@ struct ColorGrading::BuilderDetails {
 using BuilderType = ColorGrading;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-ColorGrading::Builder& ColorGrading::Builder::quality(ColorGrading::QualityLevel qualityLevel) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::quality(QualityLevel qualityLevel) noexcept {
     switch (qualityLevel) {
-        case ColorGrading::QualityLevel::LOW:
+        case QualityLevel::LOW:
             mImpl->format = LutFormat::INTEGER;
             mImpl->dimension = 16;
             break;
-        case ColorGrading::QualityLevel::MEDIUM:
+        case QualityLevel::MEDIUM:
             mImpl->format = LutFormat::INTEGER;
             mImpl->dimension = 32;
             break;
-        case ColorGrading::QualityLevel::HIGH:
+        case QualityLevel::HIGH:
             mImpl->format = LutFormat::FLOAT;
             mImpl->dimension = 32;
             break;
-        case ColorGrading::QualityLevel::ULTRA:
+        case QualityLevel::ULTRA:
             mImpl->format = LutFormat::FLOAT;
             mImpl->dimension = 64;
             break;
@@ -166,7 +166,7 @@ ColorGrading::Builder& ColorGrading::Builder::format(LutFormat format) noexcept 
 }
 
 ColorGrading::Builder& ColorGrading::Builder::dimensions(uint8_t dim) noexcept {
-    mImpl->dimension = math::clamp(+dim, 16, 64);
+    mImpl->dimension = clamp(+dim, 16, 64);
     return *this;
 }
 
@@ -649,9 +649,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     Config c;
     // This lock protects the data inside Config, which is written to by the Filament thread,
     // and read from multiple Job threads.
-    utils::Mutex configLock;
+    Mutex configLock;
     {
-        std::lock_guard<utils::Mutex> const lock(configLock);
+        std::lock_guard<Mutex> const lock(configLock);
         c.lutDimension          = builder->dimension;
         c.adaptationTransform   = adaptationTransform(builder->whiteBalance);
         c.colorGradingIn        = selectColorGradingTransformIn(builder->toneMapping);
@@ -688,7 +688,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 [data, converted, b, &c, &configLock, builder](JobSystem&, JobSystem::Job*) {
             Config config;
             {
-                std::lock_guard<utils::Mutex> lock(configLock);
+                std::lock_guard<Mutex> lock(configLock);
                 config = c;
             }
             half4* UTILS_RESTRICT p = (half4*) data + b * config.lutDimension * config.lutDimension;

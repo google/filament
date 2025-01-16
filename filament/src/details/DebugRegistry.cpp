@@ -121,7 +121,7 @@ bool FDebugRegistry::registerDataSource(std::string_view name,
 }
 
 bool FDebugRegistry::registerDataSource(std::string_view name,
-        utils::Invocable<DataSource()>&& creator) noexcept {
+        Invocable<DataSource()>&& creator) noexcept {
     auto& dataSourceCreatorMap = mDataSourceCreatorMap;
     bool const found = dataSourceCreatorMap.find(name) == dataSourceCreatorMap.end();
     if (found) {

@@ -52,7 +52,7 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(utils::JobSystem& js,
+void FScene::prepare(JobSystem& js,
         RootArenaScope& rootArenaScope,
         mat4 const& worldTransform,
         bool shadowReceiversAreCasters) noexcept {
@@ -78,11 +78,11 @@ void FScene::prepare(utils::JobSystem& js,
 
     using RenderableContainerData = std::pair<RenderableManager::Instance, TransformManager::Instance>;
     using RenderableInstanceContainer = FixedCapacityVector<RenderableContainerData,
-            utils::STLAllocator< RenderableContainerData, LinearAllocatorArena >, false>;
+            STLAllocator< RenderableContainerData, LinearAllocatorArena >, false>;
 
     using LightContainerData = std::pair<LightManager::Instance, TransformManager::Instance>;
     using LightInstanceContainer = FixedCapacityVector<LightContainerData,
-            utils::STLAllocator< LightContainerData, LinearAllocatorArena >, false>;
+            STLAllocator< LightContainerData, LinearAllocatorArena >, false>;
 
     RenderableInstanceContainer renderableInstances{
             RenderableInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
@@ -246,11 +246,11 @@ void FScene::prepare(utils::JobSystem& js,
 
     JobSystem::Job* rootJob = js.createJob();
 
-    auto* renderableJob = jobs::parallel_for(js, rootJob,
+    auto* renderableJob = parallel_for(js, rootJob,
             renderableInstances.data(), renderableInstances.size(),
             std::cref(renderableWork), jobs::CountSplitter<64>());
 
-    auto* lightJob = jobs::parallel_for(js, rootJob,
+    auto* lightJob = parallel_for(js, rootJob,
             lightInstances.data(), lightInstances.size(),
             std::cref(lightWork), jobs::CountSplitter<32, 5>());
 
@@ -448,7 +448,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
         Handle<HwBufferObject> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager const& lcm = mEngine.getLightManager();
-    FScene::LightSoa& lightData = getLightData();
+    LightSoa& lightData = getLightData();
 
     /*
      * Here we copy our lights data into the GPU buffer.
@@ -459,17 +459,17 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
     size_t const positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
     assert_invariant(positionalLightCount);
 
-    float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
+    float4 const* const UTILS_RESTRICT spheres = lightData.data<POSITION_RADIUS>();
 
     // compute the light ranges (needed when building light trees)
-    float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();
+    float2* const zrange = lightData.data<SCREEN_SPACE_Z_RANGE>();
     computeLightRanges(zrange, camera, spheres + DIRECTIONAL_LIGHTS_COUNT, positionalLightCount);
 
     LightsUib* const lp = driver.allocatePod<LightsUib>(positionalLightCount);
 
-    auto const* UTILS_RESTRICT directions       = lightData.data<FScene::DIRECTION>();
-    auto const* UTILS_RESTRICT instances        = lightData.data<FScene::LIGHT_INSTANCE>();
-    auto const* UTILS_RESTRICT shadowInfo       = lightData.data<FScene::SHADOW_INFO>();
+    auto const* UTILS_RESTRICT directions       = lightData.data<DIRECTION>();
+    auto const* UTILS_RESTRICT instances        = lightData.data<LIGHT_INSTANCE>();
+    auto const* UTILS_RESTRICT shadowInfo       = lightData.data<SHADOW_INFO>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
         auto li = instances[i];

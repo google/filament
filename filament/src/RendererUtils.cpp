@@ -295,7 +295,7 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
         config.hasScreenSpaceReflectionsOrRefractions = true;
 
         PostProcessManager& ppm = engine.getPostProcessManager();
-        auto const opaquePassOutput = RendererUtils::colorPass(fg,
+        auto const opaquePassOutput = colorPass(fg,
                 "Color Pass (opaque)", engine, view, colorPassInput, {
                         // When rendering the opaques, we need to conserve the sample buffer,
                         // so create a config that specifies the sample count.
@@ -330,7 +330,7 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
         // and we'd end up clearing the opaque pass. This scenario never happens because it is
         // prevented in Renderer.cpp's final blit.
         config.clearFlags = TargetBufferFlags::NONE;
-        auto transparentPassOutput = RendererUtils::colorPass(fg, "Color Pass (transparent)",
+        auto transparentPassOutput = colorPass(fg, "Color Pass (transparent)",
                 engine, view, colorPassInput, {
                         .width = config.physicalViewport.width,
                         .height = config.physicalViewport.height },
@@ -352,9 +352,9 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
 }
 
 UTILS_NOINLINE
-void RendererUtils::readPixels(backend::DriverApi& driver, Handle<HwRenderTarget> renderTargetHandle,
+void RendererUtils::readPixels(DriverApi& driver, Handle<HwRenderTarget> renderTargetHandle,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer) {
     FILAMENT_CHECK_PRECONDITION(buffer.type != PixelDataType::COMPRESSED)
             << "buffer.format cannot be COMPRESSED";
 

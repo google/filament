@@ -39,7 +39,7 @@ class ImportedRenderTarget;
  */
 class ResourceEdgeBase : public DependencyGraph::Edge {
 public:
-    using DependencyGraph::Edge::Edge;
+    using Edge::Edge;
 };
 
 /*

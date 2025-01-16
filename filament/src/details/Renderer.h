@@ -147,7 +147,7 @@ public:
         return mClearOptions;
     }
 
-    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept {
+    utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept {
         return mFrameInfoManager.getFrameInfoHistory(historySize);
     }
 

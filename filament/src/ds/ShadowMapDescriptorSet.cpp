@@ -61,7 +61,7 @@ PerViewUib& ShadowMapDescriptorSet::edit(Transaction const& transaction) noexcep
 }
 
 void ShadowMapDescriptorSet::prepareCamera(Transaction const& transaction,
-        backend::DriverApi& driver, const CameraInfo& camera) noexcept {
+        DriverApi& driver, const CameraInfo& camera) noexcept {
     mat4f const& viewFromWorld = camera.view;
     mat4f const& worldFromView = camera.model;
     mat4f const& clipFromView  = camera.projection;
@@ -103,7 +103,7 @@ void ShadowMapDescriptorSet::prepareViewport(Transaction const& transaction,
 }
 
 void ShadowMapDescriptorSet::prepareTime(Transaction const& transaction,
-        FEngine const& engine, math::float4 const& userTime) noexcept {
+        FEngine const& engine, float4 const& userTime) noexcept {
     auto& s = edit(transaction);
     const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1'000'000'000;
     const float fraction = float(double(oneSecondRemainder) / 1'000'000'000.0);
@@ -119,7 +119,7 @@ void ShadowMapDescriptorSet::prepareShadowMapping(Transaction const& transaction
     s.vsmExponent = highPrecision ? high : low;
 }
 
-ShadowMapDescriptorSet::Transaction ShadowMapDescriptorSet::open(backend::DriverApi& driver) noexcept {
+ShadowMapDescriptorSet::Transaction ShadowMapDescriptorSet::open(DriverApi& driver) noexcept {
     Transaction transaction;
     // TODO: use out-of-line buffer if too large
     transaction.uniforms = (PerViewUib *)driver.allocate(sizeof(PerViewUib), 16);
@@ -128,14 +128,14 @@ ShadowMapDescriptorSet::Transaction ShadowMapDescriptorSet::open(backend::Driver
 }
 
 void ShadowMapDescriptorSet::commit(Transaction& transaction,
-        FEngine& engine, backend::DriverApi& driver) noexcept {
+        FEngine& engine, DriverApi& driver) noexcept {
     driver.updateBufferObject(mUniformBufferHandle, {
             transaction.uniforms, sizeof(PerViewUib) }, 0);
     mDescriptorSet.commit(engine.getPerViewDescriptorSetLayoutDepthVariant(), driver);
     transaction.uniforms = nullptr;
 }
 
-void ShadowMapDescriptorSet::bind(backend::DriverApi& driver) noexcept {
+void ShadowMapDescriptorSet::bind(DriverApi& driver) noexcept {
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
 }
 

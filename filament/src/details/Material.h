@@ -71,11 +71,11 @@ class  FEngine;
 
 class FMaterial : public Material {
 public:
-    FMaterial(FEngine& engine, const Material::Builder& builder,
+    FMaterial(FEngine& engine, const Builder& builder,
             std::unique_ptr<MaterialParser> materialParser);
     ~FMaterial() noexcept;
 
-    class DefaultMaterialBuilder : public Material::Builder {
+    class DefaultMaterialBuilder : public Builder {
     public:
         DefaultMaterialBuilder();
     };
@@ -286,7 +286,7 @@ private:
 
     void processBlendingMode(MaterialParser const* parser);
 
-    void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
+    void processSpecializationConstants(FEngine& engine, Builder const& builder,
             MaterialParser const* parser);
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);

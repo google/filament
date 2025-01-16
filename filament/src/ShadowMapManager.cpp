@@ -858,7 +858,7 @@ void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
     // compute shadow map frustum for culling
     const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, { 0, 1, 0 }, position);
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, 0.01f, radius);
-    const mat4f MpMv = math::highPrecisionMultiply(Mp, Mv);
+    const mat4f MpMv = highPrecisionMultiply(Mp, Mv);
     const Frustum frustum(MpMv);
 
     // Cull shadow casters
@@ -945,7 +945,7 @@ void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView cons
     // compute shadow map frustum for culling
     mat4f const Mv = ShadowMap::getPointLightViewMatrix(TextureCubemapFace(face), position);
     mat4f const Mp = mat4f::perspective(90.0f, 1.0f, 0.01f, radius);
-    Frustum const frustum{ math::highPrecisionMultiply(Mp, Mv) };
+    Frustum const frustum{ highPrecisionMultiply(Mp, Mv) };
 
     // Cull shadow casters
     float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();

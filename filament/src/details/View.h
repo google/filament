@@ -106,7 +106,7 @@ public:
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
     void prepare(FEngine& engine, backend::DriverApi& driver, RootArenaScope& rootArenaScope,
-            filament::Viewport viewport, CameraInfo cameraInfo,
+            Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
@@ -158,7 +158,7 @@ public:
 
     void prepareViewport(
             const Viewport& physicalViewport,
-            const filament::Viewport& logicalViewport) const noexcept;
+            const Viewport& logicalViewport) const noexcept;
 
     void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
@@ -310,7 +310,7 @@ public:
             Renderer::FrameRateOptions const& frameRateOptions,
             Renderer::DisplayInfo const& displayInfo) noexcept;
 
-    void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
+    void setDynamicResolutionOptions(DynamicResolutionOptions const& options) noexcept;
 
     DynamicResolutionOptions getDynamicResolutionOptions() const noexcept {
         return mDynamicResolution;
@@ -449,8 +449,8 @@ public:
     void clearFrameHistory(FEngine& engine) noexcept;
 
     // create the picking query
-    View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-            View::PickingQueryResultCallback callback) noexcept;
+    PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
+            PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
             backend::RenderTargetHandle handle, math::float2 scale) noexcept;
@@ -472,13 +472,13 @@ private:
     private:
         FPickingQuery(uint32_t x, uint32_t y,
                 backend::CallbackHandler* handler,
-                View::PickingQueryResultCallback callback) noexcept
+                PickingQueryResultCallback callback) noexcept
                 : PickingQuery{}, x(x), y(y), handler(handler), callback(callback) {}
         ~FPickingQuery() noexcept = default;
     public:
         // TODO: use a small pool
         static FPickingQuery* get(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-                View::PickingQueryResultCallback callback) noexcept {
+                PickingQueryResultCallback callback) noexcept {
             return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
         static void put(FPickingQuery* pQuery) noexcept {
@@ -489,7 +489,7 @@ private:
         uint32_t const x;
         uint32_t const y;
         backend::CallbackHandler* const handler;
-        View::PickingQueryResultCallback const callback;
+        PickingQueryResultCallback const callback;
         // picking query result
         PickingQueryResult result;
     };
@@ -521,7 +521,7 @@ private:
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
-    filament::DescriptorSet mCommonRenderableDescriptorSet;
+    DescriptorSet mCommonRenderableDescriptorSet;
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing

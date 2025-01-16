@@ -32,10 +32,10 @@ struct IndexBuffer::BuilderDetails {
 using BuilderType = IndexBuffer;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 IndexBuffer::Builder& IndexBuffer::Builder::indexCount(uint32_t indexCount) noexcept {
     mImpl->mIndexCount = indexCount;
@@ -53,7 +53,7 @@ IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
+FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
         : mIndexCount(builder->mIndexCount) {
     auto& name = builder.getName();
     const char* const tag = name.empty() ? "(no tag)" : name.c_str_safe();

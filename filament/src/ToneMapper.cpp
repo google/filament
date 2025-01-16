@@ -208,19 +208,19 @@ float3 LinearToneMapper::operator()(float3 v) const noexcept {
 
 DEFAULT_CONSTRUCTORS(ACESToneMapper)
 
-float3 ACESToneMapper::operator()(math::float3 c) const noexcept {
+float3 ACESToneMapper::operator()(float3 c) const noexcept {
     return aces::ACES(c, 1.0f);
 }
 
 DEFAULT_CONSTRUCTORS(ACESLegacyToneMapper)
 
-float3 ACESLegacyToneMapper::operator()(math::float3 c) const noexcept {
+float3 ACESLegacyToneMapper::operator()(float3 c) const noexcept {
     return aces::ACES(c, 1.0f / 0.6f);
 }
 
 DEFAULT_CONSTRUCTORS(FilmicToneMapper)
 
-float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
+float3 FilmicToneMapper::operator()(float3 x) const noexcept {
     // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
     constexpr float a = 2.51f;
     constexpr float b = 0.03f;
@@ -236,7 +236,7 @@ float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
 
 DEFAULT_CONSTRUCTORS(PBRNeutralToneMapper)
 
-float3 PBRNeutralToneMapper::operator()(math::float3 color) const noexcept {
+float3 PBRNeutralToneMapper::operator()(float3 color) const noexcept {
     // PBR Tone Mapping, https://modelviewer.dev/examples/tone-mapping.html
     constexpr float startCompression = 0.8f - 0.04f;
     constexpr float desaturation = 0.15f;
@@ -260,7 +260,7 @@ float3 PBRNeutralToneMapper::operator()(math::float3 color) const noexcept {
 // AgX tone mapper
 //------------------------------------------------------------------------------
 
-AgxToneMapper::AgxToneMapper(AgxToneMapper::AgxLook look) noexcept : look(look) {}
+AgxToneMapper::AgxToneMapper(AgxLook look) noexcept : look(look) {}
 AgxToneMapper::~AgxToneMapper() noexcept = default;
 
 // These matrices taken from Blender's implementation of AgX, which works with Rec.2020 primaries.
@@ -362,7 +362,7 @@ float3 AgxToneMapper::operator()(float3 v) const noexcept {
 
 DEFAULT_CONSTRUCTORS(DisplayRangeToneMapper)
 
-float3 DisplayRangeToneMapper::operator()(math::float3 c) const noexcept {
+float3 DisplayRangeToneMapper::operator()(float3 c) const noexcept {
     // 16 debug colors + 1 duplicated at the end for easy indexing
     constexpr float3 debugColors[17] = {
             {0.0,     0.0,     0.0},         // black
@@ -460,7 +460,7 @@ GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper&& rhs) noexcep
     return *this;
 }
 
-float3 GenericToneMapper::operator()(math::float3 x) const noexcept {
+float3 GenericToneMapper::operator()(float3 x) const noexcept {
     x = pow(x, mOptions->contrast);
     return mOptions->outputScale * x / (x + mOptions->inputScale);
 }

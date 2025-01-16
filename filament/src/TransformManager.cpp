@@ -34,11 +34,11 @@ bool TransformManager::empty() const noexcept {
     return downcast(this)->empty();
 }
 
-utils::Entity TransformManager::getEntity(TransformManager::Instance i) const noexcept {
+Entity TransformManager::getEntity(Instance i) const noexcept {
     return downcast(this)->getEntity(i);
 }
 
-utils::Entity const* TransformManager::getEntities() const noexcept {
+Entity const* TransformManager::getEntities() const noexcept {
     return downcast(this)->getEntities();
 }
 
@@ -90,7 +90,7 @@ void TransformManager::setParent(Instance i, Instance newParent) noexcept {
     downcast(this)->setParent(i, newParent);
 }
 
-utils::Entity TransformManager::getParent(Instance i) const noexcept {
+Entity TransformManager::getParent(Instance i) const noexcept {
     return downcast(this)->getParent(i);
 }
 
@@ -98,7 +98,7 @@ size_t TransformManager::getChildCount(Instance i) const noexcept {
     return downcast(this)->getChildCount(i);
 }
 
-size_t TransformManager::getChildren(Instance i, utils::Entity* children,
+size_t TransformManager::getChildren(Instance i, Entity* children,
         size_t count) const noexcept {
     return downcast(this)->getChildren(i, children, count);
 }
@@ -112,12 +112,12 @@ void TransformManager::commitLocalTransformTransaction() noexcept {
 }
 
 TransformManager::children_iterator TransformManager::getChildrenBegin(
-        TransformManager::Instance parent) const noexcept {
+        Instance parent) const noexcept {
     return downcast(this)->getChildrenBegin(parent);
 }
 
 TransformManager::children_iterator TransformManager::getChildrenEnd(
-        TransformManager::Instance parent) const noexcept {
+        Instance parent) const noexcept {
     return downcast(this)->getChildrenEnd(parent);
 }
 

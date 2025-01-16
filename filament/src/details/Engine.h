@@ -498,7 +498,7 @@ public:
     Config const& getConfig() const noexcept { return mConfig; }
 
     bool hasFeatureLevel(backend::FeatureLevel neededFeatureLevel) const noexcept {
-        return FEngine::getActiveFeatureLevel() >= neededFeatureLevel;
+        return getActiveFeatureLevel() >= neededFeatureLevel;
     }
 
     auto const& getMaterialInstanceResourceList() const noexcept {
@@ -510,7 +510,7 @@ public:
 #endif
 
 private:
-    explicit FEngine(Engine::Builder const& builder);
+    explicit FEngine(Builder const& builder);
     void init();
     void shutdown();
 
@@ -602,7 +602,7 @@ private:
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
-    static uint32_t getJobSystemThreadPoolSize(Engine::Config const& config) noexcept;
+    static uint32_t getJobSystemThreadPoolSize(Config const& config) noexcept;
 
     std::default_random_engine mRandomEngine;
 

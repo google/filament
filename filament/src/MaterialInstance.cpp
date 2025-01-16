@@ -42,7 +42,7 @@ void FMaterialInstance::setParameterUntypedImpl(std::string_view name, const voi
 template<typename T>
 UTILS_ALWAYS_INLINE
 inline void FMaterialInstance::setParameterImpl(std::string_view name, T const& value) {
-    static_assert(!std::is_same_v<T, math::mat3f>);
+    static_assert(!std::is_same_v<T, mat3f>);
     setParameterUntypedImpl<sizeof(T)>(name, &value);
 }
 
@@ -71,7 +71,7 @@ template<typename T>
 UTILS_ALWAYS_INLINE
 inline void FMaterialInstance::setParameterImpl(std::string_view name,
         const T* value, size_t count) {
-    static_assert(!std::is_same_v<T, math::mat3f>);
+    static_assert(!std::is_same_v<T, mat3f>);
     setParameterUntypedImpl<sizeof(T)>(name, value, count);
 }
 
@@ -85,25 +85,25 @@ void MaterialInstance::setParameter(const char* name, size_t nameLength, T const
 template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool const& v) {
     // this kills tail-call optimization
-    MaterialInstance::setParameter(name, nameLength, (uint32_t)v);
+    setParameter(name, nameLength, (uint32_t)v);
 }
 
 template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool2 const& v) {
     // this kills tail-call optimization
-    MaterialInstance::setParameter(name, nameLength, uint2(v));
+    setParameter(name, nameLength, uint2(v));
 }
 
 template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool3 const& v) {
     // this kills tail-call optimization
-    MaterialInstance::setParameter(name, nameLength, uint3(v));
+    setParameter(name, nameLength, uint3(v));
 }
 
 template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, bool4 const& v) {
     // this kills tail-call optimization
-    MaterialInstance::setParameter(name, nameLength, uint4(v));
+    setParameter(name, nameLength, uint4(v));
 }
 
 // explicit template instantiation of our supported types
@@ -133,7 +133,7 @@ template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool* v, size_t c) {
     auto* p = new uint32_t[c];
     std::copy_n(v, c, p);
-    MaterialInstance::setParameter(name, nameLength, p, c);
+    setParameter(name, nameLength, p, c);
     delete [] p;
 }
 
@@ -141,7 +141,7 @@ template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool2* v, size_t c) {
     auto* p = new uint2[c];
     std::copy_n(v, c, p);
-    MaterialInstance::setParameter(name, nameLength, p, c);
+    setParameter(name, nameLength, p, c);
     delete [] p;
 }
 
@@ -149,7 +149,7 @@ template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool3* v, size_t c) {
     auto* p = new uint3[c];
     std::copy_n(v, c, p);
-    MaterialInstance::setParameter(name, nameLength, p, c);
+    setParameter(name, nameLength, p, c);
     delete [] p;
 }
 
@@ -157,14 +157,14 @@ template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t nameLength, const bool4* v, size_t c) {
     auto* p = new uint4[c];
     std::copy_n(v, c, p);
-    MaterialInstance::setParameter(name, nameLength, p, c);
+    setParameter(name, nameLength, p, c);
     delete [] p;
 }
 
 template<>
 UTILS_PUBLIC void MaterialInstance::setParameter<mat3f>(const char* name, size_t nameLength, const mat3f* v, size_t c) {
     // pretend each mat3 is an array of 3 float3
-    MaterialInstance::setParameter(name, nameLength, reinterpret_cast<math::float3 const*>(v), c * 3);
+    setParameter(name, nameLength, reinterpret_cast<float3 const*>(v), c * 3);
 }
 
 template UTILS_PUBLIC void MaterialInstance::setParameter<float>   (const char* name, size_t nameLength, const float    *v, size_t c);

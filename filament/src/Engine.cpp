@@ -108,11 +108,11 @@ Camera* Engine::createCamera(Entity entity) noexcept {
     return downcast(this)->createCamera(entity);
 }
 
-Camera* Engine::getCameraComponent(utils::Entity entity) noexcept {
+Camera* Engine::getCameraComponent(Entity entity) noexcept {
     return downcast(this)->getCameraComponent(entity);
 }
 
-void Engine::destroyCameraComponent(utils::Entity entity) noexcept {
+void Engine::destroyCameraComponent(Entity entity) noexcept {
     downcast(this)->destroyCameraComponent(entity);
 }
 
@@ -342,7 +342,7 @@ void Engine::flush() {
     downcast(this)->flush();
 }
 
-utils::EntityManager& Engine::getEntityManager() noexcept {
+EntityManager& Engine::getEntityManager() noexcept {
     return downcast(this)->getEntityManager();
 }
 
@@ -375,7 +375,7 @@ void Engine::execute() {
     downcast(this)->execute();
 }
 
-utils::JobSystem& Engine::getJobSystem() noexcept {
+JobSystem& Engine::getJobSystem() noexcept {
     return downcast(this)->getJobSystem();
 }
 
@@ -443,7 +443,7 @@ uint64_t Engine::getSteadyClockTimeNano() noexcept {
     return std::chrono::steady_clock::now().time_since_epoch().count();
 }
 
-utils::Slice<const Engine::FeatureFlag> Engine::getFeatureFlags() const noexcept {
+Slice<const Engine::FeatureFlag> Engine::getFeatureFlags() const noexcept {
     return downcast(this)->getFeatureFlags();
 }
 

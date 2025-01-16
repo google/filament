@@ -28,7 +28,7 @@ UniformBuffer::UniformBuffer(size_t size) noexcept
           mSize(uint32_t(size)),
           mSomethingDirty(true) {
     if (UTILS_LIKELY(size > sizeof(mStorage))) {
-        mBuffer = UniformBuffer::alloc(size);
+        mBuffer = alloc(size);
     }
     memset(mBuffer, 0, size);
 }
@@ -65,13 +65,13 @@ UniformBuffer& UniformBuffer::setUniforms(const UniformBuffer& rhs) noexcept {
         if (UTILS_UNLIKELY(mSize != rhs.mSize)) {
             // first free our storage if any
             if (mBuffer && !isLocalStorage()) {
-                UniformBuffer::free(mBuffer, mSize);
+                free(mBuffer, mSize);
             }
             // and allocate new storage
             mBuffer = mStorage;
             mSize = rhs.mSize;
             if (mSize > sizeof(mStorage)) {
-                mBuffer = UniformBuffer::alloc(mSize);
+                mBuffer = alloc(mSize);
             }
         }
         memcpy(mBuffer, rhs.mBuffer, rhs.mSize);
@@ -83,7 +83,7 @@ UniformBuffer& UniformBuffer::setUniforms(const UniformBuffer& rhs) noexcept {
 
 void* UniformBuffer::alloc(size_t size) noexcept {
     // these allocations have a long life span
-    return ::malloc(size);
+    return malloc(size);
 }
 
 void UniformBuffer::free(void* addr, size_t) noexcept {
@@ -133,7 +133,7 @@ void UniformBuffer::setUniformArrayUntyped<64ul>(size_t offset, void const* UTIL
 // specialization for mat3f (which has a different alignment, see std140 layout rules)
 template<>
 UTILS_NOINLINE
-void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat3f& v) noexcept {
+void UniformBuffer::setUniform(void* addr, size_t offset, const mat3f& v) noexcept {
     struct mat43 {
         float v[3][4];
     };
@@ -157,7 +157,7 @@ void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat3f& v) 
 }
 
 template<>
-void UniformBuffer::setUniform(size_t offset, const math::mat3f& v) noexcept {
+void UniformBuffer::setUniform(size_t offset, const mat3f& v) noexcept {
     setUniform(invalidateUniforms(offset, sizeof(v)), 0, v);
 }
 

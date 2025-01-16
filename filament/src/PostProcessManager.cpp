@@ -120,7 +120,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(StaticMaterialInfo 
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(
-        PostProcessManager::PostProcessMaterial&& rhs) noexcept
+        PostProcessMaterial&& rhs) noexcept
         : mData(nullptr), mSize(0), mConstants(rhs.mConstants) {
     using namespace std;
     swap(mData, rhs.mData); // aliased to mMaterial
@@ -128,7 +128,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(
 }
 
 PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial::operator=(
-        PostProcessManager::PostProcessMaterial&& rhs) noexcept {
+        PostProcessMaterial&& rhs) noexcept {
     if (this != &rhs) {
         using namespace std;
         swap(mData, rhs.mData); // aliased to mMaterial
@@ -209,8 +209,8 @@ static constexpr auto halton() {
     std::array<float2, COUNT> h;
     for (size_t i = 0; i < COUNT; i++) {
         h[i] = {
-                filament::halton(i, 2),
-                filament::halton(i, 3) };
+                halton(i, 2),
+                halton(i, 3) };
     }
     return h;
 }
@@ -227,13 +227,13 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
 
 PostProcessManager::~PostProcessManager() noexcept = default;
 
-void PostProcessManager::setFrameUniforms(backend::DriverApi& driver,
+void PostProcessManager::setFrameUniforms(DriverApi& driver,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
     mPostProcessDescriptorSet.setFrameUniforms(driver, uniforms);
     mSsrPassDescriptorSet.setFrameUniforms(uniforms);
 }
 
-void PostProcessManager::bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept {
+void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const noexcept {
     mPostProcessDescriptorSet.bind(driver);
 }
 
@@ -381,19 +381,19 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     mSsrPassDescriptorSet.terminate(driver);
 }
 
-backend::Handle<backend::HwTexture> PostProcessManager::getOneTexture() const {
+Handle<HwTexture> PostProcessManager::getOneTexture() const {
     return mEngine.getOneTexture();
 }
 
-backend::Handle<backend::HwTexture> PostProcessManager::getZeroTexture() const {
+Handle<HwTexture> PostProcessManager::getZeroTexture() const {
     return mEngine.getZeroTexture();
 }
 
-backend::Handle<backend::HwTexture> PostProcessManager::getOneTextureArray() const {
+Handle<HwTexture> PostProcessManager::getOneTextureArray() const {
     return mEngine.getOneTextureArray();
 }
 
-backend::Handle<backend::HwTexture> PostProcessManager::getZeroTextureArray() const {
+Handle<HwTexture> PostProcessManager::getZeroTextureArray() const {
     return mEngine.getZeroTextureArray();
 }
 
@@ -444,7 +444,7 @@ void PostProcessManager::renderFullScreenQuadWithScissor(
 }
 
 UTILS_NOINLINE
-void PostProcessManager::commitAndRenderFullScreenQuad(backend::DriverApi& driver,
+void PostProcessManager::commitAndRenderFullScreenQuad(DriverApi& driver,
         FrameGraphResources::RenderPassInfo const& out, FMaterialInstance const* mi,
         PostProcessVariant variant) const noexcept {
     mi->commit(driver);
@@ -940,7 +940,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> depth,
-        math::int2 axis, float zf, TextureFormat format,
+        int2 axis, float zf, TextureFormat format,
         BilateralPassConfig const& config) noexcept {
     assert_invariant(depth);
 
@@ -1172,7 +1172,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 using namespace std::literals;
                 std::string_view materialName;
                 const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
-                switch (backend::getFormatComponentCount(outDesc.format)) {
+                switch (getFormatComponentCount(outDesc.format)) {
                     case 1: materialName  = is2dArray ?
                             "separableGaussianBlur1L"sv : "separableGaussianBlur1"sv;   break;
                     case 2: materialName  = is2dArray ?
@@ -1244,7 +1244,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 }
 
 PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(FrameGraph& fg,
-        uint32_t width, uint32_t height, backend::TextureFormat format,
+        uint32_t width, uint32_t height, TextureFormat format,
         float verticalFieldOfView, float2 scale) noexcept {
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
@@ -1610,8 +1610,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         .format = TextureFormat::R16F,
                         .swizzle = {
                                 // the next stage expects min/max CoC in the red/green channel
-                                .r = backend::TextureSwizzle::CHANNEL_0,
-                                .g = backend::TextureSwizzle::CHANNEL_0 },
+                                .r = TextureSwizzle::CHANNEL_0,
+                                .g = TextureSwizzle::CHANNEL_0 },
                 });
                 data.outColor = builder.write(data.outColor, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.outCoc   = builder.write(data.outCoc,   FrameGraphTexture::Usage::COLOR_ATTACHMENT);
@@ -2217,7 +2217,7 @@ UTILS_NOINLINE
 FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         uint32_t width, uint32_t height,
-        backend::TextureFormat outFormat,
+        TextureFormat outFormat,
         BloomOptions const& bloomOptions) noexcept {
 
     struct FlarePassData {
@@ -2920,7 +2920,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
-        backend::SamplerMagFilter filter) noexcept {
+        SamplerMagFilter filter) noexcept {
 
     // The code below cannot handle sub-resources
     assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
@@ -3063,7 +3063,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                 if (UTILS_UNLIKELY(twoPassesEASU)) {
                     auto pipeline0 = getPipelineState(splitEasuMaterial->getMaterial(mEngine));
                     auto pipeline1 = getPipelineState(easuMaterial->getMaterial(mEngine));
-                    pipeline1.rasterState.depthFunc = backend::SamplerCompareFunc::NE;
+                    pipeline1.rasterState.depthFunc = SamplerCompareFunc::NE;
                     if (translucent) {
                         enableTranslucentBlending(pipeline0);
                         enableTranslucentBlending(pipeline1);
@@ -3347,7 +3347,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
-        math::float4 clearColor) noexcept {
+        float4 clearColor) noexcept {
 
     struct VsmMipData {
         FrameGraphId<FrameGraphTexture> in;
@@ -3424,7 +3424,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
                 data.output = builder.createTexture("Shadow Cascade Debug", desc);
                 builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources, auto const& data, backend::DriverApi& driver) {
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 auto color = resources.getTexture(data.color);
                 auto depth = resources.getTexture(data.depth);
@@ -3511,8 +3511,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                     mi->commit(driver);
                     renderFullScreenQuad(out, pipeline, driver);
                     // From the second draw, don't clear the targetbuffer.
-                    out.params.flags.clear = filament::backend::TargetBufferFlags::NONE;
-                    out.params.flags.discardStart = filament::backend::TargetBufferFlags::NONE;
+                    out.params.flags.clear = TargetBufferFlags::NONE;
+                    out.params.flags.discardStart = TargetBufferFlags::NONE;
                     out.params.viewport.left += out.params.viewport.width;
                 }
         });

@@ -130,7 +130,7 @@ public:
 
     // SSAO
     FrameGraphId<FrameGraphTexture> screenSpaceAmbientOcclusion(FrameGraph& fg,
-            filament::Viewport const& svp, const CameraInfo& cameraInfo,
+            Viewport const& svp, const CameraInfo& cameraInfo,
             FrameGraphId<FrameGraphTexture> structure,
             AmbientOcclusionOptions const& options) noexcept;
 
@@ -201,7 +201,7 @@ public:
 
         // Color grading, tone mapping, dithering and bloom
     FrameGraphId<FrameGraphTexture> colorGrading(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
+            FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
             FrameGraphId<FrameGraphTexture> bloom,
             FrameGraphId<FrameGraphTexture> flare,
             const FColorGrading* colorGrading,
@@ -226,12 +226,12 @@ public:
 
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
+            FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
             backend::TextureFormat outFormat, bool translucent) noexcept;
 
     // Temporal Anti-aliasing
     void TaaJitterCamera(
-            filament::Viewport const& svp,
+            Viewport const& svp,
             TemporalAntiAliasingOptions const& taaOptions,
             FrameHistory& frameHistory,
             FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
@@ -254,7 +254,7 @@ public:
     //  - doens't handle sub-resouces
     FrameGraphId<FrameGraphTexture> upscale(FrameGraph& fg, bool translucent,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
-            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+            Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;
 
     FrameGraphId<FrameGraphTexture> rcas(
@@ -267,7 +267,7 @@ public:
     // color blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
             FrameGraphId<FrameGraphTexture> input,
-            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+            Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filterMag,
             backend::SamplerMinFilter filterMin) noexcept;
 
@@ -311,7 +311,7 @@ public:
     // is not expected to be used in normal cases.
     FrameGraphId<FrameGraphTexture> debugCombineArrayTexture(FrameGraph& fg, bool translucent,
         FrameGraphId<FrameGraphTexture> input,
-        filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+        Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         backend::SamplerMagFilter filterMag,
         backend::SamplerMinFilter filterMin) noexcept;
 

@@ -34,8 +34,8 @@ using namespace utils;
 using namespace backend;
 
 size_t HwRenderPrimitiveFactory::Parameters::hash() const noexcept {
-    return utils::hash::combine(vbh.getId(),
-            utils::hash::combine(ibh.getId(),
+    return hash::combine(vbh.getId(),
+            hash::combine(ibh.getId(),
                     (size_t)type));
 }
 
@@ -61,9 +61,9 @@ void HwRenderPrimitiveFactory::terminate(DriverApi&) noexcept {
 }
 
 auto HwRenderPrimitiveFactory::create(DriverApi& driver,
-        backend::VertexBufferHandle vbh,
-        backend::IndexBufferHandle ibh,
-        backend::PrimitiveType type) noexcept -> Handle {
+        VertexBufferHandle vbh,
+        IndexBufferHandle ibh,
+        PrimitiveType type) noexcept -> Handle {
 
     // see if we already have seen this RenderPrimitive
     Key const key({ vbh, ibh, type });

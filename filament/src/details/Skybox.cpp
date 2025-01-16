@@ -56,10 +56,10 @@ struct Skybox::BuilderDetails {
 using BuilderType = Skybox;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 
 Skybox::Builder& Skybox::Builder::environment(Texture* cubemap) noexcept {
@@ -72,7 +72,7 @@ Skybox::Builder& Skybox::Builder::intensity(float envIntensity) noexcept {
     return *this;
 }
 
-Skybox::Builder& Skybox::Builder::color(math::float4 color) noexcept {
+Skybox::Builder& Skybox::Builder::color(float4 color) noexcept {
     mImpl->mColor = color;
     return *this;
 }
@@ -169,7 +169,7 @@ void FSkybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
     mLayerMask = (mLayerMask & ~select) | (values & select);
 }
 
-void FSkybox::setColor(math::float4 color) noexcept {
+void FSkybox::setColor(float4 color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
 }
 

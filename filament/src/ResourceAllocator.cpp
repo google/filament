@@ -157,17 +157,17 @@ void ResourceAllocator::destroyRenderTarget(RenderTargetHandle h) noexcept {
     mBackend.destroyRenderTarget(h);
 }
 
-backend::TextureHandle ResourceAllocator::createTexture(const char* name,
-        backend::SamplerType target, uint8_t levels, backend::TextureFormat format, uint8_t samples,
+TextureHandle ResourceAllocator::createTexture(const char* name,
+        SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
         uint32_t width, uint32_t height, uint32_t depth,
-        std::array<backend::TextureSwizzle, 4> swizzle,
-        backend::TextureUsage usage) noexcept {
+        std::array<TextureSwizzle, 4> swizzle,
+        TextureUsage usage) noexcept {
     // The frame graph descriptor uses "0" to mean "auto" but the sample count that is passed to the
     // backend should always be 1 or greater.
     samples = samples ? samples : uint8_t(1);
 
-    using TS = backend::TextureSwizzle;
-    constexpr const auto defaultSwizzle = std::array<backend::TextureSwizzle, 4>{
+    using TS = TextureSwizzle;
+    constexpr const auto defaultSwizzle = std::array<TextureSwizzle, 4>{
         TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3};
 
     // do we have a suitable texture in the cache?
@@ -253,7 +253,7 @@ void ResourceAllocator::gc(bool skippedFrame) noexcept {
     // maximum number of unique ages in the cache
     constexpr size_t MAX_UNIQUE_AGE_COUNT = 3;
 
-    utils::bitset32 ages;
+    bitset32 ages;
     uint32_t evictedCount = 0;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         size_t const ageDiff = age - it->second.age;
@@ -274,9 +274,9 @@ void ResourceAllocator::gc(bool skippedFrame) noexcept {
         uint32_t bits = ages.getValue();
         // remove from the set the ages we keep
         for (size_t i = 0; i < MAX_UNIQUE_AGE_COUNT - 1; i++) {
-            bits &= ~(1 << utils::ctz(bits));
+            bits &= ~(1 << ctz(bits));
         }
-        size_t const maxAge = utils::ctz(bits);
+        size_t const maxAge = ctz(bits);
         for (auto it = textureCache.begin(); it != textureCache.end();) {
             const size_t ageDiff = age - it->second.age;
             if (ageDiff >= maxAge) {
@@ -308,7 +308,7 @@ void ResourceAllocator::dump(bool brief) const noexcept {
 
 ResourceAllocator::CacheContainer::iterator
 ResourceAllocator::purge(
-        ResourceAllocator::CacheContainer::iterator const& pos) {
+        CacheContainer::iterator const& pos) {
     //slog.d << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age << io::endl;
     mBackend.destroyTexture(pos->second.handle);
     mCacheSize -= pos->second.size;
@@ -329,7 +329,7 @@ void ResourceAllocatorDisposer::terminate() noexcept {
     assert_invariant(mInUseTextures.empty());
 }
 
-void ResourceAllocatorDisposer::destroy(backend::TextureHandle handle) noexcept {
+void ResourceAllocatorDisposer::destroy(TextureHandle handle) noexcept {
     if (handle) {
         auto r = checkin(handle);
         if (r.has_value()) {
@@ -338,13 +338,13 @@ void ResourceAllocatorDisposer::destroy(backend::TextureHandle handle) noexcept 
     }
 }
 
-void ResourceAllocatorDisposer::checkout(backend::TextureHandle handle,
+void ResourceAllocatorDisposer::checkout(TextureHandle handle,
         ResourceAllocator::TextureKey key) {
     mInUseTextures.emplace(handle, key);
 }
 
 std::optional<ResourceAllocator::TextureKey> ResourceAllocatorDisposer::checkin(
-        backend::TextureHandle handle) {
+        TextureHandle handle) {
     // find the texture in the in-use list (it must be there!)
     auto it = mInUseTextures.find(handle);
     assert_invariant(it != mInUseTextures.end());

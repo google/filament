@@ -41,11 +41,11 @@ Camera& View::getCamera() noexcept {
     return downcast(this)->getCameraUser();
 }
 
-void View::setViewport(filament::Viewport const& viewport) noexcept {
+void View::setViewport(Viewport const& viewport) noexcept {
     downcast(this)->setViewport(viewport);
 }
 
-filament::Viewport const& View::getViewport() const noexcept {
+Viewport const& View::getViewport() const noexcept {
     return downcast(this)->getViewport();
 }
 
@@ -197,7 +197,7 @@ void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept
     downcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
-void View::setShadowType(View::ShadowType shadow) noexcept {
+void View::setShadowType(ShadowType shadow) noexcept {
     downcast(this)->setShadowType(shadow);
 }
 
@@ -221,7 +221,7 @@ SoftShadowOptions View::getSoftShadowOptions() const noexcept {
     return downcast(this)->getSoftShadowOptions();
 }
 
-void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {
+void View::setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
     downcast(this)->setAmbientOcclusion(ambientOcclusion);
 }
 
@@ -229,7 +229,7 @@ View::AmbientOcclusion View::getAmbientOcclusion() const noexcept {
     return downcast(this)->getAmbientOcclusion();
 }
 
-void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& options) noexcept {
+void View::setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept {
     downcast(this)->setAmbientOcclusionOptions(options);
 }
 
@@ -237,7 +237,7 @@ View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const no
     return downcast(this)->getAmbientOcclusionOptions();
 }
 
-void View::setBloomOptions(View::BloomOptions options) noexcept {
+void View::setBloomOptions(BloomOptions options) noexcept {
     downcast(this)->setBloomOptions(options);
 }
 
@@ -245,7 +245,7 @@ View::BloomOptions View::getBloomOptions() const noexcept {
     return downcast(this)->getBloomOptions();
 }
 
-void View::setFogOptions(View::FogOptions options) noexcept {
+void View::setFogOptions(FogOptions options) noexcept {
     downcast(this)->setFogOptions(options);
 }
 
@@ -261,7 +261,7 @@ View::DepthOfFieldOptions View::getDepthOfFieldOptions() const noexcept {
     return downcast(this)->getDepthOfFieldOptions();
 }
 
-void View::setVignetteOptions(View::VignetteOptions options) noexcept {
+void View::setVignetteOptions(VignetteOptions options) noexcept {
     downcast(this)->setVignetteOptions(options);
 }
 
@@ -310,7 +310,7 @@ const View::StereoscopicOptions& View::getStereoscopicOptions() const noexcept {
 }
 
 View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-        View::PickingQueryResultCallback callback) noexcept {
+        PickingQueryResultCallback callback) noexcept {
     return downcast(this)->pick(x, y, handler, callback);
 }
 

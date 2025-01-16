@@ -34,11 +34,11 @@ bool LightManager::empty() const noexcept {
     return downcast(this)->empty();
 }
 
-utils::Entity LightManager::getEntity(LightManager::Instance i) const noexcept {
+Entity LightManager::getEntity(Instance i) const noexcept {
     return downcast(this)->getEntity(i);
 }
 
-utils::Entity const* LightManager::getEntities() const noexcept {
+Entity const* LightManager::getEntities() const noexcept {
     return downcast(this)->getEntities();
 }
 
@@ -54,7 +54,7 @@ void LightManager::setLightChannel(Instance i, unsigned int channel, bool enable
     downcast(this)->setLightChannel(i, channel, enable);
 }
 
-bool LightManager::getLightChannel(LightManager::Instance i, unsigned int channel) const noexcept {
+bool LightManager::getLightChannel(Instance i, unsigned int channel) const noexcept {
     return downcast(this)->getLightChannel(i, channel);
 }
 
@@ -139,7 +139,7 @@ float LightManager::getSunHaloFalloff(Instance i) const noexcept {
     return downcast(this)->getSunHaloFalloff(i);
 }
 
-LightManager::Type LightManager::getType(LightManager::Instance i) const noexcept {
+LightManager::Type LightManager::getType(Instance i) const noexcept {
     return downcast(this)->getType(i);
 }
 

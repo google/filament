@@ -96,8 +96,8 @@ public:
      *                  Non-zero when we have guard bands.
      */
     void prepareViewport(
-            const filament::Viewport& physicalViewport,
-            const filament::Viewport& logicalViewport) noexcept;
+            const Viewport& physicalViewport,
+            const Viewport& logicalViewport) noexcept;
 
     void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(FEngine& engine, TemporalAntiAliasingOptions const& options) noexcept;

@@ -260,7 +260,7 @@ private:
 
     backend::Handle<backend::HwBufferObject> mUbHandle;
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
-    mutable filament::DescriptorSet mDescriptorSet;
+    mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
 
     backend::PolygonOffset mPolygonOffset{};

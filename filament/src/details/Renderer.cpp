@@ -218,7 +218,7 @@ std::pair<Handle<HwRenderTarget>, TargetBufferFlags>
     return { outTarget, outAttachmentMask };
 }
 
-backend::TargetBufferFlags FRenderer::getClearFlags() const noexcept {
+TargetBufferFlags FRenderer::getClearFlags() const noexcept {
     return (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
            | TargetBufferFlags::DEPTH_AND_STENCIL;
 }
@@ -457,14 +457,14 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 
 void FRenderer::readPixels(FRenderTarget* renderTarget,
         uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        PixelBufferDescriptor&& buffer) {
 
     // TODO: change the following to an assert when client call sites have addressed the issue.
     if (!renderTarget->supportsReadPixels()) {
-        utils::slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
+        slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
                          "TextureUsage::BLIT_SRC.  This precondition will be asserted in a later "
                          "release of Filament."
-                      << utils::io::endl;
+                      << io::endl;
     }
 
     RendererUtils::readPixels(mEngine.getDriverApi(), renderTarget->getHwHandle(),
@@ -551,7 +551,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
         // This is a workaround for internal bug b/361822355.
         // TODO: properly address the bug and remove this workaround.
-        if (engine.getBackend() == backend::Backend::VULKAN) {
+        if (engine.getBackend() == Backend::VULKAN) {
             engine.flushAndWait();
         }
     }
@@ -632,7 +632,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
-            engine.getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
+            engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW;
     // FIXME: This is to override some settings that are not supported for multiview at the moment.
     // Remove this when all features are supported.
     if (isRenderingMultiview) {
@@ -1162,7 +1162,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // RenderPass::IS_INSTANCED_STEREOSCOPIC only applies to the color pass
     if (view.hasStereo() &&
-        engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED) {
+        engine.getConfig().stereoscopicType == StereoscopicType::INSTANCED) {
         renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
         passBuilder.renderFlags(renderFlags);
     }
@@ -1178,7 +1178,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // Set the depth to the number of layers if we're rendering multiview.
     if (isRenderingMultiview) {
         colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
-        colorBufferDesc.type = backend::SamplerType::SAMPLER_2D_ARRAY;
+        colorBufferDesc.type = SamplerType::SAMPLER_2D_ARRAY;
     }
 
     // a non-drawing pass to prepare everything that need to be before the color passes execute
@@ -1257,7 +1257,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     // we can't use colorPassOutput here because it could be tonemapped
                     data.history = builder.sample(colorPassOutput.linearColor); // FIXME: an access must be declared for detach(), why?
                 }, [&view, projection](FrameGraphResources const& resources, auto const& data,
-                        backend::DriverApi&) {
+                        DriverApi&) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;

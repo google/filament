@@ -21,7 +21,7 @@
 namespace filament {
 
 ResourceNode::ResourceNode(FrameGraph& fg, FrameGraphHandle h, FrameGraphHandle parent) noexcept
-        : DependencyGraph::Node(fg.getGraph()),
+        : Node(fg.getGraph()),
           resourceHandle(h), mFrameGraph(fg), mReaderPasses(fg.getArena()), mParentHandle(parent) {
 }
 

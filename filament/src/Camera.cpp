@@ -23,7 +23,7 @@ namespace filament {
 using namespace math;
 
 void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
-        Camera::Fov direction) {
+        Fov direction) {
     setCustomProjection(
             projection(direction, fovInDegrees, aspect, near),
             projection(direction, fovInDegrees, aspect, near, far),
@@ -46,16 +46,16 @@ mat4 Camera::inverseProjection(const mat4& p) noexcept {
     return inverse(p);
 }
 
-void Camera::setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model) {
+void Camera::setEyeModelMatrix(uint8_t eyeId, mat4 const& model) {
     downcast(this)->setEyeModelMatrix(eyeId, model);
 }
 
-void Camera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
-        math::mat4 const& projectionForCulling, double near, double far) {
+void Camera::setCustomEyeProjection(mat4 const* projection, size_t count,
+        mat4 const& projectionForCulling, double near, double far) {
     downcast(this)->setCustomEyeProjection(projection, count, projectionForCulling, near, far);
 }
 
-void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,
+void Camera::setProjection(Projection projection, double left, double right, double bottom,
         double top, double near, double far) {
     downcast(this)->setProjection(projection, left, right, bottom, top, near, far);
 }
@@ -137,7 +137,7 @@ float3 Camera::getForwardVector() const noexcept {
     return downcast(this)->getForwardVector();
 }
 
-float Camera::getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
+float Camera::getFieldOfViewInDegrees(Fov direction) const noexcept {
     return downcast(this)->getFieldOfViewInDegrees(direction);
 }
 
@@ -185,12 +185,12 @@ double Camera::computeEffectiveFov(double fovInDegrees, double focusDistance) no
     return FCamera::computeEffectiveFov(fovInDegrees, focusDistance);
 }
 
-math::mat4 Camera::projection(Fov direction, double fovInDegrees,
+mat4 Camera::projection(Fov direction, double fovInDegrees,
         double aspect, double near, double far) {
     return FCamera::projection(direction, fovInDegrees, aspect, near, far);
 }
 
-math::mat4 Camera::projection(double focalLengthInMillimeters,
+mat4 Camera::projection(double focalLengthInMillimeters,
         double aspect, double near, double far) {
     return FCamera::projection(focalLengthInMillimeters, aspect, near, far);
 }

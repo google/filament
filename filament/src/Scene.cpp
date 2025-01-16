@@ -71,7 +71,7 @@ bool Scene::hasEntity(Entity entity) const noexcept {
     return downcast(this)->hasEntity(entity);
 }
 
-void Scene::forEach(Invocable<void(utils::Entity)>&& functor) const noexcept {
+void Scene::forEach(Invocable<void(Entity)>&& functor) const noexcept {
     downcast(this)->forEach(std::move(functor));
 }
 

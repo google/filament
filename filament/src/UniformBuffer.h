@@ -60,7 +60,7 @@ public:
         // immediately jump into libc's free()
         if (mBuffer && !isLocalStorage()) {
             // test not necessary but avoids a call to libc (and this is a common enough case)
-            UniformBuffer::free(mBuffer, mSize);
+            free(mBuffer, mSize);
         }
     }
 

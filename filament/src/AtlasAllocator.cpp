@@ -32,12 +32,12 @@ static inline constexpr std::pair<uint8_t, uint8_t> unmorton(uint16_t m) noexcep
 
 AtlasAllocator::AtlasAllocator(size_t maxTextureSize) noexcept {
     // round to power-of-two immediately inferior or equal to the size specified.
-    mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - utils::clz(maxTextureSize);
+    mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - clz(maxTextureSize);
 }
 
 AtlasAllocator::Allocation AtlasAllocator::allocate(size_t textureSize) noexcept {
     Allocation result{};
-    const size_t powerOfTwo = (sizeof(textureSize) * 8 - 1u) - utils::clz(textureSize);
+    const size_t powerOfTwo = (sizeof(textureSize) * 8 - 1u) - clz(textureSize);
 
     // asked for a texture size too large
     if (UTILS_UNLIKELY(powerOfTwo > mMaxTextureSizePot)) {
@@ -69,7 +69,7 @@ AtlasAllocator::Allocation AtlasAllocator::allocate(size_t textureSize) noexcept
 
 void AtlasAllocator::clear(size_t maxTextureSize) noexcept {
     std::fill(mQuadTree.begin(), mQuadTree.end(), Node{});
-    mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - utils::clz(maxTextureSize);
+    mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - clz(maxTextureSize);
 }
 
 AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcept {
@@ -155,7 +155,7 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
             if (candidate.l > 0) {
                 // first thing to do is to update our parent's children count (the first node
                 // doesn't have a parent).
-                size_t const pi = QuadTreeUtils::parent(candidate.l, candidate.code);
+                size_t const pi = parent(candidate.l, candidate.code);
                 Node& parentNode = mQuadTree[pi];
                 assert_invariant(!parentNode.isAllocated());
                 assert_invariant(!parentNode.hasAllChildren());

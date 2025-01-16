@@ -27,7 +27,7 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-bool RenderableManager::hasComponent(utils::Entity e) const noexcept {
+bool RenderableManager::hasComponent(Entity e) const noexcept {
     return downcast(this)->hasComponent(e);
 }
 
@@ -39,20 +39,20 @@ bool RenderableManager::empty() const noexcept {
     return downcast(this)->empty();
 }
 
-utils::Entity RenderableManager::getEntity(RenderableManager::Instance i) const noexcept {
+Entity RenderableManager::getEntity(Instance i) const noexcept {
     return downcast(this)->getEntity(i);
 }
 
-utils::Entity const* RenderableManager::getEntities() const noexcept {
+Entity const* RenderableManager::getEntities() const noexcept {
     return downcast(this)->getEntities();
 }
 
 RenderableManager::Instance
-RenderableManager::getInstance(utils::Entity e) const noexcept {
+RenderableManager::getInstance(Entity e) const noexcept {
     return downcast(this)->getInstance(e);
 }
 
-void RenderableManager::destroy(utils::Entity e) noexcept {
+void RenderableManager::destroy(Entity e) noexcept {
     return downcast(this)->destroy(e);
 }
 
@@ -126,7 +126,7 @@ void RenderableManager::setBlendOrderAt(Instance instance, size_t primitiveIndex
     downcast(this)->setBlendOrderAt(instance, 0, primitiveIndex, order);
 }
 
-void RenderableManager::setGlobalBlendOrderEnabledAt(RenderableManager::Instance instance,
+void RenderableManager::setGlobalBlendOrderEnabledAt(Instance instance,
         size_t primitiveIndex, bool enabled) noexcept {
     downcast(this)->setGlobalBlendOrderEnabledAt(instance, 0, primitiveIndex, enabled);
 }
@@ -143,7 +143,7 @@ void RenderableManager::setGeometryAt(Instance instance, size_t primitiveIndex,
 }
 
 void RenderableManager::setBones(Instance instance,
-        RenderableManager::Bone const* transforms, size_t boneCount, size_t offset) {
+        Bone const* transforms, size_t boneCount, size_t offset) {
     downcast(this)->setBones(instance, transforms, boneCount, offset);
 }
 
@@ -184,11 +184,11 @@ bool RenderableManager::getLightChannel(Instance instance, unsigned int channel)
     return downcast(this)->getLightChannel(instance, channel);
 }
 
-void RenderableManager::setFogEnabled(RenderableManager::Instance instance, bool enable) noexcept {
+void RenderableManager::setFogEnabled(Instance instance, bool enable) noexcept {
     downcast(this)->setFogEnabled(instance, enable);
 }
 
-bool RenderableManager::getFogEnabled(RenderableManager::Instance instance) const noexcept {
+bool RenderableManager::getFogEnabled(Instance instance) const noexcept {
     return downcast(this)->getFogEnabled(instance);
 }
 

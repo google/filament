@@ -141,7 +141,7 @@ MaterialInstance const* Material::getDefaultInstance() const noexcept {
 }
 
 void Material::compile(CompilerPriorityQueue priority, UserVariantFilterMask variantFilter,
-        backend::CallbackHandler* handler, utils::Invocable<void(Material*)>&& callback) noexcept {
+        CallbackHandler* handler, utils::Invocable<void(Material*)>&& callback) noexcept {
     downcast(this)->compile(priority, variantFilter, handler, std::move(callback));
 }
 

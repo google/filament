@@ -99,7 +99,7 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
     for (bool const lit: { false, true }) {
         for (bool const ssr: { false, true }) {
             for (bool const fog: { false, true }) {
-                auto index = ColorPassDescriptorSet::getIndex(lit, ssr, fog);
+                auto index = getIndex(lit, ssr, fog);
                 mDescriptorSetLayout[index] = {
                         engine.getDescriptorSetLayoutFactory(),
                         engine.getDriverApi(),
@@ -209,7 +209,7 @@ void ColorPassDescriptorSet::prepareViewport(
     s.logicalViewportOffset = -logical.xy / logical.zw;
 }
 
-void ColorPassDescriptorSet::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
+void ColorPassDescriptorSet::prepareTime(FEngine& engine, float4 const& userTime) noexcept {
     auto& s = mUniforms.edit();
     const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
     const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
@@ -228,7 +228,7 @@ void ColorPassDescriptorSet::prepareTemporalNoise(FEngine& engine,
 void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
         mat4 const& userWorldFromFog, FogOptions const& options, FIndirectLight const* ibl) noexcept {
 
-    auto packHalf2x16 = [](math::half2 v) -> uint32_t {
+    auto packHalf2x16 = [](half2 v) -> uint32_t {
         short2 s;
         memcpy(&s[0], &v[0], sizeof(s));
         return s.y << 16 | s.x;
@@ -262,7 +262,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
     Handle<HwTexture> fogColorTextureHandle;
     if (options.skyColor) {
         fogColorTextureHandle = downcast(options.skyColor)->getHwHandleForSampling();
-        math::half2 const minMaxMip{ 0.0f, float(options.skyColor->getLevels()) - 1.0f };
+        half2 const minMaxMip{ 0.0f, float(options.skyColor->getLevels()) - 1.0f };
         s.fogMinMaxMip = packHalf2x16(minMaxMip);
         s.fogOneOverFarMinusNear = 1.0f / (cameraInfo.zf - cameraInfo.zn);
         s.fogNearOverFarMinusNear = cameraInfo.zn / (cameraInfo.zf - cameraInfo.zn);
@@ -276,7 +276,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
             // improves the effect overall.
             fogColorTextureHandle = ibl->getReflectionHwHandle();
             float const levelCount = float(ibl->getLevelCount());
-            math::half2 const minMaxMip{ levelCount - 2.0f, levelCount - 1.0f };
+            half2 const minMaxMip{ levelCount - 2.0f, levelCount - 1.0f };
             s.fogMinMaxMip = packHalf2x16(minMaxMip);
             s.fogOneOverFarMinusNear = 1.0f / (cameraInfo.zf - cameraInfo.zn);
             s.fogNearOverFarMinusNear = cameraInfo.zn / (cameraInfo.zf - cameraInfo.zn);
@@ -327,7 +327,7 @@ void ColorPassDescriptorSet::prepareBlending(bool needsAlphaChannel) noexcept {
 }
 
 void ColorPassDescriptorSet::prepareMaterialGlobals(
-        std::array<math::float4, 4> const& materialGlobals) noexcept {
+        std::array<float4, 4> const& materialGlobals) noexcept {
     mUniforms.edit().custom[0] = materialGlobals[0];
     mUniforms.edit().custom[1] = materialGlobals[1];
     mUniforms.edit().custom[2] = materialGlobals[2];
@@ -350,8 +350,8 @@ void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
 }
 
 void ColorPassDescriptorSet::prepareHistorySSR(Handle<HwTexture> ssr,
-        math::mat4f const& historyProjection,
-        math::mat4f const& uvFromViewMatrix,
+        mat4f const& historyProjection,
+        mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
     setSampler(+PerViewBindingPoints::SSR, ssr, {
@@ -376,7 +376,7 @@ void ColorPassDescriptorSet::prepareStructure(Handle<HwTexture> structure) noexc
 void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
         float exposure,
         float3 const& sceneSpaceDirection,
-        ColorPassDescriptorSet::LightManagerInstance directionalLight) noexcept {
+        LightManagerInstance directionalLight) noexcept {
     FLightManager const& lcm = engine.getLightManager();
     auto& s = mUniforms.edit();
 
@@ -447,7 +447,7 @@ void ColorPassDescriptorSet::prepareDynamicLights(Froxelizer& froxelizer) noexce
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
-void ColorPassDescriptorSet::prepareShadowMapping(backend::BufferObjectHandle shadowUniforms, bool highPrecision) noexcept {
+void ColorPassDescriptorSet::prepareShadowMapping(BufferObjectHandle shadowUniforms, bool highPrecision) noexcept {
     auto& s = mUniforms.edit();
     constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
     constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
@@ -483,7 +483,7 @@ void ColorPassDescriptorSet::prepareShadowVSM(Handle<HwTexture> texture,
     s.vsmExponent = options.highPrecision ? high : low;
     s.vsmDepthScale = options.minVarianceScale * 0.01f * s.vsmExponent;
     s.vsmLightBleedReduction = options.lightBleedReduction;
-    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
+    prepareShadowSampling(s, shadowMappingUniforms);
 }
 
 void ColorPassDescriptorSet::prepareShadowPCF(Handle<HwTexture> texture,
@@ -497,7 +497,7 @@ void ColorPassDescriptorSet::prepareShadowPCF(Handle<HwTexture> texture,
             });
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
-    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
+    prepareShadowSampling(s, shadowMappingUniforms);
 }
 
 void ColorPassDescriptorSet::prepareShadowDPCF(Handle<HwTexture> texture,
@@ -507,7 +507,7 @@ void ColorPassDescriptorSet::prepareShadowDPCF(Handle<HwTexture> texture,
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
-    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
+    prepareShadowSampling(s, shadowMappingUniforms);
 }
 
 void ColorPassDescriptorSet::prepareShadowPCSS(Handle<HwTexture> texture,
@@ -517,7 +517,7 @@ void ColorPassDescriptorSet::prepareShadowPCSS(Handle<HwTexture> texture,
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
-    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
+    prepareShadowSampling(s, shadowMappingUniforms);
 }
 
 void ColorPassDescriptorSet::prepareShadowPCFDebug(Handle<HwTexture> texture,
@@ -528,10 +528,10 @@ void ColorPassDescriptorSet::prepareShadowPCFDebug(Handle<HwTexture> texture,
     });
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
-    ColorPassDescriptorSet::prepareShadowSampling(s, shadowMappingUniforms);
+    prepareShadowSampling(s, shadowMappingUniforms);
 }
 
-void ColorPassDescriptorSet::commit(backend::DriverApi& driver) noexcept {
+void ColorPassDescriptorSet::commit(DriverApi& driver) noexcept {
     if (mUniforms.isDirty()) {
         driver.updateBufferObject(mUniforms.getUboHandle(),
                 mUniforms.toBufferDescriptor(driver), 0);
@@ -552,7 +552,7 @@ void ColorPassDescriptorSet::unbindSamplers(DriverApi&) noexcept {
     setSampler(+PerViewBindingPoints::SSR, {}, {});
 }
 
-void ColorPassDescriptorSet::setSampler(backend::descriptor_binding_t binding,
+void ColorPassDescriptorSet::setSampler(descriptor_binding_t binding,
         TextureHandle th, SamplerParams params) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto samplers = mDescriptorSetLayout[i].getSamplerDescriptors();
@@ -562,7 +562,7 @@ void ColorPassDescriptorSet::setSampler(backend::descriptor_binding_t binding,
     }
 }
 
-void ColorPassDescriptorSet::setBuffer(backend::descriptor_binding_t binding,
+void ColorPassDescriptorSet::setBuffer(descriptor_binding_t binding,
         BufferObjectHandle boh, uint32_t offset, uint32_t size) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto ubos = mDescriptorSetLayout[i].getUniformBufferDescriptors();

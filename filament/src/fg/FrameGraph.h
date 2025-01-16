@@ -560,7 +560,7 @@ FrameGraphPass<Data>& FrameGraph::addPass(char const* name, Setup setup) {
 
 template<typename Execute>
 void FrameGraph::addTrivialSideEffectPass(char const* name, Execute&& execute) {
-    addPass<Empty>(name, [](FrameGraph::Builder& builder, auto&) { builder.sideEffect(); },
+    addPass<Empty>(name, [](Builder& builder, auto&) { builder.sideEffect(); },
             [execute](FrameGraphResources const&, auto const&, backend::DriverApi& driver) {
                 execute(driver);
             });

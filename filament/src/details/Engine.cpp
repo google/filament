@@ -81,7 +81,7 @@ using namespace filaflat;
 struct Engine::BuilderDetails {
     Backend mBackend = Backend::DEFAULT;
     Platform* mPlatform = nullptr;
-    Engine::Config mConfig;
+    Config mConfig;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
@@ -90,7 +90,7 @@ struct Engine::BuilderDetails {
     static Config validateConfig(Config config) noexcept;
 };
 
-Engine* FEngine::create(Engine::Builder const& builder) {
+Engine* FEngine::create(Builder const& builder) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
@@ -153,7 +153,7 @@ Engine* FEngine::create(Engine::Builder const& builder) {
 
 #if UTILS_HAS_THREADING
 
-void FEngine::create(Engine::Builder const& builder, Invocable<void(void*)>&& callback) {
+void FEngine::create(Builder const& builder, Invocable<void(void*)>&& callback) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
@@ -208,7 +208,7 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Engine::Builder const& builder) :
+FEngine::FEngine(Builder const& builder) :
         mBackend(builder->mBackend),
         mActiveFeatureLevel(builder->mFeatureLevel),
         mPlatform(builder->mPlatform),
@@ -268,7 +268,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
 }
 
-uint32_t FEngine::getJobSystemThreadPoolSize(Engine::Config const& config) noexcept {
+uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
     if (config.jobSystemThreadCount > 0) {
         return config.jobSystemThreadCount;
     }
@@ -309,7 +309,7 @@ void FEngine::init() {
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
+            .attribute(POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
             .build(*this));
 
     mFullScreenTriangleVb->setBufferAt(*this, 0,
@@ -635,7 +635,7 @@ void FEngine::prepare() {
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
-    FEngine::DriverApi& driver = getDriverApi();
+    DriverApi& driver = getDriverApi();
 
     for (auto& materialInstanceList: mMaterialInstances) {
         materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
@@ -703,7 +703,7 @@ void FEngine::flushAndWait() {
 
 #else
 
-    FFence::waitAndDestroy(FEngine::createFence(), FFence::Mode::FLUSH);
+    FFence::waitAndDestroy(createFence(), FFence::Mode::FLUSH);
 
 #endif
 
@@ -965,7 +965,7 @@ FCamera* FEngine::getCameraComponent(Entity entity) noexcept {
     return ci ? mCameraManager.getCamera(ci) : nullptr;
 }
 
-void FEngine::destroyCameraComponent(utils::Entity entity) noexcept {
+void FEngine::destroyCameraComponent(Entity entity) noexcept {
     mCameraManager.destroy(*this, entity);
 }
 
@@ -1378,7 +1378,7 @@ void FEngine::setPaused(bool paused) {
 }
 
 Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
-    FEngine::DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
+    DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
     return driver.getFeatureLevel();
 }
 
@@ -1433,10 +1433,10 @@ bool* FEngine::getFeatureFlagPtr(std::string_view name, bool allowConstant) cons
 
 Engine::Builder::Builder() noexcept = default;
 Engine::Builder::~Builder() noexcept = default;
-Engine::Builder::Builder(Engine::Builder const& rhs) noexcept = default;
-Engine::Builder::Builder(Engine::Builder&& rhs) noexcept = default;
-Engine::Builder& Engine::Builder::operator=(Engine::Builder const& rhs) noexcept = default;
-Engine::Builder& Engine::Builder::operator=(Engine::Builder&& rhs) noexcept = default;
+Engine::Builder::Builder(Builder const& rhs) noexcept = default;
+Engine::Builder::Builder(Builder&& rhs) noexcept = default;
+Engine::Builder& Engine::Builder::operator=(Builder const& rhs) noexcept = default;
+Engine::Builder& Engine::Builder::operator=(Builder&& rhs) noexcept = default;
 
 Engine::Builder& Engine::Builder::backend(Backend backend) noexcept {
     mImpl->mBackend = backend;
@@ -1448,8 +1448,8 @@ Engine::Builder& Engine::Builder::platform(Platform* platform) noexcept {
     return *this;
 }
 
-Engine::Builder& Engine::Builder::config(Engine::Config const* config) noexcept {
-    mImpl->mConfig = config ? *config : Engine::Config{};
+Engine::Builder& Engine::Builder::config(Config const* config) noexcept {
+    mImpl->mConfig = config ? *config : Config{};
     return *this;
 }
 

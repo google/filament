@@ -53,10 +53,10 @@ struct RenderTarget::BuilderDetails {
 using BuilderType = RenderTarget;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Texture* texture) noexcept {
     mImpl->mAttachments[(size_t)pt].texture = downcast(texture);
@@ -155,13 +155,13 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder)
+FRenderTarget::FRenderTarget(FEngine& engine, const Builder& builder)
     : mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()),
       mSupportsReadPixels(false) {
     std::copy(std::begin(builder.mImpl->mAttachments), std::end(builder.mImpl->mAttachments),
             std::begin(mAttachments));
 
-    backend::MRT mrt{};
+    MRT mrt{};
     TargetBufferInfo dinfo{};
 
     auto setAttachment = [this, &driver = engine.getDriverApi()]

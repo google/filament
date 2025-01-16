@@ -37,7 +37,7 @@ class FCamera;
 
 class UTILS_PRIVATE FCameraManager : public CameraManager {
 public:
-    using Instance = CameraManager::Instance;
+    using Instance = Instance;
 
     explicit FCameraManager(FEngine& engine) noexcept;
 

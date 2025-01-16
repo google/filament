@@ -61,8 +61,8 @@ class MorphTargetBuffer;
 
 class FRenderableManager : public RenderableManager {
 public:
-    using Instance = RenderableManager::Instance;
-    using GeometryType = RenderableManager::Builder::GeometryType;
+    using Instance = Instance;
+    using GeometryType = Builder::GeometryType;
 
     // TODO: consider renaming, this pertains to material variants, not strictly visibility.
     struct Visibility {
@@ -118,7 +118,7 @@ public:
         return mManager.getEntities();
     }
 
-    void create(const RenderableManager::Builder& builder, utils::Entity entity);
+    void create(const Builder& builder, utils::Entity entity);
 
     void destroy(utils::Entity e) noexcept;
 
@@ -273,7 +273,7 @@ private:
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones,                           // BONES
             FMorphTargetBuffer*,            // MORPHTARGET_BUFFER
-            filament::DescriptorSet          // DESCRIPTOR_SET
+            DescriptorSet          // DESCRIPTOR_SET
     >;
 
     struct Sim : public Base {

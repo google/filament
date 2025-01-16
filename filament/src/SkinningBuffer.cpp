@@ -29,7 +29,7 @@ void SkinningBuffer::setBones(Engine& engine,
 }
 
 void SkinningBuffer::setBones(Engine& engine,
-        math::mat4f const* transforms, size_t count, size_t offset) {
+        mat4f const* transforms, size_t count, size_t offset) {
     downcast(this)->setBones(downcast(engine), transforms, count, offset);
 }
 

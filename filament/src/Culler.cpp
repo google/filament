@@ -101,10 +101,10 @@ bool Culler::intersects(Frustum const& frustum, Box const& box) noexcept {
     // The main intersection routine assumes multiples of 8 items
     float3 centers[MODULO];
     float3 extents[MODULO];
-    Culler::result_type results[MODULO];
+    result_type results[MODULO];
     centers[0] = box.center;
     extents[0] = box.halfExtent;
-    Culler::intersects(results, frustum, centers, extents, MODULO, 0);
+    intersects(results, frustum, centers, extents, MODULO, 0);
     return bool(results[0] & 1);
 }
 
@@ -114,9 +114,9 @@ bool Culler::intersects(Frustum const& frustum, Box const& box) noexcept {
 bool Culler::intersects(Frustum const& frustum, float4 const& sphere) noexcept {
     // The main intersection routine assumes multiples of 8 items
     float4 spheres[MODULO];
-    Culler::result_type results[MODULO];
+    result_type results[MODULO];
     spheres[0] = sphere;
-    Culler::intersects(results, frustum, spheres, MODULO);
+    intersects(results, frustum, spheres, MODULO);
     return bool(results[0] & 1);
 }
 

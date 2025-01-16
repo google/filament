@@ -76,7 +76,7 @@ struct RenderableManager::BuilderDetails {
     Box mAABB;
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
-    uint8_t mCommandChannel = RenderableManager::Builder::DEFAULT_CHANNEL;
+    uint8_t mCommandChannel = Builder::DEFAULT_CHANNEL;
     uint8_t mLightChannels = 1;
     uint16_t mInstanceCount = 1;
     bool mCulling : 1;
@@ -85,7 +85,7 @@ struct RenderableManager::BuilderDetails {
     bool mScreenSpaceContactShadows : 1;
     bool mSkinningBufferMode : 1;
     bool mFogEnabled : 1;
-    RenderableManager::Builder::GeometryType mGeometryType : 2;
+    Builder::GeometryType mGeometryType : 2;
     size_t mSkinningBoneCount = 0;
     size_t mMorphTargetCount = 0;
     FMorphTargetBuffer* mMorphTargetBuffer = nullptr;
@@ -94,35 +94,35 @@ struct RenderableManager::BuilderDetails {
     FSkinningBuffer* mSkinningBuffer = nullptr;
     FInstanceBuffer* mInstanceBuffer = nullptr;
     uint32_t mSkinningBufferOffset = 0;
-    utils::FixedCapacityVector<math::float2> mBoneIndicesAndWeights;
+    FixedCapacityVector<float2> mBoneIndicesAndWeights;
     size_t mBoneIndicesAndWeightsCount = 0;
 
     // bone indices and weights defined for primitive index
-    std::unordered_map<size_t, utils::FixedCapacityVector<
-        utils::FixedCapacityVector<math::float2>>> mBonePairs;
+    std::unordered_map<size_t, FixedCapacityVector<
+        FixedCapacityVector<float2>>> mBonePairs;
 
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false),
               mReceiveShadows(true), mScreenSpaceContactShadows(false),
               mSkinningBufferMode(false), mFogEnabled(true),
-              mGeometryType(RenderableManager::Builder::GeometryType::DYNAMIC),
+              mGeometryType(Builder::GeometryType::DYNAMIC),
               mBonePairs() {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
 
-    void processBoneIndicesAndWights(Engine& engine, utils::Entity entity);
+    void processBoneIndicesAndWights(Engine& engine, Entity entity);
 
 };
 
 using BuilderType = RenderableManager;
 BuilderType::Builder::Builder(size_t count) noexcept
-        : BuilderBase<RenderableManager::BuilderDetails>(count) {
+        : BuilderBase<BuilderDetails>(count) {
     assert_invariant(mImpl->mEntries.size() == count);
 }
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 
 RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
@@ -247,11 +247,11 @@ RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bo
 }
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
-               math::float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept {
+               float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept {
     size_t const vertexCount = count / bonesPerVertex;
-    utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>> bonePairs(vertexCount);
+    FixedCapacityVector<FixedCapacityVector<float2>> bonePairs(vertexCount);
     for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
-        utils::FixedCapacityVector<float2> vertexData(bonesPerVertex);
+        FixedCapacityVector<float2> vertexData(bonesPerVertex);
         std::copy_n(indicesAndWeights + iVertex * bonesPerVertex,
                 bonesPerVertex, vertexData.data());
         bonePairs[iVertex] = std::move(vertexData);
@@ -260,8 +260,8 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
 }
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
-        utils::FixedCapacityVector<
-            utils::FixedCapacityVector<math::float2>> indicesAndWeightsVector) noexcept {
+        FixedCapacityVector<
+            FixedCapacityVector<float2>> indicesAndWeightsVector) noexcept {
     mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
     return *this;
 }
@@ -396,10 +396,10 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                 }
 #ifndef NDEBUG
                 else {
-                    utils::slog.w << "Warning of skinning: [entity=%" << entity.getId()
+                    slog.w << "Warning of skinning: [entity=%" << entity.getId()
                         << ", primitive @ %" << primitiveIndex
                         << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
-                        << ", it should be one. Weights will be normalized." << utils::io::endl;
+                        << ", it should be one. Weights will be normalized." << io::endl;
                 }
 #endif
 
@@ -542,7 +542,7 @@ FRenderableManager::~FRenderableManager() {
 }
 
 void FRenderableManager::create(
-        const RenderableManager::Builder& UTILS_RESTRICT builder, Entity entity) {
+        const Builder& UTILS_RESTRICT builder, Entity entity) {
     FEngine& engine = mEngine;
     auto& manager = mManager;
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -589,7 +589,7 @@ void FRenderableManager::create(
             // will get bound to the PER_RENDERABLE UBO, and we can't bind a buffer smaller than the
             // full size of the UBO.
             instances.handle = driver.createBufferObject(sizeof(PerRenderableUib),
-                    BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+                    BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
             if (auto name = instances.buffer->getName(); !name.empty()) {
                 driver.setDebugTag(instances.handle.getId(), std::move(name));
             }
@@ -627,7 +627,7 @@ void FRenderableManager::create(
                         .handle = driver.createBufferObject(
                                 sizeof(PerRenderableBoneUib),
                                 BufferObjectBinding::UNIFORM,
-                                backend::BufferUsage::DYNAMIC),
+                                BufferUsage::DYNAMIC),
                         .count = (uint16_t)boneCount,
                         .offset = 0,
                         .skinningBufferMode = false };
@@ -689,7 +689,7 @@ void FRenderableManager::create(
                 .handle = driver.createBufferObject(
                         sizeof(PerRenderableMorphingUib),
                         BufferObjectBinding::UNIFORM,
-                        backend::BufferUsage::DYNAMIC),
+                        BufferUsage::DYNAMIC),
                 .count = targetCount };
 
             Slice<FRenderPrimitive>& primitives = mManager[ci].primitives;
@@ -714,7 +714,7 @@ void FRenderableManager::create(
 }
 
 // this destroys a single component from an entity
-void FRenderableManager::destroy(utils::Entity e) noexcept {
+void FRenderableManager::destroy(Entity e) noexcept {
     Instance const ci = getInstance(e);
     if (ci) {
         destroyComponent(ci);
@@ -739,7 +739,7 @@ void FRenderableManager::terminate() noexcept {
     mHwRenderPrimitiveFactory.terminate(mEngine.getDriverApi());
 }
 
-void FRenderableManager::gc(utils::EntityManager& em) noexcept {
+void FRenderableManager::gc(EntityManager& em) noexcept {
     mManager.gc(em, [this](Entity e) {
         destroy(e);
     });
@@ -782,7 +782,7 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
 }
 
 void FRenderableManager::destroyComponentPrimitives(
-        HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+        HwRenderPrimitiveFactory& factory, DriverApi& driver,
         Slice<FRenderPrimitive>& primitives) noexcept {
     for (auto& primitive : primitives) {
         primitive.terminate(factory, driver);
@@ -917,7 +917,7 @@ void FRenderableManager::setBones(Instance ci,
     }
 }
 
-void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
+void FRenderableManager::setSkinningBuffer(Instance ci,
         FSkinningBuffer* skinningBuffer, size_t count, size_t offset) {
 
     Bones& bones = mManager[ci].bones;
@@ -947,7 +947,7 @@ void FRenderableManager::setSkinningBuffer(FRenderableManager::Instance ci,
     bones.offset = uint16_t(offset);
 }
 
-static void updateMorphWeights(FEngine& engine, backend::Handle<backend::HwBufferObject> handle,
+static void updateMorphWeights(FEngine& engine, Handle<HwBufferObject> handle,
         float const* weights, size_t count, size_t offset) noexcept {
     auto& driver = engine.getDriverApi();
     auto size = sizeof(float4) * count;

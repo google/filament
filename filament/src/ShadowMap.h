@@ -145,19 +145,19 @@ public:
     // This computes the light's camera.
     ShaderParameters updateDirectional(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             ShadowMapInfo const& shadowMapInfo,
             SceneInfo const& sceneInfo,
             bool useDepthClamp) noexcept;
 
     ShaderParameters updateSpot(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene,
             SceneInfo sceneInfo) noexcept;
 
-    ShadowMap::ShaderParameters updatePoint(FEngine& engine,
-            const FScene::LightSoa& lightData, size_t index, filament::CameraInfo const& camera,
+    ShaderParameters updatePoint(FEngine& engine,
+            const FScene::LightSoa& lightData, size_t index, CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene, uint8_t face) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
@@ -237,12 +237,12 @@ private:
             FEngine& engine,
             math::float3 direction,
             FLightManager::ShadowParams params,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             SceneInfo const& sceneInfo,
             bool useDepthClamp) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
-            filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
+            CameraInfo const& camera, FLightManager::ShadowParams const& params,
             const math::mat4f& LMp,
             const math::mat4f& Mv,
             const math::mat4f& LMpMv,
@@ -255,7 +255,7 @@ private:
             math::mat4f const& LMpMv,
             math::mat4f const& WLMp,
             FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             float shadowFar, bool stable) noexcept;
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,

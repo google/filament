@@ -232,7 +232,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
     driver.popGroupMarker();
 }
 
-void FrameGraph::addPresentPass(const std::function<void(FrameGraph::Builder&)>& setup) noexcept {
+void FrameGraph::addPresentPass(const std::function<void(Builder&)>& setup) noexcept {
     PresentPassNode* node = mArena.make<PresentPassNode>(*this);
     mPassNodes.push_back(node);
     Builder builder(*this, node);

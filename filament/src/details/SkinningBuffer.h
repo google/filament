@@ -61,7 +61,7 @@ public:
     }
 
 private:
-    friend class ::FilamentTest_Bones_Test;
+    friend class FilamentTest_Bones_Test;
     friend class SkinningBuffer;
     friend class FRenderableManager;
 

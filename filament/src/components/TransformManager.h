@@ -32,7 +32,7 @@ namespace filament {
 
 class UTILS_PRIVATE FTransformManager : public TransformManager {
 public:
-    using Instance = TransformManager::Instance;
+    using Instance = Instance;
 
     FTransformManager() noexcept;
     ~FTransformManager() noexcept;
@@ -151,7 +151,7 @@ private:
             math::float3 const& ptTranslationLo, math::float3 const& localTranslationLo,
             bool accurate);
 
-    friend class TransformManager::children_iterator;
+    friend class children_iterator;
 
     enum {
         LOCAL,          // local transform (relative to parent), world if no parent
@@ -179,7 +179,7 @@ private:
         using Base::gc;
         using Base::swap;
 
-        typename Base::SoA& getSoA() { return mData; }
+        SoA& getSoA() { return mData; }
 
         struct Proxy {
             // all of these gets inlined

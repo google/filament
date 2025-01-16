@@ -90,10 +90,10 @@ struct Texture::BuilderDetails {
 using BuilderType = Texture;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 
 Texture::Builder& Texture::Builder::width(uint32_t width) noexcept {
@@ -116,18 +116,18 @@ Texture::Builder& Texture::Builder::levels(uint8_t levels) noexcept {
     return *this;
 }
 
-Texture::Builder& Texture::Builder::sampler(Texture::Sampler target) noexcept {
+Texture::Builder& Texture::Builder::sampler(Sampler target) noexcept {
     mImpl->mTarget = target;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::format(Texture::InternalFormat format) noexcept {
+Texture::Builder& Texture::Builder::format(InternalFormat format) noexcept {
     mImpl->mFormat = format;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
-    mImpl->mUsage = Texture::Usage(usage);
+Texture::Builder& Texture::Builder::usage(Usage usage) noexcept {
+    mImpl->mUsage = Usage(usage);
     return *this;
 }
 
@@ -308,7 +308,7 @@ size_t FTexture::getDepth(size_t level) const noexcept {
 void FTexture::setImage(FEngine& engine, size_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
-        FTexture::PixelBufferDescriptor&& p) const {
+        PixelBufferDescriptor&& p) const {
 
     if (UTILS_UNLIKELY(!engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))) {
         FILAMENT_CHECK_PRECONDITION(p.stride == 0 || p.stride == width)
@@ -398,7 +398,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
 // deprecated
 void FTexture::setImage(FEngine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
+        PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
 
     auto validateTarget = [](SamplerType sampler) -> bool {
         switch (sampler) {
@@ -527,7 +527,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
         api.setExternalStream(mHandle, stream->getHandle());
     } else {
         mStream = nullptr;
-        api.setExternalStream(mHandle, backend::Handle<backend::HwStream>());
+        api.setExternalStream(mHandle, backend::Handle<HwStream>());
     }
 }
 
@@ -574,7 +574,7 @@ void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
     }
 }
 
-void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
+void FTexture::setHandles(Handle<HwTexture> handle) noexcept {
     assert_invariant(!mHandle || mHandleForSampling);
     if (mHandle) {
         mDriver->destroyTexture(mHandle);
@@ -586,8 +586,8 @@ void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
     mHandleForSampling = handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
-        backend::Handle<backend::HwTexture> handle) const noexcept {
+Handle<HwTexture> FTexture::setHandleForSampling(
+        Handle<HwTexture> handle) const noexcept {
     assert_invariant(!mHandle || mHandleForSampling);
     if (mHandleForSampling && mHandleForSampling != mHandle) {
         mDriver->destroyTexture(mHandleForSampling);
@@ -595,19 +595,19 @@ backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
     return mHandleForSampling = handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
-        backend::DriverApi& driver) noexcept {
+Handle<HwTexture> FTexture::createPlaceholderTexture(
+        DriverApi& driver) noexcept {
     auto handle = driver.createTexture(
             Sampler::SAMPLER_2D, 1, InternalFormat::RGBA8, 1, 1, 1, 1, Usage::DEFAULT);
     static uint8_t pixels[4] = { 0, 0, 0, 0 };
     driver.update3DImage(handle, 0, 0, 0, 0, 1, 1, 1,
             { (char*)&pixels[0], sizeof(pixels),
-                    Texture::PixelBufferDescriptor::PixelDataFormat::RGBA,
-                    Texture::PixelBufferDescriptor::PixelDataType::UBYTE });
+                    PixelBufferDescriptor::PixelDataFormat::RGBA,
+                    PixelBufferDescriptor::PixelDataType::UBYTE });
     return handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
+Handle<HwTexture> FTexture::getHwHandleForSampling() const noexcept {
     if (UTILS_UNLIKELY(mExternal && !mHandleForSampling)) {
         return setHandleForSampling(createPlaceholderTexture(*mDriver));
     }
@@ -642,7 +642,7 @@ bool FTexture::isTextureSwizzleSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isTextureSwizzleSupported();
 }
 
-size_t FTexture::computeTextureDataSize(Texture::Format format, Texture::Type type,
+size_t FTexture::computeTextureDataSize(Format format, Type type,
         size_t stride, size_t height, size_t alignment) noexcept {
     return PixelBufferDescriptor::computeDataSize(format, type, stride, height, alignment);
 }
@@ -807,9 +807,9 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
         CubemapIBL::roughnessFilter(js, dst, { levels.begin(), uint32_t(levels.size()) },
                 linearRoughness, numSamples, mirror, true);
 
-        Texture::PixelBufferDescriptor const pbd(image.getData(), image.getSize(),
-                Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
-                Texture::PixelBufferDescriptor::PixelDataType::FLOAT, 1, 0, 0, image.getStride());
+        PixelBufferDescriptor const pbd(image.getData(), image.getSize(),
+                PixelBufferDescriptor::PixelDataFormat::RGB,
+                PixelBufferDescriptor::PixelDataType::FLOAT, 1, 0, 0, image.getStride());
 
         uintptr_t const base = uintptr_t(image.getData());
         for (size_t j = 0; j < 6; j++) {
@@ -817,8 +817,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
             auto offset = uintptr_t(faceImage.getData()) - base;
             driver.update3DImage(mHandle, level, 0, 0, j, dim, dim, 1, {
                     (char*)image.getData() + offset, dim * dim * 3 * sizeof(float),
-                    Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
-                    Texture::PixelBufferDescriptor::PixelDataType::FLOAT, 1,
+                    PixelBufferDescriptor::PixelDataFormat::RGB,
+                    PixelBufferDescriptor::PixelDataType::FLOAT, 1,
                     0, 0, uint32_t(image.getStride())
             });
         }

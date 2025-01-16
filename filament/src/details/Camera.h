@@ -135,7 +135,7 @@ public:
         return normalize(-getModelMatrix()[2].xyz);
     }
 
-    float getFieldOfView(Camera::Fov direction) const noexcept {
+    float getFieldOfView(Fov direction) const noexcept {
         // note: this is meaningless for an orthographic projection
         auto const& p = getProjectionMatrix();
         switch (direction) {
@@ -146,7 +146,7 @@ public:
         }
     }
 
-    float getFieldOfViewInDegrees(Camera::Fov direction) const noexcept {
+    float getFieldOfViewInDegrees(Fov direction) const noexcept {
         return getFieldOfView(direction) * math::f::RAD_TO_DEG;
     }
 

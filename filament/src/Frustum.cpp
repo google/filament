@@ -26,7 +26,7 @@ using namespace filament::math;
 namespace filament {
 
 Frustum::Frustum(const mat4f& pv) {
-    Frustum::setProjection(pv);
+    setProjection(pv);
 }
 
 // NOTE: if we don't specify noinline here, LLVM inlines this huge function into
@@ -68,7 +68,7 @@ void Frustum::setProjection(const mat4f& pv) {
     mPlanes[5] = n;
 }
 
-float4 Frustum::getNormalizedPlane(Frustum::Plane plane) const noexcept {
+float4 Frustum::getNormalizedPlane(Plane plane) const noexcept {
     return mPlanes[size_t(plane)];
 }
 

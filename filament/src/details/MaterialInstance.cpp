@@ -75,7 +75,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
         mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
         driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
@@ -141,7 +141,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms.setUniforms(other->getUniformBuffer());
         mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
         driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
@@ -215,7 +215,7 @@ void FMaterialInstance::commit(DriverApi& driver) const {
 // ------------------------------------------------------------------------------------------------
 
 void FMaterialInstance::setParameter(std::string_view name,
-        backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) {
+        Handle<HwTexture> texture, SamplerParams params) {
     auto binding = mMaterial->getSamplerBinding(name);
     mDescriptorSet.setSampler(binding, texture, params);
 }
@@ -259,8 +259,8 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
 }
 
 void FMaterialInstance::setMaskThreshold(float threshold) noexcept {
-    setParameter("_maskThreshold", math::saturate(threshold));
-    mMaskThreshold = math::saturate(threshold);
+    setParameter("_maskThreshold", saturate(threshold));
+    mMaskThreshold = saturate(threshold);
 }
 
 float FMaterialInstance::getMaskThreshold() const noexcept {
@@ -268,8 +268,8 @@ float FMaterialInstance::getMaskThreshold() const noexcept {
 }
 
 void FMaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
-    setParameter("_specularAntiAliasingVariance", math::saturate(variance));
-    mSpecularAntiAliasingVariance = math::saturate(variance);
+    setParameter("_specularAntiAliasingVariance", saturate(variance));
+    mSpecularAntiAliasingVariance = saturate(variance);
 }
 
 float FMaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
@@ -277,8 +277,8 @@ float FMaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
 }
 
 void FMaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
-    setParameter("_specularAntiAliasingThreshold", math::saturate(threshold * threshold));
-    mSpecularAntiAliasingThreshold = std::sqrt(math::saturate(threshold * threshold));
+    setParameter("_specularAntiAliasingThreshold", saturate(threshold * threshold));
+    mSpecularAntiAliasingThreshold = std::sqrt(saturate(threshold * threshold));
 }
 
 float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {

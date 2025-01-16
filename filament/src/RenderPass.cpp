@@ -81,7 +81,7 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
     return *this;
 }
 
-RenderPass RenderPassBuilder::build(FEngine const& engine, backend::DriverApi& driver) const {
+RenderPass RenderPassBuilder::build(FEngine const& engine, DriverApi& driver) const {
     assert_invariant(mRenderableSoa);
     assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
     assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
@@ -91,14 +91,14 @@ RenderPass RenderPassBuilder::build(FEngine const& engine, backend::DriverApi& d
 // ------------------------------------------------------------------------------------------------
 
 void RenderPass::BufferObjectHandleDeleter::operator()(
-        backend::BufferObjectHandle handle) noexcept {
+        BufferObjectHandle handle) noexcept {
     if (handle) { // this is common case
         driver.get().destroyBufferObject(handle);
     }
 }
 
 void RenderPass::DescriptorSetHandleDeleter::operator()(
-        backend::DescriptorSetHandle handle) noexcept {
+        DescriptorSetHandle handle) noexcept {
     if (handle) { // this is common case
         driver.get().destroyDescriptorSet(handle);
     }
@@ -106,7 +106,7 @@ void RenderPass::DescriptorSetHandleDeleter::operator()(
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
+RenderPass::RenderPass(FEngine const& engine, DriverApi& driver,
         RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
           mColorPassDescriptorSet(builder.mColorPassDescriptorSet),
@@ -160,7 +160,7 @@ RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
 
     // sort commands once we're done adding commands
     commandEnd = resize(builder.mArena,
-            RenderPass::sortCommands(commandBegin, commandEnd));
+            sortCommands(commandBegin, commandEnd));
 
     if (engine.isAutomaticInstancingEnabled()) {
         int32_t stereoscopicEyeCount = 1;
@@ -188,7 +188,7 @@ RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexc
 
 void RenderPass::appendCommands(FEngine const& engine,
         Slice<Command> commands,
-        utils::Range<uint32_t> const vr,
+        Range<uint32_t> const vr,
         CommandTypeFlags const commandTypeFlags,
         RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
@@ -223,7 +223,7 @@ void RenderPass::appendCommands(FEngine const& engine,
                  variant, renderFlags, visibilityMask,
                  cameraPosition, cameraForwardVector, stereoscopicEyeCount]
             (uint32_t startIndex, uint32_t indexCount) {
-        RenderPass::generateCommands(commandTypeFlags, curr,
+        generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount },
                 variant, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector, stereoscopicEyeCount);
@@ -232,7 +232,7 @@ void RenderPass::appendCommands(FEngine const& engine,
     if (vr.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
         work(vr.first, vr.size());
     } else {
-        auto* jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
+        auto* jobCommandsParallel = parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
                 std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT>());
         js.runAndWait(jobCommandsParallel);
     }
@@ -287,7 +287,7 @@ RenderPass::Command* RenderPass::sortCommands(
     return last;
 }
 
-RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
+RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
         DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
         Command* curr, Command* const last,
         int32_t eyeCount) const noexcept {
@@ -365,7 +365,7 @@ RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
                 // TODO: use a pool for larger heap buffers
                 // buffer large enough for all instances data
                 stagingBufferSize = count * sizeof(PerRenderableData);
-                stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
+                stagingBuffer = (PerRenderableData*)malloc(stagingBufferSize);
                 uboData = mRenderableSoa.data<FScene::UBO>();
                 assert_invariant(uboData);
 
@@ -415,7 +415,7 @@ RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
                 stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
                 +[](void* buffer, size_t, void*) {
-                    ::free(buffer);
+                    free(buffer);
                 }
         }, 0);
 
@@ -550,7 +550,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
 /* static */
 template<RenderPass::CommandTypeFlags commandTypeFlags>
 UTILS_NOINLINE
-RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
+RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
@@ -732,7 +732,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 //                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
-                RenderPass::setupColorCommand(cmd, renderableVariant, mi,
+                setupColorCommand(cmd, renderableVariant, mi,
                         inverseFrontFaces, hasDepthClamp);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -853,7 +853,7 @@ void RenderPass::updateSummedPrimitiveCounts(
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::Executor::overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept {
+void RenderPass::Executor::overridePolygonOffset(PolygonOffset const* polygonOffset) noexcept {
     if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) { // NOLINT(*-assignment-in-if-condition)
         mPolygonOffset = *polygonOffset;
     }
@@ -864,7 +864,7 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noe
     mScissor = scissor;
 }
 
-void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& driver) const noexcept {
+void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver) const noexcept {
     execute(engine, driver, mCommands.begin(), mCommands.end());
 }
 
@@ -914,7 +914,7 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& driver,
+void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
         Command const* first, Command const* last) const noexcept {
 
     SYSTRACE_CALL();

@@ -103,20 +103,20 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
 
 UTILS_NOINLINE
 void FFence::FenceSignal::signal(State s) noexcept {
-    std::lock_guard<utils::Mutex> const lock(FFence::sLock);
+    std::lock_guard<utils::Mutex> const lock(sLock);
     mState = s;
-    FFence::sCondition.notify_all();
+    sCondition.notify_all();
 }
 
 UTILS_NOINLINE
 Fence::FenceStatus FFence::FenceSignal::wait(uint64_t timeout) noexcept {
-    std::unique_lock<utils::Mutex> lock(FFence::sLock);
+    std::unique_lock<utils::Mutex> lock(sLock);
     while (mState == UNSIGNALED) {
         if (mState == DESTROYED) {
             return FenceStatus::ERROR;
         }
         if (timeout == FENCE_WAIT_FOR_EVER) {
-            FFence::sCondition.wait(lock);
+            sCondition.wait(lock);
         } else {
             if (timeout == 0 ||
                     sCondition.wait_for(lock, ns(timeout)) == std::cv_status::timeout) {

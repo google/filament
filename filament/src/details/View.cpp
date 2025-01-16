@@ -542,7 +542,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
                  &lightData = scene->getLightData()]
                         (JobSystem&, JobSystem::Job*) {
-                    FView::prepareVisibleLights(engine.getLightManager(),
+                    prepareVisibleLights(engine.getLightManager(),
                             { distances, distances + positionalLightCount },
                             viewMatrix, cullingFrustum, lightData);
                 }));
@@ -884,19 +884,19 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
         uniforms = mShadowMapManager->getShadowMappingUniforms();
     }
     switch (mShadowType) {
-        case filament::ShadowType::PCF:
+        case ShadowType::PCF:
             mColorPassDescriptorSet.prepareShadowPCF(texture, uniforms);
             break;
-        case filament::ShadowType::VSM:
+        case ShadowType::VSM:
             mColorPassDescriptorSet.prepareShadowVSM(texture, uniforms, mVsmShadowOptions);
             break;
-        case filament::ShadowType::DPCF:
+        case ShadowType::DPCF:
             mColorPassDescriptorSet.prepareShadowDPCF(texture, uniforms, mSoftShadowOptions);
             break;
-        case filament::ShadowType::PCSS:
+        case ShadowType::PCSS:
             mColorPassDescriptorSet.prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
             break;
-        case filament::ShadowType::PCFd:
+        case ShadowType::PCFd:
             mColorPassDescriptorSet.prepareShadowPCFDebug(texture, uniforms);
             break;
     }
@@ -929,7 +929,7 @@ void FView::prepareVisibleRenderables(JobSystem& js,
         Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept {
     SYSTRACE_CALL();
     if (UTILS_LIKELY(isFrustumCullingEnabled())) {
-        FView::cullRenderables(js, renderableData, frustum, VISIBLE_RENDERABLE_BIT);
+        cullRenderables(js, renderableData, frustum, VISIBLE_RENDERABLE_BIT);
     } else {
         std::uninitialized_fill(renderableData.begin<FScene::VISIBLE_MASK>(),
                   renderableData.end<FScene::VISIBLE_MASK>(), VISIBLE_RENDERABLE);
@@ -963,7 +963,7 @@ void FView::cullRenderables(JobSystem&,
 }
 
 void FView::prepareVisibleLights(FLightManager const& lcm,
-        utils::Slice<float> scratch,
+        Slice<float> scratch,
         mat4f const& viewMatrix, Frustum const& frustum,
         FScene::LightSoa& lightData) noexcept {
     SYSTRACE_CALL();
@@ -1112,8 +1112,8 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
     }
 }
 
-void FView::executePickingQueries(backend::DriverApi& driver,
-        backend::RenderTargetHandle handle, float2 scale) noexcept {
+void FView::executePickingQueries(DriverApi& driver,
+        RenderTargetHandle handle, float2 scale) noexcept {
 
     while (mActivePickingQueriesList) {
         FPickingQuery* const pQuery = mActivePickingQueriesList;
@@ -1126,7 +1126,7 @@ void FView::executePickingQueries(backend::DriverApi& driver,
         if (UTILS_UNLIKELY(driver.getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
             driver.readPixels(handle, x, y, 1, 1, {
                     &pQuery->result.reserved1, 4u, // 4
-                    backend::PixelDataFormat::RGBA, backend::PixelDataType::UBYTE,
+                    PixelDataFormat::RGBA, PixelDataType::UBYTE,
                     pQuery->handler, [](void*, size_t, void* user) {
                         FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
                         uint8_t const* const p =
@@ -1148,7 +1148,7 @@ void FView::executePickingQueries(backend::DriverApi& driver,
         } else {
             driver.readPixels(handle, x, y, 1, 1, {
                     &pQuery->result.renderable, 4u * 4u, // 4*float
-                    backend::PixelDataFormat::RG, backend::PixelDataType::FLOAT,
+                    PixelDataFormat::RG, PixelDataType::FLOAT,
                     pQuery->handler, [](void*, size_t, void* user) {
                         FPickingQuery* const pQuery = static_cast<FPickingQuery*>(user);
                         // pQuery->result.renderable already contains the right value!
@@ -1163,7 +1163,7 @@ void FView::executePickingQueries(backend::DriverApi& driver,
 }
 
 void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
-    options.feedback = math::clamp(options.feedback, 0.0f, 1.0f);
+    options.feedback = clamp(options.feedback, 0.0f, 1.0f);
     options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
     mTemporalAntiAliasingOptions = options;
 }
@@ -1187,24 +1187,24 @@ void FView::setGuardBandOptions(GuardBandOptions options) noexcept {
 }
 
 void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept {
-    options.radius = math::max(0.0f, options.radius);
+    options.radius = max(0.0f, options.radius);
     options.power = std::max(0.0f, options.power);
-    options.bias = math::clamp(options.bias, 0.0f, 0.1f);
+    options.bias = clamp(options.bias, 0.0f, 0.1f);
     // snap to the closer of 0.5 or 1.0
     options.resolution = std::floor(
-            math::clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
+            clamp(options.resolution * 2.0f, 1.0f, 2.0f) + 0.5f) * 0.5f;
     options.intensity = std::max(0.0f, options.intensity);
     options.bilateralThreshold = std::max(0.0f, options.bilateralThreshold);
-    options.minHorizonAngleRad = math::clamp(options.minHorizonAngleRad, 0.0f, math::f::PI_2);
-    options.ssct.lightConeRad = math::clamp(options.ssct.lightConeRad, 0.0f, math::f::PI_2);
+    options.minHorizonAngleRad = clamp(options.minHorizonAngleRad, 0.0f, f::PI_2);
+    options.ssct.lightConeRad = clamp(options.ssct.lightConeRad, 0.0f, f::PI_2);
     options.ssct.shadowDistance = std::max(0.0f, options.ssct.shadowDistance);
     options.ssct.contactDistanceMax = std::max(0.0f, options.ssct.contactDistanceMax);
     options.ssct.intensity = std::max(0.0f, options.ssct.intensity);
     options.ssct.lightDirection = normalize(options.ssct.lightDirection);
     options.ssct.depthBias = std::max(0.0f, options.ssct.depthBias);
     options.ssct.depthSlopeBias = std::max(0.0f, options.ssct.depthSlopeBias);
-    options.ssct.sampleCount = math::clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
-    options.ssct.rayCount = math::clamp((unsigned)options.ssct.rayCount, 1u, 255u);
+    options.ssct.sampleCount = clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
+    options.ssct.rayCount = clamp((unsigned)options.ssct.rayCount, 1u, 255u);
     mAmbientOcclusionOptions = options;
 }
 void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
@@ -1219,9 +1219,9 @@ void FView::setSoftShadowOptions(SoftShadowOptions options) noexcept {
 }
 
 void FView::setBloomOptions(BloomOptions options) noexcept {
-    options.dirtStrength = math::saturate(options.dirtStrength);
-    options.resolution = math::clamp(options.resolution, 2u, 2048u);
-    options.levels = math::clamp(options.levels, uint8_t(1),
+    options.dirtStrength = saturate(options.dirtStrength);
+    options.resolution = clamp(options.resolution, 2u, 2048u);
+    options.levels = clamp(options.levels, uint8_t(1),
             FTexture::maxLevelCount(options.resolution));
     options.highlight = std::max(10.0f, options.highlight);
     mBloomOptions = options;
@@ -1229,7 +1229,7 @@ void FView::setBloomOptions(BloomOptions options) noexcept {
 
 void FView::setFogOptions(FogOptions options) noexcept {
     options.distance = std::max(0.0f, options.distance);
-    options.maximumOpacity = math::clamp(options.maximumOpacity, 0.0f, 1.0f);
+    options.maximumOpacity = clamp(options.maximumOpacity, 0.0f, 1.0f);
     options.density = std::max(0.0f, options.density);
     options.heightFalloff = std::max(0.0f, options.heightFalloff);
     options.inScatteringSize = options.inScatteringSize;
@@ -1244,14 +1244,14 @@ void FView::setDepthOfFieldOptions(DepthOfFieldOptions options) noexcept {
 }
 
 void FView::setVignetteOptions(VignetteOptions options) noexcept {
-    options.roundness = math::saturate(options.roundness);
-    options.midPoint = math::saturate(options.midPoint);
-    options.feather = math::clamp(options.feather, 0.05f, 1.0f);
+    options.roundness = saturate(options.roundness);
+    options.midPoint = saturate(options.midPoint);
+    options.feather = clamp(options.feather, 0.05f, 1.0f);
     mVignetteOptions = options;
 }
 
-View::PickingQuery& FView::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-        View::PickingQueryResultCallback callback) noexcept {
+View::PickingQuery& FView::pick(uint32_t x, uint32_t y, CallbackHandler* handler,
+        PickingQueryResultCallback callback) noexcept {
     FPickingQuery* pQuery = FPickingQuery::get(x, y, handler, callback);
     pQuery->next = mActivePickingQueriesList;
     mActivePickingQueriesList = pQuery;
@@ -1268,7 +1268,7 @@ void FView::setMaterialGlobal(uint32_t index, float4 const& value) {
     mMaterialGlobals[index] = value;
 }
 
-math::float4 FView::getMaterialGlobal(uint32_t index) const {
+float4 FView::getMaterialGlobal(uint32_t index) const {
     FILAMENT_CHECK_PRECONDITION(index < 4)
             << "material global variable index (" << +index << ") out of range";
     return mMaterialGlobals[index];

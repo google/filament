@@ -75,7 +75,7 @@ public:
     void setSampleCount(size_t sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
     size_t getSampleCount() const noexcept { return mSampleCount; }
     bool isMultisample() const noexcept { return mSampleCount > 1; }
-    bool isCompressed() const noexcept { return backend::isCompressedFormat(mFormat); }
+    bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
 
@@ -95,7 +95,7 @@ public:
     static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
 
     // storage needed on the CPU side for texture data uploads
-    static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
+    static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
     // Size a of a pixel in bytes for the given format

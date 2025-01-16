@@ -30,7 +30,7 @@ using namespace filament::backend;
 namespace filament {
 
 PassNode::PassNode(FrameGraph& fg) noexcept
-        : DependencyGraph::Node(fg.getGraph()),
+        : Node(fg.getGraph()),
           mFrameGraph(fg),
           devirtualize(fg.getArena()),
           destroy(fg.getArena()) {

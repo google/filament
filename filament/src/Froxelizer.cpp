@@ -264,10 +264,10 @@ void Froxelizer::computeFroxelLayout(
 
 UTILS_NOINLINE
 void Froxelizer::updateBoundingSpheres(
-        math::float4* const UTILS_RESTRICT boundingSpheres,
+        float4* const UTILS_RESTRICT boundingSpheres,
         size_t froxelCountX, size_t froxelCountY, size_t froxelCountZ,
-        math::float4 const* UTILS_RESTRICT planesX,
-        math::float4 const* UTILS_RESTRICT planesY,
+        float4 const* UTILS_RESTRICT planesX,
+        float4 const* UTILS_RESTRICT planesY,
         float const* UTILS_RESTRICT planesZ) noexcept {
 
     SYSTRACE_CALL();
@@ -502,7 +502,7 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 }
 
 
-void Froxelizer::commit(backend::DriverApi& driverApi) {
+void Froxelizer::commit(DriverApi& driverApi) {
     // send data to GPU
     driverApi.updateBufferObject(mFroxelsBuffer,
             { mFroxelBufferUser.data(), getFroxelBufferEntryCount() * 16u }, 0);
@@ -629,7 +629,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
     // this gets very well vectorized...
 
-    utils::Slice<LightRecord> records(mLightRecords);
+    Slice<LightRecord> records(mLightRecords);
     for (size_t j = 0, jc = getFroxelBufferEntryCount(); j < jc; j++) {
         for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
             using container_type = LightRecord::bitset::container_type;
@@ -750,7 +750,7 @@ static inline float2 project(mat4f const& p, float3 const& v) noexcept {
 void Froxelizer::froxelizePointAndSpotLight(
         FroxelThreadData& froxelThread, size_t bit,
         mat4f const& UTILS_RESTRICT p,
-        const Froxelizer::LightParams& UTILS_RESTRICT light) const noexcept {
+        const LightParams& UTILS_RESTRICT light) const noexcept {
 
     if (UTILS_UNLIKELY(light.position.z + light.radius < -mZLightFar)) { // z values are negative
         // This light is fully behind LightFar, it doesn't light anything
@@ -902,7 +902,7 @@ void Froxelizer::froxelizePointAndSpotLight(
  */
 void Froxelizer::computeLightTree(
         LightTreeNode* lightTree,
-        utils::Slice<RecordBufferType> const& lightList,
+        Slice<RecordBufferType> const& lightList,
         const FScene::LightSoa& lightData,
         size_t lightRecordsOffset) noexcept {
 
@@ -910,7 +910,7 @@ void Froxelizer::computeLightTree(
     const size_t count = lightList.size();
 
     // the width of the tree is the next power-of-two (if not already a power of two)
-    const size_t w = 1u << (log2i(count) + (utils::popcount(count) == 1 ? 0 : 1));
+    const size_t w = 1u << (log2i(count) + (popcount(count) == 1 ? 0 : 1));
 
     // height of the tree
     const size_t h = log2i(w) + 1u;

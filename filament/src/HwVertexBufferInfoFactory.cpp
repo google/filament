@@ -37,7 +37,7 @@ using namespace backend;
 
 size_t HwVertexBufferInfoFactory::Parameters::hash() const noexcept {
     static_assert((sizeof(*this) % sizeof(uint32_t)) == 0);
-    return utils::hash::murmur3(
+    return hash::murmur3(
             reinterpret_cast<uint32_t const*>(this), sizeof(Parameters) / sizeof(uint32_t), 0);
 }
 
@@ -63,7 +63,7 @@ void HwVertexBufferInfoFactory::terminate(DriverApi&) noexcept {
 auto HwVertexBufferInfoFactory::create(DriverApi& driver,
         uint8_t bufferCount,
         uint8_t attributeCount,
-        backend::AttributeArray attributes) noexcept -> Handle {
+        AttributeArray attributes) noexcept -> Handle {
 
     Key const key({ bufferCount, attributeCount, {}, attributes });
     auto pos = mBimap.find(key);

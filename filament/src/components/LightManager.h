@@ -35,7 +35,7 @@ class FScene;
 
 class FLightManager : public LightManager {
 public:
-    using Instance = LightManager::Instance;
+    using Instance = Instance;
 
     explicit FLightManager(FEngine& engine) noexcept;
     ~FLightManager();
@@ -74,7 +74,7 @@ public:
         return mManager.getEntities();
     }
 
-    void create(const FLightManager::Builder& builder, utils::Entity entity);
+    void create(const Builder& builder, utils::Entity entity);
 
     void destroy(utils::Entity e) noexcept;
 
@@ -101,7 +101,7 @@ public:
     };
 
     struct ShadowParams { // TODO: get rid of this struct
-        LightManager::ShadowOptions options;
+        ShadowOptions options;
     };
 
     UTILS_NOINLINE void setLocalPosition(Instance i, const math::float3& position) noexcept;
