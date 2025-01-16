@@ -47,6 +47,10 @@ IndexBuffer::Builder& IndexBuffer::Builder::bufferType(IndexType indexType) noex
     return *this;
 }
 
+IndexBuffer::Builder& IndexBuffer::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createIndexBuffer(*this);
 }

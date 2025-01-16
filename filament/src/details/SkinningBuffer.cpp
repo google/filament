@@ -60,6 +60,10 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::initialize(bool initialize) no
     return *this;
 }
 
+SkinningBuffer::Builder& SkinningBuffer::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createSkinningBuffer(*this);
 }

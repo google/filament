@@ -148,6 +148,10 @@ Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swi
     return *this;
 }
 
+Texture::Builder& Texture::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 Texture* Texture::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat))
             << "Texture format " << uint16_t(mImpl->mFormat) << " not supported on this platform";

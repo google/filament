@@ -148,6 +148,10 @@ VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool enabled) noe
     return *this;
 }
 
+VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
     FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";

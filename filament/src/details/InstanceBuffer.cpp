@@ -50,6 +50,10 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
     return *this;
 }
 
+InstanceBuffer::Builder& InstanceBuffer::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount >= 1) << "instanceCount must be >= 1.";
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances())

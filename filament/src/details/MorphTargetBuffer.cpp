@@ -55,6 +55,10 @@ MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::count(size_t count) noex
     return *this;
 }
 
+MorphTargetBuffer::Builder& MorphTargetBuffer::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 MorphTargetBuffer* MorphTargetBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createMorphTargetBuffer(*this);
 }

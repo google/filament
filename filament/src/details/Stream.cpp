@@ -61,6 +61,10 @@ Stream::Builder& Stream::Builder::height(uint32_t height) noexcept {
     return *this;
 }
 
+Stream::Builder& Stream::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 Stream* Stream::Builder::build(Engine& engine) {
     return downcast(engine).createStream(*this);
 }
