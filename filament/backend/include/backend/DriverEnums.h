@@ -440,18 +440,6 @@ enum class SamplerType : uint8_t {
     SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
 };
 
-inline const char* stringify(SamplerType samplerType) {
-    switch (samplerType) {
-        case SamplerType::SAMPLER_2D: return "SAMPLER_2D";
-        case SamplerType::SAMPLER_2D_ARRAY: return "SAMPLER_2D_ARRAY";
-        case SamplerType::SAMPLER_CUBEMAP: return "SAMPLER_CUBEMAP";
-        case SamplerType::SAMPLER_EXTERNAL: return "SAMPLER_EXTERNAL";
-        case SamplerType::SAMPLER_3D: return "SAMPLER_3D";
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "SAMPLER_CUBEMAP_ARRAY";
-    }
-    return "UNKNOWN";
-}
-
 //! Subpass type
 enum class SubpassType : uint8_t {
     SUBPASS_INPUT
@@ -780,23 +768,6 @@ enum class TextureUsage : uint16_t {
     DEFAULT             = UPLOADABLE | SAMPLEABLE,   //!< Default texture usage
     ALL_ATTACHMENTS     = COLOR_ATTACHMENT | DEPTH_ATTACHMENT | STENCIL_ATTACHMENT | SUBPASS_INPUT,   //!< Mask of all attachments
 };
-
-inline const char* stringify(TextureUsage usage) {
-    switch (usage) {
-        case TextureUsage::NONE: return "NONE";
-        case TextureUsage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
-        case TextureUsage::DEPTH_ATTACHMENT: return "DEPTH_ATTACHMENT";
-        case TextureUsage::STENCIL_ATTACHMENT: return "STENCIL_ATTACHMENT";
-        case TextureUsage::UPLOADABLE: return "UPLOADABLE";
-        case TextureUsage::SAMPLEABLE: return "SAMPLEABLE";
-        case TextureUsage::SUBPASS_INPUT: return "SUBPASS_INPUT";
-        case TextureUsage::BLIT_SRC: return "BLIT_SRC";
-        case TextureUsage::BLIT_DST: return "BLIT_DST";
-        case TextureUsage::PROTECTED: return "PROTECTED";
-        case TextureUsage::DEFAULT: return "DEFAULT";
-        default: return "UNKNOWN";
-    }
-}
 
 //! Texture swizzle
 enum class TextureSwizzle : uint8_t {
@@ -1381,12 +1352,16 @@ utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Textu
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureUsage usage);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferObjectBinding binding);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureSwizzle swizzle);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderStage shaderStage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderStageFlags stageFlags);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::CompilerPriorityQueue compilerPriorityQueue);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PushConstantVariant pushConstantVariant);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::DescriptorSetLayout& dsl);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RenderPassParams& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::Viewport& v);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderStageFlags stageFlags);
 #endif
 
 #endif // TNT_FILAMENT_BACKEND_DRIVERENUMS_H
