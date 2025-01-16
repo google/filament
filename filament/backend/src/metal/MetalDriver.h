@@ -41,7 +41,6 @@ class MetalPlatform;
 
 class MetalBuffer;
 class MetalProgram;
-class MetalSamplerGroup;
 class MetalTexture;
 struct MetalUniformBuffer;
 struct MetalContext;

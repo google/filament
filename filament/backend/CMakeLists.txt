@@ -42,7 +42,6 @@ set(SRCS
         src/Platform.cpp
         src/PlatformFactory.cpp
         src/Program.cpp
-        src/SamplerGroup.cpp
 )
 
 set(PRIVATE_HDRS
@@ -55,7 +54,6 @@ set(PRIVATE_HDRS
         include/private/backend/DriverAPI.inc
         include/private/backend/HandleAllocator.h
         include/private/backend/PlatformFactory.h
-        include/private/backend/SamplerGroup.h
         src/CallbackManager.h
         src/CommandStreamDispatcher.h
         src/CompilerThreadPool.h
