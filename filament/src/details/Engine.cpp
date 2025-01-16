@@ -36,6 +36,7 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
+#include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/DescriptorSets.h>
@@ -807,7 +808,7 @@ template<typename T, typename ... ARGS>
 inline T* FEngine::create(ResourceList<T>& list,
         typename T::Builder const& builder, ARGS&& ... args) noexcept {
     T* p = mHeapAllocator.make<T>(*this, builder, std::forward<ARGS>(args)...);
-    if (UTILS_UNLIKELY(p)) { // this should never happen
+    if (UTILS_LIKELY(p)) {
         list.insert(p);
     }
     return p;
@@ -872,7 +873,7 @@ FRenderTarget* FEngine::createRenderTarget(const RenderTarget::Builder& builder)
 
 FRenderer* FEngine::createRenderer() noexcept {
     FRenderer* p = mHeapAllocator.make<FRenderer>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mRenderers.insert(p);
     }
     return p;
@@ -881,7 +882,7 @@ FRenderer* FEngine::createRenderer() noexcept {
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
         const FMaterialInstance* other, const char* name) noexcept {
     FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, other, name);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
     }
@@ -891,7 +892,7 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
                                                    const char* name) noexcept {
     FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
     }
@@ -904,7 +905,7 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
 
 FScene* FEngine::createScene() noexcept {
     FScene* p = mHeapAllocator.make<FScene>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mScenes.insert(p);
     }
     return p;
@@ -912,7 +913,7 @@ FScene* FEngine::createScene() noexcept {
 
 FView* FEngine::createView() noexcept {
     FView* p = mHeapAllocator.make<FView>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mViews.insert(p);
     }
     return p;
@@ -920,7 +921,7 @@ FView* FEngine::createView() noexcept {
 
 FFence* FEngine::createFence() noexcept {
     FFence* p = mHeapAllocator.make<FFence>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         std::lock_guard const guard(mFenceListLock);
         mFences.insert(p);
     }
@@ -936,7 +937,7 @@ FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcep
         getDriverApi().setupExternalImage(nativeWindow);
     }
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, nativeWindow, flags);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mSwapChains.insert(p);
     }
     return p;
@@ -944,7 +945,7 @@ FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcep
 
 FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, width, height, flags);
-    if (p) {
+    if (UTILS_LIKELY(p)) {
         mSwapChains.insert(p);
     }
     return p;
