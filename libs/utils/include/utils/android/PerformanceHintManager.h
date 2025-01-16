@@ -37,7 +37,7 @@ class UTILS_PUBLIC PerformanceHintManager :
 public:
     class UTILS_PUBLIC Session : PrivateImplementation<SessionDetails> {
         friend class PerformanceHintManager;
-        friend struct PerformanceHintManager::SessionDetails;
+        friend struct SessionDetails;
     public:
         Session() noexcept;
         Session(PerformanceHintManager& manager,
