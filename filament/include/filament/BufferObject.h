@@ -73,7 +73,7 @@ public:
 
         /**
          * The binding type for this buffer object. (defaults to VERTEX)
-         * @param BindingType Distinguishes between SSBO, VBO, etc. For now this must be VERTEX.
+         * @param bindingType Distinguishes between SSBO, VBO, etc. For now this must be VERTEX.
          * @return A reference to this Builder for chaining calls.
          */
         Builder& bindingType(BindingType bindingType) noexcept;
@@ -91,7 +91,7 @@ public:
          * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
          */
-        // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
+        Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
          * Creates the BufferObject and returns a pointer to it. After creation, the buffer

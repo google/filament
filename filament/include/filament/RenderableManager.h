@@ -501,7 +501,7 @@ public:
          * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
          * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
          */
-        RenderableManager::Builder& morphing(uint8_t level,
+        Builder& morphing(uint8_t level,
                 size_t primitiveIndex, size_t offset) noexcept;
 
 

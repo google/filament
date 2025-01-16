@@ -94,7 +94,7 @@ public:
     /** @return whether a backend supports texture swizzling. */
     static bool isTextureSwizzleSupported(Engine& engine) noexcept;
 
-    static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
+    static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
 

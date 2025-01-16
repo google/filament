@@ -47,6 +47,10 @@ BufferObject::Builder& BufferObject::Builder::bindingType(BindingType bindingTyp
     return *this;
 }
 
+BufferObject::Builder& BufferObject::Builder::name(const char* name, size_t len) noexcept {
+    return BuilderNameMixin::name(name, len);
+}
+
 BufferObject* BufferObject::Builder::build(Engine& engine) {
     return downcast(engine).createBufferObject(*this);
 }
