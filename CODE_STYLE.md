@@ -133,7 +133,7 @@ private:
 
 For **libfilament** the rule of thumb is that STL headers that don't generate code are allowed (e.g. `type_traits`),
 conversely containers and algorithms are not allowed. There are exceptions such as `array`. See above for the full list.
-- The following `STL` headers a banned entirely, from public and private headers as well as implementation files:
+- The following `STL` headers are banned entirely, from public and private headers as well as implementation files:
   - `iostream`
 
 
