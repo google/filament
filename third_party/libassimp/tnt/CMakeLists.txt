@@ -262,24 +262,31 @@ include_directories(${PRIVATE_HDR_DIR})
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 if(NOT MSVC)
-    target_compile_options(${TARGET}
-        PRIVATE -Wno-deprecated-declarations
-        PRIVATE -Wno-deprecated-register
-        PRIVATE -Wno-incompatible-pointer-types
-        PRIVATE -Wno-ordered-compare-function-pointers
-        PRIVATE -Wno-parentheses
-        PRIVATE -Wno-sign-compare
-        PRIVATE -Wno-strict-aliasing
-        PRIVATE -Wno-strict-overflow
-        PRIVATE -Wno-tautological-compare
-        PRIVATE -Wno-tautological-undefined-compare
-        PRIVATE -Wno-undefined-var-template
-        PRIVATE -Wno-uninitialized
-        PRIVATE -Wno-unused-const-variable
-        PRIVATE -Wno-unused-private-field
-        PRIVATE -Wno-unused-variable
-        PRIVATE -Wno-deprecated-non-prototype # See https://github.com/madler/zlib/issues/633
+    set(TARGET_FLAGS
+            -Wno-deprecated-declarations
+            -Wno-deprecated-register
+            -Wno-incompatible-pointer-types
+            -Wno-ordered-compare-function-pointers
+            -Wno-parentheses
+            -Wno-sign-compare
+            -Wno-strict-aliasing
+            -Wno-strict-overflow
+            -Wno-tautological-compare
+            -Wno-tautological-undefined-compare
+            -Wno-undefined-var-template
+            -Wno-uninitialized
+            -Wno-unused-const-variable
+            -Wno-unused-private-field
+            -Wno-unused-variable
     )
+
+    # -Wdeprecated-non-prototype is a new warning introduced in Clang 15.
+    # https://www.redhat.com/en/blog/new-warnings-and-errors-clang-15
+    if (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL "15.0")
+        list(APPEND TARGET_FLAGS -Wno-deprecated-non-prototype) # See https://github.com/madler/zlib/issues/633
+    endif()
+
+    target_compile_options(${TARGET} PRIVATE ${TARGET_FLAGS})
 else()
     target_compile_options(${TARGET} PRIVATE /bigobj)
 endif()
