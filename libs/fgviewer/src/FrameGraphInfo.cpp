@@ -44,16 +44,16 @@ void FrameGraphInfo::setPasses(std::vector<Pass> sortedPasses) {
 }
 
 const char* FrameGraphInfo::getViewName() const {
-    return pImpl->getViewName();
+    return viewName.c_str();
 }
 
 const std::vector<FrameGraphInfo::Pass>& FrameGraphInfo::getPasses() const {
-    return pImpl->getPasses();
+    return passes;
 }
 
 const std::unordered_map<ResourceId, FrameGraphInfo::Resource>&
     FrameGraphInfo::getResources() const {
-    return pImpl->getResources();
+    return resources;
 }
 
 } // namespace filament::fgviewer

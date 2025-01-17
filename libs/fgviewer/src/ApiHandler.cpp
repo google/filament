@@ -102,9 +102,10 @@ const FrameGraphInfo* ApiHandler::getFrameGraphInfo(struct mg_connection* conn,
     }
     uint32_t const id = strtoul(fgid, nullptr, 16);
     std::unique_lock const lock(mServer->mViewsMutex);
-    return mServer->mViews.find(id) == mServer->mViews.end()
+    const auto it = mServer->mViews.find(id);
+    return it == mServer->mViews.end()
         ? nullptr
-        : mServer->mViews[id];
+        : &(it->second);
 }
 
 bool ApiHandler::handleGetStatus(struct mg_connection* conn,
