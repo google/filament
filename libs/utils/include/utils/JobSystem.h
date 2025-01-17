@@ -494,9 +494,9 @@ JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
 }
 
 template<typename CALLABLE, typename T, typename ... ARGS,
-        typename = typename std::enable_if<
-                std::is_member_function_pointer<typename std::remove_reference<CALLABLE>::type>::value
-        >::type
+        typename = std::enable_if_t<
+                std::is_member_function_pointer_v<std::remove_reference_t<CALLABLE>>
+        >
 >
 JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
         CALLABLE&& func, T&& o, ARGS&&... args) noexcept {

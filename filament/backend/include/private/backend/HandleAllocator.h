@@ -97,7 +97,7 @@ public:
      *  ConcreteTexture* p = reconstruct(h, w, h);
      */
     template<typename D, typename B, typename ... ARGS>
-    typename std::enable_if_t<std::is_base_of_v<B, D>, D>*
+    std::enable_if_t<std::is_base_of_v<B, D>, D>*
     destroyAndConstruct(Handle<B> const& handle, ARGS&& ... args) {
         assert_invariant(handle);
         D* addr = handle_cast<D*>(const_cast<Handle<B>&>(handle));
@@ -116,7 +116,7 @@ public:
      *  ConcreteTexture* p = construct(h, w, h);
      */
     template<typename D, typename B, typename ... ARGS>
-    typename std::enable_if_t<std::is_base_of_v<B, D>, D>*
+    std::enable_if_t<std::is_base_of_v<B, D>, D>*
     construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
         assert_invariant(handle);
         D* addr = handle_cast<D*>(const_cast<Handle<B>&>(handle));
@@ -133,7 +133,7 @@ public:
      *      deallocate(h, p);
      */
     template <typename B, typename D,
-            typename = typename std::enable_if_t<std::is_base_of_v<B, D>, D>>
+            typename = std::enable_if_t<std::is_base_of_v<B, D>, D>>
     void deallocate(Handle<B>& handle, D const* p) noexcept {
         // allow to destroy the nullptr, similarly to operator delete
         if (p) {
@@ -161,9 +161,9 @@ public:
      *      ConcreteTexture* p = handle_cast<ConcreteTexture*>(h);
      */
     template<typename Dp, typename B>
-    inline typename std::enable_if_t<
+    inline std::enable_if_t<
             std::is_pointer_v<Dp> &&
-            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+            std::is_base_of_v<B, std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B>& handle) {
         assert_invariant(handle);
         auto [p, tag] = handleToPointer(handle.getId());
@@ -217,9 +217,9 @@ public:
     }
 
     template<typename Dp, typename B>
-    inline typename std::enable_if_t<
+    inline std::enable_if_t<
             std::is_pointer_v<Dp> &&
-            std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
+            std::is_base_of_v<B, std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B> const& handle) {
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
     }

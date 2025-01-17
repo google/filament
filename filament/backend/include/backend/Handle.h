@@ -130,7 +130,7 @@ struct Handle : public HandleBase {
     bool operator>=(const Handle& rhs) const noexcept { return getId() >= rhs.getId(); }
 
     // type-safe Handle cast
-    template<typename B, typename = std::enable_if_t<std::is_base_of<T, B>::value> >
+    template<typename B, typename = std::enable_if_t<std::is_base_of_v<T, B>> >
     Handle(Handle<B> const& base) noexcept : HandleBase(base) { } // NOLINT(hicpp-explicit-conversions,google-explicit-constructor)
 
 private:
