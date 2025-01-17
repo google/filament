@@ -18,8 +18,8 @@
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
 #include "VulkanConstants.h"
-#include "VulkanImageUtility.h"
-#include "VulkanUtility.h"
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Definitions.h"
 
 #include "vulkan/memory/ResourcePointer.h"
 
@@ -27,6 +27,8 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <memory>
 
@@ -113,11 +115,11 @@ public:
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline VkFormatList const& getAttachmentDepthStencilFormats() const {
+    inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
         return mDepthStencilFormats;
     }
 
-    inline VkFormatList const& getBlittableDepthStencilFormats() const {
+    inline fvkutils::VkFormatList const& getBlittableDepthStencilFormats() const {
         return mBlittableDepthStencilFormats;
     }
 
@@ -175,8 +177,8 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
 
-    VkFormatList mDepthStencilFormats;
-    VkFormatList mBlittableDepthStencilFormats;
+    fvkutils::VkFormatList mDepthStencilFormats;
+    fvkutils::VkFormatList mBlittableDepthStencilFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

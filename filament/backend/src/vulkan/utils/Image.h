@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_VULKANIMAGEUTILITY_H
-#define TNT_FILAMENT_BACKEND_VULKANIMAGEUTILITY_H
+#ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_IMAGE_H
+#define TNT_FILAMENT_BACKEND_VULKAN_UTILS_IMAGE_H
 
 #include <backend/DriverEnums.h>
 
@@ -59,22 +59,7 @@ struct VulkanLayoutTransition {
     VkImageSubresourceRange subresources;
 };
 
-namespace imgutil {
-
-inline VkImageViewType getViewType(SamplerType target) {
-    switch (target) {
-        case SamplerType::SAMPLER_CUBEMAP:
-            return VK_IMAGE_VIEW_TYPE_CUBE;
-        case SamplerType::SAMPLER_2D_ARRAY:
-            return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-        case SamplerType::SAMPLER_3D:
-            return VK_IMAGE_VIEW_TYPE_3D;
-        default:
-            return VK_IMAGE_VIEW_TYPE_2D;
-    }
-}
+namespace fvkutils {
 
 constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
     switch (layout) {
@@ -109,7 +94,15 @@ constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
 // no transition necessary).
 bool transitionLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
 
-} // namespace imgutil
+bool isVkDepthFormat(VkFormat format);
+
+bool isVkStencilFormat(VkFormat format);
+
+VkImageAspectFlags getImageAspect(VkFormat format);
+
+uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
+
+} // namespace fvkutils
 
 } // namespace filament::backend
 
@@ -117,5 +110,4 @@ bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& 
 
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::VulkanLayout& layout);
 
-
-#endif // TNT_FILAMENT_BACKEND_VULKANIMAGEUTILITY_H
+#endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_IMAGE_H

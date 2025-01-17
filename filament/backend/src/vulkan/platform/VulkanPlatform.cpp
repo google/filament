@@ -21,7 +21,7 @@
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriver.h"
-#include "vulkan/VulkanUtility.h"
+#include "vulkan/utils/Helper.h"
 
 #include <bluevk/BlueVK.h>
 #include <utils/PrivateImplementation-impl.h>
@@ -126,7 +126,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     const int minor = VK_VERSION_MINOR(deviceProperties.apiVersion);
 
     const FixedCapacityVector<VkPhysicalDevice> physicalDevices
-            = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+            = fvkutils::enumerate(vkEnumeratePhysicalDevices, instance);
 
     FVK_LOGI << "Selected physical device '" << deviceProperties.deviceName << "' from "
                   << physicalDevices.size() << " physical devices. "
@@ -172,7 +172,7 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = 
     };
     ExtensionSet exts;
     FixedCapacityVector<VkExtensionProperties> const availableExts =
-            filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+            fvkutils::enumerate(vkEnumerateInstanceExtensionProperties,
                     static_cast<char const*>(nullptr) /* pLayerName */);
     for (auto const& extProps: availableExts) {
         utils::CString name { extProps.extensionName };
@@ -212,7 +212,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
     ExtensionSet exts;
     // Identify supported physical device extensions
     FixedCapacityVector<VkExtensionProperties> const extensions
-            = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties, device,
+            = fvkutils::enumerate(vkEnumerateDeviceExtensionProperties, device,
                     static_cast<const char*>(nullptr) /* pLayerName */);
     for (auto const& extension: extensions) {
         utils::CString name { extension.extensionName };
@@ -473,7 +473,7 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
 VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         VulkanPlatform::Customization::GPUPreference const& gpuPreference) {
     FixedCapacityVector<VkPhysicalDevice> const physicalDevices =
-            filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+            fvkutils::enumerate(vkEnumeratePhysicalDevices, instance);
     struct DeviceInfo {
         VkPhysicalDevice device = VK_NULL_HANDLE;
         VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
@@ -508,7 +508,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
 
         // Does the device support the VK_KHR_swapchain extension?
         FixedCapacityVector<VkExtensionProperties> const extensions
-                = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties,
+                = fvkutils::enumerate(vkEnumerateDeviceExtensionProperties,
                         candidateDevice, static_cast<char const*>(nullptr) /* pLayerName */);
         bool supportsSwapchain = false;
         for (auto const& extension: extensions) {
@@ -560,7 +560,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
     return device;
 }
 
-VkFormatList findAttachmentDepthStencilFormats(VkPhysicalDevice device) {
+fvkutils::VkFormatList findAttachmentDepthStencilFormats(VkPhysicalDevice device) {
     VkFormatFeatureFlags const features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
     // The ordering here indicates the preference of choosing depth+stencil format.
@@ -579,17 +579,17 @@ VkFormatList findAttachmentDepthStencilFormats(VkPhysicalDevice device) {
             selectedFormats.push_back(format);
         }
     }
-    VkFormatList ret(selectedFormats.size());
+    fvkutils::VkFormatList ret(selectedFormats.size());
     std::copy(selectedFormats.begin(), selectedFormats.end(), ret.begin());
     return ret;
 }
 
-VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device) {
+fvkutils::VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device) {
     std::vector<VkFormat> selectedFormats;
     VkFormatFeatureFlags const required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
-    for (VkFormat format : ALL_VK_FORMATS) {
-        if (isVkDepthFormat(format)) {
+    for (VkFormat format : fvkutils::ALL_VK_FORMATS) {
+        if (fvkutils::isVkDepthFormat(format)) {
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(device, format, &props);
             if ((props.optimalTilingFeatures & required) == required) {
@@ -597,7 +597,7 @@ VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device) {
             }
         }
     }
-    VkFormatList ret(selectedFormats.size());
+    fvkutils::VkFormatList ret(selectedFormats.size());
     std::copy(selectedFormats.begin(), selectedFormats.end(), ret.begin());
     return ret;
 }
