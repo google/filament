@@ -412,21 +412,30 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             out->cascadeSplitPositions[0] = splitsVector[0];
             out->cascadeSplitPositions[1] = splitsVector[1];
             out->cascadeSplitPositions[2] = splitsVector[2];
-        // TODO: constantBias
-        // TODO: normalBias
-        // TODO: shadowFar
-        // TODO: shadowNearHint
-        // TODO: shadowFarHint
+        } else if (compare(tok, jsonChunk, "constantBias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->constantBias);
+        } else if (compare(tok, jsonChunk, "normalBias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->normalBias);
+        } else if (compare(tok, jsonChunk, "shadowFar") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowFar);
+        } else if (compare(tok, jsonChunk, "shadowNearHint") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowNearHint);
+        } else if (compare(tok, jsonChunk, "shadowFarHint") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowFarHint);
         } else if (compare(tok, jsonChunk, "stable") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->stable);
         } else if (compare(tok, jsonChunk, "lispsm") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->lispsm);
-        // TODO: polygonOffsetConstant
-        // TODO: polygonOffsetSlope
+        } else if (compare(tok, jsonChunk, "polygonOffsetConstant") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->polygonOffsetConstant);
+        } else if (compare(tok, jsonChunk, "polygonOffsetSlope") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->polygonOffsetSlope);
         } else if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
-        // TODO: stepCount
-        // TODO: maxShadowDistance
+        } else if (compare(tok, jsonChunk, "stepCount") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stepCount);
+        } else if (compare(tok, jsonChunk, "maxShadowDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->maxShadowDistance);
         } else if (compare(tok, jsonChunk, "vsm") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->vsm);
         } else if (compare(tok, jsonChunk, "shadowBulbRadius") == 0) {
@@ -810,10 +819,19 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
         << "},\n"
         << "\"mapSize\": " << in.mapSize << ",\n"
         << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
-        << "\"cascadeSplitPositions\": " << (splitsVector) << "\n"
+        << "\"cascadeSplitPositions\": " << splitsVector << "\n"
+        << "\"constantBias\": " << in.constantBias << ",\n"
+        << "\"normalBias\": " << in.normalBias << ",\n"
+        << "\"shadowFar\": " << in.shadowFar << ",\n"
+        << "\"shadowNearHint\": " << in.shadowNearHint << ",\n"
+        << "\"shadowFarHint\": " << in.shadowFarHint << ",\n"
         << "\"stable\": " << to_string(in.stable) << ",\n"
         << "\"lispsm\": " << to_string(in.lispsm) << ",\n"
+        << "\"polygonOffsetConstant\": " << in.polygonOffsetConstant << ",\n"
+        << "\"polygonOffsetSlope\": " << in.polygonOffsetSlope << ",\n"
         << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
+        << "\"stepCount\": " << in.stepCount << ",\n"
+        << "\"maxShadowDistance\": " << in.maxShadowDistance << ",\n"
         << "\"shadowBulbRadius\": " << in.shadowBulbRadius << ",\n"
         << "\"transform\": " << in.transform.xyzw << ",\n"
         << "}";
