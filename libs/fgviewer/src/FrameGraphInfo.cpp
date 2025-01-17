@@ -18,44 +18,29 @@
 
 namespace filament::fgviewer {
 
-class FrameGraphInfo::FrameGraphInfoImpl {
-public:
-    void setViewName(utils::CString name) {
-        viewName = std::move(name);
-    }
-
-    void setPasses(std::vector<Pass> sortedPasses) {
-        passes = std::move(sortedPasses);
-    }
-
-    void setResources(std::unordered_map<ResourceId, Resource> resourceMap) {
-        resources = std::move(resourceMap);
-    }
-
-private:
-    utils::CString viewName;
-    // The order of the passes in the vector indicates the execution
-    // order of the passes.
-    std::vector<Pass> passes;
-    std::unordered_map<ResourceId, Resource> resources;
-};
-
-
-FrameGraphInfo::FrameGraphInfo(utils::CString viewName)
-    : pImpl(std::make_unique<FrameGraphInfoImpl>()) {
-    pImpl->setViewName(std::move(viewName));
-}
+FrameGraphInfo::FrameGraphInfo(utils::CString viewName):
+    viewName(std::move(viewName)), passes({}), resources({}) {}
 
 FrameGraphInfo::~FrameGraphInfo() = default;
 
 FrameGraphInfo::FrameGraphInfo(FrameGraphInfo&& rhs) noexcept = default;
 
+FrameGraphInfo::Pass::Pass(utils::CString name, std::vector<ResourceId> reads,
+    std::vector<ResourceId> writes): name(std::move(name)),
+                                    reads(std::move(reads)),
+                                    writes(std::move(writes)) {}
+
+FrameGraphInfo::Resource::Resource(ResourceId id, utils::CString name,
+    std::vector<std::pair<utils::CString, utils::CString> > properties): id(id),
+    name(std::move(name)), properties(std::move(properties)) {}
+
 void FrameGraphInfo::setResources(
     std::unordered_map<ResourceId, Resource> resources) {
-    pImpl->setResources(std::move(resources));
+    resources = std::move(resources);
 }
 
 void FrameGraphInfo::setPasses(std::vector<Pass> sortedPasses) {
-    pImpl->setPasses(std::move(sortedPasses));
+    passes = std::move(sortedPasses);
 }
+
 } // namespace filament::fgviewer

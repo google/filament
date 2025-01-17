@@ -20,7 +20,6 @@
 #include <utils/CString.h>
 
 #include <cstdint>
-#include <memory>
 #include <vector>
 #include <unordered_map>
 
@@ -39,9 +38,7 @@ public:
 
     struct Pass {
         Pass(utils::CString name, std::vector<ResourceId> reads,
-             std::vector<ResourceId> writes): name(std::move(name)), reads(std::move(reads)),
-                                              writes(std::move(writes)) {
-        }
+             std::vector<ResourceId> writes);
 
         utils::CString name;
         std::vector<ResourceId> reads;
@@ -50,10 +47,7 @@ public:
 
     struct Resource {
         Resource(ResourceId id, utils::CString name,
-                 std::vector<std::pair<utils::CString, utils::CString> > properties): id(id),
-            name(std::move(name)),
-            properties(std::move(properties)) {
-        }
+                 std::vector<std::pair<utils::CString, utils::CString> > properties);
 
         ResourceId id;
         utils::CString name;
@@ -66,15 +60,17 @@ public:
         std::vector<std::pair<utils::CString, utils::CString> > properties;
     };
 
-    // Resources and passes will be stored inside the impl class.
     void setResources(std::unordered_map<ResourceId, Resource> resources);
 
     // The incoming passes should be sorted by the execution order.
     void setPasses(std::vector<Pass> sortedPasses);
 
 private:
-    class FrameGraphInfoImpl;
-    std::unique_ptr<FrameGraphInfoImpl> pImpl;
+    utils::CString viewName;
+    // The order of the passes in the vector indicates the execution
+    // order of the passes.
+    std::vector<Pass> passes;
+    std::unordered_map<ResourceId, Resource> resources;
 };
 } // namespace filament::fgviewer
 
