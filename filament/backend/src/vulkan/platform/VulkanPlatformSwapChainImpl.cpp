@@ -75,9 +75,11 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
             .memoryTypeIndex = memoryTypeIndex,
     };
     result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory."
+                                                       << " error=" << static_cast<int32_t>(result);
     result = vkBindImageMemory(device, image, imageMemory, 0);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image."
+                                                       << " error=" << static_cast<int32_t>(result);
     return std::tuple(image, imageMemory);
 }
 
@@ -246,8 +248,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             .oldSwapchain = mSwapchain,
     };
     VkResult result = vkCreateSwapchainKHR(mDevice, &createInfo, VKALLOC, &mSwapchain);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkCreateSwapchainKHR error: " << static_cast<int32_t>(result);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateSwapchainKHR failed."
+                                                       << " error=" << static_cast<int32_t>(result);
 
     mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
@@ -273,7 +275,9 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         VkResult result = vkCreateSemaphore(mDevice, &semaphoreCreateInfo, nullptr,
                 mImageReady + i);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Failed to create semaphore";
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Failed to create semaphore."
+                << " error=" << static_cast<int32_t>(result);
     }
 
     return result;

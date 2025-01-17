@@ -100,11 +100,11 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // Updating this value necessitates a material version bump.
 constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 16;
 
-// The maximum number of shadowmaps.
-// There is currently a maximum limit of 128 shadowmaps.
+// The maximum number of shadow maps possible.
+// There is currently a maximum limit of 128 shadow maps.
 // Factors contributing to this limit:
 // - minspec for UBOs is 16KiB, which currently can hold a maximum of 128 entries
-constexpr size_t CONFIG_MAX_SHADOWMAPS = 64;
+constexpr size_t CONFIG_MAX_SHADOWMAPS = 128;
 
 // The maximum number of shadow layers.
 // There is currently a maximum limit of 255 layers.
@@ -112,7 +112,8 @@ constexpr size_t CONFIG_MAX_SHADOWMAPS = 64;
 // - minspec for 2d texture arrays layer is 256
 // - we're using uint8_t to store the number of layers (255 max)
 // - nonsensical to be larger than the number of shadowmaps
-constexpr size_t CONFIG_MAX_SHADOW_LAYERS = CONFIG_MAX_SHADOWMAPS;
+// - AtlasAllocator depth limits it to 64
+constexpr size_t CONFIG_MAX_SHADOW_LAYERS = 64;
 
 // The maximum number of shadow cascades that can be used for directional lights.
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
