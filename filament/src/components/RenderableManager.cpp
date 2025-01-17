@@ -792,10 +792,10 @@ void FRenderableManager::destroyComponentPrimitives(
 
 void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
         size_t primitiveIndex, FMaterialInstance const* mi) {
+    assert_invariant(mi);
     if (instance) {
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
-        if (primitiveIndex < primitives.size()) {
-            assert_invariant(mi);
+        if (primitiveIndex < primitives.size() && mi) {
             FMaterial const* material = mi->getMaterial();
 
             // we want a feature level violation to be a hard error (exception if enabled, or crash)
@@ -815,6 +815,16 @@ void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
                        << "] missing required attributes ("
                        << required << "), declared=" << declared << io::endl;
             }
+        }
+    }
+}
+
+void FRenderableManager::clearMaterialInstanceAt(Instance instance, uint8_t level,
+        size_t primitiveIndex) {
+    if (instance) {
+        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        if (primitiveIndex < primitives.size()) {
+            primitives[primitiveIndex].setMaterialInstance(nullptr);
         }
     }
 }

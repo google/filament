@@ -113,6 +113,10 @@ void RenderableManager::setMaterialInstanceAt(Instance instance,
     downcast(this)->setMaterialInstanceAt(instance, 0, primitiveIndex, downcast(materialInstance));
 }
 
+void RenderableManager::clearMaterialInstanceAt(Instance instance, size_t primitiveIndex) {
+    downcast(this)->clearMaterialInstanceAt(instance, 0, primitiveIndex);
+}
+
 MaterialInstance* RenderableManager::getMaterialInstanceAt(
         Instance instance, size_t primitiveIndex) const noexcept {
     return downcast(this)->getMaterialInstanceAt(instance, 0, primitiveIndex);

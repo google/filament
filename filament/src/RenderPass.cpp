@@ -704,11 +704,22 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
          */
         for (auto const& primitive: primitives) {
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
-            FMaterial const* const ma = mi->getMaterial();
+            if (UTILS_UNLIKELY(!mi)) {
+                // This can happen because RenderPrimitives can be initialized with
+                // a null MaterialInstance. In this case, skip the primitive.
+                if constexpr (isColorPass) {
+                    curr->key = uint64_t(Pass::SENTINEL);
+                    ++curr;
+                }
+                curr->key = uint64_t(Pass::SENTINEL);
+                ++curr;
+                continue;
+            }
 
             // TODO: we should disable the SKN variant if this primitive doesn't have either
             //       skinning or morphing.
 
+            FMaterial const* const ma = mi->getMaterial();
             cmd.info.mi = mi;
             cmd.info.rph = primitive.getHwHandle();
             cmd.info.vbih = primitive.getVertexBufferInfoHandle();
