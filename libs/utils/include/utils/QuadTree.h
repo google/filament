@@ -97,7 +97,7 @@ class QuadTreeArray : public std::array<T, QuadTreeUtils::size(HEIGHT)> {
 
     // Simple fixed capacity stack
     template<typename TYPE, size_t CAPACITY,
-            typename = typename std::enable_if<std::is_trivial<TYPE>::value>::type>
+            typename = std::enable_if_t<std::is_trivial_v<TYPE>>>
     class stack {
         TYPE mElements[CAPACITY];
         size_t mSize = 0;
@@ -147,8 +147,8 @@ public:
      * @param process   closure to process each visited node
      */
     template<typename Process,
-            typename = typename std::enable_if<
-                    std::is_invocable_r_v<TraversalResult, Process, NodeId>>::type>
+            typename = std::enable_if_t<
+                    std::is_invocable_r_v<TraversalResult, Process, NodeId>>>
     static void traverse(int8_t l, code_t code, size_t maxHeight, Process&& process) noexcept {
         assert_invariant(maxHeight < height());
         const int8_t h = int8_t(maxHeight);
@@ -173,8 +173,8 @@ public:
     }
 
     template<typename Node,
-            typename = typename std::enable_if<
-                    std::is_invocable_r_v<TraversalResult, Node, NodeId>>::type>
+            typename = std::enable_if_t<
+                    std::is_invocable_r_v<TraversalResult, Node, NodeId>>>
     static void traverse(int8_t l, code_t code, Node&& process) noexcept {
         traverse(l, code, height() - 1, std::forward<Node>(process));
     }

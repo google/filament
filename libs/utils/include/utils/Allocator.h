@@ -717,13 +717,13 @@ public:
     // trivially destructible, since free() won't call the destructor and this is allocating
     // an array.
     template <typename T,
-            typename = typename std::enable_if<std::is_trivially_destructible<T>::value>::type>
+            typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
     T* alloc(size_t count, size_t alignment, size_t extra) noexcept {
         return (T*)alloc(count * sizeof(T), alignment, extra);
     }
 
     template <typename T,
-            typename = typename std::enable_if<std::is_trivially_destructible<T>::value>::type>
+            typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
     T* alloc(size_t count, size_t alignment = alignof(T)) noexcept {
         return (T*)alloc(count * sizeof(T), alignment);
     }
@@ -879,7 +879,7 @@ public:
     template<typename T, size_t ALIGN = alignof(T), typename... ARGS>
     T* make(ARGS&& ... args) noexcept {
         T* o = nullptr;
-        if (std::is_trivially_destructible<T>::value) {
+        if (std::is_trivially_destructible_v<T>) {
             o = mArena.template make<T, ALIGN>(std::forward<ARGS>(args)...);
         } else {
             void* const p = (Finalizer*)mArena.alloc(sizeof(T), ALIGN, sizeof(Finalizer));

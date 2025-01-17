@@ -130,7 +130,7 @@ public:
         friend class IteratorValueRef;
         friend iterator;
         friend const_iterator;
-        using Type = std::tuple<typename std::decay<Elements>::type...>;
+        using Type = std::tuple<std::decay_t<Elements>...>;
         Type elements;
 
         template<size_t ... Is>
@@ -535,22 +535,22 @@ public:
 
 private:
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline typename std::enable_if<I == sizeof...(Tp), void>::type
+    inline std::enable_if_t<I == sizeof...(Tp), void>
     for_each(std::tuple<Tp...>&, FuncT) {}
 
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline typename std::enable_if<I < sizeof...(Tp), void>::type
+    inline std::enable_if_t<I < sizeof...(Tp), void>
     for_each(std::tuple<Tp...>& t, FuncT f) {
         f(I, std::get<I>(t));
         for_each<I + 1, FuncT, Tp...>(t, f);
     }
 
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline typename std::enable_if<I == sizeof...(Tp), void>::type
+    inline std::enable_if_t<I == sizeof...(Tp), void>
     for_each_index(std::tuple<Tp...>&, FuncT) {}
 
     template<std::size_t I = 0, typename FuncT, typename... Tp>
-    inline typename std::enable_if<I < sizeof...(Tp), void>::type
+    inline std::enable_if_t<I < sizeof...(Tp), void>
     for_each_index(std::tuple<Tp...>& t, FuncT f) {
         f.template operator()<I>(std::get<I>(t));
         for_each_index<I + 1, FuncT, Tp...>(t, f);
@@ -597,7 +597,7 @@ private:
 
     void construct_each(size_t from, size_t to) noexcept {
         forEach([from, to](auto p) {
-            using T = typename std::decay<decltype(*p)>::type;
+            using T = std::decay_t<decltype(*p)>;
             // note: scalar types like int/float get initialized to zero
             if constexpr (!std::is_trivially_default_constructible_v<T>) {
                 for (size_t i = from; i < to; i++) {
@@ -609,7 +609,7 @@ private:
 
     void destroy_each(size_t from, size_t to) noexcept {
         forEach([from, to](auto p) {
-            using T = typename std::decay<decltype(*p)>::type;
+            using T = std::decay_t<decltype(*p)>;
             if constexpr (!std::is_trivially_destructible_v<T>) {
                 for (size_t i = from; i < to; i++) {
                     p[i].~T();
@@ -624,7 +624,7 @@ private:
         if (mSize) {
             auto size = mSize; // placate a compiler warning
             forEach([buffer, &index, &offsets, size](auto p) {
-                using T = typename std::decay<decltype(*p)>::type;
+                using T = std::decay_t<decltype(*p)>;
                 T* UTILS_RESTRICT b = static_cast<T*>(buffer);
 
                 // go through each element and move them from the old array to the new
