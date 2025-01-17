@@ -820,7 +820,7 @@ void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
 }
 
 void FRenderableManager::clearMaterialInstanceAt(Instance instance, uint8_t level,
-    size_t primitiveIndex) {
+        size_t primitiveIndex) {
     if (instance) {
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
