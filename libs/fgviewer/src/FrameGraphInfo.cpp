@@ -36,7 +36,7 @@ FrameGraphInfo::Resource::Resource(ResourceId id, utils::CString name,
 
 void FrameGraphInfo::setResources(
     std::unordered_map<ResourceId, Resource> resources) {
-    resources = std::move(resources);
+    this->resources = std::move(resources);
 }
 
 void FrameGraphInfo::setPasses(std::vector<Pass> sortedPasses) {
