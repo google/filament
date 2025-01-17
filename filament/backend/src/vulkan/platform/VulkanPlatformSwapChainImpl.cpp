@@ -115,7 +115,7 @@ void VulkanPlatformSwapChainImpl::destroy() {
     mSwapChainBundle.colors.clear();
 }
 
-VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format, 
+VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format,
         bool isProtected) {
     auto [image, memory] = createImageAndMemory(mContext, mDevice, extent, format, isProtected);
     mMemory.insert({image, memory});
@@ -138,9 +138,8 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
 }
 
 VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
-    vkDestroySwapchainKHR(mDevice, mSwapchain, VKALLOC);
-    vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
     destroy();
+    vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
 }
 
 VkResult VulkanPlatformSurfaceSwapChain::create() {
@@ -254,7 +253,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
-    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, 
+    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent,
             mSwapChainBundle.depthFormat, mIsProtected);
     mSwapChainBundle.isProtected = mIsProtected;
 
@@ -340,6 +339,22 @@ VkResult VulkanPlatformSurfaceSwapChain::recreate() {
 }
 
 void VulkanPlatformSurfaceSwapChain::destroy() {
+    // The next part is not ideal. We don't have a good signal on when it's ok to destroy
+    // a swapchain. This is a spec oversight and mentioned as much:
+    // https://github.com/KhronosGroup/Vulkan-Docs/issues/1678
+    //
+    // One workaround [1] is:
+    // https://docs.vulkan.org/samples/latest/samples/api/swapchain_recreation/README.html
+    //
+    // The proper fix is to use VK_EXT_swapchain_maintenance1, but availability of this extension is
+    // unknown (not yet ratified).
+    //
+    // Instead of adding too much mechanics, we're taking a hacksaw to the problem - just wait for
+    // the queue to be idle. The hope is that this only happens on resize, where performance
+    // degradation is less obvious (until, of course, people complain about lag when rotating their
+    // phone). If necessary, we can revisit and implement the workaround [1].
+    vkQueueWaitIdle(mQueue);
+
     VulkanPlatformSwapChainImpl::destroy();
 
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
@@ -347,6 +362,10 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
             vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
             mImageReady[i] = VK_NULL_HANDLE;
         }
+    }
+    if (mSwapchain) {
+        vkDestroySwapchainKHR(mDevice, mSwapchain, VKALLOC);
+        mSwapchain = VK_NULL_HANDLE;
     }
 }
 
