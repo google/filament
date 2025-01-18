@@ -46,18 +46,23 @@ public:
     };
 
     struct Resource {
+        struct Property {
+            utils::CString name;
+            utils::CString value;
+        };
+        
         Resource(ResourceId id, utils::CString name,
-                 std::vector<std::pair<utils::CString, utils::CString> > properties);
+                 std::vector<Property> properties);
 
         ResourceId id;
         utils::CString name;
-        // We use a vector of string pair here to store the resource properties,
+        // We use a vector of Property here to store the resource properties,
         // so different kinds of resources could choose different types of
         // properties to record.
         // ex.
         // Texture2D --> { {"name","XXX"}, {"sizeX", "1024"}, {"sizeY", "768"} }
         // Buffer1D --> { {"name", "XXX"}, {"size", "512"} }
-        std::vector<std::pair<utils::CString, utils::CString> > properties;
+        std::vector<Property> properties;
     };
 
     void setResources(std::unordered_map<ResourceId, Resource> resources);

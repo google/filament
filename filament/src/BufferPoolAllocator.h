@@ -103,7 +103,7 @@ void BufferPoolAllocator<POOL_SIZE, ALIGNMENT, AllocatorPolicy, LockingPolicy>::
 }
 
 template<size_t POOL_SIZE, size_t ALIGNMENT, typename AllocatorPolicy, typename LockingPolicy>
-void* BufferPoolAllocator<POOL_SIZE, ALIGNMENT, AllocatorPolicy, LockingPolicy>::get(size_type size) noexcept {
+void* BufferPoolAllocator<POOL_SIZE, ALIGNMENT, AllocatorPolicy, LockingPolicy>::get(size_type const size) noexcept {
     std::lock_guard<LockingPolicy> guard(mLock);
 
     // if the requested size is larger that our buffers in the pool, we just empty the pool

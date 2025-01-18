@@ -40,7 +40,7 @@ inline constexpr math::float4 spherePlaneIntersection(math::float4 s, math::floa
 // sphere radius must be squared
 // plane equation must be normalized and have the form {0,0,1,w}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-inline constexpr math::float4 spherePlaneIntersection(math::float4 s, float pw) noexcept {
+inline constexpr math::float4 spherePlaneIntersection(math::float4 const s, float pw) noexcept {
     return spherePlaneIntersection(s, { 0.f, 0.f, 1.f, pw });
 }
 
@@ -65,8 +65,8 @@ inline constexpr bool sphereConeIntersection(
         math::float4 const& sphere,
         math::float3 const& conePosition,
         math::float3 const& coneAxis,
-        float coneSinInverse,
-        float coneCosSquared) noexcept {
+        float const coneSinInverse,
+        float const coneCosSquared) noexcept {
     if (sphereConeIntersectionFast(sphere,
             conePosition, coneAxis, coneSinInverse, coneCosSquared)) {
         math::float3 const d = sphere.xyz - conePosition;

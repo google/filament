@@ -16,27 +16,47 @@
 
 #include "Froxelizer.h"
 
+#include "Allocators.h"
 #include "Intersections.h"
 
 #include "details/Engine.h"
 #include "details/Scene.h"
 
-#include "private/backend/DriverApi.h"
+#include <private/filament/EngineEnums.h>
+#include <private/backend/DriverApi.h>
 
+#include <filament/Box.h>
 #include <filament/Viewport.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/BinaryTreeArray.h>
+#include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/Slice.h>
 #include <utils/Systrace.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
 
-#include <math/mat4.h>
 #include <math/fast.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
 #include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <algorithm>
+#include <utils/architecture.h>
+#include <array>
+#include <cmath>
+#include <limits>
+#include <type_traits>
+#include <utility>
 
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -143,7 +163,7 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     }
 }
 
-void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {
+void Froxelizer::setOptions(float const zLightNear, float const zLightFar) noexcept {
     if (UTILS_UNLIKELY(mZLightNear != zLightNear || mZLightFar != zLightFar)) {
         mZLightNear = zLightNear;
         mZLightFar = zLightFar;
@@ -160,7 +180,7 @@ void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
 }
 
 void Froxelizer::setProjection(const mat4f& projection,
-        float near, UTILS_UNUSED float far) noexcept {
+        float const near, UTILS_UNUSED float far) noexcept {
     if (UTILS_UNLIKELY(!fuzzyEqual(mProjection, projection))) {
         mProjection = projection;
         mNear = near;
@@ -171,7 +191,7 @@ void Froxelizer::setProjection(const mat4f& projection,
 bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, RootArenaScope& rootArenaScope,
         filament::Viewport const& viewport,
-        const mat4f& projection, float projectionNear, float projectionFar) noexcept {
+        const mat4f& projection, float const projectionNear, float const projectionFar) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 
@@ -223,9 +243,9 @@ bool Froxelizer::prepare(
 
 void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
-        size_t froxelBufferEntryCount, filament::Viewport const& viewport) noexcept {
+        size_t const froxelBufferEntryCount, filament::Viewport const& viewport) noexcept {
 
-    auto roundTo8 = [](uint32_t v) { return (v + 7u) & ~7u; };
+    auto roundTo8 = [](uint32_t const v) { return (v + 7u) & ~7u; };
 
     const uint32_t width  = std::max(16u, viewport.width);
     const uint32_t height = std::max(16u, viewport.height);
@@ -264,10 +284,10 @@ void Froxelizer::computeFroxelLayout(
 
 UTILS_NOINLINE
 void Froxelizer::updateBoundingSpheres(
-        math::float4* const UTILS_RESTRICT boundingSpheres,
+        float4* const UTILS_RESTRICT boundingSpheres,
         size_t froxelCountX, size_t froxelCountY, size_t froxelCountZ,
-        math::float4 const* UTILS_RESTRICT planesX,
-        math::float4 const* UTILS_RESTRICT planesY,
+        float4 const* UTILS_RESTRICT planesX,
+        float4 const* UTILS_RESTRICT planesY,
         float const* UTILS_RESTRICT planesZ) noexcept {
 
     SYSTRACE_CALL();
@@ -458,7 +478,7 @@ bool Froxelizer::update() noexcept {
     return uniformsNeedUpdating;
 }
 
-Froxel Froxelizer::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
+Froxel Froxelizer::getFroxelAt(size_t const x, size_t const y, size_t const z) const noexcept {
     assert_invariant(x < mFroxelCountX);
     assert_invariant(y < mFroxelCountY);
     assert_invariant(z < mFroxelCountZ);
@@ -473,7 +493,7 @@ Froxel Froxelizer::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
 }
 
 UTILS_NOINLINE
-size_t Froxelizer::findSliceZ(float z) const noexcept {
+size_t Froxelizer::findSliceZ(float const z) const noexcept {
     // The vastly common case is that z<0, so we always do the math for this case
     // and we "undo" it below otherwise. This works because we're using fast::log2 which
     // doesn't care if given a negative number (we'd have to use abs() otherwise).
@@ -502,7 +522,7 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 }
 
 
-void Froxelizer::commit(backend::DriverApi& driverApi) {
+void Froxelizer::commit(DriverApi& driverApi) {
     // send data to GPU
     driverApi.updateBufferObject(mFroxelsBuffer,
             { mFroxelBufferUser.data(), getFroxelBufferEntryCount() * 16u }, 0);
@@ -563,7 +583,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 
     auto process = [ this, &froxelThreadData,
                      spheres, directions, instances, &viewMatrix, &lcm ]
-            (size_t count, size_t offset, size_t stride) {
+            (size_t const count, size_t const offset, size_t const stride) {
 
         SYSTRACE_NAME("FroxelizeLoop Job");
 
@@ -603,7 +623,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     JobSystem& js = engine.getJobSystem();
 
     constexpr bool SINGLE_THREADED = false;
-    if (!SINGLE_THREADED) {
+    if constexpr (!SINGLE_THREADED) {
         auto *parent = js.createJob();
         for (size_t i = 0; i < GROUP_COUNT; i++) {
             js.run(jobs::createJob(js, parent, std::cref(process),
@@ -629,7 +649,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
     // this gets very well vectorized...
 
-    utils::Slice<LightRecord> records(mLightRecords);
+    Slice<LightRecord> records(mLightRecords);
     for (size_t j = 0, jc = getFroxelBufferEntryCount(); j < jc; j++) {
         for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
             using container_type = LightRecord::bitset::container_type;
@@ -737,7 +757,7 @@ out_of_memory:
     ;
 }
 
-static inline float2 project(mat4f const& p, float3 const& v) noexcept {
+static float2 project(mat4f const& p, float3 const& v) noexcept {
     const float vx = v[0];
     const float vy = v[1];
     const float vz = v[2];
@@ -750,7 +770,7 @@ static inline float2 project(mat4f const& p, float3 const& v) noexcept {
 void Froxelizer::froxelizePointAndSpotLight(
         FroxelThreadData& froxelThread, size_t bit,
         mat4f const& UTILS_RESTRICT p,
-        const Froxelizer::LightParams& UTILS_RESTRICT light) const noexcept {
+        const LightParams& UTILS_RESTRICT light) const noexcept {
 
     if (UTILS_UNLIKELY(light.position.z + light.radius < -mZLightFar)) { // z values are negative
         // This light is fully behind LightFar, it doesn't light anything
@@ -902,7 +922,7 @@ void Froxelizer::froxelizePointAndSpotLight(
  */
 void Froxelizer::computeLightTree(
         LightTreeNode* lightTree,
-        utils::Slice<RecordBufferType> const& lightList,
+        Slice<RecordBufferType> const& lightList,
         const FScene::LightSoa& lightData,
         size_t lightRecordsOffset) noexcept {
 
@@ -910,7 +930,7 @@ void Froxelizer::computeLightTree(
     const size_t count = lightList.size();
 
     // the width of the tree is the next power-of-two (if not already a power of two)
-    const size_t w = 1u << (log2i(count) + (utils::popcount(count) == 1 ? 0 : 1));
+    const size_t w = 1u << (log2i(count) + (popcount(count) == 1 ? 0 : 1));
 
     // height of the tree
     const size_t h = log2i(w) + 1u;
@@ -918,7 +938,7 @@ void Froxelizer::computeLightTree(
     auto const* UTILS_RESTRICT zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>() + 1;
     BinaryTreeArray::traverse(h,
             [lightTree, lightRecordsOffset, zrange, indices = lightList.data(), count]
-            (size_t index, size_t col, size_t next) {
+            (size_t const index, size_t const col, size_t const next) {
                 // indices[] cannot be accessed past 'col'
                 const float min = (col < count) ? zrange[indices[col]].x : 1.0f;
                 const float max = (col < count) ? zrange[indices[col]].y : 0.0f;
@@ -932,7 +952,7 @@ void Froxelizer::computeLightTree(
                         .reserved = 0,
                 };
             },
-            [lightTree](size_t index, size_t l, size_t r, size_t next) {
+            [lightTree](size_t const index, size_t const l, size_t const r, size_t const next) {
                 lightTree[index] = {
                         .min = std::min(lightTree[l].min, lightTree[r].min),
                         .max = std::max(lightTree[l].max, lightTree[r].max),

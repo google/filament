@@ -24,7 +24,7 @@ Blackboard::Blackboard() noexcept = default;
 
 Blackboard::~Blackboard() noexcept = default;
 
-FrameGraphHandle Blackboard::getHandle(std::string_view name) const noexcept {
+FrameGraphHandle Blackboard::getHandle(std::string_view const name) const noexcept {
     auto it = mMap.find(name);
     if (it != mMap.end()) {
         return it->second;
@@ -32,17 +32,17 @@ FrameGraphHandle Blackboard::getHandle(std::string_view name) const noexcept {
     return {};
 }
 
-FrameGraphHandle& Blackboard::operator [](std::string_view name) noexcept {
+FrameGraphHandle& Blackboard::operator [](std::string_view const name) noexcept {
     auto[pos, _] = mMap.insert_or_assign(name, FrameGraphHandle{});
     return pos->second;
 }
 
-void Blackboard::put(std::string_view name, FrameGraphHandle handle) noexcept {
+void Blackboard::put(std::string_view const name, FrameGraphHandle const handle) noexcept {
     operator[](name) = handle;
 }
 
 
-void Blackboard::remove(std::string_view name) noexcept {
+void Blackboard::remove(std::string_view const name) noexcept {
     mMap.erase(name);
 }
 

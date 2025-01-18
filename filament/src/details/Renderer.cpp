@@ -188,7 +188,7 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-TextureFormat FRenderer::getHdrFormat(const FView& view, bool translucent) const noexcept {
+TextureFormat FRenderer::getHdrFormat(const FView& view, bool const translucent) const noexcept {
     if (translucent) {
         return mHdrTranslucent;
     }
@@ -203,7 +203,7 @@ TextureFormat FRenderer::getHdrFormat(const FView& view, bool translucent) const
     }
 }
 
-TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
+TextureFormat FRenderer::getLdrFormat(bool const translucent) const noexcept {
     return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
@@ -218,7 +218,7 @@ std::pair<Handle<HwRenderTarget>, TargetBufferFlags>
     return { outTarget, outAttachmentMask };
 }
 
-backend::TargetBufferFlags FRenderer::getClearFlags() const noexcept {
+TargetBufferFlags FRenderer::getClearFlags() const noexcept {
     return (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
            | TargetBufferFlags::DEPTH_AND_STENCIL;
 }
@@ -233,12 +233,12 @@ void FRenderer::initializeClearFlags() noexcept {
     mClearFlags = getClearFlags();
 }
 
-void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
+void FRenderer::setPresentationTime(int64_t const monotonic_clock_ns) {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     driver.setPresentationTime(monotonic_clock_ns);
 }
 
-void FRenderer::setVsyncTime(uint64_t steadyClockTimeNano) noexcept {
+void FRenderer::setVsyncTime(uint64_t const steadyClockTimeNano) noexcept {
     mVsyncSteadyClockTimeNano = steadyClockTimeNano;
 }
 
@@ -444,7 +444,7 @@ void FRenderer::endFrame() {
     js.waitAndRelease(job);
 }
 
-void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+void FRenderer::readPixels(uint32_t const xoffset, uint32_t const yoffset, uint32_t const width, uint32_t const height,
         PixelBufferDescriptor&& buffer) {
 #ifndef NDEBUG
     const bool withinFrame = mSwapChain != nullptr;
@@ -456,15 +456,15 @@ void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, u
 }
 
 void FRenderer::readPixels(FRenderTarget* renderTarget,
-        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+        uint32_t const xoffset, uint32_t const yoffset, uint32_t const width, uint32_t const height,
+        PixelBufferDescriptor&& buffer) {
 
     // TODO: change the following to an assert when client call sites have addressed the issue.
     if (!renderTarget->supportsReadPixels()) {
-        utils::slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
+        slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
                          "TextureUsage::BLIT_SRC.  This precondition will be asserted in a later "
                          "release of Filament."
-                      << utils::io::endl;
+                      << io::endl;
     }
 
     RendererUtils::readPixels(mEngine.getDriverApi(), renderTarget->getHwHandle(),
@@ -472,7 +472,7 @@ void FRenderer::readPixels(FRenderTarget* renderTarget,
 }
 
 void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
-        filament::Viewport const& srcViewport, CopyFrameFlag flags) {
+        filament::Viewport const& srcViewport, CopyFrameFlag const flags) {
     SYSTRACE_CALL();
 
     assert_invariant(mSwapChain);
@@ -551,7 +551,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
 
         // This is a workaround for internal bug b/361822355.
         // TODO: properly address the bug and remove this workaround.
-        if (engine.getBackend() == backend::Backend::VULKAN) {
+        if (engine.getBackend() == Backend::VULKAN) {
             engine.flushAndWait();
         }
     }
@@ -632,7 +632,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
-            engine.getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
+            engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW;
     // FIXME: This is to override some settings that are not supported for multiview at the moment.
     // Remove this when all features are supported.
     if (isRenderingMultiview) {
@@ -748,7 +748,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       Without post-processing, we usually draw directly into
         //       the SwapChain, and we might want to keep it this way.
 
-        auto round = [](uint32_t x) {
+        auto round = [](uint32_t const x) {
             constexpr uint32_t rounding = 16u;
             return (x + (rounding - 1u)) & ~(rounding - 1u);
         };
@@ -1162,7 +1162,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // RenderPass::IS_INSTANCED_STEREOSCOPIC only applies to the color pass
     if (view.hasStereo() &&
-        engine.getConfig().stereoscopicType == backend::StereoscopicType::INSTANCED) {
+        engine.getConfig().stereoscopicType == StereoscopicType::INSTANCED) {
         renderFlags |= RenderPass::IS_INSTANCED_STEREOSCOPIC;
         passBuilder.renderFlags(renderFlags);
     }
@@ -1178,7 +1178,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // Set the depth to the number of layers if we're rendering multiview.
     if (isRenderingMultiview) {
         colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
-        colorBufferDesc.type = backend::SamplerType::SAMPLER_2D_ARRAY;
+        colorBufferDesc.type = SamplerType::SAMPLER_2D_ARRAY;
     }
 
     // a non-drawing pass to prepare everything that need to be before the color passes execute
@@ -1257,7 +1257,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     // we can't use colorPassOutput here because it could be tonemapped
                     data.history = builder.sample(colorPassOutput.linearColor); // FIXME: an access must be declared for detach(), why?
                 }, [&view, projection](FrameGraphResources const& resources, auto const& data,
-                        backend::DriverApi&) {
+                        DriverApi&) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;

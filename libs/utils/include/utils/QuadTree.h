@@ -50,7 +50,7 @@ static inline constexpr uint16_t morton(uint8_t x, uint8_t y) noexcept {
  * @return the number of elements in the tree
  */
 static inline constexpr size_t size(size_t height) noexcept {
-    return QuadTreeUtils::morton(uint8_t((1u << height) - 1u), 0u);
+    return morton(uint8_t((1u << height) - 1u), 0u);
 }
 
 /**

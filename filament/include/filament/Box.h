@@ -183,7 +183,7 @@ struct UTILS_PUBLIC Aabb {
      * Returns the 8 corner vertices of the AABB.
      */
     Corners getCorners() const {
-        return Aabb::Corners{ .vertices = {
+        return Corners{ .vertices = {
                 { min.x, min.y, min.z },
                 { max.x, min.y, min.z },
                 { min.x, max.y, min.z },

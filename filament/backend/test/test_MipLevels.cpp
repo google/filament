@@ -217,7 +217,6 @@ TEST_F(BackendTest, TextureViewLod) {
         api.endRenderPass();
 
         // Adjust the base mip to 2.
-        // Note that this is done without another call to updateSamplerGroup.
         auto texture22 = api.createTextureView(texture, 2, 2);
 
         api.updateDescriptorSetTexture(descriptorSet[1], 0, texture22, {
