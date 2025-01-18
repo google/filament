@@ -476,7 +476,7 @@ public:
     }
 
     fgviewer::ViewHandle getViewHandle() const noexcept {
-        return view_handle;
+        return mFrameGraphViewerViewHandle;
     }
 
 private:
@@ -612,7 +612,7 @@ private:
                                                             { 0, 0, 0, 1 },
                                                     }};
 
-    fgviewer::ViewHandle view_handle;
+    fgviewer::ViewHandle mFrameGraphViewerViewHandle;
 
 #ifndef NDEBUG
     struct DebugState {

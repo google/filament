@@ -688,7 +688,7 @@ public:
             bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
-        fgviewer::DebugServer* fgviewer_server = nullptr;
+        fgviewer::DebugServer* fgviewerServer = nullptr;
     } debug;
 
     struct {

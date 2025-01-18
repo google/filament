@@ -110,7 +110,11 @@ FView::FView(FEngine& engine)
 #endif
 
 #if FILAMENT_ENABLE_FGVIEWER
-    view_handle = engine.debug.fgviewer_server->createView(utils::CString(getName()));
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        mFrameGraphViewerViewHandle =
+            fgviewerServer->createView(utils::CString(getName()));
+    }
 #endif
 
     // allocate UBOs
@@ -159,7 +163,10 @@ void FView::terminate(FEngine& engine) {
 #endif
 
 #if FILAMENT_ENABLE_FGVIEWER
-    engine.debug.fgviewer_server->destroyView(view_handle);
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        fgviewerServer->destroyView(mFrameGraphViewerViewHandle);
+    }
 #endif
 }
 
