@@ -96,7 +96,7 @@ public:
          * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
          */
-        // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
+        Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
          * Creates the IndexBuffer object and returns a pointer to it. After creation, the index

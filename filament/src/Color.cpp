@@ -25,15 +25,15 @@ namespace filament {
 
 using namespace math;
 
-float3 Color::sRGBToLinear(float3 color) noexcept {
+float3 Color::sRGBToLinear(float3 const color) noexcept {
     return EOTF_sRGB(color);
 }
 
-float3 Color::linearToSRGB(float3 color) noexcept {
+float3 Color::linearToSRGB(float3 const color) noexcept {
     return OETF_sRGB(color);
 }
 
-LinearColor Color::cct(float K) {
+LinearColor Color::cct(float const K) {
     // temperature to CIE 1960
     float const K2 = K * K;
     float const u = (0.860117757f + 1.54118254e-4f * K + 1.28641212e-7f * K2) /
@@ -47,7 +47,7 @@ LinearColor Color::cct(float K) {
     return saturate(linear / max(1e-5f, max(linear)));
 }
 
-LinearColor Color::illuminantD(float K) {
+LinearColor Color::illuminantD(float const K) {
     // temperature to xyY
     const float iK = 1.0f / K;
     float const iK2 = iK * iK;
@@ -61,7 +61,7 @@ LinearColor Color::illuminantD(float K) {
     return saturate(linear / max(1e-5f, max(linear)));
 }
 
-LinearColor Color::absorptionAtDistance(LinearColor const& color, float distance) {
+LinearColor Color::absorptionAtDistance(LinearColor const& color, float const distance) {
     return -log(clamp(color, 1e-5f, 1.0f)) / max(1e-5f, distance);
 }
 

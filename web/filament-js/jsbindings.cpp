@@ -1050,7 +1050,7 @@ class_<RenderableManager>("RenderableManager")
 
     .class_function("Builder", (RenderableBuilder (*)(int)) [] (int n) {
         return RenderableBuilder(n);
-    })
+    }, return_value_policy::take_ownership())
 
     .function("destroy", &RenderableManager::destroy)
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
@@ -1100,6 +1100,7 @@ class_<RenderableManager>("RenderableManager")
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
+    .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
     .function("getMaterialInstanceAt", &RenderableManager::getMaterialInstanceAt,
             allow_raw_pointers())
 

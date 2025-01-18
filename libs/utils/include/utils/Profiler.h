@@ -91,7 +91,7 @@ public:
         struct {
             uint64_t value;
             uint64_t id;
-        } counters[Profiler::EVENT_COUNT];
+        } counters[EVENT_COUNT];
 
         friend Counters operator-(Counters lhs, const Counters& rhs) noexcept {
             lhs.nr -= rhs.nr;

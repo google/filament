@@ -99,11 +99,11 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     });
 }
 
-void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints set) const noexcept {
+void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints const set) const noexcept {
     bind(driver, set, {});
 }
 
-void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints set,
+void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints const set,
         backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept {
     // TODO: on debug check that dynamicOffsets is large enough
 
@@ -114,7 +114,7 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     // build.
     // assert_invariant(mDirty.none());
     if (mDirty.any() && !mSetAfterCommitWarning) {
-        mDirty.forEachSetBit([&](uint8_t binding) {
+        mDirty.forEachSetBit([&](uint8_t const binding) {
             utils::slog.w << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
                           << ") binding=" << (int) binding
                           << " was set between begin/endRenderPass" << utils::io::endl;
@@ -125,8 +125,8 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
 }
 
 void DescriptorSet::setBuffer(
-        backend::descriptor_binding_t binding,
-        backend::Handle<backend::HwBufferObject> boh, uint32_t offset, uint32_t size) noexcept {
+        backend::descriptor_binding_t const binding,
+        backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) noexcept {
     // TODO: validate it's the right kind of descriptor
     if (mDescriptors[binding].buffer.boh != boh || mDescriptors[binding].buffer.size != size) {
         // we don't set the dirty bit if only offset changes
@@ -137,8 +137,8 @@ void DescriptorSet::setBuffer(
 }
 
 void DescriptorSet::setSampler(
-        backend::descriptor_binding_t binding,
-        backend::Handle<backend::HwTexture> th, backend::SamplerParams params) noexcept {
+        backend::descriptor_binding_t const binding,
+        backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) noexcept {
     // TODO: validate it's the right kind of descriptor
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);

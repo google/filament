@@ -90,48 +90,48 @@ struct Texture::BuilderDetails {
 using BuilderType = Texture;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 
-Texture::Builder& Texture::Builder::width(uint32_t width) noexcept {
+Texture::Builder& Texture::Builder::width(uint32_t const width) noexcept {
     mImpl->mWidth = width;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::height(uint32_t height) noexcept {
+Texture::Builder& Texture::Builder::height(uint32_t const height) noexcept {
     mImpl->mHeight = height;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::depth(uint32_t depth) noexcept {
+Texture::Builder& Texture::Builder::depth(uint32_t const depth) noexcept {
     mImpl->mDepth = depth;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::levels(uint8_t levels) noexcept {
+Texture::Builder& Texture::Builder::levels(uint8_t const levels) noexcept {
     mImpl->mLevels = std::max(uint8_t(1), levels);
     return *this;
 }
 
-Texture::Builder& Texture::Builder::sampler(Texture::Sampler target) noexcept {
+Texture::Builder& Texture::Builder::sampler(Sampler const target) noexcept {
     mImpl->mTarget = target;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::format(Texture::InternalFormat format) noexcept {
+Texture::Builder& Texture::Builder::format(InternalFormat const format) noexcept {
     mImpl->mFormat = format;
     return *this;
 }
 
-Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
-    mImpl->mUsage = Texture::Usage(usage);
+Texture::Builder& Texture::Builder::usage(Usage const usage) noexcept {
+    mImpl->mUsage = Usage(usage);
     return *this;
 }
 
-Texture::Builder& Texture::Builder::import(intptr_t id) noexcept {
+Texture::Builder& Texture::Builder::import(intptr_t const id) noexcept {
     assert_invariant(id); // imported id can't be zero
     mImpl->mImportedId = id;
     return *this;
@@ -142,10 +142,14 @@ Texture::Builder& Texture::Builder::external() noexcept {
     return *this;
 }
 
-Texture::Builder& Texture::Builder::swizzle(Swizzle r, Swizzle g, Swizzle b, Swizzle a) noexcept {
+Texture::Builder& Texture::Builder::swizzle(Swizzle const r, Swizzle const g, Swizzle const b, Swizzle const a) noexcept {
     mImpl->mTextureIsSwizzled = true;
     mImpl->mSwizzle = { r, g, b, a };
     return *this;
+}
+
+Texture::Builder& Texture::Builder::name(const char* name, size_t const len) noexcept {
+    return BuilderNameMixin::name(name, len);
 }
 
 Texture* Texture::Builder::build(Engine& engine) {
@@ -212,7 +216,7 @@ Texture* Texture::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(!swizzled) << "WebGL does not support texture swizzling.";
     #endif
 
-    auto validateSamplerType = [&engine = downcast(engine)](SamplerType sampler) -> bool {
+    auto validateSamplerType = [&engine = downcast(engine)](SamplerType const sampler) -> bool {
         switch (sampler) {
             case SamplerType::SAMPLER_2D:
             case SamplerType::SAMPLER_CUBEMAP:
@@ -293,22 +297,22 @@ void FTexture::terminate(FEngine& engine) {
     setHandles({});
 }
 
-size_t FTexture::getWidth(size_t level) const noexcept {
+size_t FTexture::getWidth(size_t const level) const noexcept {
     return valueForLevel(level, mWidth);
 }
 
-size_t FTexture::getHeight(size_t level) const noexcept {
+size_t FTexture::getHeight(size_t const level) const noexcept {
     return valueForLevel(level, mHeight);
 }
 
-size_t FTexture::getDepth(size_t level) const noexcept {
+size_t FTexture::getDepth(size_t const level) const noexcept {
     return valueForLevel(level, mDepth);
 }
 
-void FTexture::setImage(FEngine& engine, size_t level,
-        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
-        FTexture::PixelBufferDescriptor&& p) const {
+void FTexture::setImage(FEngine& engine, size_t const level,
+        uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
+        uint32_t const width, uint32_t const height, uint32_t const depth,
+        PixelBufferDescriptor&& p) const {
 
     if (UTILS_UNLIKELY(!engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1))) {
         FILAMENT_CHECK_PRECONDITION(p.stride == 0 || p.stride == width)
@@ -397,10 +401,10 @@ void FTexture::setImage(FEngine& engine, size_t level,
 }
 
 // deprecated
-void FTexture::setImage(FEngine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
+void FTexture::setImage(FEngine& engine, size_t const level,
+        PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
 
-    auto validateTarget = [](SamplerType sampler) -> bool {
+    auto validateTarget = [](SamplerType const sampler) -> bool {
         switch (sampler) {
             case SamplerType::SAMPLER_CUBEMAP:
                 return true;
@@ -485,7 +489,7 @@ void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     setHandles(texture);
 }
 
-void FTexture::setExternalImage(FEngine& engine, void* image, size_t plane) noexcept {
+void FTexture::setExternalImage(FEngine& engine, void* image, size_t const plane) noexcept {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
 
     // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
@@ -527,7 +531,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
         api.setExternalStream(mHandle, stream->getHandle());
     } else {
         mStream = nullptr;
-        api.setExternalStream(mHandle, backend::Handle<backend::HwStream>());
+        api.setExternalStream(mHandle, backend::Handle<HwStream>());
     }
 }
 
@@ -555,7 +559,7 @@ bool FTexture::textureHandleCanMutate() const noexcept {
     return (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) || mExternal;
 }
 
-void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
+void FTexture::updateLodRange(uint8_t const baseLevel, uint8_t const levelCount) noexcept {
     assert_invariant(!mExternal);
     if (any(mUsage & Usage::SAMPLEABLE) && mLevelCount > 1) {
         auto& range = mLodRange;
@@ -574,7 +578,7 @@ void FTexture::updateLodRange(uint8_t baseLevel, uint8_t levelCount) noexcept {
     }
 }
 
-void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
+void FTexture::setHandles(Handle<HwTexture> handle) noexcept {
     assert_invariant(!mHandle || mHandleForSampling);
     if (mHandle) {
         mDriver->destroyTexture(mHandle);
@@ -586,8 +590,8 @@ void FTexture::setHandles(backend::Handle<backend::HwTexture> handle) noexcept {
     mHandleForSampling = handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
-        backend::Handle<backend::HwTexture> handle) const noexcept {
+Handle<HwTexture> FTexture::setHandleForSampling(
+        Handle<HwTexture> handle) const noexcept {
     assert_invariant(!mHandle || mHandleForSampling);
     if (mHandleForSampling && mHandleForSampling != mHandle) {
         mDriver->destroyTexture(mHandleForSampling);
@@ -595,19 +599,19 @@ backend::Handle<backend::HwTexture> FTexture::setHandleForSampling(
     return mHandleForSampling = handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::createPlaceholderTexture(
-        backend::DriverApi& driver) noexcept {
+Handle<HwTexture> FTexture::createPlaceholderTexture(
+        DriverApi& driver) noexcept {
     auto handle = driver.createTexture(
             Sampler::SAMPLER_2D, 1, InternalFormat::RGBA8, 1, 1, 1, 1, Usage::DEFAULT);
     static uint8_t pixels[4] = { 0, 0, 0, 0 };
     driver.update3DImage(handle, 0, 0, 0, 0, 1, 1, 1,
             { (char*)&pixels[0], sizeof(pixels),
-                    Texture::PixelBufferDescriptor::PixelDataFormat::RGBA,
-                    Texture::PixelBufferDescriptor::PixelDataType::UBYTE });
+                    PixelBufferDescriptor::PixelDataFormat::RGBA,
+                    PixelBufferDescriptor::PixelDataType::UBYTE });
     return handle;
 }
 
-backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noexcept {
+Handle<HwTexture> FTexture::getHwHandleForSampling() const noexcept {
     if (UTILS_UNLIKELY(mExternal && !mHandleForSampling)) {
         return setHandleForSampling(createPlaceholderTexture(*mDriver));
     }
@@ -626,11 +630,11 @@ backend::Handle<backend::HwTexture> FTexture::getHwHandleForSampling() const noe
     return mHandleForSampling;
 }
 
-void FTexture::updateLodRange(uint8_t level) noexcept {
+void FTexture::updateLodRange(uint8_t const level) noexcept {
     updateLodRange(level, 1);
 }
 
-bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept {
+bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat const format) noexcept {
     return engine.getDriverApi().isTextureFormatSupported(format);
 }
 
@@ -642,12 +646,12 @@ bool FTexture::isTextureSwizzleSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isTextureSwizzleSupported();
 }
 
-size_t FTexture::computeTextureDataSize(Texture::Format format, Texture::Type type,
-        size_t stride, size_t height, size_t alignment) noexcept {
+size_t FTexture::computeTextureDataSize(Format const format, Type const type,
+        size_t const stride, size_t const height, size_t const alignment) noexcept {
     return PixelBufferDescriptor::computeDataSize(format, type, stride, height, alignment);
 }
 
-size_t FTexture::getFormatSize(InternalFormat format) noexcept {
+size_t FTexture::getFormatSize(InternalFormat const format) noexcept {
     return backend::getFormatSize(format);
 }
 
@@ -807,9 +811,9 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
         CubemapIBL::roughnessFilter(js, dst, { levels.begin(), uint32_t(levels.size()) },
                 linearRoughness, numSamples, mirror, true);
 
-        Texture::PixelBufferDescriptor const pbd(image.getData(), image.getSize(),
-                Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
-                Texture::PixelBufferDescriptor::PixelDataType::FLOAT, 1, 0, 0, image.getStride());
+        PixelBufferDescriptor const pbd(image.getData(), image.getSize(),
+                PixelBufferDescriptor::PixelDataFormat::RGB,
+                PixelBufferDescriptor::PixelDataType::FLOAT, 1, 0, 0, image.getStride());
 
         uintptr_t const base = uintptr_t(image.getData());
         for (size_t j = 0; j < 6; j++) {
@@ -817,8 +821,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
             auto offset = uintptr_t(faceImage.getData()) - base;
             driver.update3DImage(mHandle, level, 0, 0, j, dim, dim, 1, {
                     (char*)image.getData() + offset, dim * dim * 3 * sizeof(float),
-                    Texture::PixelBufferDescriptor::PixelDataFormat::RGB,
-                    Texture::PixelBufferDescriptor::PixelDataType::FLOAT, 1,
+                    PixelBufferDescriptor::PixelDataFormat::RGB,
+                    PixelBufferDescriptor::PixelDataType::FLOAT, 1,
                     0, 0, uint32_t(image.getStride())
             });
         }
@@ -831,8 +835,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     // by the caller (without being move()d here).
 }
 
-bool FTexture::validatePixelFormatAndType(TextureFormat internalFormat,
-        PixelDataFormat format, PixelDataType type) noexcept {
+bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
+        PixelDataFormat const format, PixelDataType const type) noexcept {
 
     switch (internalFormat) {
         case TextureFormat::R8:

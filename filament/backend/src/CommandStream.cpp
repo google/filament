@@ -54,7 +54,7 @@ static void printParameterPack(io::ostream& out, const FIRST& first, const REMAI
 }
 
 static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& command) noexcept {
-    constexpr const char startPattern[] = "::Command<&(filament::backend::Driver::";
+    constexpr const char startPattern[] = "::Command<&filament::backend::Driver::";
     auto pos = command.rfind(startPattern);
     auto end = command.rfind('(');
     pos += sizeof(startPattern) - 1;

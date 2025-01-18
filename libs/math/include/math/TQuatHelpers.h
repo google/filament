@@ -259,7 +259,7 @@ public:
             return normalize(lerp(d < 0 ? -p : p, q, t));
         }
         const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
-        const T a = std::acos(filament::math::clamp(absd / npq, T(-1), T(1)));
+        const T a = std::acos(math::clamp(absd / npq, T(-1), T(1)));
         const T a0 = a * (1 - t);
         const T a1 = a * t;
         const T sina = sin(a);

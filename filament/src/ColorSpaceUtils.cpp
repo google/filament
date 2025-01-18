@@ -52,7 +52,7 @@ using namespace math;
 // Finds the maximum saturation possible for a given hue that fits in sRGB
 // Saturation here is defined as S = C/L
 // a and b must be normalized so a^2 + b^2 == 1
-static float compute_max_saturation(float a, float b) noexcept {
+static float compute_max_saturation(float const a, float const b) noexcept {
     // Max saturation will be when one of r, g or b goes below zero.
 
     // Select different coefficients depending on which component goes below zero first
@@ -131,7 +131,7 @@ static float compute_max_saturation(float a, float b) noexcept {
 
 // finds L_cusp and C_cusp for a given hue
 // a and b must be normalized so a^2 + b^2 == 1
-static float2 find_cusp(float a, float b) noexcept {
+static float2 find_cusp(float const a, float const b) noexcept {
     // First, find the maximum saturation (saturation S = C/L)
     float const S_cusp = compute_max_saturation(a, b);
 
@@ -147,7 +147,7 @@ static float2 find_cusp(float a, float b) noexcept {
 // L = L0 * (1 - t) + t * L1;
 // C = t * C1;
 // a and b must be normalized so a^2 + b^2 == 1
-static float find_gamut_intersection(float a, float b, float L1, float C1, float L0) noexcept {
+static float find_gamut_intersection(float const a, float const b, float const L1, float const C1, float const L0) noexcept {
     // Find the cusp of the gamut triangle
     float2 const cusp = find_cusp(a, b);
 
@@ -231,7 +231,7 @@ static float find_gamut_intersection(float a, float b, float L1, float C1, float
     return t;
 }
 
-constexpr float sgn(float x) noexcept {
+constexpr float sgn(float const x) noexcept {
     return (float) (0.f < x) - (float) (x < 0.f);
 }
 
@@ -266,7 +266,7 @@ inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb,
     return OkLab_to_sRGB({L_clipped, C_clipped * a_, C_clipped * b_});
 }
 
-float3 gamutMapping_sRGB(float3 rgb) noexcept {
+float3 gamutMapping_sRGB(float3 const rgb) noexcept {
     return gamut_clip_adaptive_L0_0_5(rgb);
 }
 

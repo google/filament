@@ -45,57 +45,57 @@ public:
 
     FDebugRegistry() noexcept;
 
-    void registerProperty(std::string_view name, bool* p) noexcept {
+    void registerProperty(std::string_view const name, bool* p) noexcept {
         registerProperty(name, p, BOOL);
     }
 
-    void registerProperty(std::string_view name, int* p) noexcept {
+    void registerProperty(std::string_view const name, int* p) noexcept {
         registerProperty(name, p, INT);
     }
 
-    void registerProperty(std::string_view name, float* p) noexcept {
+    void registerProperty(std::string_view const name, float* p) noexcept {
         registerProperty(name, p, FLOAT);
     }
 
-    void registerProperty(std::string_view name, math::float2* p) noexcept {
+    void registerProperty(std::string_view const name, math::float2* p) noexcept {
         registerProperty(name, p, FLOAT2);
     }
 
-    void registerProperty(std::string_view name, math::float3* p) noexcept {
+    void registerProperty(std::string_view const name, math::float3* p) noexcept {
         registerProperty(name, p, FLOAT3);
     }
 
-    void registerProperty(std::string_view name, math::float4* p) noexcept {
+    void registerProperty(std::string_view const name, math::float4* p) noexcept {
         registerProperty(name, p, FLOAT4);
     }
 
 
-    void registerProperty(std::string_view name, bool* p,
+    void registerProperty(std::string_view const name, bool* p,
             std::function<void()> fn) noexcept {
         registerProperty(name, p, BOOL, std::move(fn));
     }
 
-    void registerProperty(std::string_view name, int* p,
+    void registerProperty(std::string_view const name, int* p,
             std::function<void()> fn) noexcept {
         registerProperty(name, p, INT, std::move(fn));
     }
 
-    void registerProperty(std::string_view name, float* p,
+    void registerProperty(std::string_view const name, float* p,
             std::function<void()> fn) noexcept {
         registerProperty(name, p, FLOAT, std::move(fn));
     }
 
-    void registerProperty(std::string_view name, math::float2* p,
+    void registerProperty(std::string_view const name, math::float2* p,
             std::function<void()> fn) noexcept {
         registerProperty(name, p, FLOAT2, std::move(fn));
     }
 
-    void registerProperty(std::string_view name, math::float3* p,
+    void registerProperty(std::string_view const name, math::float3* p,
             std::function<void()> fn) noexcept {
         registerProperty(name, p, FLOAT3, std::move(fn));
     }
 
-    void registerProperty(std::string_view name, math::float4* p,
+    void registerProperty(std::string_view const name, math::float4* p,
             std::function<void()> fn) noexcept {
         registerProperty(name, p, FLOAT4, std::move(fn));
     }

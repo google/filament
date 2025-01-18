@@ -175,7 +175,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(
     return shadowTechnique;
 }
 
-ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_t lightIndex,
+ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_t const lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
     // this updates getCascadedShadowMap()
@@ -191,7 +191,7 @@ ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_
     return *this;
 }
 
-ShadowMapManager::Builder& ShadowMapManager::Builder::shadowMap(size_t lightIndex, bool spotlight,
+ShadowMapManager::Builder& ShadowMapManager::Builder::shadowMap(size_t const lightIndex, bool const spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
         const size_t c = mSpotShadowMapCount++;
@@ -770,7 +770,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 }
 
 void ShadowMapManager::updateSpotVisibilityMasks(
-        uint8_t visibleLayers,
+        uint8_t const visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
         FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
         Culler::result_type* UTILS_RESTRICT visibleMask, size_t count) {
@@ -795,7 +795,7 @@ void ShadowMapManager::updateSpotVisibilityMasks(
 
 void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engine, FView& view,
         CameraInfo const& mainCameraInfo,
-        FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept {
+        FScene::LightSoa const& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept {
 
     const size_t lightIndex = shadowMap.getLightIndex();
     FLightManager::ShadowOptions const* const options = shadowMap.getShadowOptions();
@@ -858,7 +858,7 @@ void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
     // compute shadow map frustum for culling
     const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, { 0, 1, 0 }, position);
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, 0.01f, radius);
-    const mat4f MpMv = math::highPrecisionMultiply(Mp, Mv);
+    const mat4f MpMv = highPrecisionMultiply(Mp, Mv);
     const Frustum frustum(MpMv);
 
     // Cull shadow casters
@@ -886,7 +886,7 @@ void ShadowMapManager::cullSpotShadowMap(ShadowMap const& shadowMap,
 
 void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-        FScene::LightSoa& lightData) noexcept {
+        FScene::LightSoa const& lightData) const noexcept {
 
     const uint8_t face = shadowMap.getFace();
     const size_t lightIndex = shadowMap.getLightIndex();
@@ -930,7 +930,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
 }
 
 void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
-        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+        FScene::RenderableSoa& renderableData, utils::Range<uint32_t> const range,
         FScene::LightSoa const& lightData) noexcept {
 
     uint8_t const face = shadowMap.getFace();
@@ -945,7 +945,7 @@ void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView cons
     // compute shadow map frustum for culling
     mat4f const Mv = ShadowMap::getPointLightViewMatrix(TextureCubemapFace(face), position);
     mat4f const Mp = mat4f::perspective(90.0f, 1.0f, 0.01f, radius);
-    Frustum const frustum{ math::highPrecisionMultiply(Mp, Mv) };
+    Frustum const frustum{ highPrecisionMultiply(Mp, Mv) };
 
     // Cull shadow casters
     float3 const* worldAABBCenter = renderableData.data<FScene::WORLD_AABB_CENTER>();
@@ -971,7 +971,7 @@ void ShadowMapManager::cullPointShadowMap(ShadowMap const& shadowMap, FView cons
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
-        FScene::LightSoa const& lightData) noexcept {
+        FScene::LightSoa const& lightData) const noexcept {
 
     // The const_cast here is a little ugly, but conceptually lightData should be const,
     // it's just that we're using it to store some temporary data. With SoA we can't have
@@ -1088,7 +1088,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     if (useMipmapping) {
         // Limit the lowest mipmap level to 256x256.
         // This avoids artifacts on high derivative tangent surfaces.
-        int const lowMipmapLevel = 7;    // log2(256) - 1
+        constexpr int lowMipmapLevel = 7;    // log2(256) - 1
         mipLevels = std::max(1, FTexture::maxLevelCount(maxDimension) - lowMipmapLevel);
     }
 

@@ -17,6 +17,8 @@
 #ifndef TNT_UTILS_INVOKABLE_H
 #define TNT_UTILS_INVOKABLE_H
 
+#include <utils/ostream.h>
+
 #include <type_traits>
 #include <utility>
 
@@ -81,6 +83,11 @@ public:
     explicit operator bool() const noexcept;
 
 private:
+#if !defined(NDEBUG)
+    friend io::ostream& operator<<(io::ostream& out, const Invocable&) {
+        return out << "Invocable<>"; // TODO: is there a way to do better here?
+    }
+#endif
     void* mInvocable = nullptr;
     void (*mDeleter)(void*) = nullptr;
     R (* mInvoker)(void*, Args...) = nullptr;

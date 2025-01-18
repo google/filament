@@ -20,7 +20,7 @@
 
 namespace filament {
 
-void Skybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
+void Skybox::setLayerMask(uint8_t const select, uint8_t const values) noexcept {
     downcast(this)->setLayerMask(select, values);
 }
 
@@ -32,7 +32,7 @@ float Skybox::getIntensity() const noexcept {
     return downcast(this)->getIntensity();
 }
 
-void Skybox::setColor(math::float4 color) noexcept {
+void Skybox::setColor(math::float4 const color) noexcept {
     downcast(this)->setColor(color);
 }
 
