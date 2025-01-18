@@ -757,8 +757,8 @@ int FEngine::loop() {
     const char *fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
 #endif
     if (fgviewerPortString != nullptr) {
-        const int fgviewer_port = atoi(fgviewerPortString);
-        debug.fgviewerServer = new fgviewer::DebugServer(fgviewer_port);
+        const int fgviewerPort = atoi(fgviewerPortString);
+        debug.fgviewerServer = new fgviewer::DebugServer(fgviewerPort);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
