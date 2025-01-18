@@ -754,7 +754,7 @@ int FEngine::loop() {
 #ifdef __ANDROID__
     const char* fgviewerPortString = "8085";
 #else
-    const char *fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
+    const char* fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
 #endif
     if (fgviewerPortString != nullptr) {
         const int fgviewerPort = atoi(fgviewerPortString);
