@@ -31,7 +31,7 @@ FrameGraphInfo::Pass::Pass(utils::CString name, std::vector<ResourceId> reads,
                                     writes(std::move(writes)) {}
 
 FrameGraphInfo::Resource::Resource(ResourceId id, utils::CString name,
-    std::vector<std::pair<utils::CString, utils::CString> > properties): id(id),
+    std::vector<Property> properties): id(id),
     name(std::move(name)), properties(std::move(properties)) {}
 
 void FrameGraphInfo::setResources(
