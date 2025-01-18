@@ -514,7 +514,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
     for (const auto &resource: mResourceNodes) {
-        std::vector<std::pair<utils::CString, utils::CString> > resourceProps;
+        std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
         // TODO: Fill in resource properties
         fgviewer::ResourceId id = resource->getId();
         resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
