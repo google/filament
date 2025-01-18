@@ -34,20 +34,24 @@ struct InstanceBuffer::BuilderDetails {
 };
 
 using BuilderType = InstanceBuffer;
-BuilderType::Builder::Builder(size_t instanceCount) noexcept {
+BuilderType::Builder::Builder(size_t const instanceCount) noexcept {
     mImpl->mInstanceCount = instanceCount;
 }
 
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
         math::mat4f const* localTransforms) noexcept {
     mImpl->mLocalTransforms = localTransforms;
     return *this;
+}
+
+InstanceBuffer::Builder& InstanceBuffer::Builder::name(const char* name, size_t const len) noexcept {
+    return BuilderNameMixin::name(name, len);
 }
 
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
@@ -75,7 +79,7 @@ FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
 }
 
 void FInstanceBuffer::setLocalTransforms(
-        math::mat4f const* localTransforms, size_t count, size_t offset) {
+        math::mat4f const* localTransforms, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mInstanceCount)
             << "setLocalTransforms overflow. InstanceBuffer has only " << mInstanceCount
             << " instances, but trying to set " << count 
@@ -89,7 +93,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
 
     // TODO: allocate this staging buffer from a pool.
     uint32_t stagingBufferSize = sizeof(PerRenderableUib);
-    PerRenderableData* stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
+    PerRenderableData* stagingBuffer = (PerRenderableData*)malloc(stagingBufferSize);
     // TODO: consider using JobSystem to parallelize this.
     for (size_t i = 0, c = mInstanceCount; i < c; i++) {
         stagingBuffer[i] = ubo;
@@ -102,7 +106,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
     driver.updateBufferObject(handle, {
             stagingBuffer, stagingBufferSize,
             +[](void* buffer, size_t, void*) {
-                ::free(buffer);
+                free(buffer);
             }
     }, 0);
 }

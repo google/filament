@@ -67,8 +67,8 @@ void SsrPassDescriptorSet::setFrameUniforms(TypedUniformBuffer<PerViewUib>& unif
 }
 
 void SsrPassDescriptorSet::prepareHistorySSR(Handle<HwTexture> ssr,
-        math::mat4f const& historyProjection,
-        math::mat4f const& uvFromViewMatrix,
+        mat4f const& historyProjection,
+        mat4f const& uvFromViewMatrix,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
     mDescriptorSet.setSampler(+PerViewBindingPoints::SSR, ssr, {
@@ -101,7 +101,7 @@ void SsrPassDescriptorSet::commit(FEngine& engine) noexcept {
     mDescriptorSet.commit(engine.getPerViewDescriptorSetLayoutSsrVariant(), driver);
 }
 
-void SsrPassDescriptorSet::bind(backend::DriverApi& driver) noexcept {
+void SsrPassDescriptorSet::bind(DriverApi& driver) noexcept {
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
 }
 

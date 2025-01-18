@@ -38,7 +38,7 @@ class Culler {
 public:
     // Culler can only process buffers with a size multiple of MODULO
     static constexpr size_t MODULO = 8u;
-    static inline size_t round(size_t count) noexcept {
+    static inline size_t round(size_t const count) noexcept {
         return (count + (MODULO - 1)) & ~(MODULO - 1);
     }
 

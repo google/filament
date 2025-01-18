@@ -71,11 +71,11 @@ class  FEngine;
 
 class FMaterial : public Material {
 public:
-    FMaterial(FEngine& engine, const Material::Builder& builder,
+    FMaterial(FEngine& engine, const Builder& builder,
             std::unique_ptr<MaterialParser> materialParser);
     ~FMaterial() noexcept;
 
-    class DefaultMaterialBuilder : public Material::Builder {
+    class DefaultMaterialBuilder : public Builder {
     public:
         DefaultMaterialBuilder();
     };
@@ -93,7 +93,7 @@ public:
         return mPerViewDescriptorSetLayout;
     }
 
-    DescriptorSetLayout const& getPerViewDescriptorSetLayout(Variant variant) const noexcept {
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout(Variant const variant) const noexcept {
         if (Variant::isValidDepthVariant(variant)) {
             assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
             return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
@@ -110,7 +110,7 @@ public:
     }
 
     void compile(CompilerPriorityQueue priority,
-            UserVariantFilterMask variantFilter,
+            UserVariantFilterMask variantSpec,
             backend::CallbackHandler* handler,
             utils::Invocable<void(Material*)>&& callback) noexcept;
 
@@ -131,7 +131,7 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant variant) const noexcept {
+    bool isCached(Variant const variant) const noexcept {
         return bool(mCachedPrograms[variant.key]);
     }
 
@@ -140,8 +140,8 @@ public:
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
-    void prepareProgram(Variant variant,
-            backend::CompilerPriorityQueue priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
+    void prepareProgram(Variant const variant,
+            backend::CompilerPriorityQueue const priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
         if (UTILS_UNLIKELY(!isCached(variant))) {
             prepareProgramSlow(variant, priorityQueue);
@@ -150,7 +150,7 @@ public:
 
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
-    [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
+    [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
         assert_invariant((size_t)variant.key < VARIANT_COUNT);
         std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
@@ -286,18 +286,18 @@ private:
 
     void processBlendingMode(MaterialParser const* parser);
 
-    void processSpecializationConstants(FEngine& engine, Material::Builder const& builder,
+    void processSpecializationConstants(FEngine& engine, Builder const& builder,
             MaterialParser const* parser);
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);
 
-    void precacheDepthVariants(FEngine& engine);
+    void precacheDepthVariants(FEngine const& engine);
 
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
-    inline bool isSharedVariant(Variant variant) const {
+    inline bool isSharedVariant(Variant const variant) const {
         return (mMaterialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
                !mHasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
@@ -374,7 +374,7 @@ private:
     mutable utils::Mutex mPendingEditsLock;
     std::unique_ptr<MaterialParser> mPendingEdits;
     void setPendingEdits(std::unique_ptr<MaterialParser> pendingEdits) noexcept;
-    bool hasPendingEdits() noexcept;
+    bool hasPendingEdits() const noexcept;
     void latchPendingEdits() noexcept;
 #endif
 

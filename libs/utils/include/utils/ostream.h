@@ -29,7 +29,7 @@ namespace utils::io {
 
 struct ostream_;
 
-class UTILS_PUBLIC ostream : protected utils::PrivateImplementation<ostream_> {
+class UTILS_PUBLIC ostream : protected PrivateImplementation<ostream_> {
     friend struct ostream_;
 
 public:
@@ -123,7 +123,7 @@ private:
 };
 
 // handles utils::bitset
-inline ostream& operator << (ostream& o, utils::bitset32 const& s) noexcept {
+inline ostream& operator << (ostream& o, bitset32 const& s) noexcept {
     return o << (void*)uintptr_t(s.getValue());
 }
 

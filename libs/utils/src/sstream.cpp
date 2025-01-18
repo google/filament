@@ -21,7 +21,7 @@
 
 namespace utils::io {
 
-utils::io::ostream& sstream::flush() noexcept {
+ostream& sstream::flush() noexcept {
     // no-op.
     return *this;
 }

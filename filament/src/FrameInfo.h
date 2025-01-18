@@ -57,7 +57,7 @@ struct FrameInfoImpl : public details::FrameInfo {
     time_point backendBeginFrame;    // backend thread beginFrame time (makeCurrent time)
     time_point backendEndFrame;      // backend thread endFrame time (present time)
     std::atomic_bool ready{};        // true once backend thread has populated its data
-    explicit FrameInfoImpl(uint32_t frameId) noexcept
+    explicit FrameInfoImpl(uint32_t const frameId) noexcept
         : frameId(frameId) {
     }
 };
@@ -110,7 +110,7 @@ public:
         return front();
     }
 
-    T& operator[](size_t pos) noexcept {
+    T& operator[](size_t const pos) noexcept {
         assert_invariant(pos < size());
         size_t const index = (mFront + CAPACITY - pos) % CAPACITY;
         return *std::launder(reinterpret_cast<T*>(&mStorage[index]));
@@ -135,7 +135,7 @@ private:
     Storage mStorage[CAPACITY];
     uint32_t mFront = 0;    // always index 0
     uint32_t mSize = 0;
-    [[nodiscard]] inline uint32_t advance(uint32_t v) noexcept {
+    [[nodiscard]] inline uint32_t advance(uint32_t const v) noexcept {
         return (v + 1) % CAPACITY;
     }
 };

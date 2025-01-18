@@ -26,8 +26,6 @@
 
 #include "components/RenderableManager.h"
 
-#include "ds/DescriptorSet.h"
-
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
@@ -81,7 +79,7 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
     return *this;
 }
 
-RenderPass RenderPassBuilder::build(FEngine const& engine, backend::DriverApi& driver) const {
+RenderPass RenderPassBuilder::build(FEngine const& engine, DriverApi& driver) const {
     assert_invariant(mRenderableSoa);
     assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
     assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
@@ -90,15 +88,14 @@ RenderPass RenderPassBuilder::build(FEngine const& engine, backend::DriverApi& d
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::BufferObjectHandleDeleter::operator()(
-        backend::BufferObjectHandle handle) noexcept {
+void RenderPass::BufferObjectHandleDeleter::operator()(BufferObjectHandle handle) noexcept {
     if (handle) { // this is common case
         driver.get().destroyBufferObject(handle);
     }
 }
 
 void RenderPass::DescriptorSetHandleDeleter::operator()(
-        backend::DescriptorSetHandle handle) noexcept {
+        DescriptorSetHandle handle) noexcept {
     if (handle) { // this is common case
         driver.get().destroyDescriptorSet(handle);
     }
@@ -106,7 +103,7 @@ void RenderPass::DescriptorSetHandleDeleter::operator()(
 
 // ------------------------------------------------------------------------------------------------
 
-RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
+RenderPass::RenderPass(FEngine const& engine, DriverApi& driver,
         RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
           mColorPassDescriptorSet(builder.mColorPassDescriptorSet),
@@ -160,7 +157,7 @@ RenderPass::RenderPass(FEngine const& engine, backend::DriverApi& driver,
 
     // sort commands once we're done adding commands
     commandEnd = resize(builder.mArena,
-            RenderPass::sortCommands(commandBegin, commandEnd));
+            sortCommands(commandBegin, commandEnd));
 
     if (engine.isAutomaticInstancingEnabled()) {
         int32_t stereoscopicEyeCount = 1;
@@ -188,19 +185,19 @@ RenderPass::Command* RenderPass::resize(Arena& arena, Command* const last) noexc
 
 void RenderPass::appendCommands(FEngine const& engine,
         Slice<Command> commands,
-        utils::Range<uint32_t> const vr,
+        Range<uint32_t> const visibleRenderables,
         CommandTypeFlags const commandTypeFlags,
         RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
         Variant const variant,
         float3 const cameraPosition,
-        float3 const cameraForwardVector) noexcept {
+        float3 const cameraForwardVector) const noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
     // trace the number of visible renderables
-    SYSTRACE_VALUE32("visibleRenderables", vr.size());
-    if (UTILS_UNLIKELY(vr.empty())) {
+    SYSTRACE_VALUE32("visibleRenderables", visibleRenderables.size());
+    if (UTILS_UNLIKELY(visibleRenderables.empty())) {
         // no renderables, we still need the sentinel and the command buffer size should be
         // exactly 1.
         assert_invariant(commands.size() == 1);
@@ -222,17 +219,18 @@ void RenderPass::appendCommands(FEngine const& engine,
     auto work = [commandTypeFlags, curr, &soa,
                  variant, renderFlags, visibilityMask,
                  cameraPosition, cameraForwardVector, stereoscopicEyeCount]
-            (uint32_t startIndex, uint32_t indexCount) {
-        RenderPass::generateCommands(commandTypeFlags, curr,
+            (uint32_t const startIndex, uint32_t const indexCount) {
+        generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount },
                 variant, renderFlags, visibilityMask,
                 cameraPosition, cameraForwardVector, stereoscopicEyeCount);
     };
 
-    if (vr.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
-        work(vr.first, vr.size());
+    if (visibleRenderables.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
+        work(visibleRenderables.first, visibleRenderables.size());
     } else {
-        auto* jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
+        auto* jobCommandsParallel = parallel_for(js, nullptr,
+                visibleRenderables.first, uint32_t(visibleRenderables.size()),
                 std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT>());
         js.runAndWait(jobCommandsParallel);
     }
@@ -253,7 +251,7 @@ void RenderPass::appendCommands(FEngine const& engine,
 }
 
 void RenderPass::appendCustomCommand(Command* commands,
-        uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+        uint8_t channel, Pass pass, CustomCommand custom, uint32_t const order,
         Executor::CustomCommandFn command) {
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
@@ -287,10 +285,10 @@ RenderPass::Command* RenderPass::sortCommands(
     return last;
 }
 
-RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
+RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
         DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
         Command* curr, Command* const last,
-        int32_t eyeCount) const noexcept {
+        int32_t const eyeCount) const noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -365,7 +363,7 @@ RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
                 // TODO: use a pool for larger heap buffers
                 // buffer large enough for all instances data
                 stagingBufferSize = count * sizeof(PerRenderableData);
-                stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
+                stagingBuffer = static_cast<PerRenderableData*>(malloc(stagingBufferSize));
                 uboData = mRenderableSoa.data<FScene::UBO>();
                 assert_invariant(uboData);
 
@@ -415,14 +413,14 @@ RenderPass::Command* RenderPass::instanceify(backend::DriverApi& driver,
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
                 stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
                 +[](void* buffer, size_t, void*) {
-                    ::free(buffer);
+                    free(buffer);
                 }
         }, 0);
 
         stagingBuffer = nullptr;
 
         // remove all the canceled commands
-        auto lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
+        auto const lastCommand = std::remove_if(firstSentinel, last, [](auto const& command) {
             return command.key == uint64_t(Pass::SENTINEL);
         });
 
@@ -439,7 +437,7 @@ UTILS_ALWAYS_INLINE // This function exists only to make the code more readable.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
         FMaterialInstance const* const UTILS_RESTRICT mi,
-        bool inverseFrontFaces, bool hasDepthClamp) noexcept {
+        bool const inverseFrontFaces, bool const hasDepthClamp) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
@@ -492,7 +490,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         Variant const variant, RenderFlags const renderFlags,
         FScene::VisibleMaskType const visibilityMask,
         float3 const cameraPosition, float3 const cameraForward,
-        uint8_t stereoEyeCount) noexcept {
+        uint8_t instancedStereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
 
@@ -525,13 +523,13 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range,
                     variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    stereoEyeCount);
+                    instancedStereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range,
                     variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    stereoEyeCount);
+                    instancedStereoEyeCount);
             break;
         default:
             // we should never end-up here
@@ -550,11 +548,11 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
 /* static */
 template<RenderPass::CommandTypeFlags commandTypeFlags>
 UTILS_NOINLINE
-RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
+RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
+        float3 cameraPosition, float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept {
 
     constexpr bool isColorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
     constexpr bool isDepthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
@@ -675,16 +673,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         cmd.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmd.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmd.info.index = i;
-        cmd.info.hasHybridInstancing = (bool)soaInstanceInfo[i].handle;
+        cmd.info.hasHybridInstancing = bool(soaInstanceInfo[i].handle);
         cmd.info.instanceCount = soaInstanceInfo[i].count;
-        cmd.info.hasMorphing = (bool)morphing.handle;
-        cmd.info.hasSkinning = (bool)skinning.handle;
+        cmd.info.hasMorphing = bool(morphing.handle);
+        cmd.info.hasSkinning = bool(skinning.handle);
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
         if (hasInstancedStereo) {
-            cmd.info.instanceCount *= stereoEyeCount;
+            cmd.info.instanceCount *= instancedStereoEyeCount;
         }
 
         // soaDescriptorSet[i] is either populated with a common descriptor-set or truly with
@@ -732,7 +730,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 //                    morphing.morphTargetBuffer->getHwHandle() : SamplerGroupHandle{};
 
             if constexpr (isColorPass) {
-                RenderPass::setupColorCommand(cmd, renderableVariant, mi,
+                setupColorCommand(cmd, renderableVariant, mi,
                         inverseFrontFaces, hasDepthClamp);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -853,7 +851,7 @@ void RenderPass::updateSummedPrimitiveCounts(
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::Executor::overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept {
+void RenderPass::Executor::overridePolygonOffset(PolygonOffset const* polygonOffset) noexcept {
     if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) { // NOLINT(*-assignment-in-if-condition)
         mPolygonOffset = *polygonOffset;
     }
@@ -864,7 +862,7 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noe
     mScissor = scissor;
 }
 
-void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& driver) const noexcept {
+void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver) const noexcept {
     execute(engine, driver, mCommands.begin(), mCommands.end());
 }
 
@@ -914,7 +912,7 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& driver,
+void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
         Command const* first, Command const* last) const noexcept {
 
     SYSTRACE_CALL();
@@ -958,7 +956,7 @@ void RenderPass::Executor::execute(FEngine const& engine, backend::DriverApi& dr
         // CommandStream protocol. Currently, the maximum is 248 bytes.
         // The batch size is calculated by adding the size of all commands that can possibly be
         // emitted per draw call:
-        constexpr size_t const maxCommandSizeInBytes =
+        constexpr size_t maxCommandSizeInBytes =
                 sizeof(COMMAND_TYPE(scissor)) +
                 sizeof(COMMAND_TYPE(bindDescriptorSet)) +
                 sizeof(COMMAND_TYPE(bindDescriptorSet)) +

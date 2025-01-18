@@ -164,7 +164,7 @@ inline constexpr half operator""_h(long double v) {
     return half( static_cast<float>(v) );
 }
 
-template<> struct is_arithmetic<filament::math::half> : public std::true_type {};
+template<> struct is_arithmetic<half> : public std::true_type {};
 
 } // namespace math
 } // namespace filament
