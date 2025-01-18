@@ -1437,6 +1437,13 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     fg.compile();
 
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        fgviewerServer->update(view.getViewHandle(), fg.getFrameGraphInfo(view.getName()));
+    }
+#endif
+
     //fg.export_graphviz(slog.d, view.getName());
 
     fg.execute(driver);

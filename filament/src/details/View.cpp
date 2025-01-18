@@ -109,6 +109,14 @@ FView::FView(FEngine& engine)
     }
 #endif
 
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        mFrameGraphViewerViewHandle =
+            fgviewerServer->createView(utils::CString(getName()));
+    }
+#endif
+
     // allocate UBOs
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
@@ -151,6 +159,13 @@ void FView::terminate(FEngine& engine) {
 #ifndef NDEBUG
     if (UTILS_UNLIKELY(mDebugState->owner)) {
         engine.getDebugRegistry().unregisterDataSource("d.view.frame_info");
+    }
+#endif
+
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        fgviewerServer->destroyView(mFrameGraphViewerViewHandle);
     }
 #endif
 }

@@ -88,6 +88,14 @@ using MaterialKey = uint32_t;
 } // namespace filament::matdbg
 #endif
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/DebugServer.h>
+#else
+namespace filament::fgviewer {
+    class DebugServer;
+} // namespace filament::fgviewer
+#endif
+
 namespace filament {
 
 class Renderer;
@@ -680,6 +688,7 @@ public:
             bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
+        fgviewer::DebugServer* fgviewerServer = nullptr;
     } debug;
 
     struct {
