@@ -81,7 +81,7 @@ public:
     inline resource_ptr() = default;
 
     // move constructor operator
-    inline resource_ptr(resource_ptr<D>&& rhs) {
+    inline resource_ptr(resource_ptr<D>&& rhs) noexcept {
         (*this) = std::move(rhs);
     }
 
@@ -98,7 +98,7 @@ public:
     }
 
     // move operator
-    inline resource_ptr<D>& operator=(resource_ptr<D> && rhs) {
+    inline resource_ptr<D>& operator=(resource_ptr<D> && rhs) noexcept {
         std::swap(mRef, rhs.mRef);
         return *this;
     }
