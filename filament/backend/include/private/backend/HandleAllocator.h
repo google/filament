@@ -31,6 +31,7 @@
 
 #include <cstddef>
 #include <exception>
+#include <mutex>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -44,11 +45,26 @@
 
 namespace filament::backend {
 
+// This is used to not duplicate the code for the Tags management
+class DebugTag {
+public:
+    DebugTag();
+    void writeHandleTag(HandleBase::HandleId key, utils::CString&& tag) noexcept;
+    utils::CString findHandleTag(HandleBase::HandleId key) const noexcept;
+
+private:
+    // This is used to associate a tag to a handle. mDebugTags is only written the in the main
+    // driver thread, but it can be accessed from any thread, because it's called from handle_cast<>
+    // which is used by synchronous calls.
+    mutable utils::Mutex mDebugTagLock;
+    tsl::robin_map<HandleBase::HandleId, utils::CString> mDebugTags;
+};
+
 /*
  * A utility class to efficiently allocate and manage Handle<>
  */
 template<size_t P0, size_t P1, size_t P2>
-class HandleAllocator {
+class HandleAllocator : public DebugTag {
 public:
     HandleAllocator(const char* name, size_t size, bool disableUseAfterFreeCheck) noexcept;
     HandleAllocator(HandleAllocator const& rhs) = delete;
@@ -200,6 +216,8 @@ public:
         return static_cast<Dp>(p);
     }
 
+    utils::CString getHandleTag(HandleBase::HandleId key) const noexcept;
+
     template<typename B>
     bool is_valid(Handle<B>& handle) {
         if (!handle) {
@@ -227,24 +245,12 @@ public:
     void associateTagToHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
         // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
         // those
-        if (isPoolHandle(id)) {
+        uint32_t key = id;
+        if (UTILS_LIKELY(isPoolHandle(id))) {
             // Truncate the age to get the debug tag
-            uint32_t const key = id & ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
-            // This line is the costly part. In the future, we could potentially use a custom
-            // allocator.
-            mDebugTags[key] = std::move(tag);
+            key &= ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
         }
-    }
-
-    utils::CString getHandleTag(HandleBase::HandleId id) const noexcept {
-        if (!isPoolHandle(id)) {
-            return "(no tag)";
-        }
-        uint32_t const key = id & ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
-        if (auto pos = mDebugTags.find(key); pos != mDebugTags.end()) {
-            return pos->second;
-        }
-        return "(no tag)";
+        writeHandleTag(key, std::move(tag));
     }
 
 private:
@@ -347,9 +353,8 @@ private:
         if (UTILS_LIKELY(p)) {
             uint32_t const tag = (uint32_t(age) << HANDLE_AGE_SHIFT) & HANDLE_AGE_MASK;
             return arenaPointerToHandle(p, tag);
-        } else {
-            return allocateHandleSlow(SIZE);
         }
+        return allocateHandleSlow(SIZE);
     }
 
     template<size_t SIZE>
@@ -421,7 +426,6 @@ private:
     // Below is only used when running out of space in the HandleArena
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
-    tsl::robin_map<HandleBase::HandleId, utils::CString> mDebugTags;
     HandleBase::HandleId mId = 0;
     bool mUseAfterFreeCheckDisabled = false;
 };

@@ -19,6 +19,7 @@
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
+#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/compiler.h>
@@ -29,7 +30,9 @@
 #include <exception>
 #include <limits>
 #include <mutex>
+#include <utility>
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -80,9 +83,6 @@ HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size,
         bool disableUseAfterFreeCheck) noexcept
     : mHandleArena(name, size, disableUseAfterFreeCheck),
       mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck) {
-    // Reserve initial space for debug tags. This prevents excessive calls to malloc when the first
-    // few tags are set.
-    mDebugTags.reserve(512);
 }
 
 template <size_t P0, size_t P1, size_t P2>
@@ -145,6 +145,42 @@ void HandleAllocator<P0, P1, P2>::deallocateHandleSlow(HandleBase::HandleId id, 
     lock.unlock();
 
     ::free(p);
+}
+
+template<size_t P0, size_t P1, size_t P2>
+UTILS_NOINLINE
+CString HandleAllocator<P0, P1, P2>::getHandleTag(HandleBase::HandleId id) const noexcept {
+    uint32_t key = id;
+    if (UTILS_LIKELY(isPoolHandle(id))) {
+        // Truncate the age to get the debug tag
+        key &= ~(HANDLE_DEBUG_TAG_MASK ^ HANDLE_AGE_MASK);
+    }
+    return findHandleTag(key);
+}
+
+DebugTag::DebugTag() {
+    // Reserve initial space for debug tags. This prevents excessive calls to malloc when the first
+    // few tags are set.
+    mDebugTags.reserve(512);
+}
+
+UTILS_NOINLINE
+CString DebugTag::findHandleTag(HandleBase::HandleId key) const noexcept {
+    std::unique_lock const lock(mDebugTagLock);
+    if (auto pos = mDebugTags.find(key); pos != mDebugTags.end()) {
+        return pos->second;
+    }
+    return "(no tag)";
+}
+
+UTILS_NOINLINE
+void DebugTag::writeHandleTag(HandleBase::HandleId key, CString&& tag) noexcept {
+    // This line is the costly part. In the future, we could potentially use a custom
+    // allocator.
+    std::unique_lock const lock(mDebugTagLock);
+    // Pool based tags will be recycled after a certain age. Heap-based tag will never be recycled, therefore,
+    // this can grow indefinitely, once we're in the slow mode.
+    mDebugTags[key] = std::move(tag);
 }
 
 // Explicit template instantiations.
