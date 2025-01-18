@@ -15,6 +15,7 @@
  */
 
 #include <fgviewer/DebugServer.h>
+#include <fgviewer/FrameGraphInfo.h>
 
 #include "ApiHandler.h"
 
@@ -31,12 +32,6 @@ namespace filament::fgviewer {
 
 namespace {
 std::string const BASE_URL = "libs/fgviewer/web";
-
-FrameGraphInfoKey getKeybyString(const utils::CString &input,
-                                              uint32_t seed) {
-    return utils::hash::murmurSlow(reinterpret_cast<uint8_t const*>(
-        input.c_str()), input.size(), 0);
-}
 } // anonymous
 
 using namespace utils;
@@ -48,6 +43,7 @@ std::string_view const DebugServer::kSuccessHeader =
 std::string_view const DebugServer::kErrorHeader =
         "HTTP/1.1 404 Not Found\r\nContent-Type: %s\r\n"
         "Connection: close\r\n\r\n";
+
 
 class FileRequestHandler : public CivetHandler {
 public:
@@ -110,22 +106,23 @@ DebugServer::~DebugServer() {
     delete mServer;
 }
 
-void DebugServer::addView(const utils::CString &name, FrameGraphInfo info) {
+ViewHandle DebugServer::createView(utils::CString name) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    const FrameGraphInfoKey key = getKeybyString(name, 0);
-    mViews.insert({key, info});
+    ViewHandle handle = mViewCounter++;
+    mViews.emplace(handle, FrameGraphInfo(std::move(name)));
+
+    return handle;
 }
 
-void DebugServer::removeView(const utils::CString& name) {
+void DebugServer::destroyView(ViewHandle h) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    const FrameGraphInfoKey key = getKeybyString(name, 0);
-    mViews.erase(key);
+    mViews.erase(h);
 }
 
-void DebugServer::updateView(const utils::CString& name, FrameGraphInfo info) {
+void DebugServer::update(ViewHandle h, FrameGraphInfo info) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
-    const FrameGraphInfoKey key = getKeybyString(name, 0);
-    mViews[key] = info;
+    mViews.erase(h);
+    mViews.emplace(h, std::move(info));
 }
 
 } // namespace filament::fgviewer
