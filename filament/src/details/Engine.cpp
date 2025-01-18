@@ -752,12 +752,12 @@ int FEngine::loop() {
 
 #if FILAMENT_ENABLE_FGVIEWER
 #ifdef __ANDROID__
-    const char* fgviewer_portString = "8085";
+    const char* fgviewerPortString = "8085";
 #else
-    const char *fgviewer_portString = getenv("FILAMENT_FGVIEWER_PORT");
+    const char *fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
 #endif
-    if (fgviewer_portString != nullptr) {
-        const int fgviewer_port = atoi(fgviewer_portString);
+    if (fgviewerPortString != nullptr) {
+        const int fgviewer_port = atoi(fgviewerPortString);
         debug.fgviewerServer = new fgviewer::DebugServer(fgviewer_port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
