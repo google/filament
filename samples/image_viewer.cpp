@@ -246,7 +246,7 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
             .height(h)
             .levels(0xff)
             .format(channels == 3 ?
-                    Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
+                    Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA32F)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .build(*engine);
 
