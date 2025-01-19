@@ -585,8 +585,7 @@ public:
      */
     MaterialBuilder& optimization(Optimization optimization) noexcept;
 
-    // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside
-    // MaterialBuilder.
+    // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside MaterialBuilder.
     //! If true, will output the generated GLSL shader code to stdout.
     MaterialBuilder& printShaders(bool printShaders) noexcept;
 

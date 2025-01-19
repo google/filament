@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// FIXME: Some platforms do not have execinfo.h
 #if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #include <execinfo.h>
 #define HAS_EXECINFO 1

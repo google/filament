@@ -240,7 +240,6 @@ public:
     void push(void* p) noexcept {
         assert_invariant(p);
         assert_invariant(p >= mBegin && p < mEnd);
-        // TODO: assert this is one of our pointer (i.e.: it's address match one of ours)
         Node* const head = static_cast<Node*>(p);
         head->next = mHead;
         mHead = head;

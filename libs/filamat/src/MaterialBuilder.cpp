@@ -1368,7 +1368,6 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
                 textureUsedByFilamentCount -= 1;        // fog texture
             }
 
-            // TODO: we need constants somewhere for these values
             if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel

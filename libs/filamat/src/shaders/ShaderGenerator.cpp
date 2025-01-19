@@ -489,7 +489,6 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
     CodeGenerator::generateSeparator(vs);
 
-    // TODO: should we generate per-view SIB in the vertex shader?
     cg.generateSamplers(vs, DescriptorSetBindingPoints::PER_MATERIAL, material.sib);
 
     // shader code
