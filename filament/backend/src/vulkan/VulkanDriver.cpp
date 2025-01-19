@@ -700,6 +700,11 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+    // Running gc() to guard against an edge case where the old swapchains need to have been
+    // destroyed before the new swapchain can be created. Otherwise, we would fail
+    // vkCreateSwapchainKHR with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR.
+    mResourceManager.gc();
+
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
         FVK_LOGW << "sRGB swapchain requested, but Platform does not support it"
                  << utils::io::endl;
