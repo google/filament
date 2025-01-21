@@ -537,7 +537,7 @@ public:
             Platform* UTILS_NULLABLE platform = nullptr,
             void* UTILS_NULLABLE sharedContext = nullptr,
             const Config* UTILS_NULLABLE config = nullptr) {
-        return Engine::Builder()
+        return Builder()
                 .backend(backend)
                 .platform(platform)
                 .sharedContext(sharedContext)
@@ -557,7 +557,7 @@ public:
             Platform* UTILS_NULLABLE platform = nullptr,
             void* UTILS_NULLABLE sharedContext = nullptr,
             const Config* UTILS_NULLABLE config = nullptr) {
-        Engine::Builder()
+        Builder()
                 .backend(backend)
                 .platform(platform)
                 .sharedContext(sharedContext)

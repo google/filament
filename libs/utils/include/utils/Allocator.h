@@ -194,7 +194,7 @@ public:
     }
 
     ~LinearAllocatorWithFallback() noexcept {
-        LinearAllocatorWithFallback::reset();
+        reset();
     }
 
     void* alloc(size_t size, size_t alignment = alignof(std::max_align_t));
@@ -204,7 +204,7 @@ public:
     }
 
     void rewind(void* p) noexcept {
-        if (p >= LinearAllocator::base() && p < LinearAllocator::end()) {
+        if (p >= base() && p < end()) {
             LinearAllocator::rewind(p);
         }
     }
@@ -214,7 +214,7 @@ public:
     void free(void*, size_t) noexcept { }
 
     bool isHeapAllocation(void* p) const noexcept {
-        return p < LinearAllocator::base() || p >= LinearAllocator::end();
+        return p < base() || p >= end();
     }
 };
 

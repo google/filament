@@ -39,9 +39,9 @@ using namespace utils;
 using namespace backend;
 
 size_t HwDescriptorSetLayoutFactory::Parameters::hash() const noexcept {
-    return utils::hash::murmurSlow(
+    return hash::murmurSlow(
             reinterpret_cast<uint8_t const *>(dsl.bindings.data()),
-            dsl.bindings.size() * sizeof(backend::DescriptorSetLayoutBinding),
+            dsl.bindings.size() * sizeof(DescriptorSetLayoutBinding),
             42);
 }
 
@@ -68,7 +68,7 @@ void HwDescriptorSetLayoutFactory::terminate(DriverApi&) noexcept {
 }
 
 auto HwDescriptorSetLayoutFactory::create(DriverApi& driver,
-        backend::DescriptorSetLayout dsl) noexcept -> Handle {
+        DescriptorSetLayout dsl) noexcept -> Handle {
 
     std::sort(dsl.bindings.begin(), dsl.bindings.end(),
             [](auto&& lhs, auto&& rhs) {

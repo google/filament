@@ -56,10 +56,10 @@ struct Skybox::BuilderDetails {
 using BuilderType = Skybox;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 
 Skybox::Builder& Skybox::Builder::environment(Texture* cubemap) noexcept {
@@ -67,17 +67,17 @@ Skybox::Builder& Skybox::Builder::environment(Texture* cubemap) noexcept {
     return *this;
 }
 
-Skybox::Builder& Skybox::Builder::intensity(float envIntensity) noexcept {
+Skybox::Builder& Skybox::Builder::intensity(float const envIntensity) noexcept {
     mImpl->mIntensity = envIntensity;
     return *this;
 }
 
-Skybox::Builder& Skybox::Builder::color(math::float4 color) noexcept {
+Skybox::Builder& Skybox::Builder::color(float4 const color) noexcept {
     mImpl->mColor = color;
     return *this;
 }
 
-Skybox::Builder& Skybox::Builder::showSun(bool show) noexcept {
+Skybox::Builder& Skybox::Builder::showSun(bool const show) noexcept {
     mImpl->mShowSun = show;
     return *this;
 }
@@ -153,23 +153,23 @@ FMaterial const* FSkybox::createMaterial(FEngine& engine) {
 void FSkybox::terminate(FEngine& engine) noexcept {
     // use Engine::destroy because FEngine::destroy is inlined
     Engine& e = engine;
-    e.destroy(mSkyboxMaterialInstance);
     e.destroy(mSkybox);
+    e.destroy(mSkyboxMaterialInstance);
 
     engine.getEntityManager().destroy(mSkybox);
 
-    mSkyboxMaterialInstance = nullptr;
     mSkybox = {};
+    mSkyboxMaterialInstance = nullptr;
 }
 
-void FSkybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
+void FSkybox::setLayerMask(uint8_t const select, uint8_t const values) noexcept {
     auto& rcm = mRenderableManager;
     rcm.setLayerMask(rcm.getInstance(mSkybox), select, values);
     // we keep a checked version
     mLayerMask = (mLayerMask & ~select) | (values & select);
 }
 
-void FSkybox::setColor(math::float4 color) noexcept {
+void FSkybox::setColor(float4 const color) noexcept {
     mSkyboxMaterialInstance->setParameter("color", color);
 }
 

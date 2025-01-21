@@ -37,7 +37,7 @@ public:
     struct Attachment {
         FTexture* texture = nullptr;
         uint8_t mipLevel = 0;
-        CubemapFace face = RenderTarget::CubemapFace::POSITIVE_X;
+        CubemapFace face = CubemapFace::POSITIVE_X;
         uint32_t layer = 0;
         // Indicates the number of layers used for multiview, starting from the `layer` (baseIndex).
         // This means `layer` + `layerCount` cannot exceed the number of depth for the attachment.

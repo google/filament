@@ -17,6 +17,7 @@
 #include <utils/CString.h>
 
 #include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <algorithm>
 #include <memory>
@@ -97,4 +98,11 @@ CString& CString::replace(size_type pos, size_type len, const CString& str) noex
     return *this;
 }
 
+#if !defined(NDEBUG)
+io::ostream& operator<<(io::ostream& out, const utils::CString& rhs) {
+    return out << rhs.c_str_safe();
+}
+#endif
+
 } // namespace utils
+

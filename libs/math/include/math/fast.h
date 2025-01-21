@@ -50,7 +50,7 @@ constexpr T MATH_PURE cos(T x) noexcept {
 // x between -pi and pi
 template<typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 constexpr T MATH_PURE sin(T x) noexcept {
-    return filament::math::fast::cos<T>(x - T(F_PI_2));
+    return fast::cos<T>(x - T(F_PI_2));
 }
 
 constexpr inline float MATH_PURE ilog2(float x) noexcept {

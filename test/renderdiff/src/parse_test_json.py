@@ -63,7 +63,8 @@ class TestConfig(RenderingConfig):
     preset_models = []
     if apply_presets:
       given_presets = {p.name: p for p in presets}
-      assert all((name in given_presets) for name in apply_presets)
+      assert all((name in given_presets) for name in apply_presets),\
+        f'used preset {name} which is not in {given_presets}'
       for preset in apply_presets:
         rendering.update(given_presets[preset].rendering)
         preset_models += given_presets[preset].models

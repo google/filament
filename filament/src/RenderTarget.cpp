@@ -22,19 +22,19 @@ namespace filament {
 
 using namespace backend;
 
-Texture* RenderTarget::getTexture(AttachmentPoint attachment) const noexcept {
+Texture* RenderTarget::getTexture(AttachmentPoint const attachment) const noexcept {
     return downcast(this)->getAttachment(attachment).texture;
 }
 
-uint8_t RenderTarget::getMipLevel(AttachmentPoint attachment) const noexcept {
+uint8_t RenderTarget::getMipLevel(AttachmentPoint const attachment) const noexcept {
     return downcast(this)->getAttachment(attachment).mipLevel;
 }
 
-RenderTarget::CubemapFace RenderTarget::getFace(AttachmentPoint attachment) const noexcept {
+RenderTarget::CubemapFace RenderTarget::getFace(AttachmentPoint const attachment) const noexcept {
     return downcast(this)->getAttachment(attachment).face;
 }
 
-uint32_t RenderTarget::getLayer(AttachmentPoint attachment) const noexcept {
+uint32_t RenderTarget::getLayer(AttachmentPoint const attachment) const noexcept {
     return downcast(this)->getAttachment(attachment).layer;
 }
 

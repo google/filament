@@ -19,6 +19,8 @@
 
 #include <backend/DriverApiForward.h>
 
+#include <utils/ostream.h>
+
 #include <initializer_list>
 #include <memory>
 
@@ -97,5 +99,9 @@ private:
 };
 
 } // namespace filament::backend
+
+#if !defined(NDEBUG)
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::DescriptorSetOffsetArray& rhs);
+#endif
 
 #endif //TNT_FILAMENT_BACKEND_COMMANDSTREAMVECTOR_H

@@ -77,7 +77,7 @@ struct ShadowMappingUniforms {
 class ShadowMapManager {
 public:
 
-    using ShadowMappingUniforms = filament::ShadowMappingUniforms;
+    using ShadowMappingUniforms = ShadowMappingUniforms;
 
     using ShadowType = ShadowMap::ShadowType;
 
@@ -123,7 +123,7 @@ public:
 
     // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
-    ShadowMapManager::ShadowTechnique update(Builder const& builder,
+    ShadowTechnique update(Builder const& builder,
             FEngine& engine, FView& view,
             CameraInfo const& cameraInfo,
             FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
@@ -153,19 +153,19 @@ private:
     static void updateNearFarPlanes(math::mat4f* projection,
             float nearDistance, float farDistance) noexcept;
 
-    ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
+    ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
-    ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FScene::LightSoa const& lightData) noexcept;
+    ShadowTechnique updateSpotShadowMaps(FEngine& engine,
+            FScene::LightSoa const& lightData) const noexcept;
 
     void calculateTextureRequirements(FEngine&, FView& view,
             FScene::LightSoa const&) noexcept;
 
     void prepareSpotShadowMap(ShadowMap& shadowMap,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-            FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
+            FScene::LightSoa const& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
     static void cullSpotShadowMap(ShadowMap const& map,
             FEngine const& engine, FView const& view,
@@ -174,7 +174,7 @@ private:
 
     void preparePointShadowMap(ShadowMap& map,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
-            FScene::LightSoa& lightData) noexcept;
+            FScene::LightSoa const& lightData) const noexcept;
 
     static void cullPointShadowMap(ShadowMap const& shadowMap, FView const& view,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
@@ -239,12 +239,12 @@ private:
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
 
-    ShadowMap& getShadowMap(size_t index) noexcept {
+    ShadowMap& getShadowMap(size_t const index) noexcept {
         assert_invariant(index < mShadowMapCache.size());
         return *std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[index]));
     }
 
-    ShadowMap const& getShadowMap(size_t index) const noexcept {
+    ShadowMap const& getShadowMap(size_t const index) const noexcept {
         return const_cast<ShadowMapManager*>(this)->getShadowMap(index);
     }
 

@@ -35,7 +35,7 @@ class FScene;
 
 class FLightManager : public LightManager {
 public:
-    using Instance = LightManager::Instance;
+    using Instance = Instance;
 
     explicit FLightManager(FEngine& engine) noexcept;
     ~FLightManager();
@@ -50,11 +50,11 @@ public:
      * Component Manager APIs
      */
 
-    bool hasComponent(utils::Entity e) const noexcept {
+    bool hasComponent(utils::Entity const e) const noexcept {
         return mManager.hasComponent(e);
     }
 
-    Instance getInstance(utils::Entity e) const noexcept {
+    Instance getInstance(utils::Entity const e) const noexcept {
         return { mManager.getInstance(e) };
     }
 
@@ -66,7 +66,7 @@ public:
         return mManager.empty();
     }
 
-    utils::Entity getEntity(Instance i) const noexcept {
+    utils::Entity getEntity(Instance const i) const noexcept {
         return mManager.getEntity(i);
     }
 
@@ -74,7 +74,7 @@ public:
         return mManager.getEntities();
     }
 
-    void create(const FLightManager::Builder& builder, utils::Entity entity);
+    void create(const Builder& builder, utils::Entity entity);
 
     void destroy(utils::Entity e) noexcept;
 
@@ -101,7 +101,7 @@ public:
     };
 
     struct ShadowParams { // TODO: get rid of this struct
-        LightManager::ShadowOptions options;
+        ShadowOptions options;
     };
 
     UTILS_NOINLINE void setLocalPosition(Instance i, const math::float3& position) noexcept;
@@ -118,32 +118,32 @@ public:
 
     UTILS_NOINLINE bool getLightChannel(Instance i, unsigned int channel) const noexcept;
 
-    LightType const& getLightType(Instance i) const noexcept {
+    LightType const& getLightType(Instance const i) const noexcept {
         return mManager[i].lightType;
     }
 
-    Type getType(Instance i) const noexcept {
+    Type getType(Instance const i) const noexcept {
         return getLightType(i).type;
     }
 
-    bool isShadowCaster(Instance i) const noexcept {
+    bool isShadowCaster(Instance const i) const noexcept {
         return getLightType(i).shadowCaster;
     }
 
-    bool isLightCaster(Instance i) const noexcept {
+    bool isLightCaster(Instance const i) const noexcept {
         return getLightType(i).lightCaster;
     }
 
-    bool isPointLight(Instance i) const noexcept {
+    bool isPointLight(Instance const i) const noexcept {
         return getType(i) == Type::POINT; 
     }
 
-    bool isSpotLight(Instance i) const noexcept {
+    bool isSpotLight(Instance const i) const noexcept {
         Type const type = getType(i);
         return type == Type::FOCUSED_SPOT || type == Type::SPOT;
     }
 
-    bool isDirectionalLight(Instance i) const noexcept {
+    bool isDirectionalLight(Instance const i) const noexcept {
         Type const type = getType(i);
         return type == Type::DIRECTIONAL || type == Type::SUN;
     }
@@ -152,89 +152,89 @@ public:
         return false;   // TODO: change this when we support IES lights
     }
 
-    bool isSunLight(Instance i) const noexcept {
+    bool isSunLight(Instance const i) const noexcept {
         return getType(i) == Type::SUN; 
     }
 
-    uint32_t getShadowMapSize(Instance i) const noexcept {
+    uint32_t getShadowMapSize(Instance const i) const noexcept {
         return getShadowParams(i).options.mapSize;
     }
 
-    ShadowParams const& getShadowParams(Instance i) const noexcept {
+    ShadowParams const& getShadowParams(Instance const i) const noexcept {
         return mManager[i].shadowParams;
     }
 
-    float getShadowConstantBias(Instance i) const noexcept {
+    float getShadowConstantBias(Instance const i) const noexcept {
         return getShadowParams(i).options.constantBias;
     }
 
-    float getShadowNormalBias(Instance i) const noexcept {
+    float getShadowNormalBias(Instance const i) const noexcept {
         return getShadowParams(i).options.normalBias;
     }
 
-    float getShadowFar(Instance i) const noexcept {
+    float getShadowFar(Instance const i) const noexcept {
         return getShadowParams(i).options.shadowFar;
     }
 
-    const math::float3& getColor(Instance i) const noexcept {
+    const math::float3& getColor(Instance const i) const noexcept {
         return mManager[i].color;
     }
 
-    float getIntensity(Instance i) const noexcept {
+    float getIntensity(Instance const i) const noexcept {
         return mManager[i].intensity;
     }
 
-    float getSunAngularRadius(Instance i) const noexcept {
+    float getSunAngularRadius(Instance const i) const noexcept {
         return mManager[i].sunAngularRadius;
     }
 
-    float getSunHaloSize(Instance i) const noexcept {
+    float getSunHaloSize(Instance const i) const noexcept {
         return mManager[i].sunHaloSize;
     }
 
-    float getSunHaloFalloff(Instance i) const noexcept {
+    float getSunHaloFalloff(Instance const i) const noexcept {
         return mManager[i].sunHaloFalloff;
     }
 
-    float getSquaredFalloffInv(Instance i) const noexcept {
+    float getSquaredFalloffInv(Instance const i) const noexcept {
         return mManager[i].squaredFallOffInv;
     }
 
-    float getFalloff(Instance i) const noexcept {
+    float getFalloff(Instance const i) const noexcept {
         return getRadius(i);
     }
 
-    SpotParams const& getSpotParams(Instance i) const noexcept {
+    SpotParams const& getSpotParams(Instance const i) const noexcept {
         return mManager[i].spotParams;
     }
 
     float getSpotLightInnerCone(Instance i) const noexcept;
 
-    float getCosOuterSquared(Instance i) const noexcept {
+    float getCosOuterSquared(Instance const i) const noexcept {
         return getSpotParams(i).cosOuterSquared;
     }
 
-    float getSinInverse(Instance i) const noexcept {
+    float getSinInverse(Instance const i) const noexcept {
         return getSpotParams(i).sinInverse;
     }
 
-    float getRadius(Instance i) const noexcept {
+    float getRadius(Instance const i) const noexcept {
         return getSpotParams(i).radius;
     }
 
-    uint8_t getLightChannels(Instance i) const noexcept {
+    uint8_t getLightChannels(Instance const i) const noexcept {
         return mManager[i].channels;
     }
 
-    const math::float3& getLocalPosition(Instance i) const noexcept {
+    const math::float3& getLocalPosition(Instance const i) const noexcept {
         return mManager[i].position;
     }
 
-    const math::float3& getLocalDirection(Instance i) const noexcept {
+    const math::float3& getLocalDirection(Instance const i) const noexcept {
         return mManager[i].direction;
     }
 
-    const ShadowOptions& getShadowOptions(Instance i) const noexcept {
+    const ShadowOptions& getShadowOptions(Instance const i) const noexcept {
         return getShadowParams(i).options;
     }
 

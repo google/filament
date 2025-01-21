@@ -41,15 +41,15 @@ Camera& View::getCamera() noexcept {
     return downcast(this)->getCameraUser();
 }
 
-void View::setViewport(filament::Viewport const& viewport) noexcept {
+void View::setViewport(Viewport const& viewport) noexcept {
     downcast(this)->setViewport(viewport);
 }
 
-filament::Viewport const& View::getViewport() const noexcept {
+Viewport const& View::getViewport() const noexcept {
     return downcast(this)->getViewport();
 }
 
-void View::setFrustumCullingEnabled(bool culling) noexcept {
+void View::setFrustumCullingEnabled(bool const culling) noexcept {
     downcast(this)->setFrustumCullingEnabled(culling);
 }
 
@@ -61,7 +61,7 @@ void View::setDebugCamera(Camera* camera) noexcept {
     downcast(this)->setViewingCamera(downcast(camera));
 }
 
-void View::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
+void View::setVisibleLayers(uint8_t const select, uint8_t const values) noexcept {
     downcast(this)->setVisibleLayers(select, values);
 }
 
@@ -77,7 +77,7 @@ utils::FixedCapacityVector<Camera const*> View::getDirectionalShadowCameras() co
     return downcast(this)->getDirectionalShadowCameras();
 }
 
-void View::setShadowingEnabled(bool enabled) noexcept {
+void View::setShadowingEnabled(bool const enabled) noexcept {
     downcast(this)->setShadowingEnabled(enabled);
 }
 
@@ -89,7 +89,7 @@ RenderTarget* View::getRenderTarget() const noexcept {
     return downcast(this)->getRenderTarget();
 }
 
-void View::setSampleCount(uint8_t count) noexcept {
+void View::setSampleCount(uint8_t const count) noexcept {
     downcast(this)->setSampleCount(count);
 }
 
@@ -97,7 +97,7 @@ uint8_t View::getSampleCount() const noexcept {
     return downcast(this)->getSampleCount();
 }
 
-void View::setAntiAliasing(AntiAliasing type) noexcept {
+void View::setAntiAliasing(AntiAliasing const type) noexcept {
     downcast(this)->setAntiAliasing(type);
 }
 
@@ -113,7 +113,7 @@ const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() 
     return downcast(this)->getTemporalAntiAliasingOptions();
 }
 
-void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept {
+void View::setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions const options) noexcept {
     downcast(this)->setMultiSampleAntiAliasingOptions(options);
 }
 
@@ -129,7 +129,7 @@ const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOption
     return downcast(this)->getScreenSpaceReflectionsOptions();
 }
 
-void View::setGuardBandOptions(GuardBandOptions options) noexcept {
+void View::setGuardBandOptions(GuardBandOptions const options) noexcept {
     downcast(this)->setGuardBandOptions(options);
 }
 
@@ -145,7 +145,7 @@ const ColorGrading* View::getColorGrading() const noexcept {
     return downcast(this)->getColorGrading();
 }
 
-void View::setDithering(Dithering dithering) noexcept {
+void View::setDithering(Dithering const dithering) noexcept {
     downcast(this)->setDithering(dithering);
 }
 
@@ -169,7 +169,7 @@ View::RenderQuality View::getRenderQuality() const noexcept {
     return downcast(this)->getRenderQuality();
 }
 
-void View::setPostProcessingEnabled(bool enabled) noexcept {
+void View::setPostProcessingEnabled(bool const enabled) noexcept {
     downcast(this)->setPostProcessingEnabled(enabled);
 }
 
@@ -177,7 +177,7 @@ bool View::isPostProcessingEnabled() const noexcept {
     return downcast(this)->hasPostProcessPass();
 }
 
-void View::setFrontFaceWindingInverted(bool inverted) noexcept {
+void View::setFrontFaceWindingInverted(bool const inverted) noexcept {
     downcast(this)->setFrontFaceWindingInverted(inverted);
 }
 
@@ -185,7 +185,7 @@ bool View::isFrontFaceWindingInverted() const noexcept {
     return downcast(this)->isFrontFaceWindingInverted();
 }
 
-void View::setTransparentPickingEnabled(bool enabled) noexcept {
+void View::setTransparentPickingEnabled(bool const enabled) noexcept {
     downcast(this)->setTransparentPickingEnabled(enabled);
 }
 
@@ -193,11 +193,11 @@ bool View::isTransparentPickingEnabled() const noexcept {
     return downcast(this)->isTransparentPickingEnabled();
 }
 
-void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
+void View::setDynamicLightingOptions(float const zLightNear, float const zLightFar) noexcept {
     downcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
-void View::setShadowType(View::ShadowType shadow) noexcept {
+void View::setShadowType(ShadowType const shadow) noexcept {
     downcast(this)->setShadowType(shadow);
 }
 
@@ -221,7 +221,7 @@ SoftShadowOptions View::getSoftShadowOptions() const noexcept {
     return downcast(this)->getSoftShadowOptions();
 }
 
-void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {
+void View::setAmbientOcclusion(AmbientOcclusion const ambientOcclusion) noexcept {
     downcast(this)->setAmbientOcclusion(ambientOcclusion);
 }
 
@@ -229,7 +229,7 @@ View::AmbientOcclusion View::getAmbientOcclusion() const noexcept {
     return downcast(this)->getAmbientOcclusion();
 }
 
-void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& options) noexcept {
+void View::setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept {
     downcast(this)->setAmbientOcclusionOptions(options);
 }
 
@@ -237,7 +237,7 @@ View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const no
     return downcast(this)->getAmbientOcclusionOptions();
 }
 
-void View::setBloomOptions(View::BloomOptions options) noexcept {
+void View::setBloomOptions(BloomOptions options) noexcept {
     downcast(this)->setBloomOptions(options);
 }
 
@@ -245,7 +245,7 @@ View::BloomOptions View::getBloomOptions() const noexcept {
     return downcast(this)->getBloomOptions();
 }
 
-void View::setFogOptions(View::FogOptions options) noexcept {
+void View::setFogOptions(FogOptions options) noexcept {
     downcast(this)->setFogOptions(options);
 }
 
@@ -261,7 +261,7 @@ View::DepthOfFieldOptions View::getDepthOfFieldOptions() const noexcept {
     return downcast(this)->getDepthOfFieldOptions();
 }
 
-void View::setVignetteOptions(View::VignetteOptions options) noexcept {
+void View::setVignetteOptions(VignetteOptions options) noexcept {
     downcast(this)->setVignetteOptions(options);
 }
 
@@ -269,7 +269,7 @@ View::VignetteOptions View::getVignetteOptions() const noexcept {
     return downcast(this)->getVignetteOptions();
 }
 
-void View::setBlendMode(BlendMode blendMode) noexcept {
+void View::setBlendMode(BlendMode const blendMode) noexcept {
     downcast(this)->setBlendMode(blendMode);
 }
 
@@ -285,7 +285,7 @@ bool View::isShadowingEnabled() const noexcept {
     return downcast(this)->isShadowingEnabled();
 }
 
-void View::setScreenSpaceRefractionEnabled(bool enabled) noexcept {
+void View::setScreenSpaceRefractionEnabled(bool const enabled) noexcept {
     downcast(this)->setScreenSpaceRefractionEnabled(enabled);
 }
 
@@ -293,7 +293,7 @@ bool View::isScreenSpaceRefractionEnabled() const noexcept {
     return downcast(this)->isScreenSpaceRefractionEnabled();
 }
 
-void View::setStencilBufferEnabled(bool enabled) noexcept {
+void View::setStencilBufferEnabled(bool const enabled) noexcept {
     downcast(this)->setStencilBufferEnabled(enabled);
 }
 
@@ -309,16 +309,16 @@ const View::StereoscopicOptions& View::getStereoscopicOptions() const noexcept {
     return downcast(this)->getStereoscopicOptions();
 }
 
-View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-        View::PickingQueryResultCallback callback) noexcept {
+View::PickingQuery& View::pick(uint32_t const x, uint32_t const y, backend::CallbackHandler* handler,
+        PickingQueryResultCallback const callback) noexcept {
     return downcast(this)->pick(x, y, handler, callback);
 }
 
-void View::setMaterialGlobal(uint32_t index, math::float4 const& value) {
+void View::setMaterialGlobal(uint32_t const index, math::float4 const& value) {
     downcast(this)->setMaterialGlobal(index, value);
 }
 
-math::float4 View::getMaterialGlobal(uint32_t index) const {
+math::float4 View::getMaterialGlobal(uint32_t const index) const {
     return downcast(this)->getMaterialGlobal(index);
 }
 

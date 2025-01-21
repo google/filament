@@ -269,7 +269,7 @@ inline bool JobSystem::hasActiveJobs() const noexcept {
     return mActiveJobs.load(std::memory_order_relaxed) > 0;
 }
 
-inline bool JobSystem::hasJobCompleted(JobSystem::Job const* job) noexcept {
+inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
     return (job->runningJobCount.load(std::memory_order_acquire) & JOB_COUNT_MASK) == 0;
 }
 
@@ -374,14 +374,14 @@ JobSystem::Job* JobSystem::steal(WorkQueue& workQueue) noexcept {
     return job;
 }
 
-inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(JobSystem::ThreadState& state) noexcept {
+inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state) noexcept {
     auto& threadStates = mThreadStates;
     // memory_order_relaxed is okay because we don't take any action that has data dependency
     // on this value (in particular mThreadStates, is always initialized properly).
     uint16_t const adopted = mAdoptedThreads.load(std::memory_order_relaxed);
     uint16_t const threadCount = mThreadCount + adopted;
 
-    JobSystem::ThreadState* stateToStealFrom = nullptr;
+    ThreadState* stateToStealFrom = nullptr;
 
     // don't try to steal from someone else if we're the only thread (infinite loop)
     if (threadCount >= 2) {
@@ -396,7 +396,7 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(JobSystem::ThreadS
     return stateToStealFrom;
 }
 
-JobSystem::Job* JobSystem::steal(JobSystem::ThreadState& state) noexcept {
+JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
     HEAVY_SYSTRACE_CALL();
     Job* job = nullptr;
     do {
@@ -410,7 +410,7 @@ JobSystem::Job* JobSystem::steal(JobSystem::ThreadState& state) noexcept {
     return job;
 }
 
-bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
+bool JobSystem::execute(ThreadState& state) noexcept {
     HEAVY_SYSTRACE_CALL();
 
     Job* job = pop(state.workQueue);
@@ -500,7 +500,7 @@ void JobSystem::finish(Job* job) noexcept {
 // public API...
 
 
-JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept {
+JobSystem::Job* JobSystem::create(Job* parent, JobFunc func) noexcept {
     parent = (parent == nullptr) ? mRootJob : parent;
     Job* const job = allocateJob();
     if (UTILS_LIKELY(job)) {
@@ -529,13 +529,13 @@ void JobSystem::cancel(Job*& job) noexcept {
     job = nullptr;
 }
 
-JobSystem::Job* JobSystem::retain(JobSystem::Job* job) noexcept {
-    JobSystem::Job* retained = job;
+JobSystem::Job* JobSystem::retain(Job* job) noexcept {
+    Job* retained = job;
     incRef(retained);
     return retained;
 }
 
-void JobSystem::release(JobSystem::Job*& job) noexcept {
+void JobSystem::release(Job*& job) noexcept {
     decRef(job);
     job = nullptr;
 }
@@ -564,7 +564,7 @@ void JobSystem::run(Job*& job, uint8_t id) noexcept {
 }
 
 JobSystem::Job* JobSystem::runAndRetain(Job* job) noexcept {
-    JobSystem::Job* retained = retain(job);
+    Job* retained = retain(job);
     run(job);
     return retained;
 }
@@ -618,7 +618,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
     release(job);
 }
 
-void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
+void JobSystem::runAndWait(Job*& job) noexcept {
     SYSTRACE_CALL();
     runAndRetain(job);
     waitAndRelease(job);
@@ -648,7 +648,7 @@ void JobSystem::adopt() {
             << "Too many calls to adopt(). No more adoptable threads!";
 
     // all threads adopted by the JobSystem need to run at the same priority
-    JobSystem::setThreadPriority(Priority::DISPLAY);
+    setThreadPriority(Priority::DISPLAY);
 
     // This thread's queue will be selectable immediately (i.e.: before we set its TLS)
     // however, it's not a problem since mThreadState is pre-initialized and valid

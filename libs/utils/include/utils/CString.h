@@ -20,6 +20,7 @@
 // NOTE: this header should not include STL headers
 
 #include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -181,6 +182,10 @@ public:
     };
 
 private:
+#if !defined(NDEBUG)
+    friend io::ostream& operator<<(io::ostream& out, const CString& rhs);
+#endif
+
     struct Data {
         size_type length;
     };

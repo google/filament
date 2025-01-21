@@ -1,10 +1,10 @@
 {
-    "name": "PresubmitPixelTests",
+    "name": "presubmit",
     "backends": ["opengl"],
     "model_search_paths": ["third_party/models"],
     "presets": [
         {
-            "name": "Standard",
+            "name": "base",
             "models": ["lucy", "DamagedHelmet"],
             "rendering": {
                 "viewer.cameraFocusDistance": 0,
@@ -16,7 +16,7 @@
         {
             "name": "BloomFlare",
             "description": "Testing bloom and flare",
-            "apply_presets": ["Standard"],
+            "apply_presets": ["base"],
             "rendering": {
                 "view.bloom.enabled": true,
                 "view.bloom.lensFlare": true
@@ -24,8 +24,8 @@
         },
         {
             "name": "MSAA",
-            "description": "Testing Multi-sample Anti-aliasing",
-            "apply_presets": ["Standard"],
+            "description": "Testing multisampling anti-aliasing",
+            "apply_presets": ["base"],
             "rendering": {
                 "view.msaa.enabled": true
             }

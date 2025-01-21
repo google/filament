@@ -140,7 +140,7 @@ public:
      */
 
     struct FroxelEntry {
-        inline FroxelEntry(uint16_t offset, uint8_t count) noexcept
+        inline FroxelEntry(uint16_t const offset, uint8_t const count) noexcept
             : u32((offset << 16) | count) { }
         inline uint8_t count() const noexcept { return u32 & 0xFFu; }
         inline uint16_t offset() const noexcept { return u32 >> 16u; }
@@ -214,12 +214,12 @@ private:
             math::float4 const* UTILS_RESTRICT planesY,
             float const* UTILS_RESTRICT planesZ) noexcept;
 
-    static size_t getFroxelIndex(size_t ix, size_t iy, size_t iz,
-            size_t froxelCountX, size_t froxelCountY) noexcept {
+    static size_t getFroxelIndex(size_t const ix, size_t const iy, size_t const iz,
+            size_t const froxelCountX, size_t const froxelCountY) noexcept {
         return ix + (iy * froxelCountX) + (iz * froxelCountX * froxelCountY);
     }
 
-    size_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
+    size_t getFroxelIndex(size_t const ix, size_t const iy, size_t const iz) const noexcept {
         return getFroxelIndex(ix, iy, iz, mFroxelCountX, mFroxelCountY);
     }
 

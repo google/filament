@@ -17,6 +17,8 @@
 #ifndef FGVIEWER_DEBUGSERVER_H
 #define FGVIEWER_DEBUGSERVER_H
 
+#include <fgviewer/FrameGraphInfo.h>
+
 #include <utils/CString.h>
 #include <utils/Mutex.h>
 
@@ -27,17 +29,9 @@ class CivetServer;
 
 namespace filament::fgviewer {
 
-using FrameGraphInfoKey = uint32_t;
+using ViewHandle = uint32_t;
 
-struct FrameGraphPassInfo {
-    utils::CString pass_name;
-    // TODO: Add struct detail properties
-};
 
-struct FrameGraphInfo {
-    utils::CString view_name;
-    std::vector<FrameGraphPassInfo> passes;
-};
 
 /**
  * Server-side frame graph debugger.
@@ -50,30 +44,31 @@ public:
     static std::string_view const kSuccessHeader;
     static std::string_view const kErrorHeader;
 
-    DebugServer(int port);
+    explicit DebugServer(int port);
     ~DebugServer();
 
     /**
      * Notifies the debugger that a new view has been added.
      */
-    void addView(const utils::CString& name, FrameGraphInfo info);
+    ViewHandle createView(utils::CString name);
 
     /**
      * Notifies the debugger that the given view has been deleted.
      */
-    void removeView(const utils::CString& name);
+    void destroyView(ViewHandle h);
 
     /**
      * Updates the information for a given view.
      */
-    void updateView(const utils::CString& name, FrameGraphInfo info);
+    void update(ViewHandle h, FrameGraphInfo info);
 
     bool isReady() const { return mServer; }
 
 private:
     CivetServer* mServer;
 
-    std::unordered_map<FrameGraphInfoKey, FrameGraphInfo> mViews;
+    std::unordered_map<ViewHandle, FrameGraphInfo> mViews;
+    uint32_t mViewCounter = 0;
     mutable utils::Mutex mViewsMutex;
 
     class FileRequestHandler* mFileHandler = nullptr;
