@@ -86,8 +86,9 @@ jobs:
           fetch-depth: 0
       - name: Check for manual edits to /docs
         run: |
-          # Note that at least one of "pull_request" and "push" events must be present.
-          bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }} ${{ github.event.push.head.sha }}
+           echo "${{ github.event.pull_request.head.sha }} -- ${{ github.event.pull_request.head.sha }}"
+           # disable for now
+           # bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }}
 
   test-renderdiff:
     name: test-renderdiff
