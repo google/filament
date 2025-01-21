@@ -830,7 +830,7 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
         << "\"polygonOffsetConstant\": " << in.polygonOffsetConstant << ",\n"
         << "\"polygonOffsetSlope\": " << in.polygonOffsetSlope << ",\n"
         << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
-        << "\"stepCount\": " << in.stepCount << ",\n"
+        << "\"stepCount\": " << +in.stepCount << ",\n"
         << "\"maxShadowDistance\": " << in.maxShadowDistance << ",\n"
         << "\"shadowBulbRadius\": " << in.shadowBulbRadius << ",\n"
         << "\"transform\": " << in.transform.xyzw << ",\n"
