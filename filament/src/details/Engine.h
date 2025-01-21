@@ -115,7 +115,7 @@ class ResourceAllocator;
 class FEngine : public Engine {
 public:
 
-    inline void* operator new(std::size_t size) noexcept {
+    inline void* operator new(std::size_t const size) noexcept {
         return utils::aligned_alloc(size, alignof(FEngine));
     }
 
@@ -453,7 +453,7 @@ public:
 
     void unprotected() noexcept;
 
-    void setAutomaticInstancingEnabled(bool enable) noexcept {
+    void setAutomaticInstancingEnabled(bool const enable) noexcept {
         // instancing is not allowed at feature level 0
         if (hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
             mAutomaticInstancingEnabled = enable;
@@ -497,8 +497,12 @@ public:
     size_t getRequestedDriverHandleArenaSize() const noexcept { return mConfig.driverHandleArenaSizeMB * MiB; }
     Config const& getConfig() const noexcept { return mConfig; }
 
-    bool hasFeatureLevel(backend::FeatureLevel neededFeatureLevel) const noexcept {
-        return FEngine::getActiveFeatureLevel() >= neededFeatureLevel;
+    bool hasFeatureLevel(backend::FeatureLevel const neededFeatureLevel) const noexcept {
+        return getActiveFeatureLevel() >= neededFeatureLevel;
+    }
+
+    auto const& getMaterialInstanceResourceList() const noexcept {
+        return mMaterialInstances;
     }
 
 #if defined(__EMSCRIPTEN__)
@@ -506,7 +510,7 @@ public:
 #endif
 
 private:
-    explicit FEngine(Engine::Builder const& builder);
+    explicit FEngine(Builder const& builder);
     void init();
     void shutdown();
 
@@ -598,7 +602,7 @@ private:
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
-    static uint32_t getJobSystemThreadPoolSize(Engine::Config const& config) noexcept;
+    static uint32_t getJobSystemThreadPoolSize(Config const& config) noexcept;
 
     std::default_random_engine mRandomEngine;
 
@@ -683,6 +687,13 @@ public:
             struct {
                 bool use_shadow_atlas = false;
             } shadows;
+            struct {
+#ifndef NDEBUG
+                bool assert_material_instance_in_use = true;
+#else
+                bool assert_material_instance_in_use = false;
+#endif
+            } debug;
         } engine;
         struct {
             struct {
@@ -705,7 +716,10 @@ public:
               &features.backend.opengl.assert_native_window_is_valid, true },
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
-              &features.engine.shadows.use_shadow_atlas, true }
+              &features.engine.shadows.use_shadow_atlas, true },
+            { "features.engine.debug.assert_material_instance_in_use",
+              "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
+              &features.engine.debug.assert_material_instance_in_use, false }
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

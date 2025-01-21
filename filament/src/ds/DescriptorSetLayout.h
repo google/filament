@@ -56,7 +56,7 @@ public:
         return mMaxDescriptorBinding;
     }
 
-    bool isSampler(backend::descriptor_binding_t binding) const noexcept {
+    bool isSampler(backend::descriptor_binding_t const binding) const noexcept {
         return mSamplers[binding];
     }
 

@@ -96,8 +96,8 @@ public:
      *                  Non-zero when we have guard bands.
      */
     void prepareViewport(
-            const filament::Viewport& physicalViewport,
-            const filament::Viewport& logicalViewport) noexcept;
+            const Viewport& physicalViewport,
+            const Viewport& logicalViewport) noexcept;
 
     void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(FEngine& engine, TemporalAntiAliasingOptions const& options) noexcept;
@@ -155,7 +155,7 @@ public:
     void unbindSamplers(backend::DriverApi& driver) noexcept;
 
     // bind this UBO
-    void bind(backend::DriverApi& driver, uint8_t index) const noexcept {
+    void bind(backend::DriverApi& driver, uint8_t const index) const noexcept {
         mDescriptorSet[index].bind(driver, DescriptorSetBindingPoints::PER_VIEW);
     }
 

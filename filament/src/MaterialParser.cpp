@@ -54,26 +54,26 @@ using namespace filamat;
 
 namespace filament {
 
-constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage language) {
+constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage const language) {
     switch (language) {
         case ShaderLanguage::ESSL3:
-            return { ChunkType::MaterialGlsl, ChunkType::DictionaryText };
+            return { MaterialGlsl, DictionaryText };
         case ShaderLanguage::ESSL1:
-            return { ChunkType::MaterialEssl1, ChunkType::DictionaryText };
+            return { MaterialEssl1, DictionaryText };
         case ShaderLanguage::MSL:
-            return { ChunkType::MaterialMetal, ChunkType::DictionaryText };
+            return { MaterialMetal, DictionaryText };
         case ShaderLanguage::SPIRV:
-            return { ChunkType::MaterialSpirv, ChunkType::DictionarySpirv };
+            return { MaterialSpirv, DictionarySpirv };
         case ShaderLanguage::METAL_LIBRARY:
-            return { ChunkType::MaterialMetalLibrary, ChunkType::DictionaryMetalLibrary };
+            return { MaterialMetalLibrary, DictionaryMetalLibrary };
     }
 }
 
 // ------------------------------------------------------------------------------------------------
 
 MaterialParser::MaterialParserDetails::MaterialParserDetails(
-        utils::FixedCapacityVector<ShaderLanguage> preferredLanguages, const void* data,
-        size_t size)
+        FixedCapacityVector<ShaderLanguage> preferredLanguages, const void* data,
+        size_t const size)
     : mManagedBuffer(data, size),
       mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
       mPreferredLanguages(std::move(preferredLanguages)),
@@ -83,7 +83,7 @@ MaterialParser::MaterialParserDetails::MaterialParserDetails(
 template<typename T>
 UTILS_NOINLINE
 bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
-        filamat::ChunkType type, T* value) const noexcept {
+        ChunkType const type, T* value) const noexcept {
     ChunkContainer const& chunkContainer = mChunkContainer;
     ChunkContainer::ChunkDesc chunkDesc;
     if (chunkContainer.hasChunk(type, &chunkDesc)) {
@@ -93,7 +93,7 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
     return false;
 }
 
-MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(const void* start, size_t size)
+MaterialParser::MaterialParserDetails::ManagedBuffer::ManagedBuffer(const void* start, size_t const size)
         : mStart(malloc(size)), mSize(size) {
     memcpy(mStart, start, size);
 }
@@ -108,12 +108,12 @@ template<typename T>
 bool MaterialParser::get(typename T::Container* container) const noexcept {
     auto [start, end] = mImpl.mChunkContainer.getChunkRange(T::tag);
     if (start == end) return false;
-    filaflat::Unflattener unflattener{ start, end };
+    Unflattener unflattener{ start, end };
     return T::unflatten(unflattener, container);
 }
 
-MaterialParser::MaterialParser(utils::FixedCapacityVector<ShaderLanguage> preferredLanguages,
-        const void* data, size_t size)
+MaterialParser::MaterialParser(FixedCapacityVector<ShaderLanguage> preferredLanguages,
+        const void* data, size_t const size)
     : mImpl(std::move(preferredLanguages), data, size) {
 }
 
@@ -160,20 +160,20 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
     return ParseResult::SUCCESS;
 }
 
-backend::ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
+ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
     return mImpl.mChosenLanguage;
 }
 
 // Accessors
 bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialVersion, value);
+    return mImpl.getFromSimpleChunk(MaterialVersion, value);
 }
 
 bool MaterialParser::getFeatureLevel(uint8_t* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialFeatureLevel, value);
+    return mImpl.getFromSimpleChunk(MaterialFeatureLevel, value);
 }
 
-bool MaterialParser::getName(utils::CString* cstring) const noexcept {
+bool MaterialParser::getName(CString* cstring) const noexcept {
    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialName);
     if (start == end) return false;
    Unflattener unflattener(start, end);
@@ -200,11 +200,11 @@ bool MaterialParser::getSubpasses(SubpassInfo* container) const noexcept {
 }
 
 bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialShaderModels, value);
+    return mImpl.getFromSimpleChunk(MaterialShaderModels, value);
 }
 
 bool MaterialParser::getMaterialProperties(uint64_t* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialProperties, value);
+    return mImpl.getFromSimpleChunk(MaterialProperties, value);
 }
 
 bool MaterialParser::getBindingUniformInfo(BindingUniformInfoContainer* container) const noexcept {
@@ -223,75 +223,75 @@ bool MaterialParser::getDescriptorSetLayout(DescriptorSetLayoutContainer* contai
     return get<ChunkDescriptorSetLayoutInfo>(container);
 }
 
-bool MaterialParser::getConstants(utils::FixedCapacityVector<MaterialConstant>* container) const noexcept {
+bool MaterialParser::getConstants(FixedCapacityVector<MaterialConstant>* container) const noexcept {
     return get<ChunkMaterialConstants>(container);
 }
 
-bool MaterialParser::getPushConstants(utils::CString* structVarName,
-        utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept {
-    auto [start, end] = mImpl.mChunkContainer.getChunkRange(filamat::MaterialPushConstants);
+bool MaterialParser::getPushConstants(CString* structVarName,
+        FixedCapacityVector<MaterialPushConstant>* value) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialPushConstants);
     if (start == end) return false;
     Unflattener unflattener(start, end);
     return ChunkMaterialPushConstants::unflatten(unflattener, structVarName, value);
 }
 
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
+    return mImpl.getFromSimpleChunk(MaterialDepthWriteSet, value);
 }
 
 bool MaterialParser::getDepthWrite(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWrite, value);
+    return mImpl.getFromSimpleChunk(MaterialDepthWrite, value);
 }
 
 bool MaterialParser::getDoubleSidedSet(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialDoubleSidedSet, value);
+    return mImpl.getFromSimpleChunk(MaterialDoubleSidedSet, value);
 }
 
 bool MaterialParser::getDoubleSided(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialDoubleSided, value);
+    return mImpl.getFromSimpleChunk(MaterialDoubleSided, value);
 }
 
 bool MaterialParser::getColorWrite(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialColorWrite, value);
+    return mImpl.getFromSimpleChunk(MaterialColorWrite, value);
 }
 
 bool MaterialParser::getDepthTest(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
+    return mImpl.getFromSimpleChunk(MaterialDepthTest, value);
 }
 
 bool MaterialParser::getInstanced(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialInstanced, value);
+    return mImpl.getFromSimpleChunk(MaterialInstanced, value);
 }
 
 bool MaterialParser::getCullingMode(CullingMode* value) const noexcept {
     static_assert(sizeof(CullingMode) == sizeof(uint8_t),
             "CullingMode expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialCullingMode, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(MaterialCullingMode, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getTransparencyMode(TransparencyMode* value) const noexcept {
     static_assert(sizeof(TransparencyMode) == sizeof(uint8_t),
             "TransparencyMode expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialTransparencyMode,
+    return mImpl.getFromSimpleChunk(MaterialTransparencyMode,
             reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getInterpolation(Interpolation* value) const noexcept {
     static_assert(sizeof(Interpolation) == sizeof(uint8_t),
             "Interpolation expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialInterpolation, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(MaterialInterpolation, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getVertexDomain(VertexDomain* value) const noexcept {
     static_assert(sizeof(VertexDomain) == sizeof(uint8_t),
             "VertexDomain expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialVertexDomain, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(MaterialVertexDomain, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getMaterialVariantFilterMask(UserVariantFilterMask* value) const noexcept {
     static_assert(sizeof(UserVariantFilterMask) == sizeof(uint32_t),
             "UserVariantFilterMask expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialVariantFilterMask,
+    return mImpl.getFromSimpleChunk(MaterialVariantFilterMask,
             reinterpret_cast<UserVariantFilterMask*>(value));
 }
 
@@ -304,12 +304,12 @@ bool MaterialParser::getMaterialDomain(MaterialDomain* value) const noexcept {
 bool MaterialParser::getBlendingMode(BlendingMode* value) const noexcept {
     static_assert(sizeof(BlendingMode) == sizeof(uint8_t),
             "BlendingMode expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getCustomBlendFunction(std::array<BlendFunction, 4>* value) const noexcept {
     uint32_t blendFunctions = 0;
-    bool const result =  mImpl.getFromSimpleChunk(ChunkType::MaterialBlendFunction, &blendFunctions);
+    bool const result =  mImpl.getFromSimpleChunk(MaterialBlendFunction, &blendFunctions);
     (*value)[0] = BlendFunction((blendFunctions >> 24) & 0xFF);
     (*value)[1] = BlendFunction((blendFunctions >> 16) & 0xFF);
     (*value)[2] = BlendFunction((blendFunctions >>  8) & 0xFF);
@@ -318,52 +318,52 @@ bool MaterialParser::getCustomBlendFunction(std::array<BlendFunction, 4>* value)
 }
 
 bool MaterialParser::getMaskThreshold(float* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialMaskThreshold, value);
+    return mImpl.getFromSimpleChunk(MaterialMaskThreshold, value);
 }
 
 bool MaterialParser::getAlphaToCoverageSet(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialAlphaToCoverageSet, value);
+    return mImpl.getFromSimpleChunk(MaterialAlphaToCoverageSet, value);
 }
 
 bool MaterialParser::getAlphaToCoverage(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialAlphaToCoverage, value);
+    return mImpl.getFromSimpleChunk(MaterialAlphaToCoverage, value);
 }
 
 bool MaterialParser::hasShadowMultiplier(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialShadowMultiplier, value);
+    return mImpl.getFromSimpleChunk(MaterialShadowMultiplier, value);
 }
 
 bool MaterialParser::getShading(Shading* value) const noexcept {
     static_assert(sizeof(Shading) == sizeof(uint8_t),
             "Shading expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialShading, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(MaterialShading, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::hasCustomDepthShader(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialHasCustomDepthShader, value);
+    return mImpl.getFromSimpleChunk(MaterialHasCustomDepthShader, value);
 }
 
 bool MaterialParser::hasSpecularAntiAliasing(bool* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasing, value);
+    return mImpl.getFromSimpleChunk(MaterialSpecularAntiAliasing, value);
 }
 
 bool MaterialParser::getSpecularAntiAliasingVariance(float* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasingVariance, value);
+    return mImpl.getFromSimpleChunk(MaterialSpecularAntiAliasingVariance, value);
 }
 
 bool MaterialParser::getSpecularAntiAliasingThreshold(float* value) const noexcept {
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasingThreshold, value);
+    return mImpl.getFromSimpleChunk(MaterialSpecularAntiAliasingThreshold, value);
 }
 
-bool MaterialParser::getStereoscopicType(backend::StereoscopicType* value) const noexcept {
+bool MaterialParser::getStereoscopicType(StereoscopicType* value) const noexcept {
     static_assert(sizeof(StereoscopicType) == sizeof(uint8_t),
             "StereoscopicType expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialStereoscopicType, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(MaterialStereoscopicType, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcept {
     uint32_t rawAttributes = 0;
-    if (!mImpl.getFromSimpleChunk(ChunkType::MaterialRequiredAttributes, &rawAttributes)) {
+    if (!mImpl.getFromSimpleChunk(MaterialRequiredAttributes, &rawAttributes)) {
         return false;
     }
     *value = AttributeBitset();
@@ -374,23 +374,23 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
 bool MaterialParser::getRefractionMode(RefractionMode* value) const noexcept {
     static_assert(sizeof(RefractionMode) == sizeof(uint8_t),
             "Refraction expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialRefraction, (uint8_t*)value);
+    return mImpl.getFromSimpleChunk(MaterialRefraction, (uint8_t*)value);
 }
 
 bool MaterialParser::getRefractionType(RefractionType* value) const noexcept {
     static_assert(sizeof(RefractionType) == sizeof(uint8_t),
             "RefractionType expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialRefractionType, (uint8_t*)value);
+    return mImpl.getFromSimpleChunk(MaterialRefractionType, (uint8_t*)value);
 }
 
 bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
     static_assert(sizeof(ReflectionMode) == sizeof(uint8_t),
             "ReflectionMode expected size is wrong");
-    return mImpl.getFromSimpleChunk(ChunkType::MaterialReflectionMode, (uint8_t*)value);
+    return mImpl.getFromSimpleChunk(MaterialReflectionMode, (uint8_t*)value);
 }
 
 bool MaterialParser::getShader(ShaderContent& shader,
-        ShaderModel shaderModel, Variant variant, ShaderStage stage) noexcept {
+        ShaderModel const shaderModel, Variant const variant, ShaderStage const stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
             mImpl.mBlobDictionary, shaderModel, variant, stage);
 }
@@ -399,7 +399,7 @@ bool MaterialParser::getShader(ShaderContent& shader,
 
 
 bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
-        filament::BufferInterfaceBlock* uib) {
+        BufferInterfaceBlock* uib) {
 
     BufferInterfaceBlock::Builder builder = BufferInterfaceBlock::Builder();
 
@@ -450,7 +450,7 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
 }
 
 bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
-        filament::SamplerInterfaceBlock* sib) {
+        SamplerInterfaceBlock* sib) {
 
     SamplerInterfaceBlock::Builder builder = SamplerInterfaceBlock::Builder();
 
@@ -467,7 +467,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
     }
 
     for (uint64_t i = 0; i < numFields; i++) {
-        static_assert(sizeof(backend::descriptor_binding_t) == sizeof(uint8_t));
+        static_assert(sizeof(descriptor_binding_t) == sizeof(uint8_t));
         CString fieldName;
         uint8_t fieldBinding = 0;
         uint8_t fieldType = 0;
@@ -512,7 +512,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
 }
 
 bool ChunkSubpassInterfaceBlock::unflatten(Unflattener& unflattener,
-        filament::SubpassInfo* subpass) {
+        SubpassInfo* subpass) {
 
     CString block;
     if (!unflattener.read(&block)) {
@@ -566,7 +566,7 @@ bool ChunkSubpassInterfaceBlock::unflatten(Unflattener& unflattener,
     return true;
 }
 
-bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
+bool ChunkBindingUniformInfo::unflatten(Unflattener& unflattener,
         MaterialParser::BindingUniformInfoContainer* bindingUniformInfo) {
     uint8_t bindingPointCount;
     if (!unflattener.read(&bindingPointCount)) {
@@ -578,7 +578,7 @@ bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
         if (!unflattener.read(&index)) {
             return false;
         }
-        utils::CString uboName;
+        CString uboName;
         if (!unflattener.read(&uboName)) {
             return false;
         }
@@ -589,7 +589,7 @@ bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
 
         Program::UniformInfo uniforms = Program::UniformInfo::with_capacity(uniformCount);
         for (size_t j = 0; j < uniformCount; j++) {
-            utils::CString name;
+            CString name;
             if (!unflattener.read(&name)) {
                 return false;
             }
@@ -612,7 +612,7 @@ bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
     return true;
 }
 
-bool ChunkAttributeInfo::unflatten(filaflat::Unflattener& unflattener,
+bool ChunkAttributeInfo::unflatten(Unflattener& unflattener,
         MaterialParser::AttributeInfoContainer* attributeInfoContainer) {
 
     uint8_t attributeCount;
@@ -623,7 +623,7 @@ bool ChunkAttributeInfo::unflatten(filaflat::Unflattener& unflattener,
     attributeInfoContainer->reserve(attributeCount);
 
     for (size_t j = 0; j < attributeCount; j++) {
-        utils::CString name;
+        CString name;
         if (!unflattener.read(&name)) {
             return false;
         }
@@ -637,7 +637,7 @@ bool ChunkAttributeInfo::unflatten(filaflat::Unflattener& unflattener,
     return true;
 }
 
-bool ChunkDescriptorBindingsInfo::unflatten(filaflat::Unflattener& unflattener,
+bool ChunkDescriptorBindingsInfo::unflatten(Unflattener& unflattener,
         MaterialParser::DescriptorBindingsContainer* container) {
 
     uint8_t setCount;
@@ -661,7 +661,7 @@ bool ChunkDescriptorBindingsInfo::unflatten(filaflat::Unflattener& unflattener,
         auto& descriptors = (*container)[+set];
         descriptors.reserve(descriptorCount);
         for (size_t i = 0; i < descriptorCount; i++) {
-            utils::CString name;
+            CString name;
             if (!unflattener.read(&name)) {
                 return false;
             }
@@ -675,15 +675,15 @@ bool ChunkDescriptorBindingsInfo::unflatten(filaflat::Unflattener& unflattener,
             }
             descriptors.push_back({
                     std::move(name),
-                    backend::DescriptorType(type),
-                    backend::descriptor_binding_t(binding)});
+                    DescriptorType(type),
+                    descriptor_binding_t(binding)});
         }
     }
 
     return true;
 }
 
-bool ChunkDescriptorSetLayoutInfo::unflatten(filaflat::Unflattener& unflattener,
+bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
         MaterialParser::DescriptorSetLayoutContainer* container) {
     for (size_t j = 0; j < 2; j++) {
         uint8_t descriptorCount;
@@ -714,10 +714,10 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(filaflat::Unflattener& unflattener,
                 return false;
             }
             descriptors.push_back({
-                    backend::DescriptorType(type),
-                    backend::ShaderStageFlags(stageFlags),
-                    backend::descriptor_binding_t(binding),
-                    backend::DescriptorFlags(flags),
+                    DescriptorType(type),
+                    ShaderStageFlags(stageFlags),
+                    descriptor_binding_t(binding),
+                    DescriptorFlags(flags),
                     count,
             });
         }
@@ -725,8 +725,8 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(filaflat::Unflattener& unflattener,
     return true;
 }
 
-bool ChunkMaterialConstants::unflatten(filaflat::Unflattener& unflattener,
-        utils::FixedCapacityVector<MaterialConstant>* materialConstants) {
+bool ChunkMaterialConstants::unflatten(Unflattener& unflattener,
+        FixedCapacityVector<MaterialConstant>* materialConstants) {
     assert_invariant(materialConstants);
 
     // Read number of constants.
@@ -751,15 +751,15 @@ bool ChunkMaterialConstants::unflatten(filaflat::Unflattener& unflattener,
         }
 
         (*materialConstants)[i].name = constantName;
-        (*materialConstants)[i].type = static_cast<backend::ConstantType>(constantType);
+        (*materialConstants)[i].type = static_cast<ConstantType>(constantType);
     }
 
     return true;
 }
 
-bool ChunkMaterialPushConstants::unflatten(filaflat::Unflattener& unflattener,
-        utils::CString* structVarName,
-        utils::FixedCapacityVector<MaterialPushConstant>* materialPushConstants) {
+bool ChunkMaterialPushConstants::unflatten(Unflattener& unflattener,
+        CString* structVarName,
+        FixedCapacityVector<MaterialPushConstant>* materialPushConstants) {
     assert_invariant(materialPushConstants);
 
     if (!unflattener.read(structVarName)) {
@@ -793,8 +793,8 @@ bool ChunkMaterialPushConstants::unflatten(filaflat::Unflattener& unflattener,
         }
 
         (*materialPushConstants)[i].name = constantName;
-        (*materialPushConstants)[i].type = static_cast<backend::ConstantType>(constantType);
-        (*materialPushConstants)[i].stage = static_cast<backend::ShaderStage>(shaderStage);
+        (*materialPushConstants)[i].type = static_cast<ConstantType>(constantType);
+        (*materialPushConstants)[i].stage = static_cast<ShaderStage>(shaderStage);
     }
     return true;
 }

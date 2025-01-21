@@ -22,7 +22,7 @@ namespace filament {
 
 using namespace math;
 
-void IndirectLight::setIntensity(float intensity) noexcept {
+void IndirectLight::setIntensity(float const intensity) noexcept {
     downcast(this)->setIntensity(intensity);
 }
 
@@ -50,7 +50,7 @@ float3 IndirectLight::getDirectionEstimate() const noexcept {
     return downcast(this)->getDirectionEstimate();
 }
 
-float4 IndirectLight::getColorEstimate(float3 direction) const noexcept {
+float4 IndirectLight::getColorEstimate(float3 const direction) const noexcept {
     return downcast(this)->getColorEstimate(direction);
 }
 
@@ -58,7 +58,7 @@ float3 IndirectLight::getDirectionEstimate(const float3* sh) noexcept {
     return FIndirectLight::getDirectionEstimate(sh);
 }
 
-float4 IndirectLight::getColorEstimate(const float3* sh, float3 direction) noexcept {
+float4 IndirectLight::getColorEstimate(const float3* sh, float3 const direction) noexcept {
     return FIndirectLight::getColorEstimate(sh, direction);
 }
 

@@ -94,7 +94,7 @@ public:
     /** @return whether a backend supports texture swizzling. */
     static bool isTextureSwizzleSupported(Engine& engine) noexcept;
 
-    static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
+    static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
 
@@ -215,7 +215,7 @@ public:
          * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
          */
-         // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
+         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
          * Creates the Texture object and returns a pointer to it.

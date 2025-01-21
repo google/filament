@@ -220,7 +220,7 @@ public:
          * the renderable are immutable.
          * STATIC geometry has the same restrictions as STATIC_BOUNDS, but in addition disallows
          * skinning, morphing and changing the VertexBuffer or IndexBuffer in any way.
-         * @param enable whether this renderable has static bounds. false by default.
+         * @param type type of geometry.
          */
         Builder& geometryType(GeometryType type) noexcept;
 
@@ -454,7 +454,7 @@ public:
          *
          * @param primitiveIndex zero-based index of the primitive, must be less than the primitive
          *                       count passed to Builder constructor
-         * @param indicesAndWeightsVectors pairs of bone index and bone weight for all vertices of
+         * @param indicesAndWeightsVector pairs of bone index and bone weight for all vertices of
          *                                 the primitive sequentially
          *
          * @return Builder reference for chaining calls.
@@ -501,7 +501,7 @@ public:
          * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
          * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
          */
-        RenderableManager::Builder& morphing(uint8_t level,
+        Builder& morphing(uint8_t level,
                 size_t primitiveIndex, size_t offset) noexcept;
 
 
@@ -799,6 +799,13 @@ public:
             size_t primitiveIndex, MaterialInstance const* UTILS_NONNULL materialInstance);
 
     /**
+     * Clear the MaterialInstance for the given primitive.
+     * @param instance Renderable's instance
+     * @param primitiveIndex Primitive index
+     */
+    void clearMaterialInstanceAt(Instance instance, size_t primitiveIndex);
+
+    /**
      * Retrieves the material instance that is bound to the given primitive.
      */
     MaterialInstance* UTILS_NULLABLE getMaterialInstanceAt(
@@ -845,20 +852,20 @@ public:
     /*! \cond PRIVATE */
     template<typename T>
     struct is_supported_vector_type {
-        using type = typename std::enable_if<
-                std::is_same<math::float4, T>::value ||
-                std::is_same<math::half4,  T>::value ||
-                std::is_same<math::float3, T>::value ||
-                std::is_same<math::half3,  T>::value
-        >::type;
+        using type = std::enable_if_t<
+                std::is_same_v<math::float4, T> ||
+                std::is_same_v<math::half4,  T> ||
+                std::is_same_v<math::float3, T> ||
+                std::is_same_v<math::half3,  T>
+        >;
     };
 
     template<typename T>
     struct is_supported_index_type {
-        using type = typename std::enable_if<
-                std::is_same<uint16_t, T>::value ||
-                std::is_same<uint32_t, T>::value
-        >::type;
+        using type = std::enable_if_t<
+                std::is_same_v<uint16_t, T> ||
+                std::is_same_v<uint32_t, T>
+        >;
     };
     /*! \endcond */
 

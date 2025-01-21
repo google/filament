@@ -53,33 +53,33 @@ struct RenderTarget::BuilderDetails {
 using BuilderType = RenderTarget;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
 RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Texture* texture) noexcept {
     mImpl->mAttachments[(size_t)pt].texture = downcast(texture);
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::mipLevel(AttachmentPoint pt, uint8_t const level) noexcept {
     mImpl->mAttachments[(size_t)pt].mipLevel = level;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace face) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::face(AttachmentPoint pt, CubemapFace const face) noexcept {
     mImpl->mAttachments[(size_t)pt].face = face;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t layer) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::layer(AttachmentPoint pt, uint32_t const layer) noexcept {
     mImpl->mAttachments[(size_t)pt].layer = layer;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t layerCount,
-        uint8_t baseLayer/*= 0*/) noexcept {
+RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint8_t const layerCount,
+        uint8_t const baseLayer/*= 0*/) noexcept {
     mImpl->mAttachments[(size_t)pt].layer = baseLayer;
     mImpl->mAttachments[(size_t)pt].layerCount = layerCount;
     return *this;
@@ -155,13 +155,13 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder)
+FRenderTarget::FRenderTarget(FEngine& engine, const Builder& builder)
     : mSupportedColorAttachmentsCount(engine.getDriverApi().getMaxDrawBuffers()),
       mSupportsReadPixels(false) {
     std::copy(std::begin(builder.mImpl->mAttachments), std::end(builder.mImpl->mAttachments),
             std::begin(mAttachments));
 
-    backend::MRT mrt{};
+    MRT mrt{};
     TargetBufferInfo dinfo{};
 
     auto setAttachment = [this, &driver = engine.getDriverApi()]

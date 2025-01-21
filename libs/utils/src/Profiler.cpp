@@ -59,7 +59,7 @@ Profiler::Profiler() noexcept {
 }
 
 Profiler::Profiler(uint32_t eventMask) noexcept : Profiler() {
-    Profiler::resetEvents(eventMask);
+    resetEvents(eventMask);
 }
 
 Profiler::~Profiler() noexcept {
