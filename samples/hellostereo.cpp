@@ -261,12 +261,20 @@ int main(int argc, char** argv) {
         float3 quadNormal = normalize(float3 {0, 0, 1});
         float3 u = normalize(cross(quadNormal, upVector));
         float3 v = cross(quadNormal, u);
-        static Vertex quadVertices[4] = {
-                {{quadCenter - u - v}, {1, 0}},
-                {{quadCenter + u - v}, {0, 0}},
-                {{quadCenter - u + v}, {1, 1}},
-                {{quadCenter + u + v}, {0, 1}}
-        };
+        static Vertex quadVertices[4];
+        
+        // When using Vulkan, the v coordinates need to be flipped
+        if (engine->getBackend() == filament::Engine::Backend::VULKAN) {
+            quadVertices[0] = {{quadCenter - u - v}, {1, 1}};
+            quadVertices[1] = {{quadCenter + u - v}, {0, 1}};
+            quadVertices[2] = {{quadCenter - u + v}, {1, 0}};
+            quadVertices[3] = {{quadCenter + u + v}, {0, 0}};
+        } else {
+            quadVertices[0] = {{quadCenter - u - v}, {1, 0}};
+            quadVertices[1] = {{quadCenter + u - v}, {0, 0}};
+            quadVertices[2] = {{quadCenter - u + v}, {1, 1}};
+            quadVertices[3] = {{quadCenter + u + v}, {0, 1}};
+        }
 
         static_assert(sizeof(Vertex) == 20, "Strange vertex size.");
         app.quadVb = VertexBuffer::Builder()
