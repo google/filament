@@ -45,8 +45,8 @@ namespace utils {
  */
 
 template<typename T, size_t N = 1,
-        typename = typename std::enable_if<std::is_integral<T>::value &&
-                                           std::is_unsigned<T>::value>::type>
+        typename = std::enable_if_t<std::is_integral_v<T> &&
+                                           std::is_unsigned_v<T>>>
 class UTILS_PUBLIC bitset {
     T storage[N];
 
