@@ -29,7 +29,7 @@ struct FrameGraphInfo;
 // Handles the following REST requests, where {id} is an 8-digit hex string.
 //
 //    GET /api/framegraphs
-//    GET /api/framegraph?fg={viewname}
+//    GET /api/framegraph?fg={fgid}
 //    GET /api/status
 //
 class ApiHandler : public CivetHandler {

@@ -43,7 +43,7 @@ auto const error = [](int line, std::string const& uri) {
 
 bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
     struct mg_request_info const* request = mg_get_request_info(conn);
-    std::string const &uri = request->local_uri;
+    std::string const& uri = request->local_uri;
 
     if (uri.find("/api/status") == 0) {
         return handleGetStatus(conn, request);

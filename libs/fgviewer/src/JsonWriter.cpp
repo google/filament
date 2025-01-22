@@ -39,20 +39,20 @@ void writeJSONString(std::ostream& os, const char* str) {
     os << '"';
 }
 
-void writeViewName(std::ostream& os, const FrameGraphInfo &frameGraph) {
+void writeViewName(std::ostream& os, const FrameGraphInfo& frameGraph) {
     os << "  \"viewName\": ";
     writeJSONString(os, frameGraph.getViewName());
     os << ",\n";
 }
 
-void writeResourceIds(std::ostream& os, const std::vector<ResourceId> &resources) {
+void writeResourceIds(std::ostream& os, const std::vector<ResourceId>& resources) {
     for (size_t j = 0; j < resources.size(); ++j) {
         os << resources[j];
         if (j + 1 < resources.size()) os << ", ";
     }
 }
 
-void writePasses(std::ostream& os, const FrameGraphInfo &frameGraph) {
+void writePasses(std::ostream& os, const FrameGraphInfo& frameGraph) {
     os << "  \"passes\": [\n";
     auto& passes = frameGraph.getPasses();
     for (size_t i = 0; i < passes.size(); ++i) {
@@ -79,7 +79,7 @@ void writePasses(std::ostream& os, const FrameGraphInfo &frameGraph) {
     os << "  ],\n";
 }
 
-void writeResources(std::ostream& os, const FrameGraphInfo &frameGraph) {
+void writeResources(std::ostream& os, const FrameGraphInfo& frameGraph) {
     os << "  \"resources\": {\n";
     size_t resourceCount = 0;
     auto& resources = frameGraph.getResources();
@@ -112,7 +112,7 @@ void writeResources(std::ostream& os, const FrameGraphInfo &frameGraph) {
 }
 } // anonymous
 
-const char *JsonWriter::getJsonString() const {
+const char* JsonWriter::getJsonString() const {
     return mJsonString.c_str();
 }
 
@@ -120,7 +120,7 @@ size_t JsonWriter::getJsonSize() const {
     return mJsonString.size();
 }
 
-bool JsonWriter::writeFrameGraphInfo(const FrameGraphInfo &frameGraph) {
+bool JsonWriter::writeFrameGraphInfo(const FrameGraphInfo& frameGraph) {
     std::ostringstream os;
     os << "{\n";
 
