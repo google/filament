@@ -971,6 +971,25 @@ public:
     void flushAndWait();
 
     /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
+     * all commands to this point are executed. Note that does guarantee that the
+     * hardware is actually finished.
+     *
+     * A timeout can be specified, if for some reason this flushAndWait doesn't complete before the timeout, it will
+     * return false, true otherwise.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
+     * timely fashion, such as when responding to Android's
+     * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * @param timeout A timeout in nanoseconds
+     * @return true if successful, false if flushAndWait timed out, in which case it wasn't successful and commands
+     * might still be executing on both the CPU and GPU sides.
+     */
+    bool flushAndWait(uint64_t timeout);
+
+    /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) but does not wait
      * for commands to be either executed or the hardware finished.
      *
