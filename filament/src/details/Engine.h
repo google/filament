@@ -394,6 +394,7 @@ public:
     void setPaused(bool paused);
 
     void flushAndWait();
+    bool flushAndWait(uint64_t timeout);
 
     // flush the current buffer
     void flush();
