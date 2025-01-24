@@ -23,6 +23,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+#include <utils/CString.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -55,6 +56,18 @@ public:
         unsigned int target; // GLenum target
         unsigned int id; // GLuint id
     };
+
+    /**
+     * Return the OpenGL vendor string of the specified Driver instance.
+     * @return The GL_VENDOR string
+     */
+    static utils::CString getVendorString(Driver const* UTILS_NONNULL driver);
+
+    /**
+     * Return the OpenGL vendor string of the specified Driver instance
+     * @return The GL_RENDERER string
+     */
+    static utils::CString getRendererString(Driver const* UTILS_NONNULL driver);
 
     /**
      * Called by the driver to destroy the OpenGL context. This should clean up any windows

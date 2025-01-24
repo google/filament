@@ -154,7 +154,7 @@ using namespace GLUtils;
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
-Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
+OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* const platform,
         void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
