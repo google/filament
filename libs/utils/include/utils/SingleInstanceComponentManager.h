@@ -108,7 +108,7 @@ public:
         return getComponentCount() == 0;
     }
 
-    utils::Entity const* getEntities() const noexcept {
+    Entity const* getEntities() const noexcept {
         return data<ENTITY_INDEX>() + 1;
     }
 

@@ -68,10 +68,10 @@ public:
     intptr_t operator [](size_t index) const;
 
    /** Demangles a C++ type name */
-    static utils::CString demangleTypeName(const char* mangled);
+    static CString demangleTypeName(const char* mangled);
 
     template<typename T>
-    static utils::CString typeName() {
+    static CString typeName() {
 #if UTILS_HAS_RTTI
         return demangleTypeName(typeid(T).name());
 #else
@@ -84,7 +84,7 @@ public:
      * This will print, when possible, the demangled names of functions corresponding to the
      * program-counter recorded.
      */
-    friend utils::io::ostream& operator <<(utils::io::ostream& stream, const CallStack& callstack);
+    friend io::ostream& operator <<(io::ostream& stream, const CallStack& callstack);
 
     bool operator <(const CallStack& rhs) const;
 
@@ -111,7 +111,7 @@ public:
 private:
     void update_gcc(size_t ignore) noexcept;
 
-    static utils::CString demangle(const char* mangled);
+    static CString demangle(const char* mangled);
 
     static constexpr size_t NUM_FRAMES = 20;
 

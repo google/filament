@@ -132,12 +132,12 @@ public:
         }
     }
 
-    void registerListener(EntityManager::Listener* l) noexcept {
+    void registerListener(Listener* l) noexcept {
         std::lock_guard<Mutex> const lock(mListenerLock);
         mListeners.insert(l);
     }
 
-    void unregisterListener(EntityManager::Listener* l) noexcept {
+    void unregisterListener(Listener* l) noexcept {
         std::lock_guard<Mutex> const lock(mListenerLock);
         mListeners.erase(l);
     }
@@ -162,10 +162,10 @@ public:
 #endif
 
 private:
-    utils::FixedCapacityVector<EntityManager::Listener*> getListeners() const noexcept {
+    FixedCapacityVector<Listener*> getListeners() const noexcept {
         std::lock_guard<Mutex> const lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
-        utils::FixedCapacityVector<EntityManager::Listener*> result(listeners.size());
+        FixedCapacityVector<Listener*> result(listeners.size());
         result.resize(result.capacity()); // unfortunately this memset()
         std::copy(listeners.begin(), listeners.end(), result.begin());
         return result; // the c++ standard guarantees a move

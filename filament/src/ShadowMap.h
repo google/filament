@@ -145,19 +145,19 @@ public:
     // This computes the light's camera.
     ShaderParameters updateDirectional(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             ShadowMapInfo const& shadowMapInfo,
             SceneInfo const& sceneInfo,
             bool useDepthClamp) noexcept;
 
     ShaderParameters updateSpot(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene,
             SceneInfo sceneInfo) noexcept;
 
-    ShadowMap::ShaderParameters updatePoint(FEngine& engine,
-            const FScene::LightSoa& lightData, size_t index, filament::CameraInfo const& camera,
+    ShaderParameters updatePoint(FEngine& engine,
+            const FScene::LightSoa& lightData, size_t index, CameraInfo const& camera,
             const ShadowMapInfo& shadowMapInfo, FScene const& scene, uint8_t face) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
@@ -179,7 +179,8 @@ public:
     LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
     size_t getLightIndex() const { return mLightIndex; }
     uint16_t getShadowIndex() const { return mShadowIndex; }
-    void setLayer(uint8_t layer) noexcept { mLayer = layer; }
+    void setAllocation(uint8_t layer, backend::Viewport viewport) noexcept;
+
     uint8_t getLayer() const noexcept { return mLayer; }
     backend::Viewport getViewport() const noexcept;
     backend::Viewport getScissor() const noexcept;
@@ -236,12 +237,12 @@ private:
             FEngine& engine,
             math::float3 direction,
             FLightManager::ShadowParams params,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             SceneInfo const& sceneInfo,
             bool useDepthClamp) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
-            filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
+            CameraInfo const& camera, FLightManager::ShadowParams const& params,
             const math::mat4f& LMp,
             const math::mat4f& Mv,
             const math::mat4f& LMpMv,
@@ -254,7 +255,7 @@ private:
             math::mat4f const& LMpMv,
             math::mat4f const& WLMp,
             FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
-            filament::CameraInfo const& camera,
+            CameraInfo const& camera,
             float shadowFar, bool stable) noexcept;
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
@@ -339,7 +340,7 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                     // 4
+    mutable ShadowMapDescriptorSet mPerShadowMapUniforms;                   // 48
 
     FCamera* mCamera = nullptr;                                             //  8
     FCamera* mDebugCamera = nullptr;                                        //  8
@@ -351,8 +352,10 @@ private:
     uint16_t mShadowIndex = 0;  // our index in the shadowMap vector        // 2
     uint8_t mLayer = 0;         // our layer in the shadowMap texture       // 1
     ShadowType mShadowType  : 2;                                            // :2
-    bool mHasVisibleShadows : 2;                                            // :2
+    bool mHasVisibleShadows : 1;                                            // :1
     uint8_t mFace           : 3;                                            // :3
+    math::ushort2 mOffset{};                                                // 4
+    UTILS_UNUSED uint8_t reserved[4];                                       // 4
 };
 
 } // namespace filament

@@ -645,7 +645,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
         // This mirrors the logic for choosing a backend given compile-time flags and client having
         // provided DEFAULT as the backend (see PlatformFactory.cpp)
-        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(IOS) && \
+        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(FILAMENT_IOS) && \
             !defined(__APPLE__) && defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             if (backend == Engine::Backend::DEFAULT) {
                 backend = Engine::Backend::VULKAN;

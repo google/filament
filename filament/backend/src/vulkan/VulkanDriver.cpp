@@ -157,7 +157,8 @@ DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const
         VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo,
                 VKALLOC, &mDebugMessenger);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "Unable to create Vulkan debug messenger.";
+                << "Unable to create Vulkan debug messenger. error="
+                << static_cast<int32_t>(result);
     }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 }
@@ -231,7 +232,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
         VkResult result = createDebugReportCallback(mPlatform->getInstance(), &cbinfo, VKALLOC,
                 &mDebugCallback);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "Unable to create Vulkan debug callback.";
+                << "Unable to create Vulkan debug callback."
+                << " error=" << static_cast<int32_t>(result);
     }
 #endif
 
@@ -246,7 +248,6 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    VulkanSamplerGroup            :  16       few
     //    HwStream                      :  24       few
     //    VulkanFence                   :  32       few
     //    VulkanProgram                 :  32       moderate
@@ -269,7 +270,6 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
            << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
            << "\nVulkanVertexBufferInfo: " << sizeof(VulkanVertexBufferInfo)
            << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
-           << "\nVulkanSamplerGroup: " << sizeof(VulkanSamplerGroup)
            << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
            << "\nVulkanTexture: " << sizeof(VulkanTexture)
            << "\nVulkanTimerQuery: " << sizeof(VulkanTimerQuery)
@@ -288,7 +288,7 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
-#if defined(__ANDROID__) || defined(IOS)
+#if defined(__ANDROID__) || defined(FILAMENT_IOS)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
@@ -543,7 +543,8 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,  backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 
@@ -699,6 +700,11 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+    // Running gc() to guard against an edge case where the old swapchains need to have been
+    // destroyed before the new swapchain can be created. Otherwise, we would fail
+    // vkCreateSwapchainKHR with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR.
+    mResourceManager.gc();
+
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
         FVK_LOGW << "sRGB swapchain requested, but Platform does not support it"
                  << utils::io::endl;
@@ -1187,13 +1193,6 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
     uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
     *elapsedTime = delta;
     return TimerQueryResult::AVAILABLE;
-}
-
-void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-
-}
-
-void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {

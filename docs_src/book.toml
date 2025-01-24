@@ -1,0 +1,20 @@
+[book]
+authors = []
+language = "en"
+multilingual = false
+src = "src"
+title = "Filament"
+
+[build]
+create-missing = false
+
+[output.html]
+mathjax-support = true
+default-theme = "light"
+preferred-dark-theme = "light"
+
+[output.html.print]
+enable = false
+
+[output.html.fold]
+enable = false

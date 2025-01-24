@@ -109,10 +109,6 @@ struct HwDescriptorSet : public HwBase {
     HwDescriptorSet() noexcept = default;
 };
 
-struct HwSamplerGroup : public HwBase {
-    HwSamplerGroup() noexcept = default;
-};
-
 struct HwTexture : public HwBase {
     uint32_t width{};
     uint32_t height{};

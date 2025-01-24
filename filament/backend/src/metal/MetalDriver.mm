@@ -452,6 +452,36 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
     }
 }
 
+// fixme: TextureUsage is a bitfield
+inline const char* stringify(TextureUsage usage) {
+    switch (usage) {
+        case TextureUsage::NONE: return "NONE";
+        case TextureUsage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
+        case TextureUsage::DEPTH_ATTACHMENT: return "DEPTH_ATTACHMENT";
+        case TextureUsage::STENCIL_ATTACHMENT: return "STENCIL_ATTACHMENT";
+        case TextureUsage::UPLOADABLE: return "UPLOADABLE";
+        case TextureUsage::SAMPLEABLE: return "SAMPLEABLE";
+        case TextureUsage::SUBPASS_INPUT: return "SUBPASS_INPUT";
+        case TextureUsage::BLIT_SRC: return "BLIT_SRC";
+        case TextureUsage::BLIT_DST: return "BLIT_DST";
+        case TextureUsage::PROTECTED: return "PROTECTED";
+        case TextureUsage::DEFAULT: return "DEFAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+inline const char* stringify(SamplerType samplerType) {
+    switch (samplerType) {
+        case SamplerType::SAMPLER_2D: return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY: return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP: return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL: return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D: return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "SAMPLER_CUBEMAP_ARRAY";
+    }
+    return "UNKNOWN";
+}
+
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
@@ -482,7 +512,9 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
-void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
     mContext->textures.insert(construct_handle<MetalTexture>(
             th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
@@ -907,7 +939,7 @@ void MetalDriver::terminate() {
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
@@ -981,7 +1013,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
         case MTLPixelFormatRGBA16Float:
             return true;
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
         // Mipmappable only on desktop:
         case MTLPixelFormatR32Float:
         case MTLPixelFormatRG32Float:
@@ -989,7 +1021,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
             return true;
 #endif
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         // Mipmappable only on iOS:
         case MTLPixelFormatRGB9E5Float:
             return true;
@@ -1191,10 +1223,6 @@ void MetalDriver::setupExternalImage(void* image) {
     CVPixelBufferRetain(pixelBuffer);
 }
 
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
-
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
-
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
@@ -1366,7 +1394,7 @@ void MetalDriver::startCapture(int) {
     if (@available(iOS 13, *)) {
         MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
         descriptor.captureObject = mContext->device;
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         descriptor.destination = MTLCaptureDestinationDeveloperTools;
 #else
         descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
@@ -1430,7 +1458,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                                                                width:srcTextureSize.width
                                                               height:srcTextureSize.height
                                                            mipmapped:NO];
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     textureDescriptor.storageMode = MTLStorageModeShared;
 #else
     textureDescriptor.storageMode = MTLStorageModeManaged;
@@ -1449,7 +1477,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
     id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
     [blitEncoder synchronizeResource:readPixelsTexture];
