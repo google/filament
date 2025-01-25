@@ -681,6 +681,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
              hasColorGrading &&
              !bloomOptions.enabled && !dofOptions.enabled && !taaOptions.enabled;
 
+    // whether we're scaled at all
+    bool scaled = any(notEqual(scale, float2(1.0f)));
+
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
@@ -695,17 +698,14 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                     hasColorGrading &&
                     !engine.debug.renderer.disable_subpasses,
             .translucent = needsAlphaChannel,
-            .fxaa = hasFXAA,
+            .outputLuminance = hasFXAA || scaled, // ignored by translucent variants (false)
             .dithering = hasDithering,
-            .ldrFormat = (hasColorGrading && hasFXAA) ?
+            .ldrFormat = (hasColorGrading && (hasFXAA || scaled)) ?
                     TextureFormat::RGBA8 : getLdrFormat(needsAlphaChannel)
     };
 
     // by construction (msaaSampleCount) both asSubpass and customResolve can't be true
     assert_invariant(colorGradingConfig.asSubpass + colorGradingConfig.customResolve < 2);
-
-    // whether we're scaled at all
-     bool scaled = any(notEqual(scale, float2(1.0f)));
 
     // vp is the user defined viewport within the View
     filament::Viewport const& vp = view.getViewport();
@@ -1351,8 +1351,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         }
 
         if (hasFXAA) {
-            input = ppm.fxaa(fg, input, xvp, colorGradingConfig.ldrFormat,
-                    !hasColorGrading || needsAlphaChannel);
+            bool const preserveAlphaChannel = needsAlphaChannel ||
+                    (hasColorGrading && colorGradingConfig.outputLuminance);
+            input = ppm.fxaa(fg, input, xvp, colorGradingConfig.ldrFormat, preserveAlphaChannel);
             // the padded buffer is resolved now
             xvp.left = xvp.bottom = 0;
             svp = xvp;
@@ -1360,9 +1361,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         if (scaled) {
             mightNeedFinalBlit = false;
             auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
-            input = ppm.upscale(fg, needsAlphaChannel, dsrOptions, input, xvp, {
-                    .width = viewport.width, .height = viewport.height,
-                    .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
+            bool const sourceHasLuminance = !needsAlphaChannel &&
+                    (hasColorGrading && colorGradingConfig.outputLuminance);
+            input = ppm.upscale(fg, needsAlphaChannel, sourceHasLuminance, dsrOptions, input, xvp, {
+                .width = viewport.width, .height = viewport.height,
+                .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
             xvp.left = xvp.bottom = 0;
             svp = xvp;
         }
