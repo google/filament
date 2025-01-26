@@ -44,7 +44,7 @@ void FrameGraphInfo::setPasses(std::vector<Pass> sortedPasses) {
 }
 
 const char* FrameGraphInfo::getViewName() const {
-    return viewName.c_str();
+    return viewName.c_str_safe();
 }
 
 const std::vector<FrameGraphInfo::Pass>& FrameGraphInfo::getPasses() const {
