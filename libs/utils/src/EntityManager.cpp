@@ -49,11 +49,11 @@ void EntityManager::destroy(size_t n, Entity* entities) noexcept {
     static_cast<EntityManagerImpl *>(this)->destroy(n, entities);
 }
 
-void EntityManager::registerListener(EntityManager::Listener* l) noexcept {
+void EntityManager::registerListener(Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->registerListener(l);
 }
 
-void EntityManager::unregisterListener(EntityManager::Listener* l) noexcept {
+void EntityManager::unregisterListener(Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->unregisterListener(l);
 }
 

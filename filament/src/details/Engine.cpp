@@ -36,9 +36,11 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
+#include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/DescriptorSets.h>
+#include <private/filament/EngineEnums.h>
 
 #include <private/backend/PlatformFactory.h>
 
@@ -79,7 +81,7 @@ using namespace filaflat;
 struct Engine::BuilderDetails {
     Backend mBackend = Backend::DEFAULT;
     Platform* mPlatform = nullptr;
-    Engine::Config mConfig;
+    Config mConfig;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     bool mPaused = false;
@@ -88,7 +90,7 @@ struct Engine::BuilderDetails {
     static Config validateConfig(Config config) noexcept;
 };
 
-Engine* FEngine::create(Engine::Builder const& builder) {
+Engine* FEngine::create(Builder const& builder) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
@@ -151,7 +153,7 @@ Engine* FEngine::create(Engine::Builder const& builder) {
 
 #if UTILS_HAS_THREADING
 
-void FEngine::create(Engine::Builder const& builder, Invocable<void(void*)>&& callback) {
+void FEngine::create(Builder const& builder, Invocable<void(void*)>&& callback) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
@@ -206,7 +208,7 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Engine::Builder const& builder) :
+FEngine::FEngine(Builder const& builder) :
         mBackend(builder->mBackend),
         mActiveFeatureLevel(builder->mFeatureLevel),
         mPlatform(builder->mPlatform),
@@ -233,7 +235,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
 {
     // update a feature flag from Engine::Config if the flag is not specified in the Builder
     auto const featureFlagsBackwardCompatibility =
-            [this, &builder](std::string_view name, bool value) {
+            [this, &builder](std::string_view const name, bool const value) {
         if (builder->mFeatureFlags.find(name) == builder->mFeatureFlags.end()) {
             auto* const p = getFeatureFlagPtr(name, true);
             if (p) {
@@ -266,7 +268,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
 }
 
-uint32_t FEngine::getJobSystemThreadPoolSize(Engine::Config const& config) noexcept {
+uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
     if (config.jobSystemThreadCount > 0) {
         return config.jobSystemThreadCount;
     }
@@ -307,7 +309,7 @@ void FEngine::init() {
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
+            .attribute(POSITION, 0, VertexBuffer::AttributeType::FLOAT4, 0)
             .build(*this));
 
     mFullScreenTriangleVb->setBufferAt(*this, 0,
@@ -633,7 +635,7 @@ void FEngine::prepare() {
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
-    FEngine::DriverApi& driver = getDriverApi();
+    DriverApi& driver = getDriverApi();
 
     for (auto& materialInstanceList: mMaterialInstances) {
         materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
@@ -701,7 +703,7 @@ void FEngine::flushAndWait() {
 
 #else
 
-    FFence::waitAndDestroy(FEngine::createFence(), FFence::Mode::FLUSH);
+    FFence::waitAndDestroy(createFence(), FFence::Mode::FLUSH);
 
 #endif
 
@@ -806,7 +808,7 @@ template<typename T, typename ... ARGS>
 inline T* FEngine::create(ResourceList<T>& list,
         typename T::Builder const& builder, ARGS&& ... args) noexcept {
     T* p = mHeapAllocator.make<T>(*this, builder, std::forward<ARGS>(args)...);
-    if (UTILS_UNLIKELY(p)) { // this should never happen
+    if (UTILS_LIKELY(p)) {
         list.insert(p);
     }
     return p;
@@ -871,7 +873,7 @@ FRenderTarget* FEngine::createRenderTarget(const RenderTarget::Builder& builder)
 
 FRenderer* FEngine::createRenderer() noexcept {
     FRenderer* p = mHeapAllocator.make<FRenderer>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mRenderers.insert(p);
     }
     return p;
@@ -880,7 +882,7 @@ FRenderer* FEngine::createRenderer() noexcept {
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
         const FMaterialInstance* other, const char* name) noexcept {
     FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, other, name);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
     }
@@ -890,7 +892,7 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
 FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
                                                    const char* name) noexcept {
     FMaterialInstance* p = mHeapAllocator.make<FMaterialInstance>(*this, material, name);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         auto pos = mMaterialInstances.emplace(material, "MaterialInstance");
         pos.first->second.insert(p);
     }
@@ -903,7 +905,7 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
 
 FScene* FEngine::createScene() noexcept {
     FScene* p = mHeapAllocator.make<FScene>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mScenes.insert(p);
     }
     return p;
@@ -911,7 +913,7 @@ FScene* FEngine::createScene() noexcept {
 
 FView* FEngine::createView() noexcept {
     FView* p = mHeapAllocator.make<FView>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mViews.insert(p);
     }
     return p;
@@ -919,7 +921,7 @@ FView* FEngine::createView() noexcept {
 
 FFence* FEngine::createFence() noexcept {
     FFence* p = mHeapAllocator.make<FFence>(*this);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         std::lock_guard const guard(mFenceListLock);
         mFences.insert(p);
     }
@@ -935,7 +937,7 @@ FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcep
         getDriverApi().setupExternalImage(nativeWindow);
     }
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, nativeWindow, flags);
-    if (UTILS_UNLIKELY(p)) { // should never happen
+    if (UTILS_LIKELY(p)) {
         mSwapChains.insert(p);
     }
     return p;
@@ -943,7 +945,7 @@ FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcep
 
 FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, width, height, flags);
-    if (p) {
+    if (UTILS_LIKELY(p)) {
         mSwapChains.insert(p);
     }
     return p;
@@ -954,21 +956,21 @@ FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t f
  */
 
 
-FCamera* FEngine::createCamera(Entity entity) noexcept {
+FCamera* FEngine::createCamera(Entity const entity) noexcept {
     return mCameraManager.create(*this, entity);
 }
 
-FCamera* FEngine::getCameraComponent(Entity entity) noexcept {
+FCamera* FEngine::getCameraComponent(Entity const entity) noexcept {
     auto ci = mCameraManager.getInstance(entity);
     return ci ? mCameraManager.getCamera(ci) : nullptr;
 }
 
-void FEngine::destroyCameraComponent(utils::Entity entity) noexcept {
+void FEngine::destroyCameraComponent(Entity const entity) noexcept {
     mCameraManager.destroy(*this, entity);
 }
 
 
-void FEngine::createRenderable(const RenderableManager::Builder& builder, Entity entity) {
+void FEngine::createRenderable(const RenderableManager::Builder& builder, Entity const entity) {
     mRenderableManager.create(builder, entity);
     auto& tcm = mTransformManager;
     // if this entity doesn't have a transform component, add one.
@@ -977,7 +979,7 @@ void FEngine::createRenderable(const RenderableManager::Builder& builder, Entity
     }
 }
 
-void FEngine::createLight(const LightManager::Builder& builder, Entity entity) {
+void FEngine::createLight(const LightManager::Builder& builder, Entity const entity) {
     mLightManager.create(builder, entity);
 }
 
@@ -1152,19 +1154,9 @@ UTILS_NOINLINE
 bool FEngine::destroy(const FMaterial* ptr) {
     if (ptr == nullptr) return true;
     bool const success = terminateAndDestroy(ptr, mMaterials);
-    if (success) {
+    if (UTILS_LIKELY(success)) {
         auto pos = mMaterialInstances.find(ptr);
-        if (pos != mMaterialInstances.cend()) {
-            // ensure we've destroyed all instances before destroying the material
-            if (!ASSERT_PRECONDITION_NON_FATAL(pos->second.empty(),
-                    "destroying material \"%s\" but %u instances still alive",
-                    ptr->getName().c_str(), (*pos).second.size())) {
-                // We return true here, because the material has been destroyed. However, this
-                // leaks this material's ResourceList<FMaterialInstance> until the engine
-                // is shut down. Note that it's still possible for the MaterialInstances to be
-                // destroyed manually.
-                return true;
-            }
+        if (UTILS_LIKELY(pos != mMaterialInstances.cend())) {
             mMaterialInstances.erase(pos);
         }
     }
@@ -1174,6 +1166,39 @@ bool FEngine::destroy(const FMaterial* ptr) {
 UTILS_NOINLINE
 bool FEngine::destroy(const FMaterialInstance* ptr) {
     if (ptr == nullptr) return true;
+
+    // Check that the material instance we're destroying is not in use in the RenderableManager
+    // To do this, we currently need to inspect all render primitives in the RenderableManager
+    EntityManager const& em = mEntityManager;
+    FRenderableManager const& rcm = mRenderableManager;
+    Entity const* entities = rcm.getEntities();
+    size_t const count = rcm.getComponentCount();
+    for (size_t i = 0; i < count; i++) {
+        Entity const entity = entities[i];
+        if (em.isAlive(entity)) {
+            RenderableManager::Instance const ri = rcm.getInstance(entity);
+            size_t const primitiveCount = rcm.getPrimitiveCount(ri, 0);
+            for (size_t j = 0; j < primitiveCount; j++) {
+                auto const* const mi = rcm.getMaterialInstanceAt(ri, 0, j);
+                if (features.engine.debug.assert_material_instance_in_use) {
+                    FILAMENT_CHECK_PRECONDITION(mi != ptr)
+                            << "destroying MaterialInstance \""
+                            << mi->getName() << "\" which is still in use by Renderable (entity="
+                            << entity.getId() << ", instance="
+                            << ri.asValue() << ", index=" << j << ")";
+                } else {
+                    if (UTILS_UNLIKELY(mi == ptr)) {
+                        slog.e  << "destroying MaterialInstance \""
+                                << mi->getName() << "\" which is still in use by Renderable (entity="
+                                << entity.getId() << ", instance="
+                                << ri.asValue() << ", index=" << j << ")"
+                                << io::endl;
+                    }
+                }
+            }
+        }
+    }
+
     if (ptr->isDefaultInstance()) return false;
     auto pos = mMaterialInstances.find(ptr->getMaterial());
     assert_invariant(pos != mMaterialInstances.cend());
@@ -1185,7 +1210,7 @@ bool FEngine::destroy(const FMaterialInstance* ptr) {
 }
 
 UTILS_NOINLINE
-void FEngine::destroy(Entity e) {
+void FEngine::destroy(Entity const e) {
     mRenderableManager.destroy(e);
     mLightManager.destroy(e);
     mTransformManager.destroy(e);
@@ -1305,7 +1330,12 @@ size_t FEngine::getSkyboxeCount() const noexcept { return mSkyboxes.size(); }
 size_t FEngine::getColorGradingCount() const noexcept { return mColorGradings.size(); }
 size_t FEngine::getRenderTargetCount() const noexcept { return mRenderTargets.size(); }
 
-void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
+size_t FEngine::getMaxShadowMapCount() const noexcept {
+    return features.engine.shadows.use_shadow_atlas ?
+        CONFIG_MAX_SHADOWMAPS : CONFIG_MAX_SHADOW_LAYERS;
+}
+
+void* FEngine::streamAlloc(size_t const size, size_t const alignment) noexcept {
     // we allow this only for small allocations
     if (size > 65536) {
         return nullptr;
@@ -1343,12 +1373,12 @@ bool FEngine::isPaused() const noexcept {
     return mCommandBufferQueue.isPaused();
 }
 
-void FEngine::setPaused(bool paused) {
+void FEngine::setPaused(bool const paused) {
     mCommandBufferQueue.setPaused(paused);
 }
 
 Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
-    FEngine::DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
+    DriverApi& driver = const_cast<FEngine*>(this)->getDriverApi();
     return driver.getFeatureLevel();
 }
 
@@ -1373,7 +1403,7 @@ void FEngine::unprotected() noexcept {
     mUnprotectedDummySwapchain->makeCurrent(getDriverApi());
 }
 
-bool FEngine::setFeatureFlag(char const* name, bool value) noexcept {
+bool FEngine::setFeatureFlag(char const* name, bool const value) noexcept {
     auto* const p = getFeatureFlagPtr(name);
     if (p) {
         *p = value;
@@ -1389,7 +1419,7 @@ std::optional<bool> FEngine::getFeatureFlag(char const* name) const noexcept {
     return std::nullopt;
 }
 
-bool* FEngine::getFeatureFlagPtr(std::string_view name, bool allowConstant) const noexcept {
+bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant) const noexcept {
     auto pos = std::find_if(mFeatures.begin(), mFeatures.end(),
             [name](FeatureFlag const& entry) {
                 return name == entry.name;
@@ -1403,12 +1433,12 @@ bool* FEngine::getFeatureFlagPtr(std::string_view name, bool allowConstant) cons
 
 Engine::Builder::Builder() noexcept = default;
 Engine::Builder::~Builder() noexcept = default;
-Engine::Builder::Builder(Engine::Builder const& rhs) noexcept = default;
-Engine::Builder::Builder(Engine::Builder&& rhs) noexcept = default;
-Engine::Builder& Engine::Builder::operator=(Engine::Builder const& rhs) noexcept = default;
-Engine::Builder& Engine::Builder::operator=(Engine::Builder&& rhs) noexcept = default;
+Engine::Builder::Builder(Builder const& rhs) noexcept = default;
+Engine::Builder::Builder(Builder&& rhs) noexcept = default;
+Engine::Builder& Engine::Builder::operator=(Builder const& rhs) noexcept = default;
+Engine::Builder& Engine::Builder::operator=(Builder&& rhs) noexcept = default;
 
-Engine::Builder& Engine::Builder::backend(Backend backend) noexcept {
+Engine::Builder& Engine::Builder::backend(Backend const backend) noexcept {
     mImpl->mBackend = backend;
     return *this;
 }
@@ -1418,12 +1448,12 @@ Engine::Builder& Engine::Builder::platform(Platform* platform) noexcept {
     return *this;
 }
 
-Engine::Builder& Engine::Builder::config(Engine::Config const* config) noexcept {
-    mImpl->mConfig = config ? *config : Engine::Config{};
+Engine::Builder& Engine::Builder::config(Config const* config) noexcept {
+    mImpl->mConfig = config ? *config : Config{};
     return *this;
 }
 
-Engine::Builder& Engine::Builder::featureLevel(FeatureLevel featureLevel) noexcept {
+Engine::Builder& Engine::Builder::featureLevel(FeatureLevel const featureLevel) noexcept {
     mImpl->mFeatureLevel = featureLevel;
     return *this;
 }
@@ -1433,17 +1463,17 @@ Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
     return *this;
 }
 
-Engine::Builder& Engine::Builder::paused(bool paused) noexcept {
+Engine::Builder& Engine::Builder::paused(bool const paused) noexcept {
     mImpl->mPaused = paused;
     return *this;
 }
 
-Engine::Builder& Engine::Builder::feature(char const* name, bool value) noexcept {
+Engine::Builder& Engine::Builder::feature(char const* name, bool const value) noexcept {
     mImpl->mFeatureFlags[name] = value;
     return *this;
 }
 
-Engine::Builder& Engine::Builder::features(std::initializer_list<char const *> list) noexcept {
+Engine::Builder& Engine::Builder::features(std::initializer_list<char const *> const list) noexcept {
     for (auto name : list) {
         if (name) {
             feature(name, true);

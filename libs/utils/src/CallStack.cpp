@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// FIXME: Some platforms do not have execinfo.h
 #if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #include <execinfo.h>
 #define HAS_EXECINFO 1
@@ -120,7 +119,7 @@ bool CallStack::operator<(const CallStack& rhs) const {
 
 // ------------------------------------------------------------------------------------------------
 
-utils::CString CallStack::demangle(const char* mangled) {
+CString CallStack::demangle(const char* mangled) {
 #if !defined(NDEBUG) && !defined(WIN32)
     size_t len;
     int status;
@@ -135,7 +134,7 @@ utils::CString CallStack::demangle(const char* mangled) {
 }
 
 
-utils::CString CallStack::demangleTypeName(const char* mangled) {
+CString CallStack::demangleTypeName(const char* mangled) {
     return demangle(mangled);
 }
 

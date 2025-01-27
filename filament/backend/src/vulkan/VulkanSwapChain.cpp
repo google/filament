@@ -115,7 +115,7 @@ void VulkanSwapChain::present() {
         VkResult const result = mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
                 result == VK_ERROR_OUT_OF_DATE_KHR)
-                << "Cannot present in swapchain.";
+                << "Cannot present in swapchain. error=" << static_cast<int32_t>(result);
     }
 
     // We presented the last acquired buffer.
@@ -144,7 +144,7 @@ void VulkanSwapChain::acquire(bool& resized) {
     mCurrentSwapIndex = imageSyncData.imageIndex;
     mExplicitImageReadyWait = imageSyncData.explicitImageReadyWait;
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
-        << "Cannot acquire in swapchain.";
+            << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {
         mCommands->injectDependency(imageSyncData.imageReadySemaphore);
     }

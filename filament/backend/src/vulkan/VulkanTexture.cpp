@@ -295,11 +295,11 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     this->samples = samples;
     imageInfo.samples = (VkSampleCountFlagBits) samples;
 
-    VkResult error = vkCreateImage(mState->mDevice, &imageInfo, VKALLOC, &mState->mTextureImage);
-    if (error || FVK_ENABLED(FVK_DEBUG_TEXTURE)) {
+    VkResult result = vkCreateImage(mState->mDevice, &imageInfo, VKALLOC, &mState->mTextureImage);
+    if (result != VK_SUCCESS || FVK_ENABLED(FVK_DEBUG_TEXTURE)) {
         FVK_LOGD << "vkCreateImage: "
             << "image = " << mState->mTextureImage << ", "
-            << "result = " << error << ", "
+            << "result = " << result << ", "
             << "handle = " << utils::io::hex << mState->mTextureImage << utils::io::dec << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
             << "mipLevels = " << int(levels) << ", "
@@ -311,7 +311,8 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             << "target = " << static_cast<int>(target) <<", "
             << "format = " << mState->mVkFormat << utils::io::endl;
     }
-    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to create image.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create image."
+                                                       << " error=" << static_cast<int32_t>(result);
 
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs = {};
@@ -332,11 +333,13 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         .allocationSize = memReqs.size,
         .memoryTypeIndex = memoryTypeIndex,
     };
-    error = vkAllocateMemory(mState->mDevice, &allocInfo, nullptr, &mState->mTextureImageMemory);
-    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to allocate image memory.";
-    error = vkBindImageMemory(mState->mDevice, mState->mTextureImage, mState->mTextureImageMemory,
+    result = vkAllocateMemory(mState->mDevice, &allocInfo, nullptr, &mState->mTextureImageMemory);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory."
+                                                       << " error=" << static_cast<int32_t>(result);
+    result = vkBindImageMemory(mState->mDevice, mState->mTextureImage, mState->mTextureImageMemory,
             0);
-    FILAMENT_CHECK_POSTCONDITION(!error) << "Unable to bind image.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image."
+                                                       << " error=" << static_cast<int32_t>(result);
 
     // Spec out the "primary" VkImageView that shaders use to sample from the image.
     mPrimaryViewRange = mState->mFullViewRange;

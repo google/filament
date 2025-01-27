@@ -15,12 +15,15 @@
  */
 
 #include <backend/BufferDescriptor.h>
+#include <backend/DescriptorSetOffsetArray.h>
 #include <backend/DriverEnums.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
 #include <backend/TargetBufferInfo.h>
 
 #include <utils/ostream.h>
+
+#include <variant>
 
 using namespace filament;
 using namespace backend;
@@ -475,8 +478,50 @@ io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
 }
 
 io::ostream& operator<<(io::ostream& out, MRT const& mrt) {
-    // TODO: implement decoding of enum
+    // TODO: implement decoding of MRT
     out << "MRT{...}";
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, ShaderStage shaderStage) {
+    switch (shaderStage) {
+        CASE(ShaderStage, VERTEX)
+        CASE(ShaderStage, FRAGMENT)
+        CASE(ShaderStage, COMPUTE)
+    }
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, CompilerPriorityQueue compilerPriorityQueue) {
+    switch (compilerPriorityQueue) {
+        CASE(CompilerPriorityQueue, HIGH)
+        CASE(CompilerPriorityQueue, LOW)
+    }
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, TextureUsage usage) {
+    // TODO: implement decoding of TextureUsage bitfield
+    out << uint32_t(usage);
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, PushConstantVariant pushConstantVariant) {
+    std::visit([&](auto&& arg) {
+        out << arg;
+    }, pushConstantVariant);
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, DescriptorSetLayout const& dsl) {
+    // TODO: implement decoding of DescriptorSetLayout
+    out << "DescriptorSetLayout{...}";
+    return out;
+}
+
+io::ostream& operator<<(io::ostream& out, DescriptorSetOffsetArray const& dsa) {
+    // TODO: implement decoding of DescriptorSetOffsetArray
+    out << "DescriptorSetOffsetArray{...}";
     return out;
 }
 

@@ -186,7 +186,7 @@ private:
 };
 
 inline DependencyGraph::Edge::Edge(DependencyGraph& graph,
-        DependencyGraph::Node* from, DependencyGraph::Node* to)
+        Node* from, Node* to)
         : from(from->getId()), to(to->getId()) {
     assert_invariant(graph.mNodes[this->from] == from);
     assert_invariant(graph.mNodes[this->to] == to);

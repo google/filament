@@ -304,7 +304,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "Unable to create Vulkan instance. Result=" << result;
+            << "Unable to create Vulkan instance. error=" << static_cast<int32_t>(result);
     return instance;
 }
 
@@ -390,7 +390,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     deviceCreateInfo.pNext = pNext;
 
     VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateDevice error=" << result << ".";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+            << "vkCreateDevice error=" << static_cast<int32_t>(result);
 
     return device;
 }

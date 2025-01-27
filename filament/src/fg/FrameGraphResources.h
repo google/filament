@@ -115,7 +115,7 @@ public:
      * @param handle to a FrameGraphTexture
      * @return backend concrete Texture handle
      */
-    backend::Handle<backend::HwTexture> getTexture(FrameGraphId<FrameGraphTexture> handle) const {
+    backend::Handle<backend::HwTexture> getTexture(FrameGraphId<FrameGraphTexture> const handle) const {
         return get(handle).handle;
     }
 

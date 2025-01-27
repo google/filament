@@ -498,10 +498,10 @@ constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near,
 }
 
 template<typename T>
-TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, TMat44::Fov direction) noexcept {
+TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, Fov direction) noexcept {
     T h, w;
 
-    if (direction == TMat44::Fov::VERTICAL) {
+    if (direction == Fov::VERTICAL) {
         h = std::tan(fov * F_PI / 360.0f) * near;
         w = h * aspect;
     } else {

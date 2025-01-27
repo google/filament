@@ -31,12 +31,12 @@
 
 namespace filament {
 
-FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags)
+FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t const flags)
         : mEngine(engine), mNativeWindow(nativeWindow), mConfigFlags(initFlags(engine, flags)) {
     mHwSwapChain = engine.getDriverApi().createSwapChain(nativeWindow, flags);
 }
 
-FSwapChain::FSwapChain(FEngine& engine, uint32_t width, uint32_t height, uint64_t flags)
+FSwapChain::FSwapChain(FEngine& engine, uint32_t const width, uint32_t const height, uint64_t const flags)
         : mEngine(engine), mWidth(width), mHeight(height), mConfigFlags(initFlags(engine, flags)) {
     mHwSwapChain = engine.getDriverApi().createSwapChainHeadless(width, height, flags);
 }
@@ -70,7 +70,7 @@ void FSwapChain::terminate(FEngine& engine) noexcept {
 }
 
 void FSwapChain::setFrameScheduledCallback(
-        backend::CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
+        backend::CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t const flags) {
     mFrameScheduledCallbackIsSet = bool(callback);
     mEngine.getDriverApi().setFrameScheduledCallback(
             mHwSwapChain, handler, std::move(callback), flags);

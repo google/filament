@@ -870,6 +870,13 @@ public class RenderableManager {
     }
 
     /**
+     * Clears the material instance for the given primitive.
+     */
+    public void clearMaterialInstanceAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
+        nClearMaterialInstanceAt(mNativeObject, i, primitiveIndex);
+    }
+
+    /**
      * Creates a MaterialInstance Java wrapper object for a particular material instance.
      */
     public @NonNull MaterialInstance getMaterialInstanceAt(@EntityInstance int i,
@@ -1012,6 +1019,7 @@ public class RenderableManager {
     private static native void nGetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float[] center, float[] halfExtent);
     private static native int nGetPrimitiveCount(long nativeRenderableManager, int i);
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
+    private static native void nClearMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);

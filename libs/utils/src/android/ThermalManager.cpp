@@ -46,7 +46,7 @@ ThermalManager& ThermalManager::operator=(ThermalManager&& rhs) noexcept {
 
 ThermalManager::ThermalStatus ThermalManager::getCurrentThermalStatus() const noexcept {
     if (__builtin_available(android 30, *)) {
-        return (ThermalManager::ThermalStatus)AThermal_getCurrentThermalStatus(mThermalManager);
+        return (ThermalStatus)AThermal_getCurrentThermalStatus(mThermalManager);
     } else {
         return ThermalStatus::NONE;
     }

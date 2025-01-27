@@ -30,7 +30,7 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-FrameSkipper::FrameSkipper(size_t latency) noexcept
+FrameSkipper::FrameSkipper(size_t const latency) noexcept
         : mLast(std::clamp(latency, size_t(1), MAX_FRAME_LATENCY) - 1) {
 }
 

@@ -400,14 +400,14 @@ public:
      *          engine.getTransformManager().getInstance(camera->getEntity()), model);
      * ~~~~~~~~~~~
      *
-     * @param model The camera position and orientation provided as a rigid transform matrix.
+     * @param modelMatrix The camera position and orientation provided as a rigid transform matrix.
      *
      * @note The Camera "looks" towards its -z axis
      *
      * @warning \p model must be a rigid transform
      */
-    void setModelMatrix(const math::mat4& model) noexcept;
-    void setModelMatrix(const math::mat4f& model) noexcept; //!< @overload
+    void setModelMatrix(const math::mat4& modelMatrix) noexcept;
+    void setModelMatrix(const math::mat4f& modelMatrix) noexcept; //!< @overload
 
     /** Set the position of an eye relative to this Camera (head).
      *

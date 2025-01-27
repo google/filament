@@ -215,8 +215,8 @@ private:
 
     using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
 
-    ResourceAllocator::CacheContainer::iterator
-    purge(ResourceAllocator::CacheContainer::iterator const& pos);
+    CacheContainer::iterator
+    purge(CacheContainer::iterator const& pos);
 
     backend::DriverApi& mBackend;
     std::shared_ptr<ResourceAllocatorDisposer> mDisposer;

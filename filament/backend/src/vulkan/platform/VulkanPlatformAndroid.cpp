@@ -142,7 +142,7 @@ VulkanPlatform::ImageData allocateExternalImage(void* externalBuffer,
 
     VkResult result = vkCreateImage(device, &imageInfo, allocator, &data.first);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkCreateImage failed with error=" << result;
+            << "vkCreateImage failed with error=" << static_cast<int32_t>(result);
 
     // Allocate the memory
     VkImportAndroidHardwareBufferInfoANDROID androidHardwareBufferInfo = {
@@ -162,7 +162,7 @@ VulkanPlatform::ImageData allocateExternalImage(void* externalBuffer,
         .memoryTypeIndex = metadata.memoryTypeBits};
     result = vkAllocateMemory(device, &allocInfo, allocator, &data.second);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkAllocateMemory failed with error=" << result;
+            << "vkAllocateMemory failed with error=" << static_cast<int32_t>(result);
 
     return data;
 }
@@ -197,9 +197,11 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
     };
     VkResult result = vkGetAndroidHardwareBufferPropertiesANDROID(device, buffer, &properties);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkGetAndroidHardwareBufferProperties failed with error=" << result;
+            << "vkGetAndroidHardwareBufferProperties failed with error="
+            << static_cast<int32_t>(result);
 
-    FILAMENT_CHECK_POSTCONDITION(metadata.format == formatInfo.format);
+    FILAMENT_CHECK_POSTCONDITION(metadata.format == formatInfo.format)
+            << "mismatched image format for external image (AHB)";
     metadata.externalFormat = formatInfo.externalFormat;
     metadata.allocationSize = properties.allocationSize;
     metadata.memoryTypeBits = properties.memoryTypeBits;
@@ -212,7 +214,7 @@ VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* external
     ImageData data = allocateExternalImage(externalImage, device, allocator, metadata);
     VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkBindImageMemory error=" << result << ".";
+            << "vkBindImageMemory error=" << static_cast<int32_t>(result);
     return data;
 }
 
@@ -234,7 +236,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
     VkResult const result =
             vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC, (VkSurfaceKHR*) &surface);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkCreateAndroidSurfaceKHR with error=" << result;
+            << "vkCreateAndroidSurfaceKHR with error=" << static_cast<int32_t>(result);
     return {surface, extent};
 }
 }

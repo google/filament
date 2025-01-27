@@ -19,14 +19,20 @@
 #include "Culler.h"
 
 #include <utils/compiler.h>
-#include <utils/Log.h>
+#include <utils/ostream.h>
+
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat4.h>
+
+#include <algorithm>
 
 using namespace filament::math;
 
 namespace filament {
 
 Frustum::Frustum(const mat4f& pv) {
-    Frustum::setProjection(pv);
+    setProjection(pv);
 }
 
 // NOTE: if we don't specify noinline here, LLVM inlines this huge function into
@@ -68,7 +74,7 @@ void Frustum::setProjection(const mat4f& pv) {
     mPlanes[5] = n;
 }
 
-float4 Frustum::getNormalizedPlane(Frustum::Plane plane) const noexcept {
+float4 Frustum::getNormalizedPlane(Plane plane) const noexcept {
     return mPlanes[size_t(plane)];
 }
 
@@ -89,7 +95,7 @@ bool Frustum::intersects(const float4& sphere) const noexcept {
     return Culler::intersects(*this, sphere);
 }
 
-float Frustum::contains(float3 p) const noexcept {
+float Frustum::contains(float3 const p) const noexcept {
     float const l = dot(mPlanes[0].xyz, p) + mPlanes[0].w;
     float const b = dot(mPlanes[1].xyz, p) + mPlanes[1].w;
     float const r = dot(mPlanes[2].xyz, p) + mPlanes[2].w;
