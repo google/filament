@@ -47,6 +47,10 @@ VulkanLayout VulkanAttachment::getLayout() const {
     return texture ? texture->getLayout(layer, level) : VulkanLayout::UNDEFINED;
 }
 
+uint32_t VulkanAttachment::getLayerCount() const {
+    return texture ? texture->getPrimaryViewRange().layerCount : 1;
+}
+
 VkExtent2D VulkanAttachment::getExtent2D() const {
     assert_invariant(texture);
     return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };

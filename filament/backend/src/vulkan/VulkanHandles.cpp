@@ -276,20 +276,24 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
 
     VulkanAttachment color = {};
     color.texture = swapchain->getCurrentColor();
+    color.layerCount = color.getLayerCount();
     mInfo->attachments = {color};
 
     auto& fbkey = mInfo->fbkey;
     auto& rpkey = mInfo->rpkey;
 
     rpkey.colorFormat[0] = color.getFormat();
+    rpkey.viewCount = color.layerCount;
     fbkey.width = width;
     fbkey.height = height;
+    fbkey.layers = color.layerCount;
     fbkey.color[0] = color.getImageView();
     fbkey.resolve[0] = VK_NULL_HANDLE;
 
     if (swapchain->getDepth()) {
         VulkanAttachment depth = {};
         depth.texture = swapchain->getDepth();
+        depth.layerCount = depth.getLayerCount();
         mInfo->attachments.push_back(depth);
         mInfo->depthIndex = 1;
 
