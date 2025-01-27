@@ -215,6 +215,14 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureViewSwizzle,
         backend::TextureSwizzle, b,
         backend::TextureSwizzle, a)
 
+DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage2,
+        backend::SamplerType, target,
+        backend::TextureFormat, format,
+        uint32_t, width,
+        uint32_t, height,
+        backend::TextureUsage, usage,
+        backend::Platform::ExternalImageHandleRef, image)
+
 DECL_DRIVER_API_R_N(backend::TextureHandle, createTextureExternalImage,
         backend::SamplerType, target,
         backend::TextureFormat, format,
@@ -355,6 +363,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)

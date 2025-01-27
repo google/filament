@@ -16,7 +16,92 @@
 
 #include <backend/Platform.h>
 
+#include <utils/compiler.h>
+
+#include <atomic>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+
 namespace filament::backend {
+
+void Platform::ExternalImageHandle::incref(ExternalImage* p) noexcept {
+    if (p) {
+        // incrementing the ref-count doesn't acquire or release anything
+        p->mRefCount.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+void Platform::ExternalImageHandle::decref(ExternalImage* p) noexcept {
+    if (p) {
+        // When decrementing the ref-count, unless it reaches zero, there is no need to acquire data; we need to
+        // release all previous writes though so they can be visible to the thread that will actually delete the
+        // object.
+        if (p->mRefCount.fetch_sub(1, std::memory_order_release) == 1) {
+            // if we reach zero, we're about to delete the object, we need to acquire all previous writes from other
+            // threads (i.e.: the memory from other threads prior to the decref() need to be visible now.
+            std::atomic_thread_fence(std::memory_order_acquire);
+            delete p;
+        }
+    }
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle() noexcept = default;
+
+Platform::ExternalImageHandle::~ExternalImageHandle() noexcept {
+    decref(mTarget);
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle(ExternalImage* p) noexcept
+        : mTarget(p) {
+    incref(mTarget);
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle(ExternalImageHandle const& rhs) noexcept
+        : mTarget(rhs.mTarget) {
+    incref(mTarget);
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle(ExternalImageHandle&& rhs) noexcept
+        : mTarget(rhs.mTarget) {
+    rhs.mTarget = nullptr;
+}
+
+Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(ExternalImageHandle const& rhs) noexcept {
+    if (UTILS_LIKELY(this != &rhs)) {
+        incref(rhs.mTarget);
+        decref(mTarget);
+        mTarget = rhs.mTarget;
+    }
+    return *this;
+}
+
+Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(ExternalImageHandle&& rhs) noexcept {
+    if (UTILS_LIKELY(this != &rhs)) {
+        decref(mTarget);
+        mTarget = rhs.mTarget;
+        rhs.mTarget = nullptr;
+    }
+    return *this;
+}
+
+void Platform::ExternalImageHandle::clear() noexcept {
+    decref(mTarget);
+    mTarget = nullptr;
+}
+
+void Platform::ExternalImageHandle::reset(ExternalImage* p) noexcept {
+    incref(p);
+    decref(mTarget);
+    mTarget = p;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+Platform::ExternalImage::~ExternalImage() noexcept = default;
+
+// --------------------------------------------------------------------------------------------------------------------
 
 Platform::Platform() noexcept = default;
 

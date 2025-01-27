@@ -513,6 +513,14 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
+void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage,
+        Platform::ExternalImageHandleRef image) {
+    // FIXME: implement createTextureExternalImage2R
+}
+
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th,
         backend::SamplerType target,
         backend::TextureFormat format,
@@ -744,6 +752,10 @@ Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureViewSwizzleS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImage2S() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
@@ -1216,6 +1228,10 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
             "update3DImage(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width = "
             "%d, height = %d, depth = %d, data = ?)\n",
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
+}
+
+void MetalDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+    // FIXME: implement setupExternalImage2
 }
 
 void MetalDriver::setupExternalImage(void* image) {
