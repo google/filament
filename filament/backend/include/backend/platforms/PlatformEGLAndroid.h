@@ -57,6 +57,11 @@ protected:
     Driver* createDriver(void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
 
+    /**
+     * Creates an ExternalImage from a EGLImageKHR
+     */
+    ExternalImageHandle createExternalImage(AHardwareBuffer const *buffer, bool sRGB) noexcept;
+
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
@@ -88,6 +93,15 @@ protected:
      * @return source.image contains an EGLImage
      */
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
+
+    bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
+
+    struct ExternalImageEGLAndroid : public ExternalImageEGL {
+        AHardwareBuffer* aHardwareBuffer = nullptr;
+        bool sRGB = false;
+    protected:
+        ~ExternalImageEGLAndroid() override;
+    };
 
 protected:
     bool makeCurrent(ContextType type,

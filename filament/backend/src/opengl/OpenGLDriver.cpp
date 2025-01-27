@@ -576,6 +576,10 @@ Handle<HwTexture> OpenGLDriver::createTextureViewSwizzleS() noexcept {
     return initHandle<GLTexture>();
 }
 
+Handle<HwTexture> OpenGLDriver::createTextureExternalImage2S() noexcept {
+    return initHandle<GLTexture>();
+}
+
 Handle<HwTexture> OpenGLDriver::createTextureExternalImageS() noexcept {
     return initHandle<GLTexture>();
 }
@@ -989,8 +993,7 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
 }
 
 void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
-        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
-        backend::TextureSwizzle a) {
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
 
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
@@ -1050,6 +1053,46 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     ref->count++;
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerType target,
+    TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
+    Platform::ExternalImageHandleRef image) {
+    DEBUG_MARKER()
+
+    usage |= TextureUsage::SAMPLEABLE;
+    usage &= ~TextureUsage::UPLOADABLE;
+
+    auto& gl = mContext;
+    GLenum internalFormat = getInternalFormat(format);
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        // on ES2, format and internal format must match
+        // FIXME: handle compressed texture format
+        internalFormat = textureFormatToFormatAndType(format).first;
+    }
+    assert_invariant(internalFormat);
+
+    GLTexture* const t = construct<GLTexture>(th, target, 1, 1, width, height, 1, format, usage);
+    assert_invariant(t);
+
+    t->externalTexture = mPlatform.createExternalImageTexture();
+    if (t->externalTexture) {
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+        // internalFormat actually depends on the external image, but it doesn't matter
+        // because it's not used anywhere for anything important.
+        t->gl.internalFormat = internalFormat;
+        t->gl.baseLevel = 0;
+        t->gl.maxLevel = 0;
+        t->gl.external = true; // forces bindTexture() call (they're never cached)
+    }
+
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+        // the target and id can be reset each time
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+    }
 }
 
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType target,
@@ -1864,7 +1907,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                         detachStream(t);
                     }
                     if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-                        mPlatform.destroyExternalImage(t->externalTexture);
+                        mPlatform.destroyExternalImageTexture(t->externalTexture);
                     } else {
                         glDeleteTextures(1, &t->gl.id);
                     }
@@ -2801,6 +2844,10 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
     scheduleDestroy(std::move(p));
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+    mPlatform.retainExternalImage(image);
 }
 
 void OpenGLDriver::setupExternalImage(void* image) {

@@ -121,12 +121,22 @@ OpenGLPlatform::ExternalTexture* OpenGLPlatform::createExternalImageTexture() no
     return nullptr;
 }
 
-void OpenGLPlatform::destroyExternalImage(
+void OpenGLPlatform::destroyExternalImageTexture(
         UTILS_UNUSED ExternalTexture* texture) noexcept {
 }
 
 void OpenGLPlatform::retainExternalImage(
+        UTILS_UNUSED ExternalImageHandleRef externalImage) noexcept {
+}
+
+void OpenGLPlatform::retainExternalImage(
         UTILS_UNUSED void* externalImage) noexcept {
+}
+
+bool OpenGLPlatform::setExternalImage(
+        UTILS_UNUSED ExternalImageHandleRef externalImage,
+        UTILS_UNUSED ExternalTexture* texture) noexcept {
+    return false;
 }
 
 bool OpenGLPlatform::setExternalImage(
