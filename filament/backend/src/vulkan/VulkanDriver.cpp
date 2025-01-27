@@ -552,6 +552,15 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
    texture.inc();
 }
 
+void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th,
+        backend::SamplerType target,  backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage,
+        Platform::ExternalImageHandleRef externalImage) {
+    FVK_SYSTRACE_SCOPE();
+
+    // FIXME: implement createTextureExternalImage2R
+}
+
 void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* externalImage) {
@@ -789,6 +798,10 @@ Handle<HwTexture> VulkanDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
+Handle<HwTexture> VulkanDriver::createTextureExternalImage2S() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
@@ -1169,6 +1182,9 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     texture->updateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
     scheduleDestroy(std::move(data));
+}
+
+void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
 }
 
 void VulkanDriver::setupExternalImage(void* image) {

@@ -17,6 +17,10 @@
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 
+#include <backend/Handle.h>
+
+#include <stdint.h>
+
 namespace filament::backend {
 
 Driver* NoopDriver::create() {
@@ -260,6 +264,9 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
         uint32_t width, uint32_t height, uint32_t depth,
         PixelBufferDescriptor&& data) {
     scheduleDestroy(std::move(data));
+}
+
+void NoopDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
 }
 
 void NoopDriver::setupExternalImage(void* image) {

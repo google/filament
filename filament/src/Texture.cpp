@@ -58,6 +58,10 @@ void Texture::setImage(Engine& engine, size_t const level,
     downcast(this)->setImage(downcast(engine), level, std::move(buffer), faceOffsets);
 }
 
+void Texture::setExternalImage(Engine& engine, ExternalImageHandleRef image) noexcept {
+    downcast(this)->setExternalImage(downcast(engine), image);
+}
+
 void Texture::setExternalImage(Engine& engine, void* image) noexcept {
     downcast(this)->setExternalImage(downcast(engine), image);
 }
