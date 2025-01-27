@@ -561,7 +561,7 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
 
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
         mAllocator, &mResourceManager, &mCommands, data.first, data.second, metadata.format,
-        1, metadata.width, metadata.height, usage, mStagePool);
+        1, metadata.width, metadata.height, metadata.layerCount, usage, mStagePool);
 
     texture.inc();
 }
