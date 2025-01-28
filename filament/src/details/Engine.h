@@ -705,7 +705,7 @@ public:
               &features.backend.opengl.assert_native_window_is_valid, true },
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
-              &features.engine.shadows.use_shadow_atlas, true }
+              &features.engine.shadows.use_shadow_atlas, false }
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
