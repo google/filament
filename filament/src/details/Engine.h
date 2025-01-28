@@ -716,7 +716,7 @@ public:
               &features.backend.opengl.assert_native_window_is_valid, true },
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
-              &features.engine.shadows.use_shadow_atlas, true },
+              &features.engine.shadows.use_shadow_atlas, false },
             { "features.engine.debug.assert_material_instance_in_use",
               "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
               &features.engine.debug.assert_material_instance_in_use, false }
