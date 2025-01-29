@@ -87,6 +87,7 @@ void VulkanSwapChain::update() {
         mStagePool);
 
     mExtent = bundle.extent;
+    mLayerCount = bundle.layerCount;
 }
 
 void VulkanSwapChain::present() {
@@ -97,7 +98,7 @@ void VulkanSwapChain::present() {
                 .baseMipLevel = 0,
                 .levelCount = 1,
                 .baseArrayLayer = 0,
-                .layerCount = 1,
+                .layerCount = mLayerCount,
         };
         mColors[mCurrentSwapIndex]->transitionLayout(&commands, subresources, VulkanLayout::PRESENT);
     }

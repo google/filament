@@ -144,6 +144,16 @@ inline VulkanLayout getDefaultLayoutImpl(VkImageUsageFlags vkusage) {
     return getDefaultLayoutImpl(usage);
 }
 
+SamplerType getSamplerTypeFromDepth(uint32_t const depth) {
+  return depth > 1 ? SamplerType::SAMPLER_2D_ARRAY
+                                  : SamplerType::SAMPLER_2D;
+}
+
+uint8_t getLayerCountFromDepth(uint32_t const depth) {
+    return getLayerCount(getSamplerTypeFromDepth(depth), depth);
+}
+
+
 } // anonymous namespace
 
 VulkanTextureState::VulkanTextureState(VkDevice device, VmaAllocator allocator,
@@ -166,11 +176,11 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, VkImage image,
         VkDeviceMemory memory, VkFormat format, uint8_t samples, uint32_t width,
         uint32_t height, uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool)
-    : HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, depth, TextureFormat::UNUSED,
+    : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth, TextureFormat::UNUSED,
               tusage),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, device,
               allocator, commands, stagePool, format, fvkutils::getViewType(SamplerType::SAMPLER_2D),
-              1, depth, getDefaultLayoutImpl(tusage), any(usage & TextureUsage::PROTECTED))) {
+              /*mipLevels=*/1, getLayerCountFromDepth(depth), getDefaultLayoutImpl(tusage), any(usage & TextureUsage::PROTECTED))) {
     mState->mTextureImage = image;
     mState->mTextureImageMemory = memory;
     mPrimaryViewRange = mState->mFullViewRange;
