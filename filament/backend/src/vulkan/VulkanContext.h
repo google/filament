@@ -52,7 +52,6 @@ struct VulkanAttachment {
     VkImage getImage() const;
     VkFormat getFormat() const;
     VulkanLayout getLayout() const;
-    uint32_t getLayerCount() const;
     VkExtent2D getExtent2D() const;
     VkImageView getImageView();
     // TODO: maybe embed aspect into the attachment or texture itself.
