@@ -122,13 +122,11 @@ size_t JsonWriter::getJsonSize() const {
 
 bool JsonWriter::writeFrameGraphInfo(const FrameGraphInfo& frameGraph) {
     std::ostringstream os;
-    os << "{\n";
 
     writeViewName(os, frameGraph);
     writePasses(os, frameGraph);
     writeResources(os, frameGraph);
 
-    os << "}\n";
 
     mJsonString = utils::CString(os.str().c_str());
     return true;
