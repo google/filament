@@ -24,9 +24,12 @@
 
 namespace filament::backend {
 
+struct PlatformMetalImpl;
+
 class PlatformMetal final : public Platform {
 public:
-    ~PlatformMetal() override;
+    PlatformMetal();
+    ~PlatformMetal() noexcept override;
 
     Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
@@ -54,9 +57,28 @@ public:
      */
     id<MTLCommandBuffer> createAndEnqueueCommandBuffer() noexcept;
 
-private:
-    id<MTLCommandQueue> mCommandQueue = nil;
+    /**
+     * The action to take if a Drawable cannot be acquired.
+     *
+     * Each frame rendered requires a CAMetalDrawable texture, which is presented on-screen at the
+     * completion of each frame. These are limited and provided round-robin style by the system.
+     */
+    enum class DrawableFailureBehavior : uint8_t {
+        /**
+         * Terminates the application and reports an error message (default).
+         */
+        PANIC,
+        /*
+         * Aborts execution of the current frame. The Metal backend will attempt to acquire a new
+         * drawable at the next frame.
+         */
+        ABORT_FRAME
+    };
+    void setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept;
+    DrawableFailureBehavior getDrawableFailureBehavior() const noexcept;
 
+private:
+    PlatformMetalImpl* pImpl = nullptr;
 };
 
 } // namespace filament::backend

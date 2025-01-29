@@ -246,6 +246,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    mContext->currentFrame = frameId;
     DEBUG_LOG("beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
             monotonic_clock_ns, refreshIntervalNs, frameId);
 #if defined(FILAMENT_METAL_PROFILING)
@@ -1268,6 +1269,13 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
     renderTarget->setUpRenderPassAttachments(descriptor, params);
 
+    if (renderTarget->involvesAbandonedSwapChain()) {
+        mContext->currentRenderPassAbandoned = true;
+        return;
+    } else {
+        mContext->currentRenderPassAbandoned = false;
+    }
+
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
     if (!mContext->groupMarkers.empty()) {
@@ -1328,6 +1336,10 @@ void MetalDriver::endRenderPass(int dummy) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, OS_SIGNPOST_ID_EXCLUSIVE, "Render pass");
 #endif
+
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
 
     [mContext->currentRenderPassEncoder endEncoding];
 
@@ -1629,6 +1641,11 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
     auto srcTarget = handle_cast<MetalRenderTarget>(src);
     auto dstTarget = handle_cast<MetalRenderTarget>(dst);
 
+    if (UTILS_UNLIKELY(srcTarget->involvesAbandonedSwapChain() ||
+                dstTarget->involvesAbandonedSwapChain())) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
             << "blitDEPRECATED only supports COLOR0";
 
@@ -1913,6 +1930,10 @@ void MetalDriver::bindDescriptorSet(
 }
 
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
     DEBUG_LOG("draw2(...)\n");
@@ -1956,6 +1977,9 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
 
 void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
         uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     MetalRenderPrimitive const* const rp = handle_cast<MetalRenderPrimitive>(rph);
     ps.primitiveType = rp->type;
     ps.vertexBufferInfo = rp->vertexBuffer->vbih;

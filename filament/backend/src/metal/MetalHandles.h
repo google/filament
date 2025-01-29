@@ -90,6 +90,8 @@ public:
 
     bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
+    bool isAbandoned() const;
+
 private:
 
     enum class SwapChainType {
@@ -118,6 +120,8 @@ private:
     std::shared_ptr<std::mutex> layerDrawableMutex;
     MetalExternalImage externalImage;
     SwapChainType type;
+
+    int64_t abandonedUntilFrame = -1;
 
     // These fields store a callback to notify the client that a frame is ready for presentation. If
     // !frameScheduled.callback, then the Metal backend automatically calls presentDrawable when the
@@ -345,6 +349,8 @@ public:
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
 
     void setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor, const RenderPassParams& params);
+
+    bool involvesAbandonedSwapChain() const noexcept;
 
     MTLViewport getViewportFromClientViewport(
             Viewport rect, float depthRangeNear, float depthRangeFar) {

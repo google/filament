@@ -146,6 +146,10 @@ NSUInteger MetalSwapChain::getSurfaceHeight() const {
     return (NSUInteger) layer.drawableSize.height;
 }
 
+bool MetalSwapChain::isAbandoned() const {
+    return context.currentFrame < abandonedUntilFrame;
+}
+
 id<MTLTexture> MetalSwapChain::acquireDrawable() {
     if (drawable) {
         return drawable.texture;
@@ -186,9 +190,18 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         drawable = [layer nextDrawable];
     }
 
-    (void) platform; // temporarily silence unused warning
+    if (UTILS_UNLIKELY(drawable == nil)) {
+        switch (platform.getDrawableFailureBehavior()) {
+            case PlatformMetal::DrawableFailureBehavior::PANIC:
+                FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
+                break;
 
-    FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
+            case PlatformMetal::DrawableFailureBehavior::ABORT_FRAME:
+                abandonedUntilFrame = context.currentFrame + 1;
+                return nil;
+        }
+    }
+
     return drawable.texture;
 }
 
@@ -1125,12 +1138,20 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 }
 
+bool MetalRenderTarget::involvesAbandonedSwapChain() const noexcept {
+    const auto* draw = context->currentDrawSwapChain;
+    const auto* read = context->currentReadSwapChain;
+    return (draw && draw->isAbandoned()) || (read && read->isAbandoned());
+}
+
 MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
     assert_invariant(index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
         assert_invariant(context->currentDrawSwapChain);
         result.texture = context->currentDrawSwapChain->acquireDrawable();
+        // acquireDrawable may fail to acquire the drawable, in which case result.texture will be
+        // nil, and an invalid attachment
     }
     return result;
 }
@@ -1141,6 +1162,8 @@ MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t i
     if (index == 0 && defaultRenderTarget) {
         assert_invariant(context->currentReadSwapChain);
         result.texture = context->currentReadSwapChain->acquireDrawable();
+        // acquireDrawable may fail to acquire the drawable, in which case result.texture will be
+        // nil, and an invalid attachment
     }
     return result;
 }
