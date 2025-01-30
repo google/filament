@@ -29,8 +29,6 @@
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
-#include "private/backend/SamplerGroup.h"
-
 #include <backend/DriverEnums.h>
 
 #include <utils/bitset.h>

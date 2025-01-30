@@ -86,7 +86,8 @@ VulkanTimestamps::VulkanTimestamps(VkDevice device) : mDevice(device) {
     std::unique_lock<utils::Mutex> lock(mMutex);
     tqpCreateInfo.queryCount = mUsed.size() * 2;
     VkResult result = vkCreateQueryPool(mDevice, &tqpCreateInfo, VKALLOC, &mPool);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateQueryPool error.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateQueryPool failed."
+                                                       << " error=" << static_cast<int32_t>(result);
     mUsed.reset();
 }
 
@@ -136,7 +137,7 @@ VulkanTimestamps::QueryResult VulkanTimestamps::getResult(
             vkGetQueryPoolResults(mDevice, mPool, index, 2, dataSize, (void*) result.data(), stride,
                     VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
     FILAMENT_CHECK_POSTCONDITION(vkresult == VK_SUCCESS || vkresult == VK_NOT_READY)
-            << "vkGetQueryPoolResults error: " << static_cast<int32_t>(vkresult);
+            << "vkGetQueryPoolResults error=" << static_cast<int32_t>(vkresult);
     if (vkresult == VK_NOT_READY) {
         return {0, 0, 0, 0};
     }

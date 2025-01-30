@@ -157,7 +157,8 @@ DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const
         VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo,
                 VKALLOC, &mDebugMessenger);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "Unable to create Vulkan debug messenger.";
+                << "Unable to create Vulkan debug messenger. error="
+                << static_cast<int32_t>(result);
     }
 #endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 }
@@ -231,7 +232,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
         VkResult result = createDebugReportCallback(mPlatform->getInstance(), &cbinfo, VKALLOC,
                 &mDebugCallback);
         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "Unable to create Vulkan debug callback.";
+                << "Unable to create Vulkan debug callback."
+                << " error=" << static_cast<int32_t>(result);
     }
 #endif
 
@@ -246,7 +248,6 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    VulkanSamplerGroup            :  16       few
     //    HwStream                      :  24       few
     //    VulkanFence                   :  32       few
     //    VulkanProgram                 :  32       moderate
@@ -269,7 +270,6 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
            << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
            << "\nVulkanVertexBufferInfo: " << sizeof(VulkanVertexBufferInfo)
            << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
-           << "\nVulkanSamplerGroup: " << sizeof(VulkanSamplerGroup)
            << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
            << "\nVulkanTexture: " << sizeof(VulkanTexture)
            << "\nVulkanTimerQuery: " << sizeof(VulkanTimerQuery)

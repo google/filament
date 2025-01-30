@@ -14,10 +14,24 @@
 
 #!/usr/bin/bash
 
-set -e
-set -x
+set -xe
+
+CLANG_VERSION=`clang --version | head -n 1 | awk '{ print $4 }' | python3 -c "import sys; print(sys.stdin.read().split('.')[0])"`
 
 sudo apt-get -y build-dep mesa
+
+# Uninstall llvm-18 (and above) as they conflict with the mesa version we are compiling.
+set +e
+sudo apt -y remove llvm-18 llvm-18-*
+set -e
+
+sudo apt -y install clang-${CLANG_VERSION} \
+     libc++-${CLANG_VERSION}-dev \
+     libc++abi-${CLANG_VERSION}-dev \
+     llvm-${CLANG_VERSION} \
+     llvm-${CLANG_VERSION}-{dev,tools,runtime}
+
+export CXX=`which clang++` && export CC=`which clang`
 
 git clone https://gitlab.freedesktop.org/mesa/mesa.git
 

@@ -42,7 +42,6 @@
 namespace filament::backend {
 
 class VulkanPlatform;
-struct VulkanSamplerGroup;
 
 // The maximum number of attachments for any renderpass (color + resolve + depth)
 constexpr uint8_t MAX_RENDERTARGET_ATTACHMENT_TEXTURES =
@@ -135,7 +134,6 @@ private:
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
-    VulkanSamplerGroup* mSamplerBindings[MAX_SAMPLER_BINDING_COUNT] = {};
     VulkanReadPixels mReadPixels;
     VulkanDescriptorSetManager mDescriptorSetManager;
 
