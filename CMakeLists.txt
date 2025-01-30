@@ -749,7 +749,7 @@ endfunction()
 # ==================================================================================================
 
 # Common to all platforms
-add_subdirectory(${EXTERNAL}/libgtest/tnt)
+# add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/camutils)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
@@ -809,6 +809,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${EXTERNAL}/spirv-headers)
+    add_subdirectory(${EXTERNAL}/dawn)
 endif()
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
