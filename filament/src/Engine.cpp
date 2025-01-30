@@ -338,6 +338,10 @@ void Engine::flushAndWait() {
     downcast(this)->flushAndWait();
 }
 
+bool Engine::flushAndWait(uint64_t timeout) {
+    return downcast(this)->flushAndWait(timeout);
+}
+
 void Engine::flush() {
     downcast(this)->flush();
 }

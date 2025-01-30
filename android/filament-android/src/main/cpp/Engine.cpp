@@ -392,11 +392,11 @@ Java_com_google_android_filament_Engine_nIsValidSwapChain(JNIEnv*, jclass,
     return (jboolean)engine->isValid((SwapChain*)nativeSwapChain);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv*, jclass,
-        jlong nativeEngine) {
+        jlong nativeEngine, jlong timeout) {
     Engine* engine = (Engine*) nativeEngine;
-    engine->flushAndWait();
+    return engine->flushAndWait((uint64_t)timeout);
 }
 
 extern "C" JNIEXPORT void JNICALL
