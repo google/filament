@@ -30,6 +30,7 @@
 #include "MetalState.h" // for MetalState::VertexDescription
 
 #include <backend/DriverEnums.h>
+#include <backend/platforms/PlatformMetal.h>
 
 #include <utils/bitset.h>
 #include <utils/CString.h>
@@ -51,13 +52,16 @@ class MetalSwapChain : public HwSwapChain {
 public:
 
     // Instantiate a SwapChain from a CAMetalLayer
-    MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags);
+    MetalSwapChain(MetalContext& context, PlatformMetal& platform, CAMetalLayer* nativeWindow,
+            uint64_t flags);
 
     // Instantiate a SwapChain from a CVPixelBuffer
-    MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags);
+    MetalSwapChain(MetalContext& context, PlatformMetal& platform, CVPixelBufferRef pixelBuffer,
+            uint64_t flags);
 
     // Instantiate a headless SwapChain.
-    MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags);
+    MetalSwapChain(MetalContext& context, PlatformMetal& platform, int32_t width, int32_t height,
+            uint64_t flags);
 
     ~MetalSwapChain();
 
@@ -103,6 +107,7 @@ private:
     void ensureDepthStencilTexture();
 
     MetalContext& context;
+    PlatformMetal& platform;
     id<CAMetalDrawable> drawable = nil;
     id<MTLTexture> depthStencilTexture = nil;
     id<MTLTexture> headlessDrawable = nil;

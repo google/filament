@@ -69,8 +69,10 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     return MTLTextureUsage(u);
 }
 
-MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
+MetalSwapChain::MetalSwapChain(
+        MetalContext& context, PlatformMetal& platform, CAMetalLayer* nativeWindow, uint64_t flags)
     : context(context),
+      platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       layer(nativeWindow),
       layerDrawableMutex(std::make_shared<std::mutex>()),
@@ -94,15 +96,19 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
     layer.device = context.device;
 }
 
-MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
+MetalSwapChain::MetalSwapChain(MetalContext& context, PlatformMetal& platform, int32_t width,
+        int32_t height, uint64_t flags)
     : context(context),
+      platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       headlessWidth(width),
       headlessHeight(height),
       type(SwapChainType::HEADLESS) {}
 
-MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
+MetalSwapChain::MetalSwapChain(MetalContext& context, PlatformMetal& platform,
+        CVPixelBufferRef pixelBuffer, uint64_t flags)
     : context(context),
+      platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       externalImage(MetalExternalImage::createFromImage(context, pixelBuffer)),
       type(SwapChainType::CVPIXELBUFFERREF) {
@@ -179,6 +185,8 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         std::lock_guard<std::mutex> lock(*layerDrawableMutex);
         drawable = [layer nextDrawable];
     }
+
+    (void) platform; // temporarily silence unused warning
 
     FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
     return drawable.texture;

@@ -631,19 +631,19 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
-        construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, pixelBuffer, flags);
         // This release matches the retain call in setupExternalImage. The MetalSwapchain will have
         // retained the buffer by now.
         CVPixelBufferRelease((CVPixelBufferRef)pixelBuffer);
     } else {
         auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-        construct_handle<MetalSwapChain>(sch, *mContext, metalLayer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, metalLayer, flags);
     }
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(sch, *mContext, width, height, flags);
+    construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, width, height, flags);
 }
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
