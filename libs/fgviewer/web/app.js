@@ -30,9 +30,9 @@ const CODE_VIEWER_BOTTOM_ROW_HEIGHT = 60;
 const REGULAR_FONT_SIZE = 12;
 
 // Constants for color coding operations
-const READ_COLOR = '#cce5ff';
-const WRITE_COLOR = '#d4edda';
-const CREATE_COLOR = '#f8d7da';
+const READ_COLOR = '#3ac224';
+const WRITE_COLOR = '#d43232';
+const NO_ACCESS_COLOR = 'rgba(216,221,231,0.33)';
 const READ_WRITE_COLOR = '#ffeb99';
 const DEFAULT_COLOR = '#ffffff';
 
@@ -108,7 +108,7 @@ class FrameGraphSidePanel extends LitElement {
         return `
             :host {
                 background: ${this.connected ? BACKGROUND_COLOR : DARKER_INACTIVE_COLOR};
-                width:100%;
+                width: 100%;
                 max-width: 250px;
                 min-width: 180px;
                 padding: 10px 20px;
@@ -232,28 +232,25 @@ class FrameGraphTable extends LitElement {
     static get styles() {
         return css`
             :host {
-                display: flex;
+                display: block;
                 flex-grow: 1;
-                padding: 10px;
-                overflow: auto;
-            }
-            #editor {
-                width: 100%;
-                height: 100%;
             }
             .table-container {
-                width: 100%;
                 max-height: 100%;
+                max-width: 100%;
                 overflow: auto;
+                border: 1px solid #ddd;
             }
-            table {
+            .scrollable-table {
                 width: 100%;
+                height: 100%;
                 border-collapse: collapse;
             }
-            th, td {
+            .scrollable-table th,
+            .scrollable-table td {
+                padding: 12px;
+                text-align: left;
                 border: 1px solid #ddd;
-                text-align: center;
-                padding: 8px;
             }
             th {
                 background-color: #f2f2f2;
@@ -295,7 +292,7 @@ class FrameGraphTable extends LitElement {
         switch (type) {
             case 'read': return READ_COLOR;
             case 'write': return WRITE_COLOR;
-            case 'create': return CREATE_COLOR;
+            case 'no-access': return NO_ACCESS_COLOR;
             case 'read-write': return READ_WRITE_COLOR;
             default: return DEFAULT_COLOR;
         }
@@ -303,13 +300,13 @@ class FrameGraphTable extends LitElement {
 
     _buildTable() {
         if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
-
+        console.log(this.frameGraphData);
         const allPasses = this.frameGraphData.passes.map(pass => pass.name);
         const resources = Object.values(this.frameGraphData.resources);
 
         return html`
-            <div class="table-container" id="editor">
-                <table>
+            <div class="table-container">
+                <table class="scrollable-table">
                     <thead>
                     <tr>
                         <th>Resources</th>
@@ -320,14 +317,24 @@ class FrameGraphTable extends LitElement {
                     ${resources.map(resource => html`
                         <tr>
                             <td>${resource.name}</td>
-                            ${allPasses.map(passName => {
+                            ${allPasses.map((passName, index) => {
                                 const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
                                 const isRead = passData?.reads.includes(resource.id);
                                 const isWrite = passData?.writes.includes(resource.id);
                                 let type = null;
+                                const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
+                                    const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                    return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
+                                });
+                                const willBeUsedLater = allPasses.slice(index + 1).some(p => {
+                                    const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                    return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
+                                });
+                                
                                 if (isRead && isWrite) type = 'read-write';
                                 else if (isRead) type = 'read';
                                 else if (isWrite) type = 'write';
+                                else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
                                 const color = type ? this._getCellColor(type) : DEFAULT_COLOR;
                                 return html`<td style="background-color: ${unsafeCSS(color)};">${type ?? nothing}</td>`;
                             })}
@@ -341,7 +348,7 @@ class FrameGraphTable extends LitElement {
 
     render() {
         return html`
-          ${this._buildTable()}
+            ${this._buildTable()}
         `;
     }
 }
@@ -437,14 +444,14 @@ class FrameGraphViewer extends LitElement {
         return html`
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}"
+                current-framegraph="${this.currentFrameGraph}" >
             </framegraph-sidepanel>
             <framegraph-table id="table" 
                 ?connected="${this.connected}"
                 ?current-framegraph="${this.currentFrameGraph}" 
                 expected-width="${this.tableExpectedWidth}" 
                 expected-height="${this.tableExpectedHeight}" >
-            </framegraph-table>>
+            </framegraph-table>
         `;
     }
 }
