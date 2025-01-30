@@ -65,6 +65,7 @@ filament::backend::Platform* createDefaultMetalPlatform();
 #endif
 
 #include "noop/PlatformNoop.h"
+#include "dawn/DawnPlatform.h"
 
 namespace filament::backend {
 
@@ -105,6 +106,9 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
         #else
             return nullptr;
         #endif
+    }
+    if (*backend == Backend::DAWN) {
+        return new DawnPlatform();
     }
     if (*backend == Backend::METAL) {
 #if defined(FILAMENT_SUPPORTS_METAL)

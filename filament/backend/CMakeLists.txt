@@ -5,6 +5,8 @@ set(TARGET backend)
 set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 
+# get_target_property(DAWN_INCLUDE_DIR dawn_headers INTERFACE_INCLUDE_DIRECTORIES)
+
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
@@ -39,6 +41,8 @@ set(SRCS
         src/ostream.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
+        src/dawn/DawnDriver.cpp
+        src/dawn/DawnPlatform.cpp
         src/Platform.cpp
         src/PlatformFactory.cpp
         src/Program.cpp
@@ -249,9 +253,24 @@ add_definitions(-DSYSTRACE_TAG=2 )
 include_directories(${PUBLIC_HDR_DIR})
 include_directories(src)
 include_directories(${GENERATION_ROOT})
+# include_directories(${DAWN_GEN_HEADERS})
 
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
+
+set(DAWN_BUILD_DIR ${CMAKE_BINARY_DIR}/third_party/dawn)
+add_subdirectory(${EXTERNAL}/dawn ${DAWN_BUILD_DIR})
+set(DAWN_INCLUDE_STATIC ${EXTERNAL}/dawn/include)
+get_target_property(DAWN_GENERATED_HEADERS dawncpp_headers SOURCES)
+message(STATUS "IDRIS: DAW_INCLUDE_DIR ${DAWN_GENERATED_HEADERS}")
+
+list(GET DAWN_GENERATED_HEADERS 2 DAWN_FIRST_GENERATED_HEADER)
+get_filename_component(DAWN_GENERATED_HEADERS_DIR ${DAWN_FIRST_GENERATED_HEADER} DIRECTORY)
+get_filename_component(DAWN_GENERATED_HEADERS_DIR_REDUCED ${DAWN_GENERATED_HEADERS_DIR}/.. ABSOLUTE)
+message(STATUS "DAWN_GENERATED_HEADERS_DIR_REDUCED: ${DAWN_GENERATED_HEADERS_DIR_REDUCED}")
+message(STATUS "DAWN_GENERATED_HEADERS_DIR: ${DAWN_GENERATED_HEADERS_DIR}")
+    target_include_directories(${TARGET} PUBLIC ${DAWN_GENERATED_HEADERS_DIR_REDUCED} ${DAWN_INCLUDE_STATIC})
+
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

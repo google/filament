@@ -139,6 +139,10 @@ public class Engine {
          */
         METAL,
         /**
+         * Select Dawn driver if platform supports webgpu.
+         */
+        DAWN,
+        /**
          * Selects the no-op driver for testing purposes.
          */
         NOOP,

@@ -168,6 +168,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             }
             break;
         case TargetApi::VULKAN:
+        case TargetApi::DAWN:
             out << "#define TARGET_VULKAN_ENVIRONMENT\n";
             break;
         case TargetApi::METAL:
@@ -188,6 +189,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     }
 
     if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::DAWN ||
         mTargetApi == TargetApi::METAL ||
         (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
@@ -295,7 +297,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
             +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
 
-    if (mTargetApi == TargetApi::VULKAN) {
+    if (mTargetApi == TargetApi::VULKAN ||
+        mTargetApi == TargetApi::DAWN) {
         // Note: This is a hack for a hack.
         //
         // Vulkan doesn't support sizing arrays within a block with specialization constants,
@@ -726,6 +729,7 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
         switch (mTargetApi) {
             case TargetApi::METAL:
             case TargetApi::VULKAN:
+            case TargetApi::DAWN:
                 out << "set = " << +set << ", binding = " << +binding << ", ";
                 break;
 
@@ -807,6 +811,7 @@ io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
                 // Note that the set specifier is not covered by the desktop GLSL spec, including
                 // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
                 case TargetApi::VULKAN:
+                case TargetApi::DAWN:
                     out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
                     break;
 
