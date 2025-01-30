@@ -30,7 +30,7 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
-#include "MetalPlatform.h"
+#include <backend/platforms/PlatformMetal.h>
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -57,7 +57,7 @@
 namespace filament {
 namespace backend {
 
-Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+Driver* MetalDriverFactory::create(PlatformMetal* const platform, const Platform::DriverConfig& driverConfig) {
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
@@ -96,7 +96,7 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
 }
 
 UTILS_NOINLINE
-Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+Driver* MetalDriver::create(PlatformMetal* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -109,7 +109,7 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 }
 
 MetalDriver::MetalDriver(
-        MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+        PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept
     : mPlatform(*platform),
       mContext(new MetalContext),
       mHandleAllocator(

@@ -18,9 +18,9 @@
 #define TNT_FILAMENT_DRIVER_METALBUFFER_H
 
 #include "MetalContext.h"
-#include "MetalPlatform.h"
 
 #include <backend/DriverEnums.h>
+#include <backend/platforms/PlatformMetal.h>
 
 #include <Metal/Metal.h>
 
@@ -54,12 +54,12 @@ public:
         }
     }
 
-    static void setPlatform(MetalPlatform* p) { platform = p; }
+    static void setPlatform(PlatformMetal* p) { platform = p; }
 
 private:
     typedef std::chrono::steady_clock clock_t;
 
-    static MetalPlatform* platform;
+    static PlatformMetal* platform;
 
     std::chrono::time_point<clock_t> mBeginning;
     const char* mName;
@@ -141,7 +141,7 @@ public:
         assert_invariant(type != Type::NONE);
         return aliveBuffers[toIndex(type)];
     }
-    static void setPlatform(MetalPlatform* p) { platform = p; }
+    static void setPlatform(PlatformMetal* p) { platform = p; }
 
 private:
     void swap(TrackedMetalBuffer& other) noexcept {
@@ -152,7 +152,7 @@ private:
     id<MTLBuffer> mBuffer;
     Type mType = Type::NONE;
 
-    static MetalPlatform* platform;
+    static PlatformMetal* platform;
     static std::array<uint64_t, TypeCount> aliveBuffers;
 };
 

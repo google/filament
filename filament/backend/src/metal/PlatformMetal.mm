@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "MetalPlatform.h"
+#include <backend/platforms/PlatformMetal.h>
 
 #include "MetalDriverFactory.h"
 
@@ -25,16 +25,16 @@
 namespace filament::backend {
 
 Platform* createDefaultMetalPlatform() {
-    return new MetalPlatform();
+    return new PlatformMetal();
 }
 
-MetalPlatform::~MetalPlatform() = default;
+PlatformMetal::~PlatformMetal() = default;
 
-Driver* MetalPlatform::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
     return MetalDriverFactory::create(this, driverConfig);
 }
 
-id<MTLDevice> MetalPlatform::createDevice() noexcept {
+id<MTLDevice> PlatformMetal::createDevice() noexcept {
     id<MTLDevice> result;
 
 #if !defined(FILAMENT_IOS)
@@ -62,13 +62,13 @@ id<MTLDevice> MetalPlatform::createDevice() noexcept {
     return result;
 }
 
-id<MTLCommandQueue> MetalPlatform::createCommandQueue(id<MTLDevice> device) noexcept {
+id<MTLCommandQueue> PlatformMetal::createCommandQueue(id<MTLDevice> device) noexcept {
     mCommandQueue = [device newCommandQueue];
     mCommandQueue.label = @"Filament";
     return mCommandQueue;
 }
 
-id<MTLCommandBuffer> MetalPlatform::createAndEnqueueCommandBuffer() noexcept {
+id<MTLCommandBuffer> PlatformMetal::createAndEnqueueCommandBuffer() noexcept {
     id<MTLCommandBuffer> commandBuffer = [mCommandQueue commandBuffer];
     [commandBuffer enqueue];
     return commandBuffer;

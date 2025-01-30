@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H
-#define TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H
+#ifndef TNT_FILAMENT_BACKEND_PRIVATE_PLATFORMMETAL_H
+#define TNT_FILAMENT_BACKEND_PRIVATE_PLATFORMMETAL_H
 
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -24,9 +24,9 @@
 
 namespace filament::backend {
 
-class MetalPlatform final : public Platform {
+class PlatformMetal final : public Platform {
 public:
-    ~MetalPlatform() override;
+    ~PlatformMetal() override;
 
     Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
@@ -61,4 +61,4 @@ private:
 
 } // namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H
+#endif // TNT_FILAMENT_BACKEND_PRIVATE_PLATFORMMETAL_H
