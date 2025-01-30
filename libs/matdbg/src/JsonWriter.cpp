@@ -136,13 +136,22 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
     }
 }
 
-static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
+static bool printGlslInfo(ostream& json, const ChunkContainer& container, ChunkType chunkType) {
     std::vector<ShaderInfo> info;
-    info.resize(getShaderCount(container, ChunkType::MaterialGlsl));
-    if (!getShaderInfo(container, info.data(), ChunkType::MaterialGlsl)) {
+    info.resize(getShaderCount(container, chunkType));
+    if (!getShaderInfo(container, info.data(), chunkType)) {
         return false;
     }
-    json << "\"opengl\": [\n";
+    switch (chunkType) {
+        case ChunkType::MaterialEssl1:
+            json << "\"essl1\": [\n";
+            break;
+        case ChunkType::MaterialGlsl:
+            json << "\"opengl\": [\n";
+            break;
+        default:
+            assert(false); // unreachable
+    }
     printShaderInfo(json, info, container);
     json << "],\n";
     return true;
@@ -180,7 +189,10 @@ bool JsonWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     if (!printParametersInfo(json, container)) {
         return false;
     }
-    if (!printGlslInfo(json, container)) {
+    if (!printGlslInfo(json, container, ChunkType::MaterialGlsl)) {
+        return false;
+    }
+    if (!printGlslInfo(json, container, ChunkType::MaterialEssl1)) {
         return false;
     }
     if (!printVkInfo(json, container)) {
@@ -220,29 +232,34 @@ size_t JsonWriter::getJsonSize() const {
 }
 
 bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
-        Backend backend, VariantList activeVariants) {
+        ShaderLanguage shaderLanguage, VariantList activeVariants) {
     vector<ShaderInfo> shaders;
     ostringstream json;
     json << "[\"";
-    switch (backend) {
-        case Backend::OPENGL:
-            shaders.resize(getShaderCount(package, ChunkType::MaterialGlsl));
-            getShaderInfo(package, shaders.data(), ChunkType::MaterialGlsl);
+    ChunkType chunkType;
+    switch (shaderLanguage) {
+        case ShaderLanguage::ESSL1:
+            json << "essl1";
+            chunkType = ChunkType::MaterialEssl1;
+            break;
+        case ShaderLanguage::ESSL3:
             json << "opengl";
+            chunkType = ChunkType::MaterialGlsl;
             break;
-        case Backend::VULKAN:
-            shaders.resize(getShaderCount(package, ChunkType::MaterialSpirv));
-            getShaderInfo(package, shaders.data(), ChunkType::MaterialSpirv);
+        case ShaderLanguage::SPIRV:
             json << "vulkan";
+            chunkType = ChunkType::MaterialSpirv;
             break;
-        case Backend::METAL:
-            shaders.resize(getShaderCount(package, ChunkType::MaterialMetal));
-            getShaderInfo(package, shaders.data(), ChunkType::MaterialMetal);
+        case ShaderLanguage::MSL:
             json << "metal";
+            chunkType = ChunkType::MaterialMetal;
             break;
         default:
             return false;
     }
+    shaders.resize(getShaderCount(package, chunkType));
+    getShaderInfo(package, shaders.data(), chunkType);
+
     json << "\"";
     for (size_t variant = 0; variant < activeVariants.size(); variant++) {
         if (activeVariants[variant]) {

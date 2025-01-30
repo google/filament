@@ -204,6 +204,7 @@ private:
     }
 
     ShaderModel getShaderModel() const noexcept final;
+    ShaderLanguage getShaderLanguage() const noexcept final;
 
     /*
      * Driver interface
