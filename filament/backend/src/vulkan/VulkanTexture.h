@@ -148,10 +148,7 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     VkImageView getViewForType(VkImageSubresourceRange const& range, VkImageViewType type);
 
     VkFormat getVkFormat() const {
-      if (!mState) {
-        return VK_FORMAT_UNDEFINED;
-      }
-      return mState->mVkFormat;
+        return mState->mVkFormat;
     }
     VkImage getVkImage() const {
         return mState->mTextureImage;
