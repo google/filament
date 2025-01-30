@@ -120,8 +120,9 @@ class MainActivity : Activity() {
 
         engine = Engine.Builder()
             .config(config)
-            .backend(Engine.Backend.VULKAN)
+//            .backend(Engine.Backend.VULKAN)
 //            .featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0)
+            .backend(Engine.Backend.DAWN)
             .build()
         renderer = engine.createRenderer()
         scene = engine.createScene()

@@ -230,6 +230,7 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
             getShaderInfo(package, shaders.data(), ChunkType::MaterialGlsl);
             json << "opengl";
             break;
+        case Backend::DAWN:
         case Backend::VULKAN:
             shaders.resize(getShaderCount(package, ChunkType::MaterialSpirv));
             getShaderInfo(package, shaders.data(), ChunkType::MaterialSpirv);

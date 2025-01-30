@@ -44,6 +44,7 @@ void FSR_ScalingSetup(FSRUniforms* outUniforms, FSRScalingConfig config) noexcep
 
     auto yoffset = config.input.bottom;
     if (config.backend == backend::Backend::METAL ||
+        // config.backend == backend::Backend::DAWN ||
         config.backend == backend::Backend::VULKAN) {
         yoffset = config.inputHeight - (config.input.bottom + config.input.height);
     }

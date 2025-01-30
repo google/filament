@@ -179,6 +179,14 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
                 effectiveFeatureLevel,
             });
         }
+        if (any(mTargetApi & TargetApi::DAWN)) {
+            mCodeGenPermutations.push_back({
+                shaderModel,
+                TargetApi::DAWN,
+                TargetLanguage::SPIRV,
+                effectiveFeatureLevel,
+            });
+        }
     }
 }
 
@@ -828,6 +836,8 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
         case TargetApi::METAL:
             targetApiString = "Metal.\n";
             break;
+        case TargetApi::DAWN:
+            targetApiString = "Dawn.\n";
         case TargetApi::ALL:
             assert(0); // Unreachable.
             break;
@@ -899,7 +909,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
         // Metal Shading Language is cross-compiled from Vulkan.
         const bool targetApiNeedsSpirv =
-                (targetApi == TargetApi::VULKAN || targetApi == TargetApi::METAL);
+                (targetApi == TargetApi::VULKAN || targetApi == TargetApi::DAWN || targetApi == TargetApi::METAL);
         const bool targetApiNeedsMsl = targetApi == TargetApi::METAL;
         const bool targetApiNeedsGlsl = targetApi == TargetApi::OPENGL;
 
@@ -1053,6 +1063,14 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         metalEntry.shader = msl;
                         metalEntries.push_back(metalEntry);
                         break;
+                    case TargetApi::DAWN:
+                        assert(!spirv.empty());
+                        const std::vector<uint8_t> d(reinterpret_cast<uint8_t*>(spirv.data()),
+                                reinterpret_cast<uint8_t*>(spirv.data()+spirv.size()));
+                        spirvEntry.stage = v.stage;
+                        spirvEntry.data = std::move(d);
+                        spirvEntries.push_back(spirvEntry);
+                        break;    
                 }
             });
 

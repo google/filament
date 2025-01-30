@@ -516,7 +516,7 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(
             // issue messages for SPIR-V generation
             using Type = std::underlying_type_t<EShMessages>;
             auto msg = (Type)EShMessages::EShMsgSpvRules;
-            if (targetApi == TargetApi::VULKAN) {
+            if (targetApi == TargetApi::VULKAN || targetApi == TargetApi::DAWN) {
                 // issue messages for Vulkan-requirements of GLSL for SPIR-V
                 msg |= (Type)EShMessages::EShMsgVulkanRules;
             }
@@ -542,6 +542,7 @@ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
                 break;
             case MaterialBuilderBase::TargetApi::VULKAN:
             case MaterialBuilderBase::TargetApi::METAL:
+            case MaterialBuilderBase::TargetApi::DAWN:
                 shader.setEnvInput(EShSourceGlsl, stage, EShClientVulkan, version);
                 shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_1);
                 break;

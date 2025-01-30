@@ -259,6 +259,7 @@ public:
                                 ? backend::ShaderLanguage::ESSL1
                                 : backend::ShaderLanguage::ESSL3 };
             case Backend::VULKAN:
+            case Backend::DAWN:
                 return { backend::ShaderLanguage::SPIRV };
             case Backend::METAL:
                 const auto& lang = mConfig.preferredShaderLanguage;

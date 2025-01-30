@@ -554,6 +554,8 @@ void FRenderer::renderStandaloneView(FView const* view) {
         if (engine.getBackend() == backend::Backend::VULKAN) {
             engine.flushAndWait();
         }
+
+        // May need to do something similar for DAWN
     }
 }
 

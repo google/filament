@@ -266,6 +266,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
             }
             break;
         }
+        case backend::Backend::DAWN:
         case backend::Backend::VULKAN: {
             shaderCount = getShaderCount(package, ChunkType::MaterialSpirv);
             infos.reserve(shaderCount);

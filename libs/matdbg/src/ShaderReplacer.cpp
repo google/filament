@@ -106,6 +106,7 @@ ShaderReplacer::ShaderReplacer(Backend backend, const void* data, size_t size) :
             mDictionaryTag = ChunkType::DictionaryText;
             break;
         case Backend::VULKAN:
+        case Backend::DAWN:
             mMaterialTag = ChunkType::MaterialSpirv;
             mDictionaryTag = ChunkType::DictionarySpirv;
             break;
@@ -185,6 +186,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     };
 
     MaterialBuilder::TargetApi const targetApi = targetApiFromBackend(mBackend);
+    // Add DAWN
     assert_invariant(targetApi == MaterialBuilder::TargetApi::VULKAN);
 
     // Unfortunately we need to use std::vector to interface with glslang.
