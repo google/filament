@@ -706,28 +706,6 @@ int FEngine::loop() {
         }
     }
 
-#if FILAMENT_ENABLE_MATDBG
-    #ifdef __ANDROID__
-        const char* portString = "8081";
-    #else
-        const char* portString = getenv("FILAMENT_MATDBG_PORT");
-    #endif
-    if (portString != nullptr) {
-        const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, port);
-
-        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
-        // When this occurs, carry onward, developers can look at civetweb.txt for details.
-        if (!debug.server->isReady()) {
-            delete debug.server;
-            debug.server = nullptr;
-        } else {
-            debug.server->setEditCallback(FMaterial::onEditCallback);
-            debug.server->setQueryCallback(FMaterial::onQueryCallback);
-        }
-    }
-#endif
-
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
@@ -748,6 +726,28 @@ int FEngine::loop() {
         // been logged.
         return 0;
     }
+
+#if FILAMENT_ENABLE_MATDBG
+    #ifdef __ANDROID__
+        const char* portString = "8081";
+    #else
+        const char* portString = getenv("FILAMENT_MATDBG_PORT");
+    #endif
+    if (portString != nullptr) {
+        const int port = atoi(portString);
+        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(), port);
+
+        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
+        // When this occurs, carry onward, developers can look at civetweb.txt for details.
+        if (!debug.server->isReady()) {
+            delete debug.server;
+            debug.server = nullptr;
+        } else {
+            debug.server->setEditCallback(FMaterial::onEditCallback);
+            debug.server->setQueryCallback(FMaterial::onQueryCallback);
+        }
+    }
+#endif
 
     while (true) {
         if (!execute()) {

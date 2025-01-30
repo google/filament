@@ -946,6 +946,10 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 #endif
 }
 
+ShaderLanguage MetalDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::MSL;
+}
+
 Handle<HwStream> MetalDriver::createStreamNative(void* stream) {
     return {};
 }

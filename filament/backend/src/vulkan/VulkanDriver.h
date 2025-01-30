@@ -93,6 +93,7 @@ private:
     Dispatcher getDispatcher() const noexcept final;
 
     ShaderModel getShaderModel() const noexcept final;
+    ShaderLanguage getShaderLanguage() const noexcept final;
 
     template<typename T>
     friend class ConcreteDispatcher;

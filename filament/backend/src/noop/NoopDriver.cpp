@@ -39,6 +39,10 @@ ShaderModel NoopDriver::getShaderModel() const noexcept {
 #endif
 }
 
+ShaderLanguage NoopDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::ESSL3;
+}
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<NoopDriver>;
 

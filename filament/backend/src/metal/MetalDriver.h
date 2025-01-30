@@ -67,6 +67,7 @@ private:
     MetalContext* mContext;
 
     ShaderModel getShaderModel() const noexcept final;
+    ShaderLanguage getShaderLanguage() const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
     void execute(std::function<void(void)> const& fn) noexcept final;
