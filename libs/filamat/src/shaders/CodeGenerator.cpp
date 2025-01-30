@@ -78,7 +78,11 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                     out << "#endif\n\n";
                     break;
                 case StereoscopicType::MULTIVIEW:
-                    out << "#extension GL_OVR_multiview2 : require\n";
+                    if (mTargetApi == TargetApi::VULKAN) {
+                        out << "#extension GL_EXT_multiview : enable\n";
+                    } else {
+                        out << "#extension GL_OVR_multiview2 : require\n";
+                    }
                     break;
                 case StereoscopicType::NONE:
                     break;
@@ -101,7 +105,11 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                     // Nothing to generate
                     break;
                 case StereoscopicType::MULTIVIEW:
-                    out << "#extension GL_OVR_multiview2 : require\n";
+                    if (mTargetApi == TargetApi::VULKAN) {
+                        out << "#extension GL_EXT_multiview : enable\n";
+                    } else {
+                        out << "#extension GL_OVR_multiview2 : require\n";
+                    }
                     break;
                 case StereoscopicType::NONE:
                     break;
@@ -124,7 +132,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
             // Nothing to generate
             break;
         case StereoscopicType::MULTIVIEW:
-            out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            if (mTargetApi != TargetApi::VULKAN) {
+                out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
+            }
             break;
         case StereoscopicType::NONE:
             break;
