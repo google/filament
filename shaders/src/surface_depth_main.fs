@@ -40,7 +40,7 @@ void main() {
 #endif
 
 #if defined(MATERIAL_HAS_TRANSPARENT_SHADOW)
-    // Interleaved gradient noise, see dithering.fs
+    // Interleaved gradient noise, see inline_dithering.fs
     float noise = interleavedGradientNoise(gl_FragCoord.xy);
     if (noise >= alpha) {
         discard;
@@ -49,7 +49,7 @@ void main() {
 #endif
 
 #if defined(VARIANT_HAS_VSM)
-    // interpolated depth is stored in vertex_worldPosition.w (see main.vs)
+    // interpolated depth is stored in vertex_worldPosition.w (see surface_main.vs)
     // we always compute the "negative" side of ELVSM because the cost is small, and this allows
     // EVSM/ELVSM choice to be done on the CPU side more easily.
     highp float depth = vertex_worldPosition.w;

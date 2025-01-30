@@ -32,7 +32,7 @@ LAYOUT_LOCATION(10) VARYING highp vec4 vertex_uv01;
 LAYOUT_LOCATION(11) VARYING highp vec4 vertex_lightSpacePosition;
 #endif
 
-// Note that fragColor is an output and is not declared here; see main.fs and depth_main.fs
+// Note that fragColor is an output and is not declared here; see surface_main.fs and surface_depth_main.fs
 
 #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
 #if defined(GL_ES) && defined(FILAMENT_GLSLANG)
