@@ -27,6 +27,7 @@ import android.view.Surface
 import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
 import com.google.android.filament.*
+import com.google.android.filament.Engine.Backend
 import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.VertexBuffer.AttributeType
 import com.google.android.filament.VertexBuffer.VertexAttribute
@@ -70,6 +71,8 @@ class MainActivity : Activity() {
     private lateinit var view: View
     // Should be pretty obvious :)
     private lateinit var camera: Camera
+
+    private lateinit var backend: Backend
 
     private lateinit var material: Material
     private lateinit var vertexBuffer: VertexBuffer
@@ -117,12 +120,16 @@ class MainActivity : Activity() {
 
         engine = Engine.Builder()
             .config(config)
-            .featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0)
+            .backend(Engine.Backend.VULKAN)
+//            .featureLevel(Engine.FeatureLevel.FEATURE_LEVEL_0)
             .build()
         renderer = engine.createRenderer()
         scene = engine.createScene()
         view = engine.createView()
         camera = engine.createCamera(engine.entityManager.create())
+        backend = engine.getBackend();
+        android.util.Log.i("hellotriangle",
+            "Backend " + backend.name + " selected.")
     }
 
     private fun setupView() {
