@@ -21,12 +21,12 @@
 
 namespace filament {
 namespace backend {
-class MetalPlatform;
+class PlatformMetal;
 class Driver;
 
 class MetalDriverFactory {
 public:
-    static Driver* create(MetalPlatform* platform, const Platform::DriverConfig& driverConfig);
+    static Driver* create(PlatformMetal* platform, const Platform::DriverConfig& driverConfig);
 };
 
 } // namespace backend

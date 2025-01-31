@@ -30,7 +30,7 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
-#include "MetalPlatform.h"
+#include <backend/platforms/PlatformMetal.h>
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -57,7 +57,7 @@
 namespace filament {
 namespace backend {
 
-Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+Driver* MetalDriverFactory::create(PlatformMetal* const platform, const Platform::DriverConfig& driverConfig) {
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
@@ -96,7 +96,7 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
 }
 
 UTILS_NOINLINE
-Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+Driver* MetalDriver::create(PlatformMetal* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -109,7 +109,7 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 }
 
 MetalDriver::MetalDriver(
-        MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+        PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept
     : mPlatform(*platform),
       mContext(new MetalContext),
       mHandleAllocator(
@@ -246,6 +246,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    mContext->currentFrame = frameId;
     DEBUG_LOG("beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
             monotonic_clock_ns, refreshIntervalNs, frameId);
 #if defined(FILAMENT_METAL_PROFILING)
@@ -631,19 +632,19 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
-        construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, pixelBuffer, flags);
         // This release matches the retain call in setupExternalImage. The MetalSwapchain will have
         // retained the buffer by now.
         CVPixelBufferRelease((CVPixelBufferRef)pixelBuffer);
     } else {
         auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-        construct_handle<MetalSwapChain>(sch, *mContext, metalLayer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, metalLayer, flags);
     }
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(sch, *mContext, width, height, flags);
+    construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, width, height, flags);
 }
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
@@ -1272,6 +1273,13 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
     renderTarget->setUpRenderPassAttachments(descriptor, params);
 
+    if (renderTarget->involvesAbandonedSwapChain()) {
+        mContext->currentRenderPassAbandoned = true;
+        return;
+    } else {
+        mContext->currentRenderPassAbandoned = false;
+    }
+
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
     if (!mContext->groupMarkers.empty()) {
@@ -1332,6 +1340,10 @@ void MetalDriver::endRenderPass(int dummy) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, OS_SIGNPOST_ID_EXCLUSIVE, "Render pass");
 #endif
+
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
 
     [mContext->currentRenderPassEncoder endEncoding];
 
@@ -1633,6 +1645,11 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
     auto srcTarget = handle_cast<MetalRenderTarget>(src);
     auto dstTarget = handle_cast<MetalRenderTarget>(dst);
 
+    if (UTILS_UNLIKELY(srcTarget->involvesAbandonedSwapChain() ||
+                dstTarget->involvesAbandonedSwapChain())) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
             << "blitDEPRECATED only supports COLOR0";
 
@@ -1917,6 +1934,10 @@ void MetalDriver::bindDescriptorSet(
 }
 
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
     DEBUG_LOG("draw2(...)\n");
@@ -1960,6 +1981,9 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
 
 void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
         uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     MetalRenderPrimitive const* const rp = handle_cast<MetalRenderPrimitive>(rph);
     ps.primitiveType = rp->type;
     ps.vertexBufferInfo = rp->vertexBuffer->vbih;
