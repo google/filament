@@ -18,12 +18,28 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/Mutex.h>
+#include <utils/Panic.h>
 
 #include <jni.h>
 
+#include <mutex>
+
 namespace filament {
 
-JavaVM* VirtualMachineEnv::sVirtualMachine = nullptr;
+using namespace utils;
+
+// This Mutex shouldn't be subject to the Static Initialization Order Fiasco because its initial state is
+// a single int initialized to 0.
+/* static*/ Mutex VirtualMachineEnv::sLock;
+/* static*/ JavaVM* VirtualMachineEnv::sVirtualMachine = nullptr;
+
+UTILS_NOINLINE
+JavaVM* VirtualMachineEnv::getVirtualMachine() {
+    std::lock_guard const lock(sLock);
+    assert_invariant(sVirtualMachine);
+    return sVirtualMachine;
+}
 
 /*
  * This is typically called by filament_jni.so when it is loaded. If filament_jni.so is not used,
@@ -35,13 +51,73 @@ JavaVM* VirtualMachineEnv::sVirtualMachine = nullptr;
 UTILS_PUBLIC
 UTILS_NOINLINE
 jint VirtualMachineEnv::JNI_OnLoad(JavaVM* vm) noexcept {
-    JNIEnv* env = nullptr;
-    if (UTILS_UNLIKELY(vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK)) {
-        // this should not happen
-        return -1;
+    std::lock_guard const lock(sLock);
+    if (sVirtualMachine) {
+        // It doesn't make sense for JNI_OnLoad() to be called more than once
+        return JNI_VERSION_1_6;
     }
+
+    // Here we check this VM at least has JNI_VERSION_1_6
+    JNIEnv* env = nullptr;
+    jint const result = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+
+    FILAMENT_CHECK_POSTCONDITION(result == JNI_OK)
+            << "Couldn't get JniEnv* from the VM, error = " << result;
+
     sVirtualMachine = vm;
     return JNI_VERSION_1_6;
+}
+
+UTILS_NOINLINE
+VirtualMachineEnv& VirtualMachineEnv::get() noexcept {
+    JavaVM* const vm = getVirtualMachine();
+    // declaring this thread local, will ensure it's destroyed with the calling thread
+    thread_local VirtualMachineEnv instance{ vm };
+    return instance;
+}
+
+UTILS_NOINLINE
+JNIEnv* VirtualMachineEnv::getThreadEnvironment() noexcept {
+    JavaVM* const vm = getVirtualMachine();
+    JNIEnv* env = nullptr;
+    jint const result = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+
+    FILAMENT_CHECK_POSTCONDITION(result == JNI_OK)
+            << "Couldn't get JniEnv* from the VM, error = " << result;
+
+    return env;
+}
+
+VirtualMachineEnv::VirtualMachineEnv(JavaVM* vm) noexcept : mVirtualMachine(vm) {
+    // We're not initializing the JVM here -- but we could -- because most of the time
+    // we don't need the jvm. Instead, we do the initialization on first use. This means we could get
+    // a nasty slow down the very first time, but we'll live with it for now.
+}
+
+VirtualMachineEnv::~VirtualMachineEnv() noexcept {
+    if (mVirtualMachine) {
+        mVirtualMachine->DetachCurrentThread();
+    }
+}
+
+UTILS_NOINLINE
+JNIEnv* VirtualMachineEnv::getEnvironmentSlow() noexcept {
+    FILAMENT_CHECK_PRECONDITION(mVirtualMachine)
+            << "JNI_OnLoad() has not been called";
+
+#if defined(__ANDROID__)
+    jint const result = mVirtualMachine->AttachCurrentThread(&mJniEnv, nullptr);
+#else
+    jint const result = mVirtualMachine->AttachCurrentThread(reinterpret_cast<void**>(&mJniEnv), nullptr);
+#endif
+
+    FILAMENT_CHECK_POSTCONDITION(result == JNI_OK)
+            << "JavaVM::AttachCurrentThread failed with error " << result;
+
+    FILAMENT_CHECK_POSTCONDITION(mJniEnv)
+            << "JavaVM::AttachCurrentThread returned a null mJniEnv";
+
+    return mJniEnv;
 }
 
 UTILS_NOINLINE
@@ -50,17 +126,6 @@ void VirtualMachineEnv::handleException(JNIEnv* const env) noexcept {
         env->ExceptionDescribe();
         env->ExceptionClear();
     }
-}
-
-UTILS_NOINLINE
-JNIEnv* VirtualMachineEnv::getEnvironmentSlow() noexcept {
-#if defined(__ANDROID__)
-    mVirtualMachine->AttachCurrentThread(&mJniEnv, nullptr);
-#else
-    mVirtualMachine->AttachCurrentThread(reinterpret_cast<void**>(&mJniEnv), nullptr);
-#endif
-    assert_invariant(mJniEnv);
-    return mJniEnv;
 }
 
 } // namespace filament
