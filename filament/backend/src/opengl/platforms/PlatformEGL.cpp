@@ -117,7 +117,9 @@ bool PlatformEGL::isOpenGL() const noexcept {
     return false;
 }
 
-Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
+
+Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
@@ -708,7 +710,7 @@ OpenGLPlatform::ExternalTexture* PlatformEGL::createExternalImageTexture() noexc
     return outTexture;
 }
 
-void PlatformEGL::destroyExternalImage(ExternalTexture* texture) noexcept {
+void PlatformEGL::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
     glDeleteTextures(1, &texture->id);
     delete texture;
 }
@@ -726,6 +728,18 @@ bool PlatformEGL::setExternalImage(void* externalImage,
 #endif
 
     return true;
+}
+
+Platform::ExternalImageHandle PlatformEGL::createExternalImage(EGLImageKHR eglImage) noexcept {
+    auto* const p = new(std::nothrow) ExternalImageEGL;
+    p->eglImage = eglImage;
+    return ExternalImageHandle{p};
+}
+
+bool PlatformEGL::setExternalImage(ExternalImageHandleRef externalImage,
+        UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
+    auto const* const eglExternalImage = static_cast<ExternalImageEGL const*>(externalImage.get());
+    return setExternalImage(eglExternalImage->eglImage, texture);
 }
 
 // -----------------------------------------------------------------------------------------------

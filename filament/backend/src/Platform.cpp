@@ -16,7 +16,79 @@
 
 #include <backend/Platform.h>
 
+#include <atomic>
+#include <utility>
+
 namespace filament::backend {
+
+void Platform::ExternalImageHandle::incref(ExternalImage* p) noexcept {
+    if (p) {
+        p->mRefCount.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+void Platform::ExternalImageHandle::decref(ExternalImage* p) noexcept {
+    if (p) {
+        if (p->mRefCount.fetch_sub(1, std::memory_order_release) == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            delete p;
+        }
+    }
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle() noexcept = default;
+
+Platform::ExternalImageHandle::~ExternalImageHandle() noexcept {
+    decref(mTarget);
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle(ExternalImage* p) noexcept
+        : mTarget(p) {
+    incref(mTarget);
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle(ExternalImageHandle const& rhs) noexcept
+        : mTarget(rhs.mTarget) {
+    incref(mTarget);
+}
+
+Platform::ExternalImageHandle::ExternalImageHandle(ExternalImageHandle&& rhs) noexcept
+        : mTarget(rhs.mTarget) {
+    rhs.mTarget = nullptr;
+}
+
+Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(ExternalImageHandle const& rhs) noexcept {
+    if (this != &rhs) {
+        incref(rhs.mTarget);
+        decref(mTarget);
+        mTarget = rhs.mTarget;
+    }
+    return *this;
+}
+
+Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(ExternalImageHandle&& rhs) noexcept {
+    auto* const temp = mTarget;
+    mTarget = rhs.mTarget;
+    rhs.mTarget = temp;
+    return *this;
+}
+
+void Platform::ExternalImageHandle::clear() noexcept {
+    decref(mTarget);
+    mTarget = nullptr;
+}
+
+void Platform::ExternalImageHandle::reset(ExternalImage* p) noexcept {
+    incref(p);
+    decref(mTarget);
+    mTarget = p;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+Platform::ExternalImage::~ExternalImage() noexcept = default;
+
+// --------------------------------------------------------------------------------------------------------------------
 
 Platform::Platform() noexcept = default;
 

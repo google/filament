@@ -47,7 +47,14 @@ struct PlatformCocoaTouchGLImpl {
     GLuint mDefaultDepthbuffer = 0;
     CVOpenGLESTextureCacheRef mTextureCache = nullptr;
     CocoaTouchExternalImage::SharedGl* mExternalImageSharedGl = nullptr;
+    struct ExternalImageCocoaTouchGL : public Platform::ExternalImage {
+        CVPixelBufferRef cvBuffer;
+    protected:
+        ~ExternalImageCocoaTouchGL() noexcept final;
+    };
 };
+
+PlatformCocoaTouchGLImpl::ExternalImageCocoaTouchGL::~ExternalImageCocoaTouchGL() noexcept = default;
 
 PlatformCocoaTouchGL::PlatformCocoaTouchGL()
         : pImpl(new PlatformCocoaTouchGLImpl) {
@@ -204,7 +211,7 @@ OpenGLPlatform::ExternalTexture* PlatformCocoaTouchGL::createExternalImageTextur
     return outTexture;
 }
 
-void PlatformCocoaTouchGL::destroyExternalImage(ExternalTexture* texture) noexcept {
+void PlatformCocoaTouchGL::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
     auto* p = static_cast<CocoaTouchExternalImage*>(texture);
     delete p;
 }
@@ -228,5 +235,36 @@ bool PlatformCocoaTouchGL::setExternalImage(void* externalImage, ExternalTexture
     // cocoaExternalImage->getInternalFormat();
     return true;
 }
+
+Platform::ExternalImageHandle PlatformCocoaTouchGL::createExternalImage(void* cvPixelBuffer) noexcept {
+    auto* p = new(std::nothrow) PlatformCocoaTouchGLImpl::ExternalImageCocoaTouchGL;
+    p->cvBuffer = (CVPixelBufferRef) cvPixelBuffer;
+    return ExternalImageHandle{ p };
+}
+
+void PlatformCocoaTouchGL::retainExternalImage(ExternalImageHandleRef externalImage) noexcept {
+    auto const* const cocoaTouchGlExternalImage
+            = static_cast<PlatformCocoaTouchGLImpl::ExternalImageCocoaTouchGL const*>(externalImage.get());
+    // Take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, or when the texture is destroyed.
+    CVPixelBufferRef pixelBuffer = cocoaTouchGlExternalImage->cvBuffer;
+    CVPixelBufferRetain(pixelBuffer);
+}
+
+bool PlatformCocoaTouchGL::setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept {
+    auto const* const cocoaTouchGlExternalImage
+            = static_cast<PlatformCocoaTouchGLImpl::ExternalImageCocoaTouchGL const*>(externalImage.get());
+    CVPixelBufferRef cvPixelBuffer = cocoaTouchGlExternalImage->cvBuffer;
+    CocoaTouchExternalImage* cocoaExternalImage = static_cast<CocoaTouchExternalImage*>(texture);
+    if (!cocoaExternalImage->set(cvPixelBuffer)) {
+        return false;
+    }
+    texture->target = cocoaExternalImage->getTarget();
+    texture->id = cocoaExternalImage->getGlTexture();
+    // we used to set the internalFormat, but it's not used anywhere on the gl backend side
+    // cocoaExternalImage->getInternalFormat();
+    return true;
+}
+
 
 } // namespace filament::backend

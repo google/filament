@@ -231,6 +231,26 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
     return driver;
 }
 
+PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() = default;
+
+Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer, bool sRGB) noexcept {
+    auto* const p = new(std::nothrow) ExternalImageEGLAndroid;
+    p->aHardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+    p->sRGB = sRGB;
+    return ExternalImageHandle{ p };
+}
+
+bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
+        UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
+    auto const* const eglExternalImage = static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
+    if (eglExternalImage->aHardwareBuffer) {
+        // TODO: implement PlatformEGLAndroid::setExternalImage w/ AHardwareBuffer
+        return true;
+    }
+    // not a AHardwareBuffer, fallback to the inherited version
+    return PlatformEGL::setExternalImage(externalImage, texture);
+}
+
 void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
     EGLSurface currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
     if (currentDrawSurface != EGL_NO_SURFACE) {

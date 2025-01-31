@@ -54,7 +54,14 @@ struct PlatformCocoaGLImpl {
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
     std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
     void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
+    struct ExternalImageCocoaGL : public Platform::ExternalImage {
+        CVPixelBufferRef cvBuffer;
+    protected:
+        ~ExternalImageCocoaGL() noexcept final;
+    };
 };
+
+PlatformCocoaGLImpl::ExternalImageCocoaGL::~ExternalImageCocoaGL() noexcept = default;
 
 CocoaGLSwapChain::CocoaGLSwapChain( NSView* inView )
         : view(inView)
@@ -319,7 +326,7 @@ OpenGLPlatform::ExternalTexture* PlatformCocoaGL::createExternalImageTexture() n
     return outTexture;
 }
 
-void PlatformCocoaGL::destroyExternalImage(ExternalTexture* texture) noexcept {
+void PlatformCocoaGL::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
     auto* p = static_cast<CocoaExternalImage*>(texture);
     delete p;
 }
@@ -333,6 +340,36 @@ void PlatformCocoaGL::retainExternalImage(void* externalImage) noexcept {
 
 bool PlatformCocoaGL::setExternalImage(void* externalImage, ExternalTexture* texture) noexcept {
     CVPixelBufferRef cvPixelBuffer = (CVPixelBufferRef) externalImage;
+    CocoaExternalImage* cocoaExternalImage = static_cast<CocoaExternalImage*>(texture);
+    if (!cocoaExternalImage->set(cvPixelBuffer)) {
+        return false;
+    }
+    texture->target = cocoaExternalImage->getTarget();
+    texture->id = cocoaExternalImage->getGlTexture();
+    // we used to set the internalFormat, but it's not used anywhere on the gl backend side
+    // cocoaExternalImage->getInternalFormat();
+    return true;
+}
+
+Platform::ExternalImageHandle PlatformCocoaGL::createExternalImage(void* cvPixelBuffer) noexcept {
+    auto* p = new(std::nothrow) PlatformCocoaGLImpl::ExternalImageCocoaGL;
+    p->cvBuffer = (CVPixelBufferRef) cvPixelBuffer;
+    return ExternalImageHandle{ p };
+}
+
+void PlatformCocoaGL::retainExternalImage(ExternalImageHandleRef externalImage) noexcept {
+    auto const* const cocoaGlExternalImage
+            = static_cast<PlatformCocoaGLImpl::ExternalImageCocoaGL const*>(externalImage.get());
+    // Take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, or when the texture is destroyed.
+    CVPixelBufferRef pixelBuffer = cocoaGlExternalImage->cvBuffer;
+    CVPixelBufferRetain(pixelBuffer);
+}
+
+bool PlatformCocoaGL::setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept {
+    auto const* const cocoaGlExternalImage
+            = static_cast<PlatformCocoaGLImpl::ExternalImageCocoaGL const*>(externalImage.get());
+    CVPixelBufferRef cvPixelBuffer = cocoaGlExternalImage->cvBuffer;
     CocoaExternalImage* cocoaExternalImage = static_cast<CocoaExternalImage*>(texture);
     if (!cocoaExternalImage->set(cvPixelBuffer)) {
         return false;
