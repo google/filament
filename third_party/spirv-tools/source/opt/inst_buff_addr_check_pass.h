@@ -29,10 +29,10 @@ namespace opt {
 class InstBuffAddrCheckPass : public InstrumentPass {
  public:
   // For test harness only
-  InstBuffAddrCheckPass() : InstrumentPass(7, 23, kInstValidationIdBuffAddr) {}
+  InstBuffAddrCheckPass() : InstrumentPass(0, 23, false, true) {}
   // For all other interfaces
-  InstBuffAddrCheckPass(uint32_t desc_set, uint32_t shader_id)
-      : InstrumentPass(desc_set, shader_id, kInstValidationIdBuffAddr) {}
+  InstBuffAddrCheckPass(uint32_t shader_id)
+      : InstrumentPass(0, shader_id, false, true) {}
 
   ~InstBuffAddrCheckPass() override = default;
 
@@ -42,10 +42,6 @@ class InstBuffAddrCheckPass : public InstrumentPass {
   const char* name() const override { return "inst-buff-addr-check-pass"; }
 
  private:
-  // Return byte alignment of type |type_id|. Must be int, float, vector,
-  // matrix, struct, array or physical pointer. Uses std430 alignment.
-  uint32_t GetTypeAlignment(uint32_t type_id);
-
   // Return byte length of type |type_id|. Must be int, float, vector, matrix,
   // struct, array or physical pointer. Uses std430 alignment and sizes.
   uint32_t GetTypeLength(uint32_t type_id);
@@ -62,7 +58,7 @@ class InstBuffAddrCheckPass : public InstrumentPass {
   // are within the buffer. Returns id of boolean value which is true if
   // search and test is successful, false otherwise.
   uint32_t GenSearchAndTest(Instruction* ref_inst, InstructionBuilder* builder,
-                            uint32_t* ref_uptr_id);
+                            uint32_t* ref_uptr_id, uint32_t stage_idx);
 
   // This function does checking instrumentation on a single
   // instruction which references through a physical storage buffer address.
@@ -115,8 +111,7 @@ class InstBuffAddrCheckPass : public InstrumentPass {
   // writes debug error output utilizing |ref_inst|, |error_id| and
   // |stage_idx|. Generate merge block for valid and invalid reference blocks.
   // Kill original reference.
-  void GenCheckCode(uint32_t check_id, uint32_t error_id, uint32_t length_id,
-                    uint32_t stage_idx, Instruction* ref_inst,
+  void GenCheckCode(uint32_t check_id, Instruction* ref_inst,
                     std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 
   // Initialize state for instrumenting physical buffer address checking

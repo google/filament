@@ -108,6 +108,40 @@ bool SpirvTools::Disassemble(const uint32_t* binary, const size_t binary_size,
   return status == SPV_SUCCESS;
 }
 
+struct CxxParserContext {
+  const HeaderParser& header_parser;
+  const InstructionParser& instruction_parser;
+};
+
+bool SpirvTools::Parse(const std::vector<uint32_t>& binary,
+                       const HeaderParser& header_parser,
+                       const InstructionParser& instruction_parser,
+                       spv_diagnostic* diagnostic) {
+  CxxParserContext parser_context = {header_parser, instruction_parser};
+
+  spv_parsed_header_fn_t header_fn_wrapper =
+      [](void* user_data, spv_endianness_t endianness, uint32_t magic,
+         uint32_t version, uint32_t generator, uint32_t id_bound,
+         uint32_t reserved) {
+        CxxParserContext* ctx = reinterpret_cast<CxxParserContext*>(user_data);
+        spv_parsed_header_t header = {magic, version, generator, id_bound,
+                                      reserved};
+
+        return ctx->header_parser(endianness, header);
+      };
+
+  spv_parsed_instruction_fn_t instruction_fn_wrapper =
+      [](void* user_data, const spv_parsed_instruction_t* instruction) {
+        CxxParserContext* ctx = reinterpret_cast<CxxParserContext*>(user_data);
+        return ctx->instruction_parser(*instruction);
+      };
+
+  spv_result_t status = spvBinaryParse(
+      impl_->context, &parser_context, binary.data(), binary.size(),
+      header_fn_wrapper, instruction_fn_wrapper, diagnostic);
+  return status == SPV_SUCCESS;
+}
+
 bool SpirvTools::Validate(const std::vector<uint32_t>& binary) const {
   return Validate(binary.data(), binary.size());
 }

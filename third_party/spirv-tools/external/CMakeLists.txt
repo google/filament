@@ -30,11 +30,7 @@ if (DEFINED SPIRV-Headers_SOURCE_DIR)
   # This allows flexible position of the SPIRV-Headers repo.
   set(SPIRV_HEADER_DIR ${SPIRV-Headers_SOURCE_DIR})
 else()
-  if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers)
-    set(SPIRV_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers)
-  else()
-    set(SPIRV_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/spirv-headers)
-  endif()
+  set(SPIRV_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/spirv-headers)
 endif()
 
 if (IS_DIRECTORY ${SPIRV_HEADER_DIR})
@@ -45,8 +41,6 @@ if (IS_DIRECTORY ${SPIRV_HEADER_DIR})
   # Do this so enclosing projects can use SPIRV-Headers_SOURCE_DIR to find
   # headers to include.
   if (NOT DEFINED SPIRV-Headers_SOURCE_DIR)
-    set(SPIRV_HEADERS_SKIP_INSTALL ON)
-    set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${SPIRV_HEADER_DIR})
   endif()
 else()
@@ -60,7 +54,9 @@ if (NOT ${SPIRV_SKIP_TESTS})
   if (TARGET gmock)
     message(STATUS "Google Mock already configured")
   else()
-    set(GMOCK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/googletest)
+    if (NOT GMOCK_DIR)
+      set(GMOCK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/googletest)
+    endif()
     if(EXISTS ${GMOCK_DIR})
       if(MSVC)
         # Our tests use ::testing::Combine.  Work around a compiler
@@ -77,7 +73,7 @@ if (NOT ${SPIRV_SKIP_TESTS})
       # gtest requires special defines for building as a shared
       # library, simply always build as static.
       push_variable(BUILD_SHARED_LIBS 0)
-      add_subdirectory(${GMOCK_DIR} EXCLUDE_FROM_ALL)
+      add_subdirectory(${GMOCK_DIR} ${CMAKE_CURRENT_BINARY_DIR}/googletest EXCLUDE_FROM_ALL)
       pop_variable(BUILD_SHARED_LIBS)
     endif()
   endif()
@@ -95,10 +91,22 @@ if (NOT ${SPIRV_SKIP_TESTS})
 
   # Find Effcee and RE2, for testing.
 
+  # RE2 depends on Abseil. We set absl_SOURCE_DIR if it is not already set, so
+  # that effcee can find abseil.
+  if(NOT TARGET absl::base)
+    if (NOT absl_SOURCE_DIR)
+      if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/abseil_cpp)
+        set(absl_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/abseil_cpp" CACHE STRING "Abseil source dir" )
+      endif()
+    endif()
+  endif()
+
   # First find RE2, since Effcee depends on it.
   # If already configured, then use that.  Otherwise, prefer to find it under 're2'
   # in this directory.
   if (NOT TARGET re2)
+
+
     # If we are configuring RE2, then turn off its testing.  It takes a long time and
     # does not add much value for us.  If an enclosing project configured RE2, then it
     # has already chosen whether to enable RE2 testing.
@@ -156,7 +164,7 @@ if(SPIRV_BUILD_FUZZER)
 
   if(NOT TARGET protobuf::libprotobuf OR NOT TARGET protobuf::protoc)
 
-    set(SPIRV_TOOLS_PROTOBUF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protobuf/cmake)
+    set(SPIRV_TOOLS_PROTOBUF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protobuf)
     if (NOT IS_DIRECTORY ${SPIRV_TOOLS_PROTOBUF_DIR})
       message(
           FATAL_ERROR

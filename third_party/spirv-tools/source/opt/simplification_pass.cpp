@@ -14,7 +14,6 @@
 
 #include "source/opt/simplification_pass.h"
 
-#include <set>
 #include <unordered_set>
 #include <vector>
 

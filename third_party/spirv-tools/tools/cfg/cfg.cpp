@@ -21,11 +21,11 @@
 #include "spirv-tools/libspirv.h"
 #include "tools/cfg/bin_to_dot.h"
 #include "tools/io.h"
+#include "tools/util/flags.h"
 
-// Prints a program usage message to stdout.
-static void print_usage(const char* argv0) {
-  printf(
-      R"(%s - Show the control flow graph in GraphiViz "dot" form. EXPERIMENTAL
+static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+static const std::string kHelpText =
+    R"(%s - Show the control flow graph in GraphiViz "dot" form. EXPERIMENTAL
 
 Usage: %s [options] [<filename>]
 
@@ -40,71 +40,42 @@ Options:
   -o <filename>   Set the output filename.
                   Output goes to standard output if this option is
                   not specified, or if the filename is "-".
-)",
-      argv0, argv0);
-}
+)";
 
-static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+// clang-format off
+FLAG_SHORT_bool(  h,       /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool(   help,    /* default_value= */ false, /* required= */false);
+FLAG_LONG_bool(   version, /* default_value= */ false, /* required= */ false);
+FLAG_SHORT_string(o,       /* default_value= */ "",    /* required= */ false);
+// clang-format on
 
-int main(int argc, char** argv) {
-  const char* inFile = nullptr;
-  const char* outFile = nullptr;  // Stays nullptr if printing to stdout.
-
-  for (int argi = 1; argi < argc; ++argi) {
-    if ('-' == argv[argi][0]) {
-      switch (argv[argi][1]) {
-        case 'h':
-          print_usage(argv[0]);
-          return 0;
-        case 'o': {
-          if (!outFile && argi + 1 < argc) {
-            outFile = argv[++argi];
-          } else {
-            print_usage(argv[0]);
-            return 1;
-          }
-        } break;
-        case '-': {
-          // Long options
-          if (0 == strcmp(argv[argi], "--help")) {
-            print_usage(argv[0]);
-            return 0;
-          }
-          if (0 == strcmp(argv[argi], "--version")) {
-            printf("%s EXPERIMENTAL\n", spvSoftwareVersionDetailsString());
-            printf("Target: %s\n",
-                   spvTargetEnvDescription(kDefaultEnvironment));
-            return 0;
-          }
-          print_usage(argv[0]);
-          return 1;
-        }
-        case 0: {
-          // Setting a filename of "-" to indicate stdin.
-          if (!inFile) {
-            inFile = argv[argi];
-          } else {
-            fprintf(stderr, "error: More than one input file specified\n");
-            return 1;
-          }
-        } break;
-        default:
-          print_usage(argv[0]);
-          return 1;
-      }
-    } else {
-      if (!inFile) {
-        inFile = argv[argi];
-      } else {
-        fprintf(stderr, "error: More than one input file specified\n");
-        return 1;
-      }
-    }
+int main(int, const char** argv) {
+  if (!flags::Parse(argv)) {
+    return 1;
   }
+
+  if (flags::h.value() || flags::help.value()) {
+    printf(kHelpText.c_str(), argv[0], argv[0]);
+    return 0;
+  }
+
+  if (flags::version.value()) {
+    printf("%s EXPERIMENTAL\n", spvSoftwareVersionDetailsString());
+    printf("Target: %s\n", spvTargetEnvDescription(kDefaultEnvironment));
+    return 0;
+  }
+
+  if (flags::positional_arguments.size() != 1) {
+    fprintf(stderr, "error: exactly one input file must be specified.\n");
+    return 1;
+  }
+
+  std::string inFile = flags::positional_arguments[0];
+  std::string outFile = flags::o.value();
 
   // Read the input binary.
   std::vector<uint32_t> contents;
-  if (!ReadBinaryFile<uint32_t>(inFile, &contents)) return 1;
+  if (!ReadBinaryFile<uint32_t>(inFile.c_str(), &contents)) return 1;
   spv_context context = spvContextCreate(kDefaultEnvironment);
   spv_diagnostic diagnostic = nullptr;
 
@@ -118,7 +89,8 @@ int main(int argc, char** argv) {
     return error;
   }
   std::string str = ss.str();
-  WriteFile(outFile, "w", str.data(), str.size());
+  WriteFile(outFile.empty() ? nullptr : outFile.c_str(), "w", str.data(),
+            str.size());
 
   spvDiagnosticDestroy(diagnostic);
   spvContextDestroy(context);
