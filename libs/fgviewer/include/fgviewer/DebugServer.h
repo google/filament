@@ -31,8 +31,6 @@ namespace filament::fgviewer {
 
 using ViewHandle = uint32_t;
 
-
-
 /**
  * Server-side frame graph debugger.
  *
