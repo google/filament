@@ -60,6 +60,14 @@
 #include <utils/Range.h>
 #include <utils/Slice.h>
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/DebugServer.h>
+#else
+namespace filament::fgviewer {
+    using ViewHandle = uint32_t;
+}
+#endif
+
 #include <math/scalar.h>
 #include <math/mat4.h>
 
@@ -467,6 +475,10 @@ public:
         return mUniforms;
     }
 
+    fgviewer::ViewHandle getViewHandle() const noexcept {
+        return mFrameGraphViewerViewHandle;
+    }
+
 private:
     struct FPickingQuery : public PickingQuery {
     private:
@@ -599,6 +611,8 @@ private:
                                                             { 0, 0, 0, 1 },
                                                             { 0, 0, 0, 1 },
                                                     }};
+
+    fgviewer::ViewHandle mFrameGraphViewerViewHandle;
 
 #ifndef NDEBUG
     struct DebugState {
