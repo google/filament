@@ -89,7 +89,7 @@ public:
         bool asSubpass{};
         bool customResolve{};
         bool translucent{};
-        bool fxaa{};
+        bool outputLuminance{}; // Whether to output luminance in the alpha channel. Ignored by the TRANSLUCENT variant.
         bool dithering{};
         backend::TextureFormat ldrFormat{};
     };
@@ -227,7 +227,7 @@ public:
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
-            backend::TextureFormat outFormat, bool translucent) noexcept;
+            backend::TextureFormat outFormat, bool preserveAlphaChannel) noexcept;
 
     // Temporal Anti-aliasing
     void TaaJitterCamera(
@@ -251,11 +251,24 @@ public:
 
     // high quality upscaler
     //  - when translucent, reverts to LINEAR
-    //  - doens't handle sub-resouces
+    //  - doesn't handle sub-resouces
     FrameGraphId<FrameGraphTexture> upscale(FrameGraph& fg, bool translucent,
+            bool sourceHasLuminance, DynamicResolutionOptions dsrOptions,
+            FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
+            FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filter) noexcept;
+
+    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg, bool translucent,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;
+
+    FrameGraphId<FrameGraphTexture> upscaleFSR1(FrameGraph& fg,
+            DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
+            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept;
+
+    FrameGraphId<FrameGraphTexture> upscaleSGSR1(FrameGraph& fg, bool sourceHasLuminance,
+            DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
+            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
     FrameGraphId<FrameGraphTexture> rcas(
             FrameGraph& fg,

@@ -41,7 +41,7 @@ material {
         },
         {
             type : int,
-            name : fxaa
+            name : outputLuminance
         },
         {
             type : float,
@@ -83,8 +83,8 @@ vertex {
 
 fragment {
 
-#include "../../../../shaders/src/dithering.fs"
-#include "../../../../shaders/src/vignette.fs"
+#include "../../../../shaders/src/inline_dithering.fs"
+#include "../../../../shaders/src/inline_vignette.fs"
 #include "colorGrading.fs"
 
 void dummy(){}
@@ -166,10 +166,10 @@ void postProcess(inout PostProcessInputs postProcess) {
         color = dither(color, materialParams.temporalNoise);
     }
 
-    // kill alpha computations when opaque / fxaa luminance
+    // kill alpha computations when opaque / luminance
 #if POST_PROCESS_OPAQUE
     color.a = 1.0;
-    if (materialParams.fxaa > 0) {
+    if (materialParams.outputLuminance > 0) {
         color.a = luminance(color.rgb);
     }
 #endif

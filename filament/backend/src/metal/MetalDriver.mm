@@ -1134,8 +1134,8 @@ FeatureLevel MetalDriver::getFeatureLevel() {
 
 math::float2 MetalDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
-    // Note: this is actually never used (see: main.vs), but it's a backend API so we implement it
-    // properly.
+    // Note: this is actually never used (see: surface_main.vs), but it's a backend API so we
+    // implement it properly.
     return math::float2{ 1.0f, 0.0f };
 }
 
