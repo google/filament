@@ -23,8 +23,8 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
-#include "VulkanUtility.h"
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/StaticVector.h"
 
 #include <utils/Condition.h>
 #include <utils/FixedCapacityVector.h>
@@ -79,7 +79,7 @@ struct VulkanCommandBuffer {
     void reset() noexcept;
 
     inline void insertWait(VkSemaphore sem) {
-        mWaitSemaphores.insert(sem);
+        mWaitSemaphores.push_back(sem);
     }
 
     void pushMarker(char const* marker) noexcept;
@@ -115,7 +115,7 @@ private:
     bool const isProtected;
     VkDevice mDevice;
     VkQueue mQueue;
-    CappedArray<VkSemaphore, 2> mWaitSemaphores;
+    fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
     VkFence mFence;
