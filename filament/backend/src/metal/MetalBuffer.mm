@@ -23,8 +23,8 @@ namespace filament {
 namespace backend {
 
 std::array<uint64_t, TrackedMetalBuffer::TypeCount> TrackedMetalBuffer::aliveBuffers = { 0 };
-MetalPlatform* TrackedMetalBuffer::platform = nullptr;
-MetalPlatform* ScopedAllocationTimer::platform = nullptr;
+PlatformMetal* TrackedMetalBuffer::platform = nullptr;
+PlatformMetal* ScopedAllocationTimer::platform = nullptr;
 
 MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
         size_t size, bool forceGpuBuffer)
