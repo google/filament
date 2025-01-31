@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
+
+#include<stdint.h>
 
 namespace filament::backend {
 
@@ -215,6 +220,10 @@ bool NoopDriver::isWorkaroundNeeded(Workaround) {
 
 FeatureLevel NoopDriver::getFeatureLevel() {
     return FeatureLevel::FEATURE_LEVEL_1;
+}
+
+char const* NoopDriver::getString(backend::BackendString) {
+    return nullptr;
 }
 
 math::float2 NoopDriver::getClipSpaceParams() {

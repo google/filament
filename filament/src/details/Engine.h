@@ -61,6 +61,8 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
@@ -114,12 +116,11 @@ class ResourceAllocator;
  */
 class FEngine : public Engine {
 public:
-
-    inline void* operator new(std::size_t const size) noexcept {
+    void* operator new(std::size_t const size) noexcept {
         return utils::aligned_alloc(size, alignof(FEngine));
     }
 
-    inline void operator delete(void* p) noexcept {
+    void operator delete(void* p) noexcept {
         utils::aligned_free(p);
     }
 
@@ -139,6 +140,14 @@ public:
     static void destroy(FEngine* engine);
 
     ~FEngine() noexcept;
+
+    char const* getVendorString() const noexcept {
+        return getDriver().getString(backend::BackendString::VENDOR);
+    }
+
+    char const* getRendererString() const noexcept {
+        return getDriver().getString(backend::BackendString::RENDERER);
+    }
 
     backend::ShaderModel getShaderModel() const noexcept { return getDriver().getShaderModel(); }
 
@@ -490,7 +499,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
 
-    static constexpr const size_t MiB = 1024u * 1024u;
+    static constexpr size_t MiB = 1024u * 1024u;
     size_t getMinCommandBufferSize() const noexcept { return mConfig.minCommandBufferSizeMB * MiB; }
     size_t getCommandBufferSize() const noexcept { return mConfig.commandBufferSizeMB * MiB; }
     size_t getPerFrameCommandsSize() const noexcept { return mConfig.perFrameCommandsSizeMB * MiB; }

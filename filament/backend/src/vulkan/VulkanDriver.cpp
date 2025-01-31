@@ -1089,6 +1089,10 @@ FeatureLevel VulkanDriver::getFeatureLevel() {
     return FeatureLevel::FEATURE_LEVEL_3;
 }
 
+char const* VulkanDriver::getString(backend::BackendString) {
+    return nullptr;
+}
+
 math::float2 VulkanDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
     // Note: this is actually never used (see: surface_main.vs), but it's a backend API, so we

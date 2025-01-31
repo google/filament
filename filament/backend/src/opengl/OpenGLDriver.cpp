@@ -2363,6 +2363,16 @@ FeatureLevel OpenGLDriver::getFeatureLevel() {
     return mContext.getFeatureLevel();
 }
 
+char const* OpenGLDriver::getString(BackendString stringName) {
+    switch (stringName) {
+    case BackendString::VENDOR:
+        return mContext.state.vendor;
+    case BackendString::RENDERER:
+        return mContext.state.renderer;
+    }
+    return nullptr;
+}
+
 math::float2 OpenGLDriver::getClipSpaceParams() {
     return mContext.ext.EXT_clip_control ?
            // z-coordinate of virtual and physical clip-space is in [-w, 0]

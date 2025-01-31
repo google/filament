@@ -76,6 +76,14 @@ void Engine::destroy(Engine** pEngine) {
     }
 }
 
+char const* Engine::getVendorString() const noexcept {
+    return downcast(this)->getVendorString();
+}
+
+char const* Engine::getRendererString() const noexcept {
+    return downcast(this)->getRendererString();
+}
+
 // -----------------------------------------------------------------------------------------------
 // Resource management
 // -----------------------------------------------------------------------------------------------

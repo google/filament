@@ -638,6 +638,21 @@ public:
      */
     static void destroy(Engine* UTILS_NULLABLE engine);
 
+
+    /**
+     * This is only available with the OpenGL backend.
+     * @see getBackend
+     * @return GL_VENDOR string or nullptr if the backend is not OpenGL.
+     */
+    char const* UTILS_NULLABLE getVendorString() const noexcept;
+
+    /**
+     * This is only available with the OpenGL backend.
+     * @see getBackend
+     * @return GL_RENDERER string or nullptr if the backend is not OpenGL.
+     */
+    char const* UTILS_NULLABLE getRendererString() const noexcept;
+
     /**
      * Query the feature level supported by the selected backend.
      *

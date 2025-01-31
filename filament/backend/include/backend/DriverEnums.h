@@ -1312,6 +1312,13 @@ enum class Workaround : uint16_t {
 
 using StereoscopicType = backend::Platform::StereoscopicType;
 
+enum class BackendString : uint8_t {
+    // OpenGL backend only. Return the GL_VENDOR string.
+    VENDOR,
+    // OpenGL backend only. Return the GL_RENDERER string.
+    RENDERER
+};
+
 } // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>
