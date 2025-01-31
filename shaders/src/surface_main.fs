@@ -43,11 +43,11 @@ void main() {
 
     initObjectUniforms();
 
-    // See shading_parameters.fs
+    // See surface_shading_parameters.fs
     // Computes global variables we need to evaluate material and lighting
     computeShadingParams();
 
-    // Initialize the inputs to sensible default values, see material_inputs.fs
+    // Initialize the inputs to sensible default values, see surface_material_inputs.fs
     MaterialInputs inputs;
     initMaterial(inputs);
 

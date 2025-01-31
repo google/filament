@@ -91,7 +91,7 @@ vec3 diffuseLobe(const PixelParams pixel, float NoV, float NoL, float LoH) {
  * Surface BRDF
  * The surface BRDF uses a diffuse lobe and a specular lobe to render both
  * dielectrics and conductors. The specular lobe is based on the Cook-Torrance
- * micro-facet model (see brdf.fs for more details). In addition, the specular
+ * micro-facet model (see surface_brdf.fs for more details). In addition, the specular
  * can be either isotropic or anisotropic.
  *
  * Clear coat BRDF
@@ -99,7 +99,7 @@ vec3 diffuseLobe(const PixelParams pixel, float NoV, float NoL, float LoH) {
  * top of the surface. Its IOR is set to 1.5 (polyutherane) to simplify
  * our computations. This BRDF only contains a specular lobe and while based
  * on the Cook-Torrance microfacet model, it uses cheaper terms than the surface
- * BRDF's specular lobe (see brdf.fs).
+ * BRDF's specular lobe (see surface_brdf.fs).
  */
 vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);

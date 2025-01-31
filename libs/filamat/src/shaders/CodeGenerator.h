@@ -75,68 +75,68 @@ public:
     static utils::io::sstream& generateSeparator(utils::io::sstream& out);
 
     // generate prolog for the given shader
-    utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderStage stage,
+    utils::io::sstream& generateCommonProlog(utils::io::sstream& out, ShaderStage stage,
             MaterialInfo const& material, filament::Variant v) const;
 
-    static utils::io::sstream& generateEpilog(utils::io::sstream& out);
+    static utils::io::sstream& generateCommonEpilog(utils::io::sstream& out);
 
-    static utils::io::sstream& generateCommonTypes(utils::io::sstream& out, ShaderStage stage);
+    static utils::io::sstream& generateSurfaceTypes(utils::io::sstream& out, ShaderStage stage);
 
     // generate common functions for the given shader
-    static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderStage stage);
-    static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderStage type);
-    static utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateSurfaceCommon(utils::io::sstream& out, ShaderStage stage);
+    static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderStage stage);
+    static utils::io::sstream& generateSurfaceMaterial(utils::io::sstream& out, ShaderStage stage);
 
-    static utils::io::sstream& generateFog(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateSurfaceFog(utils::io::sstream& out, ShaderStage stage);
 
     // generate the shader's main()
-    static utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderStage stage);
-    static utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateSurfaceMain(utils::io::sstream& out, ShaderStage stage);
+    static utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderStage stage);
 
     // generate the shader's code for the lit shading model
-    static utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderStage type,
+    static utils::io::sstream& generateSurfaceLit(utils::io::sstream& out, ShaderStage stage,
             filament::Variant variant, filament::Shading shading, bool customSurfaceShading);
 
     // generate the shader's code for the unlit shading model
-    static utils::io::sstream& generateShaderUnlit(utils::io::sstream& out, ShaderStage type,
+    static utils::io::sstream& generateSurfaceUnlit(utils::io::sstream& out, ShaderStage stage,
             filament::Variant variant, bool hasShadowMultiplier);
 
     // generate the shader's code for the screen-space reflections
-    static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateSurfaceReflections(utils::io::sstream& out, ShaderStage stage);
 
     // generate declarations for custom interpolants
-    static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderStage stage,
+    static utils::io::sstream& generateCommonVariable(utils::io::sstream& out, ShaderStage stage,
             const MaterialBuilder::CustomVariable& variable, size_t index);
 
     // generate declarations for non-custom "in" variables
-    utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderStage type,
+    utils::io::sstream& generateSurfaceShaderInputs(utils::io::sstream& out, ShaderStage stage,
             const filament::AttributeBitset& attributes, filament::Interpolation interpolation,
             MaterialBuilder::PushConstantList const& pushConstants) const;
-    static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderStage stage);
 
     // generate declarations for custom output variables
-    utils::io::sstream& generateOutput(utils::io::sstream& out, ShaderStage type,
+    utils::io::sstream& generateOutput(utils::io::sstream& out, ShaderStage stage,
             const utils::CString& name, size_t index,
             MaterialBuilder::VariableQualifier qualifier,
             MaterialBuilder::Precision precision,
             MaterialBuilder::OutputType outputType) const;
 
     // generate no-op shader for depth prepass
-    static utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generateSurfaceDepthMain(utils::io::sstream& out, ShaderStage stage);
 
     // generate samplers
-    utils::io::sstream& generateSamplers(utils::io::sstream& out,
+    utils::io::sstream& generateCommonSamplers(utils::io::sstream& out,
             filament::DescriptorSetBindingPoints set,
             filament::SamplerInterfaceBlock::SamplerInfoList const& list) const;
 
-    utils::io::sstream& generateSamplers(utils::io::sstream& out,
+    utils::io::sstream& generateCommonSamplers(utils::io::sstream& out,
             filament::DescriptorSetBindingPoints set,
             const filament::SamplerInterfaceBlock& sib) const {
-        return generateSamplers(out, set, sib.getSamplerInfoList());
+        return generateCommonSamplers(out, set, sib.getSamplerInfoList());
     }
 
     // generate subpass
-    static utils::io::sstream& generateSubpass(utils::io::sstream& out,
+    static utils::io::sstream& generatePostProcessSubpass(utils::io::sstream& out,
             filament::SubpassInfo subpass);
 
     // generate uniforms
@@ -174,9 +174,9 @@ public:
             MaterialBuilder::PushConstantList const& pushConstants,
             size_t const layoutLocation) const;
 
-    static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);
-    static utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderStage stage);
-    static utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderStage type);
+    static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage stage);
+    static utils::io::sstream& generateSurfaceGetters(utils::io::sstream& out, ShaderStage stage);
+    static utils::io::sstream& generateSurfaceParameters(utils::io::sstream& out, ShaderStage stage);
 
     static void fixupExternalSamplers(
             std::string& shader, filament::SamplerInterfaceBlock const& sib,

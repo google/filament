@@ -2661,7 +2661,7 @@ void PostProcessManager::TaaJitterCamera(
     // update projection matrix
     inoutCameraInfo->projection[2].xy -= jitterInClipSpace;
     // VERTEX_DOMAIN_DEVICE doesn't apply the projection, but it still needs this
-    // clip transform, so we apply it separately (see main.vs)
+    // clip transform, so we apply it separately (see surface_main.vs)
     inoutCameraInfo->clipTransform.zw -= jitterInClipSpace;
 }
 
