@@ -88,6 +88,7 @@ public:
         VkFormat colorFormat = VK_FORMAT_UNDEFINED;
         VkFormat depthFormat = VK_FORMAT_UNDEFINED;
         VkExtent2D extent = {0, 0};
+        uint32_t layerCount = 1;
         bool isProtected = false;
     };
 
@@ -302,6 +303,11 @@ public:
          * The height of the external image
          */
         uint32_t height;
+
+        /**
+         * The layerCount of the external image
+         */
+        uint32_t layerCount;
 
         /**
          * The layer count of the external image
