@@ -52,7 +52,7 @@ public:
     static std::string_view const kSuccessHeader;
     static std::string_view const kErrorHeader;
 
-    DebugServer(backend::Backend backend, int port);
+    DebugServer(backend::Backend backend, backend::ShaderLanguage shaderLanguage, int port);
     ~DebugServer();
 
     /**
@@ -97,6 +97,7 @@ private:
             const char* newShaderContent, size_t newShaderLength);
 
     const backend::Backend mBackend;
+    const backend::ShaderLanguage mShaderLanguage;
 
     CivetServer* mServer;
 

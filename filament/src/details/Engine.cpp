@@ -706,6 +706,27 @@ int FEngine::loop() {
         }
     }
 
+    JobSystem::setThreadName("FEngine::loop");
+    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+
+    DriverConfig const driverConfig {
+            .handleArenaSize = getRequestedDriverHandleArenaSize(),
+            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
+            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
+            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
+            .forceGLES2Context = mConfig.forceGLES2Context,
+            .stereoscopicType =  mConfig.stereoscopicType,
+            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
+    };
+    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
+
+    mDriverBarrier.latch();
+    if (UTILS_UNLIKELY(!mDriver)) {
+        // if we get here, it's because the driver couldn't be initialized and the problem has
+        // been logged.
+        return 0;
+    }
+
 #if FILAMENT_ENABLE_MATDBG
     #ifdef __ANDROID__
         const char* portString = "8081";
@@ -714,7 +735,7 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, port);
+        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(), port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
@@ -746,27 +767,6 @@ int FEngine::loop() {
         }
     }
 #endif
-
-    JobSystem::setThreadName("FEngine::loop");
-    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
-
-    DriverConfig const driverConfig {
-            .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
-            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
-            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
-            .forceGLES2Context = mConfig.forceGLES2Context,
-            .stereoscopicType =  mConfig.stereoscopicType,
-            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-    };
-    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
-
-    mDriverBarrier.latch();
-    if (UTILS_UNLIKELY(!mDriver)) {
-        // if we get here, it's because the driver couldn't be initialized and the problem has
-        // been logged.
-        return 0;
-    }
 
     while (true) {
         if (!execute()) {

@@ -72,7 +72,8 @@ nil if there is none)."
                 (brace-list-intro . c-filament-style-lineup-brace-list-intro)
                 (brace-list-entry . c-filament-style-lineup-brace-list-entry)
                 (brace-list-close . c-filament-style-lineup-brace-list-entry)
-                (label . [0]))))
+                (label . [0])
+                (member-init-intro . ++))))
 
 (provide 'c-filament-style)
 

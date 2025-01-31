@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "MetalPlatform.h"
+#include <backend/platforms/PlatformMetal.h>
 
 #include "MetalDriverFactory.h"
 
@@ -22,19 +22,32 @@
 
 #import <Foundation/Foundation.h>
 
+#include <atomic>
+
 namespace filament::backend {
 
+struct PlatformMetalImpl {
+    id<MTLCommandQueue> mCommandQueue = nil;
+    // read form driver thread, read/written to from client thread
+    std::atomic<PlatformMetal::DrawableFailureBehavior> mDrawableFailureBehavior =
+            PlatformMetal::DrawableFailureBehavior::PANIC;
+};
+
 Platform* createDefaultMetalPlatform() {
-    return new MetalPlatform();
+    return new PlatformMetal();
 }
 
-MetalPlatform::~MetalPlatform() = default;
+PlatformMetal::PlatformMetal() : pImpl(new PlatformMetalImpl) {}
 
-Driver* MetalPlatform::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
+PlatformMetal::~PlatformMetal() noexcept {
+    delete pImpl;
+}
+
+Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
     return MetalDriverFactory::create(this, driverConfig);
 }
 
-id<MTLDevice> MetalPlatform::createDevice() noexcept {
+id<MTLDevice> PlatformMetal::createDevice() noexcept {
     id<MTLDevice> result;
 
 #if !defined(FILAMENT_IOS)
@@ -62,16 +75,24 @@ id<MTLDevice> MetalPlatform::createDevice() noexcept {
     return result;
 }
 
-id<MTLCommandQueue> MetalPlatform::createCommandQueue(id<MTLDevice> device) noexcept {
-    mCommandQueue = [device newCommandQueue];
-    mCommandQueue.label = @"Filament";
-    return mCommandQueue;
+id<MTLCommandQueue> PlatformMetal::createCommandQueue(id<MTLDevice> device) noexcept {
+    pImpl->mCommandQueue = [device newCommandQueue];
+    pImpl->mCommandQueue.label = @"Filament";
+    return pImpl->mCommandQueue;
 }
 
-id<MTLCommandBuffer> MetalPlatform::createAndEnqueueCommandBuffer() noexcept {
-    id<MTLCommandBuffer> commandBuffer = [mCommandQueue commandBuffer];
+id<MTLCommandBuffer> PlatformMetal::createAndEnqueueCommandBuffer() noexcept {
+    id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
     [commandBuffer enqueue];
     return commandBuffer;
+}
+
+void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
+    pImpl->mDrawableFailureBehavior = behavior;
+}
+
+PlatformMetal::DrawableFailureBehavior PlatformMetal::getDrawableFailureBehavior() const noexcept {
+    return pImpl->mDrawableFailureBehavior;
 }
 
 } // namespace filament

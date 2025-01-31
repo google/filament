@@ -26,6 +26,7 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
+#include "backend/DriverEnums.h"
 #include "memory/ResourceManager.h"
 #include "memory/ResourcePointer.h"
 
@@ -293,6 +294,10 @@ ShaderModel VulkanDriver::getShaderModel() const noexcept {
 #else
     return ShaderModel::DESKTOP;
 #endif
+}
+
+ShaderLanguage VulkanDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::SPIRV;
 }
 
 void VulkanDriver::terminate() {
