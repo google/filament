@@ -26,10 +26,12 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
+#if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
+#endif
 
 using namespace bluevk;
 
@@ -323,4 +325,6 @@ bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,
 
 } // namespace filament::backend
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif

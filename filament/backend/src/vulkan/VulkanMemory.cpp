@@ -16,6 +16,7 @@
 
 #include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 
 // Needed because not all clang versions have the warning -Wdeprecated-copy.
@@ -32,6 +33,7 @@
 #pragma clang diagnostic ignored "-Wextra-semi"
 #pragma clang diagnostic ignored "-Wc++98-compat-extra-semi"
 #pragma clang diagnostic ignored "-Wthread-safety-analysis"
+#endif
 
 static const PFN_vkGetInstanceProcAddr& vkGetInstanceProcAddr = bluevk::vkGetInstanceProcAddr;
 static const PFN_vkGetDeviceProcAddr& vkGetDeviceProcAddr = bluevk::vkGetDeviceProcAddr;
@@ -39,4 +41,7 @@ static const PFN_vkGetDeviceProcAddr& vkGetDeviceProcAddr = bluevk::vkGetDeviceP
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
+
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif

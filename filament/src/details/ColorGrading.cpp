@@ -52,10 +52,14 @@ using namespace backend;
 struct ColorGrading::BuilderDetails {
     const ToneMapper* toneMapper = nullptr;
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
     bool hasAdjustments = false;
 
@@ -268,8 +272,10 @@ ColorGrading::Builder& ColorGrading::Builder::outputColorSpace(
     return *this;
 }
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     // We want to see if any of the default adjustment values have been modified
     // We skip the tonemapping operator on purpose since we always want to apply it
@@ -309,7 +315,9 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     return colorGrading;
 }
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 //------------------------------------------------------------------------------
 // Exposure
@@ -585,8 +593,10 @@ static std::tuple<TextureFormat, PixelDataFormat, PixelDataType>
     }
 }
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 // The following functions exist to preserve backward compatibility with the
 // `FILMIC` set via the deprecated `ToneMapping` API. Selecting `ToneMapping::FILMIC`
 // forces post-processing to be performed in sRGB to guarantee that the inverse tone
@@ -612,7 +622,9 @@ static float3 selectColorGradingLuminance(ColorGrading::ToneMapping const toneMa
     }
     return LUMINANCE_Rec2020;
 }
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 using ColorTransform = float3(*)(float3);
 
@@ -792,7 +804,9 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
                 // 32-bits results in one go.
                 const size_t count = (config.lutDimension * config.lutDimension) & ~0x7u; // tell the compiler that we're a multiple of 8
+#if defined(__clang__)
                 #pragma clang loop vectorize_width(8)
+#endif
                 for (size_t i = 0; i < count; ++i) {
                     float4 v{src[i]};
                     uint32_t pr = uint32_t(std::floor(v.x * 1023.0f + 0.5f));
