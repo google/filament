@@ -58,21 +58,21 @@ public:
             size_t vertexLineOffset,
             MaterialBuilder::MaterialDomain materialDomain) noexcept;
 
-    std::string createVertexProgram(filament::backend::ShaderModel shaderModel,
+    std::string createSurfaceVertexProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation,
             filament::VertexDomain vertexDomain) const noexcept;
 
-    std::string createFragmentProgram(filament::backend::ShaderModel shaderModel,
+    std::string createSurfaceFragmentProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation,
             filament::UserVariantFilterMask variantFilter) const noexcept;
 
-    std::string createComputeProgram(filament::backend::ShaderModel shaderModel,
+    std::string createSurfaceComputeProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material) const noexcept;

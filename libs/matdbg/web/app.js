@@ -20,9 +20,17 @@ const kUntitledPlaceholder = "untitled";
 
 // Maps to backend to the languages allowed for that backend.
 const LANGUAGE_CHOICES = {
-    'opengl': ['glsl'],
+    'opengl': ['essl3', 'essl1'],
+    'essl1': ['essl3', 'essl1'],
     'vulkan': ['glsl', 'spirv'],
     'metal': ['msl'],
+};
+
+const DEFAULT_LANGUAGE_FOR_BACKEND = {
+    'opengl': 'essl3',
+    'essl1': 'essl1',
+    'vulkan': 'glsl',
+    'metal': 'msl',
 };
 
 const BACKENDS = Object.keys(LANGUAGE_CHOICES);
@@ -1051,9 +1059,8 @@ class MatdbgViewer extends LitElement {
     updated(props) {
         // Set a language if there hasn't been one set.
         if (props.has('currentBackend') && this.currentBackend) {
-            const choices = LANGUAGE_CHOICES[this.currentBackend];
-            if (choices.indexOf(this.currentLanguage) < 0) {
-                this.currentLanguage = choices[0];
+            if (LANGUAGE_CHOICES[this.currentBackend].indexOf(this.currentLanguage) < 0) {
+                this.currentLanguage = DEFAULT_LANGUAGE_FOR_BACKEND[this.currentBackend];
             }
         }
         if (props.has('currentMaterial')) {

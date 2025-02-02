@@ -252,6 +252,7 @@ set(MATERIAL_SRCS
         src/materials/fsr/fsr_easu_mobile.mat
         src/materials/fsr/fsr_easu_mobileF.mat
         src/materials/fsr/fsr_rcas.mat
+        src/materials/sgsr/sgsr1.mat
         src/materials/resolveDepth.mat
         src/materials/separableGaussianBlur.mat
         src/materials/skybox.mat
@@ -384,16 +385,16 @@ endforeach()
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
-        DEPENDS ../shaders/src/dithering.fs
-        DEPENDS ../shaders/src/vignette.fs
+        DEPENDS ../shaders/src/inline_dithering.fs
+        DEPENDS ../shaders/src/inline_vignette.fs
         DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
-        DEPENDS ../shaders/src/dithering.fs
-        DEPENDS ../shaders/src/vignette.fs
+        DEPENDS ../shaders/src/inline_dithering.fs
+        DEPENDS ../shaders/src/inline_vignette.fs
         DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
@@ -501,6 +502,12 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fsr_rcas.filamat"
         DEPENDS src/materials/fsr/ffx_a.h
         DEPENDS src/materials/fsr/ffx_fsr1.h
+        APPEND
+)
+
+add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/sgsr1.filamat"
+        DEPENDS src/materials/sgsr/sgsr1_shader_mobile.fs
         APPEND
 )
 

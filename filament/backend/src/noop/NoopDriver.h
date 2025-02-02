@@ -34,6 +34,7 @@ public:
 
 private:
     ShaderModel getShaderModel() const noexcept final;
+    ShaderLanguage getShaderLanguage() const noexcept final;
 
     uint64_t nextFakeHandle = 1;
 

@@ -665,50 +665,28 @@ void FEngine::flush() {
 }
 
 void FEngine::flushAndWait() {
-    FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isPaused())
-            << "Cannot call flushAndWait() when rendering thread is paused!";
+    flushAndWait(FENCE_WAIT_FOR_EVER);
+}
 
-#if defined(__ANDROID__)
+bool FEngine::flushAndWait(uint64_t timeout) {
+    FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isPaused())
+            << "Cannot call Engine::flushAndWait() when rendering thread is paused!";
 
     // first make sure we've not terminated filament
     FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isExitRequested())
-            << "calling Engine::flushAndWait() after Engine::shutdown()!";
-
-#endif
+            << "Calling Engine::flushAndWait() after Engine::shutdown()!";
 
     // enqueue finish command -- this will stall in the driver until the GPU is done
     getDriverApi().finish();
 
-#if defined(__ANDROID__) && !defined(NDEBUG)
-
-    // then create a fence that will trigger when we're past the finish() above
-    size_t tryCount = 8;
-    FFence* fence = FEngine::createFence();
-    UTILS_NOUNROLL
-    do {
-        FenceStatus status = fence->wait(FFence::Mode::FLUSH,250000000u);
-        // if the fence didn't trigger after 250ms, check that the command queue thread is still
-        // running (otherwise indicating a precondition violation).
-        if (UTILS_UNLIKELY(status == FenceStatus::TIMEOUT_EXPIRED)) {
-            FILAMENT_CHECK_PRECONDITION(!mCommandBufferQueue.isExitRequested())
-                    << "called Engine::shutdown() WHILE in Engine::flushAndWait()!";
-            tryCount--;
-            FILAMENT_CHECK_POSTCONDITION(tryCount) << "flushAndWait() failed inexplicably after 2s";
-            // if the thread is still running, maybe we just need to give it more time
-            continue;
-        }
-        break;
-    } while (true);
+    FFence* fence = createFence();
+    FenceStatus const status = fence->wait(FFence::Mode::FLUSH, timeout);
     destroy(fence);
-
-#else
-
-    FFence::waitAndDestroy(createFence(), FFence::Mode::FLUSH);
-
-#endif
 
     // finally, execute callbacks that might have been scheduled
     getDriver().purge();
+
+    return status == FenceStatus::CONDITION_SATISFIED;
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -728,6 +706,27 @@ int FEngine::loop() {
         }
     }
 
+    JobSystem::setThreadName("FEngine::loop");
+    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+
+    DriverConfig const driverConfig {
+            .handleArenaSize = getRequestedDriverHandleArenaSize(),
+            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
+            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
+            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
+            .forceGLES2Context = mConfig.forceGLES2Context,
+            .stereoscopicType =  mConfig.stereoscopicType,
+            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
+    };
+    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
+
+    mDriverBarrier.latch();
+    if (UTILS_UNLIKELY(!mDriver)) {
+        // if we get here, it's because the driver couldn't be initialized and the problem has
+        // been logged.
+        return 0;
+    }
+
 #if FILAMENT_ENABLE_MATDBG
     #ifdef __ANDROID__
         const char* portString = "8081";
@@ -736,7 +735,7 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, port);
+        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(), port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
@@ -768,27 +767,6 @@ int FEngine::loop() {
         }
     }
 #endif
-
-    JobSystem::setThreadName("FEngine::loop");
-    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
-
-    DriverConfig const driverConfig {
-            .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
-            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
-            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
-            .forceGLES2Context = mConfig.forceGLES2Context,
-            .stereoscopicType =  mConfig.stereoscopicType,
-            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-    };
-    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
-
-    mDriverBarrier.latch();
-    if (UTILS_UNLIKELY(!mDriver)) {
-        // if we get here, it's because the driver couldn't be initialized and the problem has
-        // been logged.
-        return 0;
-    }
 
     while (true) {
         if (!execute()) {

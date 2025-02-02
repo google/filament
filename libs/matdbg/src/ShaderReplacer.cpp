@@ -94,22 +94,33 @@ private:
     filaflat::BlobDictionary mDataBlobs;
 };
 
-ShaderReplacer::ShaderReplacer(Backend backend, const void* data, size_t size) :
+ShaderReplacer::ShaderReplacer(Backend backend, ShaderLanguage language,
+                               const void* data, size_t size) :
         mBackend(backend), mOriginalPackage(data, size) {
-    switch (backend) {
-        case Backend::OPENGL:
-            mMaterialTag = ChunkType::MaterialGlsl;
+    switch (language) {
+        // ESSL1 and ESSL3 share the same dictionary, and replacing either will corrupt the other.
+        // If replacing one, delete both.
+        case backend::ShaderLanguage::ESSL1:
+            mMaterialTag = ChunkType::MaterialEssl1;
+            mDeleteTag = ChunkType::MaterialGlsl;
             mDictionaryTag = ChunkType::DictionaryText;
             break;
-        case Backend::METAL:
+        case backend::ShaderLanguage::ESSL3:
+            mMaterialTag = ChunkType::MaterialGlsl;
+            mDeleteTag = ChunkType::MaterialEssl1;
+            mDictionaryTag = ChunkType::DictionaryText;
+            break;
+        case backend::ShaderLanguage::MSL:
             mMaterialTag = ChunkType::MaterialMetal;
             mDictionaryTag = ChunkType::DictionaryText;
             break;
-        case Backend::VULKAN:
+        case backend::ShaderLanguage::SPIRV:
             mMaterialTag = ChunkType::MaterialSpirv;
             mDictionaryTag = ChunkType::DictionarySpirv;
             break;
-        default:
+        case backend::ShaderLanguage::METAL_LIBRARY:
+            mMaterialTag = ChunkType::MaterialMetalLibrary;
+            mDictionaryTag = ChunkType::DictionaryMetalLibrary;
             break;
     }
 }
@@ -133,7 +144,7 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
         return replaceSpirv(shaderModel, variant, stage, sourceString, stringLength);
     }
 
-    // Clone all chunks except Dictionary* and Material*.
+    // Clone (almost) all chunks except Dictionary* and Material*.
     stringstream sstream(std::string((const char*) cc.getData(), cc.getSize()));
     stringstream tstream;
     {
@@ -145,7 +156,9 @@ bool ShaderReplacer::replaceShaderSource(ShaderModel shaderModel, Variant varian
             sstream.read((char*) &size, sizeof(size));
             content.resize(size);
             sstream.read((char*) content.data(), size);
-            if (ChunkType(type) == mDictionaryTag|| ChunkType(type) == mMaterialTag) {
+            if (ChunkType(type) == mDictionaryTag
+                    || ChunkType(type) == mDeleteTag
+                    || ChunkType(type) == mMaterialTag) {
                 continue;
             }
             tstream.write((char*) &type, sizeof(type));
@@ -295,6 +308,10 @@ const uint8_t* ShaderReplacer::getEditedPackage() const {
 
 size_t ShaderReplacer::getEditedSize() const {
     return mEditedPackage->getSize();
+}
+
+filamat::ChunkType ShaderReplacer::getMaterialTag() const noexcept {
+    return mMaterialTag;
 }
 
 ShaderIndex::ShaderIndex(ChunkType dictTag, ChunkType matTag, const filaflat::ChunkContainer& cc) :

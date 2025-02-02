@@ -260,20 +260,12 @@ public:
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
         switch (mBackend) {
-            case Backend::DEFAULT:
-            case Backend::NOOP:
             default:
-                return { backend::ShaderLanguage::ESSL3 };
-            case Backend::OPENGL:
-                return { getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
-                                ? backend::ShaderLanguage::ESSL1
-                                : backend::ShaderLanguage::ESSL3 };
-            case Backend::VULKAN:
-                return { backend::ShaderLanguage::SPIRV };
+                return { getDriver().getShaderLanguage() };
             case Backend::METAL:
                 const auto& lang = mConfig.preferredShaderLanguage;
                 if (lang == Config::ShaderLanguage::MSL) {
-                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
+                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY};
                 }
                 return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
@@ -402,6 +394,7 @@ public:
     void setPaused(bool paused);
 
     void flushAndWait();
+    bool flushAndWait(uint64_t timeout);
 
     // flush the current buffer
     void flush();
@@ -725,7 +718,7 @@ public:
               &features.backend.opengl.assert_native_window_is_valid, true },
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
-              &features.engine.shadows.use_shadow_atlas, true },
+              &features.engine.shadows.use_shadow_atlas, false },
             { "features.engine.debug.assert_material_instance_in_use",
               "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
               &features.engine.debug.assert_material_instance_in_use, false }
