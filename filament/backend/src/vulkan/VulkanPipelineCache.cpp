@@ -24,7 +24,7 @@
 #include "VulkanConstants.h"
 #include "VulkanHandles.h"
 #include "VulkanTexture.h"
-#include "VulkanUtility.h"
+#include "vulkan/utils/Conversion.h"
 
 #if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
@@ -196,7 +196,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     vkDs.depthTestEnable = VK_TRUE;
     vkDs.depthWriteEnable = raster.depthWriteEnable;
-    vkDs.depthCompareOp = getCompareOp(raster.depthCompareOp);
+    vkDs.depthCompareOp = fvkutils::getCompareOp(raster.depthCompareOp);
     vkDs.depthBoundsTestEnable = VK_FALSE;
     vkDs.stencilTestEnable = VK_FALSE;
     vkDs.minDepthBounds = 0.0f;

@@ -18,9 +18,8 @@
 #define TNT_FILAMENT_BACKEND_CACHING_VULKANDESCRIPTORSETMANAGER_H
 
 #include "vulkan/VulkanHandles.h"
-#include "vulkan/VulkanTexture.h"
-#include "vulkan/VulkanUtility.h"
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
 
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
@@ -68,7 +67,7 @@ public:
     void unbind(uint8_t setIndex);
 
     void commit(VulkanCommandBuffer* commands, VkPipelineLayout pipelineLayout,
-            DescriptorSetMask const& setMask);
+            fvkutils::DescriptorSetMask const& setMask);
 
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
@@ -93,7 +92,7 @@ private:
 
     struct {
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-        DescriptorSetMask setMask;
+        fvkutils::DescriptorSetMask setMask;
         DescriptorSetArray boundSets = {};
     } mLastBoundInfo;
 };
