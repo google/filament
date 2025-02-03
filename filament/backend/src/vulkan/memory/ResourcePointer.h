@@ -21,6 +21,7 @@
 #include "vulkan/memory/ResourceManager.h"
 
 #include <backend/Handle.h>
+#include <utils/compiler.h>
 
 #include <utility>
 
@@ -59,6 +60,10 @@ public:
     static enabled_resource_ptr<B> cast(ResourceManager* resManager,
             Handle<B> const& handle) noexcept {
         D* ptr = resManager->handle_cast<D*, B>(handle);
+        FILAMENT_CHECK_PRECONDITION(!ptr->isHandleConsideredDestroyed())
+                << "Handle id=" << ptr->id << " (" << getTypeStr(ptr->restype)
+                << ") is being used after it has been freed";
+
         return {ptr};
     }
 
@@ -76,7 +81,7 @@ public:
     inline resource_ptr() = default;
 
     // move constructor operator
-    inline resource_ptr(resource_ptr<D>&& rhs) {
+    inline resource_ptr(resource_ptr<D>&& rhs) noexcept {
         (*this) = std::move(rhs);
     }
 
@@ -93,7 +98,7 @@ public:
     }
 
     // move operator
-    inline resource_ptr<D>& operator=(resource_ptr<D> && rhs) {
+    inline resource_ptr<D>& operator=(resource_ptr<D> && rhs) noexcept {
         std::swap(mRef, rhs.mRef);
         return *this;
     }
@@ -156,6 +161,8 @@ private:
     // only be used from VulkanDriver.
     inline void dec() {
         assert_invariant(mRef);
+        assert_invariant(!mRef->isHandleConsideredDestroyed());
+        mRef->setHandleConsiderDestroyed();
         mRef->dec();
     }
 

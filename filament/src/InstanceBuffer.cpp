@@ -23,7 +23,7 @@ size_t InstanceBuffer::getInstanceCount() const noexcept {
 }
 
 void InstanceBuffer::setLocalTransforms(
-        math::mat4f const* localTransforms, size_t count, size_t offset) {
+        math::mat4f const* localTransforms, size_t const count, size_t const offset) {
     downcast(this)->setLocalTransforms(localTransforms, count, offset);
 }
 

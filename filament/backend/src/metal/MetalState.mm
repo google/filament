@@ -150,7 +150,7 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
                 MTLCompareFunctionNever : getCompareFunction(params.compareFunc);
     samplerDescriptor.supportArgumentBuffers = YES;
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     // Older Apple devices (and the simulator) don't support setting a comparison function in
     // MTLSamplerDescriptor.
     // In practice, this means shadows are not supported when running in the simulator.

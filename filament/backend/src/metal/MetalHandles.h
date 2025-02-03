@@ -29,9 +29,8 @@
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
-#include "private/backend/SamplerGroup.h"
-
 #include <backend/DriverEnums.h>
+#include <backend/platforms/PlatformMetal.h>
 
 #include <utils/bitset.h>
 #include <utils/CString.h>
@@ -53,13 +52,16 @@ class MetalSwapChain : public HwSwapChain {
 public:
 
     // Instantiate a SwapChain from a CAMetalLayer
-    MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags);
+    MetalSwapChain(MetalContext& context, PlatformMetal& platform, CAMetalLayer* nativeWindow,
+            uint64_t flags);
 
     // Instantiate a SwapChain from a CVPixelBuffer
-    MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags);
+    MetalSwapChain(MetalContext& context, PlatformMetal& platform, CVPixelBufferRef pixelBuffer,
+            uint64_t flags);
 
     // Instantiate a headless SwapChain.
-    MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags);
+    MetalSwapChain(MetalContext& context, PlatformMetal& platform, int32_t width, int32_t height,
+            uint64_t flags);
 
     ~MetalSwapChain();
 
@@ -88,6 +90,8 @@ public:
 
     bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
+    bool isAbandoned() const;
+
 private:
 
     enum class SwapChainType {
@@ -105,6 +109,7 @@ private:
     void ensureDepthStencilTexture();
 
     MetalContext& context;
+    PlatformMetal& platform;
     id<CAMetalDrawable> drawable = nil;
     id<MTLTexture> depthStencilTexture = nil;
     id<MTLTexture> headlessDrawable = nil;
@@ -115,6 +120,8 @@ private:
     std::shared_ptr<std::mutex> layerDrawableMutex;
     MetalExternalImage externalImage;
     SwapChainType type;
+
+    int64_t abandonedUntilFrame = -1;
 
     // These fields store a callback to notify the client that a frame is ready for presentation. If
     // !frameScheduled.callback, then the Metal backend automatically calls presentDrawable when the
@@ -343,6 +350,8 @@ public:
 
     void setUpRenderPassAttachments(MTLRenderPassDescriptor* descriptor, const RenderPassParams& params);
 
+    bool involvesAbandonedSwapChain() const noexcept;
+
     MTLViewport getViewportFromClientViewport(
             Viewport rect, float depthRangeNear, float depthRangeFar) {
         const int32_t height = int32_t(getAttachmentSize().y);
@@ -438,7 +447,7 @@ struct MetalTimerQuery : public HwTimerQuery {
 
     struct Status {
         std::atomic<bool> available {false};
-        uint64_t elapsed {0};   // only valid if available is true
+        std::atomic<uint64_t> elapsed {0};   // only valid if available is true
     };
 
     std::shared_ptr<Status> status;

@@ -147,7 +147,7 @@ public:
         return mClearOptions;
     }
 
-    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept {
+    utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(size_t const historySize) const noexcept {
         return mFrameInfoManager.getFrameInfoHistory(historySize);
     }
 
@@ -178,7 +178,7 @@ private:
     std::pair<backend::Handle<backend::HwRenderTarget>, backend::TargetBufferFlags>
             getRenderTarget(FView const& view) const noexcept;
 
-    void recordHighWatermark(size_t watermark) noexcept {
+    void recordHighWatermark(size_t const watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
     }
 

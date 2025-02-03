@@ -1050,7 +1050,7 @@ class_<RenderableManager>("RenderableManager")
 
     .class_function("Builder", (RenderableBuilder (*)(int)) [] (int n) {
         return RenderableBuilder(n);
-    })
+    }, return_value_policy::take_ownership())
 
     .function("destroy", &RenderableManager::destroy)
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
@@ -1100,6 +1100,7 @@ class_<RenderableManager>("RenderableManager")
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
+    .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
     .function("getMaterialInstanceAt", &RenderableManager::getMaterialInstanceAt,
             allow_raw_pointers())
 
@@ -1489,6 +1490,8 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->sampler(target); })
     .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
         return &builder->format(fmt); })
+    .BUILDER_FUNCTION("external", TexBuilder, (TexBuilder* builder), {
+        return &builder->external(); })
 
     // This takes a bitfield that can be composed by or'ing constants.
     // - JS clients should use the value member, as in: "Texture$Usage.SAMPLEABLE.value".

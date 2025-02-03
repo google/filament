@@ -19,6 +19,7 @@
 
 #include <filament/MaterialEnums.h>
 
+#include <utils/compiler.h>
 #include <utils/bitset.h>
 #include <utils/Slice.h>
 
@@ -271,6 +272,8 @@ namespace VariantUtils {
 utils::Slice<Variant> getLitVariants() noexcept UTILS_PURE;
 // list of unlit variants
 utils::Slice<Variant> getUnlitVariants() noexcept UTILS_PURE;
+// list of depth variants
+utils::Slice<Variant> getDepthVariants() noexcept UTILS_PURE;
 }
 
 } // namespace filament

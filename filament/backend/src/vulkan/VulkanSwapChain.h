@@ -19,9 +19,9 @@
 
 #include "DriverBase.h"
 
-#include "VulkanCommands.h"
 #include "VulkanContext.h"
-#include "VulkanResources.h"
+#include "VulkanTexture.h"
+#include "vulkan/memory/Resource.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -36,14 +36,14 @@ namespace filament::backend {
 
 struct VulkanHeadlessSwapChain;
 struct VulkanSurfaceSwapChain;
-class VulkanResourceAllocator;
+class VulkanCommands;
 
 // A wrapper around the platform implementation of swapchain.
-struct VulkanSwapChain : public HwSwapChain, VulkanResource {
-    VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context, VmaAllocator allocator,
-            VulkanCommands* commands, VulkanResourceAllocator* handleAllocator,
-            VulkanStagePool& stagePool,
-            void* nativeWindow, uint64_t flags, VkExtent2D extent = {0, 0});
+struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
+    VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context,
+            fvkmemory::ResourceManager* resourceManager, VmaAllocator allocator,
+            VulkanCommands* commands, VulkanStagePool& stagePool, void* nativeWindow,
+            uint64_t flags, VkExtent2D extent = {0, 0});
 
     ~VulkanSwapChain();
 
@@ -51,15 +51,15 @@ struct VulkanSwapChain : public HwSwapChain, VulkanResource {
 
     void acquire(bool& reized);
 
-    inline VulkanTexture* getCurrentColor() const noexcept {
+    fvkmemory::resource_ptr<VulkanTexture> getCurrentColor() const noexcept {
         uint32_t const imageIndex = mCurrentSwapIndex;
         FILAMENT_CHECK_PRECONDITION(
             imageIndex != VulkanPlatform::ImageSyncData::INVALID_IMAGE_INDEX);
-        return mColors[imageIndex].get();
+        return mColors[imageIndex];
     }
 
-    inline VulkanTexture* getDepth() const noexcept {
-        return mDepth.get();
+    inline fvkmemory::resource_ptr<VulkanTexture> getDepth() const noexcept {
+        return mDepth;
     }
 
     inline bool isFirstRenderPass() const noexcept {
@@ -83,9 +83,9 @@ private:
     void update();
 
     VulkanPlatform* mPlatform;
+    fvkmemory::ResourceManager* mResourceManager;
     VulkanCommands* mCommands;
     VmaAllocator mAllocator;
-    VulkanResourceAllocator* const mHandleAllocator;
     VulkanStagePool& mStagePool;
     bool const mHeadless;
     bool const mFlushAndWaitOnResize;
@@ -93,8 +93,8 @@ private:
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.
-    utils::FixedCapacityVector<std::unique_ptr<VulkanTexture>> mColors;
-    std::unique_ptr<VulkanTexture> mDepth;
+    utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanTexture>> mColors;
+    fvkmemory::resource_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
     uint32_t mCurrentSwapIndex;
     std::function<void(Platform::SwapChain* handle)> mExplicitImageReadyWait = nullptr;

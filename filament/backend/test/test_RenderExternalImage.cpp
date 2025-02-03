@@ -227,7 +227,8 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     api.setupExternalImage(pixBuffer);
     backend::Handle<HwTexture> texture =
-            api.createTextureExternalImage(TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer);
+            api.createTextureExternalImage(SamplerType::SAMPLER_EXTERNAL,
+                    TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer);
 
     // We're now free to release the buffer.
     CVBufferRelease(pixBuffer);

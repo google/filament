@@ -128,6 +128,7 @@ struct MetalContext {
     std::atomic<uint64_t> latestCompletedCommandBufferId = 0;
     id<MTLCommandBuffer> pendingCommandBuffer = nil;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nil;
+    uint32_t currentFrame = 0;
 
     std::atomic<bool> memorylessLimitsReached = false;
 
@@ -135,6 +136,7 @@ struct MetalContext {
     bool supportsTextureSwizzling = false;
     bool supportsAutoDepthResolve = false;
     bool supportsMemorylessRenderTargets = false;
+    bool supportsDepthClamp = false;
     uint8_t maxColorRenderTargets = 4;
     struct {
         uint8_t common;
@@ -154,6 +156,8 @@ struct MetalContext {
 
     RenderPassFlags currentRenderPassFlags;
     MetalRenderTarget* currentRenderTarget = nullptr;
+    bool validPipelineBound = false;
+    bool currentRenderPassAbandoned = false;
 
     // State trackers.
     PipelineStateTracker pipelineState;

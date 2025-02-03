@@ -23,8 +23,8 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
-#include "VulkanResources.h"
-#include "VulkanUtility.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/StaticVector.h"
 
 #include <utils/Condition.h>
 #include <utils/FixedCapacityVector.h>
@@ -39,6 +39,8 @@
 
 namespace filament::backend {
 
+using namespace fvkmemory;
+
 struct VulkanContext;
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
@@ -49,14 +51,11 @@ public:
     void push(std::string const& marker, Timestamp start = {}) noexcept;
     std::pair<std::string, Timestamp> pop() noexcept;
     std::pair<std::string, Timestamp> pop_bottom() noexcept;
-    std::pair<std::string, Timestamp> top() const;
+    std::pair<std::string, Timestamp> const& top() const;
     bool empty() const noexcept;
 
 private:
-    std::list<std::string> mMarkers;
-#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
-    std::list<Timestamp> mTimestamps;
-#endif
+    std::list<std::pair<std::string, Timestamp>> mMarkers;
 };
 
 #endif // FVK_DEBUG_GROUP_MARKERS
@@ -65,7 +64,7 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext* mContext, VulkanResourceAllocator* allocator,
+    VulkanCommandBuffer(VulkanContext* mContext,
             VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
@@ -73,17 +72,14 @@ struct VulkanCommandBuffer {
 
     ~VulkanCommandBuffer();
 
-    inline void acquire(VulkanResource* resource) {
-        mResourceManager.acquire(resource);
+    inline void acquire(fvkmemory::resource_ptr<fvkmemory::Resource> resource) {
+        mResources.push_back(resource);
     }
 
-    inline void acquire(VulkanAcquireOnlyResourceManager* srcResources) {
-        mResourceManager.acquireAll(srcResources);
-    }
     void reset() noexcept;
 
     inline void insertWait(VkSemaphore sem) {
-        mWaitSemaphores.insert(sem);
+        mWaitSemaphores.push_back(sem);
     }
 
     void pushMarker(char const* marker) noexcept;
@@ -119,21 +115,20 @@ private:
     bool const isProtected;
     VkDevice mDevice;
     VkQueue mQueue;
-    VulkanAcquireOnlyResourceManager mResourceManager;
-    CappedArray<VkSemaphore, 2> mWaitSemaphores;
+    fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
-
+    std::vector<fvkmemory::resource_ptr<Resource>> mResources;
 };
 
 struct CommandBufferPool {
-    using ActiveBuffers = utils::bitset32;
+    using ActiveBuffers = utils::bitset64;
     static constexpr int8_t INVALID = -1;
 
-    CommandBufferPool(VulkanContext* context, VulkanResourceAllocator* allocator, VkDevice device,
-            VkQueue queue, uint8_t queueFamilyIndex, bool isProtected);
+    CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
+            uint8_t queueFamilyIndex, bool isProtected);
     ~CommandBufferPool();
 
     VulkanCommandBuffer& getRecording();
@@ -142,12 +137,14 @@ struct CommandBufferPool {
     void update();
     VkSemaphore flush();
     void wait();
-
     void waitFor(VkSemaphore previousAction);
 
-    void pushMarker(char const* marker);
-    void popMarker();
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+    std::string topMarker() const;
+    void pushMarker(char const* marker, VulkanGroupMarkers::Timestamp timestamp);
+    std::pair<std::string, VulkanGroupMarkers::Timestamp> popMarker();
     void insertEvent(char const* marker);
+#endif
 
     inline bool isRecording() const { return mRecording != INVALID; }
 
@@ -155,12 +152,21 @@ private:
     static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
     // int8 only goes up to 127, therefore capacity must be less than that.
     static_assert(CAPACITY < 128);
+
+    // The number of bits in ActiveBuffers describe the usage of the buffers in the pool, so must be
+    // larger than the size of the pool.
+    static_assert(sizeof(ActiveBuffers) * 8 >= CAPACITY);
+
     using BufferList = utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>>;
     VkDevice mDevice;
     VkCommandPool mPool;
     ActiveBuffers mSubmitted;
     std::vector<std::unique_ptr<VulkanCommandBuffer>> mBuffers;
     int8_t mRecording;
+
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+    std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
+#endif
 };
 
 // Manages a set of command buffers and semaphores, exposing an API that is significantly simpler
@@ -189,8 +195,7 @@ private:
 class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context,
-            VulkanResourceAllocator* allocator);
+            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context);
 
     void terminate();
 
@@ -241,7 +246,6 @@ private:
     VkQueue const mProtectedQueue;
     // For defered initialization if/when we need protected content
     uint32_t const mProtectedQueueFamilyIndex;
-    VulkanResourceAllocator* mAllocator;
     VulkanContext* mContext;
 
     std::unique_ptr<CommandBufferPool> mPool;
@@ -249,11 +253,6 @@ private:
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     VkSemaphore mLastSubmit = VK_NULL_HANDLE;
-
-#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
-    std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
-#endif
 };
 
 } // namespace filament::backend

@@ -75,9 +75,11 @@
 #include <emscripten.h>
 #endif
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+#endif
 
 // We can only support this feature on OpenGL ES 3.1+
 // Support is currently disabled as we don't need it
@@ -106,17 +108,29 @@
 // set to the desired debug level (for internal debugging [Default: None])
 #define DEBUG_MARKER_LEVEL            DEBUG_MARKER_NONE
 
+// Override the debug markers if we are forcing profiling mode
+#if defined(FILAMENT_FORCE_PROFILING_MODE)
+#   undef DEBUG_GROUP_MARKER_LEVEL
+#   undef DEBUG_MARKER_LEVEL
+
+#   define DEBUG_GROUP_MARKER_LEVEL   DEBUG_GROUP_MARKER_NONE
+#   define DEBUG_MARKER_LEVEL         DEBUG_MARKER_PROFILE
+#endif
+
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_PROFILE
 #   define DEBUG_MARKER()
 #   define PROFILE_MARKER(marker) PROFILE_SCOPE(marker);
 #   if DEBUG_GROUP_MARKER_LEVEL != DEBUG_GROUP_MARKER_NONE
-#       error PROFILING is exclusive; group markers must be disabled.
+#      error PROFILING is exclusive; group markers must be disabled.
+#   endif
+#   ifndef NDEBUG
+#      error PROFILING is meaningless in DEBUG mode.
 #   endif
 #elif DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() DebugMarker _debug_marker(*this, __func__);
 #   define PROFILE_MARKER(marker) DEBUG_MARKER()
 #   if DEBUG_MARKER_LEVEL & DEBUG_MARKER_PROFILE
-#       error PROFILING is exclusive; all other debug features must be disabled.
+#      error PROFILING is exclusive; all other debug features must be disabled.
 #   endif
 #else
 #   define DEBUG_MARKER()
@@ -337,6 +351,10 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
     return mContext.getShaderModel();
 }
 
+ShaderLanguage OpenGLDriver::getShaderLanguage() const noexcept {
+    return mContext.isES2() ? ShaderLanguage::ESSL1 : ShaderLanguage::ESSL3;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
@@ -390,28 +408,25 @@ void OpenGLDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
 
 void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     assert_invariant(t != nullptr);
-    mContext.bindTexture(unit, t->gl.target, t->gl.id);
+    mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
 }
 
 bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
-    if (UTILS_UNLIKELY(mBoundProgram == p)) {
-        // program didn't change, don't do anything.
-        return true;
-    }
+    bool success = true;
+    if (mBoundProgram != p) {
+        // compile/link the program if needed and call glUseProgram
+        success = p->use(this, mContext);
+        assert_invariant(success == p->isValid());
+        if (success) {
+            // TODO: we could even improve this if the program could tell us which of the descriptors
+            //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
+            //       change often.
+            decltype(mInvalidDescriptorSetBindings) changed;
+            changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+            mInvalidDescriptorSetBindings |= changed;
 
-    // compile/link the program if needed and call glUseProgram
-    bool const success = p->use(this, mContext);
-    assert_invariant(success == p->isValid());
-  
-    if (success) {
-        // TODO: we could even improve this if the program could tell us which of the descriptors
-        //       bindings actually changed. In practice, it is likely that set 0 or 1 might not
-        //       change often.
-        decltype(mInvalidDescriptorSetBindings) changed;
-        changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
-        mInvalidDescriptorSetBindings |= changed;
-
-        mBoundProgram = p;
+            mBoundProgram = p;
+        }
     }
 
     if (UTILS_UNLIKELY(mContext.isES2() && success)) {
@@ -1043,17 +1058,49 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
-    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImage(th, image);
+void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType target,
+    TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage, void* image) {
+    DEBUG_MARKER()
+
+    usage |= TextureUsage::SAMPLEABLE;
+    usage &= ~TextureUsage::UPLOADABLE;
+
+    auto& gl = mContext;
+    GLenum internalFormat = getInternalFormat(format);
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        // on ES2, format and internal format must match
+        // FIXME: handle compressed texture format
+        internalFormat = textureFormatToFormatAndType(format).first;
+    }
+    assert_invariant(internalFormat);
+
+    GLTexture* const t = construct<GLTexture>(th, target, 1, 1, width, height, 1, format, usage);
+    assert_invariant(t);
+
+    t->externalTexture = mPlatform.createExternalImageTexture();
+    if (t->externalTexture) {
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+        // internalFormat actually depends on the external image, but it doesn't matter
+        // because it's not used anywhere for anything important.
+        t->gl.internalFormat = internalFormat;
+        t->gl.baseLevel = 0;
+        t->gl.maxLevel = 0;
+        t->gl.external = true; // forces bindTexture() call (they're never cached)
+    }
+
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+        // the target and id can be reset each time
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+    }
 }
 
 void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, uint32_t plane) {
-    createTextureR(th, SamplerType::SAMPLER_EXTERNAL, 1, format, 1, width, height, 1, usage);
-    setExternalImagePlane(th, image, plane);
+    // not relevant for the OpenGL backend
 }
 
 void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
@@ -1073,6 +1120,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     switch (target) {
         case SamplerType::SAMPLER_EXTERNAL:
             t->gl.target = GL_TEXTURE_EXTERNAL_OES;
+            t->gl.external = true; // forces bindTexture() call (they're never cached)
             break;
         case SamplerType::SAMPLER_2D:
             t->gl.target = GL_TEXTURE_2D;
@@ -1339,13 +1387,13 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 
                 // TODO: support multiview for iOS and WebGL
-#if !defined(__EMSCRIPTEN__) && !defined(IOS)
+#if !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 if (layerCount > 1) {
                     // if layerCount > 1, it means we use the multiview extension.
                     glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
                         t->gl.id, 0, binfo.layer, layerCount);
                 } else
-#endif // !defined(__EMSCRIPTEN__) && !defined(IOS)
+#endif // !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 {
                     // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
                     glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
@@ -1673,7 +1721,7 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     // See if we need the emulated rec709 output conversion
     if (UTILS_UNLIKELY(mContext.isES2())) {
-        sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
+        sc->rec709 = ((flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) &&
                 !mPlatform.isSRGBSwapChainSupported());
     }
 }
@@ -2765,25 +2813,6 @@ void OpenGLDriver::setupExternalImage(void* image) {
     mPlatform.retainExternalImage(image);
 }
 
-void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-    DEBUG_MARKER()
-    GLTexture* t = handle_cast<GLTexture*>(th);
-    assert_invariant(t);
-    assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
-
-    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    if (mPlatform.setExternalImage(image, t->externalTexture)) {
-        // the target and id can be reset each time
-        t->gl.target = t->externalTexture->target;
-        t->gl.id = t->externalTexture->id;
-        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-    }
-}
-
-void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
-    DEBUG_MARKER()
-}
-
 void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
     auto& gl = mContext;
     if (gl.ext.OES_EGL_image_external_essl3) {
@@ -3503,7 +3532,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     auto& gl = mContext;
     gl.bindVertexArray(nullptr);
     for (int unit = OpenGLContext::DUMMY_TEXTURE_BINDING; unit >= 0; unit--) {
-        gl.bindTexture(unit, GL_TEXTURE_2D, 0);
+        gl.bindTexture(unit, GL_TEXTURE_2D, 0, false);
     }
     gl.disable(GL_CULL_FACE);
     gl.depthFunc(GL_LESS);
@@ -4067,4 +4096,6 @@ template class ConcreteDispatcher<OpenGLDriver>;
 
 } // namespace filament::backend
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif

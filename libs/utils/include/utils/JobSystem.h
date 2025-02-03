@@ -344,7 +344,7 @@ public:
     }
 
     // for debugging
-    friend utils::io::ostream& operator << (utils::io::ostream& out, JobSystem const& js);
+    friend io::ostream& operator << (io::ostream& out, JobSystem const& js);
 
 
     // utility functions...
@@ -419,7 +419,7 @@ private:
     void decRef(Job const* job) noexcept;
 
     Job* allocateJob() noexcept;
-    JobSystem::ThreadState* getStateToStealFrom(JobSystem::ThreadState& state) noexcept;
+    ThreadState* getStateToStealFrom(ThreadState& state) noexcept;
     static bool hasJobCompleted(Job const* job) noexcept;
 
     void requestExit() noexcept;
@@ -427,8 +427,8 @@ private:
     bool hasActiveJobs() const noexcept;
 
     void loop(ThreadState* state) noexcept;
-    bool execute(JobSystem::ThreadState& state) noexcept;
-    Job* steal(JobSystem::ThreadState& state) noexcept;
+    bool execute(ThreadState& state) noexcept;
+    Job* steal(ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
     void put(WorkQueue& workQueue, Job* job) noexcept;
@@ -446,10 +446,10 @@ private:
     Condition mWaiterCondition;
 
     std::atomic<int32_t> mActiveJobs = { 0 };
-    utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
+    Arena<ObjectPoolAllocator<Job>, LockingPolicy::Mutex> mJobPool;
 
     template <typename T>
-    using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
+    using aligned_vector = std::vector<T, STLAlignedAllocator<T>>;
 
     // These are essentially const, make sure they're on a different cache-lines than the
     // read-write atomics.
@@ -494,9 +494,9 @@ JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
 }
 
 template<typename CALLABLE, typename T, typename ... ARGS,
-        typename = typename std::enable_if<
-                std::is_member_function_pointer<typename std::remove_reference<CALLABLE>::type>::value
-        >::type
+        typename = std::enable_if_t<
+                std::is_member_function_pointer_v<std::remove_reference_t<CALLABLE>>
+        >
 >
 JobSystem::Job* createJob(JobSystem& js, JobSystem::Job* parent,
         CALLABLE&& func, T&& o, ARGS&&... args) noexcept {
@@ -596,7 +596,7 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
 // parallel jobs on a Slice<>
 template<typename T, typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
-        utils::Slice<T> slice, F functor, const S& splitter) noexcept {
+        Slice<T> slice, F functor, const S& splitter) noexcept {
     return parallel_for(js, parent, slice.data(), slice.size(), functor, splitter);
 }
 

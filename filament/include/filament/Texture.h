@@ -94,7 +94,7 @@ public:
     /** @return whether a backend supports texture swizzling. */
     static bool isTextureSwizzleSupported(Engine& engine) noexcept;
 
-    static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
+    static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
 
@@ -215,7 +215,7 @@ public:
          * @param len Length of name, should be less than or equal to 128
          * @return This Builder, for chaining calls.
          */
-         // Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept; // inherited
+         Builder& name(const char* UTILS_NONNULL name, size_t len) noexcept;
 
         /**
          * Creates the Texture object and returns a pointer to it.
@@ -260,6 +260,18 @@ public:
          * @return This Builder, for chaining calls.
          */
         Builder& import(intptr_t id) noexcept;
+
+        /**
+         * Creates an external texture. The content must be set using setExternalImage().
+         * The sampler can be SAMPLER_EXTERNAL or SAMPLER_2D depending on the format. Generally
+         * YUV formats must use SAMPLER_EXTERNAL. This depends on the backend features and is not
+         * validated.
+         *
+         * If the Sampler is set to SAMPLER_EXTERNAL, external() is implied.
+         *
+         * @return
+         */
+        Builder& external() noexcept;
 
     private:
         friend class FTexture;
@@ -395,7 +407,7 @@ public:
 
 
     /**
-     * Specify the external image to associate with this Texture. Typically the external
+     * Specify the external image to associate with this Texture. Typically, the external
      * image is OS specific, and can be a video or camera frame.
      * There are many restrictions when using an external image as a texture, such as:
      *   - only the level of detail (lod) 0 can be specified
@@ -420,7 +432,7 @@ public:
     void setExternalImage(Engine& engine, void* UTILS_NONNULL image) noexcept;
 
     /**
-     * Specify the external image and plane to associate with this Texture. Typically the external
+     * Specify the external image and plane to associate with this Texture. Typically, the external
      * image is OS specific, and can be a video or camera frame. When using this method, the
      * external image must be a planar type (such as a YUV camera frame). The plane parameter
      * selects which image plane is bound to this texture.

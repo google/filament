@@ -30,6 +30,7 @@ async function fetchShaderCode(matid, backend, language, index) {
     let query;
     switch (backend) {
         case "opengl":
+        case "essl1":
             query = `type=${language}&glindex=${index}`;
             break;
         case "vulkan":
@@ -82,7 +83,10 @@ async function queryActiveShaders() {
 function rebuildMaterial(materialId, backend, shaderIndex, editedText) {
     let api = 0;
     switch (backend) {
-        case "opengl": api = 1; break;
+        case "opengl":
+        case "essl1":
+            api = 1;
+            break;
         case "vulkan": api = 2; break;
         case "metal":  api = 3; break;
     }

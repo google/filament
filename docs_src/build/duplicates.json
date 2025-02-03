@@ -1,0 +1,74 @@
+{
+    "README.md": {
+        "dest": "dup/intro.md",
+        "link_transforms": {
+            "BUILDING.md": "building.md",
+            "/CONTRIBUTING.md": "contributing.md",
+            "/CODE_STYLE.md": "code_style.md",
+            "docs/images/samples": "../images/samples"
+        }
+    },
+    "BUILDING.md": {
+        "dest": "dup/building.md"
+    },
+    "CONTRIBUTING.md": {
+        "dest": "dup/contributing.md"
+    },
+    "CODE_STYLE.md": {
+        "dest": "dup/code_style.md"
+    },
+    "libs/uberz/README.md": {
+        "dest": "dup/uberz.md"
+    },
+    "libs/bluegl/README.md": {
+        "dest": "dup/bluegl.md"
+    },
+    "libs/bluevk/README.md": {
+        "dest": "dup/bluevk.md"
+    },
+    "libs/gltfio/README.md": {
+        "dest": "dup/gltfio.md"
+    },
+    "libs/filamat/README.md": {
+        "dest": "dup/filamat.md"
+    },
+    "libs/iblprefilter/README.md": {
+        "dest": "dup/iblprefilter.md"
+    },
+    "libs/matdbg/README.md": {
+        "dest": "dup/matdbg.md"
+    },
+    "tools/normal-blending/README.md": {
+        "dest": "dup/normal_blending.md"
+    },
+    "tools/filamesh/README.md": {
+        "dest": "dup/filamesh.md"
+    },
+    "tools/beamsplitter/README.md": {
+        "dest": "dup/beamsplitter.md"
+    },
+    "tools/cmgen/README.md": {
+        "dest": "dup/cmgen.md"
+    },
+    "tools/mipgen/README.md": {
+        "dest": "dup/mipgen.md"
+    },
+    "tools/matinfo/README.md": {
+        "dest": "dup/matinfo.md"
+    },
+    "tools/roughness-prefilter/README.md": {
+        "dest": "dup/roughness_prefilter.md"
+    },
+    "tools/zbloat/README.md": {
+        "dest": "dup/zbloat.md"
+    },
+    "tools/cso-lut/README.md": {
+        "dest": "dup/cso_lut.md"
+    },
+    "tools/specular-color/README.md": {
+        "dest": "dup/specular_color.md"
+    },
+    "docs_src/README.md": {
+        "dest": "dup/docs.md"
+    }
+}

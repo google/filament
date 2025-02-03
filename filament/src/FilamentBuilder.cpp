@@ -20,7 +20,7 @@
 
 namespace filament {
 
-void builderMakeName(utils::CString& outName, const char* name, size_t len) noexcept {
+void builderMakeName(utils::CString& outName, const char* name, size_t const len) noexcept {
     if (!name) {
         return;
     }

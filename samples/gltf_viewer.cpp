@@ -158,7 +158,7 @@ static void printUsage(char* name) {
         "       Specify the backend API: "
 
 // Matches logic in filament/backend/src/PlatformFactory.cpp for Backend::DEFAULT
-#if defined(IOS) || defined(__APPLE__)
+#if defined(FILAMENT_IOS) || defined(__APPLE__)
         "opengl, vulkan, or metal (default)"
 #elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         "opengl, vulkan (default), or metal"
@@ -1043,6 +1043,8 @@ int main(int argc, char** argv) {
         delete app.resourceLoader;
         delete app.stbDecoder;
         delete app.ktxDecoder;
+        delete app.automationSpec;
+        delete app.automationEngine;
 
         AssetLoader::destroy(&app.assetLoader);
     };

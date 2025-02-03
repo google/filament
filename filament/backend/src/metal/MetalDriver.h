@@ -37,11 +37,10 @@
 namespace filament {
 namespace backend {
 
-class MetalPlatform;
+class PlatformMetal;
 
 class MetalBuffer;
 class MetalProgram;
-class MetalSamplerGroup;
 class MetalTexture;
 struct MetalUniformBuffer;
 struct MetalContext;
@@ -52,22 +51,23 @@ struct BufferState;
 #endif
 
 class MetalDriver final : public DriverBase {
-    explicit MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept;
+    explicit MetalDriver(PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept;
     ~MetalDriver() noexcept override;
     Dispatcher getDispatcher() const noexcept final;
 
 public:
-    static Driver* create(MetalPlatform* platform, const Platform::DriverConfig& driverConfig);
+    static Driver* create(PlatformMetal* platform, const Platform::DriverConfig& driverConfig);
 
 private:
 
     friend class MetalSwapChain;
     friend struct MetalDescriptorSet;
 
-    MetalPlatform& mPlatform;
+    PlatformMetal& mPlatform;
     MetalContext* mContext;
 
     ShaderModel getShaderModel() const noexcept final;
+    ShaderLanguage getShaderLanguage() const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
     void execute(std::function<void(void)> const& fn) noexcept final;

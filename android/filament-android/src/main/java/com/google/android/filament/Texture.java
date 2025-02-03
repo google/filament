@@ -801,6 +801,19 @@ public class Texture {
         }
 
         /**
+         * Creates an external texture. The content must be set using setExternalImage().
+         * The sampler can be SAMPLER_EXTERNAL or SAMPLER_2D depending on the format. Generally
+         * YUV formats must use SAMPLER_EXTERNAL. This depends on the backend features and is not
+         * validated.
+         * @return This Builder, for chaining calls.
+         */
+        @NonNull
+        public Builder external() {
+            nBuilderExternal(mNativeBuilder);
+            return this;
+        }
+
+        /**
          * Creates a new <code>Texture</code> instance.
          * @param engine The {@link Engine} to associate this <code>Texture</code> with.
          * @return A newly created <code>Texture</code>
@@ -1261,6 +1274,7 @@ public class Texture {
     private static native void nBuilderUsage(long nativeBuilder, int flags);
     private static native void nBuilderSwizzle(long nativeBuilder, int r, int g, int b, int a);
     private static native void nBuilderImportTexture(long nativeBuilder, long id);
+    private static native void nBuilderExternal(long nativeBuilder);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetWidth(long nativeTexture, int level);

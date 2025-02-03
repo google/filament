@@ -34,7 +34,7 @@ FTransformManager::~FTransformManager() noexcept = default;
 void FTransformManager::terminate() noexcept {
 }
 
-void FTransformManager::setAccurateTranslationsEnabled(bool enable) noexcept {
+void FTransformManager::setAccurateTranslationsEnabled(bool const enable) noexcept {
     if (enable != mAccurateTranslations) {
         mAccurateTranslations = enable;
         // when enabling accurate translations, we have to recompute all world transforms
@@ -44,11 +44,11 @@ void FTransformManager::setAccurateTranslationsEnabled(bool enable) noexcept {
     }
 }
 
-void FTransformManager::create(Entity entity) {
+void FTransformManager::create(Entity const entity) {
     create(entity, 0, mat4f{});
 }
 
-void FTransformManager::create(Entity entity, Instance parent, const mat4f& localTransform) {
+void FTransformManager::create(Entity const entity, Instance const parent, const mat4f& localTransform) {
     // this always adds at the end, so all existing instances stay valid
     auto& manager = mManager;
 
@@ -70,7 +70,7 @@ void FTransformManager::create(Entity entity, Instance parent, const mat4f& loca
     }
 }
 
-void FTransformManager::create(Entity entity, Instance parent, const mat4& localTransform) {
+void FTransformManager::create(Entity const entity, Instance const parent, const mat4& localTransform) {
     // this always adds at the end, so all existing instances stay valid
     auto& manager = mManager;
 
@@ -92,7 +92,7 @@ void FTransformManager::create(Entity entity, Instance parent, const mat4& local
     }
 }
 
-void FTransformManager::setParent(Instance i, Instance parent) noexcept {
+void FTransformManager::setParent(Instance const i, Instance const parent) noexcept {
     validateNode(i);
     if (i) {
         auto& manager = mManager;
@@ -115,14 +115,14 @@ Entity FTransformManager::getParent(Instance i) const noexcept {
     return i ? mManager.getEntity(i) : Entity();
 }
 
-size_t FTransformManager::getChildCount(Instance i) const noexcept {
+size_t FTransformManager::getChildCount(Instance const i) const noexcept {
     size_t count = 0;
     for (Instance ci = mManager[i].firstChild; ci; ci = mManager[ci].next, ++count);
     return count;
 }
 
-size_t FTransformManager::getChildren(Instance i, utils::Entity* children,
-        size_t count) const noexcept {
+size_t FTransformManager::getChildren(Instance const i, Entity* children,
+        size_t const count) const noexcept {
     Instance ci = mManager[i].firstChild;
     size_t numWritten = 0;
     while (ci && numWritten < count) {
@@ -133,7 +133,7 @@ size_t FTransformManager::getChildren(Instance i, utils::Entity* children,
 }
 
 TransformManager::children_iterator FTransformManager::getChildrenBegin(
-        Instance parent) const noexcept {
+        Instance const parent) const noexcept {
     return { *this, mManager[parent].firstChild };
 }
 
@@ -141,7 +141,7 @@ TransformManager::children_iterator FTransformManager::getChildrenEnd(Instance) 
     return { *this, 0 };
 }
 
-void FTransformManager::destroy(Entity e) noexcept {
+void FTransformManager::destroy(Entity const e) noexcept {
     // update the reference of the element we're removing
     auto& manager = mManager;
     Instance const i = manager.getInstance(e);
@@ -167,7 +167,7 @@ void FTransformManager::destroy(Entity e) noexcept {
     }
 }
 
-void FTransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
+void FTransformManager::setTransform(Instance const ci, const mat4f& model) noexcept {
     validateNode(ci);
     if (ci) {
         auto& manager = mManager;
@@ -178,7 +178,7 @@ void FTransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
     }
 }
 
-void FTransformManager::setTransform(Instance ci, const mat4& model) noexcept {
+void FTransformManager::setTransform(Instance const ci, const mat4& model) noexcept {
     validateNode(ci);
     if (ci) {
         auto& manager = mManager;
@@ -189,7 +189,7 @@ void FTransformManager::setTransform(Instance ci, const mat4& model) noexcept {
     }
 }
 
-void FTransformManager::updateNodeTransform(Instance i) noexcept {
+void FTransformManager::updateNodeTransform(Instance const i) noexcept {
     if (UTILS_UNLIKELY(mLocalTransformTransactionOpen)) {
         return;
     }
@@ -201,7 +201,7 @@ void FTransformManager::updateNodeTransform(Instance i) noexcept {
     // find our parent's world transform, if any
     // note: by using the raw_array() we don't need to check that parent is valid.
     Instance const parent = manager[i].parent;
-    FTransformManager::computeWorldTransform(
+    computeWorldTransform(
             manager[i].world, manager[i].worldTranslationLo,
             manager[parent].world, manager[i].local,
             manager[parent].worldTranslationLo, manager[i].localTranslationLo,
@@ -241,7 +241,7 @@ void FTransformManager::computeAllWorldTransforms() noexcept {
         Instance const parent = manager[i].parent;
         assert_invariant(parent < i);
 
-        FTransformManager::computeWorldTransform(
+        computeWorldTransform(
                 manager[i].world, manager[i].worldTranslationLo,
                 manager[parent].world, manager[i].local,
                 manager[parent].worldTranslationLo, manager[i].localTranslationLo,
@@ -250,7 +250,7 @@ void FTransformManager::computeAllWorldTransforms() noexcept {
 }
 
 // Inserts a parentless node in the hierarchy
-void FTransformManager::insertNode(Instance i, Instance parent) noexcept {
+void FTransformManager::insertNode(Instance const i, Instance const parent) noexcept {
     auto& manager = mManager;
 
     assert_invariant(manager[i].parent == Instance{});
@@ -274,7 +274,7 @@ void FTransformManager::insertNode(Instance i, Instance parent) noexcept {
     validateNode(parent);
 }
 
-void FTransformManager::swapNode(Instance i, Instance j) noexcept {
+void FTransformManager::swapNode(Instance const i, Instance const j) noexcept {
     validateNode(i);
     validateNode(j);
 
@@ -316,7 +316,7 @@ void FTransformManager::swapNode(Instance i, Instance j) noexcept {
 
 // removes a node from the graph, but doesn't remove it or its children from the array
 // (making everybody orphaned).
-void FTransformManager::removeNode(Instance i) noexcept {
+void FTransformManager::removeNode(Instance const i) noexcept {
     auto& manager = mManager;
     Instance const parent = manager[i].parent;
     Instance const prev = manager[i].prev;
@@ -342,7 +342,7 @@ void FTransformManager::removeNode(Instance i) noexcept {
 }
 
 // update references to this node after it has been moved in the array
-void FTransformManager::updateNode(Instance i) noexcept {
+void FTransformManager::updateNode(Instance const i) noexcept {
     auto& manager = mManager;
     // update our preview sibling's next reference (to ourselves)
     Instance const parent = manager[i].parent;
@@ -376,7 +376,7 @@ void FTransformManager::transformChildren(Sim& manager, Instance i) noexcept {
     while (i) {
         // update child's world transform
         Instance const parent = manager[i].parent;
-        FTransformManager::computeWorldTransform(
+        computeWorldTransform(
                 manager[i].world, manager[i].worldTranslationLo,
                 manager[parent].world, manager[i].local,
                 manager[parent].worldTranslationLo, manager[i].localTranslationLo,
@@ -400,7 +400,7 @@ void FTransformManager::computeWorldTransform(
         mat4f const& UTILS_RESTRICT local,
         float3 const& UTILS_RESTRICT ptTranslationLo,       // reference to avoid unneeded access
         float3 const& UTILS_RESTRICT localTranslationLo,    // reference to avoid unneeded access
-        bool accurate) {
+        bool const accurate) {
 
     outWorld[0] = pt * local[0];
     outWorld[1] = pt * local[1];
@@ -428,7 +428,7 @@ void FTransformManager::computeWorldTransform(
 }
 
 
-void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance i) noexcept {
+void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance const i) noexcept {
 #ifndef NDEBUG
     auto& manager = mManager;
     if (i) {
@@ -470,8 +470,8 @@ void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance i) noexcep
 #endif
 }
 
-void FTransformManager::gc(utils::EntityManager& em) noexcept {
-    mManager.gc(em, [this](Entity e) {
+void FTransformManager::gc(EntityManager& em) noexcept {
+    mManager.gc(em, [this](Entity const e) {
                 destroy(e);
             });
 }

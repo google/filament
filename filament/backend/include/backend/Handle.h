@@ -35,7 +35,6 @@ struct HwIndexBuffer;
 struct HwProgram;
 struct HwRenderPrimitive;
 struct HwRenderTarget;
-struct HwSamplerGroup;
 struct HwStream;
 struct HwSwapChain;
 struct HwTexture;
@@ -131,7 +130,7 @@ struct Handle : public HandleBase {
     bool operator>=(const Handle& rhs) const noexcept { return getId() >= rhs.getId(); }
 
     // type-safe Handle cast
-    template<typename B, typename = std::enable_if_t<std::is_base_of<T, B>::value> >
+    template<typename B, typename = std::enable_if_t<std::is_base_of_v<T, B>> >
     Handle(Handle<B> const& base) noexcept : HandleBase(base) { } // NOLINT(hicpp-explicit-conversions,google-explicit-constructor)
 
 private:
@@ -149,7 +148,6 @@ using IndexBufferHandle         = Handle<HwIndexBuffer>;
 using ProgramHandle             = Handle<HwProgram>;
 using RenderPrimitiveHandle     = Handle<HwRenderPrimitive>;
 using RenderTargetHandle        = Handle<HwRenderTarget>;
-using SamplerGroupHandle        = Handle<HwSamplerGroup>;
 using StreamHandle              = Handle<HwStream>;
 using SwapChainHandle           = Handle<HwSwapChain>;
 using TextureHandle             = Handle<HwTexture>;

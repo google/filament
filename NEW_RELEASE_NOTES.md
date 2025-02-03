@@ -7,3 +7,5 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- matdbg: Add support for debugging ESSL 1.0 shaders

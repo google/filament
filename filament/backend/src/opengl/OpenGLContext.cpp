@@ -408,7 +408,7 @@ void OpenGLContext::initProcs(Procs* procs,
     procs->maxShaderCompilerThreadsKHR = +[](GLuint) {};
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
-#   ifndef IOS // IOS is guaranteed to have ES3.x
+#   ifndef FILAMENT_IOS // FILAMENT_IOS is guaranteed to have ES3.x
 #       ifndef __EMSCRIPTEN__
     if (UTILS_UNLIKELY(major == 2)) {
         // Runtime OpenGL version is ES 2.x
@@ -438,7 +438,7 @@ void OpenGLContext::initProcs(Procs* procs,
         procs->maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsKHR;
     }
 #       endif // __EMSCRIPTEN__
-#   endif // IOS
+#   endif // FILAMENT_IOS
 #else
     procs->maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsARB;
 #endif
@@ -500,11 +500,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // qualcomm seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
 
+#ifndef __EMSCRIPTEN__
             // Older Adreno devices that support ES3.0 only tend to be extremely buggy, so we
             // fall back to ES2.0.
             if (major == 3 && minor == 0) {
                 bugs->force_feature_level0 = true;
             }
+#endif
         } else if (strstr(renderer, "Mali")) {
             // ARM GPU
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
@@ -574,14 +576,14 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     }
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
-#   ifndef IOS // IOS is guaranteed to have ES3.x
+#   ifndef FILAMENT_IOS // FILAMENT_IOS is guaranteed to have ES3.x
     if (UTILS_UNLIKELY(major == 2)) {
         if (UTILS_UNLIKELY(!exts.OES_vertex_array_object)) {
             // we activate this workaround path, which does the reset of array buffer
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
         }
     }
-#   endif // IOS
+#   endif // FILAMENT_IOS
 #else
     // feedback loops are allowed on GL desktop as long as writes are disabled
     bugs->allow_read_only_ancillary_feedback_loop = true;
@@ -614,27 +616,25 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
                 featureLevel = FeatureLevel::FEATURE_LEVEL_2;
                 if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
                     gets.max_combined_texture_image_units >=
-                    (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                            (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
                     featureLevel = FeatureLevel::FEATURE_LEVEL_3;
                 }
             }
         }
     }
-#   ifndef IOS // IOS is guaranteed to have ES3.x
+#   ifndef FILAMENT_IOS // FILAMENT_IOS is guaranteed to have ES3.x
     else if (UTILS_UNLIKELY(major == 2)) {
         // Runtime OpenGL version is ES 2.x
-#       if defined(BACKEND_OPENGL_LEVEL_GLES30)
-        // mandatory extensions (all supported by Mali-400 and Adreno 304)
-        assert_invariant(exts.OES_depth_texture);
-        assert_invariant(exts.OES_depth24);
-        assert_invariant(exts.OES_packed_depth_stencil);
-        assert_invariant(exts.OES_rgb8_rgba8);
-        assert_invariant(exts.OES_standard_derivatives);
-        assert_invariant(exts.OES_texture_npot);
-#       endif
+        // note: mandatory extensions (all supported by Mali-400 and Adreno 304)
+        //      OES_depth_texture
+        //      OES_depth24
+        //      OES_packed_depth_stencil
+        //      OES_rgb8_rgba8
+        //      OES_standard_derivatives
+        //      OES_texture_npot
         featureLevel = FeatureLevel::FEATURE_LEVEL_0;
     }
-#   endif // IOS
+#   endif // FILAMENT_IOS
 #else
     assert_invariant(gets.max_texture_image_units >= 16);
     assert_invariant(gets.max_combined_texture_image_units >= 32);

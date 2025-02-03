@@ -20,9 +20,17 @@ const kUntitledPlaceholder = "untitled";
 
 // Maps to backend to the languages allowed for that backend.
 const LANGUAGE_CHOICES = {
-    'opengl': ['glsl'],
+    'opengl': ['essl3', 'essl1'],
+    'essl1': ['essl3', 'essl1'],
     'vulkan': ['glsl', 'spirv'],
     'metal': ['msl'],
+};
+
+const DEFAULT_LANGUAGE_FOR_BACKEND = {
+    'opengl': 'essl3',
+    'essl1': 'essl1',
+    'vulkan': 'glsl',
+    'metal': 'msl',
 };
 
 const BACKENDS = Object.keys(LANGUAGE_CHOICES);
@@ -452,6 +460,7 @@ class AdvancedOptions extends LitElement {
     static get properties() {
         return {
             currentBackend: {type: String, attribute: 'current-backend'},
+            hideInactiveVariants: {type: Boolean, attribute: 'hide-inactive-variants'},
             availableBackends: {type: Array, state: true},
         };
     }
@@ -470,6 +479,9 @@ class AdvancedOptions extends LitElement {
                 justify-content: center;
                 align-items: flex-start;
             }
+            .borderless {
+                border: 1px solid rgba(0,0,0,0);
+            }
             label {
                 display: flex;
                 flex-direction: row;
@@ -485,6 +497,35 @@ class AdvancedOptions extends LitElement {
             }
             .option-heading {
                 margin-bottom: 5px;
+            }
+
+            /* Below is a custom checkbox */
+            input[type="checkbox"] {
+                -webkit-appearance: none;
+                appearance: none;
+                background-color: var(--form-background);
+                margin-right: 5px;
+                font: inherit;
+                width: 1.15em;
+                height: 1.15em;
+                border: 0.15em solid ${unsafeCSS(UNSELECTED_COLOR)};
+                border-radius: 0.15em;
+                display: grid;
+                place-content: center;
+            }
+            input[type="checkbox"]::before {
+                content: "";
+                width: 0.65em;
+                height: 0.65em;
+                clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+                transform: scale(0);
+                transform-origin: bottom left;
+                box-shadow: inset 1em 1em var(--form-control-color);
+                /* Windows High Contrast Mode */
+                background-color: ${unsafeCSS(FOREGROUND_COLOR)};
+            }
+            input[type="checkbox"]:checked::before {
+                transform: scale(1);
             }
         `;
     }
@@ -536,6 +577,25 @@ class AdvancedOptions extends LitElement {
         `;
     }
 
+    _hideInactiveVariantsOption() {
+        const onChange = (ev) => {
+            this.dispatchEvent(
+                new CustomEvent(
+                    'option-hide-inactive-variants',
+                    {detail: null, bubbles: true, composed: true}));
+        }
+        return html`
+            <div class="option borderless">
+                <!--<div class="option-heading">Current Backend</div>-->
+                <form action="" id="hide-inactive-variants-form">
+                    <input type="checkbox" name="InactiveVariants"
+                       ?checked=${this.hideInactiveVariants} @change=${onChange}/>
+                    Hide Inactive Variants
+                </form>
+            </div>
+        `;
+    }
+
     constructor() {
         super();
         this.availableBackends = [];
@@ -544,6 +604,7 @@ class AdvancedOptions extends LitElement {
     render() {
         return html`
             <menu-section title="Advanced Options">
+                ${this._hideInactiveVariantsOption() ?? nothing}
                 ${this._backendOption() ?? nothing}
             </menu-section>
         `;
@@ -613,11 +674,11 @@ class MaterialSidePanel extends LitElement {
             currentShaderIndex: {type: Number, attribute: 'current-shader-index'},
             currentBackend: {type: String, attribute: 'current-backend'},
             currentLanguage: {type: String, attribute: 'current-language'},
+            hideInactiveVariants: {type: Boolean, attribute: 'hide-inactive-variants'},
 
             database: {type: Object, state: true},
             materials: {type: Array, state: true},
             activeShaders: {type: Object, state: true},
-
             variants: {type: Array, state: true},
         }
     }
@@ -662,8 +723,8 @@ class MaterialSidePanel extends LitElement {
                 let name = material.name || kUntitledPlaceholder;
                 if (name in duplicatedLabels) {
                     const index = duplicatedLabels[name];
-                    name = `${name} (${index})`;
                     duplicatedLabels[name] = index + 1;
+                    name = `${name} (${index})`;
                 }
                 return {
                     matid: matid,
@@ -747,6 +808,7 @@ class MaterialSidePanel extends LitElement {
                     if (b.active && !a.active) return 1;
                     return 0;
                 })
+                .filter((variant) => (!this.hideInactiveVariants || variant.shader.active))
                 .map((variant) => {
                     let divClass = 'material_variant_language';
                     const shaderIndex = +variant.shader.index;
@@ -778,7 +840,13 @@ class MaterialSidePanel extends LitElement {
 
     render() {
         const sections = (title, domain) => {
-            const mats = this.materials.filter((m) => m.domain == domain).map((mat) => {
+            const mats = this.materials
+                             .filter((m) => m.domain == domain)
+                             .filter((mat) => {
+                                 const material = this.database[mat.matid];
+                                 return !this.hideInactiveVariants || material.active;
+                             })
+                             .map((mat) => {
                 const material = this.database[mat.matid];
                 const onClick = this._handleMaterialClick.bind(this, mat.matid);
                 let divClass = 'material_variant_language';
@@ -806,15 +874,13 @@ class MaterialSidePanel extends LitElement {
             }
             return null;
         };
-        let advancedOptions = null;
-        // Currently we only have one advanced option and it's only for when we're in matinfo
-        if (_isMatInfoMode(this.database)) {
-            advancedOptions =
-                (() => html`
-                    <advanced-options id="advanced-options"
-                             current-backend=${this.currentBackend}></advanced-options>
-                `)();
-        }
+        const advancedOptions =
+            (() => html`
+                <advanced-options id="advanced-options"
+                         current-backend=${this.currentBackend}
+                         ?hide-inactive-variants=${this.hideInactiveVariants}
+                ></advanced-options>
+            `)();
 
         return html`
             <style>${this.dynamicStyle()}</style>
@@ -874,6 +940,12 @@ class MatdbgViewer extends LitElement {
 
         let materials = await fetchMaterials();
         this.database = materials;
+
+        // This is the user preferences stored in localStorage
+        let hideInactiveVariantsVal = localStorage.getItem('option-hide-inactive-variants');
+        if (hideInactiveVariantsVal != null) {
+            this.hideInactiveVariants = hideInactiveVariantsVal == 'true';
+        }
     }
 
     _getShader() {
@@ -907,6 +979,7 @@ class MatdbgViewer extends LitElement {
         this.currentMaterial = null;
         this.currentLanguage = null;
         this.currentBackend = null;
+        this.hideInactiveVariants = false;
         this.init();
 
         this.addEventListener('select-material',
@@ -957,6 +1030,12 @@ class MatdbgViewer extends LitElement {
             }
         );
 
+        this.addEventListener('option-hide-inactive-variants',
+            (ev) => {
+                this.hideInactiveVariants = !this.hideInactiveVariants;
+                localStorage.setItem('option-hide-inactive-variants', "" + this.hideInactiveVariants);
+            }
+        );
         addEventListener('resize', this._onResize.bind(this));
     }
 
@@ -972,15 +1051,16 @@ class MatdbgViewer extends LitElement {
             currentBackend: {type: String, state: true},
             codeViewerExpectedWidth: {type: Number, state: true},
             codeViewerExpectedHeight: {type: Number, state: true},
+
+            hideInactiveVariants: {type: Boolean, state: true},
         }
     }
 
     updated(props) {
         // Set a language if there hasn't been one set.
         if (props.has('currentBackend') && this.currentBackend) {
-            const choices = LANGUAGE_CHOICES[this.currentBackend];
-            if (choices.indexOf(this.currentLanguage) < 0) {
-                this.currentLanguage = choices[0];
+            if (LANGUAGE_CHOICES[this.currentBackend].indexOf(this.currentLanguage) < 0) {
+                this.currentLanguage = DEFAULT_LANGUAGE_FOR_BACKEND[this.currentBackend];
             }
         }
         if (props.has('currentMaterial')) {
@@ -1085,7 +1165,8 @@ class MatdbgViewer extends LitElement {
                      current-language="${this.currentLanguage}"
                      current-shader-index="${this.currentShaderIndex}"
                      current-material="${this.currentMaterial}"
-                     current-backend="${this.currentBackend}" >
+                     current-backend="${this.currentBackend}"
+                     ?hide-inactive-variants="${this.hideInactiveVariants}" >
             </material-sidepanel>
             <code-viewer id="code-viewer"
                  ?active=${shader && shader.active}

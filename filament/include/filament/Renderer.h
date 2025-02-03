@@ -105,7 +105,7 @@ public:
      * @param historySize requested history size. The returned vector could be smaller.
      * @return A vector of FrameInfo.
      */
-    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(
+    utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(
             size_t historySize = 1) const noexcept;
 
     /**

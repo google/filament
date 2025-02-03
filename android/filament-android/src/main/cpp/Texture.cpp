@@ -138,6 +138,13 @@ Java_com_google_android_filament_Texture_nBuilderImportTexture(JNIEnv*, jclass, 
     builder->import((intptr_t)id);
 }
 
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Texture_nBuilderExternal(JNIEnv*, jclass, jlong nativeBuilder) {
+    Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
+    builder->external();
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv*, jclass,
         jlong nativeBuilder, jlong nativeEngine) {

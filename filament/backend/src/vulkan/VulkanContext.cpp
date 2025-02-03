@@ -20,19 +20,14 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
-#include "VulkanUtility.h"
 
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/Panic.h>
-#include <utils/FixedCapacityVector.h>
 
 #include <algorithm> // for std::max
 
 using namespace bluevk;
-
-using utils::FixedCapacityVector;
-
 
 namespace {
 
@@ -90,7 +85,8 @@ VulkanTimestamps::VulkanTimestamps(VkDevice device) : mDevice(device) {
     std::unique_lock<utils::Mutex> lock(mMutex);
     tqpCreateInfo.queryCount = mUsed.size() * 2;
     VkResult result = vkCreateQueryPool(mDevice, &tqpCreateInfo, VKALLOC, &mPool);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateQueryPool error.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateQueryPool failed."
+                                                       << " error=" << static_cast<int32_t>(result);
     mUsed.reset();
 }
 
@@ -113,7 +109,7 @@ void VulkanTimestamps::clearQuery(uint32_t queryIndex) {
 }
 
 void VulkanTimestamps::beginQuery(VulkanCommandBuffer const* commands,
-        VulkanTimerQuery* query) {
+        fvkmemory::resource_ptr<VulkanTimerQuery> query) {
     uint32_t const index = query->getStartingQueryIndex();
 
     auto const cmdbuffer = commands->buffer();
@@ -125,21 +121,22 @@ void VulkanTimestamps::beginQuery(VulkanCommandBuffer const* commands,
 }
 
 void VulkanTimestamps::endQuery(VulkanCommandBuffer const* commands,
-        VulkanTimerQuery const* query) {
+        fvkmemory::resource_ptr<VulkanTimerQuery> query) {
     uint32_t const index = query->getStoppingQueryIndex();
     vkCmdWriteTimestamp(commands->buffer(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
 }
 
-VulkanTimestamps::QueryResult VulkanTimestamps::getResult(VulkanTimerQuery const* query) {
+VulkanTimestamps::QueryResult VulkanTimestamps::getResult(
+        fvkmemory::resource_ptr<VulkanTimerQuery> query) {
     uint32_t const index = query->getStartingQueryIndex();
     QueryResult result;
     size_t const dataSize = result.size() * sizeof(uint64_t);
     VkDeviceSize const stride = sizeof(uint64_t) * 2;
     VkResult vkresult =
-            vkGetQueryPoolResults(mDevice, mPool, index, 2, dataSize, (void*) result.data(),
-                    stride, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+            vkGetQueryPoolResults(mDevice, mPool, index, 2, dataSize, (void*) result.data(), stride,
+                    VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
     FILAMENT_CHECK_POSTCONDITION(vkresult == VK_SUCCESS || vkresult == VK_NOT_READY)
-            << "vkGetQueryPoolResults error: " << static_cast<int32_t>(vkresult);
+            << "vkGetQueryPoolResults error=" << static_cast<int32_t>(vkresult);
     if (vkresult == VK_NOT_READY) {
         return {0, 0, 0, 0};
     }

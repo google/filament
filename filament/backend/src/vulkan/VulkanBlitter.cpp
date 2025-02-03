@@ -21,6 +21,7 @@
 #include "VulkanHandles.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanTexture.h"
+#include "vulkan/utils/Image.h"
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
@@ -61,8 +62,8 @@ inline void blitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, V
             .dstOffsets = { dstRect[0], dstRect[1] },
     }};
     vkCmdBlitImage(cmdbuf,
-            src.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            dst.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_DST),
+            src.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            dst.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, blitRegions, filter);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
@@ -104,8 +105,8 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
             .extent = { src.getExtent2D().width, src.getExtent2D().height, 1 },
     }};
     vkCmdResolveImage(cmdbuffer,
-            src.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_SRC),
-            dst.getImage(), imgutil::getVkLayout(VulkanLayout::TRANSFER_DST),
+            src.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            dst.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, resolveRegions);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
@@ -126,8 +127,7 @@ struct BlitterUniforms {
 }// anonymous namespace
 
 VulkanBlitter::VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept
-    : mPhysicalDevice(physicalDevice),
-      mCommands(commands) {}
+        : mPhysicalDevice(physicalDevice), mCommands(commands) {}
 
 void VulkanBlitter::resolve(VulkanAttachment dst, VulkanAttachment src) {
 
@@ -151,7 +151,8 @@ void VulkanBlitter::resolve(VulkanAttachment dst, VulkanAttachment src) {
     }
 #endif
 
-    VulkanCommandBuffer& commands = mCommands->get();
+    VulkanCommandBuffer& commands = dst.texture->getIsProtected() ?
+            mCommands->getProtected() : mCommands->get();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
     resolveFast(&commands, aspect, src, dst);
@@ -176,7 +177,8 @@ void VulkanBlitter::blit(VkFilter filter,
 #endif
     // src and dst should have the same aspect here
     VkImageAspectFlags const aspect = src.texture->getImageAspect();
-    VulkanCommandBuffer& commands = mCommands->get();
+    VulkanCommandBuffer& commands = dst.texture->getIsProtected() ?
+            mCommands->getProtected() : mCommands->get();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
     blitFast(&commands, aspect, filter, src, dst, srcRectPair, dstRectPair);

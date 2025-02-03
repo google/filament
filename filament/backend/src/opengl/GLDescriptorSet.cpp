@@ -173,6 +173,7 @@ void GLDescriptorSet::update(OpenGLContext& gl,
 
             arg.target = t ? t->gl.target : 0;
             arg.id = t ? t->gl.id : 0;
+            arg.external = t ? t->gl.external :  false;
             if constexpr (std::is_same_v<T, Sampler> ||
                           std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
                 if constexpr (std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
@@ -285,7 +286,7 @@ void GLDescriptorSet::bind(
             } else if constexpr (std::is_same_v<T, Sampler>) {
                 GLuint const unit = p.getTextureUnit(set, binding);
                 if (arg.target) {
-                    gl.bindTexture(unit, arg.target, arg.id);
+                    gl.bindTexture(unit, arg.target, arg.id, arg.external);
                     gl.bindSampler(unit, arg.sampler);
                     if (UTILS_UNLIKELY(arg.ref)) {
                         updateTextureView(gl, handleAllocator, unit, arg);
@@ -296,7 +297,7 @@ void GLDescriptorSet::bind(
             } else if constexpr (std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
                 GLuint const unit = p.getTextureUnit(set, binding);
                 if (arg.target) {
-                    gl.bindTexture(unit, arg.target, arg.id);
+                    gl.bindTexture(unit, arg.target, arg.id, arg.external);
                     gl.bindSampler(unit, arg.sampler);
                     if (UTILS_UNLIKELY(arg.ref)) {
                         updateTextureView(gl, handleAllocator, unit, arg);
@@ -314,7 +315,7 @@ void GLDescriptorSet::bind(
                 // in ES2 the sampler parameters need to be set on the texture itself
                 GLuint const unit = p.getTextureUnit(set, binding);
                 if (arg.target) {
-                    gl.bindTexture(unit, arg.target, arg.id);
+                    gl.bindTexture(unit, arg.target, arg.id, arg.external);
                     SamplerParams const params = arg.params;
                     glTexParameteri(arg.target, GL_TEXTURE_MIN_FILTER,
                             (GLint)GLUtils::getTextureFilter(params.filterMin));

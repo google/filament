@@ -254,8 +254,8 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     const uint32_t dim = outCube->getWidth();
 
     RenderableManager& rcm = engine.getRenderableManager();
-    rcm.setMaterialInstanceAt(
-            rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
+    auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
+    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     TextureSampler environmentSampler;
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
@@ -289,6 +289,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         engine.destroy(rt);
     }
 
+    rcm.clearMaterialInstanceAt(ci, 0);
     engine.destroy(mi);
 
     return outCube;
@@ -328,8 +329,8 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
     mi->setParameter("sampleCount", float(mSampleCount));
 
     RenderableManager& rcm = engine.getRenderableManager();
-    rcm.setMaterialInstanceAt(
-            rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
+    auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
+    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     RenderTarget* const rt = RenderTarget::Builder()
             .texture(RenderTarget::AttachmentPoint::COLOR0, mKernelTexture)
@@ -339,6 +340,8 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
     view->setViewport({ 0, 0, 1, mSampleCount });
 
     renderer->renderStandaloneView(view);
+
+    rcm.clearMaterialInstanceAt(ci, 0);
 
     engine.destroy(rt);
     engine.destroy(mi);
@@ -410,8 +413,8 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
     MaterialInstance* const mi = mContext.mIrradianceIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
-    rcm.setMaterialInstanceAt(
-            rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
+    auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
+    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     const uint32_t sampleCount = mSampleCount;
     const float linear = options.hdrLinear;
@@ -454,6 +457,8 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
         renderer->renderStandaloneView(view);
         engine.destroy(rt);
     }
+
+    rcm.clearMaterialInstanceAt(ci, 0);
 
     engine.destroy(mi);
 
@@ -533,8 +538,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     mi->setParameter("roughness", roughnessArray, 16);
 
     RenderableManager& rcm = engine.getRenderableManager();
-    rcm.setMaterialInstanceAt(
-            rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
+    auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
+    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     RenderTarget* const rt = RenderTarget::Builder()
             .texture(RenderTarget::AttachmentPoint::COLOR0, mKernelTexture)
@@ -544,6 +549,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     view->setViewport({ 0, 0, mLevelCount, mSampleCount });
 
     renderer->renderStandaloneView(view);
+
+    rcm.clearMaterialInstanceAt(ci, 0);
 
     engine.destroy(rt);
     engine.destroy(mi);
@@ -643,8 +650,8 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     MaterialInstance* const mi = mContext.mIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
-    rcm.setMaterialInstanceAt(
-            rcm.getInstance(mContext.mFullScreenQuadEntity), 0, mi);
+    auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
+    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     const uint32_t sampleCount = mSampleCount;
     const float linear = options.hdrLinear;
@@ -706,6 +713,8 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         dim >>= 1;
     }
+
+    rcm.clearMaterialInstanceAt(ci, 0);
 
     engine.destroy(mi);
 

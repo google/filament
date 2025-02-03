@@ -172,9 +172,9 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
      }
 }
 
-utils::FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
+FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
         size_t historySize) const noexcept {
-    auto result = utils::FixedCapacityVector<Renderer::FrameInfo>::with_capacity(MAX_FRAMETIME_HISTORY);
+    auto result = FixedCapacityVector<Renderer::FrameInfo>::with_capacity(MAX_FRAMETIME_HISTORY);
     auto const& history = mFrameTimeHistory;
     size_t i = 0;
     size_t const c = history.size();

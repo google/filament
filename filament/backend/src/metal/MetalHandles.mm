@@ -69,8 +69,10 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     return MTLTextureUsage(u);
 }
 
-MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
+MetalSwapChain::MetalSwapChain(
+        MetalContext& context, PlatformMetal& platform, CAMetalLayer* nativeWindow, uint64_t flags)
     : context(context),
+      platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       layer(nativeWindow),
       layerDrawableMutex(std::make_shared<std::mutex>()),
@@ -94,15 +96,19 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
     layer.device = context.device;
 }
 
-MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
+MetalSwapChain::MetalSwapChain(MetalContext& context, PlatformMetal& platform, int32_t width,
+        int32_t height, uint64_t flags)
     : context(context),
+      platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       headlessWidth(width),
       headlessHeight(height),
       type(SwapChainType::HEADLESS) {}
 
-MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
+MetalSwapChain::MetalSwapChain(MetalContext& context, PlatformMetal& platform,
+        CVPixelBufferRef pixelBuffer, uint64_t flags)
     : context(context),
+      platform(platform),
       depthStencilFormat(decideDepthStencilFormat(flags)),
       externalImage(MetalExternalImage::createFromImage(context, pixelBuffer)),
       type(SwapChainType::CVPIXELBUFFERREF) {
@@ -140,6 +146,10 @@ NSUInteger MetalSwapChain::getSurfaceHeight() const {
     return (NSUInteger) layer.drawableSize.height;
 }
 
+bool MetalSwapChain::isAbandoned() const {
+    return context.currentFrame < abandonedUntilFrame;
+}
+
 id<MTLTexture> MetalSwapChain::acquireDrawable() {
     if (drawable) {
         return drawable.texture;
@@ -157,7 +167,7 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         textureDescriptor.height = headlessHeight;
         // Specify MTLTextureUsageShaderRead so the headless surface can be blitted from.
         textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         textureDescriptor.storageMode = MTLStorageModeShared;
 #else
         textureDescriptor.storageMode = MTLStorageModeManaged;
@@ -180,7 +190,18 @@ id<MTLTexture> MetalSwapChain::acquireDrawable() {
         drawable = [layer nextDrawable];
     }
 
-    FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
+    if (UTILS_UNLIKELY(drawable == nil)) {
+        switch (platform.getDrawableFailureBehavior()) {
+            case PlatformMetal::DrawableFailureBehavior::PANIC:
+                FILAMENT_CHECK_POSTCONDITION(drawable != nil) << "Could not obtain drawable.";
+                break;
+
+            case PlatformMetal::DrawableFailureBehavior::ABORT_FRAME:
+                abandonedUntilFrame = context.currentFrame + 1;
+                return nil;
+        }
+    }
+
     return drawable.texture;
 }
 
@@ -520,7 +541,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     const BOOL mipmapped = levels > 1;
     const BOOL multisampled = samples > 1;
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     const BOOL textureArray = target == SamplerType::SAMPLER_2D_ARRAY;
     FILAMENT_CHECK_PRECONDITION(!textureArray || !multisampled)
             << "iOS does not support multisampled texture arrays.";
@@ -533,7 +554,7 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
         switch (target) {
             case SamplerType::SAMPLER_2D:
                 return MTLTextureType2DMultisample;
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
             case SamplerType::SAMPLER_2D_ARRAY:
                 return MTLTextureType2DMultisampleArray;
 #endif
@@ -856,7 +877,7 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     descriptor.height = region.size.height;
     descriptor.depth = region.size.depth;
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     descriptor.storageMode = MTLStorageModeShared;
 #else
     descriptor.storageMode = MTLStorageModeManaged;
@@ -1117,12 +1138,20 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 }
 
+bool MetalRenderTarget::involvesAbandonedSwapChain() const noexcept {
+    const auto* draw = context->currentDrawSwapChain;
+    const auto* read = context->currentReadSwapChain;
+    return (draw && draw->isAbandoned()) || (read && read->isAbandoned());
+}
+
 MetalRenderTarget::Attachment MetalRenderTarget::getDrawColorAttachment(size_t index) {
     assert_invariant(index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
     Attachment result = color[index];
     if (index == 0 && defaultRenderTarget) {
         assert_invariant(context->currentDrawSwapChain);
         result.texture = context->currentDrawSwapChain->acquireDrawable();
+        // acquireDrawable may fail to acquire the drawable, in which case result.texture will be
+        // nil, and an invalid attachment
     }
     return result;
 }
@@ -1133,6 +1162,8 @@ MetalRenderTarget::Attachment MetalRenderTarget::getReadColorAttachment(size_t i
     if (index == 0 && defaultRenderTarget) {
         assert_invariant(context->currentReadSwapChain);
         result.texture = context->currentReadSwapChain->acquireDrawable();
+        // acquireDrawable may fail to acquire the drawable, in which case result.texture will be
+        // nil, and an invalid attachment
     }
     return result;
 }

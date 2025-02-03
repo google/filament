@@ -24,7 +24,7 @@
 
 #include <fstream>
 
-#ifndef IOS
+#ifndef FILAMENT_IOS
 #include <imageio/ImageEncoder.h>
 #include <image/ColorTransform.h>
 #endif
@@ -67,7 +67,7 @@ struct ScreenshotParams {
     uint32_t pixelHashResult;
 };
 
-#ifdef IOS
+#ifdef FILAMENT_IOS
 static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {}
 #else
 static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt, ScreenshotParams* params) {

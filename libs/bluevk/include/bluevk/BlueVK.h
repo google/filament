@@ -40,7 +40,7 @@
 
     #if defined(__ANDROID__)
     #define VK_USE_PLATFORM_ANDROID_KHR 1
-    #elif defined(IOS)
+    #elif defined(FILAMENT_IOS)
     #define VK_USE_PLATFORM_IOS_MVK 1
     #elif defined(__linux__)
     #if defined(FILAMENT_SUPPORTS_XCB)

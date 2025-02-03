@@ -18,13 +18,17 @@
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
 #include "VulkanConstants.h"
-#include "VulkanImageUtility.h"
-#include "VulkanUtility.h"
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Definitions.h"
+
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <memory>
 
@@ -41,10 +45,10 @@ struct VulkanTimerQuery;
 struct VulkanCommandBuffer;
 
 struct VulkanAttachment {
-    VulkanTexture* texture = nullptr;
+    fvkmemory::resource_ptr<VulkanTexture> texture;
     uint8_t level = 0;
     uint8_t layerCount = 1;
-    uint16_t layer = 0;
+    uint8_t layer = 0;
 
     bool isDepth() const;
     VkImage getImage() const;
@@ -70,9 +74,11 @@ public:
     std::tuple<uint32_t, uint32_t> getNextQuery();
     void clearQuery(uint32_t queryIndex);
 
-    void beginQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery* query);
-    void endQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery const* query);
-    QueryResult getResult(VulkanTimerQuery const* query);
+    void beginQuery(VulkanCommandBuffer const* commands,
+            fvkmemory::resource_ptr<VulkanTimerQuery> query);
+    void endQuery(VulkanCommandBuffer const* commands,
+            fvkmemory::resource_ptr<VulkanTimerQuery> query);
+    QueryResult getResult(fvkmemory::resource_ptr<VulkanTimerQuery> query);
 
 private:
     VkDevice mDevice;
@@ -82,7 +88,9 @@ private:
 };
 
 struct VulkanRenderPass {
-    VulkanRenderTarget* renderTarget;
+    // Between the begin and end command render pass we cache the command buffer
+    VulkanCommandBuffer* commandBuffer;
+    fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
     int currentSubpass;
@@ -107,11 +115,11 @@ public:
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline VkFormatList const& getAttachmentDepthStencilFormats() const {
+    inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
         return mDepthStencilFormats;
     }
 
-    inline VkFormatList const& getBlittableDepthStencilFormats() const {
+    inline fvkutils::VkFormatList const& getBlittableDepthStencilFormats() const {
         return mBlittableDepthStencilFormats;
     }
 
@@ -169,8 +177,8 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
 
-    VkFormatList mDepthStencilFormats;
-    VkFormatList mBlittableDepthStencilFormats;
+    fvkutils::VkFormatList mDepthStencilFormats;
+    fvkutils::VkFormatList mBlittableDepthStencilFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

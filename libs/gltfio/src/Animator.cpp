@@ -264,7 +264,7 @@ size_t Animator::getAnimationCount() const {
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
-    time = fmod(time, anim.duration);
+    time = time == anim.duration ? time : fmod(time, anim.duration);
     TransformManager& transformManager = *mImpl->transformManager;
     transformManager.openLocalTransformTransaction();
     for (const auto& channel : anim.channels) {
@@ -408,6 +408,9 @@ void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
     const Sampler* samplers = dst.samplers.data();
     for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
         const cgltf_animation_channel& srcChannel = srcChannels[j];
+        if (!srcChannel.target_node) {
+            continue;
+        }
         Entity targetEntity = nodeMap[srcChannel.target_node - nodes];
         if (UTILS_UNLIKELY(!targetEntity)) {
             if (GLTFIO_VERBOSE) {

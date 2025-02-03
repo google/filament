@@ -22,9 +22,11 @@
 #include "VulkanDriver.h"
 
 #include "VulkanMemory.h"
-#include "VulkanResourceAllocator.h"
-#include "VulkanUtility.h"
-#include "spirv/VulkanSpirvUtils.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Conversion.h"
+#include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Spirv.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -56,10 +58,10 @@ template<typename Bitmask>
 inline void fromStageFlags(backend::ShaderStageFlags stage, descriptor_binding_t binding,
         Bitmask& mask) {
     if ((bool) (stage & ShaderStageFlags::VERTEX)) {
-        mask.set(binding + getVertexStageShift<Bitmask>());
+        mask.set(binding + fvkutils::getVertexStageShift<Bitmask>());
     }
     if ((bool) (stage & ShaderStageFlags::FRAGMENT)) {
-        mask.set(binding + getFragmentStageShift<Bitmask>());
+        mask.set(binding + fvkutils::getFragmentStageShift<Bitmask>());
     }
 }
 
@@ -105,9 +107,10 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
     return mask;
 }
 
-VulkanTexture* initMsaaTexture(VulkanTexture* texture, VkDevice device,
+fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
+        fvkmemory::resource_ptr<VulkanTexture> texture, VkDevice device,
         VkPhysicalDevice physicalDevice, VulkanContext const& context, VmaAllocator allocator,
-        VulkanCommands* commands, VulkanResourceAllocator* handleAllocator, uint8_t levels,
+        VulkanCommands* commands, fvkmemory::ResourceManager* resManager, uint8_t levels,
         uint8_t samples, VulkanStagePool& stagePool) {
     assert_invariant(texture);
     auto msTexture = texture->getSidecar();
@@ -117,10 +120,9 @@ VulkanTexture* initMsaaTexture(VulkanTexture* texture, VkDevice device,
         const TextureUsage usage = texture->usage & TextureUsage::ALL_ATTACHMENTS;
         assert_invariant(static_cast<uint16_t>(usage) != 0U);
 
-        msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
-                handleAllocator, texture->target, levels,
-                texture->format, samples, texture->width, texture->height, texture->depth, usage,
-                stagePool, true /* heap allocated */);
+        msTexture = resource_ptr<VulkanTexture>::construct(resManager, device, physicalDevice,
+                context, allocator, resManager, commands, texture->target, levels, texture->format,
+                samples, texture->width, texture->height, texture->depth, usage, stagePool);
         texture->setSidecar(msTexture);
     }
     return msTexture;
@@ -128,18 +130,17 @@ VulkanTexture* initMsaaTexture(VulkanTexture* texture, VkDevice device,
 
 } // anonymous namespace
 
+void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanTexture> texture) {
+    mResources.push_back(texture);
+}
+
+void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanBufferObject> obj) {
+    mResources.push_back(obj);
+}
+
 VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout const& layout)
-    : VulkanResource(VulkanResourceType::DESCRIPTOR_SET_LAYOUT),
-      bitmask(fromBackendLayout(layout)),
+    : bitmask(fromBackendLayout(layout)),
       count(Count::fromLayoutBitmask(bitmask)) {}
-
-void VulkanDescriptorSet::acquire(VulkanTexture* texture) {
-    mResources.acquire(texture);
-}
-
-void VulkanDescriptorSet::acquire(VulkanBufferObject* bufferObject) {
-    mResources.acquire(bufferObject);
-}
 
 PushConstantDescription::PushConstantDescription(backend::Program const& program) noexcept {
     mRangeCount = 0;
@@ -164,9 +165,9 @@ PushConstantDescription::PushConstantDescription(backend::Program const& program
     }
 }
 
-void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout layout,
+void PushConstantDescription::write(VkCommandBuffer cmdbuf, VkPipelineLayout layout,
         backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant const& value) {
-    VulkanCommandBuffer* cmdbuf = &(commands->get());
+
     uint32_t binaryValue = 0;
     UTILS_UNUSED_IN_RELEASE auto const& types = mTypes[(uint8_t) stage];
     if (std::holds_alternative<bool>(value)) {
@@ -182,13 +183,12 @@ void PushConstantDescription::write(VulkanCommands* commands, VkPipelineLayout l
         int const ival = std::get<int>(value);
         binaryValue = *reinterpret_cast<uint32_t const*>(&ival);
     }
-    vkCmdPushConstants(cmdbuf->buffer(), layout, getVkStage(stage), index * ENTRY_SIZE, ENTRY_SIZE,
+    vkCmdPushConstants(cmdbuf, layout, getVkStage(stage), index * ENTRY_SIZE, ENTRY_SIZE,
             &binaryValue);
 }
 
 VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
-      VulkanResource(VulkanResourceType::PROGRAM),
       mInfo(new(std::nothrow) PipelineInfo(builder)),
       mDevice(device) {
 
@@ -208,7 +208,7 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
         size_t dataSize = blob.size();
 
         if (!specializationConstants.empty()) {
-            workaroundSpecConstant(blob, specializationConstants, shader);
+            fvkutils::workaroundSpecConstant(blob, specializationConstants, shader);
             data = (uint32_t*) shader.data();
             dataSize = shader.size() * 4;
         }
@@ -220,7 +220,9 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
             .pCode = data,
         };
         VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create shader module.";
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Unable to create shader module."
+                << " error=" << static_cast<int32_t>(result);
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
         std::string name{ builder.getName().c_str(), builder.getName().size() };
@@ -256,23 +258,24 @@ VulkanProgram::~VulkanProgram() {
 // Creates a special "default" render target (i.e. associated with the swap chain)
 VulkanRenderTarget::VulkanRenderTarget()
     : HwRenderTarget(0, 0),
-      VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(false),
       mProtected(false),
-      mResources(nullptr),
       mInfo(std::make_unique<Auxiliary>()) {
     mInfo->rpkey.samples = mInfo->fbkey.samples = 1;
 }
 
-void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
+VulkanRenderTarget::~VulkanRenderTarget() = default;
+
+void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain> swapchain) {
     assert_invariant(!mOffscreen);
 
-    VkExtent2D const extent = swapChain.getExtent();
+    VkExtent2D const extent = swapchain->getExtent();
     width = extent.width;
     height = extent.height;
-    mProtected = swapChain.isProtected();
+    mProtected = swapchain->isProtected();
 
-    VulkanAttachment color = {.texture = swapChain.getCurrentColor()};
+    VulkanAttachment color = {};
+    color.texture = swapchain->getCurrentColor();
     mInfo->attachments = {color};
 
     auto& fbkey = mInfo->fbkey;
@@ -284,40 +287,37 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     fbkey.color[0] = color.getImageView();
     fbkey.resolve[0] = VK_NULL_HANDLE;
 
-    VulkanAttachment depth = {};
-    rpkey.depthFormat = depth.getFormat();
-    fbkey.depth = VK_NULL_HANDLE;
-
-    if (swapChain.getDepth()) {
-        depth = {.texture = swapChain.getDepth()};
+    if (swapchain->getDepth()) {
+        VulkanAttachment depth = {};
+        depth.texture = swapchain->getDepth();
         mInfo->attachments.push_back(depth);
         mInfo->depthIndex = 1;
 
         rpkey.depthFormat = depth.getFormat();
         fbkey.depth = depth.getImageView();
+    } else {
+        rpkey.depthFormat = VK_FORMAT_UNDEFINED;
+        fbkey.depth = VK_NULL_HANDLE;
     }
     mInfo->colors.set(0);
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
-        VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
-        VulkanResourceAllocator* handleAllocator, uint32_t width, uint32_t height, uint8_t samples,
-        VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+        VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
+        VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
+        uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
-      VulkanResource(VulkanResourceType::RENDER_TARGET),
       mOffscreen(true),
       mProtected(false),
-      mResources(handleAllocator),
       mInfo(std::make_unique<Auxiliary>()) {
-
     auto& depth = depthStencil[0];
 
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
     auto const& limits = context.getPhysicalDeviceLimits();
-    samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
-            limits.framebufferColorSampleCounts);
+    samples = samples = fvkutils::reduceSampleCount(samples,
+            limits.framebufferDepthSampleCounts & limits.framebufferColorSampleCounts);
 
     auto& rpkey = mInfo->rpkey;
     rpkey.samples = samples;
@@ -340,6 +340,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             continue;
         }
 
+        mProtected |= texture->getIsProtected();
+
         attachments.push_back(attachment);
         mInfo->colors.set(index);
 
@@ -347,14 +349,11 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         fbkey.color[index] = attachment.getImageView();
         fbkey.resolve[index] = VK_NULL_HANDLE;
 
-        mResources.acquire(attachment.texture);
-
         if (samples > 1) {
             VulkanAttachment msaaAttachment = {};
             if (texture->samples == 1) {
                 auto msaaTexture = initMsaaTexture(texture, device, physicalDevice, context,
-                        allocator, commands, handleAllocator,
-                        ((VulkanTexture const*) texture)->levels, samples, stagePool);
+                        allocator, commands, resourceManager, texture->levels, samples, stagePool);
                 if (msaaTexture && msaaTexture->isTransientAttachment()) {
                     rpkey.usesLazilyAllocatedMemory |= (1 << index);
                 }
@@ -375,7 +374,6 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             }
             fbkey.color[index] = msaaAttachment.getImageView();
             msaa.push_back(msaaAttachment);
-            mResources.acquire(msaaAttachment.texture);
         }
     }
 
@@ -388,19 +386,18 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         auto depthTexture = depth.texture;
         mInfo->depthIndex = (uint8_t) attachments.size();
         attachments.push_back(depth);
-        mResources.acquire(depthTexture);
         fbkey.depth = depth.getImageView();
         if (samples > 1) {
             mInfo->msaaDepthIndex = mInfo->depthIndex;
             if (depthTexture->samples == 1) {
                 // MSAA depth texture must have the mipmap count of 1
                 uint8_t const msLevel = 1;
-                // Create sidecar MSAA texture for the depth attachment if it does not already exist.
-                auto msaa = initMsaaTexture(depthTexture, device, physicalDevice, context, allocator,
-                        commands, handleAllocator, msLevel, samples, stagePool);
+                // Create sidecar MSAA texture for the depth attachment if it does not already
+                // exist.
+                auto msaa = initMsaaTexture(depthTexture, device, physicalDevice, context,
+                        allocator, commands, resourceManager, msLevel, samples, stagePool);
                 mInfo->msaaDepthIndex = (uint8_t) attachments.size();
                 attachments.push_back({ .texture = msaa, .layerCount = layerCount });
-                mResources.acquire(msaa);
             }
         }
     }
@@ -491,9 +488,7 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
 VulkanVertexBufferInfo::VulkanVertexBufferInfo(
         uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes)
     : HwVertexBufferInfo(bufferCount, attributeCount),
-      VulkanResource(VulkanResourceType::VERTEX_BUFFER_INFO),
       mInfo(attributes.size()) {
-
     auto attribDesc = mInfo.mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
     auto bufferDesc = mInfo.mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
     auto offsets = mInfo.mSoa.data<PipelineInfo::OFFSETS>();
@@ -505,7 +500,7 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(
         Attribute attrib = attributes[attribIndex];
         bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
         bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
-        VkFormat vkformat = getVkFormat(attrib.type, isNormalized, isInteger);
+        VkFormat vkformat = fvkutils::getVkFormat(attrib.type, isNormalized, isInteger);
 
         // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes. Filament's
         // vertex shaders declare all attributes as either vec4 or uvec4 (the latter for bone
@@ -531,19 +526,15 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanResourceAllocator* allocator,
-        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
+        uint32_t vertexCount, fvkmemory::resource_ptr<VulkanVertexBufferInfo> vbi)
     : HwVertexBuffer(vertexCount),
-      VulkanResource(VulkanResourceType::VERTEX_BUFFER),
-      vbih(vbih),
-      mBuffers(MAX_VERTEX_BUFFER_COUNT), // TODO: can we do better here?
-      mResources(allocator) {
+      vbi(vbi),
+      // TODO: Seems a bit wasteful. can we do better here?
+      mBuffers(MAX_VERTEX_BUFFER_COUNT) {
 }
 
-void VulkanVertexBuffer::setBuffer(VulkanResourceAllocator const& allocator,
-        VulkanBufferObject* bufferObject, uint32_t index) {
-    VulkanVertexBufferInfo const* const vbi =
-            const_cast<VulkanResourceAllocator&>(allocator).handle_cast<VulkanVertexBufferInfo*>(vbih);
+void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
+        uint32_t index) {
     size_t const count = vbi->getAttributeCount();
     VkBuffer* const vkbuffers = getVkBuffers();
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
@@ -552,25 +543,20 @@ void VulkanVertexBuffer::setBuffer(VulkanResourceAllocator const& allocator,
             vkbuffers[attribIndex] = bufferObject->buffer.getGpuBuffer();
         }
     }
-    mResources.acquire(bufferObject);
+    mResources.push_back(bufferObject);
 }
 
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
         uint32_t byteCount, BufferObjectBinding bindingType)
     : HwBufferObject(byteCount),
-      VulkanResource(VulkanResourceType::BUFFER_OBJECT),
       buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
       bindingType(bindingType) {}
 
-VulkanRenderPrimitive::VulkanRenderPrimitive(VulkanResourceAllocator* resourceAllocator,
-        PrimitiveType pt, Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh)
-        : VulkanResource(VulkanResourceType::RENDER_PRIMITIVE),
-          mResources(resourceAllocator) {
-    type = pt;
-    vertexBuffer = resourceAllocator->handle_cast<VulkanVertexBuffer*>(vbh);
-    indexBuffer = resourceAllocator->handle_cast<VulkanIndexBuffer*>(ibh);
-    mResources.acquire(vertexBuffer);
-    mResources.acquire(indexBuffer);
-}
+VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
+        fvkmemory::resource_ptr<VulkanVertexBuffer> vb,
+        fvkmemory::resource_ptr<VulkanIndexBuffer> ib)
+    : HwRenderPrimitive{.type = pt},
+      vertexBuffer(vb),
+      indexBuffer(ib) {}
 
 } // namespace filament::backend

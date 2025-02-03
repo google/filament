@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2021 The Android Open Source Project
  *
-* Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -63,7 +63,7 @@
 #define FVK_DEBUG_SHADER_MODULE           0x00000800
 #define FVK_DEBUG_READ_PIXELS             0x00001000
 #define FVK_DEBUG_PIPELINE_CACHE          0x00002000
-#define FVK_DEBUG_ALLOCATION              0x00004000
+#define FVK_DEBUG_STAGING_ALLOCATION      0x00004000
 
 // Enable the debug utils extension if it is available.
 #define FVK_DEBUG_DEBUG_UTILS             0x00008000
@@ -96,6 +96,12 @@
 #define FVK_DEBUG_FLAGS (FVK_DEBUG_PERFORMANCE | FVK_DEBUG_FORWARDED_FLAG)
 #else
 #define FVK_DEBUG_FLAGS 0
+#endif
+
+// Override the debug flags if we are forcing profiling mode
+#if defined(FILAMENT_FORCE_PROFILING_MODE)
+#undef FVK_DEBUG_FLAGS
+#define FVK_DEBUG_FLAGS (FVK_DEBUG_PROFILING)
 #endif
 
 #define FVK_ENABLED(flags) (((FVK_DEBUG_FLAGS) & (flags)) == (flags))
@@ -132,6 +138,10 @@ static_assert(FVK_ENABLED(FVK_DEBUG_VALIDATION));
 // end shorthands
 
 #if FVK_DEBUG_FLAGS == FVK_DEBUG_PROFILING
+
+    #ifndef NDEBUG
+        #error PROFILING is meaningless in DEBUG mode.
+    #endif
 
     #define FVK_SYSTRACE_CONTEXT()
     #define FVK_SYSTRACE_START(marker)
@@ -186,14 +196,16 @@ constexpr static const int FVK_REQUIRED_VERSION_MINOR = 1;
 // buffers that have been submitted but have not yet finished rendering. Note that Filament can
 // issue multiple commit calls in a single frame, and that we use a triple buffered swap chain on
 // some platforms.
-constexpr static const int FVK_MAX_COMMAND_BUFFERS = 10;
+//
+// Heuristic: Triple Buffering (3) multiplied by maximum number of renderpasses (15).
+constexpr static const int FVK_MAX_COMMAND_BUFFERS = 3 * 15;
 
 // Number of command buffer submissions that should occur before an unused pipeline is removed
 // from the cache.
 //
 // If this number is low, VkPipeline construction will occur frequently, which can
 // be extremely slow. If this number is high, the memory footprint will be large.
-constexpr static const int FVK_MAX_PIPELINE_AGE = 10;
+constexpr static const int FVK_MAX_PIPELINE_AGE = FVK_MAX_COMMAND_BUFFERS;
 
 // VulkanPipelineCache does not track which command buffers contain references to which pipelines,
 // instead it simply waits for at least FVK_MAX_COMMAND_BUFFERS submissions to occur before

@@ -59,7 +59,7 @@ void PostProcessDescriptorSet::setFrameUniforms(DriverApi& driver,
     mDescriptorSet.commit(mDescriptorSetLayout, driver);
 }
 
-void PostProcessDescriptorSet::bind(backend::DriverApi& driver) noexcept {
+void PostProcessDescriptorSet::bind(DriverApi& driver) noexcept {
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
 }
 

@@ -29,7 +29,7 @@ namespace utils::io {
 
 struct ostream_;
 
-class UTILS_PUBLIC ostream : protected utils::PrivateImplementation<ostream_> {
+class UTILS_PUBLIC ostream : protected PrivateImplementation<ostream_> {
     friend struct ostream_;
 
 public:
@@ -95,11 +95,11 @@ protected:
         size_t length() const noexcept;
 
     private:
-        void reserve(size_t newSize) noexcept;
+        void reserve(size_t newCapacity) noexcept;
 
         char* buffer = nullptr;     // buffer address
         char* curr = nullptr;       // current pointer
-        size_t size = 0;            // size remaining
+        size_t sizeRemaining = 0;            // size remaining
         size_t capacity = 0;        // total capacity of the buffer
     };
 
@@ -123,7 +123,7 @@ private:
 };
 
 // handles utils::bitset
-inline ostream& operator << (ostream& o, utils::bitset32 const& s) noexcept {
+inline ostream& operator << (ostream& o, bitset32 const& s) noexcept {
     return o << (void*)uintptr_t(s.getValue());
 }
 
