@@ -28,7 +28,13 @@ highp mat4 getClipFromWorldMatrix() {
     int eye = instance_index % CONFIG_STEREO_EYE_COUNT;
     return frameUniforms.clipFromWorldMatrix[eye];
 #elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
+
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    return frameUniforms.clipFromWorldMatrix[gl_ViewIndex];
+#else
     return frameUniforms.clipFromWorldMatrix[gl_ViewID_OVR];
+#endif // TARGET_VULKAN_ENVIRONMENT
+
 #else
     return frameUniforms.clipFromWorldMatrix[0];
 #endif
