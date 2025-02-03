@@ -87,9 +87,10 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
     return error(__LINE__, uri);
 }
 
-void ApiHandler::addFrameGraph(ViewHandle view_handle) {
+void ApiHandler::updateFrameGraph(ViewHandle view_handle) {
     std::unique_lock const lock(mStatusMutex);
     snprintf(statusFrameGraphId, sizeof(statusFrameGraphId), "%8.8x", view_handle);
+    mCurrentStatus++;
     mStatusCondition.notify_all();
 }
 

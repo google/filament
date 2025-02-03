@@ -40,7 +40,7 @@ public:
 
     bool handleGet(CivetServer* server, struct mg_connection* conn);
 
-    void addFrameGraph(ViewHandle view_handle);
+    void updateFrameGraph(ViewHandle view_handle);
 
 private:
     const FrameGraphInfo* getFrameGraphInfo(struct mg_connection* conn,
@@ -58,7 +58,7 @@ private:
     // This variable is to implement a *hanging* effect for /api/status. The call to /api/status
     // will always block until statusMaterialId is updated again. The client is expected to keep
     // calling /api/status (a constant "pull" to simulate a push).
-    std::atomic<uint64_t> mCurrentStatus = 0;
+    uint64_t mCurrentStatus = 0;
 };
 
 } // filament::fgviewer

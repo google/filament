@@ -110,6 +110,7 @@ ViewHandle DebugServer::createView(utils::CString name) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
     ViewHandle handle = mViewCounter++;
     mViews.emplace(handle, FrameGraphInfo(std::move(name)));
+    mApiHandler->updateFrameGraph(handle);
 
     return handle;
 }
@@ -121,8 +122,19 @@ void DebugServer::destroyView(ViewHandle h) {
 
 void DebugServer::update(ViewHandle h, FrameGraphInfo info) {
     std::unique_lock<utils::Mutex> lock(mViewsMutex);
+    const auto it = mViews.find(h);
+    if (it == mViews.end()) {
+        slog.w << "[fgviewer] Received update for unknown handle " << h;
+        return;
+    }
+
+    bool has_changed = !(it->second == info);
+    if (!has_changed)
+        return;
+
     mViews.erase(h);
     mViews.emplace(h, std::move(info));
+    mApiHandler->updateFrameGraph(h);
 }
 
 } // namespace filament::fgviewer
