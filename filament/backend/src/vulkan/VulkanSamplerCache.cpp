@@ -15,6 +15,7 @@
  */
 
 #include "vulkan/VulkanSamplerCache.h"
+#include "vulkan/utils/Conversion.h"
 
 #include <utils/Panic.h>
 
@@ -114,7 +115,7 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
         .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
         .maxAnisotropy = (float)(1u << params.anisotropyLog2),
         .compareEnable = getCompareEnable(params.compareMode),
-        .compareOp = getCompareOp(params.compareFunc),
+        .compareOp = fvkutils::getCompareOp(params.compareFunc),
         .minLod = 0.0f,
         .maxLod = getMaxLod(params.filterMin),
         .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
