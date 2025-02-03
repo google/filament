@@ -809,7 +809,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${EXTERNAL}/spirv-headers)
-    # add_subdirectory(${EXTERNAL}/dawn)
+    # Disable opengles for filament
+    set(DAWN_ENABLE_OPENGLES OFF CACHE BOOL "Disbale opengles backend" FORCE)
+    set(DAWN_ENABLE_INSTALL ON CACHE BOOL "Enable install" FORCE)
+    set(DAWN_INCLUDE_STATIC ${EXTERNAL}/dawn/include)
+    add_subdirectory(${EXTERNAL}/dawn)
 endif()
 
 add_subdirectory(${FILAMENT}/filament)
