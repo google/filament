@@ -25,14 +25,32 @@ FrameGraphInfo::~FrameGraphInfo() = default;
 
 FrameGraphInfo::FrameGraphInfo(FrameGraphInfo&& rhs) noexcept = default;
 
+bool FrameGraphInfo::operator==(const FrameGraphInfo& rhs) const {
+    return viewName == rhs.viewName
+            && passes == rhs.passes
+            && resources == rhs.resources;
+}
+
 FrameGraphInfo::Pass::Pass(utils::CString name, std::vector<ResourceId> reads,
     std::vector<ResourceId> writes): name(std::move(name)),
                                     reads(std::move(reads)),
                                     writes(std::move(writes)) {}
 
+bool FrameGraphInfo::Pass::operator==(const Pass& rhs) const {
+    return name == rhs.name && reads == rhs.reads && writes == rhs.writes;
+}
+
 FrameGraphInfo::Resource::Resource(ResourceId id, utils::CString name,
     std::vector<Property> properties): id(id),
     name(std::move(name)), properties(std::move(properties)) {}
+
+bool FrameGraphInfo::Resource::operator==(const Resource& rhs) const {
+    return id == rhs.id && name == rhs.name && properties == rhs.properties;
+}
+
+bool FrameGraphInfo::Resource::Property::operator==(const Property &rhs) const {
+    return name == rhs.name && value == rhs.value;
+}
 
 void FrameGraphInfo::setResources(
     std::unordered_map<ResourceId, Resource> resources) {

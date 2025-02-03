@@ -36,9 +36,13 @@ public:
 
     FrameGraphInfo(FrameGraphInfo const &) = delete;
 
+    bool operator==(const FrameGraphInfo& rhs) const;
+
     struct Pass {
         Pass(utils::CString name, std::vector<ResourceId> reads,
              std::vector<ResourceId> writes);
+
+        bool operator==(const Pass& rhs) const;
 
         utils::CString name;
         std::vector<ResourceId> reads;
@@ -46,7 +50,11 @@ public:
     };
 
     struct Resource {
+        bool operator==(const Resource& rhs) const;
+
         struct Property {
+            bool operator==(const Property& rhs) const;
+
             utils::CString name;
             utils::CString value;
         };
