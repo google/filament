@@ -126,8 +126,10 @@
  * Driver API below...
  */
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 
 DECL_DRIVER_API_0(tick)
 
@@ -533,7 +535,9 @@ DECL_DRIVER_API_N(scissor,
         Viewport, scissor)
 
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 #undef EXPAND
 

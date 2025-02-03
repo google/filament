@@ -395,7 +395,9 @@ bool Froxelizer::update() noexcept {
         const float linearizer = std::log2(zLightFar / zLightNear) / float(std::max(1u, mFroxelCountZ - 1u));
         // for a strange reason when, vectorizing this loop, clang does some math in double
         // and generates conversions to float. not worth it for so little iterations.
+#if defined(__clang__)
         #pragma clang loop vectorize(disable) unroll(disable)
+#endif
         for (ssize_t i = 1, n = mFroxelCountZ; i <= n; i++) {
             mDistancesZ[i] = zLightFar * std::exp2(float(i - n) * linearizer);
         }

@@ -26,9 +26,11 @@ namespace filament {
 
 using namespace math;
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 #pragma clang diagnostic ignored "-Wignored-qualifiers"
+#endif
 
 #define A_CPU  1
 #include "materials/fsr/ffx_a.h"
@@ -36,7 +38,9 @@ using namespace math;
 #define FSR_RCAS_F 1
 #include "materials/fsr/ffx_fsr1.h"
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
 void FSR_ScalingSetup(FSRUniforms* outUniforms, FSRScalingConfig config) noexcept {
     // FsrEasu API claims it needs the left-top offset, however that's not true with OpenGL,

@@ -27,7 +27,9 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #endif
 
+#if defined(__clang__)
 #pragma clang diagnostic ignored "-Wc++98-compat-extra-semi"
+#endif
 
 #include "vk_mem_alloc.h"
 
