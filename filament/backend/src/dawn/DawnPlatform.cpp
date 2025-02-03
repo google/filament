@@ -19,9 +19,17 @@
 #include "dawn/DawnDriver.h"
 #include "webgpu/webgpu_cpp.h"
 
+#include "vulkan/VulkanConstants.h"
+
 namespace filament::backend {
 
 Driver* DawnPlatform::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+    FVK_LOGI << "IDRIS: " <<__FILE__<<":"<<__LINE__<< " " <<__func__ << "\n";
+    wgpu::InstanceDescriptor instance_descriptor;
+    wgpu::Instance instance = wgpu::CreateInstance(&instance_descriptor);
+    if (instance) {
+        FVK_LOGI << "IDRIS: " << __func__ << " instance created\n";
+    }
     return DawnDriver::create();
 }
 

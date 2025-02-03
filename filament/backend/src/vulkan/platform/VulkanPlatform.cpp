@@ -649,7 +649,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Load Vulkan entry points.
     FILAMENT_CHECK_POSTCONDITION(bluevk::initialize()) << "BlueVK is unable to load entry points.";
 
+    FVK_LOGI << "IDRIS : VulkanPlatform::createDriver called: ";
     if (sharedContext) {
+        FVK_LOGI << "IDRIS : VulkanPlatform::createDriver valid sharedcontext: ";
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         // All fields of VulkanSharedContext should be present.
         FILAMENT_CHECK_PRECONDITION(scontext->instance != VK_NULL_HANDLE)

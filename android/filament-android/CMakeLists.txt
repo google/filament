@@ -9,6 +9,9 @@ option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
+# Idris: is it needed?
+set(CMAKE_ANDROID_ARCH_ABI ${ANDROID_ABI})
+
 add_library(filament STATIC IMPORTED)
 set_target_properties(filament PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilament.a)
@@ -48,6 +51,10 @@ set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
 add_library(vkshaders STATIC IMPORTED)
 set_target_properties(vkshaders PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libvkshaders.a)
+
+add_library(webgpu_dawn SHARED IMPORTED)
+set_target_properties(webgpu_dawn PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libwebgpu_dawn.so)
 
 add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
@@ -132,6 +139,7 @@ target_link_libraries(filament-jni
     $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>
+    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:webgpu_dawn>
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
 )
 
