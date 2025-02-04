@@ -21,6 +21,7 @@ set(SHADERS
         src/surface_material.fs
         src/common_math.glsl
         src/common_shading.fs
+        src/common_varyings.glsl
         src/surface_shadowing.glsl
         src/surface_types.glsl
         src/surface_depth_main.fs

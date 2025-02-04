@@ -284,14 +284,7 @@ int getEyeIndex() {
 #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
     return instance_index % CONFIG_STEREO_EYE_COUNT;
 #elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
-
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    return int(gl_ViewIndex);
-#else
-    // gl_ViewID_OVR is of uint type, which needs an explicit conversion.
-    return int(gl_ViewID_OVR);
-#endif // TARGET_VULKAN_ENVIRONMENT
-
+    return int(multiview_data.y);
 #endif
     return 0;
 }

@@ -31,6 +31,17 @@ void main() {
     logical_instance_index = instance_index / CONFIG_STEREO_EYE_COUNT;
 #endif
 
+#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
+#   if defined(TARGET_VULKAN_ENVIRONMENT)
+    int multiview_view_index = int(gl_ViewIndex);
+#   else
+    int multiview_view_index = int(gl_ViewID_OVR);
+#   endif // TARGET_VULKAN_ENVIRONMENT
+    multiview_data = ivec2(1, int(multiview_view_index));
+#else
+    multiview_data = ivec2(0, 0);
+#endif
+
     initObjectUniforms();
 
     // Initialize the inputs to sensible default values, see surface_material_inputs.vs

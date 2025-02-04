@@ -109,7 +109,7 @@ public:
             const MaterialBuilder::CustomVariable& variable, size_t index);
 
     // generate declarations for non-custom "in" variables
-    utils::io::sstream& generateSurfaceShaderInputs(utils::io::sstream& out, ShaderStage stage,
+    utils::io::sstream& generateSurfaceInputs(utils::io::sstream& out, ShaderStage stage,
             const filament::AttributeBitset& attributes, filament::Interpolation interpolation,
             MaterialBuilder::PushConstantList const& pushConstants) const;
     static utils::io::sstream& generatePostProcessInputs(utils::io::sstream& out, ShaderStage stage);
