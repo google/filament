@@ -43,8 +43,7 @@ public:
     void updateFrameGraph(ViewHandle view_handle);
 
 private:
-    const FrameGraphInfo* getFrameGraphInfo(struct mg_connection* conn,
-        struct mg_request_info const* request);
+    const FrameGraphInfo* getFrameGraphInfo(struct mg_request_info const* request);
 
     bool handleGetStatus(struct mg_connection* conn,
                          struct mg_request_info const* request);

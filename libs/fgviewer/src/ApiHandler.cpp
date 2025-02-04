@@ -70,7 +70,7 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
     }
 
     if (uri == "/api/framegraph") {
-        const FrameGraphInfo* result = getFrameGraphInfo(conn, request);
+        const FrameGraphInfo* result = getFrameGraphInfo(request);
         if (!result) {
             return error(__LINE__, uri);
         }
@@ -94,8 +94,7 @@ void ApiHandler::updateFrameGraph(ViewHandle view_handle) {
     mStatusCondition.notify_all();
 }
 
-const FrameGraphInfo* ApiHandler::getFrameGraphInfo(struct mg_connection* conn,
-                                         struct mg_request_info const* request) {
+const FrameGraphInfo* ApiHandler::getFrameGraphInfo(struct mg_request_info const* request) {
     size_t const qlength = strlen(request->query_string);
     char fgid[9] = {};
     if (mg_get_var(request->query_string, qlength, "fgid", fgid, sizeof(fgid)) < 0) {
