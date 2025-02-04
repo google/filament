@@ -690,11 +690,9 @@ public:
                 bool use_shadow_atlas = false;
             } shadows;
             struct {
-#ifndef NDEBUG
-                bool assert_material_instance_in_use = true;
-#else
+                // TODO: default the following two flags to true.
                 bool assert_material_instance_in_use = false;
-#endif
+                bool assert_destroy_material_before_material_instance = false;
             } debug;
         } engine;
         struct {
@@ -721,7 +719,10 @@ public:
               &features.engine.shadows.use_shadow_atlas, false },
             { "features.engine.debug.assert_material_instance_in_use",
               "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
-              &features.engine.debug.assert_material_instance_in_use, false }
+              &features.engine.debug.assert_material_instance_in_use, false },
+            { "features.engine.debug.assert_destroy_material_before_material_instance",
+              "Assert when a Material is destroyed but its instances are still alive.",
+              &features.engine.debug.assert_destroy_material_before_material_instance, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

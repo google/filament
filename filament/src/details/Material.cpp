@@ -383,9 +383,14 @@ void FMaterial::terminate(FEngine& engine) {
     auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
     auto pos = materialInstanceResourceList.find(this);
     if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
-        FILAMENT_CHECK_PRECONDITION(pos->second.empty())
-                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                << pos->second.size() << " instances still alive.";
+        if (engine.features.engine.debug.assert_destroy_material_before_material_instance) {
+            FILAMENT_CHECK_PRECONDITION(pos->second.empty())
+                    << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                    << pos->second.size() << " instances still alive.";
+        } else {
+            utils::slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                          << pos->second.size() << " instances still alive.";
+        }
     }
 
 
