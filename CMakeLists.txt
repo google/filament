@@ -667,10 +667,6 @@ function(list_licenses OUTPUT MODULES)
 endfunction()
 
 set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
-if (WIN32)
-    set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/windows/combine-static-libs.bat")
-    set(CMAKE_AR "lib.exe")
-endif()
 
 # Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
 function(combine_static_libs TARGET OUTPUT DEPS)
@@ -685,12 +681,22 @@ function(combine_static_libs TARGET OUTPUT DEPS)
         endif()
     endforeach()
 
-    add_custom_command(
-        TARGET ${TARGET} POST_BUILD
-        COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
-        COMMENT "Combining ${target} dependencies into single shared library"
-        VERBATIM
-    )
+    if (WIN32)
+        add_custom_command(
+            TARGET ${TARGET} POST_BUILD
+            COMMAND lib.exe /nologo /out:temp.lib ${DEPS_FILES}
+            COMMAND "${CMAKE_COMMAND}" -E rename temp.lib ${OUTPUT}
+            COMMENT "Combining ${target} dependencies into single shared library"
+            VERBATIM
+        )
+    else()
+        add_custom_command(
+            TARGET ${TARGET} POST_BUILD
+            COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
+            COMMENT "Combining ${target} dependencies into single shared library"
+            VERBATIM
+        )
+    endif()
 endfunction()
 
 # ==================================================================================================
