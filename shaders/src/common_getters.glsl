@@ -28,7 +28,7 @@ highp mat4 getClipFromWorldMatrix() {
     int eye = instance_index % CONFIG_STEREO_EYE_COUNT;
     return frameUniforms.clipFromWorldMatrix[eye];
 #elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
-    return frameUniforms.clipFromWorldMatrix[multiview_data.y];
+    return frameUniforms.clipFromWorldMatrix[filament_multiview_data.y];
 #else
     return frameUniforms.clipFromWorldMatrix[0];
 #endif

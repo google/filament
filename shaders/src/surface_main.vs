@@ -37,9 +37,9 @@ void main() {
 #   else
     int multiview_view_index = int(gl_ViewID_OVR);
 #   endif // TARGET_VULKAN_ENVIRONMENT
-    multiview_data = ivec2(1, int(multiview_view_index));
+    filament_multiview_data = ivec2(1, int(multiview_view_index));
 #else
-    multiview_data = ivec2(0, 0);
+    filament_multiview_data = ivec2(0, 0);
 #endif
 
     initObjectUniforms();

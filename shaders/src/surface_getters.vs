@@ -284,7 +284,7 @@ int getEyeIndex() {
 #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
     return instance_index % CONFIG_STEREO_EYE_COUNT;
 #elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
-    return int(multiview_data.y);
+    return int(filament_multiview_data.y);
 #endif
     return 0;
 }
