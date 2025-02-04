@@ -1351,8 +1351,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         }
 
         if (hasFXAA) {
-            bool const preserveAlphaChannel = needsAlphaChannel ||
-                    (hasColorGrading && colorGradingConfig.outputLuminance);
+            bool const preserveAlphaChannel =
+                    // we're transparent -- alpha channel has user data
+                    needsAlphaChannel ||
+                    // the color-grading pass outputted the luminance channel, and we have an upscaling pass
+                    (hasColorGrading && colorGradingConfig.outputLuminance && scaled);
             input = ppm.fxaa(fg, input, xvp, colorGradingConfig.ldrFormat, preserveAlphaChannel);
             // the padded buffer is resolved now
             xvp.left = xvp.bottom = 0;
