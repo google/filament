@@ -40,6 +40,8 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
       mFlushAndWaitOnResize(platform->getCustomization().flushAndWaitOnWindowResize),
       mTransitionSwapChainImageLayoutForPresent(
               platform->getCustomization().transitionSwapChainImageLayoutForPresent),
+      mLayerCount(1),
+      mCurrentSwapIndex(0),
       mAcquired(false),
       mIsFirstRenderPass(true) {
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
