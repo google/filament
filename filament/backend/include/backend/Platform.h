@@ -79,6 +79,10 @@ public:
 
         void clear() noexcept;
         void reset(ExternalImage* UTILS_NULLABLE p) noexcept;
+
+    private:
+        friend utils::io::ostream& operator<<(utils::io::ostream& out,
+                ExternalImageHandle const& handle);
     };
 
     using ExternalImageHandleRef = ExternalImageHandle const&;
