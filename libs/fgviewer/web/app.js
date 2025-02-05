@@ -286,6 +286,9 @@ class FrameGraphTable extends LitElement {
             // this._tableDiv.style.width = actualWidth + 'px';
             // this._tableDiv.style.height = actualHeight + 'px';
         }
+        if(props.has('frameGraphData')){
+            this.requestUpdate();
+        }
     }
 
     _getCellColor(type) {
@@ -347,8 +350,49 @@ class FrameGraphTable extends LitElement {
     }
 
     render() {
+        if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
+        console.log(this.frameGraphData);
+        const allPasses = this.frameGraphData.passes.map(pass => pass.name);
+        const resources = Object.values(this.frameGraphData.resources);
         return html`
-            ${this._buildTable()}
+            <div class="table-container">
+                <table class="scrollable-table">
+                    <thead>
+                    <tr>
+                        <th>Resources</th>
+                        ${allPasses.map(pass => html`<th>${pass}</th>`)}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    ${resources.map(resource => html`
+                        <tr>
+                            <td>${resource.name}</td>
+                            ${allPasses.map((passName, index) => {
+                        const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
+                        const isRead = passData?.reads.includes(resource.id);
+                        const isWrite = passData?.writes.includes(resource.id);
+                        let type = null;
+                        const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
+                            const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                            return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
+                        });
+                        const willBeUsedLater = allPasses.slice(index + 1).some(p => {
+                            const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                            return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
+                        });
+
+                        if (isRead && isWrite) type = 'read-write';
+                        else if (isRead) type = 'read';
+                        else if (isWrite) type = 'write';
+                        else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
+                        const color = type ? this._getCellColor(type) : DEFAULT_COLOR;
+                        return html`<td style="background-color: ${unsafeCSS(color)};">${type ?? nothing}</td>`;
+                    })}
+                        </tr>
+                    `)}
+                    </tbody>
+                </table>
+            </div>
         `;
     }
 }
@@ -377,12 +421,13 @@ class FrameGraphViewer extends LitElement {
         const isConnected = () => this.connected;
         statusLoop(
                 isConnected,
-                async (status, data) => {
+                async (status, fgid) => {
                     this.connected = status == STATUS_CONNECTED || status == STATUS_FRAMEGRAPH_UPDATED;
 
                     if(status == STATUS_FRAMEGRAPH_UPDATED){
                         let fgInfo = await fetchFrameGraph(fgid);
                         this.database[fgInfo.fgid] = fgInfo;
+                        this._framegraph_table.frameGraphData = fgInfo;
                     }
                 }
         );
@@ -431,7 +476,7 @@ class FrameGraphViewer extends LitElement {
     }
 
     updated(props){
-        if (props.has('currentFrameGraph')) {
+        if (props.has('currentFrameGraph') || props.has('database')) {
             const framegraph = this.database[this.currentFrameGraph];
             this._framegraph_table.frameGraphData = framegraph;
         }
