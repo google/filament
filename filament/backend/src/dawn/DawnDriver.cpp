@@ -32,7 +32,7 @@ Dispatcher DawnDriver::getDispatcher() const noexcept {
 }
 
 ShaderModel DawnDriver::getShaderModel() const noexcept {
-#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(IOS)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;

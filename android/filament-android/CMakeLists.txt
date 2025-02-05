@@ -6,6 +6,7 @@ option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 # option(FILAMENT_ENABLE_FGVIEWER "Enables Frame Graph Viewer" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
+option(FILAMENT_SUPPORTS_WEBGPU "Enables WebGPU on Android" OFF)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
@@ -52,9 +53,14 @@ add_library(vkshaders STATIC IMPORTED)
 set_target_properties(vkshaders PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libvkshaders.a)
 
-add_library(webgpu_dawn SHARED IMPORTED)
-set_target_properties(webgpu_dawn PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libwebgpu_dawn.so)
+# if (FILAMENT_SUPPORTS_WEBGPU)
+        message(STATUS "IDRIS filament-jni adding webgpu")
+        add_library(webgpu_dawn SHARED IMPORTED)
+        set_target_properties(webgpu_dawn PROPERTIES IMPORTED_LOCATION
+                ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libwebgpu_dawn.so)
+# else()
+        message(STATUS "IDRIS filament-jni not adding webgpu")
+# endif()
 
 add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
@@ -152,3 +158,20 @@ target_include_directories(filament-jni PRIVATE
 
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
+
+# FetchContent_Declare(
+#         dawn
+
+#         # if GIT_SHALLOW worked:
+#         #GIT_REPOSITORY https://dawn.googlesource.com/dawn
+#         #GIT_TAG        chromium/6963
+#         #GIT_SHALLOW    ON
+
+#         # Manual download mode instead:
+#         DOWNLOAD_COMMAND
+#             cd ${FETCHCONTENT_BASE_DIR}/dawn-src &&
+#             git init &&
+#             git fetch --depth=1 https://dawn.googlesource.com/dawn chromium/6963 &&
+#             git reset --hard FETCH_HEAD
+# )
+# set(TINT_BUILD_TESTS OFF)

@@ -34,7 +34,7 @@ function print_help {
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p platform1,platform2,..."
-    echo "        Where platformN is [desktop|android|ios|webgl|all]."
+    echo "        Where platformN is [desktop|android|ios|webgl|webgpu|all]."
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building for iOS will automatically perform a partial desktop build."
     echo "    -q abi1,abi2,..."
@@ -167,6 +167,7 @@ ISSUE_ANDROID_BUILD=false
 ISSUE_IOS_BUILD=false
 ISSUE_DESKTOP_BUILD=true
 ISSUE_WEBGL_BUILD=false
+ISSUE_WEBGPU_BUILD=false
 
 # Default: all
 ABI_ARMEABI_V7A=true
@@ -192,6 +193,8 @@ INSTALL_COMMAND=
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
+WEBGPU_ANDROID_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=OFF"
+WEBGPU_ANDROID_GRADLE_OPTION=""
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
@@ -388,6 +391,14 @@ function build_android_target {
     local lc_target=$(echo "$1" | tr '[:upper:]' '[:lower:]')
     local arch=$2
 
+    if [[ "${ISSUE_WEBGPU_BUILD}" == "true" ]]; then
+        if [[ "${VULKAN_ANDROID_OPTION}" != "-DFILAMENT_SUPPORTS_VULKAN=ON" ]]; then
+            echo "Error: WebGPU requires vulkan to be enabled"
+            exit 1
+        fi
+        WEBGPU_ANDROID_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=ON"
+    fi
+
     echo "Building Android ${lc_target} (${arch})..."
     mkdir -p "out/cmake-android-${lc_target}-${arch}"
 
@@ -405,6 +416,7 @@ function build_android_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
+            ${WEBGPU_ANDROID_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ../..
@@ -523,6 +535,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleDebug \
@@ -568,10 +581,13 @@ function build_android {
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        echo "IDRIS: calling gradlew from console:. Webgpu gradle: ${WEBGPU_ANDROID_GRADLE_OPTION}"
+        echo "IDRIS: calling gradlew from console:. vulkan gradle: ${VULKAN_ANDROID_GRADLE_OPTION}"
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleRelease \
@@ -888,15 +904,21 @@ while getopts ":hacCfgijmp:q:uvslwedtk:bx:S:X:" opt; do
                     webgl)
                         ISSUE_WEBGL_BUILD=true
                     ;;
+                    webgpu)
+                        ISSUE_ANDROID_BUILD=true
+                        ISSUE_WEBGPU_BUILD=true
+                        WEBGPU_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.include-webgpu"
+                    ;;
                     all)
                         ISSUE_ANDROID_BUILD=true
                         ISSUE_IOS_BUILD=true
                         ISSUE_DESKTOP_BUILD=true
                         ISSUE_WEBGL_BUILD=false
+                        ISSUE_WEBGPU_BUILD=false
                     ;;
                     *)
                         echo "Unknown platform ${platform}"
-                        echo "Platform must be one of [desktop|android|ios|webgl|all]"
+                        echo "Platform must be one of [desktop|android|ios|webgl|webgpu|all]"
                         echo ""
                         exit 1
                     ;;
