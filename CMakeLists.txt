@@ -508,6 +508,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_definitions(-DFILAMENT_DRIVER_SUPPORTS_VULKAN)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
+endif()
+
 # Build with Metal support on non-WebGL Apple platforms.
 if (APPLE AND NOT WEBGL)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
@@ -793,9 +797,15 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${EXTERNAL}/spirv-headers)
+endif()
+
+if (FILAMENT_SUPPORTS_WEBGPU)
     # Disable opengles for filament
-    set(DAWN_ENABLE_OPENGLES OFF CACHE BOOL "Disbale opengles backend" FORCE)
-    set(DAWN_ENABLE_INSTALL ON CACHE BOOL "Enable install" FORCE)
+    set(DAWN_ENABLE_OPENGLES OFF)
+    # set(DAWN_ENABLE_INSTALL ON)
+    # This causes a compilation error in dawn. Disabling it now.
+    # This is temporary and should be removed.
+    set(TINT_BUILD_GLSL_VALIDATOR OFF)
     set(DAWN_INCLUDE_STATIC ${EXTERNAL}/dawn/include)
     add_subdirectory(${EXTERNAL}/dawn)
 endif()
