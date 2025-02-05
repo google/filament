@@ -1103,8 +1103,13 @@ void FMaterial::precacheDepthVariants(FEngine const& engine) {
     // later, when/if needed by createAndCacheProgram(). Doing it now potentially uses more
     // memory and increases init time, but reduces hiccups during the first frame.
     if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+        const bool stereoSupported = mEngine.getDriverApi().isStereoSupported();
         auto const allDepthVariants = VariantUtils::getDepthVariants();
         for (auto const variant: allDepthVariants) {
+            // Don't precache any stereo variants if stereo is not supported.
+            if (!stereoSupported && Variant::isStereoVariant(variant)) {
+                continue;
+            }
             assert_invariant(Variant::isValidDepthVariant(variant));
             if (hasVariant(variant)) {
                 prepareProgram(variant);
