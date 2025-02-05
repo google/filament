@@ -816,6 +816,27 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
+include(FetchContent)
+    FetchContent_Declare(
+        dawn
+        # GIT_REPOSITORY https://dawn.googlesource.com/dawn
+        # GIT_TAG cb465b57e62a03588e77bd938ef850136b5b3edf
+        # GIT_SHALLOW ON
+        # SOURCE_DIR ${EXTERNAL}/dawn
+        DOWNLOAD_COMMAND
+            mkdir -p ${EXTERNAL}/dawn && cd ${EXTERNAL}/dawn &&
+            git init &&
+            git fetch --depth=1 https://dawn.googlesource.com/dawn cb465b57e62a03588e77bd938ef850136b5b3edf &&
+            git reset --hard FETCH_HEAD
+    )
+    FetchContent_GetProperties(dawn)
+    if (NOT dawn_POPULATED)
+        message(STATUS "dawn download calling available")
+        FetchContent_Populate(dawn)
+        message(STATUS "Dawn after populate")
+        set(DAWN_FETCH_DEPENDENCIES ON)
+    endif()
+
     # Disable opengles for filament
     set(DAWN_ENABLE_OPENGLES OFF)
     # set(DAWN_ENABLE_INSTALL ON)
