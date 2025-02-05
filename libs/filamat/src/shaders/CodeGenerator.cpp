@@ -365,6 +365,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
+    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(mFeatureLevel));
+
     if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
             (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
                     || mTargetLanguage == TargetLanguage::SPIRV)) {
@@ -485,7 +487,7 @@ io::sstream& CodeGenerator::generateCommonVariable(io::sstream& out, ShaderStage
     return out;
 }
 
-io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, ShaderStage stage,
+io::sstream& CodeGenerator::generateSurfaceInputs(io::sstream& out, ShaderStage stage,
         const AttributeBitset& attributes, Interpolation interpolation,
         MaterialBuilder::PushConstantList const& pushConstants) const {
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
@@ -517,6 +519,7 @@ io::sstream& CodeGenerator::generateSurfaceShaderInputs(io::sstream& out, Shader
     }
 
     out << "\n";
+    out << SHADERS_COMMON_VARYINGS_GLSL_DATA;
     out << SHADERS_SURFACE_VARYINGS_GLSL_DATA;
     return out;
 }
@@ -1073,6 +1076,7 @@ io::sstream& CodeGenerator::generateSurfaceMaterial(io::sstream& out, ShaderStag
 }
 
 io::sstream& CodeGenerator::generatePostProcessInputs(io::sstream& out, ShaderStage stage) {
+    out << SHADERS_COMMON_VARYINGS_GLSL_DATA;
     if (stage == ShaderStage::VERTEX) {
         out << SHADERS_POST_PROCESS_INPUTS_VS_DATA;
     } else if (stage == ShaderStage::FRAGMENT) {

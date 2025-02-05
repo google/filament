@@ -81,7 +81,6 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
     }
 
     out << '\n';
-    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
 
     CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
@@ -436,7 +435,7 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel shaderModel,
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::VERTEX;
             });
-    cg.generateSurfaceShaderInputs(vs, ShaderStage::VERTEX, attributes, interpolation,
+    cg.generateSurfaceInputs(vs, ShaderStage::VERTEX, attributes, interpolation,
             vertexPushConstants);
 
     CodeGenerator::generateSurfaceTypes(vs, ShaderStage::VERTEX);
@@ -546,7 +545,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderMode
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::FRAGMENT;
             });
-    cg.generateSurfaceShaderInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes, interpolation,
+    cg.generateSurfaceInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes, interpolation,
             fragmentPushConstants);
 
     CodeGenerator::generateSurfaceTypes(fs, ShaderStage::FRAGMENT);
