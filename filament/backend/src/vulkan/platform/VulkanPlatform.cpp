@@ -675,13 +675,13 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     VulkanContext context;
 
-    ExtensionSet instExts;
-    // If using a shared context, we do not assume any extensions.
+    // This constains instance extensions that are required for the platform, which includes
+    // swapchain surface extensions.
+    auto const& swapchainExts = getSwapchainInstanceExtensions();
+    
+    ExtensionSet instExts = getInstanceExtensions(swapchainExts);
+
     if (!mImpl->mSharedContext) {
-        // This constains instance extensions that are required for the platform, which includes
-        // swapchain surface extensions.
-        auto const& swapchainExts = getSwapchainInstanceExtensions();
-        instExts = getInstanceExtensions(swapchainExts);
 
 #if defined(FILAMENT_SUPPORTS_XCB) && defined(FILAMENT_SUPPORTS_XLIB)
         // For the special case where we're on linux and both xcb and xlib are "required", then we
@@ -771,10 +771,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         = mImpl->mProtectedGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : 
         mImpl->mProtectedGraphicsQueueIndex;
 
-    ExtensionSet deviceExts;
-    // If using a shared context, we do not assume any extensions.
+    ExtensionSet deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
+
     if (!mImpl->mSharedContext) {
-        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
         auto [prunedInstExts, prunedDeviceExts]
                 = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;
