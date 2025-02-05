@@ -35,12 +35,13 @@ void Platform::ExternalImageHandle::incref(ExternalImage* p) noexcept {
 
 void Platform::ExternalImageHandle::decref(ExternalImage* p) noexcept {
     if (p) {
-        // When decrementing the ref-count, unless it reaches zero, there is no need to acquire data; we need to
-        // release all previous writes though so they can be visible to the thread that will actually delete the
-        // object.
+        // When decrementing the ref-count, unless it reaches zero, there is no need to acquire
+        // data; we need to release all previous writes though so they can be visible to the thread
+        // that will actually delete the object.
         if (p->mRefCount.fetch_sub(1, std::memory_order_release) == 1) {
-            // if we reach zero, we're about to delete the object, we need to acquire all previous writes from other
-            // threads (i.e.: the memory from other threads prior to the decref() need to be visible now.
+            // if we reach zero, we're about to delete the object, we need to acquire all previous
+            // writes from other threads (i.e.: the memory from other threads prior to the decref()
+            // need to be visible now.
             std::atomic_thread_fence(std::memory_order_acquire);
             delete p;
         }
@@ -68,7 +69,8 @@ Platform::ExternalImageHandle::ExternalImageHandle(ExternalImageHandle&& rhs) no
     rhs.mTarget = nullptr;
 }
 
-Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(ExternalImageHandle const& rhs) noexcept {
+Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(
+        ExternalImageHandle const& rhs) noexcept {
     if (UTILS_LIKELY(this != &rhs)) {
         incref(rhs.mTarget);
         decref(mTarget);
@@ -77,7 +79,8 @@ Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(External
     return *this;
 }
 
-Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(ExternalImageHandle&& rhs) noexcept {
+Platform::ExternalImageHandle& Platform::ExternalImageHandle::operator=(
+        ExternalImageHandle&& rhs) noexcept {
     if (UTILS_LIKELY(this != &rhs)) {
         decref(mTarget);
         mTarget = rhs.mTarget;
@@ -95,6 +98,12 @@ void Platform::ExternalImageHandle::reset(ExternalImage* p) noexcept {
     incref(p);
     decref(mTarget);
     mTarget = p;
+}
+
+utils::io::ostream& operator<<(utils::io::ostream& out,
+        Platform::ExternalImageHandle const& handle) {
+    out << "ExternalImageHandle{" << handle.mTarget << "}";
+    return out;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
