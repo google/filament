@@ -284,7 +284,6 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
     mProtected = swapchain->isProtected();
 
     VulkanAttachment color = createSwapchainAttachment(swapchain->getCurrentColor());
-    color.texture = swapchain->getCurrentColor();
     mInfo->attachments = {color};
 
     auto& fbkey = mInfo->fbkey;
@@ -299,7 +298,6 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
 
     if (swapchain->getDepth()) {
         VulkanAttachment depth = createSwapchainAttachment(swapchain->getDepth());
-        depth.texture = swapchain->getDepth();
         mInfo->attachments.push_back(depth);
         mInfo->depthIndex = 1;
 
