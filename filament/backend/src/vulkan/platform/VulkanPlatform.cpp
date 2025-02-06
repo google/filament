@@ -616,6 +616,9 @@ struct VulkanPlatformPrivate {
     uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
+    bool mDebugMarkersSupported = false;
+    bool mDebugUtilsSupported = false;
+    bool mMultiviewSupported = false;
     VulkanContext mContext = {};
 
     // We use a map to both map a handle (i.e. SwapChainPtr) to the concrete type and also to
@@ -669,19 +672,22 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mDevice = scontext->logicalDevice;
         mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
         mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
+        mImpl->mDebugMarkersSupported = scontext->debugUtilsSupported;
+        mImpl->mDebugUtilsSupported = scontext->debugMarkersSupported;
+        mImpl->mMultiviewSupported = scontext->multiviewSupported;
 
         mImpl->mSharedContext = true;
     }
 
     VulkanContext context;
 
-    // This constains instance extensions that are required for the platform, which includes
-    // swapchain surface extensions.
-    auto const& swapchainExts = getSwapchainInstanceExtensions();
-    
-    ExtensionSet instExts = getInstanceExtensions(swapchainExts);
-
+    ExtensionSet instExts;
+    // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
+        // This constains instance extensions that are required for the platform, which includes
+        // swapchain surface extensions.
+        auto const& swapchainExts = getSwapchainInstanceExtensions();
+        instExts = getInstanceExtensions(swapchainExts);
 
 #if defined(FILAMENT_SUPPORTS_XCB) && defined(FILAMENT_SUPPORTS_XLIB)
         // For the special case where we're on linux and both xcb and xlib are "required", then we
@@ -771,9 +777,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         = mImpl->mProtectedGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : 
         mImpl->mProtectedGraphicsQueueIndex;
 
-    ExtensionSet deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
-
+    ExtensionSet deviceExts;
+    // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
         auto [prunedInstExts, prunedDeviceExts]
                 = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;
@@ -805,9 +812,15 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     // Store the extension support in the context
-    context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    if (!mImpl->mSharedContext) {
+        context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    } else {
+        context.mDebugUtilsSupported = mImpl->mDebugUtilsSupported;
+        context.mDebugMarkersSupported = mImpl->mDebugMarkersSupported;
+        context.mMultiviewEnabled = mImpl->mMultiviewSupported;
+    }
 
     // Check the availability of lazily allocated memory
     {
