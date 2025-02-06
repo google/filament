@@ -39,6 +39,10 @@ ShaderModel DawnDriver::getShaderModel() const noexcept {
 #endif
 }
 
+ShaderLanguage DawnDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::ESSL3;
+}
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<DawnDriver>;
 
@@ -265,10 +269,7 @@ TimerQueryResult DawnDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64
     return TimerQueryResult::ERROR;
 }
 
-void DawnDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-}
-
-void DawnDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
+void DawnDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
 }
 
 void DawnDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
