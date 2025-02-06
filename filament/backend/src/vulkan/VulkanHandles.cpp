@@ -294,7 +294,6 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
     rpkey.viewCount = color.layerCount;
     fbkey.width = width;
     fbkey.height = height;
-    fbkey.layers = color.layerCount;
     fbkey.color[0] = color.getImageView();
     fbkey.resolve[0] = VK_NULL_HANDLE;
 
