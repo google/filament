@@ -3489,6 +3489,14 @@ void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
 
 void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    // glFenceSync can return 0 in certain situations. For example, we've seen this happen on Web
+    // when the GL context has been lost.
+    // Unfortunately, there's not much we can do here. The fn callback will never execute, which
+    // could cause issues. If we've lost the WebGL context though, Filament is most likely shutting
+    // down anyway, so in practice this might not be a big problem.
+    if (!sync) {
+        return;
+    }
     mGpuCommandCompleteOps.emplace_back(sync, fn);
     CHECK_GL_ERROR(utils::slog.e)
 }
