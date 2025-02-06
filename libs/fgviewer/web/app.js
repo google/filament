@@ -301,54 +301,6 @@ class FrameGraphTable extends LitElement {
         }
     }
 
-    _buildTable() {
-        if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
-        console.log(this.frameGraphData);
-        const allPasses = this.frameGraphData.passes.map(pass => pass.name);
-        const resources = Object.values(this.frameGraphData.resources);
-
-        return html`
-            <div class="table-container">
-                <table class="scrollable-table">
-                    <thead>
-                    <tr>
-                        <th>Resources</th>
-                        ${allPasses.map(pass => html`<th>${pass}</th>`)}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    ${resources.map(resource => html`
-                        <tr>
-                            <td>${resource.name}</td>
-                            ${allPasses.map((passName, index) => {
-                                const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
-                                const isRead = passData?.reads.includes(resource.id);
-                                const isWrite = passData?.writes.includes(resource.id);
-                                let type = null;
-                                const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
-                                    const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                                    return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
-                                });
-                                const willBeUsedLater = allPasses.slice(index + 1).some(p => {
-                                    const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                                    return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
-                                });
-                                
-                                if (isRead && isWrite) type = 'read-write';
-                                else if (isRead) type = 'read';
-                                else if (isWrite) type = 'write';
-                                else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
-                                const color = type ? this._getCellColor(type) : DEFAULT_COLOR;
-                                return html`<td style="background-color: ${unsafeCSS(color)};">${type ?? nothing}</td>`;
-                            })}
-                        </tr>
-                    `)}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
     render() {
         if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
         console.log(this.frameGraphData);
@@ -364,32 +316,36 @@ class FrameGraphTable extends LitElement {
                     </tr>
                     </thead>
                     <tbody>
-                    ${resources.map(resource => html`
+                    ${resources.map(resource => {
+                        const isSubresource = resource.properties?.some(prop => prop.key === 'is_subresource');
+                        return html`
                         <tr>
-                            <td>${resource.name}</td>
-                            ${allPasses.map((passName, index) => {
-                        const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
-                        const isRead = passData?.reads.includes(resource.id);
-                        const isWrite = passData?.writes.includes(resource.id);
-                        let type = null;
-                        const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
-                            const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                            return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
-                        });
-                        const willBeUsedLater = allPasses.slice(index + 1).some(p => {
-                            const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                            return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
-                        });
+                          <td style="background-color: ${unsafeCSS(isSubresource ? 'gray' : 'white')};">
+                            ${resource.name}
+                          </td>
+                          ${allPasses.map((passName, index) => {
+                            const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
+                            const isRead = passData?.reads.includes(resource.id);
+                            const isWrite = passData?.writes.includes(resource.id);
+                            let type = null;
+                            const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
+                                const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
+                            });
+                            const willBeUsedLater = allPasses.slice(index + 1).some(p => {
+                                const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
+                            });
 
-                        if (isRead && isWrite) type = 'read-write';
-                        else if (isRead) type = 'read';
-                        else if (isWrite) type = 'write';
-                        else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
-                        const color = type ? this._getCellColor(type) : DEFAULT_COLOR;
-                        return html`<td style="background-color: ${unsafeCSS(color)};">${type ?? nothing}</td>`;
-                    })}
+                            if (isRead && isWrite) type = 'read-write';
+                            else if (isRead) type = 'read';
+                            else if (isWrite) type = 'write';
+                            else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
+                            return html`<td style="background-color: ${unsafeCSS(this._getCellColor(type))};">${type ?? nothing}</td>`;
+                        })}
                         </tr>
-                    `)}
+                      `;
+                    })}
                     </tbody>
                 </table>
             </div>
