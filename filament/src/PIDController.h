@@ -27,43 +27,43 @@ class PIDController {
 public:
     PIDController() noexcept = default;
 
-    void setStandardGains(float Kp, float Ti, float Td) noexcept {
+    void setStandardGains(float const Kp, float const Ti, float const Td) noexcept {
         mKp = Kp;
         mKi = Kp / Ti;
         mKd = Kp * Td;
     }
 
-    void setParallelGains(float Kp, float Ki, float Kd) noexcept {
+    void setParallelGains(float const Kp, float const Ki, float const Kd) noexcept {
         mKp = Kp;
         mKi = Ki;
         mKd = Kd;
     }
 
     // output is kept steady in the dead band
-    void setOutputDeadBand(float low, float high) noexcept {
+    void setOutputDeadBand(float const low, float const high) noexcept {
         mDeadBandLow = low;
         mDeadBandHigh = high;
     }
 
     // integral bounds to prevent windup
-    void setIntegralLimits(float low, float high) noexcept {
+    void setIntegralLimits(float const low, float const high) noexcept {
         mIntegralLimitLow = low;
         mIntegralLimitHigh = high;
     }
 
     // output bounds
-    void setOutputLimits(float low, float high) noexcept {
+    void setOutputLimits(float const low, float const high) noexcept {
         mOutputLimitLow = low;
         mOutputLimitHigh = high;
     }
 
     // disable integral term to prevent windup
-    void setIntegralInhibitionEnabled(bool enabled) noexcept {
+    void setIntegralInhibitionEnabled(bool const enabled) noexcept {
         mIntegralInhibition = enabled ? 0.0f : 1.0f;
     }
 
     // update PID output
-    float update(float measure, float target, float dt) const noexcept {
+    float update(float const measure, float const target, float const dt) const noexcept {
         // compute error
         const float error = target - measure;
 

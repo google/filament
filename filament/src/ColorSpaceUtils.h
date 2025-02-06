@@ -213,7 +213,7 @@ constexpr float MIDDLE_GRAY_ACEScct = 0.4135884f;
 
 // Returns the y chromaticity coordinate in xyY for an illuminant series D,
 // given its x chromaticity coordinate.
-inline constexpr float chromaticityCoordinateIlluminantD(float x) noexcept {
+inline constexpr float chromaticityCoordinateIlluminantD(float const x) noexcept {
     // See http://en.wikipedia.org/wiki/Standard_illuminant#Illuminant_series_D
     return 2.87f * x - 3.0f * x * x - 0.275f;
 }
@@ -222,7 +222,7 @@ inline constexpr float chromaticityCoordinateIlluminantD(float x) noexcept {
 // Color space conversions
 //------------------------------------------------------------------------------
 
-inline constexpr XYZ xyY_to_XYZ(xyY v) noexcept {
+inline constexpr XYZ xyY_to_XYZ(xyY const v) noexcept {
     const float a = v.z / max(v.y, 1e-5f);
     return XYZ{v.x * a, v.z, (1.0f - v.x - v.y) * a};
 }
@@ -231,23 +231,23 @@ inline constexpr xyY XYZ_to_xyY(XYZ v) noexcept {
     return {v.xy / max(v.x + v.y + v.z, 1e-5f), v.y};
 }
 
-inline constexpr float3 pow3(float3 x) noexcept {
+inline constexpr float3 pow3(float3 const x) noexcept {
     return x * x * x;
 }
 
-inline float3 sRGB_to_OkLab(float3 x) noexcept {
+inline float3 sRGB_to_OkLab(float3 const x) noexcept {
     return OkLab_LMS_to_OkLab * cbrt(sRGB_to_OkLab_LMS * x);
 }
 
-inline float3 Rec2020_to_OkLab(float3 x) noexcept {
+inline float3 Rec2020_to_OkLab(float3 const x) noexcept {
     return OkLab_LMS_to_OkLab * cbrt(Rec2020_to_OkLab_LMS * x);
 }
 
-inline float3 OkLab_to_sRGB(float3 x) noexcept {
+inline float3 OkLab_to_sRGB(float3 const x) noexcept {
     return OkLab_LMS_to_sRGB * pow3(OkLab_to_OkLab_LMS * x);
 }
 
-inline float3 OkLab_to_Rec2020(float3 x) noexcept {
+inline float3 OkLab_to_Rec2020(float3 const x) noexcept {
     return OkLab_LMS_to_Rec2020 * pow3(OkLab_to_OkLab_LMS * x);
 }
 
@@ -256,7 +256,7 @@ inline float3 OkLab_to_Rec2020(float3 x) noexcept {
 //------------------------------------------------------------------------------
 
 // Decodes a linear value from LogC using the Alexa LogC EI 1000 curve
-inline float3 LogC_to_linear(float3 x) noexcept {
+inline float3 LogC_to_linear(float3 const x) noexcept {
     const float ia = 1.0f / 5.555556f;
     const float b  = 0.047996f;
     const float ic = 1.0f / 0.244161f;
@@ -265,7 +265,7 @@ inline float3 LogC_to_linear(float3 x) noexcept {
 }
 
 // Encodes a linear value in LogC using the Alexa LogC EI 1000 curve
-inline float3 linear_to_LogC(float3 x) noexcept {
+inline float3 linear_to_LogC(float3 const x) noexcept {
     const float a = 5.555556f;
     const float b = 0.047996f;
     const float c = 0.244161f;
@@ -296,7 +296,7 @@ inline float3 linearAP1_to_ACEScct(float3 x) noexcept {
     return x;
 }
 
-inline float3 OETF_Linear(float3 x) noexcept {
+inline float3 OETF_Linear(float3 const x) noexcept {
     return x;
 }
 

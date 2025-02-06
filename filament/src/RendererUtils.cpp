@@ -55,7 +55,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
         FrameGraph& fg, const char* name, FEngine& engine, FView const& view,
         ColorPassInput const& colorPassInput,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
-        ColorPassConfig const& config, PostProcessManager::ColorGradingConfig colorGradingConfig,
+        ColorPassConfig const& config, PostProcessManager::ColorGradingConfig const colorGradingConfig,
         RenderPass::Executor passExecutor) noexcept {
 
     struct ColorPassData {
@@ -273,7 +273,7 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
         ColorPassInput colorPassInput,
         ColorPassConfig config,
         PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
-        PostProcessManager::ColorGradingConfig colorGradingConfig,
+        PostProcessManager::ColorGradingConfig const colorGradingConfig,
         RenderPass const& pass) noexcept {
 
     // find the first refractive object in channel 2
@@ -295,7 +295,7 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
         config.hasScreenSpaceReflectionsOrRefractions = true;
 
         PostProcessManager& ppm = engine.getPostProcessManager();
-        auto const opaquePassOutput = RendererUtils::colorPass(fg,
+        auto const opaquePassOutput = colorPass(fg,
                 "Color Pass (opaque)", engine, view, colorPassInput, {
                         // When rendering the opaques, we need to conserve the sample buffer,
                         // so create a config that specifies the sample count.
@@ -330,7 +330,7 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
         // and we'd end up clearing the opaque pass. This scenario never happens because it is
         // prevented in Renderer.cpp's final blit.
         config.clearFlags = TargetBufferFlags::NONE;
-        auto transparentPassOutput = RendererUtils::colorPass(fg, "Color Pass (transparent)",
+        auto transparentPassOutput = colorPass(fg, "Color Pass (transparent)",
                 engine, view, colorPassInput, {
                         .width = config.physicalViewport.width,
                         .height = config.physicalViewport.height },
@@ -352,9 +352,9 @@ std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
 }
 
 UTILS_NOINLINE
-void RendererUtils::readPixels(backend::DriverApi& driver, Handle<HwRenderTarget> renderTargetHandle,
-        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        backend::PixelBufferDescriptor&& buffer) {
+void RendererUtils::readPixels(DriverApi& driver, Handle<HwRenderTarget> renderTargetHandle,
+        uint32_t const xoffset, uint32_t const yoffset, uint32_t const width, uint32_t const height,
+        PixelBufferDescriptor&& buffer) {
     FILAMENT_CHECK_PRECONDITION(buffer.type != PixelDataType::COMPRESSED)
             << "buffer.format cannot be COMPRESSED";
 

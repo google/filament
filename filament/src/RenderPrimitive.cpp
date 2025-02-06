@@ -41,8 +41,8 @@ void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverAp
     mBlendOrder = entry.blendOrder;
 
     if (entry.indices && entry.vertices) {
-        FVertexBuffer* vertexBuffer = downcast(entry.vertices);
-        FIndexBuffer* indexBuffer = downcast(entry.indices);
+        FVertexBuffer const* vertexBuffer = downcast(entry.vertices);
+        FIndexBuffer const* indexBuffer = downcast(entry.indices);
         set(factory, driver, entry.type, vertexBuffer, indexBuffer, entry.offset, entry.count);
     }
 }
@@ -54,9 +54,9 @@ void FRenderPrimitive::terminate(HwRenderPrimitiveFactory& factory, backend::Dri
 }
 
 void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
-        RenderableManager::PrimitiveType type,
-        FVertexBuffer* vertexBuffer, FIndexBuffer* indexBuffer,
-        size_t offset, size_t count) noexcept {
+        RenderableManager::PrimitiveType const type,
+        FVertexBuffer const* vertexBuffer, FIndexBuffer const* indexBuffer,
+        size_t const offset, size_t const count) noexcept {
     if (mHandle) {
         factory.destroy(driver, mHandle);
     }

@@ -118,10 +118,10 @@ public:
         Builder& package(const void* UTILS_NONNULL payload, size_t size);
 
         template<typename T>
-        using is_supported_constant_parameter_t = typename std::enable_if<
-                std::is_same<int32_t, T>::value ||
-                std::is_same<float, T>::value ||
-                std::is_same<bool, T>::value>::type;
+        using is_supported_constant_parameter_t = std::enable_if_t<
+                std::is_same_v<int32_t, T> ||
+                std::is_same_v<float, T> ||
+                std::is_same_v<bool, T>>;
 
         /**
          * Specialize a constant parameter specified in the material definition with a concrete
@@ -177,7 +177,7 @@ public:
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Material* UTILS_NULLABLE build(Engine& engine);
+        Material* UTILS_NULLABLE build(Engine& engine) const;
     private:
         friend class FMaterial;
     };

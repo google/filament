@@ -25,14 +25,32 @@ namespace filament::matdbg {
 
 #if defined(__linux__) || defined(__APPLE__)
 std::string SourceFormatter::format(char const* source) {
-    std::string const TMP_FILENAME = "/tmp/matdbg-tmp-src.cpp";
+    char output[1024];
 
-    std::string original(source);
-    FILE* fp;
-    fp = fopen(TMP_FILENAME.c_str(), "w");
-    if (!fp) {
-        return original;
+    // First check if clang-format is available.
+    FILE* fp = popen("clang-format -version", "r");
+
+    // Need to drain the output
+    while (fgets(output, 1024, fp) != NULL) {}
+
+    int status = pclose(fp);
+    if (!fp || !WEXITSTATUS(status)) {
+        std::call_once(mClangWarningFlag, []() {
+            utils::slog.w << "[matdbg] unable to run clang-format to format shader file. "
+                          << "Please make sure it's installed." << utils::io::endl;
+        });
+        return source;
     }
+
+    // Write the source to a temp file for formatting
+    char const* TMP_FILENAME = "/tmp/matdbg-tmp-src.cpp";
+    fp = fopen(TMP_FILENAME, "w");
+    if (!fp) {
+        return source;
+    }
+
+    // Unknown if the input is 0-terminated so we put it in a string first.
+    std::string original(source);
     fputs(original.c_str(), fp);
     fflush(fp);
     pclose(fp);
@@ -45,22 +63,16 @@ std::string SourceFormatter::format(char const* source) {
             "}'";
 
     fp = popen(("clang-format " + CLANG_FORMAT_OPTIONS + "< " + TMP_FILENAME).c_str(), "r");
-
     if (!fp) {
-        std::call_once(mClangWarningFlag, []() {
-            utils::slog.w << "[matdbg] unable to run clang-format to format shader file. "
-                          << "Please make sure it's installed.";
-        });
         return original;
     }
 
-    char output[1024];
     std::stringstream outStream;
     while (fgets(output, 1024, fp) != NULL) {
         outStream << output;
     }
 
-    int status = pclose(fp);
+    status = pclose(fp);
     if (WEXITSTATUS(status)) {
         utils::slog.w << "[matdbg] clang-format failed with code=" << WEXITSTATUS(status)
                       << utils::io::endl;
@@ -69,11 +81,11 @@ std::string SourceFormatter::format(char const* source) {
 }
 #else
 std::string SourceFormatter::format(char const* source) {
-    std::call_once(mClangWarningFlag, []() {    
+    std::call_once(mClangWarningFlag, []() {
         utils::slog.w <<"[matdbg]: source formatting is not available on this platform" <<
                 utils::io::endl;
     });
-    return "";
+    return source;
 }
 #endif
 

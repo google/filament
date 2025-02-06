@@ -56,7 +56,7 @@ public:
 
     // copy the UBO data and cleans the dirty bits
     backend::BufferDescriptor toBufferDescriptor(
-            backend::DriverApi& driver, size_t offset, size_t size) const noexcept {
+            backend::DriverApi& driver, size_t const offset, size_t const size) const noexcept {
         backend::BufferDescriptor p;
         p.size = size;
         p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large

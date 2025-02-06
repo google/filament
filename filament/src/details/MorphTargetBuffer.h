@@ -37,7 +37,7 @@ class FEngine;
 
 class FMorphTargetBuffer : public MorphTargetBuffer {
 public:
-    class EmptyMorphTargetBuilder : public MorphTargetBuffer::Builder {
+    class EmptyMorphTargetBuilder : public Builder {
     public:
         EmptyMorphTargetBuilder();
     };

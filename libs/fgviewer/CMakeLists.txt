@@ -15,12 +15,14 @@ endif()
 set(PUBLIC_HDRS
     include/fgviewer/DebugServer.h
     include/fgviewer/JsonWriter.h
+    include/fgviewer/FrameGraphInfo.h
 )
 
 set(SRCS
     src/ApiHandler.cpp
     src/ApiHandler.h
     src/DebugServer.cpp
+    src/FrameGraphInfo.cpp
 )
 
 # ==================================================================================================

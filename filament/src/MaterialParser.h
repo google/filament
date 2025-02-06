@@ -130,8 +130,8 @@ public:
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
             Variant variant, backend::ShaderStage stage) noexcept;
 
-    bool hasShader(backend::ShaderModel model,
-            Variant variant, backend::ShaderStage stage) const noexcept {
+    bool hasShader(backend::ShaderModel const model,
+            Variant const variant, backend::ShaderStage const stage) const noexcept {
         return getMaterialChunk().hasShader(model, variant, stage);
     }
 

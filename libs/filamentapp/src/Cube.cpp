@@ -140,11 +140,14 @@ void Cube::mapAabb(filament::Engine& engine, filament::Box const& box) {
 Cube::~Cube() {
     mEngine.destroy(mVertexBuffer);
     mEngine.destroy(mIndexBuffer);
-    mEngine.destroy(mMaterialInstanceSolid);
-    mEngine.destroy(mMaterialInstanceWireFrame);
+
     // We don't own the material, only instances
     mEngine.destroy(mSolidRenderable);
     mEngine.destroy(mWireFrameRenderable);
+
+    // material instances must be destroyed after the renderables
+    mEngine.destroy(mMaterialInstanceSolid);
+    mEngine.destroy(mMaterialInstanceWireFrame);
 
     utils::EntityManager& em = utils::EntityManager::get();
     em.destroy(mSolidRenderable);

@@ -194,7 +194,7 @@ public:
     }
 
     ~LinearAllocatorWithFallback() noexcept {
-        LinearAllocatorWithFallback::reset();
+        reset();
     }
 
     void* alloc(size_t size, size_t alignment = alignof(std::max_align_t));
@@ -204,7 +204,7 @@ public:
     }
 
     void rewind(void* p) noexcept {
-        if (p >= LinearAllocator::base() && p < LinearAllocator::end()) {
+        if (p >= base() && p < end()) {
             LinearAllocator::rewind(p);
         }
     }
@@ -214,7 +214,7 @@ public:
     void free(void*, size_t) noexcept { }
 
     bool isHeapAllocation(void* p) const noexcept {
-        return p < LinearAllocator::base() || p >= LinearAllocator::end();
+        return p < base() || p >= end();
     }
 };
 
@@ -240,7 +240,6 @@ public:
     void push(void* p) noexcept {
         assert_invariant(p);
         assert_invariant(p >= mBegin && p < mEnd);
-        // TODO: assert this is one of our pointer (i.e.: it's address match one of ours)
         Node* const head = static_cast<Node*>(p);
         head->next = mHead;
         mHead = head;
@@ -718,13 +717,13 @@ public:
     // trivially destructible, since free() won't call the destructor and this is allocating
     // an array.
     template <typename T,
-            typename = typename std::enable_if<std::is_trivially_destructible<T>::value>::type>
+            typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
     T* alloc(size_t count, size_t alignment, size_t extra) noexcept {
         return (T*)alloc(count * sizeof(T), alignment, extra);
     }
 
     template <typename T,
-            typename = typename std::enable_if<std::is_trivially_destructible<T>::value>::type>
+            typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
     T* alloc(size_t count, size_t alignment = alignof(T)) noexcept {
         return (T*)alloc(count * sizeof(T), alignment);
     }
@@ -880,7 +879,7 @@ public:
     template<typename T, size_t ALIGN = alignof(T), typename... ARGS>
     T* make(ARGS&& ... args) noexcept {
         T* o = nullptr;
-        if (std::is_trivially_destructible<T>::value) {
+        if (std::is_trivially_destructible_v<T>) {
             o = mArena.template make<T, ALIGN>(std::forward<ARGS>(args)...);
         } else {
             void* const p = (Finalizer*)mArena.alloc(sizeof(T), ALIGN, sizeof(Finalizer));

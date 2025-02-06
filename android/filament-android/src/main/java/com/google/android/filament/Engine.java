@@ -1271,7 +1271,28 @@ public class Engine {
      * {@link  android.view.SurfaceHolder.Callback#surfaceDestroyed surfaceDestroyed}.</p>
      */
     public void flushAndWait() {
-        nFlushAndWait(getNativeObject());
+        boolean unused = flushAndWait(Fence.WAIT_FOR_EVER);
+    }
+
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
+     * all commands to this point are executed. Note that does guarantee that the
+     * hardware is actually finished.
+     *
+     * A timeout can be specified, if for some reason this flushAndWait doesn't complete before the timeout, it will
+     * return false, true otherwise.
+     *
+     * <p>This is typically used right after destroying the <code>SwapChain</code>,
+     * in cases where a guarantee about the <code>SwapChain</code> destruction is needed in a
+     * timely fashion, such as when responding to Android's
+     * <code>android.view.SurfaceHolder.Callback.surfaceDestroyed</code></p>
+     *
+     * @param timeout A timeout in nanoseconds
+     * @return true if successful, false if flushAndWait timed out, in which case it wasn't successful and commands
+     * might still be executing on both the CPU and GPU sides.
+     */
+    public boolean flushAndWait(long timeout) {
+        return nFlushAndWait(getNativeObject(), timeout);
     }
 
     /**
@@ -1437,7 +1458,7 @@ public class Engine {
     private static native boolean nIsValidRenderTarget(long nativeEngine, long nativeTarget);
     private static native boolean nIsValidSwapChain(long nativeEngine, long nativeSwapChain);
     private static native void nDestroyEntity(long nativeEngine, int entity);
-    private static native void nFlushAndWait(long nativeEngine);
+    private static native boolean nFlushAndWait(long nativeEngine, long timeout);
     private static native void nFlush(long nativeEngine);
     private static native boolean nIsPaused(long nativeEngine);
     private static native void nSetPaused(long nativeEngine, boolean paused);

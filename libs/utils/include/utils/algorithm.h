@@ -39,7 +39,7 @@ constexpr inline T popcount(T v) noexcept {
     return (T) (v * (ONES / 255)) >> (sizeof(T) - 1) * CHAR_BIT;
 }
 
-template<typename T, typename = std::enable_if_t<std::is_unsigned<T>::value>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline T clz(T x) noexcept {
     static_assert(sizeof(T) * CHAR_BIT <= 128, "details::clz() only support up to 128 bits");
     x |= (x >> 1u);
@@ -62,7 +62,7 @@ constexpr inline T clz(T x) noexcept {
     return T(sizeof(T) * CHAR_BIT) - details::popcount(x);
 }
 
-template<typename T, typename = std::enable_if_t<std::is_unsigned<T>::value>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline T ctz(T x) noexcept {
     static_assert(sizeof(T) * CHAR_BIT <= 64, "details::ctz() only support up to 64 bits");
     T c = sizeof(T) * CHAR_BIT;
@@ -227,7 +227,7 @@ unsigned long long UTILS_ALWAYS_INLINE popcount(unsigned long long x) noexcept {
 }
 
 template<typename T,
-        typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+        typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
 constexpr inline UTILS_PUBLIC UTILS_PURE
 T log2i(T x) noexcept {
     return (sizeof(x) * 8 - 1u) - clz(x);

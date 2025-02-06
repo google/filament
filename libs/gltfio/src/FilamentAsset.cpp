@@ -37,12 +37,8 @@ FFilamentAsset::~FFilamentAsset() {
     // Free transient load-time data if they haven't been freed yet.
     releaseSourceData();
 
-    // Destroy all instance objects. Instance entities / components are
-    // destroyed later in this method because they are owned by the asset
-    // (except for the root of the instance).
     for (FFilamentInstance* instance : mInstances) {
         mEntityManager->destroy(instance->mRoot);
-        delete instance;
     }
 
     delete mWireframe;
@@ -74,6 +70,12 @@ FFilamentAsset::~FFilamentAsset() {
             mEngine->destroy(entity);
             mEntityManager->destroy(entity);
         }
+    }
+
+    // FilamentInstances need to be destroyed after the renderables have been destroyed
+    // so that there are no dangling MaterialInstance around
+    for (FFilamentInstance* instance : mInstances) {
+        delete instance;
     }
 
     for (auto vb : mVertexBuffers) {
