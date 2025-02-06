@@ -25,8 +25,9 @@
 #include "VulkanFboCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
-#include "VulkanUtility.h"
 #include "vulkan/memory/Resource.h"
+#include "vulkan/utils/StaticVector.h"
+#include "vulkan/utils/Definitions.h"
 
 #include <backend/Program.h>
 
@@ -44,11 +45,11 @@ namespace {
 template<typename Bitmask>
 inline uint8_t collapsedCount(Bitmask const& mask) {
     static_assert(sizeof(mask) <= 64);
-    constexpr uint64_t VERTEX_MASK = (1ULL << getFragmentStageShift<Bitmask>()) - 1ULL;
-    constexpr uint64_t FRAGMENT_MASK = (VERTEX_MASK << getFragmentStageShift<Bitmask>());
+    constexpr uint64_t VERTEX_MASK = (1ULL << fvkutils::getFragmentStageShift<Bitmask>()) - 1ULL;
+    constexpr uint64_t FRAGMENT_MASK = (VERTEX_MASK << fvkutils::getFragmentStageShift<Bitmask>());
     uint64_t val = mask.getValue();
-    val = ((val & VERTEX_MASK) >> getVertexStageShift<Bitmask>()) |
-        ((val & FRAGMENT_MASK) >> getFragmentStageShift<Bitmask>());
+    val = ((val & VERTEX_MASK) >> fvkutils::getVertexStageShift<Bitmask>()) |
+          ((val & FRAGMENT_MASK) >> fvkutils::getFragmentStageShift<Bitmask>());
     return (uint8_t) Bitmask(val).count();
 }
 
@@ -67,10 +68,10 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
     // The bitmask representation of a set layout.
     struct Bitmask {
         // TODO: better utiltize the space below and use bitset instead.
-        UniformBufferBitmask ubo;         // 8 bytes
-        UniformBufferBitmask dynamicUbo;  // 8 bytes
-        SamplerBitmask sampler;           // 8 bytes
-        InputAttachmentBitmask inputAttachment; // 8 bytes
+        fvkutils::UniformBufferBitmask ubo;         // 8 bytes
+        fvkutils::UniformBufferBitmask dynamicUbo;  // 8 bytes
+        fvkutils::SamplerBitmask sampler;           // 8 bytes
+        fvkutils::InputAttachmentBitmask inputAttachment; // 8 bytes
 
         bool operator==(Bitmask const& right) const {
             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
@@ -138,7 +139,7 @@ public:
     using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
     VulkanDescriptorSet(VkDescriptorSet rawSet,
-            UniformBufferBitmask const& dynamicUboMask,
+            fvkutils::UniformBufferBitmask const& dynamicUboMask,
             uint8_t uniqueDynamicUboCount,
             OnRecycle&& onRecycleFn)
         : vkSet(rawSet),
@@ -164,7 +165,7 @@ public:
     void acquire(fvkmemory::resource_ptr<VulkanBufferObject> buffer);
 
     VkDescriptorSet const vkSet;
-    UniformBufferBitmask const dynamicUboMask;
+    fvkutils::UniformBufferBitmask const dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
 
 private:
@@ -193,7 +194,7 @@ private:
 };
 
 struct VulkanProgram : public HwProgram, fvkmemory::Resource {
-    using BindingList = CappedArray<uint16_t, MAX_SAMPLER_COUNT>;
+    using BindingList = fvkutils::StaticVector<uint16_t, MAX_SAMPLER_COUNT>;
 
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram();

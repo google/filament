@@ -469,6 +469,26 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     const_cast<FTexture*>(this)->updateLodRange(level);
 }
 
+void FTexture::setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept {
+    FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
+
+    // The call to setupExternalImage2 is synchronous, and allows the driver to take ownership of the
+    // external image on this thread, if necessary.
+    auto& api = engine.getDriverApi();
+    api.setupExternalImage2(image);
+
+    auto texture = api.createTextureExternalImage2(mTarget, mFormat, mWidth, mHeight, mUsage, image);
+
+    if (mTextureIsSwizzled) {
+        auto const& s = mSwizzle;
+        auto swizzleView = api.createTextureViewSwizzle(texture, s[0], s[1], s[2], s[3]);
+        api.destroyTexture(texture);
+        texture = swizzleView;
+    }
+
+    setHandles(texture);
+}
+
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     FILAMENT_CHECK_PRECONDITION(mExternal) << "The texture must be external.";
 

@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
         app.offscreenDepthTexture = Texture::Builder()
             .width(vp.width).height(vp.height).levels(1)
             .usage(Texture::Usage::DEPTH_ATTACHMENT)
-            .format(Texture::InternalFormat::DEPTH24).build(*engine);
+            .format(Texture::InternalFormat::DEPTH32F).build(*engine);
         app.offscreenRenderTarget = RenderTarget::Builder()
             .texture(RenderTarget::AttachmentPoint::COLOR, app.offscreenColorTexture)
             .texture(RenderTarget::AttachmentPoint::DEPTH, app.offscreenDepthTexture)
@@ -321,11 +321,11 @@ int main(int argc, char** argv) {
         engine->destroy(app.reflectedMonkey);
         engine->destroy(app.lightEntity);
         engine->destroy(app.quadEntity);
-        engine->destroy(app.meshMatInstance);
-        engine->destroy(app.meshMaterial);
         engine->destroy(app.monkeyMesh.renderable);
         engine->destroy(app.monkeyMesh.vertexBuffer);
         engine->destroy(app.monkeyMesh.indexBuffer);
+        engine->destroy(app.meshMatInstance);
+        engine->destroy(app.meshMaterial);
         engine->destroy(app.offscreenColorTexture);
         engine->destroy(app.offscreenDepthTexture);
         engine->destroy(app.offscreenRenderTarget);

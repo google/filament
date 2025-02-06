@@ -26,10 +26,12 @@
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"
-#include "backend/DriverEnums.h"
-#include "memory/ResourceManager.h"
-#include "memory/ResourcePointer.h"
+#include "vulkan/memory/ResourceManager.h"
+#include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Conversion.h"
+#include "vulkan/utils/Definitions.h"
 
+#include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/CString.h>
@@ -44,11 +46,13 @@ using namespace bluevk;
 
 using utils::FixedCapacityVector;
 
+#if defined(__clang__)
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
 // to a stack-allocated variable.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 
 namespace filament::backend {
 
@@ -541,16 +545,25 @@ void VulkanDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a) {
    TextureSwizzle const swizzleArray[] = {r, g, b, a};
-   VkComponentMapping const swizzle = getSwizzleMap(swizzleArray);
+   VkComponentMapping const swizzle = fvkutils::getSwizzleMap(swizzleArray);
    auto src = resource_ptr<VulkanTexture>::cast(&mResourceManager, srch);
    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
            mPlatform->getPhysicalDevice(), mContext, mAllocator, &mCommands, src, swizzle);
    texture.inc();
 }
 
-void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
+void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th,
         backend::SamplerType target,  backend::TextureFormat format,
-        uint32_t width, uint32_t height, backend::TextureUsage usage, void* externalImage) {
+        uint32_t width, uint32_t height, backend::TextureUsage usage,
+        Platform::ExternalImageHandleRef externalImage) {
+    FVK_SYSTRACE_SCOPE();
+
+    // FIXME: implement createTextureExternalImage2R
+}
+
+void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
+        backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
+        void* externalImage) {
     FVK_SYSTRACE_SCOPE();
 
     const auto& metadata = mPlatform->getExternalImageMetadata(externalImage);
@@ -560,7 +573,7 @@ void VulkanDriver::createTextureExternalImageR(Handle<HwTexture> th,
 
     assert_invariant(width == metadata.width);
     assert_invariant(height == metadata.height);
-    assert_invariant(getVkFormat(format) == metadata.format);
+    assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
     const auto& data = mPlatform->createExternalImage(externalImage, metadata);
 
@@ -788,6 +801,10 @@ Handle<HwTexture> VulkanDriver::createTextureViewSwizzleS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
 
+Handle<HwTexture> VulkanDriver::createTextureExternalImage2S() noexcept {
+    return mResourceManager.allocHandle<VulkanTexture>();
+}
+
 Handle<HwTexture> VulkanDriver::createTextureExternalImageS() noexcept {
     return mResourceManager.allocHandle<VulkanTexture>();
 }
@@ -935,7 +952,7 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
-    VkFormat vkformat = getVkFormat(format);
+    VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -962,7 +979,7 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
 }
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
-    VkFormat vkformat = getVkFormat(format);
+    VkFormat vkformat = fvkutils::getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -1020,12 +1037,11 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
 
 bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
     auto const& formats = mContext.getBlittableDepthStencilFormats();
-    return std::find(formats.begin(), formats.end(), getVkFormat(format)) != formats.end();
+    return std::find(formats.begin(), formats.end(), fvkutils::getVkFormat(format)) !=
+           formats.end();
 }
 
-bool VulkanDriver::isProtectedTexturesSupported() {
-    return false;
-}
+bool VulkanDriver::isProtectedTexturesSupported() { return false; }
 
 bool VulkanDriver::isDepthClampSupported() {
     return mContext.isDepthClampSupported();
@@ -1166,6 +1182,9 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     texture->updateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
     scheduleDestroy(std::move(data));
+}
+
+void VulkanDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
 }
 
 void VulkanDriver::setupExternalImage(void* image) {
@@ -1678,25 +1697,25 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     auto rt = mCurrentRenderPass.renderTarget;
 
     VulkanPipelineCache::RasterState const vulkanRasterState{
-        .cullMode = getCullMode(rasterState.culling),
-        .frontFace = getFrontFace(rasterState.inverseFrontFaces),
+        .cullMode = fvkutils::getCullMode(rasterState.culling),
+        .frontFace = fvkutils::getFrontFace(rasterState.inverseFrontFaces),
         .depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false,
         .blendEnable = rasterState.hasBlending(),
         .depthWriteEnable = rasterState.depthWrite,
         .alphaToCoverageEnable = rasterState.alphaToCoverage,
-        .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
-        .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
-        .srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha),
-        .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
+        .srcColorBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcRGB),
+        .dstColorBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstRGB),
+        .srcAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionSrcAlpha),
+        .dstAlphaBlendFactor = fvkutils::getBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
         .rasterizationSamples = rt->getSamples(),
         .depthClamp = rasterState.depthClamp,
         .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
         .colorBlendOp = rasterState.blendEquationRGB,
-        .alphaBlendOp =  rasterState.blendEquationAlpha,
+        .alphaBlendOp = rasterState.blendEquationAlpha,
         .depthCompareOp = rasterState.depthFunc,
         .depthBiasConstantFactor = depthOffset.constant,
-        .depthBiasSlopeFactor = depthOffset.slope
+        .depthBiasSlopeFactor = depthOffset.slope,
     };
 
     // unfortunately in Vulkan the topology is per pipeline
@@ -1733,7 +1752,7 @@ void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
     mBoundPipeline = {
         .program = program,
         .pipelineLayout = pipelineLayout,
-        .descriptorSetMask = DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
+        .descriptorSetMask = fvkutils::DescriptorSetMask(descriptorSetMaskTable[layoutCount]),
     };
 
     mPipelineCache.bindLayout(pipelineLayout);
@@ -1882,4 +1901,6 @@ template class ConcreteDispatcher<VulkanDriver>;
 
 } // namespace filament::backend
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif

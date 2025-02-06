@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
                 .depth(eyeCount)
                 .levels(1)
                 .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
-                .format(Texture::InternalFormat::DEPTH24)
+                .format(Texture::InternalFormat::DEPTH32F)
                 .usage(Texture::Usage::DEPTH_ATTACHMENT)
                 .build(*engine);
         app.stereoRenderTarget = RenderTarget::Builder()
@@ -324,11 +324,11 @@ int main(int argc, char** argv) {
 
         auto& em = utils::EntityManager::get();
 
-        for (MaterialInstance* mi : app.quadMatInstances) {
-            engine->destroy(mi);
-        }
         for (utils::Entity e : app.quadEntities) {
             engine->destroy(e);
+        }
+        for (MaterialInstance* mi : app.quadMatInstances) {
+            engine->destroy(mi);
         }
         engine->destroy(app.quadMaterial);
         engine->destroy(app.quadIb);

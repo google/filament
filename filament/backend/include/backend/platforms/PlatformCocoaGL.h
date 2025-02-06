@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H
 
-#include <backend/DriverEnums.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
 #include <stdint.h>
@@ -34,12 +33,14 @@ public:
     PlatformCocoaGL();
     ~PlatformCocoaGL() noexcept override;
 
+    ExternalImageHandle createExternalImage(void* cvPixelBuffer) noexcept;
+
 protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
     Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const DriverConfig& driverConfig) noexcept override;
 
     // Currently returns 0
     int getOSVersion() const noexcept override;
@@ -59,10 +60,12 @@ protected:
     void destroySwapChain(SwapChain* swapChain) noexcept override;
     bool makeCurrent(ContextType type, SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
-    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
-    void destroyExternalImage(ExternalTexture* texture) noexcept override;
+    ExternalTexture* createExternalImageTexture() noexcept override;
+    void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
     void retainExternalImage(void* externalImage) noexcept override;
     bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept override;
+    void retainExternalImage(ExternalImageHandleRef externalImage) noexcept override;
+    bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
 
 private:
     PlatformCocoaGLImpl* pImpl = nullptr;

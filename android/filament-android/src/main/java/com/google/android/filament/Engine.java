@@ -1271,7 +1271,7 @@ public class Engine {
      * {@link  android.view.SurfaceHolder.Callback#surfaceDestroyed surfaceDestroyed}.</p>
      */
     public void flushAndWait() {
-        flushAndWait(Fence.WAIT_FOR_EVER);
+        boolean unused = flushAndWait(Fence.WAIT_FOR_EVER);
     }
 
     /**
