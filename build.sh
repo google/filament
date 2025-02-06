@@ -396,13 +396,14 @@ function build_android_target {
             echo "Error: WebGPU requires vulkan to be enabled"
             exit 1
         fi
+        local webgpu_platform="-webgpu"
         WEBGPU_ANDROID_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=ON"
     fi
 
     echo "Building Android ${lc_target} (${arch})..."
-    mkdir -p "out/cmake-android-${lc_target}-${arch}"
+    mkdir -p "out/cmake-android${webgpu_platform}-${lc_target}-${arch}"
 
-    pushd "out/cmake-android-${lc_target}-${arch}" > /dev/null
+    pushd "out/cmake-android${webgpu_platform}-${lc_target}-${arch}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
@@ -410,7 +411,7 @@ function build_android_target {
             -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE="$1" \
             -DFILAMENT_NDK_VERSION="${FILAMENT_NDK_VERSION}" \
-            -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
+            -DCMAKE_INSTALL_PREFIX="../android${webgpu_platform}-${lc_target}/filament" \
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
             ${FGVIEWER_OPTION} \
             ${MATDBG_OPTION} \
@@ -420,7 +421,7 @@ function build_android_target {
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ../..
-        ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
+        ln -sf "out/cmake-android${webgpu_platform}-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
     fi
 

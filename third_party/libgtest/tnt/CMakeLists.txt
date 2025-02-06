@@ -24,6 +24,10 @@ include_directories(
     ${PUBLIC_HDR_DIR}
     ${PRIVATE_HDR_DIR})
 
+# Dawn also adds gtest which conflicts with this target.
+# Check, if the target already exists before creation.
+# This should be updated after dependencies between Dawn and Filament are resolved.
+if (NOT TARGET ${TARGET})
 # we're building a library
 add_library(${TARGET} STATIC ${SRCS})
 
@@ -36,3 +40,4 @@ endif()
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)
+endif()

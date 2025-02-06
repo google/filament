@@ -847,6 +847,7 @@ include(FetchContent)
     add_subdirectory(${EXTERNAL}/dawn)
 endif()
 
+add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${FILAMENT}/filament)
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
