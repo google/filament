@@ -518,6 +518,14 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
         std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
         // TODO: Fill in resource properties
         fgviewer::ResourceId id = resource->getId();
+        if (resource->getRefCount() == 0)
+            continue;
+        if (resource->getParentNode() != nullptr) {
+            resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
+                .name = "is_subresource",
+                .value = "true"
+            });
+        }
         resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
                               id, utils::CString(resource->getName()),
                               std::move(resourceProps))
