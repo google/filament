@@ -117,8 +117,6 @@ template("glslang_sources_common") {
     }
 
     sources = [
-      "OGLCompilersDLL/InitializeDll.cpp",
-      "OGLCompilersDLL/InitializeDll.h",
       "SPIRV/GLSL.ext.AMD.h",
       "SPIRV/GLSL.ext.EXT.h",
       "SPIRV/GLSL.ext.KHR.h",
@@ -161,6 +159,7 @@ template("glslang_sources_common") {
       "glslang/Include/Types.h",
       "glslang/Include/arrays.h",
       "glslang/Include/intermediate.h",
+      "glslang/Include/visibility.h",
       "glslang/MachineIndependent/Constant.cpp",
       "glslang/MachineIndependent/InfoSink.cpp",
       "glslang/MachineIndependent/Initialize.cpp",
@@ -236,7 +235,7 @@ template("glslang_sources_common") {
       ]
     }
 
-    defines = []
+    defines = [ "ENABLE_SPIRV=1" ]
     if (invoker.enable_opt) {
       sources += [ "SPIRV/SpvTools.cpp" ]
       defines += [ "ENABLE_OPT=1" ]
@@ -303,6 +302,7 @@ source_set("glslang_default_resource_limits_sources") {
     "glslang/ResourceLimits/ResourceLimits.cpp",
     "glslang/Public/ResourceLimits.h",
     "glslang/Include/ResourceLimits.h",
+    "glslang/Include/visibility.h",
   ]
   public_configs = [ ":glslang_public" ]
 
@@ -318,7 +318,10 @@ executable("glslang_validator") {
   if (!is_win) {
     cflags = [ "-Woverflow" ]
   }
-  defines = [ "ENABLE_OPT=1" ]
+  defines = [
+    "ENABLE_OPT=1",
+    "ENABLE_SPIRV=1",
+  ]
   deps = [
     ":glslang_build_info",
     ":glslang_default_resource_limits_sources",
@@ -338,7 +341,10 @@ executable("glslang_validator") {
 
 executable("spirv-remap") {
   sources = [ "StandAlone/spirv-remap.cpp" ]
-  defines = [ "ENABLE_OPT=1" ]
+  defines = [
+    "ENABLE_OPT=1",
+    "ENABLE_SPIRV=1",
+  ]
   deps = [ ":glslang_sources" ]
 
   include_dirs = [ "${spirv_tools_dir}/include" ]

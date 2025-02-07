@@ -83,6 +83,11 @@ public:
         const char* featureDesc);
     virtual void ppRequireExtensions(const TSourceLoc&, int numExtensions, const char* const extensions[],
         const char* featureDesc);
+    template<typename Container>
+    constexpr void ppRequireExtensions(const TSourceLoc& loc, Container extensions, const char* featureDesc) {
+        ppRequireExtensions(loc, static_cast<int>(extensions.size()), extensions.data(), featureDesc);
+    }
+
     virtual TExtensionBehavior getExtensionBehavior(const char*);
     virtual bool extensionTurnedOn(const char* const extension);
     virtual bool extensionsTurnedOn(int numExtensions, const char* const extensions[]);
@@ -116,6 +121,8 @@ public:
     virtual void fcoopmatCheckNV(const TSourceLoc&, const char* op, bool builtIn = false);
     virtual void intcoopmatCheckNV(const TSourceLoc&, const char *op, bool builtIn = false);
     virtual void coopmatCheck(const TSourceLoc&, const char* op, bool builtIn = false);
+    virtual void tensorLayoutViewCheck(const TSourceLoc&, const char* op, bool builtIn = false);
+    virtual void coopvecCheck(const TSourceLoc&, const char* op, bool builtIn = false);
     bool relaxedErrors()    const { return (messages & EShMsgRelaxedErrors) != 0; }
     bool suppressWarnings() const { return (messages & EShMsgSuppressWarnings) != 0; }
     bool isForwardCompatible() const { return forwardCompatible; }

@@ -1,7 +1,7 @@
 //
 // Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
 // Copyright (C) 2012-2016 LunarG, Inc.
-// Copyright (C) 2017 ARM Limited.
+// Copyright (C) 2017, 2022-2024 Arm Limited.
 // Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights reserved.
 //
 // All rights reserved.
@@ -48,14 +48,9 @@
 #ifndef __INTERMEDIATE_H
 #define __INTERMEDIATE_H
 
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-    #pragma warning(disable : 4464) // relative include path contains '..'
-    #pragma warning(disable : 5026) // 'glslang::TIntermUnary': move constructor was implicitly defined as deleted
-#endif
-
-#include "../Include/Common.h"
-#include "../Include/Types.h"
-#include "../Include/ConstantUnion.h"
+#include "Common.h"
+#include "Types.h"
+#include "ConstantUnion.h"
 
 namespace glslang {
 
@@ -92,189 +87,9 @@ enum TOperator {
 
     EOpDeclare,        // Used by debugging to force declaration of variable in correct scope
 
-    // (u)int* -> bool
-    EOpConvInt8ToBool,
-    EOpConvUint8ToBool,
-    EOpConvInt16ToBool,
-    EOpConvUint16ToBool,
-    EOpConvIntToBool,
-    EOpConvUintToBool,
-    EOpConvInt64ToBool,
-    EOpConvUint64ToBool,
-
-    // float* -> bool
-    EOpConvFloat16ToBool,
-    EOpConvFloatToBool,
-    EOpConvDoubleToBool,
-
-    // bool -> (u)int*
-    EOpConvBoolToInt8,
-    EOpConvBoolToUint8,
-    EOpConvBoolToInt16,
-    EOpConvBoolToUint16,
-    EOpConvBoolToInt,
-    EOpConvBoolToUint,
-    EOpConvBoolToInt64,
-    EOpConvBoolToUint64,
-
-    // bool -> float*
-    EOpConvBoolToFloat16,
-    EOpConvBoolToFloat,
-    EOpConvBoolToDouble,
-
-    // int8_t -> (u)int*
-    EOpConvInt8ToInt16,
-    EOpConvInt8ToInt,
-    EOpConvInt8ToInt64,
-    EOpConvInt8ToUint8,
-    EOpConvInt8ToUint16,
-    EOpConvInt8ToUint,
-    EOpConvInt8ToUint64,
-
-    // uint8_t -> (u)int*
-    EOpConvUint8ToInt8,
-    EOpConvUint8ToInt16,
-    EOpConvUint8ToInt,
-    EOpConvUint8ToInt64,
-    EOpConvUint8ToUint16,
-    EOpConvUint8ToUint,
-    EOpConvUint8ToUint64,
-
-    // int8_t -> float*
-    EOpConvInt8ToFloat16,
-    EOpConvInt8ToFloat,
-    EOpConvInt8ToDouble,
-
-    // uint8_t -> float*
-    EOpConvUint8ToFloat16,
-    EOpConvUint8ToFloat,
-    EOpConvUint8ToDouble,
-
-    // int16_t -> (u)int*
-    EOpConvInt16ToInt8,
-    EOpConvInt16ToInt,
-    EOpConvInt16ToInt64,
-    EOpConvInt16ToUint8,
-    EOpConvInt16ToUint16,
-    EOpConvInt16ToUint,
-    EOpConvInt16ToUint64,
-
-    // uint16_t -> (u)int*
-    EOpConvUint16ToInt8,
-    EOpConvUint16ToInt16,
-    EOpConvUint16ToInt,
-    EOpConvUint16ToInt64,
-    EOpConvUint16ToUint8,
-    EOpConvUint16ToUint,
-    EOpConvUint16ToUint64,
-
-    // int16_t -> float*
-    EOpConvInt16ToFloat16,
-    EOpConvInt16ToFloat,
-    EOpConvInt16ToDouble,
-
-    // uint16_t -> float*
-    EOpConvUint16ToFloat16,
-    EOpConvUint16ToFloat,
-    EOpConvUint16ToDouble,
-
-    // int32_t -> (u)int*
-    EOpConvIntToInt8,
-    EOpConvIntToInt16,
-    EOpConvIntToInt64,
-    EOpConvIntToUint8,
-    EOpConvIntToUint16,
-    EOpConvIntToUint,
-    EOpConvIntToUint64,
-
-    // uint32_t -> (u)int*
-    EOpConvUintToInt8,
-    EOpConvUintToInt16,
-    EOpConvUintToInt,
-    EOpConvUintToInt64,
-    EOpConvUintToUint8,
-    EOpConvUintToUint16,
-    EOpConvUintToUint64,
-
-    // int32_t -> float*
-    EOpConvIntToFloat16,
-    EOpConvIntToFloat,
-    EOpConvIntToDouble,
-
-    // uint32_t -> float*
-    EOpConvUintToFloat16,
-    EOpConvUintToFloat,
-    EOpConvUintToDouble,
-
-    // int64_t -> (u)int*
-    EOpConvInt64ToInt8,
-    EOpConvInt64ToInt16,
-    EOpConvInt64ToInt,
-    EOpConvInt64ToUint8,
-    EOpConvInt64ToUint16,
-    EOpConvInt64ToUint,
-    EOpConvInt64ToUint64,
-
-    // uint64_t -> (u)int*
-    EOpConvUint64ToInt8,
-    EOpConvUint64ToInt16,
-    EOpConvUint64ToInt,
-    EOpConvUint64ToInt64,
-    EOpConvUint64ToUint8,
-    EOpConvUint64ToUint16,
-    EOpConvUint64ToUint,
-
-    // int64_t -> float*
-    EOpConvInt64ToFloat16,
-    EOpConvInt64ToFloat,
-    EOpConvInt64ToDouble,
-
-    // uint64_t -> float*
-    EOpConvUint64ToFloat16,
-    EOpConvUint64ToFloat,
-    EOpConvUint64ToDouble,
-
-    // float16_t -> (u)int*
-    EOpConvFloat16ToInt8,
-    EOpConvFloat16ToInt16,
-    EOpConvFloat16ToInt,
-    EOpConvFloat16ToInt64,
-    EOpConvFloat16ToUint8,
-    EOpConvFloat16ToUint16,
-    EOpConvFloat16ToUint,
-    EOpConvFloat16ToUint64,
-
-    // float16_t -> float*
-    EOpConvFloat16ToFloat,
-    EOpConvFloat16ToDouble,
-
-    // float -> (u)int*
-    EOpConvFloatToInt8,
-    EOpConvFloatToInt16,
-    EOpConvFloatToInt,
-    EOpConvFloatToInt64,
-    EOpConvFloatToUint8,
-    EOpConvFloatToUint16,
-    EOpConvFloatToUint,
-    EOpConvFloatToUint64,
-
-    // float -> float*
-    EOpConvFloatToFloat16,
-    EOpConvFloatToDouble,
-
-    // float64 _t-> (u)int*
-    EOpConvDoubleToInt8,
-    EOpConvDoubleToInt16,
-    EOpConvDoubleToInt,
-    EOpConvDoubleToInt64,
-    EOpConvDoubleToUint8,
-    EOpConvDoubleToUint16,
-    EOpConvDoubleToUint,
-    EOpConvDoubleToUint64,
-
-    // float64_t -> float*
-    EOpConvDoubleToFloat16,
-    EOpConvDoubleToFloat,
+    // Operator used to represent all conversions between int, float, and bool.
+    // The specific types are inferred from TBasicType.
+    EOpConvNumeric,
 
     // uint64_t <-> pointer
     EOpConvUint64ToPtr,
@@ -511,6 +326,8 @@ enum TOperator {
     EOpSubgroupShuffleXor,
     EOpSubgroupShuffleUp,
     EOpSubgroupShuffleDown,
+    EOpSubgroupRotate,
+    EOpSubgroupClusteredRotate,
     EOpSubgroupAdd,
     EOpSubgroupMul,
     EOpSubgroupMin,
@@ -543,6 +360,8 @@ enum TOperator {
     EOpSubgroupQuadSwapHorizontal,
     EOpSubgroupQuadSwapVertical,
     EOpSubgroupQuadSwapDiagonal,
+    EOpSubgroupQuadAll,
+    EOpSubgroupQuadAny,
 
     EOpSubgroupPartition,
     EOpSubgroupPartitionedAdd,
@@ -568,6 +387,11 @@ enum TOperator {
     EOpSubgroupPartitionedExclusiveXor,
 
     EOpSubgroupGuardStop,
+    
+    // Integer dot product
+    EOpDotPackedEXT,
+    EOpDotAccSatEXT,
+    EOpDotPackedAccSatEXT,
 
     EOpMinInvocations,
     EOpMaxInvocations,
@@ -629,7 +453,31 @@ enum TOperator {
     EOpCooperativeMatrixMulAdd,
     EOpCooperativeMatrixLoadNV,
     EOpCooperativeMatrixStoreNV,
+    EOpCooperativeMatrixLoadTensorNV,
+    EOpCooperativeMatrixStoreTensorNV,
     EOpCooperativeMatrixMulAddNV,
+    EOpCooperativeMatrixReduceNV,
+    EOpCooperativeMatrixPerElementOpNV,
+    EOpCooperativeMatrixTransposeNV,
+
+    EOpCreateTensorLayoutNV,
+    EOpTensorLayoutSetBlockSizeNV,
+    EOpTensorLayoutSetDimensionNV,
+    EOpTensorLayoutSetStrideNV,
+    EOpTensorLayoutSliceNV,
+    EOpTensorLayoutSetClampValueNV,
+
+    EOpCreateTensorViewNV,
+    EOpTensorViewSetDimensionNV,
+    EOpTensorViewSetStrideNV,
+    EOpTensorViewSetClipNV,
+
+    EOpCooperativeVectorMatMulNV,
+    EOpCooperativeVectorMatMulAddNV,
+    EOpCooperativeVectorLoadNV,
+    EOpCooperativeVectorStoreNV,
+    EOpCooperativeVectorOuterProductAccumulateNV,
+    EOpCooperativeVectorReduceSumAccumulateNV,
 
     EOpBeginInvocationInterlock, // Fragment only
     EOpEndInvocationInterlock, // Fragment only
@@ -769,6 +617,7 @@ enum TOperator {
     EOpConstructReference,
     EOpConstructCooperativeMatrixNV,
     EOpConstructCooperativeMatrixKHR,
+    EOpConstructCooperativeVectorNV,
     EOpConstructAccStruct,
     EOpConstructGuardEnd,
 
@@ -1092,6 +941,10 @@ enum TOperator {
     EOpWaveActiveCountBits,              // Will decompose to subgroupBallotBitCount(subgroupBallot()).
     EOpWavePrefixCountBits,              // Will decompose to subgroupBallotInclusiveBitCount(subgroupBallot()).
 
+    // GL_EXT_expect_assume
+    EOpAssumeEXT,
+    EOpExpectEXT,
+
     // Shader Clock Ops
     EOpReadClockSubgroupKHR,
     EOpReadClockDeviceKHR,
@@ -1108,7 +961,36 @@ enum TOperator {
     EOpImageBoxFilterQCOM,
     EOpImageBlockMatchSADQCOM,
     EOpImageBlockMatchSSDQCOM,
+
+    // Image processing2
+    EOpImageBlockMatchWindowSSDQCOM,
+    EOpImageBlockMatchWindowSADQCOM,
+    EOpImageBlockMatchGatherSSDQCOM,
+    EOpImageBlockMatchGatherSADQCOM,
+
+    // GL_NV_cluster_acceleration_structure
+    EOpRayQueryGetIntersectionClusterIdNV,
+    EOpHitObjectGetClusterIdNV,
+
+    // GL_NV_linear_swept_spheres
+    EOpRayQueryGetIntersectionSpherePositionNV,
+    EOpRayQueryGetIntersectionSphereRadiusNV,
+    EOpRayQueryGetIntersectionLSSHitValueNV,
+    EOpRayQueryGetIntersectionLSSPositionsNV,
+    EOpRayQueryGetIntersectionLSSRadiiNV,
+    EOpRayQueryIsSphereHitNV,
+    EOpRayQueryIsLSSHitNV,
+    EOpHitObjectGetSpherePositionNV,
+    EOpHitObjectGetSphereRadiusNV,
+    EOpHitObjectGetLSSPositionsNV,
+    EOpHitObjectGetLSSRadiiNV,
+    EOpHitObjectIsSphereHitNV,
+    EOpHitObjectIsLSSHitNV,
 };
+
+inline bool IsOpNumericConv(const TOperator op) {
+    return op == EOpConvNumeric;
+}
 
 enum TLinkType {
     ELinkNone,
@@ -1347,11 +1229,19 @@ public:
     // if symbol is initialized as symbol(sym), the memory comes from the pool allocator of sym. If sym comes from
     // per process threadPoolAllocator, then it causes increased memory usage per compile
     // it is essential to use "symbol = sym" to assign to symbol
-    TIntermSymbol(long long i, const TString& n, const TType& t)
-        : TIntermTyped(t), id(i), flattenSubset(-1), constSubtree(nullptr) { name = n; }
+    TIntermSymbol(long long i, const TString& n, EShLanguage s, const TType& t, const TString* mn = nullptr)
+        : TIntermTyped(t), id(i), flattenSubset(-1), stage(s), constSubtree(nullptr) { 
+        name = n;
+        if (mn) {
+            mangledName = *mn;
+        } else {
+            mangledName = n;
+        }
+    }
     virtual long long getId() const { return id; }
     virtual void changeId(long long i) { id = i; }
     virtual const TString& getName() const { return name; }
+    virtual const TString& getMangledName() const { return mangledName; }
     virtual void traverse(TIntermTraverser*);
     virtual       TIntermSymbol* getAsSymbolNode()       { return this; }
     virtual const TIntermSymbol* getAsSymbolNode() const { return this; }
@@ -1367,11 +1257,14 @@ public:
     // This is meant for cases where a node has already been constructed, and
     // later on, it becomes necessary to switch to a different symbol.
     virtual void switchId(long long newId) { id = newId; }
+    EShLanguage getStage() const { return stage; }
 
 protected:
     long long id;                // the unique id of the symbol this node represents
     int flattenSubset;           // how deeply the flattened object rooted at id has been dereferenced
     TString name;                // the name of the symbol this node represents
+    EShLanguage stage;
+    TString mangledName;         // mangled function name, or a copy of name if not a function
     TConstUnionArray constArray; // if the symbol is a front-end compile-time constant, this is its value
     TIntermTyped* constSubtree;
 };
@@ -1685,8 +1578,12 @@ typedef TVector<TStorageQualifier> TQualifierList;
 //
 class TIntermAggregate : public TIntermOperator {
 public:
-    TIntermAggregate() : TIntermOperator(EOpNull), userDefined(false), pragmaTable(nullptr) { }
-    TIntermAggregate(TOperator o) : TIntermOperator(o), pragmaTable(nullptr) { }
+    TIntermAggregate() : TIntermOperator(EOpNull), userDefined(false), pragmaTable(nullptr) { 
+        endLoc.init();
+    }
+    TIntermAggregate(TOperator o) : TIntermOperator(o), pragmaTable(nullptr) {
+        endLoc.init();
+    }
     ~TIntermAggregate() { delete pragmaTable; }
     virtual       TIntermAggregate* getAsAggregate()       { return this; }
     virtual const TIntermAggregate* getAsAggregate() const { return this; }
@@ -1710,6 +1607,9 @@ public:
     void setSpirvInstruction(const TSpirvInstruction& inst) { spirvInst = inst; }
     const TSpirvInstruction& getSpirvInstruction() const { return spirvInst; }
 
+    void setEndLoc(TSourceLoc loc) { endLoc = loc; }
+    TSourceLoc getEndLoc() const { return endLoc; }
+
     void setLinkType(TLinkType l) { linkType = l; }
     TLinkType getLinkType() const { return linkType; }
 protected:
@@ -1724,6 +1624,10 @@ protected:
     TPragmaTable* pragmaTable;
     TSpirvInstruction spirvInst;
     TLinkType linkType = ELinkNone;
+
+    // Marking the end source location of the aggregate.
+    // This is currently only set for a compound statement or a function body, pointing to '}'.
+    TSourceLoc endLoc;
 };
 
 //
