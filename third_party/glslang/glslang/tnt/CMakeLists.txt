@@ -89,7 +89,8 @@ glslang_add_build_info_dependency(glslang)
 set(PUBLIC_HEADER_FOLDERS
         ../Include
         ../Public
-        ../MachineIndependent)
+        ../MachineIndependent
+        ../..)
 
 target_include_directories(glslang PUBLIC ${PUBLIC_HEADER_FOLDERS})
 target_link_libraries(glslang OGLCompiler OSDependent)
