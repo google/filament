@@ -235,7 +235,7 @@ vec4 getCustom7() { return mesh_custom7; }
 #endif
 
 //------------------------------------------------------------------------------
-// Helpers
+// Surface Helpers
 //------------------------------------------------------------------------------
 
 /**
@@ -274,24 +274,4 @@ vec4 computeWorldPosition() {
 #else
 #error Unknown Vertex Domain
 #endif
-}
-
-/**
- * Index of the eye being rendered, starting at 0.
- * @public-api
- */
-int getEyeIndex() {
-#if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
-    return instance_index % CONFIG_STEREO_EYE_COUNT;
-#elif defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_MULTIVIEW)
-
-#if defined(TARGET_VULKAN_ENVIRONMENT)
-    return int(gl_ViewIndex);
-#else
-    // gl_ViewID_OVR is of uint type, which needs an explicit conversion.
-    return int(gl_ViewID_OVR);
-#endif // TARGET_VULKAN_ENVIRONMENT
-
-#endif
-    return 0;
 }
