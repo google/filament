@@ -128,6 +128,15 @@ fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
     return msTexture;
 }
 
+VulkanAttachment createSwapchainAttachment(const fvkmemory::resource_ptr<VulkanTexture> texture) {
+    return VulkanAttachment {
+        .texture = texture,
+        .level = 0,
+        .layerCount = static_cast<uint8_t>(texture ? texture->getPrimaryViewRange().layerCount : 1),
+        .layer = 0,
+    };
+}
+
 } // anonymous namespace
 
 void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanTexture> texture) {
@@ -274,22 +283,21 @@ void VulkanRenderTarget::bindToSwapChain(fvkmemory::resource_ptr<VulkanSwapChain
     height = extent.height;
     mProtected = swapchain->isProtected();
 
-    VulkanAttachment color = {};
-    color.texture = swapchain->getCurrentColor();
+    VulkanAttachment color = createSwapchainAttachment(swapchain->getCurrentColor());
     mInfo->attachments = {color};
 
     auto& fbkey = mInfo->fbkey;
     auto& rpkey = mInfo->rpkey;
 
     rpkey.colorFormat[0] = color.getFormat();
+    rpkey.viewCount = color.layerCount;
     fbkey.width = width;
     fbkey.height = height;
     fbkey.color[0] = color.getImageView();
     fbkey.resolve[0] = VK_NULL_HANDLE;
 
     if (swapchain->getDepth()) {
-        VulkanAttachment depth = {};
-        depth.texture = swapchain->getDepth();
+        VulkanAttachment depth = createSwapchainAttachment(swapchain->getDepth());
         mInfo->attachments.push_back(depth);
         mInfo->depthIndex = 1;
 
