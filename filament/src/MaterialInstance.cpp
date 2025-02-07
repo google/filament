@@ -17,6 +17,26 @@
 #include <filament/MaterialInstance.h>
 
 #include "details/Material.h"
+#include "details/MaterialInstance.h"
+
+#include <filament/Color.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+#include <math/mat3.h>
+
+#include <algorithm>
+#include <string_view>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -85,7 +105,7 @@ void MaterialInstance::setParameter(const char* name, size_t nameLength, T const
 template<>
 UTILS_PUBLIC void MaterialInstance::setParameter(const char* name, size_t const nameLength, bool const& v) {
     // this kills tail-call optimization
-    setParameter(name, nameLength, (uint32_t)v);
+    setParameter(name, nameLength, uint32_t(v));
 }
 
 template<>
@@ -125,8 +145,8 @@ template UTILS_PUBLIC void MaterialInstance::setParameter<mat4f>   (const char* 
 // ------------------------------------------------------------------------------------------------
 
 template <typename T, typename>
-void MaterialInstance::setParameter(const char* name, size_t nameLength, const T* value, size_t count) {
-    downcast(this)->setParameterImpl({ name, nameLength }, value, count);
+void MaterialInstance::setParameter(const char* name, size_t nameLength, const T* values, size_t count) {
+    downcast(this)->setParameterImpl({ name, nameLength }, values, count);
 }
 
 template<>
@@ -272,6 +292,11 @@ void MaterialInstance::setCullingMode(CullingMode const culling) noexcept {
     downcast(this)->setCullingMode(culling);
 }
 
+void MaterialInstance::setCullingMode(CullingMode const colorPassCullingMode,
+    CullingMode const shadowPassCullingMode) noexcept {
+    downcast(this)->setCullingMode(colorPassCullingMode, shadowPassCullingMode);
+}
+
 void MaterialInstance::setColorWrite(bool const enable) noexcept {
     downcast(this)->setColorWrite(enable);
 }
@@ -351,6 +376,10 @@ TransparencyMode MaterialInstance::getTransparencyMode() const noexcept {
 
 CullingMode MaterialInstance::getCullingMode() const noexcept {
     return downcast(this)->getCullingMode();
+}
+
+CullingMode MaterialInstance::getShadowCullingMode() const noexcept {
+    return downcast(this)->getShadowCullingMode();
 }
 
 bool MaterialInstance::isColorWriteEnabled() const noexcept {
