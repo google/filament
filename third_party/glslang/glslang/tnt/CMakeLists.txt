@@ -93,7 +93,7 @@ set(PUBLIC_HEADER_FOLDERS
         ../..)
 
 target_include_directories(glslang PUBLIC ${PUBLIC_HEADER_FOLDERS})
-target_link_libraries(glslang OGLCompiler OSDependent)
+target_link_libraries(glslang OSDependent)
 #if(ENABLE_HLSL)
 #    target_link_libraries(glslang HLSL)
 #endif()
