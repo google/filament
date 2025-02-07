@@ -193,7 +193,6 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
         uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool)
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
-
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, device,
               allocator, commands, stagePool, fvkutils::getVkFormat(tformat),
               fvkutils::getViewType(target), levels, getLayerCount(target, depth),
@@ -209,11 +208,20 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = 0,
     };
-    if (target == SamplerType::SAMPLER_CUBEMAP) {
+    if (target == SamplerType::SAMPLER_3D && any(tusage & TextureUsage::ALL_ATTACHMENTS)) {
+        if (context.isImageView2DOn3DImageSupported()) {
+            // Note that VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT is only meant to create 2D views of
+            // a 3D image in the case where the image is the render target.  So, for example, it's
+            // not meant to allow for 2D views that can be used with a sampler.
+            imageInfo.flags = VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+        } else {
+            FVK_LOGW << "Note: creating 2D views on 3D image is not available on this platform. "
+                     << "i.e. we cannot render to slices of a 3D image" << utils::io::endl;
+        }
+    } else if (target == SamplerType::SAMPLER_CUBEMAP) {
         imageInfo.arrayLayers = 6;
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-    }
-    if (target == SamplerType::SAMPLER_2D_ARRAY) {
+    } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
         imageInfo.arrayLayers = depth;
         imageInfo.extent.depth = 1;
         // NOTE: We do not use VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT here because:

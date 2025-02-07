@@ -79,6 +79,10 @@ public:
 
         void clear() noexcept;
         void reset(ExternalImage* UTILS_NULLABLE p) noexcept;
+
+    private:
+        friend utils::io::ostream& operator<<(utils::io::ostream& out,
+                ExternalImageHandle const& handle);
     };
 
     using ExternalImageHandleRef = ExternalImageHandle const&;
@@ -165,7 +169,7 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual backend::Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
+    virtual Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
             const DriverConfig& driverConfig) noexcept = 0;
 
     /**
