@@ -1,0 +1,25 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	vec4 v[];
+};
+
+layout(set = 0, binding = 1) uniform texture2D T;
+layout(set = 0, binding = 2) uniform texture2D Ts[];
+
+layout(set = 1, binding = 0) uniform sampler S;
+layout(set = 1, binding = 1) uniform sampler Ss[];
+
+void in_func()
+{
+	v[gl_GlobalInvocationID.x] = textureLod(sampler2D(T, S), vec2(0.5), 0.0);
+	v[gl_GlobalInvocationID.x] = textureLod(sampler2D(Ts[gl_WorkGroupID.x], Ss[gl_WorkGroupID.x]), vec2(0.5), 0.0);
+}
+
+void main()
+{
+	in_func();
+}

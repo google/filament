@@ -27,21 +27,21 @@ struct A
     B1 b1_array[4];
 };
 
-struct _8
+struct _10
 {
     A a_block;
     C c_block;
 };
 
-kernel void main0(device _8& _3 [[buffer(0)]])
+kernel void main0(device _10& _4 [[buffer(0)]])
 {
-    A _27;
-    _27.a = _3.c_block.c;
-    _27.b1.elem1 = _3.c_block.b2.elem2;
-    _27.b1_array[0].elem1 = _3.c_block.b2_array[0].elem2;
-    _27.b1_array[1].elem1 = _3.c_block.b2_array[1].elem2;
-    _27.b1_array[2].elem1 = _3.c_block.b2_array[2].elem2;
-    _27.b1_array[3].elem1 = _3.c_block.b2_array[3].elem2;
-    _3.a_block = _27;
+    A _24;
+    _24.a = _4.c_block.c;
+    _24.b1.elem1 = _4.c_block.b2.elem2;
+    _24.b1_array[0].elem1 = _4.c_block.b2_array[0].elem2;
+    _24.b1_array[1].elem1 = _4.c_block.b2_array[1].elem2;
+    _24.b1_array[2].elem1 = _4.c_block.b2_array[2].elem2;
+    _24.b1_array[3].elem1 = _4.c_block.b2_array[3].elem2;
+    _4.a_block = _24;
 }
 

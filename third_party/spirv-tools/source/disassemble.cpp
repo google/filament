@@ -23,7 +23,11 @@
 #include <cassert>
 #include <cstring>
 #include <iomanip>
+#include <ios>
 #include <memory>
+#include <set>
+#include <sstream>
+#include <stack>
 #include <unordered_map>
 #include <utility>
 
@@ -43,6 +47,70 @@
 namespace spvtools {
 namespace {
 
+// Indices to ControlFlowGraph's list of blocks from one block to its successors
+struct BlockSuccessors {
+  // Merge block in OpLoopMerge and OpSelectionMerge
+  uint32_t merge_block_id = 0;
+  // The continue block in OpLoopMerge
+  uint32_t continue_block_id = 0;
+  // The true and false blocks in OpBranchConditional
+  uint32_t true_block_id = 0;
+  uint32_t false_block_id = 0;
+  // The body block of a loop, as specified by OpBranch after a merge
+  // instruction
+  uint32_t body_block_id = 0;
+  // The same-nesting-level block that follows this one, indicated by an
+  // OpBranch with no merge instruction.
+  uint32_t next_block_id = 0;
+  // The cases (including default) of an OpSwitch
+  std::vector<uint32_t> case_block_ids;
+};
+
+class ParsedInstruction {
+ public:
+  ParsedInstruction(const spv_parsed_instruction_t* instruction) {
+    // Make a copy of the parsed instruction, including stable memory for its
+    // operands.
+    instruction_ = *instruction;
+    operands_ =
+        std::make_unique<spv_parsed_operand_t[]>(instruction->num_operands);
+    memcpy(operands_.get(), instruction->operands,
+           instruction->num_operands * sizeof(*instruction->operands));
+    instruction_.operands = operands_.get();
+  }
+
+  const spv_parsed_instruction_t* get() const { return &instruction_; }
+
+ private:
+  spv_parsed_instruction_t instruction_;
+  std::unique_ptr<spv_parsed_operand_t[]> operands_;
+};
+
+// One block in the CFG
+struct SingleBlock {
+  // The byte offset in the SPIR-V where the block starts.  Used for printing in
+  // a comment.
+  size_t byte_offset;
+
+  // Block instructions
+  std::vector<ParsedInstruction> instructions;
+
+  // Successors of this block
+  BlockSuccessors successors;
+
+  // The nesting level for this block.
+  uint32_t nest_level = 0;
+  bool nest_level_assigned = false;
+
+  // Whether the block was reachable
+  bool reachable = false;
+};
+
+// CFG for one function
+struct ControlFlowGraph {
+  std::vector<SingleBlock> blocks;
+};
+
 // A Disassembler instance converts a SPIR-V binary to its assembly
 // representation.
 class Disassembler {
@@ -50,6 +118,10 @@ class Disassembler {
   Disassembler(const AssemblyGrammar& grammar, uint32_t options,
                NameMapper name_mapper)
       : print_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_PRINT, options)),
+        nested_indent_(
+            spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_NESTED_INDENT, options)),
+        reorder_blocks_(
+            spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_REORDER_BLOCKS, options)),
         text_(),
         out_(print_ ? out_stream() : out_stream(text_)),
         instruction_disassembler_(grammar, out_.get(), options, name_mapper),
@@ -70,7 +142,13 @@ class Disassembler {
   spv_result_t SaveTextResult(spv_text* text_result) const;
 
  private:
+  void EmitCFG();
+
   const bool print_;  // Should we also print to the standard output stream?
+  const bool nested_indent_;  // Should the blocks be indented according to the
+                              // control flow structure?
+  const bool
+      reorder_blocks_;       // Should the blocks be reordered for readability?
   spv_endianness_t endian_;  // The detected endianness of the binary.
   std::stringstream text_;   // Captures the text, if not printing.
   out_stream out_;  // The Output stream.  Either to text_ or standard output.
@@ -80,6 +158,9 @@ class Disassembler {
   bool inserted_decoration_space_ = false;
   bool inserted_debug_space_ = false;
   bool inserted_type_space_ = false;
+
+  // The CFG for the current function
+  ControlFlowGraph current_function_cfg_;
 };
 
 spv_result_t Disassembler::HandleHeader(spv_endianness_t endian,
@@ -106,11 +187,334 @@ spv_result_t Disassembler::HandleInstruction(
                                                inserted_debug_space_,
                                                inserted_type_space_);
 
-  instruction_disassembler_.EmitInstruction(inst, byte_offset_);
+  // When nesting needs to be calculated or when the blocks are reordered, we
+  // have to have the full picture of the CFG first.  Defer processing of the
+  // instructions until the entire function is visited.  This is not done
+  // without those options (even if simpler) to improve debuggability; for
+  // example to be able to see whatever is parsed so far even if there is a
+  // parse error.
+  if (nested_indent_ || reorder_blocks_) {
+    switch (static_cast<spv::Op>(inst.opcode)) {
+      case spv::Op::OpLabel: {
+        // Add a new block to the CFG
+        SingleBlock new_block;
+        new_block.byte_offset = byte_offset_;
+        new_block.instructions.emplace_back(&inst);
+        current_function_cfg_.blocks.push_back(std::move(new_block));
+        break;
+      }
+      case spv::Op::OpFunctionEnd:
+        // Process the CFG and output the instructions
+        EmitCFG();
+        // Output OpFunctionEnd itself too
+        [[fallthrough]];
+      default:
+        if (!current_function_cfg_.blocks.empty()) {
+          // If in a function, stash the instruction for later.
+          current_function_cfg_.blocks.back().instructions.emplace_back(&inst);
+        } else {
+          // Otherwise emit the instruction right away.
+          instruction_disassembler_.EmitInstruction(inst, byte_offset_);
+        }
+        break;
+    }
+  } else {
+    instruction_disassembler_.EmitInstruction(inst, byte_offset_);
+  }
 
   byte_offset_ += inst.num_words * sizeof(uint32_t);
 
   return SPV_SUCCESS;
+}
+
+// Helper to get the operand of an instruction as an id.
+uint32_t GetOperand(const spv_parsed_instruction_t* instruction,
+                    uint32_t operand) {
+  return instruction->words[instruction->operands[operand].offset];
+}
+
+std::unordered_map<uint32_t, uint32_t> BuildControlFlowGraph(
+    ControlFlowGraph& cfg) {
+  std::unordered_map<uint32_t, uint32_t> id_to_index;
+
+  for (size_t index = 0; index < cfg.blocks.size(); ++index) {
+    SingleBlock& block = cfg.blocks[index];
+
+    // For future use, build the ID->index map
+    assert(static_cast<spv::Op>(block.instructions[0].get()->opcode) ==
+           spv::Op::OpLabel);
+    const uint32_t id = block.instructions[0].get()->result_id;
+
+    id_to_index[id] = static_cast<uint32_t>(index);
+
+    // Look for a merge instruction first.  The function of OpBranch depends on
+    // that.
+    if (block.instructions.size() >= 3) {
+      const spv_parsed_instruction_t* maybe_merge =
+          block.instructions[block.instructions.size() - 2].get();
+
+      switch (static_cast<spv::Op>(maybe_merge->opcode)) {
+        case spv::Op::OpLoopMerge:
+          block.successors.merge_block_id = GetOperand(maybe_merge, 0);
+          block.successors.continue_block_id = GetOperand(maybe_merge, 1);
+          break;
+
+        case spv::Op::OpSelectionMerge:
+          block.successors.merge_block_id = GetOperand(maybe_merge, 0);
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    // Then look at the last instruction; it must be a branch
+    assert(block.instructions.size() >= 2);
+
+    const spv_parsed_instruction_t* branch = block.instructions.back().get();
+    switch (static_cast<spv::Op>(branch->opcode)) {
+      case spv::Op::OpBranch:
+        if (block.successors.merge_block_id != 0) {
+          block.successors.body_block_id = GetOperand(branch, 0);
+        } else {
+          block.successors.next_block_id = GetOperand(branch, 0);
+        }
+        break;
+
+      case spv::Op::OpBranchConditional:
+        block.successors.true_block_id = GetOperand(branch, 1);
+        block.successors.false_block_id = GetOperand(branch, 2);
+        break;
+
+      case spv::Op::OpSwitch:
+        for (uint32_t case_index = 1; case_index < branch->num_operands;
+             case_index += 2) {
+          block.successors.case_block_ids.push_back(
+              GetOperand(branch, case_index));
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  return id_to_index;
+}
+
+// Helper to deal with nesting and non-existing ids / previously-assigned
+// levels.  It assigns a given nesting level `level` to the block identified by
+// `id` (unless that block already has a nesting level assigned).
+void Nest(ControlFlowGraph& cfg,
+          const std::unordered_map<uint32_t, uint32_t>& id_to_index,
+          uint32_t id, uint32_t level) {
+  if (id == 0) {
+    return;
+  }
+
+  const uint32_t block_index = id_to_index.at(id);
+  SingleBlock& block = cfg.blocks[block_index];
+
+  if (!block.nest_level_assigned) {
+    block.nest_level = level;
+    block.nest_level_assigned = true;
+  }
+}
+
+// For a given block, assign nesting level to its successors.
+void NestSuccessors(ControlFlowGraph& cfg, const SingleBlock& block,
+                    const std::unordered_map<uint32_t, uint32_t>& id_to_index) {
+  assert(block.nest_level_assigned);
+
+  // Nest loops as such:
+  //
+  //     %loop = OpLabel
+  //               OpLoopMerge %merge %cont ...
+  //               OpBranch %body
+  //     %body =     OpLabel
+  //                   Op...
+  //     %cont =   OpLabel
+  //                 Op...
+  //    %merge = OpLabel
+  //               Op...
+  //
+  // Nest conditional branches as such:
+  //
+  //   %header = OpLabel
+  //               OpSelectionMerge %merge ...
+  //               OpBranchConditional ... %true %false
+  //     %true =     OpLabel
+  //                   Op...
+  //    %false =     OpLabel
+  //                   Op...
+  //    %merge = OpLabel
+  //               Op...
+  //
+  // Nest switch/case as such:
+  //
+  //   %header = OpLabel
+  //               OpSelectionMerge %merge ...
+  //               OpSwitch ... %default ... %case0 ... %case1 ...
+  //  %default =     OpLabel
+  //                   Op...
+  //    %case0 =     OpLabel
+  //                   Op...
+  //    %case1 =     OpLabel
+  //                   Op...
+  //             ...
+  //    %merge = OpLabel
+  //               Op...
+  //
+  // The following can be observed:
+  //
+  // - In all cases, the merge block has the same nesting as this block
+  // - The continue block of loops is nested 1 level deeper
+  // - The body/branches/cases are nested 2 levels deeper
+  //
+  // Back branches to the header block, branches to the merge block, etc
+  // are correctly handled by processing the header block first (that is
+  // _this_ block, already processed), then following the above rules
+  // (in the same order) for any block that is not already processed.
+  Nest(cfg, id_to_index, block.successors.merge_block_id, block.nest_level);
+  Nest(cfg, id_to_index, block.successors.continue_block_id,
+       block.nest_level + 1);
+  Nest(cfg, id_to_index, block.successors.true_block_id, block.nest_level + 2);
+  Nest(cfg, id_to_index, block.successors.false_block_id, block.nest_level + 2);
+  Nest(cfg, id_to_index, block.successors.body_block_id, block.nest_level + 2);
+  Nest(cfg, id_to_index, block.successors.next_block_id, block.nest_level);
+  for (uint32_t case_block_id : block.successors.case_block_ids) {
+    Nest(cfg, id_to_index, case_block_id, block.nest_level + 2);
+  }
+}
+
+struct StackEntry {
+  // The index of the block (in ControlFlowGraph::blocks) to process.
+  uint32_t block_index;
+  // Whether this is the pre or post visit of the block.  Because a post-visit
+  // traversal is needed, the same block is pushed back on the stack on
+  // pre-visit so it can be visited again on post-visit.
+  bool post_visit = false;
+};
+
+// Helper to deal with DFS traversal and non-existing ids
+void VisitSuccesor(std::stack<StackEntry>* dfs_stack,
+                   const std::unordered_map<uint32_t, uint32_t>& id_to_index,
+                   uint32_t id) {
+  if (id != 0) {
+    dfs_stack->push({id_to_index.at(id), false});
+  }
+}
+
+// Given the control flow graph, calculates and returns the reverse post-order
+// ordering of the blocks.  The blocks are then disassembled in that order for
+// readability.
+std::vector<uint32_t> OrderBlocks(
+    ControlFlowGraph& cfg,
+    const std::unordered_map<uint32_t, uint32_t>& id_to_index) {
+  std::vector<uint32_t> post_order;
+
+  // Nest level of a function's first block is 0.
+  cfg.blocks[0].nest_level = 0;
+  cfg.blocks[0].nest_level_assigned = true;
+
+  // Stack of block indices as they are visited.
+  std::stack<StackEntry> dfs_stack;
+  dfs_stack.push({0, false});
+
+  std::set<uint32_t> visited;
+
+  while (!dfs_stack.empty()) {
+    const uint32_t block_index = dfs_stack.top().block_index;
+    const bool post_visit = dfs_stack.top().post_visit;
+    dfs_stack.pop();
+
+    // If this is the second time the block is visited, that's the post-order
+    // visit.
+    if (post_visit) {
+      post_order.push_back(block_index);
+      continue;
+    }
+
+    // If already visited, another path got to it first (like a case
+    // fallthrough), avoid reprocessing it.
+    if (visited.count(block_index) > 0) {
+      continue;
+    }
+    visited.insert(block_index);
+
+    // Push it back in the stack for post-order visit
+    dfs_stack.push({block_index, true});
+
+    SingleBlock& block = cfg.blocks[block_index];
+
+    // Assign nest levels of successors right away.  The successors are either
+    // nested under this block, or are back or forward edges to blocks outside
+    // this nesting level (no farther than the merge block), whose nesting
+    // levels are already assigned before this block is visited.
+    NestSuccessors(cfg, block, id_to_index);
+    block.reachable = true;
+
+    // The post-order visit yields the order in which the blocks are naturally
+    // ordered _backwards_. So blocks to be ordered last should be visited
+    // first.  In other words, they should be pushed to the DFS stack last.
+    VisitSuccesor(&dfs_stack, id_to_index, block.successors.true_block_id);
+    VisitSuccesor(&dfs_stack, id_to_index, block.successors.false_block_id);
+    VisitSuccesor(&dfs_stack, id_to_index, block.successors.body_block_id);
+    VisitSuccesor(&dfs_stack, id_to_index, block.successors.next_block_id);
+    for (uint32_t case_block_id : block.successors.case_block_ids) {
+      VisitSuccesor(&dfs_stack, id_to_index, case_block_id);
+    }
+    VisitSuccesor(&dfs_stack, id_to_index, block.successors.continue_block_id);
+    VisitSuccesor(&dfs_stack, id_to_index, block.successors.merge_block_id);
+  }
+
+  std::vector<uint32_t> order(post_order.rbegin(), post_order.rend());
+
+  // Finally, dump all unreachable blocks at the end
+  for (size_t index = 0; index < cfg.blocks.size(); ++index) {
+    SingleBlock& block = cfg.blocks[index];
+
+    if (!block.reachable) {
+      order.push_back(static_cast<uint32_t>(index));
+      block.nest_level = 0;
+      block.nest_level_assigned = true;
+    }
+  }
+
+  return order;
+}
+
+void Disassembler::EmitCFG() {
+  // Build the CFG edges.  At the same time, build an ID->block index map to
+  // simplify building the CFG edges.
+  const std::unordered_map<uint32_t, uint32_t> id_to_index =
+      BuildControlFlowGraph(current_function_cfg_);
+
+  // Walk the CFG in reverse post-order to find the best ordering of blocks for
+  // presentation
+  std::vector<uint32_t> block_order =
+      OrderBlocks(current_function_cfg_, id_to_index);
+  assert(block_order.size() == current_function_cfg_.blocks.size());
+
+  // Walk the CFG either in block order or input order based on whether the
+  // reorder_blocks_ option is given.
+  for (uint32_t index = 0; index < current_function_cfg_.blocks.size();
+       ++index) {
+    const uint32_t block_index = reorder_blocks_ ? block_order[index] : index;
+    const SingleBlock& block = current_function_cfg_.blocks[block_index];
+
+    // Emit instructions for this block
+    size_t byte_offset = block.byte_offset;
+    assert(block.nest_level_assigned);
+
+    for (const ParsedInstruction& inst : block.instructions) {
+      instruction_disassembler_.EmitInstructionInBlock(*inst.get(), byte_offset,
+                                                       block.nest_level);
+      byte_offset += inst.get()->num_words * sizeof(uint32_t);
+    }
+  }
+
+  current_function_cfg_.blocks.clear();
 }
 
 spv_result_t Disassembler::SaveTextResult(spv_text* text_result) const {
@@ -194,7 +598,29 @@ spv_result_t DisassembleTargetInstruction(
   return SPV_SUCCESS;
 }
 
+uint32_t GetLineLengthWithoutColor(const std::string line) {
+  // Currently, every added color is in the form \x1b...m, so instead of doing a
+  // lot of string comparisons with spvtools::clr::* strings, we just ignore
+  // those ranges.
+  uint32_t length = 0;
+  for (size_t i = 0; i < line.size(); ++i) {
+    if (line[i] == '\x1b') {
+      do {
+        ++i;
+      } while (i < line.size() && line[i] != 'm');
+      continue;
+    }
+
+    ++length;
+  }
+
+  return length;
+}
+
 constexpr int kStandardIndent = 15;
+constexpr int kBlockNestIndent = 2;
+constexpr int kBlockBodyIndentOffset = 2;
+constexpr uint32_t kCommentColumn = 50;
 }  // namespace
 
 namespace disassemble {
@@ -209,10 +635,13 @@ InstructionDisassembler::InstructionDisassembler(const AssemblyGrammar& grammar,
       indent_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_INDENT, options)
                   ? kStandardIndent
                   : 0),
+      nested_indent_(
+          spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_NESTED_INDENT, options)),
       comment_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_COMMENT, options)),
       show_byte_offset_(
           spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_SHOW_BYTE_OFFSET, options)),
-      name_mapper_(std::move(name_mapper)) {}
+      name_mapper_(std::move(name_mapper)),
+      last_instruction_comment_alignment_(0) {}
 
 void InstructionDisassembler::EmitHeaderSpirv() { stream_ << "; SPIR-V\n"; }
 
@@ -244,47 +673,147 @@ void InstructionDisassembler::EmitHeaderSchema(uint32_t schema) {
 
 void InstructionDisassembler::EmitInstruction(
     const spv_parsed_instruction_t& inst, size_t inst_byte_offset) {
+  EmitInstructionImpl(inst, inst_byte_offset, 0, false);
+}
+
+void InstructionDisassembler::EmitInstructionInBlock(
+    const spv_parsed_instruction_t& inst, size_t inst_byte_offset,
+    uint32_t block_indent) {
+  EmitInstructionImpl(inst, inst_byte_offset, block_indent, true);
+}
+
+void InstructionDisassembler::EmitInstructionImpl(
+    const spv_parsed_instruction_t& inst, size_t inst_byte_offset,
+    uint32_t block_indent, bool is_in_block) {
   auto opcode = static_cast<spv::Op>(inst.opcode);
+
+  // To better align the comments (if any), write the instruction to a line
+  // first so its length can be readily available.
+  std::ostringstream line;
+
+  if (nested_indent_ && opcode == spv::Op::OpLabel) {
+    // Separate the blocks by an empty line to make them easier to separate
+    stream_ << std::endl;
+  }
 
   if (inst.result_id) {
     SetBlue();
     const std::string id_name = name_mapper_(inst.result_id);
     if (indent_)
-      stream_ << std::setw(std::max(0, indent_ - 3 - int(id_name.size())));
-    stream_ << "%" << id_name;
+      line << std::setw(std::max(0, indent_ - 3 - int(id_name.size())));
+    line << "%" << id_name;
     ResetColor();
-    stream_ << " = ";
+    line << " = ";
   } else {
-    stream_ << std::string(indent_, ' ');
+    line << std::string(indent_, ' ');
   }
 
-  stream_ << "Op" << spvOpcodeString(opcode);
+  if (nested_indent_ && is_in_block) {
+    // Output OpLabel at the specified nest level, and instructions inside
+    // blocks nested a little more.
+    uint32_t indent = block_indent;
+    bool body_indent = opcode != spv::Op::OpLabel;
+
+    line << std::string(
+        indent * kBlockNestIndent + (body_indent ? kBlockBodyIndentOffset : 0),
+        ' ');
+  }
+
+  line << "Op" << spvOpcodeString(opcode);
 
   for (uint16_t i = 0; i < inst.num_operands; i++) {
     const spv_operand_type_t type = inst.operands[i].type;
     assert(type != SPV_OPERAND_TYPE_NONE);
     if (type == SPV_OPERAND_TYPE_RESULT_ID) continue;
-    stream_ << " ";
-    EmitOperand(inst, i);
+    line << " ";
+    EmitOperand(line, inst, i);
+  }
+
+  // For the sake of comment generation, store information from some
+  // instructions for the future.
+  if (comment_) {
+    GenerateCommentForDecoratedId(inst);
+  }
+
+  std::ostringstream comments;
+  const char* comment_separator = "";
+
+  if (show_byte_offset_) {
+    SetGrey(comments);
+    auto saved_flags = comments.flags();
+    auto saved_fill = comments.fill();
+    comments << comment_separator << "0x" << std::setw(8) << std::hex
+             << std::setfill('0') << inst_byte_offset;
+    comments.flags(saved_flags);
+    comments.fill(saved_fill);
+    ResetColor(comments);
+    comment_separator = ", ";
   }
 
   if (comment_ && opcode == spv::Op::OpName) {
     const spv_parsed_operand_t& operand = inst.operands[0];
     const uint32_t word = inst.words[operand.offset];
-    stream_ << "  ; id %" << word;
+    comments << comment_separator << "id %" << word;
+    comment_separator = ", ";
   }
 
-  if (show_byte_offset_) {
-    SetGrey();
-    auto saved_flags = stream_.flags();
-    auto saved_fill = stream_.fill();
-    stream_ << " ; 0x" << std::setw(8) << std::hex << std::setfill('0')
-            << inst_byte_offset;
-    stream_.flags(saved_flags);
-    stream_.fill(saved_fill);
-    ResetColor();
+  if (comment_ && inst.result_id && id_comments_.count(inst.result_id) > 0) {
+    comments << comment_separator << id_comments_[inst.result_id].str();
+    comment_separator = ", ";
   }
+
+  stream_ << line.str();
+
+  if (!comments.str().empty()) {
+    // Align the comments
+    const uint32_t line_length = GetLineLengthWithoutColor(line.str());
+    uint32_t align = std::max(
+        {line_length + 2, last_instruction_comment_alignment_, kCommentColumn});
+    // Round up the alignment to a multiple of 4 for more niceness.
+    align = (align + 3) & ~0x3u;
+    last_instruction_comment_alignment_ = align;
+
+    stream_ << std::string(align - line_length, ' ') << "; " << comments.str();
+  } else {
+    last_instruction_comment_alignment_ = 0;
+  }
+
   stream_ << "\n";
+}
+
+void InstructionDisassembler::GenerateCommentForDecoratedId(
+    const spv_parsed_instruction_t& inst) {
+  assert(comment_);
+  auto opcode = static_cast<spv::Op>(inst.opcode);
+
+  std::ostringstream partial;
+  uint32_t id = 0;
+  const char* separator = "";
+
+  switch (opcode) {
+    case spv::Op::OpDecorate:
+      // Take everything after `OpDecorate %id` and associate it with id.
+      id = inst.words[inst.operands[0].offset];
+      for (uint16_t i = 1; i < inst.num_operands; i++) {
+        partial << separator;
+        separator = " ";
+        EmitOperand(partial, inst, i);
+      }
+      break;
+    default:
+      break;
+  }
+
+  if (id == 0) {
+    return;
+  }
+
+  // Add the new comment to the comments of this id
+  std::ostringstream& id_comment = id_comments_[id];
+  if (!id_comment.str().empty()) {
+    id_comment << ", ";
+  }
+  id_comment << partial.str();
 }
 
 void InstructionDisassembler::EmitSectionComment(
@@ -293,6 +822,11 @@ void InstructionDisassembler::EmitSectionComment(
   auto opcode = static_cast<spv::Op>(inst.opcode);
   if (comment_ && opcode == spv::Op::OpFunction) {
     stream_ << std::endl;
+    if (nested_indent_) {
+      // Double the empty lines between Function sections since nested_indent_
+      // also separates blocks by a blank.
+      stream_ << std::endl;
+    }
     stream_ << std::string(indent_, ' ');
     stream_ << "; Function " << name_mapper_(inst.result_id) << std::endl;
   }
@@ -316,36 +850,37 @@ void InstructionDisassembler::EmitSectionComment(
   }
 }
 
-void InstructionDisassembler::EmitOperand(const spv_parsed_instruction_t& inst,
-                                          const uint16_t operand_index) {
+void InstructionDisassembler::EmitOperand(std::ostream& stream,
+                                          const spv_parsed_instruction_t& inst,
+                                          const uint16_t operand_index) const {
   assert(operand_index < inst.num_operands);
   const spv_parsed_operand_t& operand = inst.operands[operand_index];
   const uint32_t word = inst.words[operand.offset];
   switch (operand.type) {
     case SPV_OPERAND_TYPE_RESULT_ID:
       assert(false && "<result-id> is not supposed to be handled here");
-      SetBlue();
-      stream_ << "%" << name_mapper_(word);
+      SetBlue(stream);
+      stream << "%" << name_mapper_(word);
       break;
     case SPV_OPERAND_TYPE_ID:
     case SPV_OPERAND_TYPE_TYPE_ID:
     case SPV_OPERAND_TYPE_SCOPE_ID:
     case SPV_OPERAND_TYPE_MEMORY_SEMANTICS_ID:
-      SetYellow();
-      stream_ << "%" << name_mapper_(word);
+      SetYellow(stream);
+      stream << "%" << name_mapper_(word);
       break;
     case SPV_OPERAND_TYPE_EXTENSION_INSTRUCTION_NUMBER: {
       spv_ext_inst_desc ext_inst;
-      SetRed();
+      SetRed(stream);
       if (grammar_.lookupExtInst(inst.ext_inst_type, word, &ext_inst) ==
           SPV_SUCCESS) {
-        stream_ << ext_inst->name;
+        stream << ext_inst->name;
       } else {
         if (!spvExtInstIsNonSemantic(inst.ext_inst_type)) {
           assert(false && "should have caught this earlier");
         } else {
           // for non-semantic instruction sets we can just print the number
-          stream_ << word;
+          stream << word;
         }
       }
     } break;
@@ -353,26 +888,27 @@ void InstructionDisassembler::EmitOperand(const spv_parsed_instruction_t& inst,
       spv_opcode_desc opcode_desc;
       if (grammar_.lookupOpcode(spv::Op(word), &opcode_desc))
         assert(false && "should have caught this earlier");
-      SetRed();
-      stream_ << opcode_desc->name;
+      SetRed(stream);
+      stream << opcode_desc->name;
     } break;
     case SPV_OPERAND_TYPE_LITERAL_INTEGER:
-    case SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER: {
-      SetRed();
-      EmitNumericLiteral(&stream_, inst, operand);
-      ResetColor();
+    case SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER:
+    case SPV_OPERAND_TYPE_LITERAL_FLOAT: {
+      SetRed(stream);
+      EmitNumericLiteral(&stream, inst, operand);
+      ResetColor(stream);
     } break;
     case SPV_OPERAND_TYPE_LITERAL_STRING: {
-      stream_ << "\"";
-      SetGreen();
+      stream << "\"";
+      SetGreen(stream);
 
       std::string str = spvDecodeLiteralStringOperand(inst, operand_index);
       for (char const& c : str) {
-        if (c == '"' || c == '\\') stream_ << '\\';
-        stream_ << c;
+        if (c == '"' || c == '\\') stream << '\\';
+        stream << c;
       }
-      ResetColor();
-      stream_ << '"';
+      ResetColor(stream);
+      stream << '"';
     } break;
     case SPV_OPERAND_TYPE_CAPABILITY:
     case SPV_OPERAND_TYPE_SOURCE_LANGUAGE:
@@ -410,11 +946,12 @@ void InstructionDisassembler::EmitOperand(const spv_parsed_instruction_t& inst,
     case SPV_OPERAND_TYPE_FPDENORM_MODE:
     case SPV_OPERAND_TYPE_FPOPERATION_MODE:
     case SPV_OPERAND_TYPE_QUANTIZATION_MODES:
+    case SPV_OPERAND_TYPE_FPENCODING:
     case SPV_OPERAND_TYPE_OVERFLOW_MODES: {
       spv_operand_desc entry;
       if (grammar_.lookupOperand(operand.type, word, &entry))
         assert(false && "should have caught this earlier");
-      stream_ << entry->name;
+      stream << entry->name;
     } break;
     case SPV_OPERAND_TYPE_FP_FAST_MATH_MODE:
     case SPV_OPERAND_TYPE_FUNCTION_CONTROL:
@@ -424,26 +961,28 @@ void InstructionDisassembler::EmitOperand(const spv_parsed_instruction_t& inst,
     case SPV_OPERAND_TYPE_SELECTION_CONTROL:
     case SPV_OPERAND_TYPE_DEBUG_INFO_FLAGS:
     case SPV_OPERAND_TYPE_CLDEBUG100_DEBUG_INFO_FLAGS:
-      EmitMaskOperand(operand.type, word);
+    case SPV_OPERAND_TYPE_RAW_ACCESS_CHAIN_OPERANDS:
+      EmitMaskOperand(stream, operand.type, word);
       break;
     default:
       if (spvOperandIsConcreteMask(operand.type)) {
-        EmitMaskOperand(operand.type, word);
+        EmitMaskOperand(stream, operand.type, word);
       } else if (spvOperandIsConcrete(operand.type)) {
         spv_operand_desc entry;
         if (grammar_.lookupOperand(operand.type, word, &entry))
           assert(false && "should have caught this earlier");
-        stream_ << entry->name;
+        stream << entry->name;
       } else {
         assert(false && "unhandled or invalid case");
       }
       break;
   }
-  ResetColor();
+  ResetColor(stream);
 }
 
-void InstructionDisassembler::EmitMaskOperand(const spv_operand_type_t type,
-                                              const uint32_t word) {
+void InstructionDisassembler::EmitMaskOperand(std::ostream& stream,
+                                              const spv_operand_type_t type,
+                                              const uint32_t word) const {
   // Scan the mask from least significant bit to most significant bit.  For each
   // set bit, emit the name of that bit. Separate multiple names with '|'.
   uint32_t remaining_word = word;
@@ -455,8 +994,8 @@ void InstructionDisassembler::EmitMaskOperand(const spv_operand_type_t type,
       spv_operand_desc entry;
       if (grammar_.lookupOperand(type, mask, &entry))
         assert(false && "should have caught this earlier");
-      if (num_emitted) stream_ << "|";
-      stream_ << entry->name;
+      if (num_emitted) stream << "|";
+      stream << entry->name;
       num_emitted++;
     }
   }
@@ -465,28 +1004,35 @@ void InstructionDisassembler::EmitMaskOperand(const spv_operand_type_t type,
     // of the 0 value. In many cases, that's "None".
     spv_operand_desc entry;
     if (SPV_SUCCESS == grammar_.lookupOperand(type, 0, &entry))
-      stream_ << entry->name;
+      stream << entry->name;
   }
 }
 
-void InstructionDisassembler::ResetColor() {
-  if (color_) stream_ << spvtools::clr::reset{print_};
+void InstructionDisassembler::ResetColor(std::ostream& stream) const {
+  if (color_) stream << spvtools::clr::reset{print_};
 }
-void InstructionDisassembler::SetGrey() {
-  if (color_) stream_ << spvtools::clr::grey{print_};
+void InstructionDisassembler::SetGrey(std::ostream& stream) const {
+  if (color_) stream << spvtools::clr::grey{print_};
 }
-void InstructionDisassembler::SetBlue() {
-  if (color_) stream_ << spvtools::clr::blue{print_};
+void InstructionDisassembler::SetBlue(std::ostream& stream) const {
+  if (color_) stream << spvtools::clr::blue{print_};
 }
-void InstructionDisassembler::SetYellow() {
-  if (color_) stream_ << spvtools::clr::yellow{print_};
+void InstructionDisassembler::SetYellow(std::ostream& stream) const {
+  if (color_) stream << spvtools::clr::yellow{print_};
 }
-void InstructionDisassembler::SetRed() {
-  if (color_) stream_ << spvtools::clr::red{print_};
+void InstructionDisassembler::SetRed(std::ostream& stream) const {
+  if (color_) stream << spvtools::clr::red{print_};
 }
-void InstructionDisassembler::SetGreen() {
-  if (color_) stream_ << spvtools::clr::green{print_};
+void InstructionDisassembler::SetGreen(std::ostream& stream) const {
+  if (color_) stream << spvtools::clr::green{print_};
 }
+
+void InstructionDisassembler::ResetColor() { ResetColor(stream_); }
+void InstructionDisassembler::SetGrey() { SetGrey(stream_); }
+void InstructionDisassembler::SetBlue() { SetBlue(stream_); }
+void InstructionDisassembler::SetYellow() { SetYellow(stream_); }
+void InstructionDisassembler::SetRed() { SetRed(stream_); }
+void InstructionDisassembler::SetGreen() { SetGreen(stream_); }
 }  // namespace disassemble
 
 std::string spvInstructionBinaryToText(const spv_target_env env,

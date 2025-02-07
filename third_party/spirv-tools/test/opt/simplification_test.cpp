@@ -16,7 +16,6 @@
 
 #include "gmock/gmock.h"
 #include "source/opt/simplification_pass.h"
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 
 namespace spvtools {

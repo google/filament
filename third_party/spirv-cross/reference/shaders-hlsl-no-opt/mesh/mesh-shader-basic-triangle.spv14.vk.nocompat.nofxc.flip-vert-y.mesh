@@ -1,0 +1,84 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1
+#endif
+static const int spec_const_index = SPIRV_CROSS_CONSTANT_ID_0;
+static const uint3 gl_WorkGroupSize = uint3(2u, 3u, 4u);
+
+struct BlockOut
+{
+    float4 a;
+    float4 b;
+};
+
+struct TaskPayload
+{
+    float a;
+    float b;
+    int c;
+};
+
+static uint3 gl_WorkGroupID;
+static uint3 gl_GlobalInvocationID;
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_WorkGroupID : SV_GroupID;
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+struct gl_MeshPerVertexEXT
+{
+    float4 vOut : TEXCOORD0;
+    BlockOut outputs : TEXCOORD2;
+    float4 gl_Position : SV_Position;
+    float gl_ClipDistance[1] : SV_ClipDistance;
+    float2 gl_CullDistance : SV_CullDistance;
+};
+
+struct gl_MeshPerPrimitiveEXT
+{
+};
+
+groupshared float shared_float[16];
+
+float4 spvFlipVertY(float4 v)
+{
+    return float4(v.x, -v.y, v.z, v.w);
+}
+
+float spvFlipVertY(float v)
+{
+    return -v;
+}
+
+void mesh_main(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout uint3 gl_PrimitiveTriangleIndicesEXT[22])
+{
+    SetMeshOutputCounts(24u, 22u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = spvFlipVertY(float4(float3(gl_GlobalInvocationID), 1.0f));
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.y = spvFlipVertY(float3(gl_WorkGroupID).x);
+    float3 _46 = float3(gl_GlobalInvocationID);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.x = _46.x;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.z = _46.y;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.w = _46.z;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position[gl_LocalInvocationIndex % 4u] = float(gl_GlobalInvocationID.z);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position[spec_const_index] = spvFlipVertY(float(gl_GlobalInvocationID.z));
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_CullDistance[0] = 3.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_CullDistance[1] = 5.0f;
+    GroupMemoryBarrierWithGroupSync();
+    if (gl_LocalInvocationIndex < 22u)
+    {
+        gl_PrimitiveTriangleIndicesEXT[gl_LocalInvocationIndex] = uint3(0u, 1u, 2u) + gl_LocalInvocationIndex.xxx;
+    }
+}
+
+[outputtopology("triangle")]
+[numthreads(2, 3, 4)]
+void main(SPIRV_Cross_Input stage_input, out vertices gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], out indices uint3 gl_PrimitiveTriangleIndicesEXT[22])
+{
+    gl_WorkGroupID = stage_input.gl_WorkGroupID;
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    mesh_main(gl_MeshVerticesEXT, gl_PrimitiveTriangleIndicesEXT);
+}

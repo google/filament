@@ -18,20 +18,20 @@ void frag_main()
 {
     int i = 0;
     float phi;
-    float4 _36;
+    float4 _45;
     phi = 1.0f;
-    _36 = float4(1.0f, 2.0f, 1.0f, 2.0f);
+    _45 = float4(1.0f, 2.0f, 1.0f, 2.0f);
     for (;;)
     {
-        FragColor = _36;
+        FragColor = _45;
         if (i < 4)
         {
             if (v0[i] > 0.0f)
             {
-                float2 _48 = phi.xx;
+                float2 _43 = phi.xx;
                 i++;
                 phi += 2.0f;
-                _36 = uImage.SampleLevel(_uImage_sampler, _48, 0.0f);
+                _45 = uImage.SampleLevel(_uImage_sampler, _43, 0.0f);
                 continue;
             }
             else

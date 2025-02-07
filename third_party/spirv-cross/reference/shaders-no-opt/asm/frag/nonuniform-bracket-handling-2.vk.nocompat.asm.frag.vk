@@ -4,7 +4,7 @@
 layout(set = 0, binding = 0, std430) readonly buffer SSBO
 {
     uint indices[];
-} _8;
+} _12;
 
 layout(set = 0, binding = 0) uniform sampler2D uSamplers[];
 layout(set = 1, binding = 0) uniform sampler2D uSampler;
@@ -14,7 +14,7 @@ layout(location = 0) in vec2 vUV;
 
 void main()
 {
-    FragColor = textureLod(uSamplers[nonuniformEXT(_8.indices[10])], vUV, 0.0);
-    FragColor += textureLod(uSampler, vUV, float(_8.indices[int(gl_FragCoord.y)]));
+    FragColor = textureLod(uSamplers[nonuniformEXT(_12.indices[10])], vUV, 0.0);
+    FragColor += textureLod(uSampler, vUV, float(_12.indices[int(gl_FragCoord.y)]));
 }
 

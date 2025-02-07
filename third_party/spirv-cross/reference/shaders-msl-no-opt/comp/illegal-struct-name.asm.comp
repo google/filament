@@ -19,11 +19,11 @@ struct SSBO
     Foo_1 foo2;
 };
 
-kernel void main0(device SSBO& _7 [[buffer(0)]])
+kernel void main0(device SSBO& _9 [[buffer(0)]])
 {
     Foo f;
-    f._abs = _7.foo._abs;
+    f._abs = _9.foo._abs;
     int _abs = 10;
-    _7.foo2._abs = f._abs;
+    _9.foo2._abs = f._abs;
 }
 

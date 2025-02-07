@@ -45,6 +45,7 @@ class ConvertToHalfPass : public Pass {
   // Return true if |inst| returns scalar, vector or matrix type with base
   // float and |width|
   bool IsFloat(Instruction* inst, uint32_t width);
+  bool IsStruct(Instruction* inst);
 
   // Return true if |inst| is decorated with RelaxedPrecision
   bool IsDecoratedRelaxed(Instruction* inst);
@@ -54,6 +55,9 @@ class ConvertToHalfPass : public Pass {
 
   // Add |id| to the relaxed id set
   void AddRelaxed(uint32_t id);
+
+  // Return true if the instruction's operands can be relaxed
+  bool CanRelaxOpOperands(Instruction* inst);
 
   // Return type id for float with |width|
   analysis::Type* FloatScalarType(uint32_t width);
@@ -132,13 +136,13 @@ class ConvertToHalfPass : public Pass {
   // Set of 450 extension operations to be processed
   std::unordered_set<uint32_t> target_ops_450_;
 
-  // Set of sample operations
+  // Set of all sample operations, including dref and non-dref operations
   std::unordered_set<spv::Op, hasher> image_ops_;
 
-  // Set of dref sample operations
+  // Set of only dref sample operations
   std::unordered_set<spv::Op, hasher> dref_image_ops_;
 
-  // Set of dref sample operations
+  // Set of operations that can be marked as relaxed
   std::unordered_set<spv::Op, hasher> closure_ops_;
 
   // Set of ids of all relaxed instructions

@@ -1,0 +1,29 @@
+#version 450
+#extension GL_ARB_shader_ballot : require
+
+layout (local_size_x = 64) in;
+layout (std430, binding = 0) buffer inputData
+{
+    float inputDataArray[];
+};
+
+layout (std430, binding = 1) buffer outputData
+{
+    float outputDataArray[];
+};
+
+void main ()
+{
+    float thisLaneData = inputDataArray [gl_LocalInvocationID.x];
+    bool laneActive = (thisLaneData > 0);
+
+    uvec4 activeSlots = bitCount(uvec4(unpackUint2x32(gl_SubGroupLtMaskARB), uvec2(0)) & uvec4(unpackUint2x32(ballotARB (laneActive)), uvec2(0)));
+    uint thisLaneOutputSlot = activeSlots.x + activeSlots.y;
+
+    int firstInvocation = readFirstInvocationARB(1);
+    int invocation = readInvocationARB(1, 0);
+
+    if (laneActive) {
+        outputDataArray[thisLaneOutputSlot] = thisLaneData;
+    }
+}

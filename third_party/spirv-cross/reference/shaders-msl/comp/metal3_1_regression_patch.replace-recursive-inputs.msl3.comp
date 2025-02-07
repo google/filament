@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct recurs;
+
+struct recurs
+{
+    int m1;
+    device recurs* m2;
+};
+
+struct recurs_1
+{
+    int m1;
+    device recurs_1* m2;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device void* nums_vp [[buffer(0)]], texture2d<uint, access::write> tex [[texture(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    device auto& nums = *(device recurs*)nums_vp;
+    int rslt = 0;
+    rslt += nums.m1;
+    rslt += nums.m2->m1;
+    rslt += nums.m2->m2->m1;
+    tex.write(uint4(uint(rslt), 0u, 0u, 1u), uint2(int2(gl_GlobalInvocationID.xy)));
+}
+

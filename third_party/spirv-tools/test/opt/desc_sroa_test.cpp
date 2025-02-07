@@ -14,8 +14,6 @@
 
 #include <string>
 
-#include "gmock/gmock.h"
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 
@@ -200,7 +198,8 @@ TEST_F(DescriptorScalarReplacementTest, ExpandArrayOfTextures) {
 
   )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, ExpandArrayOfSamplers) {
@@ -251,7 +250,8 @@ TEST_F(DescriptorScalarReplacementTest, ExpandArrayOfSamplers) {
                OpFunctionEnd
   )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, ExpandArrayOfSSBOs) {
@@ -310,7 +310,8 @@ TEST_F(DescriptorScalarReplacementTest, ExpandArrayOfSSBOs) {
                OpFunctionEnd
   )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, NameNewVariables) {
@@ -372,7 +373,8 @@ TEST_F(DescriptorScalarReplacementTest, NameNewVariables) {
                OpFunctionEnd
   )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, DontExpandCBuffers) {
@@ -432,7 +434,8 @@ TEST_F(DescriptorScalarReplacementTest, DontExpandCBuffers) {
                OpFunctionEnd
 )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, DontExpandStructuredBuffers) {
@@ -499,7 +502,8 @@ TEST_F(DescriptorScalarReplacementTest, DontExpandStructuredBuffers) {
                OpFunctionEnd
 )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, StructureArrayNames) {
@@ -513,7 +517,39 @@ TEST_F(DescriptorScalarReplacementTest, StructureArrayNames) {
   )";
 
   const std::string text = checks + GetStructureArrayTestSpirv();
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
+}
+
+TEST_F(DescriptorScalarReplacementTest,
+       FlattensArraysOfStructsButNoResourceArrays) {
+  // Check that only the composite array is flattenned, but internal resource
+  // arrays are left as-is.
+  const std::string checks = R"(
+; CHECK:     OpName %globalS_0__0__t "globalS[0][0].t"
+; CHECK:     OpName %globalS_0__0__s "globalS[0][0].s"
+; CHECK:     OpName %globalS_1__1__t "globalS[1][1].t"
+; CHECK:     OpName %globalS_1__1__s "globalS[1][1].s"
+; CHECK-NOT: OpName %globalS_1__1__t_0_
+; CHECK-NOT: OpName %globalS_1__1__s_0_
+  )";
+
+  const std::string text = checks + GetStructureArrayTestSpirv();
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/false);
+}
+
+TEST_F(DescriptorScalarReplacementTest, FlattenNothingIfAskedTo) {
+  // Not useful, but checks what happens if both are set to false.
+  // In such case, nothing happens.
+  const std::string checks = R"(
+; CHECK:     OpName %globalS
+; CHECK-NOT: OpName %globalS_
+  )";
+
+  const std::string text = checks + GetStructureArrayTestSpirv();
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/false, /* flatten_arrays=*/false);
 }
 
 TEST_F(DescriptorScalarReplacementTest, StructureArrayBindings) {
@@ -527,7 +563,8 @@ TEST_F(DescriptorScalarReplacementTest, StructureArrayBindings) {
   )";
 
   const std::string text = checks + GetStructureArrayTestSpirv();
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, StructureArrayReplacements) {
@@ -542,7 +579,8 @@ TEST_F(DescriptorScalarReplacementTest, StructureArrayReplacements) {
   )";
 
   const std::string text = checks + GetStructureArrayTestSpirv();
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(text, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, ResourceStructAsFunctionParam) {
@@ -726,7 +764,9 @@ TEST_F(DescriptorScalarReplacementTest, ResourceStructAsFunctionParam) {
 ; CHECK:                          OpFAdd %v4float [[sample_3]] [[sample_4]]
 )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(checks + shader, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      checks + shader, true, /* flatten_composites=*/true,
+      /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, BindingForResourceArrayOfStructs) {
@@ -767,7 +807,8 @@ TEST_F(DescriptorScalarReplacementTest, BindingForResourceArrayOfStructs) {
                OpFunctionEnd
 )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      shader, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, MemberDecorationForResourceStruct) {
@@ -830,7 +871,8 @@ TEST_F(DescriptorScalarReplacementTest, MemberDecorationForResourceStruct) {
                OpFunctionEnd
 )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      shader, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
 }
 
 TEST_F(DescriptorScalarReplacementTest, DecorateStringForReflect) {
@@ -917,7 +959,230 @@ TEST_F(DescriptorScalarReplacementTest, DecorateStringForReflect) {
                OpFunctionEnd
 )";
 
-  SinglePassRunAndMatch<DescriptorScalarReplacement>(shader, true);
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      shader, true, /* flatten_composites=*/true, /* flatten_arrays=*/true);
+}
+
+TEST_F(DescriptorScalarReplacementTest, ExpandArrayInOpEntryPoint) {
+  const std::string text = R"(; SPIR-V
+; Version: 1.6
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+
+; CHECK:       OpEntryPoint GLCompute %main "main" %output_0_ %output_1_
+
+               OpEntryPoint GLCompute %main "main" %output
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %type_RWByteAddressBuffer "type.RWByteAddressBuffer"
+               OpName %output "output"
+               OpName %main "main"
+               OpName %src_main "src.main"
+               OpName %bb_entry "bb.entry"
+
+; CHECK:       OpDecorate %output_1_ DescriptorSet 0
+; CHECK:       OpDecorate %output_1_ Binding 1
+; CHECK:       OpDecorate %output_0_ DescriptorSet 0
+; CHECK:       OpDecorate %output_0_ Binding 0
+
+               OpDecorate %output DescriptorSet 0
+               OpDecorate %output Binding 0
+
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %type_RWByteAddressBuffer 0 Offset 0
+               OpDecorate %type_RWByteAddressBuffer Block
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+    %uint_32 = OpConstant %uint 32
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+%type_RWByteAddressBuffer = OpTypeStruct %_runtimearr_uint
+%_arr_type_RWByteAddressBuffer_uint_2 = OpTypeArray %type_RWByteAddressBuffer %uint_2
+%_ptr_StorageBuffer__arr_type_RWByteAddressBuffer_uint_2 = OpTypePointer StorageBuffer %_arr_type_RWByteAddressBuffer_uint_2
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+%_ptr_StorageBuffer_type_RWByteAddressBuffer = OpTypePointer StorageBuffer %type_RWByteAddressBuffer
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+
+; CHECK: %output_1_ = OpVariable %_ptr_StorageBuffer_type_RWByteAddressBuffer StorageBuffer
+; CHECK: %output_0_ = OpVariable %_ptr_StorageBuffer_type_RWByteAddressBuffer StorageBuffer
+
+     %output = OpVariable %_ptr_StorageBuffer__arr_type_RWByteAddressBuffer_uint_2 StorageBuffer
+
+       %main = OpFunction %void None %23
+         %26 = OpLabel
+         %27 = OpFunctionCall %void %src_main
+               OpReturn
+               OpFunctionEnd
+   %src_main = OpFunction %void None %23
+   %bb_entry = OpLabel
+         %28 = OpAccessChain %_ptr_StorageBuffer_type_RWByteAddressBuffer %output %int_1
+         %29 = OpShiftRightLogical %uint %uint_0 %uint_2
+         %30 = OpAccessChain %_ptr_StorageBuffer_uint %28 %uint_0 %29
+               OpStore %30 %uint_32
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, false, /* flatten_composites=*/true, /* flatten_arrays=*/true);
+}
+
+TEST_F(DescriptorScalarReplacementTest,
+       ExpandArrayWhenCompositeExpensionIsOff) {
+  const std::string text = R"(; SPIR-V
+; Version: 1.6
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+
+; CHECK:       OpEntryPoint GLCompute %main "main" %output_0_ %output_1_
+
+               OpEntryPoint GLCompute %main "main" %output
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %type_RWByteAddressBuffer "type.RWByteAddressBuffer"
+               OpName %output "output"
+               OpName %main "main"
+               OpName %src_main "src.main"
+               OpName %bb_entry "bb.entry"
+
+; CHECK:       OpDecorate %output_1_ DescriptorSet 0
+; CHECK:       OpDecorate %output_1_ Binding 1
+; CHECK:       OpDecorate %output_0_ DescriptorSet 0
+; CHECK:       OpDecorate %output_0_ Binding 0
+
+               OpDecorate %output DescriptorSet 0
+               OpDecorate %output Binding 0
+
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %type_RWByteAddressBuffer 0 Offset 0
+               OpDecorate %type_RWByteAddressBuffer Block
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+    %uint_32 = OpConstant %uint 32
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+%type_RWByteAddressBuffer = OpTypeStruct %_runtimearr_uint
+%_arr_type_RWByteAddressBuffer_uint_2 = OpTypeArray %type_RWByteAddressBuffer %uint_2
+%_ptr_StorageBuffer__arr_type_RWByteAddressBuffer_uint_2 = OpTypePointer StorageBuffer %_arr_type_RWByteAddressBuffer_uint_2
+       %void = OpTypeVoid
+         %23 = OpTypeFunction %void
+%_ptr_StorageBuffer_type_RWByteAddressBuffer = OpTypePointer StorageBuffer %type_RWByteAddressBuffer
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+
+; CHECK: %output_1_ = OpVariable %_ptr_StorageBuffer_type_RWByteAddressBuffer StorageBuffer
+; CHECK: %output_0_ = OpVariable %_ptr_StorageBuffer_type_RWByteAddressBuffer StorageBuffer
+
+     %output = OpVariable %_ptr_StorageBuffer__arr_type_RWByteAddressBuffer_uint_2 StorageBuffer
+
+       %main = OpFunction %void None %23
+         %26 = OpLabel
+         %27 = OpFunctionCall %void %src_main
+               OpReturn
+               OpFunctionEnd
+   %src_main = OpFunction %void None %23
+   %bb_entry = OpLabel
+         %28 = OpAccessChain %_ptr_StorageBuffer_type_RWByteAddressBuffer %output %int_1
+         %29 = OpShiftRightLogical %uint %uint_0 %uint_2
+         %30 = OpAccessChain %_ptr_StorageBuffer_uint %28 %uint_0 %29
+               OpStore %30 %uint_32
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, false, /* flatten_composites=*/false, /* flatten_arrays=*/true);
+}
+
+TEST_F(DescriptorScalarReplacementTest, ExpandStructButNotArray) {
+  const std::string text = R"(; SPIR-V
+; Version: 1.6
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 41
+; Schema: 0
+                                   OpCapability Shader
+                                   OpMemoryModel Logical GLSL450
+                                   OpEntryPoint Fragment %main "main" %out_var_SV_Target
+                                   OpExecutionMode %main OriginUpperLeft
+                                   OpSource HLSL 660
+                                   OpName %type_2d_image "type.2d.image"
+                                   OpName %Textures "Textures"
+                                   OpName %type_sampler "type.sampler"
+                                   OpName %out_var_SV_Target "out.var.SV_Target"
+                                   OpName %main "main"
+                                   OpName %type_sampled_image "type.sampled.image"
+                                   OpName %TheStruct "TheStruct"
+                                   OpMemberName %StructOfResources 0 "Texture"
+                                   OpMemberName %StructOfResources 1 "Sampler"
+; CHECK:                           OpName %TheStruct_Sampler "TheStruct.Sampler"
+; CHECK:                           OpName %TheStruct_Texture "TheStruct.Texture"
+                                   OpDecorate %out_var_SV_Target Location 0
+                                   OpDecorate %Textures DescriptorSet 0
+                                   OpDecorate %Textures Binding 0
+                                   OpDecorate %TheStruct DescriptorSet 0
+                                   OpDecorate %TheStruct Binding 10
+; CHECK:                           OpDecorate %TheStruct_Sampler DescriptorSet 0
+; CHECK:                           OpDecorate %TheStruct_Sampler Binding 11
+; CHECK:                           OpDecorate %TheStruct_Texture DescriptorSet 0
+; CHECK:                           OpDecorate %TheStruct_Texture Binding 10
+                            %int = OpTypeInt 32 1
+                          %int_0 = OpConstant %int 0
+                          %int_1 = OpConstant %int 1
+                          %float = OpTypeFloat 32
+                        %float_0 = OpConstant %float 0
+                        %v2float = OpTypeVector %float 2
+                             %13 = OpConstantComposite %v2float %float_0 %float_0
+                           %uint = OpTypeInt 32 0
+                        %uint_10 = OpConstant %uint 10
+                  %type_2d_image = OpTypeImage %float 2D 2 0 0 1 Unknown
+     %_arr_type_2d_image_uint_10 = OpTypeArray %type_2d_image %uint_10
+%_ptr_UniformConstant__arr_type_2d_image_uint_10 = OpTypePointer UniformConstant %_arr_type_2d_image_uint_10
+                   %type_sampler = OpTypeSampler
+              %StructOfResources = OpTypeStruct %type_2d_image %type_sampler
+%_ptr_UniformConstant__struct_18 = OpTypePointer UniformConstant %StructOfResources
+                        %v4float = OpTypeVector %float 4
+            %_ptr_Output_v4float = OpTypePointer Output %v4float
+                           %void = OpTypeVoid
+                             %23 = OpTypeFunction %void
+%_ptr_UniformConstant_type_2d_image = OpTypePointer UniformConstant %type_2d_image
+ %_ptr_UniformConstant_type_sampler = OpTypePointer UniformConstant %type_sampler
+             %type_sampled_image = OpTypeSampledImage %type_2d_image
+                       %Textures = OpVariable %_ptr_UniformConstant__arr_type_2d_image_uint_10 UniformConstant
+              %out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+                      %TheStruct = OpVariable %_ptr_UniformConstant__struct_18 UniformConstant
+                           %main = OpFunction %void None %23
+                             %26 = OpLabel
+                             %27 = OpAccessChain %_ptr_UniformConstant_type_2d_image %Textures %int_0
+                             %28 = OpLoad %type_2d_image %27
+                             %29 = OpAccessChain %_ptr_UniformConstant_type_sampler %TheStruct %int_1
+                             %31 = OpLoad %type_sampler %29
+; CHECK:                     %31 = OpLoad %type_sampler %TheStruct_Sampler
+                             %32 = OpSampledImage %type_sampled_image %28 %31
+                             %33 = OpImageSampleImplicitLod %v4float %32 %13 None
+                             %34 = OpAccessChain %_ptr_UniformConstant_type_2d_image %TheStruct %int_0
+                             %35 = OpLoad %type_2d_image %34
+; CHECK:                     %35 = OpLoad %type_2d_image %TheStruct_Texture
+                             %36 = OpAccessChain %_ptr_UniformConstant_type_sampler %TheStruct %int_1
+                             %37 = OpLoad %type_sampler %36
+; CHECK:                     %37 = OpLoad %type_sampler %TheStruct_Sampler
+                             %38 = OpSampledImage %type_sampled_image %35 %37
+                             %39 = OpImageSampleImplicitLod %v4float %38 %13 None
+                             %40 = OpFAdd %v4float %33 %39
+                                   OpStore %out_var_SV_Target %40
+                                   OpReturn
+                                   OpFunctionEnd
+  )";
+
+  SinglePassRunAndMatch<DescriptorScalarReplacement>(
+      text, false, /* flatten_composites=*/true, /* flatten_arrays=*/false);
 }
 
 }  // namespace

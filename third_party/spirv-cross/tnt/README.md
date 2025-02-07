@@ -1,4 +1,18 @@
 ## Updating
+To update to the spire-cross of a specific chromium commit, do the following.
+```
+cd third_party
+curl -L https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross/+archive/b8fcf307.tar.gz > spirv-cross-src.tar.gz
+mkdir spirv-cross-new
+tar -xzf spirv-cross-src.tar.gz -C spirv-cross-new
+rsync -r spirv-cross-new/ spirv-cross/ --delete
+git restore spirv-cross/tnt
+patch -p2 < spirv-cross/tnt/0001-convert-floats-to-their-smallest-string-representati.patch
+patch -p2 < spirv-cross/tnt/0002-localeconv-api-level-check.patch
+rm -rf spirv-cross-new spirv-cross-src.tar.gz
+git add spirv-cross
+```
+
 
 To update to the spirv-cross that's currently on GitHub master, do the following.
 

@@ -48,6 +48,7 @@ struct spv_validator_options_t {
         workgroup_scalar_block_layout(false),
         skip_block_layout(false),
         allow_localsizeid(false),
+        allow_offset_texture_operand(false),
         before_hlsl_legalization(false),
         use_friendly_names(true) {}
 
@@ -60,6 +61,7 @@ struct spv_validator_options_t {
   bool workgroup_scalar_block_layout;
   bool skip_block_layout;
   bool allow_localsizeid;
+  bool allow_offset_texture_operand;
   bool before_hlsl_legalization;
   bool use_friendly_names;
 };

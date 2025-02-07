@@ -81,7 +81,7 @@ struct main0_out
 struct main0_in
 {
     VertexOutput_1 p;
-    ushort2 m_171;
+    ushort2 m_174;
     float4 gl_Position;
 };
 

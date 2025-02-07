@@ -12,11 +12,11 @@ struct foo
     packed_half2 wibble;
 };
 
-kernel void main0(device foo& _8 [[buffer(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint3 gl_NumWorkGroups [[threadgroups_per_grid]])
+kernel void main0(device foo& _10 [[buffer(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint3 gl_NumWorkGroups [[threadgroups_per_grid]])
 {
-    _8.bar = gl_LocalInvocationID.x;
-    _8.baz = float3(gl_GlobalInvocationID);
-    _8.blah = uchar4(uint4(uint4(uchar4(_8.blah)).xyz + gl_WorkGroupID, 0u));
-    _8.wibble = half2(float2(half2(_8.wibble)) * float2(gl_NumWorkGroups.xy));
+    _10.bar = gl_LocalInvocationID.x;
+    _10.baz = float3(gl_GlobalInvocationID);
+    _10.blah = uchar4(uint4(uint4(uchar4(_10.blah)).xyz + gl_WorkGroupID, 0u));
+    _10.wibble = half2(float2(half2(_10.wibble)) * float2(gl_NumWorkGroups.xy));
 }
 

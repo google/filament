@@ -30,7 +30,7 @@ static const int A_10 = (A_9 - A_5);
 static const int A_11 = (A_10 + A_5);
 static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
 
-RWByteAddressBuffer _5 : register(u0);
+RWByteAddressBuffer _7 : register(u0);
 
 static uint3 gl_GlobalInvocationID;
 struct SPIRV_Cross_Input
@@ -40,7 +40,7 @@ struct SPIRV_Cross_Input
 
 void comp_main()
 {
-    _5.Store(gl_GlobalInvocationID.x * 4 + 0, uint(A_11));
+    _7.Store(gl_GlobalInvocationID.x * 4 + 0, uint(A_11));
 }
 
 [numthreads(1, 1, 1)]

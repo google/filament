@@ -34,12 +34,12 @@ void main()
     _input.foo = input_foo;
     _input.bar = input_bar;
     vec2 uv = vec2(gl_TessCoord.xy);
-    ControlPoint _54_unrolled[4];
+    ControlPoint _68_unrolled[4];
     for (int i = 0; i < int(4); i++)
     {
-        _54_unrolled[i] = CPData[i];
+        _68_unrolled[i] = CPData[i];
     }
-    ControlPoint CPData_1[4] = _54_unrolled;
+    ControlPoint CPData_1[4] = _68_unrolled;
     HS_INPUT param = _input;
     vec2 param_1 = uv;
     ControlPoint param_2[4] = CPData_1;

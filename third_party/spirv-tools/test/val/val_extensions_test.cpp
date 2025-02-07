@@ -18,10 +18,8 @@
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "source/enum_string_mapping.h"
 #include "source/extensions.h"
 #include "source/spirv_target_env.h"
-#include "test/test_fixture.h"
 #include "test/unit_spirv.h"
 #include "test/val/val_fixtures.h"
 
@@ -63,7 +61,8 @@ INSTANTIATE_TEST_SUITE_P(
         "SPV_AMD_shader_image_load_store_lod", "SPV_AMD_shader_fragment_mask",
         "SPV_GOOGLE_decorate_string", "SPV_GOOGLE_hlsl_functionality1",
         "SPV_NV_shader_subgroup_partitioned", "SPV_EXT_descriptor_indexing",
-        "SPV_KHR_terminate_invocation"));
+        "SPV_KHR_terminate_invocation",
+        "SPV_KHR_relaxed_extended_instruction"));
 
 INSTANTIATE_TEST_SUITE_P(FailSilently, ValidateUnknownExtensions,
                          Values("ERROR_unknown_extension", "SPV_KHR_",
@@ -131,6 +130,214 @@ TEST_F(ValidateExtensionCapabilities, DeclCapabilityFailure) {
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("requires one of these extensions"));
   EXPECT_THAT(getDiagnosticString(), HasSubstr("SPV_KHR_device_group"));
+}
+
+TEST_F(ValidateExtensionCapabilities,
+       DeclCapabilityFailureBlockMatchWIndowSAD) {
+  const std::string str = R"(
+               OpCapability Shader
+               OpCapability TextureBlockMatch2QCOM
+               OpExtension "SPV_QCOM_image_processing2"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %v_texcoord %fragColor %target_samp %ref_samp
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpSourceExtension "GL_QCOM_image_processing"
+               OpSourceExtension "GL_QCOM_image_processing2"
+               OpName %main "main"
+               OpName %tgt_coords "tgt_coords"
+               OpName %v_texcoord "v_texcoord"
+               OpName %ref_coords "ref_coords"
+               OpName %blockSize "blockSize"
+               OpName %fragColor "fragColor"
+               OpName %target_samp "target_samp"
+               OpName %ref_samp "ref_samp"
+               OpDecorate %v_texcoord Location 0
+               OpDecorate %fragColor Location 0
+               OpDecorate %target_samp DescriptorSet 0
+               OpDecorate %target_samp Binding 4
+               OpDecorate %ref_samp DescriptorSet 0
+               OpDecorate %ref_samp Binding 5
+               OpDecorate %target_samp BlockMatchTextureQCOM
+               OpDecorate %target_samp BlockMatchSamplerQCOM
+               OpDecorate %ref_samp BlockMatchTextureQCOM
+               OpDecorate %ref_samp BlockMatchSamplerQCOM
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+ %v_texcoord = OpVariable %_ptr_Input_v4float Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_4 = OpConstant %uint 4
+         %39 = OpConstantComposite %v2uint %uint_4 %uint_4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+  %fragColor = OpVariable %_ptr_Output_v4float Output
+         %42 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %43 = OpTypeSampledImage %42
+%_ptr_UniformConstant_43 = OpTypePointer UniformConstant %43
+%target_samp = OpVariable %_ptr_UniformConstant_43 UniformConstant
+   %ref_samp = OpVariable %_ptr_UniformConstant_43 UniformConstant
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+ %tgt_coords = OpVariable %_ptr_Function_v2uint Function
+ %ref_coords = OpVariable %_ptr_Function_v2uint Function
+  %blockSize = OpVariable %_ptr_Function_v2uint Function
+         %16 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_0
+         %17 = OpLoad %float %16
+         %18 = OpConvertFToU %uint %17
+         %20 = OpAccessChain %_ptr_Function_uint %tgt_coords %uint_0
+               OpStore %20 %18
+         %22 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_1
+         %23 = OpLoad %float %22
+         %24 = OpConvertFToU %uint %23
+         %25 = OpAccessChain %_ptr_Function_uint %tgt_coords %uint_0
+               OpStore %25 %24
+         %28 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_2
+         %29 = OpLoad %float %28
+         %30 = OpConvertFToU %uint %29
+         %31 = OpAccessChain %_ptr_Function_uint %ref_coords %uint_0
+               OpStore %31 %30
+         %33 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_3
+         %34 = OpLoad %float %33
+         %35 = OpConvertFToU %uint %34
+         %36 = OpAccessChain %_ptr_Function_uint %ref_coords %uint_1
+               OpStore %36 %35
+               OpStore %blockSize %39
+         %46 = OpLoad %43 %target_samp
+         %47 = OpLoad %v2uint %tgt_coords
+         %49 = OpLoad %43 %ref_samp
+         %50 = OpLoad %v2uint %ref_coords
+         %51 = OpLoad %v2uint %blockSize
+         %52 = OpImageBlockMatchWindowSADQCOM %v4float %46 %47 %49 %50 %51
+               OpStore %fragColor %52
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(str.c_str());
+  ASSERT_EQ(SPV_ERROR_MISSING_EXTENSION, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("2nd operand of Decorate"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these extensions"));
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("SPV_QCOM_image_processing"));
+}
+
+TEST_F(ValidateExtensionCapabilities,
+       DeclCapabilityFailureBlockMatchWIndowSSD) {
+  const std::string str = R"(
+               OpCapability Shader
+               OpCapability TextureBlockMatch2QCOM
+               OpExtension "SPV_QCOM_image_processing2"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %v_texcoord %fragColor %tex2D_src1 %samp %tex2D_src2
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpSourceExtension "GL_QCOM_image_processing"
+               OpSourceExtension "GL_QCOM_image_processing2"
+               OpName %main "main"
+               OpName %tgt_coords "tgt_coords"
+               OpName %v_texcoord "v_texcoord"
+               OpName %ref_coords "ref_coords"
+               OpName %blockSize "blockSize"
+               OpName %fragColor "fragColor"
+               OpName %tex2D_src1 "tex2D_src1"
+               OpName %samp "samp"
+               OpName %tex2D_src2 "tex2D_src2"
+               OpDecorate %v_texcoord Location 0
+               OpDecorate %fragColor Location 0
+               OpDecorate %tex2D_src1 DescriptorSet 0
+               OpDecorate %tex2D_src1 Binding 1
+               OpDecorate %samp DescriptorSet 0
+               OpDecorate %samp Binding 3
+               OpDecorate %tex2D_src2 DescriptorSet 0
+               OpDecorate %tex2D_src2 Binding 2
+               OpDecorate %tex2D_src1 BlockMatchTextureQCOM
+               OpDecorate %samp BlockMatchSamplerQCOM
+               OpDecorate %tex2D_src2 BlockMatchTextureQCOM
+               OpDecorate %samp BlockMatchSamplerQCOM
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+ %v_texcoord = OpVariable %_ptr_Input_v4float Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_4 = OpConstant %uint 4
+         %39 = OpConstantComposite %v2uint %uint_4 %uint_4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+  %fragColor = OpVariable %_ptr_Output_v4float Output
+         %42 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%_ptr_UniformConstant_42 = OpTypePointer UniformConstant %42
+ %tex2D_src1 = OpVariable %_ptr_UniformConstant_42 UniformConstant
+         %46 = OpTypeSampler
+%_ptr_UniformConstant_46 = OpTypePointer UniformConstant %46
+       %samp = OpVariable %_ptr_UniformConstant_46 UniformConstant
+         %50 = OpTypeSampledImage %42
+ %tex2D_src2 = OpVariable %_ptr_UniformConstant_42 UniformConstant
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+ %tgt_coords = OpVariable %_ptr_Function_v2uint Function
+ %ref_coords = OpVariable %_ptr_Function_v2uint Function
+  %blockSize = OpVariable %_ptr_Function_v2uint Function
+         %16 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_0
+         %17 = OpLoad %float %16
+         %18 = OpConvertFToU %uint %17
+         %20 = OpAccessChain %_ptr_Function_uint %tgt_coords %uint_0
+               OpStore %20 %18
+         %22 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_1
+         %23 = OpLoad %float %22
+         %24 = OpConvertFToU %uint %23
+         %25 = OpAccessChain %_ptr_Function_uint %tgt_coords %uint_0
+               OpStore %25 %24
+         %28 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_2
+         %29 = OpLoad %float %28
+         %30 = OpConvertFToU %uint %29
+         %31 = OpAccessChain %_ptr_Function_uint %ref_coords %uint_0
+               OpStore %31 %30
+         %33 = OpAccessChain %_ptr_Input_float %v_texcoord %uint_3
+         %34 = OpLoad %float %33
+         %35 = OpConvertFToU %uint %34
+         %36 = OpAccessChain %_ptr_Function_uint %ref_coords %uint_1
+               OpStore %36 %35
+               OpStore %blockSize %39
+         %45 = OpLoad %42 %tex2D_src1
+         %49 = OpLoad %46 %samp
+         %51 = OpSampledImage %50 %45 %49
+         %52 = OpLoad %v2uint %tgt_coords
+         %54 = OpLoad %42 %tex2D_src2
+         %55 = OpLoad %46 %samp
+         %56 = OpSampledImage %50 %54 %55
+         %57 = OpLoad %v2uint %ref_coords
+         %58 = OpLoad %v2uint %blockSize
+         %59 = OpImageBlockMatchWindowSSDQCOM %v4float %51 %52 %56 %57 %58
+               OpStore %fragColor %59
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(str.c_str());
+  ASSERT_EQ(SPV_ERROR_MISSING_EXTENSION, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("2nd operand of Decorate"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these extensions"));
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("SPV_QCOM_image_processing"));
 }
 
 using ValidateAMDShaderBallotCapabilities = spvtest::ValidateBase<std::string>;
@@ -343,6 +550,44 @@ INSTANTIATE_TEST_SUITE_P(
         {"SPV_KHR_device_group", "DeviceGroup", "DeviceIndex", SPV_ENV_VULKAN_1_0, false},
     }));
 // clang-format on
+
+using ValidateRelaxedExtendedInstructionExt = spvtest::ValidateBase<bool>;
+
+TEST_F(ValidateRelaxedExtendedInstructionExt, RequiresExtension) {
+  const std::string str = R"(
+             OpCapability Shader
+             OpExtension "SPV_KHR_non_semantic_info"
+        %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+             OpMemoryModel Logical GLSL450
+             OpEntryPoint GLCompute %2 "main"
+             OpExecutionMode %2 LocalSize 1 1 1
+        %3 = OpString "sample"
+     %void = OpTypeVoid
+     %uint = OpTypeInt 32 0
+   %uint_0 = OpConstant %uint 0
+        %7 = OpTypeFunction %void
+        %8 = OpExtInst %void %1 DebugSource %3 %3
+        %9 = OpExtInst %void %1 DebugCompilationUnit %uint_0 %uint_0 %8 %uint_0
+       %10 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeFunction %uint_0 %11
+       %12 = OpExtInstWithForwardRefsKHR %void %1 DebugFunction %3 %10 %8 %uint_0 %uint_0 %11 %3 %uint_0 %uint_0
+       %11 = OpExtInst %void %1 DebugTypeComposite %3 %uint_0 %8 %uint_0 %uint_0 %9 %3 %uint_0 %uint_0 %12
+        %2 = OpFunction %void None %7
+       %13 = OpLabel
+             OpReturn
+             OpFunctionEnd
+)";
+
+  CompileSuccessfully(str.c_str());
+  EXPECT_NE(SPV_SUCCESS, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "ExtInstWithForwardRefsKHR requires one of the following extensions:"
+          " SPV_KHR_relaxed_extended_instruction \n"
+          "  %10 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeFunction "
+          "%uint_0 "
+          "%11\n"));
+}
 
 }  // namespace
 }  // namespace val

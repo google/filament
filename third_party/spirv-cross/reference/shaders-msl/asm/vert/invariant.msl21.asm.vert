@@ -19,8 +19,8 @@ float4 _main()
 vertex main0_out main0()
 {
     main0_out out = {};
-    float4 _14 = _main();
-    out.gl_Position = _14;
+    float4 _17 = _main();
+    out.gl_Position = _17;
     return out;
 }
 

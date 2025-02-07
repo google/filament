@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -511,36 +510,36 @@ OpBranch %24
 %24 = OpLabel
 %35 = OpPhi %8 %10 %23 %34 %26
 %s1 = OpExtInst %6 %ext DebugScope %dbg_main
-%d10 = OpExtInst %6 %ext DebugLine %file_name %uint_1 %uint_1 %uint_0 %uint_0
+%d10 = OpExtInst %6 %ext DebugLine %src %uint_1 %uint_1 %uint_0 %uint_0
 %value0 = OpExtInst %6 %ext DebugValue %dbg_f %35 %null_expr
 OpLoopMerge %25 %26 Unroll
 OpBranch %27
 %27 = OpLabel
 %s2 = OpExtInst %6 %ext DebugScope %dbg_main
-%d1 = OpExtInst %6 %ext DebugLine %file_name %uint_1 %uint_1 %uint_1 %uint_1
+%d1 = OpExtInst %6 %ext DebugLine %src %uint_1 %uint_1 %uint_1 %uint_1
 %29 = OpSLessThan %12 %35 %11
-%d2 = OpExtInst %6 %ext DebugLine %file_name %uint_2 %uint_2 %uint_0 %uint_0
+%d2 = OpExtInst %6 %ext DebugLine %src %uint_2 %uint_2 %uint_0 %uint_0
 OpBranchConditional %29 %30 %25
 %30 = OpLabel
 %s3 = OpExtInst %6 %ext DebugScope %bb
 %decl0 = OpExtInst %6 %ext DebugDeclare %dbg_f %5 %null_expr
 %decl1 = OpExtInst %6 %ext DebugValue %dbg_i %5 %deref_expr
-%d3 = OpExtInst %6 %ext DebugLine %file_name %uint_3 %uint_3 %uint_0 %uint_0
+%d3 = OpExtInst %6 %ext DebugLine %src %uint_3 %uint_3 %uint_0 %uint_0
 %32 = OpAccessChain %19 %5 %35
-%d4 = OpExtInst %6 %ext DebugLine %file_name %uint_4 %uint_4 %uint_0 %uint_0
+%d4 = OpExtInst %6 %ext DebugLine %src %uint_4 %uint_4 %uint_0 %uint_0
 OpStore %32 %18
-%d5 = OpExtInst %6 %ext DebugLine %file_name %uint_5 %uint_5 %uint_0 %uint_0
+%d5 = OpExtInst %6 %ext DebugLine %src %uint_5 %uint_5 %uint_0 %uint_0
 OpBranch %26
 %26 = OpLabel
 %s4 = OpExtInst %6 %ext DebugScope %dbg_main
-%d6 = OpExtInst %6 %ext DebugLine %file_name %uint_6 %uint_6 %uint_0 %uint_0
+%d6 = OpExtInst %6 %ext DebugLine %src %uint_6 %uint_6 %uint_0 %uint_0
 %34 = OpIAdd %8 %35 %20
 %value1 = OpExtInst %6 %ext DebugValue %dbg_f %34 %null_expr
-%d7 = OpExtInst %6 %ext DebugLine %file_name %uint_7 %uint_7 %uint_0 %uint_0
+%d7 = OpExtInst %6 %ext DebugLine %src %uint_7 %uint_7 %uint_0 %uint_0
 OpBranch %24
 %25 = OpLabel
 %s5 = OpExtInst %6 %ext DebugScope %dbg_main
-%d8 = OpExtInst %6 %ext DebugLine %file_name %uint_8 %uint_8 %uint_0 %uint_0
+%d8 = OpExtInst %6 %ext DebugLine %src %uint_8 %uint_8 %uint_0 %uint_0
 OpReturn
 OpFunctionEnd)";
 

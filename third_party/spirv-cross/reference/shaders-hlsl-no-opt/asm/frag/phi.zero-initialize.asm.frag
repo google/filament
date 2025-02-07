@@ -24,14 +24,14 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    int _39 = 0;
+    int _27 = 0;
     if (vColor.x > 10.0f)
     {
-        _39 = 10;
+        _27 = 10;
     }
     else
     {
-        _39 = 20;
+        _27 = 20;
     }
     FragColor = vColor;
 }

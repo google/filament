@@ -157,9 +157,9 @@ fragment void main0(constant uint* spvSwizzleConstants [[buffer(30)]], texture1d
     c = spvTextureSwizzle(tex1d.sample(tex1dSamp, float2(0.0, 1.0).x / float2(0.0, 1.0).y), tex1dSwzl);
     c = spvTextureSwizzle(tex2d.sample(tex2dSamp, float3(0.0, 0.0, 1.0).xy / float3(0.0, 0.0, 1.0).z), tex2dSwzl);
     c = spvTextureSwizzle(tex3d.sample(tex3dSamp, float4(0.0, 0.0, 0.0, 1.0).xyz / float4(0.0, 0.0, 0.0, 1.0).w), tex3dSwzl);
-    float4 _152 = float4(0.0, 0.0, 1.0, 1.0);
-    _152.z = 1.0;
-    c.x = spvTextureSwizzle(depth2d.sample_compare(depth2dSamp, _152.xy / _152.z, 1.0 / _152.z), depth2dSwzl);
+    float4 _108 = float4(0.0, 0.0, 1.0, 1.0);
+    _108.z = 1.0;
+    c.x = spvTextureSwizzle(depth2d.sample_compare(depth2dSamp, _108.xy / _108.z, 1.0 / _108.z), depth2dSwzl);
     c = spvTextureSwizzle(tex1d.sample(tex1dSamp, 0.0), tex1dSwzl);
     c = spvTextureSwizzle(tex2d.sample(tex2dSamp, float2(0.0), level(0.0)), tex2dSwzl);
     c = spvTextureSwizzle(tex3d.sample(tex3dSamp, float3(0.0), level(0.0)), tex3dSwzl);
@@ -170,9 +170,9 @@ fragment void main0(constant uint* spvSwizzleConstants [[buffer(30)]], texture1d
     c = spvTextureSwizzle(tex1d.sample(tex1dSamp, float2(0.0, 1.0).x / float2(0.0, 1.0).y), tex1dSwzl);
     c = spvTextureSwizzle(tex2d.sample(tex2dSamp, float3(0.0, 0.0, 1.0).xy / float3(0.0, 0.0, 1.0).z, level(0.0)), tex2dSwzl);
     c = spvTextureSwizzle(tex3d.sample(tex3dSamp, float4(0.0, 0.0, 0.0, 1.0).xyz / float4(0.0, 0.0, 0.0, 1.0).w, level(0.0)), tex3dSwzl);
-    float4 _202 = float4(0.0, 0.0, 1.0, 1.0);
-    _202.z = 1.0;
-    c.x = spvTextureSwizzle(depth2d.sample_compare(depth2dSamp, _202.xy / _202.z, 1.0 / _202.z, level(0.0)), depth2dSwzl);
+    float4 _161 = float4(0.0, 0.0, 1.0, 1.0);
+    _161.z = 1.0;
+    c.x = spvTextureSwizzle(depth2d.sample_compare(depth2dSamp, _161.xy / _161.z, 1.0 / _161.z, level(0.0)), depth2dSwzl);
     c = spvTextureSwizzle(tex1d.read(uint(0)), tex1dSwzl);
     c = spvTextureSwizzle(tex2d.read(uint2(int2(0)), 0), tex2dSwzl);
     c = spvTextureSwizzle(tex3d.read(uint3(int3(0)), 0), tex3dSwzl);

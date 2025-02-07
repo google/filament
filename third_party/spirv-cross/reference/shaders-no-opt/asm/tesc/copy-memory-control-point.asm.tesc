@@ -14,16 +14,16 @@ layout(location = 4) in vec4 vicp1[];
 layout(location = 5) out vec4 vocp1[3];
 vec4 opc[4];
 vec4 vicp[2][3];
-vec4 _48;
-vec4 _49;
-vec4 _50;
-vec4 _56;
+vec4 _52;
+vec4 _55;
+vec4 _58;
+vec4 _89;
 
-void fork0_epilogue(vec4 _87, vec4 _88, vec4 _89)
+void fork0_epilogue(vec4 _61, vec4 _62, vec4 _63)
 {
-    gl_TessLevelOuter[0u] = _87.x;
-    gl_TessLevelOuter[1u] = _88.x;
-    gl_TessLevelOuter[2u] = _89.x;
+    gl_TessLevelOuter[0u] = _61.x;
+    gl_TessLevelOuter[1u] = _62.x;
+    gl_TessLevelOuter[2u] = _63.x;
 }
 
 void fork0(uint vForkInstanceId)
@@ -31,22 +31,22 @@ void fork0(uint vForkInstanceId)
     vec4 r0;
     r0.x = uintBitsToFloat(vForkInstanceId);
     opc[floatBitsToInt(r0.x)].x = cb0_0._m0[0u].x;
-    _48 = opc[0u];
-    _49 = opc[1u];
-    _50 = opc[2u];
-    fork0_epilogue(_48, _49, _50);
+    _52 = opc[0u];
+    _55 = opc[1u];
+    _58 = opc[2u];
+    fork0_epilogue(_52, _55, _58);
 }
 
-void fork1_epilogue(vec4 _109)
+void fork1_epilogue(vec4 _92)
 {
-    gl_TessLevelInner[0u] = _109.x;
+    gl_TessLevelInner[0u] = _92.x;
 }
 
 void fork1()
 {
     opc[3u].x = cb0_0._m0[0u].x;
-    _56 = opc[3u];
-    fork1_epilogue(_56);
+    _89 = opc[3u];
+    fork1_epilogue(_89);
 }
 
 void main()

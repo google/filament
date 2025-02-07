@@ -41,12 +41,6 @@ namespace {
 
 enum class FuzzingTarget { kSpirv, kWgsl };
 
-// Check that the std::system function can actually be used.
-bool CheckExecuteCommand() {
-  int res = std::system(nullptr);
-  return res != 0;
-}
-
 // Execute a command using the shell.
 // Returns true if and only if the command's exit status was 0.
 bool ExecuteCommand(const std::string& command) {
@@ -590,8 +584,7 @@ bool Fuzz(const spv_target_env& target_env,
         [donor_filename, message_consumer,
          target_env]() -> std::unique_ptr<spvtools::opt::IRContext> {
           std::vector<uint32_t> donor_binary;
-          if (!ReadBinaryFile<uint32_t>(donor_filename.c_str(),
-                                        &donor_binary)) {
+          if (!ReadBinaryFile(donor_filename.c_str(), &donor_binary)) {
             return nullptr;
           }
           return spvtools::BuildModule(target_env, message_consumer,
@@ -679,7 +672,7 @@ void DumpTransformationsJson(
     const spvtools::fuzz::protobufs::TransformationSequence& transformations,
     const char* filename) {
   std::string json_string;
-  auto json_options = google::protobuf::util::JsonOptions();
+  auto json_options = google::protobuf::util::JsonPrintOptions();
   json_options.add_whitespace = true;
   auto json_generation_status = google::protobuf::util::MessageToJsonString(
       transformations, &json_string, json_options);
@@ -718,7 +711,7 @@ int main(int argc, const char** argv) {
   }
 
   std::vector<uint32_t> binary_in;
-  if (!ReadBinaryFile<uint32_t>(in_binary_file.c_str(), &binary_in)) {
+  if (!ReadBinaryFile(in_binary_file.c_str(), &binary_in)) {
     return 1;
   }
 
@@ -770,11 +763,6 @@ int main(int argc, const char** argv) {
       }
       break;
     case FuzzActions::SHRINK: {
-      if (!CheckExecuteCommand()) {
-        std::cerr << "could not find shell interpreter for executing a command"
-                  << std::endl;
-        return 1;
-      }
       if (!Shrink(target_env, fuzzer_options, validator_options, binary_in,
                   initial_facts, shrink_transformations_file,
                   shrink_temp_file_prefix, interestingness_test, &binary_out,
@@ -812,7 +800,7 @@ int main(int argc, const char** argv) {
     }
 
     std::string json_string;
-    auto json_options = google::protobuf::util::JsonOptions();
+    auto json_options = google::protobuf::util::JsonPrintOptions();
     json_options.add_whitespace = true;
     auto json_generation_status = google::protobuf::util::MessageToJsonString(
         transformations_applied, &json_string, json_options);

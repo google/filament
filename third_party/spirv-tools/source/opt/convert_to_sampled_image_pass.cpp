@@ -16,7 +16,6 @@
 
 #include <cctype>
 #include <cstring>
-#include <tuple>
 
 #include "source/opt/ir_builder.h"
 #include "source/util/make_unique.h"
@@ -330,12 +329,10 @@ bool ConvertToSampledImagePass::ConvertImageVariableToSampledImage(
   if (sampled_image_type == nullptr) return false;
   auto storage_class = GetStorageClass(*image_variable);
   if (storage_class == spv::StorageClass::Max) return false;
-  analysis::Pointer sampled_image_pointer(sampled_image_type, storage_class);
-
   // Make sure |image_variable| is behind its type i.e., avoid the forward
   // reference.
-  uint32_t type_id =
-      context()->get_type_mgr()->GetTypeInstruction(&sampled_image_pointer);
+  uint32_t type_id = context()->get_type_mgr()->FindPointerToType(
+      sampled_image_type_id, storage_class);
   MoveInstructionNextToType(image_variable, type_id);
   return true;
 }

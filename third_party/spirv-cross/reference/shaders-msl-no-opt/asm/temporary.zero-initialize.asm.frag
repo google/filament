@@ -18,19 +18,19 @@ fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
     out.FragColor = float4(0.0);
-    int _10 = {};
-    int _15 = {};
-    for (int _16 = 0, _17 = 0; _16 < in.vA; _17 = _15, _16 += _10)
+    int _49 = {};
+    int _58 = {};
+    for (int _57 = 0, _60 = 0; _57 < in.vA; _60 = _58, _57 += _49)
     {
-        if ((in.vA + _16) == 20)
+        if ((in.vA + _57) == 20)
         {
-            _15 = 50;
+            _58 = 50;
         }
         else
         {
-            _15 = ((in.vB + _16) == 40) ? 60 : _17;
+            _58 = ((in.vB + _57) == 40) ? 60 : _60;
         }
-        _10 = _15 + 10;
+        _49 = _58 + 10;
         out.FragColor += float4(1.0);
     }
     return out;

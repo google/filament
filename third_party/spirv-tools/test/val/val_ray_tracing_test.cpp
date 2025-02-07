@@ -578,6 +578,95 @@ OpTraceRayKHR %as %uint_1 %uint_1 %uint_1 %uint_1 %uint_1 %v3composite %float_0 
                         "IncomingRayPayloadKHR"));
 }
 
+TEST_F(ValidateRayTracing, InterfaceIncomingRayPayload) {
+  const std::string body = R"(
+OpCapability RayTracingKHR
+OpExtension "SPV_KHR_ray_tracing"
+OpMemoryModel Logical GLSL450
+OpEntryPoint CallableKHR %main "main" %inData1 %inData2
+OpName %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%inData_ptr = OpTypePointer IncomingRayPayloadKHR %int
+%inData1 = OpVariable %inData_ptr IncomingRayPayloadKHR
+%inData2 = OpVariable %inData_ptr IncomingRayPayloadKHR
+%main = OpFunction %void None %func
+%label = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-IncomingRayPayloadKHR-04700"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Entry-point has more than one variable with the "
+                "IncomingRayPayloadKHR storage class in the interface"));
+}
+
+TEST_F(ValidateRayTracing, InterfaceHitAttribute) {
+  const std::string body = R"(
+OpCapability RayTracingKHR
+OpExtension "SPV_KHR_ray_tracing"
+OpMemoryModel Logical GLSL450
+OpEntryPoint CallableKHR %main "main" %inData1 %inData2
+OpName %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%inData_ptr = OpTypePointer HitAttributeKHR %int
+%inData1 = OpVariable %inData_ptr HitAttributeKHR
+%inData2 = OpVariable %inData_ptr HitAttributeKHR
+%main = OpFunction %void None %func
+%label = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-HitAttributeKHR-04702"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Entry-point has more than one variable with the "
+                        "HitAttributeKHR storage class in the interface"));
+}
+
+TEST_F(ValidateRayTracing, InterfaceIncomingCallableData) {
+  const std::string body = R"(
+OpCapability RayTracingKHR
+OpExtension "SPV_KHR_ray_tracing"
+OpMemoryModel Logical GLSL450
+OpEntryPoint CallableKHR %main "main" %inData1 %inData2
+OpName %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%inData_ptr = OpTypePointer IncomingCallableDataKHR %int
+%inData1 = OpVariable %inData_ptr IncomingCallableDataKHR
+%inData2 = OpVariable %inData_ptr IncomingCallableDataKHR
+%main = OpFunction %void None %func
+%label = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateAndRetrieveValidationState(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-IncomingCallableDataKHR-04706"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Entry-point has more than one variable with the "
+                "IncomingCallableDataKHR storage class in the interface"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

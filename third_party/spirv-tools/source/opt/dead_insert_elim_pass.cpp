@@ -213,7 +213,8 @@ bool DeadInsertElimPass::EliminateDeadInsertsOnePass(Function* func) {
           } break;
           default: {
             // Mark inserts in chain for all components
-            MarkInsertChain(&*ii, nullptr, 0, nullptr);
+            std::unordered_set<uint32_t> visited_phis;
+            MarkInsertChain(&*ii, nullptr, 0, &visited_phis);
           } break;
         }
       });

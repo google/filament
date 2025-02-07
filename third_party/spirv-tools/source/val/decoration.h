@@ -15,6 +15,7 @@
 #ifndef SOURCE_VAL_DECORATION_H_
 #define SOURCE_VAL_DECORATION_H_
 
+#include <cassert>
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
@@ -55,6 +56,12 @@ namespace val {
 //              params_ = vector { 2 }
 // struct_member_index_ = 2
 //
+// Example 4: Decoration for a Builtin:
+// OpDecorate %var BuiltIn FragDepth
+//            dec_type_ = spv::Decoration::BuiltIn
+//              params_ = vector { FragDepth }
+// struct_member_index_ = kInvalidMember
+//
 class Decoration {
  public:
   enum { kInvalidMember = -1 };
@@ -68,6 +75,10 @@ class Decoration {
   spv::Decoration dec_type() const { return dec_type_; }
   std::vector<uint32_t>& params() { return params_; }
   const std::vector<uint32_t>& params() const { return params_; }
+  spv::BuiltIn builtin() const {
+    assert(dec_type_ == spv::Decoration::BuiltIn);
+    return spv::BuiltIn(params_[0]);
+  }
 
   inline bool operator<(const Decoration& rhs) const {
     // Note: Sort by struct_member_index_ first, then type, so look up can be

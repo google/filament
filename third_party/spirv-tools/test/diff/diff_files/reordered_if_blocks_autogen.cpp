@@ -203,8 +203,7 @@ TEST(DiffTest, ReorderedIfBlocks) {
   constexpr char kDiff[] = R"( ; SPIR-V
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
--; Bound: 46
-+; Bound: 47
+ ; Bound: 46
  ; Schema: 0
  OpCapability Shader
  %1 = OpExtInstImport "GLSL.std.450"
@@ -471,8 +470,7 @@ TEST(DiffTest, ReorderedIfBlocksNoDebug) {
   constexpr char kDiff[] = R"( ; SPIR-V
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
--; Bound: 46
-+; Bound: 47
+ ; Bound: 46
  ; Schema: 0
  OpCapability Shader
  %1 = OpExtInstImport "GLSL.std.450"

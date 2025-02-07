@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Google Inc.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,10 @@
 """Generates the vendor tool table from the SPIR-V XML registry."""
 
 import errno
+import io
 import os.path
-import xml.etree.ElementTree
+import platform
+from xml.etree.ElementTree import XML, XMLParser, TreeBuilder
 
 
 def mkdir_p(directory):
@@ -78,8 +80,16 @@ def main():
                         help='output file for SPIR-V generators table')
     args = parser.parse_args()
 
-    with open(args.xml) as xml_in:
-       registry = xml.etree.ElementTree.fromstring(xml_in.read())
+    with io.open(args.xml, encoding='utf-8') as xml_in:
+      # Python3 default str to UTF-8. But Python2.7 (in case of NDK build,
+      # don't be fooled by the shebang) is returning a unicode string.
+      # So depending of the version, we need to make sure the correct
+      # encoding is used.
+      content = xml_in.read()
+      if platform.python_version_tuple()[0] == '2':
+        content = content.encode('utf-8')
+      parser = XMLParser(target=TreeBuilder(), encoding='utf-8')
+      registry = XML(content, parser=parser)
 
     mkdir_p(os.path.dirname(args.generator_output))
     with open(args.generator_output, 'w') as f:

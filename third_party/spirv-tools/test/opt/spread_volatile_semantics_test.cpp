@@ -14,7 +14,6 @@
 
 #include <string>
 
-#include "gmock/gmock.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 
@@ -307,7 +306,7 @@ OpDecorate %images DescriptorSet 0
 OpDecorate %images Binding 1
 OpDecorate %images NonWritable
 
-; CHECK:     OpEntryPoint RayGenerationNV {{%\w+}} "RayGeneration" [[var:%\w+]]
+; CHECK:     OpEntryPoint RayGenerationKHR {{%\w+}} "RayGeneration" [[var:%\w+]]
 ; CHECK:     OpDecorate [[var]] BuiltIn SubgroupSize
 ; CHECK:     OpDecorate [[var]] Volatile
 ; CHECK-NOT: OpDecorate {{%\w+}} Volatile
@@ -398,8 +397,8 @@ OpDecorate %images DescriptorSet 0
 OpDecorate %images Binding 1
 OpDecorate %images NonWritable
 
-; CHECK:     OpEntryPoint RayGenerationNV {{%\w+}} "RayGeneration" [[var:%\w+]]
-; CHECK:     OpEntryPoint ClosestHitNV {{%\w+}} "ClosestHit" [[var]]
+; CHECK:     OpEntryPoint RayGenerationKHR {{%\w+}} "RayGeneration" [[var:%\w+]]
+; CHECK:     OpEntryPoint ClosestHitKHR {{%\w+}} "ClosestHit" [[var]]
 ; CHECK:     OpDecorate [[var]] BuiltIn SubgroupSize
 ; CHECK:     OpDecorate [[var]] Volatile
 ; CHECK-NOT: OpDecorate {{%\w+}} Volatile

@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <vector>
 
-#include "source/diagnostic.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
 #include "source/val/function.h"
@@ -35,11 +34,13 @@ const uint32_t kMaxLocations = 4096 * 4;
 bool is_interface_variable(const Instruction* inst, bool is_spv_1_4) {
   if (is_spv_1_4) {
     // Starting in SPIR-V 1.4, all global variables are interface variables.
-    return inst->opcode() == spv::Op::OpVariable &&
+    return (inst->opcode() == spv::Op::OpVariable ||
+            inst->opcode() == spv::Op::OpUntypedVariableKHR) &&
            inst->GetOperandAs<spv::StorageClass>(2u) !=
                spv::StorageClass::Function;
   } else {
-    return inst->opcode() == spv::Op::OpVariable &&
+    return (inst->opcode() == spv::Op::OpVariable ||
+            inst->opcode() == spv::Op::OpUntypedVariableKHR) &&
            (inst->GetOperandAs<spv::StorageClass>(2u) ==
                 spv::StorageClass::Input ||
             inst->GetOperandAs<spv::StorageClass>(2u) ==
@@ -174,8 +175,19 @@ spv_result_t NumConsumedLocations(ValidationState_t& _, const Instruction* type,
       }
       break;
     }
+    case spv::Op::OpTypePointer: {
+      if (_.addressing_model() ==
+              spv::AddressingModel::PhysicalStorageBuffer64 &&
+          type->GetOperandAs<spv::StorageClass>(1) ==
+              spv::StorageClass::PhysicalStorageBuffer) {
+        *num_locations = 1;
+        break;
+      }
+      [[fallthrough]];
+    }
     default:
-      break;
+      return _.diag(SPV_ERROR_INVALID_DATA, type)
+             << "Invalid type to assign a location";
   }
 
   return SPV_SUCCESS;
@@ -207,6 +219,14 @@ uint32_t NumConsumedComponents(ValidationState_t& _, const Instruction* type) {
       // Skip the array.
       return NumConsumedComponents(_,
                                    _.FindDef(type->GetOperandAs<uint32_t>(1)));
+    case spv::Op::OpTypePointer:
+      if (_.addressing_model() ==
+              spv::AddressingModel::PhysicalStorageBuffer64 &&
+          type->GetOperandAs<spv::StorageClass>(1) ==
+              spv::StorageClass::PhysicalStorageBuffer) {
+        return 2;
+      }
+      break;
     default:
       // This is an error that is validated elsewhere.
       break;
@@ -224,8 +244,9 @@ spv_result_t GetLocationsForVariable(
     std::unordered_set<uint32_t>* output_index1_locations) {
   const bool is_fragment = entry_point->GetOperandAs<spv::ExecutionModel>(0) ==
                            spv::ExecutionModel::Fragment;
-  const bool is_output =
-      variable->GetOperandAs<spv::StorageClass>(2) == spv::StorageClass::Output;
+  const auto sc_index = 2u;
+  const bool is_output = variable->GetOperandAs<spv::StorageClass>(sc_index) ==
+                         spv::StorageClass::Output;
   auto ptr_type_id = variable->GetOperandAs<uint32_t>(0);
   auto ptr_type = _.FindDef(ptr_type_id);
   auto type_id = ptr_type->GetOperandAs<uint32_t>(2);
@@ -236,36 +257,23 @@ spv_result_t GetLocationsForVariable(
   // equal. Also track Patch and PerTaskNV decorations.
   bool has_location = false;
   uint32_t location = 0;
-  bool has_component = false;
   uint32_t component = 0;
   bool has_index = false;
   uint32_t index = 0;
   bool has_patch = false;
   bool has_per_task_nv = false;
   bool has_per_vertex_khr = false;
+  // Duplicate Location, Component, Index are checked elsewhere.
   for (auto& dec : _.id_decorations(variable->id())) {
     if (dec.dec_type() == spv::Decoration::Location) {
-      if (has_location && dec.params()[0] != location) {
-        return _.diag(SPV_ERROR_INVALID_DATA, variable)
-               << "Variable has conflicting location decorations";
-      }
       has_location = true;
       location = dec.params()[0];
     } else if (dec.dec_type() == spv::Decoration::Component) {
-      if (has_component && dec.params()[0] != component) {
-        return _.diag(SPV_ERROR_INVALID_DATA, variable)
-               << "Variable has conflicting component decorations";
-      }
-      has_component = true;
       component = dec.params()[0];
     } else if (dec.dec_type() == spv::Decoration::Index) {
       if (!is_output || !is_fragment) {
         return _.diag(SPV_ERROR_INVALID_DATA, variable)
                << "Index can only be applied to Fragment output variables";
-      }
-      if (has_index && dec.params()[0] != index) {
-        return _.diag(SPV_ERROR_INVALID_DATA, variable)
-               << "Variable has conflicting index decorations";
       }
       has_index = true;
       index = dec.params()[0];
@@ -364,12 +372,12 @@ spv_result_t GetLocationsForVariable(
       sub_type = _.FindDef(sub_type_id);
     }
 
-    for (uint32_t array_idx = 0; array_idx < array_size; ++array_idx) {
-      uint32_t num_locations = 0;
-      if (auto error = NumConsumedLocations(_, sub_type, &num_locations))
-        return error;
+    uint32_t num_locations = 0;
+    if (auto error = NumConsumedLocations(_, sub_type, &num_locations))
+      return error;
+    uint32_t num_components = NumConsumedComponents(_, sub_type);
 
-      uint32_t num_components = NumConsumedComponents(_, sub_type);
+    for (uint32_t array_idx = 0; array_idx < array_size; ++array_idx) {
       uint32_t array_location = location + (num_locations * array_idx);
       uint32_t start = array_location * 4;
       if (kMaxLocations <= start) {
@@ -389,6 +397,7 @@ spv_result_t GetLocationsForVariable(
       for (uint32_t i = start; i < end; ++i) {
         if (!locs->insert(i).second) {
           return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                 << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
                  << "Entry-point has conflicting " << storage_class
                  << " location assignment at location " << i / 4
                  << ", component " << i % 4;
@@ -460,6 +469,7 @@ spv_result_t GetLocationsForVariable(
             uint32_t check = 4 * l + c;
             if (!locations->insert(check).second) {
               return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                     << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
                      << "Entry-point has conflicting " << storage_class
                      << " location assignment at location " << l
                      << ", component " << c;
@@ -477,6 +487,7 @@ spv_result_t GetLocationsForVariable(
         for (uint32_t l = start; l < end; ++l) {
           if (!locations->insert(l).second) {
             return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                   << (is_output ? _.VkErrorID(8722) : _.VkErrorID(8721))
                    << "Entry-point has conflicting " << storage_class
                    << " location assignment at location " << l / 4
                    << ", component " << l % 4;
@@ -511,11 +522,15 @@ spv_result_t ValidateLocations(ValidationState_t& _,
   std::unordered_set<uint32_t> input_locations;
   std::unordered_set<uint32_t> output_locations_index0;
   std::unordered_set<uint32_t> output_locations_index1;
+  std::unordered_set<uint32_t> patch_locations_index0;
+  std::unordered_set<uint32_t> patch_locations_index1;
   std::unordered_set<uint32_t> seen;
   for (uint32_t i = 3; i < entry_point->operands().size(); ++i) {
     auto interface_id = entry_point->GetOperandAs<uint32_t>(i);
     auto interface_var = _.FindDef(interface_id);
-    auto storage_class = interface_var->GetOperandAs<spv::StorageClass>(2);
+    const auto sc_index = 2u;
+    auto storage_class =
+        interface_var->GetOperandAs<spv::StorageClass>(sc_index);
     if (storage_class != spv::StorageClass::Input &&
         storage_class != spv::StorageClass::Output) {
       continue;
@@ -523,6 +538,26 @@ spv_result_t ValidateLocations(ValidationState_t& _,
     if (!seen.insert(interface_id).second) {
       // Pre-1.4 an interface variable could be listed multiple times in an
       // entry point. Validation for 1.4 or later is done elsewhere.
+      continue;
+    }
+
+    // The two Tessellation stages have a "Patch" variable that interface with
+    // the Location mechanism, but are not suppose to be tied to the "normal"
+    // input/output Location.
+    // TODO - SPIR-V allows the Patch decoration to be applied to struct
+    // members, but is not allowed in GLSL/HLSL
+    bool has_patch = false;
+    for (auto& dec : _.id_decorations(interface_var->id())) {
+      if (dec.dec_type() == spv::Decoration::Patch) {
+        has_patch = true;
+        if (auto error = GetLocationsForVariable(_, entry_point, interface_var,
+                                                 &patch_locations_index0,
+                                                 &patch_locations_index1))
+          return error;
+        break;
+      }
+    }
+    if (has_patch) {
       continue;
     }
 
@@ -534,6 +569,64 @@ spv_result_t ValidateLocations(ValidationState_t& _,
       return error;
   }
 
+  return SPV_SUCCESS;
+}
+
+spv_result_t ValidateStorageClass(ValidationState_t& _,
+                                  const Instruction* entry_point) {
+  bool has_push_constant = false;
+  bool has_ray_payload = false;
+  bool has_hit_attribute = false;
+  bool has_callable_data = false;
+  for (uint32_t i = 3; i < entry_point->operands().size(); ++i) {
+    auto interface_id = entry_point->GetOperandAs<uint32_t>(i);
+    auto interface_var = _.FindDef(interface_id);
+    auto storage_class = interface_var->GetOperandAs<spv::StorageClass>(2);
+    switch (storage_class) {
+      case spv::StorageClass::PushConstant: {
+        if (has_push_constant) {
+          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                 << _.VkErrorID(6673)
+                 << "Entry-point has more than one variable with the "
+                    "PushConstant storage class in the interface";
+        }
+        has_push_constant = true;
+        break;
+      }
+      case spv::StorageClass::IncomingRayPayloadKHR: {
+        if (has_ray_payload) {
+          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                 << _.VkErrorID(4700)
+                 << "Entry-point has more than one variable with the "
+                    "IncomingRayPayloadKHR storage class in the interface";
+        }
+        has_ray_payload = true;
+        break;
+      }
+      case spv::StorageClass::HitAttributeKHR: {
+        if (has_hit_attribute) {
+          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                 << _.VkErrorID(4702)
+                 << "Entry-point has more than one variable with the "
+                    "HitAttributeKHR storage class in the interface";
+        }
+        has_hit_attribute = true;
+        break;
+      }
+      case spv::StorageClass::IncomingCallableDataKHR: {
+        if (has_callable_data) {
+          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                 << _.VkErrorID(4706)
+                 << "Entry-point has more than one variable with the "
+                    "IncomingCallableDataKHR storage class in the interface";
+        }
+        has_callable_data = true;
+        break;
+      }
+      default:
+        break;
+    }
+  }
   return SPV_SUCCESS;
 }
 
@@ -553,6 +646,9 @@ spv_result_t ValidateInterfaces(ValidationState_t& _) {
     for (auto& inst : _.ordered_instructions()) {
       if (inst.opcode() == spv::Op::OpEntryPoint) {
         if (auto error = ValidateLocations(_, &inst)) {
+          return error;
+        }
+        if (auto error = ValidateStorageClass(_, &inst)) {
           return error;
         }
       }
