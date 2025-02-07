@@ -196,10 +196,10 @@ void FMaterialInstance::commit(DriverApi& driver) const {
         for (auto const& [binding, p]: mTextureParameters) {
             assert_invariant(p.texture);
             // TODO: figure out a way to do this more efficiently (isValid() is a hashmap lookup)
-            FEngine& engine = mMaterial->getEngine();
+            FEngine const& engine = mMaterial->getEngine();
             FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
                     << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
-            Handle<HwTexture> handle = p.texture->getHwHandleForSampling();
+            Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
             assert_invariant(handle);
             mDescriptorSet.setSampler(binding, handle, p.params);
         }
@@ -216,7 +216,7 @@ void FMaterialInstance::commit(DriverApi& driver) const {
 
 void FMaterialInstance::setParameter(std::string_view const name,
         Handle<HwTexture> texture, SamplerParams const params) {
-    auto binding = mMaterial->getSamplerBinding(name);
+    auto const binding = mMaterial->getSamplerBinding(name);
     mDescriptorSet.setSampler(binding, texture, params);
 }
 
@@ -243,7 +243,7 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
     }
 #endif
 
-    auto binding = mMaterial->getSamplerBinding(name);
+    auto const binding = mMaterial->getSamplerBinding(name);
     if (texture && texture->textureHandleCanMutate()) {
         mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
     } else {
@@ -328,13 +328,13 @@ const char* FMaterialInstance::getName() const noexcept {
 void FMaterialInstance::use(FEngine::DriverApi& driver) const {
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
-        std::call_once(mMissingSamplersFlag, [this]() {
+        std::call_once(mMissingSamplersFlag, [this] {
             auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
             slog.w << "sampler parameters not set in MaterialInstance \""
                    << mName.c_str_safe() << "\" or Material \""
                    << mMaterial->getName().c_str_safe() << "\":\n";
             mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
-                auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+                auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                     return item.binding == binding;
                 });
                 // just safety-check, should never fail
@@ -368,7 +368,7 @@ void FMaterialInstance::fixMissingSamplers() const {
         // here we need to set the samplers that are missing
         auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
         missingSamplerDescriptors.forEachSetBit([this, &list](descriptor_binding_t binding) {
-            auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+            auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                 return item.binding == binding;
             });
 

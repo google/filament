@@ -61,6 +61,8 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
@@ -122,12 +124,11 @@ class ResourceAllocator;
  */
 class FEngine : public Engine {
 public:
-
-    inline void* operator new(std::size_t const size) noexcept {
+    void* operator new(std::size_t const size) noexcept {
         return utils::aligned_alloc(size, alignof(FEngine));
     }
 
-    inline void operator delete(void* p) noexcept {
+    void operator delete(void* p) noexcept {
         utils::aligned_free(p);
     }
 
@@ -490,7 +491,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
 
-    static constexpr const size_t MiB = 1024u * 1024u;
+    static constexpr size_t MiB = 1024u * 1024u;
     size_t getMinCommandBufferSize() const noexcept { return mConfig.minCommandBufferSizeMB * MiB; }
     size_t getCommandBufferSize() const noexcept { return mConfig.commandBufferSizeMB * MiB; }
     size_t getPerFrameCommandsSize() const noexcept { return mConfig.perFrameCommandsSizeMB * MiB; }
@@ -510,6 +511,8 @@ public:
     void resetBackendState() noexcept;
 #endif
 
+    backend::Driver& getDriver() const noexcept { return *mDriver; }
+
 private:
     explicit FEngine(Builder const& builder);
     void init();
@@ -517,8 +520,6 @@ private:
 
     int loop();
     void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue) const;
-
-    backend::Driver& getDriver() const noexcept { return *mDriver; }
 
     template<typename T>
     bool isValid(const T* ptr, ResourceList<T> const& list) const;

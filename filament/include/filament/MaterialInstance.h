@@ -121,7 +121,7 @@ public:
 
     /** inline helper to provide the name as a null-terminated string literal */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(StringLiteral name, T const& value) {
+    void setParameter(StringLiteral const name, T const& value) {
         setParameter<T>(name.data, name.size, value);
     }
 
@@ -148,14 +148,14 @@ public:
 
     /** inline helper to provide the name as a null-terminated string literal */
     template<typename T, typename = is_supported_parameter_t<T>>
-    void setParameter(StringLiteral name, const T* UTILS_NONNULL values, size_t count) {
+    void setParameter(StringLiteral const name, const T* UTILS_NONNULL values, size_t const count) {
         setParameter<T>(name.data, name.size, values, count);
     }
 
     /** inline helper to provide the name as a null-terminated C string */
     template<typename T, typename = is_supported_parameter_t<T>>
     void setParameter(const char* UTILS_NONNULL name,
-                      const T* UTILS_NONNULL values, size_t count) {
+                      const T* UTILS_NONNULL values, size_t const count) {
         setParameter<T>(name, strlen(name), values, count);
     }
 
@@ -176,7 +176,7 @@ public:
             Texture const* UTILS_NULLABLE texture, TextureSampler const& sampler);
 
     /** inline helper to provide the name as a null-terminated string literal */
-    void setParameter(StringLiteral name,
+    void setParameter(StringLiteral const name,
                       Texture const* UTILS_NULLABLE texture, TextureSampler const& sampler) {
         setParameter(name.data, name.size, texture, sampler);
     }
@@ -202,12 +202,12 @@ public:
             RgbType type, math::float3 color);
 
     /** inline helper to provide the name as a null-terminated string literal */
-    void setParameter(StringLiteral name, RgbType type, math::float3 color) {
+    void setParameter(StringLiteral const name, RgbType const type, math::float3 const color) {
         setParameter(name.data, name.size, type, color);
     }
 
     /** inline helper to provide the name as a null-terminated C string */
-    void setParameter(const char* UTILS_NONNULL name, RgbType type, math::float3 color) {
+    void setParameter(const char* UTILS_NONNULL name, RgbType const type, math::float3 const color) {
         setParameter(name, strlen(name), type, color);
     }
 
@@ -226,12 +226,12 @@ public:
             RgbaType type, math::float4 color);
 
     /** inline helper to provide the name as a null-terminated string literal */
-    void setParameter(StringLiteral name, RgbaType type, math::float4 color) {
+    void setParameter(StringLiteral const name, RgbaType const type, math::float4 const color) {
         setParameter(name.data, name.size, type, color);
     }
 
     /** inline helper to provide the name as a null-terminated C string */
-    void setParameter(const char* UTILS_NONNULL name, RgbaType type, math::float4 color) {
+    void setParameter(const char* UTILS_NONNULL name, RgbaType const type, math::float4 const color) {
         setParameter(name, strlen(name), type, color);
     }
 
@@ -251,7 +251,7 @@ public:
 
     /** inline helper to provide the name as a null-terminated C string */
     template<typename T, typename = is_supported_parameter_t<T>>
-    T getParameter(StringLiteral name) const {
+    T getParameter(StringLiteral const name) const {
         return getParameter<T>(name.data, name.size);
     }
 
@@ -377,9 +377,20 @@ public:
     void setCullingMode(CullingMode culling) noexcept;
 
     /**
+     * Overrides the default triangle culling state that was set on the material separately for the
+     * color and shadow passes
+     */
+    void setCullingMode(CullingMode colorPassCullingMode, CullingMode shadowPassCullingMode) noexcept;
+
+    /**
      * Returns the face culling mode.
      */
     CullingMode getCullingMode() const noexcept;
+
+    /**
+     * Returns the face culling mode for the shadow passes.
+     */
+    CullingMode getShadowCullingMode() const noexcept;
 
     /**
      * Overrides the default color-buffer write state that was set on the material.
