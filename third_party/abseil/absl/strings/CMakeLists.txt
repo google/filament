@@ -18,9 +18,9 @@ absl_cc_library(
   NAME
     string_view
   HDRS
-    "string_view.h"
+    string_view.h
   SRCS
-    "string_view.cc"
+    string_view.cc
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
@@ -42,6 +42,7 @@ absl_cc_library(
     "has_absl_stringify.h"
     "internal/damerau_levenshtein_distance.h"
     "internal/string_constant.h"
+    "internal/has_absl_stringify.h"
     "match.h"
     "numbers.h"
     "str_cat.h"
@@ -100,7 +101,7 @@ absl_cc_library(
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
-    absl::config
+    absl::core_headers
     absl::string_view
   PUBLIC
 )
@@ -371,7 +372,6 @@ absl_cc_test(
   DEPS
     absl::strings
     absl::str_format
-    absl::config
     absl::core_headers
     GTest::gmock_main
 )
@@ -705,7 +705,6 @@ absl_cc_library(
     absl::compressed_tuple
     absl::config
     absl::container_memory
-    absl::compare
     absl::core_headers
     absl::crc_cord_state
     absl::endian

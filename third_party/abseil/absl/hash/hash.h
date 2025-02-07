@@ -78,15 +78,11 @@
 #ifndef ABSL_HASH_HASH_H_
 #define ABSL_HASH_HASH_H_
 
-#include <cstddef>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
-#include "absl/base/config.h"
 #include "absl/functional/function_ref.h"
 #include "absl/hash/internal/hash.h"
-#include "absl/meta/type_traits.h"
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
@@ -323,12 +319,8 @@ class HashState : public hash_internal::HashStateBase<HashState> {
   // Create a new `HashState` instance that wraps `state`. All calls to
   // `combine()` and `combine_contiguous()` on the new instance will be
   // redirected to the original `state` object. The `state` object must outlive
-  // the `HashState` instance. `T` must be a subclass of `HashStateBase<T>` -
-  // users should not define their own HashState types.
-  template <
-      typename T,
-      absl::enable_if_t<
-          std::is_base_of<hash_internal::HashStateBase<T>, T>::value, int> = 0>
+  // the `HashState` instance.
+  template <typename T>
   static HashState Create(T* state) {
     HashState s;
     s.Init(state);
