@@ -1391,8 +1391,14 @@ class_<MaterialInstance>("MaterialInstance")
     .function("isDoubleSided", &MaterialInstance::isDoubleSided)
     .function("setTransparencyMode", &MaterialInstance::setTransparencyMode)
     .function("getTransparencyMode", &MaterialInstance::getTransparencyMode)
-    .function("setCullingMode", &MaterialInstance::setCullingMode)
+    .function("setCullingMode", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::CullingMode mode), {
+        self->setCullingMode(mode); }), allow_raw_pointers())
+    .function("setCullingModeSeparate", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::CullingMode color, MaterialInstance::CullingMode shadows), {
+        self->setCullingMode(color, shadows); }), allow_raw_pointers())
     .function("getCullingMode", &MaterialInstance::getCullingMode)
+    .function("getShadowCullingMode", &MaterialInstance::getShadowCullingMode)
     .function("setColorWrite", &MaterialInstance::setColorWrite)
     .function("isColorWriteEnabled", &MaterialInstance::isColorWriteEnabled)
     .function("setDepthWrite", &MaterialInstance::setDepthWrite)

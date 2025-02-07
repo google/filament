@@ -547,6 +547,11 @@ void FScene::removeEntities(const Entity* entities, size_t const count) {
 }
 
 UTILS_NOINLINE
+void FScene::removeAllEntities() noexcept {
+    mEntities.clear();
+}
+
+UTILS_NOINLINE
 size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();

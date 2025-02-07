@@ -205,17 +205,11 @@ void setup_window(Window& w, Engine* engine) {
     void* nativeSwapChain = nativeWindow;
 #if defined(__APPLE__)
     void* metalLayer = nullptr;
-    if (kBackend == filament::Engine::Backend::METAL) {
+    if (kBackend == filament::Engine::Backend::METAL || kBackend == filament::Engine::Backend::VULKAN) {
         metalLayer = setUpMetalLayer(nativeWindow);
-        // The swap chain on Metal is a CAMetalLayer.
+        // The swap chain on both native Metal and MoltenVK is a CAMetalLayer.
         nativeSwapChain = metalLayer;
     }
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    if (kBackend == filament::Engine::Backend::VULKAN) {
-        // We request a Metal layer for rendering via MoltenVK.
-        setUpMetalLayer(nativeWindow);
-    }
-#endif
 #endif
     w.swapChain = engine->createSwapChain(nativeSwapChain);
 
