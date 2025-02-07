@@ -547,7 +547,7 @@ void FScene::removeEntities(const Entity* entities, size_t const count) {
 }
 
 UTILS_NOINLINE
-void FScene::clearEntities() {
+void FScene::removeAllEntities() noexcept {
     mEntities.clear();
 }
 
