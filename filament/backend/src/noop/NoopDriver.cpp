@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 

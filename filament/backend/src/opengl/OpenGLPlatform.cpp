@@ -18,25 +18,51 @@
 
 #include "OpenGLDriverFactory.h"
 
+#include "platforms/OpenGLDriverBase.h"
+
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
-
+#include <utils/Panic.h>
+#include <utils/CString.h>
 #include <utils/Invocable.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "OpenGLDriver.h"
+
 namespace filament::backend {
 
+OpenGLDriverBase::~OpenGLDriverBase() = default;
+
 Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
-        void* sharedContext, const Platform::DriverConfig& driverConfig) {
+        void* sharedContext, const DriverConfig& driverConfig) {
     return OpenGLDriverFactory::create(platform, sharedContext, driverConfig);
 }
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
+
+utils::CString OpenGLPlatform::getVendorString(Driver const* driver) {
+    auto const p = static_cast<OpenGLDriverBase const*>(driver);
+#if UTILS_HAS_RTTI
+    FILAMENT_CHECK_POSTCONDITION(dynamic_cast<OpenGLDriverBase const*>(driver))
+            << "Driver* has not been allocated with OpenGLPlatform";
+#endif
+    return p->getVendorString();
+}
+
+utils::CString OpenGLPlatform::getRendererString(Driver const* driver) {
+    auto const p = static_cast<OpenGLDriverBase const*>(driver);
+#if UTILS_HAS_RTTI
+    FILAMENT_CHECK_POSTCONDITION(dynamic_cast<OpenGLDriverBase const*>(driver))
+            << "Driver* has not been allocated with OpenGLPlatform";
+#endif
+    return p->getRendererString();
+}
 
 void OpenGLPlatform::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
         utils::Invocable<void()>, utils::Invocable<void(size_t)>) noexcept {
