@@ -142,9 +142,9 @@ public:
     void removeEntities(const utils::Entity* UTILS_NONNULL entities, size_t count);
 
     /**
-     * Clear all entities to the Scene.
+     * Remove all entities to the Scene.
      */
-    void clearEntities();
+    void removeAllEntities() noexcept;
 
     /**
      * Returns the total number of Entities in the Scene, whether alive or not.

@@ -55,8 +55,8 @@ void Scene::removeEntities(const Entity* entities, size_t const count) {
     downcast(this)->removeEntities(entities, count);
 }
 
-void Scene::clearEntities() {
-    downcast(this)->clearEntities();
+void Scene::removeAllEntities() noexcept {
+    downcast(this)->removeAllEntities();
 }
 
 size_t Scene::getEntityCount() const noexcept {

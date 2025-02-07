@@ -199,7 +199,7 @@ private:
     void addEntities(const utils::Entity* entities, size_t count);
     void remove(utils::Entity entity);
     void removeEntities(const utils::Entity* entities, size_t count);
-    void clearEntities();
+    void removeAllEntities() noexcept;
     size_t getEntityCount() const noexcept { return mEntities.size(); }
     size_t getRenderableCount() const noexcept;
     size_t getLightCount() const noexcept;
