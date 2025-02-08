@@ -107,10 +107,12 @@ class FrameGraphSidePanel extends LitElement {
     dynamicStyle() {
         return `
             :host {
+                position: fixed;
                 background: ${this.connected ? BACKGROUND_COLOR : DARKER_INACTIVE_COLOR};
-                width: 100%;
+                width: 20%;
+                height: 100%;
                 max-width: 250px;
-                min-width: 180px;
+                min-width: 250px;
                 padding: 10px 20px;
                 overflow-y: auto;
             }
@@ -234,12 +236,14 @@ class FrameGraphTable extends LitElement {
             :host {
                 display: block;
                 flex-grow: 1;
+                width: 80%;
             }
             .table-container {
                 max-height: 100%;
                 max-width: 100%;
                 overflow: auto;
                 border: 1px solid #ddd;
+                margin-left: 300px;
             }
             .scrollable-table {
                 width: 100%;
@@ -257,15 +261,32 @@ class FrameGraphTable extends LitElement {
             .hidden {
                 display: none;
             }
-            
-            .scrollable-table th,
-            .scrollable-table td {
+            .scrollable-table td,
+            .scrollable-table th {
                 padding: 12px;
                 text-align: left;
                 border: 1px solid #ddd;
             }
+            .scrollable-table tr {
+                position: sticky;
+                padding: 12px;
+                text-align: left;
+                border: 1px solid #ddd;
+                left: 0;
+                z-index: 1;
+            }
+
+            .sticky-col {
+                position: sticky;
+                left: 0;
+                z-index: 1;
+            }
             th {
+                min-width: 100px;
                 background-color: #f2f2f2;
+                padding: 12px;
+                text-align: left;
+                border: 1px solid #ddd;
             }
         `;
     }
@@ -331,7 +352,7 @@ class FrameGraphTable extends LitElement {
                 <table class="scrollable-table">
                     <thead>
                     <tr>
-                        <th>Resources</th>
+                        <th class="sticky-col">Resources/Passes</th>
                         ${allPasses.map(pass => html`<th>${pass}</th>`)}
                     </tr>
                     </thead>
@@ -346,14 +367,14 @@ class FrameGraphTable extends LitElement {
                         );
                         return html`
                             <tr id="resource-${resourceIndex}">
-                                <td>
+                                <th class="sticky-col">
                                     ${hasSubresources ? html`
                                     <span
                                       class="toggle-icon"
                                       @click="${() => this._toggleCollapse(resourceIndex)}"
                                     >▶</span>` : nothing} 
                                     ${resource.name}
-                                </td>
+                                </th>
                                 ${allPasses.map((passName, index) => {
                                     const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
                                     const isRead = passData?.reads.includes(resource.id);
@@ -379,7 +400,7 @@ class FrameGraphTable extends LitElement {
                                     subresource.properties?.some(prop => prop.key === 'is_subresource' && Number(prop.value) == resource.id)
                             ).map((subresource, subIndex) => html`
                             <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
-                                <td style="background-color: lightgray;">${subresource.name}</td>
+                                <td class="sticky-col" style="background-color: lightgray;">${subresource.name}</td>
                                 ${allPasses.map((passName, index) => {
                                     const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
                                     const isRead = passData?.reads.includes(subresource.id);
