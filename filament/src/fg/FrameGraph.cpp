@@ -32,6 +32,7 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
@@ -41,6 +42,13 @@
 #include <functional>
 
 #include <stdint.h>
+
+namespace utils{
+template<>
+CString to_string<uint32_t>(uint32_t value) noexcept {
+    return utils::CString(std::to_string(value).data());
+}
+} // namespace utils
 
 namespace filament {
 
@@ -523,7 +531,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
         if (resource->getParentNode() != nullptr) {
             resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
                 .name = "is_subresource",
-                .value = "true"
+                .value = utils::to_string(resource->getParentNode()->getId())
             });
         }
         resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
