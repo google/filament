@@ -6,9 +6,10 @@ targets:
     hello-pbr:
         templates:
             - FilamentApp
-        settings:
-            base:
-                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage"]
+        dependencies:
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libfilameshio.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libmeshoptimizer.xcframework
+            - framework: $(SRCROOT)/../../../out/ios-release/filament/lib/libimage.xcframework
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources
