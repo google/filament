@@ -246,6 +246,18 @@ class FrameGraphTable extends LitElement {
                 height: 100%;
                 border-collapse: collapse;
             }
+            .collapsible {
+                background-color: #f9f9f9;
+            }
+            .toggle-icon {
+                cursor: pointer;
+                margin-right: 5px;
+                user-select: none;
+            }
+            .hidden {
+                display: none;
+            }
+            
             .scrollable-table th,
             .scrollable-table td {
                 padding: 12px;
@@ -257,7 +269,6 @@ class FrameGraphTable extends LitElement {
             }
         `;
     }
-
 
     static get properties() {
         return {
@@ -291,14 +302,23 @@ class FrameGraphTable extends LitElement {
         }
     }
 
-    _getCellColor(type) {
+    _getCellColor(type, defaultColor) {
         switch (type) {
             case 'read': return READ_COLOR;
             case 'write': return WRITE_COLOR;
             case 'no-access': return NO_ACCESS_COLOR;
             case 'read-write': return READ_WRITE_COLOR;
-            default: return DEFAULT_COLOR;
+            default: return defaultColor;
         }
+    }
+
+    _toggleCollapse(resourceIndex) {
+        console.log("toggle collapse for " + resourceIndex);
+        const subresourceRows = this.shadowRoot.querySelectorAll(`[id^="subresource-${resourceIndex}-"]`);
+        const icon = this.shadowRoot.querySelector(`#resource-${resourceIndex} .toggle-icon`);
+        const isHidden = subresourceRows[0]?.classList.contains('hidden');
+        subresourceRows.forEach(row => row.classList.toggle('hidden'));
+        icon.textContent = isHidden ? '▼' : '▶';
     }
 
     render() {
@@ -316,35 +336,73 @@ class FrameGraphTable extends LitElement {
                     </tr>
                     </thead>
                     <tbody>
-                    ${resources.map(resource => {
+                    ${resources.map((resource, resourceIndex) => {
                         const isSubresource = resource.properties?.some(prop => prop.key === 'is_subresource');
+                        const parentResourceId = resource.properties?.find(prop => prop.key === 'is_subresource')?.value;
+                        
+                        if (isSubresource) return nothing;
+                        const hasSubresources = resources.some(subresource =>
+                                subresource.properties?.some(prop => prop.key === 'is_subresource' && Number(prop.value) === resource.id)
+                        );
                         return html`
-                        <tr>
-                          <td style="background-color: ${unsafeCSS(isSubresource ? 'gray' : 'white')};">
-                            ${resource.name}
-                          </td>
-                          ${allPasses.map((passName, index) => {
-                            const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
-                            const isRead = passData?.reads.includes(resource.id);
-                            const isWrite = passData?.writes.includes(resource.id);
-                            let type = null;
-                            const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
-                                const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                                return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
-                            });
-                            const willBeUsedLater = allPasses.slice(index + 1).some(p => {
-                                const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                                return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
-                            });
+                            <tr id="resource-${resourceIndex}">
+                                <td>
+                                    ${hasSubresources ? html`
+                                    <span
+                                      class="toggle-icon"
+                                      @click="${() => this._toggleCollapse(resourceIndex)}"
+                                    >▶</span>` : nothing} 
+                                    ${resource.name}
+                                </td>
+                                ${allPasses.map((passName, index) => {
+                                    const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
+                                    const isRead = passData?.reads.includes(resource.id);
+                                    const isWrite = passData?.writes.includes(resource.id);
+                                    let type = null;
+                                    const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
+                                        const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                        return previousPassData?.reads.includes(resource.id) || previousPassData?.writes.includes(resource.id);
+                                    });
+                                    const willBeUsedLater = allPasses.slice(index + 1).some(p => {
+                                        const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                        return futurePassData?.reads.includes(resource.id) || futurePassData?.writes.includes(resource.id);
+                                    });
 
-                            if (isRead && isWrite) type = 'read-write';
-                            else if (isRead) type = 'read';
-                            else if (isWrite) type = 'write';
-                            else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
-                            return html`<td style="background-color: ${unsafeCSS(this._getCellColor(type))};">${type ?? nothing}</td>`;
-                        })}
-                        </tr>
-                      `;
+                                    if (isRead && isWrite) type = 'read-write';
+                                    else if (isRead) type = 'read';
+                                    else if (isWrite) type = 'write';
+                                    else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
+                                    return html`<td style="background-color: ${unsafeCSS(this._getCellColor(type, DEFAULT_COLOR))};">${type ?? nothing}</td>`;
+                                })}
+                            </tr>
+                            ${resources.filter(subresource =>
+                                    subresource.properties?.some(prop => prop.key === 'is_subresource' && Number(prop.value) == resource.id)
+                            ).map((subresource, subIndex) => html`
+                            <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
+                                <td style="background-color: lightgray;">${subresource.name}</td>
+                                ${allPasses.map((passName, index) => {
+                                    const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
+                                    const isRead = passData?.reads.includes(subresource.id);
+                                    const isWrite = passData?.writes.includes(subresource.id);
+                                    let type = null;
+                                    const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
+                                        const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                        return previousPassData?.reads.includes(subresource.id) || previousPassData?.writes.includes(subresource.id);
+                                    });
+                                    const willBeUsedLater = allPasses.slice(index + 1).some(p => {
+                                        const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
+                                        return futurePassData?.reads.includes(subresource.id) || futurePassData?.writes.includes(subresource.id);
+                                    });
+
+                                    if (isRead && isWrite) type = 'read-write';
+                                    else if (isRead) type = 'read';
+                                    else if (isWrite) type = 'write';
+                                    else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
+                                    return html`<td style="background-color: ${unsafeCSS(this._getCellColor(type, 'lightgray'))};">${type ?? nothing}</td>`;
+                                })}
+                            </tr>
+                          `)}
+                        `;
                     })}
                     </tbody>
                 </table>
