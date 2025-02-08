@@ -16,7 +16,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <unordered_set>
 
 #include "source/val/function.h"
 #include "source/val/validation_state.h"

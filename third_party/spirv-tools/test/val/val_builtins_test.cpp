@@ -4261,6 +4261,260 @@ INSTANTIATE_TEST_SUITE_P(
         Values(TestResult(SPV_ERROR_INVALID_DATA,
                           "needs to be a 3-component 32-bit float vector"))));
 
+std::string GenerateMeshShadingCode(const std::string& built_in,
+                                    const std::string& execution_mode,
+                                    const std::string& body,
+                                    const std::string& declarations = "") {
+  std::ostringstream ss;
+  ss << R"(
+OpCapability MeshShadingEXT
+OpExtension "SPV_EXT_mesh_shader"
+OpMemoryModel Logical GLSL450
+OpEntryPoint MeshEXT %main "main" %var
+OpExecutionMode %main LocalSize 1 1 1
+OpExecutionMode %main OutputVertices 1
+OpExecutionMode %main OutputPrimitivesEXT 16
+)";
+  ss << "OpExecutionMode %main " << execution_mode << "\n";
+  ss << "OpDecorate %var BuiltIn " << built_in << "\n";
+
+  ss << R"(
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%int = OpTypeInt 32 1
+%uint = OpTypeInt 32 0
+%v2uint = OpTypeVector %uint 2
+%v3uint = OpTypeVector %uint 3
+
+%int_0 = OpConstant %int 0
+%uint_16 = OpConstant %uint 16
+)";
+
+  ss << declarations;
+
+  ss << R"(
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+)";
+
+  ss << body;
+
+  ss << R"(
+OpReturn
+OpFunctionEnd)";
+  return ss.str();
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveTriangleIndicesEXTSuccess) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v3uint %uint_16
+%array_ptr = OpTypePointer Output %array
+%var = OpVariable %array_ptr Output
+%ptr = OpTypePointer Output %v3uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveTriangleIndicesEXT",
+                              "OutputTrianglesEXT", body, declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveTriangleIndicesEXTStorageClass) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v3uint %uint_16
+%array_ptr = OpTypePointer Input %array
+%var = OpVariable %array_ptr Input
+%ptr = OpTypePointer Input %v3uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveTriangleIndicesEXT",
+                              "OutputTrianglesEXT", body, declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-PrimitiveTriangleIndicesEXT-"
+                      "PrimitiveTriangleIndicesEXT-07055"));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveTriangleIndicesEXTVectorSize) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v2uint %uint_16
+%array_ptr = OpTypePointer Output %array
+%var = OpVariable %array_ptr Output
+%ptr = OpTypePointer Output %v2uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveTriangleIndicesEXT",
+                              "OutputTrianglesEXT", body, declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-PrimitiveTriangleIndicesEXT-"
+                      "PrimitiveTriangleIndicesEXT-07056"));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveTriangleIndicesEXTNonArray) {
+  const std::string declarations = R"(
+%ptr = OpTypePointer Output %v3uint
+%var = OpVariable %ptr Output
+)";
+  const std::string body = R"(
+%load = OpLoad %v3uint %var
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveTriangleIndicesEXT",
+                              "OutputTrianglesEXT", body, declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-PrimitiveTriangleIndicesEXT-"
+                      "PrimitiveTriangleIndicesEXT-07056"));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveLineIndicesEXTSuccess) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v2uint %uint_16
+%array_ptr = OpTypePointer Output %array
+%var = OpVariable %array_ptr Output
+%ptr = OpTypePointer Output %v2uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveLineIndicesEXT", "OutputLinesEXT", body,
+                              declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveLineIndicesEXTStorageClass) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v2uint %uint_16
+%array_ptr = OpTypePointer Input %array
+%var = OpVariable %array_ptr Input
+%ptr = OpTypePointer Input %v2uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveLineIndicesEXT", "OutputLinesEXT", body,
+                              declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      AnyVUID("VUID-PrimitiveLineIndicesEXT-PrimitiveLineIndicesEXT-07049"));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitiveLineIndicesEXTType) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v3uint %uint_16
+%array_ptr = OpTypePointer Input %array
+%var = OpVariable %array_ptr Input
+%ptr = OpTypePointer Input %v3uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitiveLineIndicesEXT", "OutputLinesEXT", body,
+                              declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      AnyVUID("VUID-PrimitiveLineIndicesEXT-PrimitiveLineIndicesEXT-07050"));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitivePointIndicesEXTSuccess) {
+  const std::string declarations = R"(
+%array = OpTypeArray %uint %uint_16
+%array_ptr = OpTypePointer Output %array
+%var = OpVariable %array_ptr Output
+%ptr = OpTypePointer Output %uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitivePointIndicesEXT", "OutputPoints", body,
+                              declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitivePointIndicesEXTStorageClass) {
+  const std::string declarations = R"(
+%array = OpTypeArray %uint %uint_16
+%array_ptr = OpTypePointer Input %array
+%var = OpVariable %array_ptr Input
+%ptr = OpTypePointer Input %uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitivePointIndicesEXT", "OutputPoints", body,
+                              declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      AnyVUID("VUID-PrimitivePointIndicesEXT-PrimitivePointIndicesEXT-07043"));
+}
+
+TEST_F(ValidateBuiltIns, VulkanPrimitivePointIndicesEXTType) {
+  const std::string declarations = R"(
+%array = OpTypeArray %v3uint %uint_16
+%array_ptr = OpTypePointer Output %array
+%var = OpVariable %array_ptr Output
+%ptr = OpTypePointer Output %v3uint
+)";
+  const std::string body = R"(
+%access = OpAccessChain %ptr %var %int_0
+)";
+
+  CompileSuccessfully(
+      GenerateMeshShadingCode("PrimitivePointIndicesEXT", "OutputPoints", body,
+                              declarations)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      AnyVUID("VUID-PrimitivePointIndicesEXT-PrimitivePointIndicesEXT-07044"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

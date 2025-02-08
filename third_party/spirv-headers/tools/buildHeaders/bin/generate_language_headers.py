@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2017-2020 Google LLC
+# Copyright (c) 2017-2024 Google LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and/or associated documentation files (the
@@ -32,7 +32,7 @@ import json
 import os.path
 import re
 
-DEFAULT_COPYRIGHT="""Copyright (c) 2020 The Khronos Group Inc.
+DEFAULT_COPYRIGHT="""Copyright (c) 2020-2024 The Khronos Group Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and/or associated documentation files (the
