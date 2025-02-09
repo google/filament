@@ -35,7 +35,6 @@ enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
 
 enum_<View::TemporalAntiAliasingOptions::BoxType>("View$TemporalAntiAliasingOptions$BoxType")
     .value("AABB", View::TemporalAntiAliasingOptions::BoxType::AABB)
-    .value("VARIANCE", View::TemporalAntiAliasingOptions::BoxType::VARIANCE)
     .value("AABB_VARIANCE", View::TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE)
     ;
 

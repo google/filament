@@ -447,7 +447,6 @@ struct TemporalAntiAliasingOptions {
 
     enum class BoxType : uint8_t {
         AABB,           //!< use an AABB neighborhood
-        VARIANCE,       //!< use the variance of the neighborhood (not recommended)
         AABB_VARIANCE   //!< use both AABB and variance
     };
 

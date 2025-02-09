@@ -653,7 +653,6 @@ std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::BoxType* out) {
     if (0 == compare(tokens[i], jsonChunk, "AABB")) { *out = TemporalAntiAliasingOptions::BoxType::AABB; }
-    else if (0 == compare(tokens[i], jsonChunk, "VARIANCE")) { *out = TemporalAntiAliasingOptions::BoxType::VARIANCE; }
     else if (0 == compare(tokens[i], jsonChunk, "AABB_VARIANCE")) { *out = TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE; }
     else {
         slog.w << "Invalid TemporalAntiAliasingOptions::BoxType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
@@ -664,7 +663,6 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
 std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxType in) {
     switch (in) {
         case TemporalAntiAliasingOptions::BoxType::AABB: return out << "\"AABB\"";
-        case TemporalAntiAliasingOptions::BoxType::VARIANCE: return out << "\"VARIANCE\"";
         case TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE: return out << "\"AABB_VARIANCE\"";
     }
     return out << "\"INVALID\"";

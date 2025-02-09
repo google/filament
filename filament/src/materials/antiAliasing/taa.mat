@@ -100,10 +100,8 @@ fragment {
 
 // min/max neighborhood
 #define BOX_TYPE_AABB           0
-// Variance based neighborhood
-#define BOX_TYPE_VARIANCE       1
 // uses both min/max and variance
-#define BOX_TYPE_AABB_VARIANCE  2
+#define BOX_TYPE_AABB_VARIANCE  1
 
 /* Clipping algorithm */
 
@@ -175,12 +173,15 @@ vec4 clipToBox(const int quality,
     const float epsilon = 0.0001;
 
     if (quality == BOX_CLIPPING_ACCURATE) {
-        vec4 r = c - h;
-        vec3 ir = 1.0 / (epsilon + r.rgb);
-        vec3 rmax = (boxmax - h.rgb) * ir;
-        vec3 rmin = (boxmin - h.rgb) * ir;
-        vec3 imin = min(rmax, rmin);
-        return h + r * saturate(max3(imin));
+        // don't clip if we're already in the box
+        if (any(lessThan(h.rgb, boxmin)) || any(greaterThan(h.rgb, boxmax))) {
+            vec4 r = c - h;
+            vec3 ir = 1.0 / (epsilon + r.rgb);
+            vec3 rmax = (boxmax - h.rgb) * ir;
+            vec3 rmin = (boxmin - h.rgb) * ir;
+            vec3 imin = min(rmax, rmin);
+            return h + r * saturate(max3(imin));
+        }
     } else if (quality == BOX_CLIPPING_CLAMP) {
         return vec4(clamp(h.rgb, boxmin, boxmax), h.a);
     }
@@ -347,8 +348,7 @@ void postProcess(inout PostProcessInputs postProcess) {
             boxmax = (boxmax + box9max) * 0.5;
         }
 
-        if (materialConstants_boxType == BOX_TYPE_VARIANCE ||
-                materialConstants_boxType == BOX_TYPE_AABB_VARIANCE) {
+        if (materialConstants_boxType == BOX_TYPE_AABB_VARIANCE) {
             // "An Excursion in Temporal Supersampling" by Marco Salvi
             highp vec3 m0 = s[4];// conversion to highp
             highp vec3 m1 = m0 * m0;
@@ -360,15 +360,12 @@ void postProcess(inout PostProcessInputs postProcess) {
             }
             highp vec3 a0 = m0 * (1.0 / 5.0);
             highp vec3 a1 = m1 * (1.0 / 5.0);
-            highp vec3 sigma = sqrt(a1 - a0 * a0);
-            if (materialConstants_boxType == BOX_TYPE_VARIANCE) {
-                boxmin = a0 - materialConstants_varianceGamma * sigma;
-                boxmax = a0 + materialConstants_varianceGamma * sigma;
-            } else {
-                // intersect both bounding boxes
-                boxmin = max(boxmin, a0 - materialConstants_varianceGamma * sigma);
-                boxmax = min(boxmax, a0 + materialConstants_varianceGamma * sigma);
-            }
+            // stdDev is never < 0, but we enforce it with abs(), which is free, to account for fp math
+            highp vec3 stdDev = sqrt(abs(a1 - a0 * a0));
+
+            // intersect both bounding boxes
+            boxmin = max(boxmin, a0 - materialConstants_varianceGamma * stdDev);
+            boxmax = min(boxmax, a0 + materialConstants_varianceGamma * stdDev);
         }
         // history clamping
         history = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
@@ -391,7 +388,7 @@ void postProcess(inout PostProcessInputs postProcess) {
         }
     }
 
-    // tonemap before mixing
+    // tonemap before mixing (TODO: we could make this optional for SDR inputs)
     filtered.rgb = tonemap(filtered.rgb);
     history.rgb = tonemap(history.rgb);
 
