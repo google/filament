@@ -320,9 +320,9 @@ float2 FView::updateScale(FEngine& engine,
         // relative scaling ("velocity" control)
         const float scale = mScale.x * mScale.y * command;
 
-        const float w = float(mViewport.width);
-        const float h = float(mViewport.height);
         if (scale < 1.0f && !options.homogeneousScaling) {
+            const float w = float(mViewport.width);
+            const float h = float(mViewport.height);
             // figure out the major and minor axis
             const float major = std::max(w, h);
             const float minor = std::min(w, h);
@@ -351,7 +351,7 @@ float2 FView::updateScale(FEngine& engine,
         const auto s = mScale;
         mScale = clamp(s, options.minScale, options.maxScale);
 
-        // disable the integration term when we're outside the controllable range
+        // Disable the integration term when we're outside the controllable range
         // (i.e. we clamped). This help not to have to wait too long for the Integral term
         // to kick in after a clamping event.
         mPidController.setIntegralInhibitionEnabled(mScale != s);
