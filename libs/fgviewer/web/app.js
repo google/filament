@@ -192,8 +192,8 @@ class FrameGraphSidePanel extends LitElement {
         }
     }
 
-    _handleFrameGraphClick(fgid, ev) {
-        this.dispatchEvent(new CustomEvent('select-framegraph', {detail: fgid, bubbles: true, composed: true}));
+    _handleFrameGraphClick(ev) {
+        this.dispatchEvent(new CustomEvent('select-framegraph', {detail: ev, bubbles: true, composed: true}));
     }
 
     render() {
@@ -478,11 +478,11 @@ class FrameGraphViewer extends LitElement {
         return html`
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
-                ?current-framegraph="${this.currentFrameGraph}" >
+                current-framegraph="${this.currentFrameGraph}" >
             </framegraph-sidepanel>
             <framegraph-table id="table" 
                 ?connected="${this.connected}"
-                ?current-framegraph="${this.currentFrameGraph}"
+                current-framegraph="${this.currentFrameGraph}"
             </framegraph-table>
         `;
     }
