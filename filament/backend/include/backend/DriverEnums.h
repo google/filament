@@ -144,7 +144,8 @@ enum class Backend : uint8_t {
     OPENGL = 1,   //!< Selects the OpenGL/ES driver (default on Android)
     VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it (default on Linux/Windows)
     METAL = 3,    //!< Selects the Metal driver if the platform supports it (default on MacOS/iOS).
-    NOOP = 4,     //!< Selects the no-op driver for testing purposes.
+    WEBGPU = 4,   //!< Selects the Webgpu driver if the platform supports webgpu.
+    NOOP = 5,     //!< Selects the no-op driver for testing purposes.
 };
 
 enum class TimerQueryResult : int8_t {
@@ -163,6 +164,8 @@ static constexpr const char* backendToString(Backend backend) {
             return "Vulkan";
         case Backend::METAL:
             return "Metal";
+        case Backend::WEBGPU:
+            return "WebGPU";
         default:
             return "Unknown";
     }
