@@ -620,9 +620,6 @@ struct VulkanPlatformPrivate {
     uint32_t mProtectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t mProtectedGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
-    bool mDebugMarkersSupported = false;
-    bool mDebugUtilsSupported = false;
-    bool mMultiviewSupported = false;
     VulkanContext mContext = {};
 
     // We use a map to both map a handle (i.e. SwapChainPtr) to the concrete type and also to
@@ -657,6 +654,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Load Vulkan entry points.
     FILAMENT_CHECK_POSTCONDITION(bluevk::initialize()) << "BlueVK is unable to load entry points.";
 
+    VulkanContext context;
+
     if (sharedContext) {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         // All fields of VulkanSharedContext should be present.
@@ -676,14 +675,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mDevice = scontext->logicalDevice;
         mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
         mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
-        mImpl->mDebugMarkersSupported = scontext->debugUtilsSupported;
-        mImpl->mDebugUtilsSupported = scontext->debugMarkersSupported;
-        mImpl->mMultiviewSupported = scontext->multiviewSupported;
+        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
+        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+        context.mMultiviewEnabled = scontext->multiviewSupported;
 
         mImpl->mSharedContext = true;
     }
-
-    VulkanContext context;
 
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
@@ -829,10 +826,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
-    } else {
-        context.mDebugUtilsSupported = mImpl->mDebugUtilsSupported;
-        context.mDebugMarkersSupported = mImpl->mDebugMarkersSupported;
-        context.mMultiviewEnabled = mImpl->mMultiviewSupported;
     }
 
     // Check the availability of lazily allocated memory

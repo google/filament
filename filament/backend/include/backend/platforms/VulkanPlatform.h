@@ -71,7 +71,7 @@ public:
         // where the gpu only has one graphics queue. Then the client needs to ensure that no
         // concurrent access can occur.
         uint32_t graphicsQueueIndex = 0xFFFFFFFF;
-                bool debugUtilsSupported = false;
+        bool debugUtilsSupported = false;
         bool debugMarkersSupported = false;
         bool multiviewSupported = false;
     };
