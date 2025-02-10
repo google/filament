@@ -14,7 +14,7 @@
 * limitations under the License.
 */
 
-// api.js encapsulates all of the REST endpoints that the server provides
+// api.js encapsulates all the REST endpoints that the server provides
 
 async function _fetchJson(uri) {
     const response = await fetch(uri);
