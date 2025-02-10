@@ -25,6 +25,7 @@
 
 #include <utils/Log.h>
 
+#include <algorithm>
 #include <sstream>
 
 #include <GlslangToSpv.h>
@@ -50,9 +51,29 @@ using namespace glslang;
 using namespace utils;
 
 using std::ostream;
-using std::stringstream;
 using std::streampos;
+using std::stringstream;
 using std::vector;
+
+
+namespace {
+
+// This is to ensure that the edited material package have the same order of shaders as the output
+// of the original material. We use the ordering in the front-end to simplify logic.
+template<typename RecordType>
+void sortRecords(std::vector<RecordType>& records) {
+    std::sort(records.begin(), records.end(), [](RecordType const& a, RecordType const& b) -> bool {
+        if (a.shaderModel != b.shaderModel) {
+            return a.shaderModel < b.shaderModel;
+        }
+        if (a.variant.key != b.variant.key) {
+            return a.variant.key < b.variant.key;
+        }
+        return a.stage < b.stage;
+    });
+}
+
+} // anonymous
 
 // Tiny database of shader text that can import / export MaterialTextChunk and DictionaryTextChunk.
 class ShaderIndex {
@@ -344,6 +365,7 @@ void ShaderIndex::writeChunks(ostream& stream) {
     for (const auto& record : mShaderRecords) {
         lines.addText(record.shader);
     }
+    sortRecords(mShaderRecords);
 
     filamat::ChunkContainer cc;
     const auto& dchunk = cc.push<DictionaryTextChunk>(std::move(lines), mDictTag);
@@ -405,6 +427,8 @@ void BlobIndex::writeChunks(ostream& stream) {
             f.writeUint8(0);
         }
     };
+
+    sortRecords(mShaderRecords);
 
     // Apply SMOL-V compression and write out the results.
     filamat::ChunkContainer cc;

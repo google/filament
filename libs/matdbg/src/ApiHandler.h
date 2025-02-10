@@ -55,6 +55,8 @@ private:
     bool handleGetStatus(struct mg_connection* conn, struct mg_request_info const* request);
     MaterialRecord const* getMaterialRecord(struct mg_request_info const* request);
 
+    void updateMaterial(uint32_t key);
+
     DebugServer* mServer;
 
     std::mutex mStatusMutex;
@@ -64,7 +66,7 @@ private:
     // This variable is to implement a *hanging* effect for /api/status. The call to /api/status
     // will always block until statusMaterialId is updated again. The client is expected to keep
     // calling /api/status (a constant "pull" to simulate a push).
-    std::atomic<uint64_t> mCurrentStatus = 0;
+    uint64_t mCurrentStatus = 0;
 
     SourceFormatter mFormatter;
 };
