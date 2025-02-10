@@ -828,6 +828,8 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
         case TargetApi::METAL:
             targetApiString = "Metal.\n";
             break;
+        case TargetApi::WEBGPU:
+            targetApiString = "WebGPU.\n";
         case TargetApi::ALL:
             assert(0); // Unreachable.
             break;
@@ -1025,6 +1027,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
 
                 switch (targetApi) {
+                    // TODO: Handle webgpu here
+                    case TargetApi::WEBGPU:
                     case TargetApi::ALL:
                         // should never happen
                         break;
