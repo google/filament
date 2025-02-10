@@ -236,6 +236,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
     endif()
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    file(GLOB_RECURSE WEBGPU_SOURCES RELATIVE ${PROJECT_SOURCE_DIR} "src/webgpu/*.cpp" "src/webgpu/*.h")
+    list(APPEND SRCS ${WEBGPU_SOURCES})
+endif()
+
 # ==================================================================================================
 # Definitions
 # ==================================================================================================
@@ -338,6 +343,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_link_libraries(${TARGET} PRIVATE webgpu_dawn dawncpp_headers)
+endif()
+
 if (FILAMENT_SUPPORTS_METAL)
     target_link_libraries(${TARGET} PUBLIC "-framework Metal -framework CoreVideo")
 endif()
@@ -424,6 +433,10 @@ set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(TARGETS vkshaders ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    install(TARGETS webgpu_dawn ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
+endif()
 
 # ==================================================================================================
 # Test

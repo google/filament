@@ -662,6 +662,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
 #endif
 
+        // Should we add DAWN here or separate path for Dawn?
         if (backend == Engine::Backend::VULKAN) {
             #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
                 mFilamentApp->mVulkanPlatform =
@@ -886,6 +887,7 @@ void FilamentApp::Window::resize() {
     }
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    // add DAWN??
     if (mBackend == filament::Engine::Backend::VULKAN) {
         resizeMetalLayer(nativeWindow);
     }

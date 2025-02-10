@@ -219,6 +219,7 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     };
 
     MaterialBuilder::TargetApi const targetApi = targetApiFromBackend(mBackend);
+    // Add DAWN
     assert_invariant(targetApi == MaterialBuilder::TargetApi::VULKAN);
 
     // Unfortunately we need to use std::vector to interface with glslang.
