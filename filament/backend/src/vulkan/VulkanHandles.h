@@ -218,12 +218,6 @@ struct VulkanProgram : public HwProgram, fvkmemory::Resource {
         mInfo->pushConstantDescription.write(cmdbuf, layout, stage, index, value);
     }
 
-#if FVK_ENABLED_DEBUG_SAMPLER_NAME
-    inline utils::FixedCapacityVector<std::string> const& getBindingToName() const {
-        return mInfo->bindingToName;
-    }
-#endif
-
     // TODO: handle compute shaders.
     // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
     static constexpr uint8_t const MAX_SHADER_MODULES = 2;
