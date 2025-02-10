@@ -192,7 +192,8 @@ public class MaterialBuilder {
         OPENGL      (0x1),
         VULKAN      (0x2),
         METAL       (0x4),
-        ALL         (0x7);
+        WEBGPU      (0x8),
+        ALL         (0x15);
 
         final int number;
 

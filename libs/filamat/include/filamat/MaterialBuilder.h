@@ -80,7 +80,8 @@ public:
         OPENGL      = 0x01u,
         VULKAN      = 0x02u,
         METAL       = 0x04u,
-        ALL         = OPENGL | VULKAN | METAL
+        WEBGPU        = 0x08u,
+        ALL         = OPENGL | VULKAN | METAL | WEBGPU
     };
 
     /*
@@ -163,6 +164,7 @@ inline constexpr MaterialBuilderBase::TargetApi targetApiFromBackend(
         case Backend::OPENGL:  return TargetApi::OPENGL;
         case Backend::VULKAN:  return TargetApi::VULKAN;
         case Backend::METAL:   return TargetApi::METAL;
+        case Backend::WEBGPU:    return TargetApi::WEBGPU;
         case Backend::NOOP:    return TargetApi::OPENGL;
     }
 }

@@ -629,6 +629,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             .textureDimension    = uint16_t(options.mapSize),
             .shadowDimension     = uint16_t(options.mapSize - 2u),
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                //    engine.getBackend() == Backend::DAWN ||
                                    engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
@@ -806,6 +807,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
             .textureDimension    = uint16_t(options->mapSize),
             .shadowDimension     = uint16_t(options->mapSize - 2u),
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                //    engine.getBackend() == Backend::DAWN ||
                                    engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
@@ -898,6 +900,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
             .textureDimension    = uint16_t(options->mapSize),
             .shadowDimension     = uint16_t(options->mapSize), // point-lights don't have a border
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                //    engine.getBackend() == Backend::DAWN ||
                                    engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
