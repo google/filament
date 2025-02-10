@@ -2648,6 +2648,7 @@ void PostProcessManager::TaaJitterCamera(
     float2 jitter = current.jitter;
     switch (mEngine.getBackend()) {
         case Backend::VULKAN:
+        // case Backend::DAWN:
         case Backend::METAL:
             jitter.y = -jitter.y;
             UTILS_FALLTHROUGH;

@@ -236,6 +236,15 @@ if (FILAMENT_SUPPORTS_VULKAN)
     endif()
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    list(APPEND SRCS
+            src/dawn/DawnDriver.cpp
+            src/dawn/DawnDriver.h
+            src/dawn/DawnPlatform.cpp
+            src/dawn/DawnPlatform.h
+    )
+endif()
+
 # ==================================================================================================
 # Definitions
 # ==================================================================================================
@@ -252,6 +261,17 @@ include_directories(${GENERATION_ROOT})
 
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+get_target_property(DAWN_GENERATED_HEADERS dawncpp_headers SOURCES)
+message(STATUS "IDRIS: DAW_INCLUDE_DIR ${DAWN_GENERATED_HEADERS}")
+list(GET DAWN_GENERATED_HEADERS 2 DAWN_FIRST_GENERATED_HEADER)
+get_filename_component(DAWN_GENERATED_HEADERS_DIR ${DAWN_FIRST_GENERATED_HEADER} DIRECTORY)
+get_filename_component(DAWN_GENERATED_HEADERS_DIR_REDUCED ${DAWN_GENERATED_HEADERS_DIR}/.. ABSOLUTE)
+message(STATUS "DAWN_GENERATED_HEADERS_DIR_REDUCED: ${DAWN_GENERATED_HEADERS_DIR_REDUCED}")
+message(STATUS "DAWN_GENERATED_HEADERS_DIR: ${DAWN_GENERATED_HEADERS_DIR}")
+target_include_directories(${TARGET} PUBLIC ${DAWN_GENERATED_HEADERS_DIR_REDUCED} ${DAWN_INCLUDE_STATIC})
+endif()
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
@@ -336,6 +356,10 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
     target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
+endif()
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    target_link_libraries(${TARGET} PUBLIC webgpu_dawn)
 endif()
 
 if (FILAMENT_SUPPORTS_METAL)
@@ -424,6 +448,10 @@ set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(TARGETS vkshaders ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    install(TARGETS webgpu_dawn LIBRARY DESTINATION lib/${DIST_DIR})
+endif()
 
 # ==================================================================================================
 # Test

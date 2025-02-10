@@ -65,6 +65,9 @@ filament::backend::Platform* createDefaultMetalPlatform();
 #endif
 
 #include "noop/PlatformNoop.h"
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+    #include "dawn/DawnPlatform.h"
+#endif
 
 namespace filament::backend {
 
@@ -102,6 +105,13 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             return new VulkanPlatform();
+        #else
+            return nullptr;
+        #endif
+    }
+    if (*backend == Backend::DAWN) {
+        #if defined(FILAMENT_SUPPORTS_WEBGPU)
+            return new DawnPlatform();
         #else
             return nullptr;
         #endif
