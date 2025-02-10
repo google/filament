@@ -298,13 +298,13 @@ private:
 
     void setStencilState(StencilState ss) noexcept;
 
-    void setTextureData(GLTexture* t,
+    void setTextureData(GLTexture const* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& p);
 
-    void setCompressedTextureData(GLTexture* t,
+    void setCompressedTextureData(GLTexture const* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
@@ -347,7 +347,7 @@ private:
     struct {
         DescriptorSetHandle dsh;
         std::array<uint32_t, CONFIG_UNIFORM_BINDING_COUNT> offsets;
-    } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT];
+    } mBoundDescriptorSets[MAX_DESCRIPTOR_SET_COUNT] = {};
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;
