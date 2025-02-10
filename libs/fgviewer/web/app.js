@@ -410,11 +410,11 @@ class FrameGraphViewer extends LitElement {
         `;
     }
 
-    get _sidepanel() {
+    get _sidePanel() {
         return this.renderRoot.querySelector('#sidepanel');
     }
 
-    get _framegraph_table() {
+    get _framegraphTable() {
         return this.renderRoot.querySelector('#table');
     }
 
@@ -428,7 +428,7 @@ class FrameGraphViewer extends LitElement {
                     if(status == STATUS_FRAMEGRAPH_UPDATED){
                         let fgInfo = await fetchFrameGraph(fgid);
                         this.database[fgInfo.fgid] = fgInfo;
-                        this._framegraph_table.frameGraphData = fgInfo;
+                        this._framegraphTable.frameGraphData = fgInfo;
                     }
                 }
         );
@@ -467,9 +467,9 @@ class FrameGraphViewer extends LitElement {
 
     updated(props){
         if (props.has('currentFrameGraph') || props.has('database')) {
-            const framegraph = this.database[this.currentFrameGraph];
-            this._framegraph_table.frameGraphData = framegraph;
-            this._sidepanel.database = this.database;
+            const framegraph = this._getFrameGraph();
+            this._framegraphTable.frameGraphData = framegraph;
+            this._sidePanel.database = this.database;
         }
     }
 
