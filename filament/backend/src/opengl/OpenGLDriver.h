@@ -19,14 +19,13 @@
 
 #include "DriverBase.h"
 #include "OpenGLContext.h"
+#include "OpenGLDriverBase.h"
 #include "OpenGLTimerQuery.h"
 #include "GLBufferObject.h"
 #include "GLDescriptorSet.h"
 #include "GLDescriptorSetLayout.h"
 #include "GLTexture.h"
 #include "ShaderCompilerService.h"
-
-#include "platforms/OpenGLDriverBase.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
