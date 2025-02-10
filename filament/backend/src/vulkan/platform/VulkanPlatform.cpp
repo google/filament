@@ -18,6 +18,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include "vulkan/VulkanContext.h"
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriver.h"
@@ -654,8 +655,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Load Vulkan entry points.
     FILAMENT_CHECK_POSTCONDITION(bluevk::initialize()) << "BlueVK is unable to load entry points.";
 
-    VulkanContext context;
-
     if (sharedContext) {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         // All fields of VulkanSharedContext should be present.
@@ -675,11 +674,17 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mDevice = scontext->logicalDevice;
         mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
         mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
+
+        mImpl->mSharedContext = true;
+    }
+
+    VulkanContext context;
+    // Set the supported extensions in the vulkan context based on the shared context.
+    if (sharedContext) {
+        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
         context.mDebugUtilsSupported = scontext->debugUtilsSupported;
         context.mDebugMarkersSupported = scontext->debugMarkersSupported;
         context.mMultiviewEnabled = scontext->multiviewSupported;
-
-        mImpl->mSharedContext = true;
     }
 
     ExtensionSet instExts;
