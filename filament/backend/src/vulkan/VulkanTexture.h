@@ -20,9 +20,9 @@
 #include "DriverBase.h"
 
 #include "VulkanBuffer.h"
-#include "VulkanImageUtility.h"
 #include "vulkan/memory/Resource.h"
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/Image.h"
 
 #include <utils/Hash.h>
 #include <utils/RangeMap.h>

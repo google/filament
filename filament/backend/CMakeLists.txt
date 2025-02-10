@@ -185,8 +185,15 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
-            src/vulkan/spirv/VulkanSpirvUtils.cpp
-            src/vulkan/spirv/VulkanSpirvUtils.h
+            src/vulkan/utils/Conversion.cpp
+            src/vulkan/utils/Conversion.h
+            src/vulkan/utils/Definitions.h
+            src/vulkan/utils/Helper.h
+            src/vulkan/utils/Image.h
+            src/vulkan/utils/Image.cpp
+            src/vulkan/utils/Spirv.h
+            src/vulkan/utils/Spirv.cpp
+            src/vulkan/utils/StaticVector.h
             src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
@@ -205,8 +212,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
-            src/vulkan/VulkanImageUtility.cpp
-            src/vulkan/VulkanImageUtility.h
             src/vulkan/VulkanMemory.h
             src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPipelineCache.cpp
@@ -221,8 +226,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
-            src/vulkan/VulkanUtility.cpp
-            src/vulkan/VulkanUtility.h
     )
     if (LINUX OR WIN32)
         list(APPEND SRCS src/vulkan/platform/VulkanPlatformLinuxWindows.cpp)

@@ -83,8 +83,8 @@ vertex {
 
 fragment {
 
-#include "../../../../shaders/src/dithering.fs"
-#include "../../../../shaders/src/vignette.fs"
+#include "../../../../shaders/src/inline_dithering.fs"
+#include "../../../../shaders/src/inline_vignette.fs"
 #include "colorGrading.fs"
 
 void dummy(){}

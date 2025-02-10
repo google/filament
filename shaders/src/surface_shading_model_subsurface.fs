@@ -1,6 +1,6 @@
 /**
  * Evalutes lit materials with the subsurface shading model. This model is a
- * combination of a BRDF (the same used in shading_model_standard.fs, refer to that
+ * combination of a BRDF (the same used in surface_shading_model_standard.fs, refer to that
  * file for more information) and of an approximated BTDF to simulate subsurface
  * scattering. The BTDF itself is not physically based and does not represent a
  * correct interpretation of transmission events.

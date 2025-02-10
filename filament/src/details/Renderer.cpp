@@ -781,7 +781,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         cameraInfo.projection = highPrecisionMultiply(ts, cameraInfo.projection);
 
         // VERTEX_DOMAIN_DEVICE doesn't apply the projection, but it still needs this
-        // clip transform, so we apply it separately (see main.vs)
+        // clip transform, so we apply it separately (see surface_main.vs)
         cameraInfo.clipTransform = { ts[0][0], ts[1][1], ts[3].x, ts[3].y };
 
         // adjust svp to the new, larger, rendering dimensions
@@ -1442,6 +1442,13 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     fg.present(fgViewRenderTarget);
 
     fg.compile();
+
+#if FILAMENT_ENABLE_FGVIEWER
+    fgviewer::DebugServer* fgviewerServer = engine.debug.fgviewerServer;
+    if (UTILS_LIKELY(fgviewerServer)) {
+        fgviewerServer->update(view.getViewHandle(), fg.getFrameGraphInfo(view.getName()));
+    }
+#endif
 
     //fg.export_graphviz(slog.d, view.getName());
 

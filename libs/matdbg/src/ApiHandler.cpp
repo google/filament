@@ -86,6 +86,8 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
     }
 
     std::string_view const glsl("glsl");
+    std::string_view const essl3("essl3");
+    std::string_view const essl1("essl1");
     std::string_view const msl("msl");
     std::string_view const spirv("spirv");
     size_t const qlength = strlen(request->query_string);
@@ -109,12 +111,20 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
     }
 
     if (glindex[0]) {
-        if (language != glsl) {
-            return softError("Only GLSL is supported.");
+        ChunkType chunkType;
+        ShaderLanguage shaderLanguage;
+        if (language == essl3) {
+            chunkType = ChunkType::MaterialGlsl;
+            shaderLanguage = ShaderLanguage::ESSL3;
+        } else if (language == essl1) {
+            chunkType = ChunkType::MaterialEssl1;
+            shaderLanguage = ShaderLanguage::ESSL1;
+        } else {
+            return softError("Only essl3 and essl1 are supported.");
         }
 
-        FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialGlsl));
-        if (!getShaderInfo(package, info.data(), ChunkType::MaterialGlsl)) {
+        FixedCapacityVector<ShaderInfo> info(getShaderCount(package, chunkType));
+        if (!getShaderInfo(package, info.data(), chunkType)) {
             return error(__LINE__, uri);
         }
 
@@ -123,7 +133,7 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
             return error(__LINE__, uri);
         }
 
-        ShaderExtractor extractor(ShaderLanguage::ESSL3, result->package, result->packageSize);
+        ShaderExtractor extractor(shaderLanguage, result->package, result->packageSize);
         if (!extractor.parse()) {
             return error(__LINE__, uri);
         }
@@ -314,7 +324,7 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
                 return error(__LINE__, uri);
             }
             JsonWriter writer;
-            if (!writer.writeActiveInfo(package, mServer->mBackend, record.activeVariants)) {
+            if (!writer.writeActiveInfo(package, mServer->mShaderLanguage, record.activeVariants)) {
                 return error(__LINE__, uri);
             }
             bool const last = (++index) == mServer->mMaterialRecords.size();

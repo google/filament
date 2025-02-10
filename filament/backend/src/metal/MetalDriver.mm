@@ -513,6 +513,14 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
+void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage,
+        Platform::ExternalImageHandleRef image) {
+    // FIXME: implement createTextureExternalImage2R
+}
+
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th,
         backend::SamplerType target,
         backend::TextureFormat format,
@@ -747,6 +755,10 @@ Handle<HwTexture> MetalDriver::createTextureViewSwizzleS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
+Handle<HwTexture> MetalDriver::createTextureExternalImage2S() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
 Handle<HwTexture> MetalDriver::createTextureExternalImageS() noexcept {
     return alloc_handle<MetalTexture>();
 }
@@ -947,6 +959,10 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 #endif
 }
 
+ShaderLanguage MetalDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::MSL;
+}
+
 Handle<HwStream> MetalDriver::createStreamNative(void* stream) {
     return {};
 }
@@ -1135,8 +1151,8 @@ FeatureLevel MetalDriver::getFeatureLevel() {
 
 math::float2 MetalDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
-    // Note: this is actually never used (see: main.vs), but it's a backend API so we implement it
-    // properly.
+    // Note: this is actually never used (see: surface_main.vs), but it's a backend API so we
+    // implement it properly.
     return math::float2{ 1.0f, 0.0f };
 }
 
@@ -1212,6 +1228,10 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
             "update3DImage(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width = "
             "%d, height = %d, depth = %d, data = ?)\n",
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
+}
+
+void MetalDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+    // FIXME: implement setupExternalImage2
 }
 
 void MetalDriver::setupExternalImage(void* image) {

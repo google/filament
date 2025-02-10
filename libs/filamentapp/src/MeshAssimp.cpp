@@ -277,26 +277,25 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
 }
 
 MeshAssimp::~MeshAssimp() {
+    for (Entity renderable : mRenderables) {
+        mEngine.destroy(renderable);
+    }
     mEngine.destroy(mVertexBuffer);
     mEngine.destroy(mIndexBuffer);
+    for (auto& item : mMaterialInstances) {
+        mEngine.destroy(item.second);
+    }
     mEngine.destroy(mDefaultColorMaterial);
     mEngine.destroy(mDefaultTransparentColorMaterial);
-    mEngine.destroy(mDefaultNormalMap);
-    mEngine.destroy(mDefaultMap);
-
     for (auto& item : mGltfMaterialCache) {
         auto material = item.second;
         mEngine.destroy(material);
     }
-
-    for (Entity renderable : mRenderables) {
-        mEngine.destroy(renderable);
-    }
-
+    mEngine.destroy(mDefaultNormalMap);
+    mEngine.destroy(mDefaultMap);
     for (Texture* texture : mTextures) {
         mEngine.destroy(texture);
     }
-
     // destroy the Entities itself
     EntityManager::get().destroy(mRenderables.size(), mRenderables.data());
 }
@@ -626,6 +625,10 @@ void MeshAssimp::addFromFile(const Path& path,
                 tcm.getInstance(rootEntity) : tcm.getInstance(mRenderables[pindex]));
         tcm.create(entity, parent, mesh.transform);
     }
+
+    // Takes over the ownership of the material instances so that resources are gracefully
+    // destroyed in a correct order. The caller doesn't need to handle the destruction.
+    mMaterialInstances.swap(materials);
 }
 
 using Assimp::Importer;

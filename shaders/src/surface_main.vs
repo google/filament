@@ -33,7 +33,7 @@ void main() {
 
     initObjectUniforms();
 
-    // Initialize the inputs to sensible default values, see material_inputs.vs
+    // Initialize the inputs to sensible default values, see surface_material_inputs.vs
 #if defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 
     // In USE_OPTIMIZED_DEPTH_VERTEX_SHADER mode, we can even skip this if we're already in

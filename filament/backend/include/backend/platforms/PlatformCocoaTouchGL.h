@@ -32,11 +32,13 @@ public:
     PlatformCocoaTouchGL();
     ~PlatformCocoaTouchGL() noexcept override;
 
+    ExternalImageHandle createExternalImage(void* cvPixelBuffer) noexcept;
+
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
     Driver* createDriver(void* sharedGLContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const DriverConfig& driverConfig) noexcept override;
 
     int getOSVersion() const noexcept final { return 0; }
 
@@ -56,10 +58,12 @@ public:
     bool makeCurrent(ContextType type, SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
 
-    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
-    void destroyExternalImage(ExternalTexture* texture) noexcept override;
+    ExternalTexture* createExternalImageTexture() noexcept override;
+    void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
     void retainExternalImage(void* externalImage) noexcept override;
     bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept override;
+    void retainExternalImage(ExternalImageHandleRef externalImage) noexcept override;
+    bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
 
 private:
     PlatformCocoaTouchGLImpl* pImpl = nullptr;

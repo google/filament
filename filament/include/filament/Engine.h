@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_ENGINE_H
 #define TNT_FILAMENT_ENGINE_H
 
+
 #include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
@@ -32,6 +33,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
+
 namespace utils {
 class Entity;
 class EntityManager;
@@ -39,6 +41,10 @@ class JobSystem;
 } // namespace utils
 
 namespace filament {
+
+namespace backend {
+class Driver;
+} // backend
 
 class BufferObject;
 class Camera;
@@ -183,6 +189,7 @@ public:
     using DriverConfig = backend::Platform::DriverConfig;
     using FeatureLevel = backend::FeatureLevel;
     using StereoscopicType = backend::StereoscopicType;
+    using Driver = backend::Driver;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -309,6 +316,15 @@ public:
          * Only respected by the Metal backend.
          */
         size_t metalUploadBufferSizeBytes = 512 * 1024;
+
+        /**
+         * The action to take if a Drawable cannot be acquired.
+         *
+         * Each frame rendered requires a CAMetalDrawable texture, which is
+         * presented on-screen at the completion of each frame. These are
+         * limited and provided round-robin style by the system.
+         */
+        bool metalDisablePanicOnDrawableFailure = false;
 
         /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
@@ -582,6 +598,11 @@ public:
     static Engine* UTILS_NULLABLE getEngine(void* UTILS_NONNULL token);
 #endif
 
+    /**
+     * @return the Driver instance used by this Engine.
+     * @see OpenGLPlatform
+     */
+    backend::Driver const* UTILS_NONNULL getDriver() const noexcept;
 
     /**
      * Destroy the Engine instance and all associated resources.

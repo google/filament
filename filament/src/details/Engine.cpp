@@ -123,6 +123,7 @@ Engine* FEngine::create(Builder const& builder) {
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
                 .stereoscopicType = instance->getConfig().stereoscopicType,
                 .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
+                .metalDisablePanicOnDrawableFailure = instance->getConfig().metalDisablePanicOnDrawableFailure,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -706,6 +707,28 @@ int FEngine::loop() {
         }
     }
 
+    JobSystem::setThreadName("FEngine::loop");
+    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+
+    DriverConfig const driverConfig {
+            .handleArenaSize = getRequestedDriverHandleArenaSize(),
+            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
+            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
+            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
+            .forceGLES2Context = mConfig.forceGLES2Context,
+            .stereoscopicType =  mConfig.stereoscopicType,
+            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
+            .metalDisablePanicOnDrawableFailure = mConfig.metalDisablePanicOnDrawableFailure,
+    };
+    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
+
+    mDriverBarrier.latch();
+    if (UTILS_UNLIKELY(!mDriver)) {
+        // if we get here, it's because the driver couldn't be initialized and the problem has
+        // been logged.
+        return 0;
+    }
+
 #if FILAMENT_ENABLE_MATDBG
     #ifdef __ANDROID__
         const char* portString = "8081";
@@ -714,7 +737,7 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, port);
+        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(), port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
         // When this occurs, carry onward, developers can look at civetweb.txt for details.
@@ -728,26 +751,24 @@ int FEngine::loop() {
     }
 #endif
 
-    JobSystem::setThreadName("FEngine::loop");
-    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+#if FILAMENT_ENABLE_FGVIEWER
+#ifdef __ANDROID__
+    const char* fgviewerPortString = "8085";
+#else
+    const char* fgviewerPortString = getenv("FILAMENT_FGVIEWER_PORT");
+#endif
+    if (fgviewerPortString != nullptr) {
+        const int fgviewerPort = atoi(fgviewerPortString);
+        debug.fgviewerServer = new fgviewer::DebugServer(fgviewerPort);
 
-    DriverConfig const driverConfig {
-            .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
-            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
-            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
-            .forceGLES2Context = mConfig.forceGLES2Context,
-            .stereoscopicType =  mConfig.stereoscopicType,
-            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-    };
-    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
-
-    mDriverBarrier.latch();
-    if (UTILS_UNLIKELY(!mDriver)) {
-        // if we get here, it's because the driver couldn't be initialized and the problem has
-        // been logged.
-        return 0;
+        // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
+        // When this occurs, carry onward, developers can look at civetweb.txt for details.
+        if (!debug.fgviewerServer->isReady()) {
+            delete debug.fgviewerServer;
+            debug.fgviewerServer = nullptr;
+        }
     }
+#endif
 
     while (true) {
         if (!execute()) {

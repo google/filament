@@ -66,6 +66,7 @@ public:
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
             PrefilterOptions const* options);
 
+    void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
     void setExternalStream(FEngine& engine, FStream* stream) noexcept;

@@ -75,9 +75,11 @@
 #include <emscripten.h>
 #endif
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+#endif
 
 // We can only support this feature on OpenGL ES 3.1+
 // Support is currently disabled as we don't need it
@@ -152,7 +154,7 @@ using namespace GLUtils;
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
-Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
+OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* const platform,
         void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
@@ -347,6 +349,10 @@ void OpenGLDriver::terminate() {
 
 ShaderModel OpenGLDriver::getShaderModel() const noexcept {
     return mContext.getShaderModel();
+}
+
+ShaderLanguage OpenGLDriver::getShaderLanguage() const noexcept {
+    return mContext.isES2() ? ShaderLanguage::ESSL1 : ShaderLanguage::ESSL3;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -573,6 +579,10 @@ Handle<HwTexture> OpenGLDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> OpenGLDriver::createTextureViewSwizzleS() noexcept {
+    return initHandle<GLTexture>();
+}
+
+Handle<HwTexture> OpenGLDriver::createTextureExternalImage2S() noexcept {
     return initHandle<GLTexture>();
 }
 
@@ -897,25 +907,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
             t->gl.internalFormat = internalFormat;
 
-            switch (target) {
-                case SamplerType::SAMPLER_EXTERNAL:
-                    // we can't be here -- doesn't matter what we do
-                case SamplerType::SAMPLER_2D:
-                    t->gl.target = GL_TEXTURE_2D;
-                    break;
-                case SamplerType::SAMPLER_3D:
-                    t->gl.target = GL_TEXTURE_3D;
-                    break;
-                case SamplerType::SAMPLER_2D_ARRAY:
-                    t->gl.target = GL_TEXTURE_2D_ARRAY;
-                    break;
-                case SamplerType::SAMPLER_CUBEMAP:
-                    t->gl.target = GL_TEXTURE_CUBE_MAP;
-                    break;
-                case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-                    t->gl.target = GL_TEXTURE_CUBE_MAP_ARRAY;
-                    break;
-            }
+            t->gl.target = getTextureTargetNotExternal(target);
 
             if (t->samples > 1) {
                 // Note: we can't be here in practice because filament's user API doesn't
@@ -989,8 +981,7 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
 }
 
 void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
-        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
-        backend::TextureSwizzle a) {
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
 
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
@@ -1052,6 +1043,57 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerType target,
+    TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
+    Platform::ExternalImageHandleRef image) {
+    DEBUG_MARKER()
+
+    usage |= TextureUsage::SAMPLEABLE;
+    usage &= ~TextureUsage::UPLOADABLE;
+
+    auto& gl = mContext;
+    GLenum internalFormat = getInternalFormat(format);
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        // on ES2, format and internal format must match
+        // FIXME: handle compressed texture format
+        internalFormat = textureFormatToFormatAndType(format).first;
+    }
+    assert_invariant(internalFormat);
+
+    GLTexture* const t = construct<GLTexture>(th, target, 1, 1, width, height, 1, format, usage);
+    assert_invariant(t);
+
+    t->externalTexture = mPlatform.createExternalImageTexture();
+    if (t->externalTexture) {
+        if (target == SamplerType::SAMPLER_EXTERNAL) {
+            if (UTILS_LIKELY(gl.ext.OES_EGL_image_external_essl3)) {
+                t->externalTexture->target = GL_TEXTURE_EXTERNAL_OES;
+            } else {
+                // revert to texture 2D if external is not supported; what else can we do?
+                t->externalTexture->target = GL_TEXTURE_2D;
+            }
+        } else {
+            t->externalTexture->target = getTextureTargetNotExternal(target);
+        }
+
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+        // internalFormat actually depends on the external image, but it doesn't matter
+        // because it's not used anywhere for anything important.
+        t->gl.internalFormat = internalFormat;
+        t->gl.baseLevel = 0;
+        t->gl.maxLevel = 0;
+        t->gl.external = true; // forces bindTexture() call (they're never cached)
+    }
+
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+        // the target and id can be reset each time
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+    }
+}
+
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType target,
     TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage, void* image) {
     DEBUG_MARKER()
@@ -1073,6 +1115,16 @@ void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType
 
     t->externalTexture = mPlatform.createExternalImageTexture();
     if (t->externalTexture) {
+        if (target == SamplerType::SAMPLER_EXTERNAL) {
+            if (UTILS_LIKELY(gl.ext.OES_EGL_image_external_essl3)) {
+                t->externalTexture->target = GL_TEXTURE_EXTERNAL_OES;
+            } else {
+                // revert to texture 2D if external is not supported; what else can we do?
+                t->externalTexture->target = GL_TEXTURE_2D;
+            }
+        } else {
+            t->externalTexture->target = getTextureTargetNotExternal(target);
+        }
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
         // internalFormat actually depends on the external image, but it doesn't matter
@@ -1864,7 +1916,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                         detachStream(t);
                     }
                     if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-                        mPlatform.destroyExternalImage(t->externalTexture);
+                        mPlatform.destroyExternalImageTexture(t->externalTexture);
                     } else {
                         glDeleteTextures(1, &t->gl.id);
                     }
@@ -2801,6 +2853,10 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
     scheduleDestroy(std::move(p));
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+    mPlatform.retainExternalImage(image);
 }
 
 void OpenGLDriver::setupExternalImage(void* image) {
@@ -4090,4 +4146,6 @@ template class ConcreteDispatcher<OpenGLDriver>;
 
 } // namespace filament::backend
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif

@@ -115,7 +115,7 @@ float getAngleAttenuation(const highp vec3 lightDir, const highp vec3 l, const h
 }
 
 /**
- * Returns a Light structure (see common_lighting.fs) describing a point or spot light.
+ * Returns a Light structure (see surface_lighting.fs) describing a point or spot light.
  * The colorIntensity field will store the *pre-exposed* intensity of the light
  * in the w component.
  *

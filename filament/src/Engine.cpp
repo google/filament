@@ -68,6 +68,10 @@ Engine* Engine::getEngine(void* token) {
 }
 #endif
 
+Driver const* Engine::getDriver() const noexcept {
+    return std::addressof(downcast(this)->getDriver());
+}
+
 void Engine::destroy(Engine** pEngine) {
     if (pEngine) {
         Engine* engine = *pEngine;
