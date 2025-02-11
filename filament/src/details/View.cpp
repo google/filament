@@ -126,6 +126,7 @@ FView::FView(FEngine& engine)
     mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
 
     mColorPassDescriptorSet.init(
+            engine,
             mLightUbh,
             mFroxelizer.getRecordBuffer(),
             mFroxelizer.getFroxelBuffer());

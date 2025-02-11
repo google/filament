@@ -980,9 +980,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
                                  ? 1 : CONFIG_MAX_INSTANCES;
 
-    int const maxFroxelBufferHeight = int(std::min(
-            FROXEL_BUFFER_MAX_ENTRY_COUNT / 4,
-            engine.getDriverApi().getMaxUniformBufferSize() / 16u));
+    // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
+    int const maxFroxelBufferHeight =
+            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
 
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);

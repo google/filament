@@ -116,6 +116,12 @@ static bool fuzzyEqual(mat4f const& UTILS_RESTRICT l, mat4f const& UTILS_RESTRIC
     return result == 0;
 }
 
+size_t Froxelizer::getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept {
+    // Make sure that targetSize is 16-byte aligned so that it'll fit properly into an array of
+    // uvec4.
+    size_t const targetSize = (driverApi.getMaxUniformBufferSize() / 16) * 16;
+    return std::min(FROXEL_BUFFER_MAX_ENTRY_COUNT * sizeof(FroxelEntry), targetSize);
+}
 
 Froxelizer::Froxelizer(FEngine& engine)
         : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
@@ -131,14 +137,14 @@ Froxelizer::Froxelizer(FEngine& engine)
         return;
     }
 
-    mFroxelBufferEntryCount = std::min(
-            FROXEL_BUFFER_MAX_ENTRY_COUNT,
-            engine.getDriverApi().getMaxUniformBufferSize() / 16u);
+    size_t const froxelBufferByteCount = getFroxelBufferByteCount(engine.getDriverApi());
+    mFroxelBufferEntryCount = froxelBufferByteCount / sizeof(FroxelEntry);
 
     mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
-    mFroxelsBuffer = driverApi.createBufferObject(getFroxelBufferEntryCount() * 16u,
+    mFroxelsBuffer = driverApi.createBufferObject(
+            froxelBufferByteCount,
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 }
 
@@ -527,7 +533,7 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 void Froxelizer::commit(DriverApi& driverApi) {
     // send data to GPU
     driverApi.updateBufferObject(mFroxelsBuffer,
-            { mFroxelBufferUser.data(), getFroxelBufferEntryCount() * 16u }, 0);
+            { mFroxelBufferUser.data(), getFroxelBufferEntryCount() * sizeof(FroxelEntry) }, 0);
 
     driverApi.updateBufferObject(mRecordsBuffer,
             { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT }, 0);
