@@ -14,7 +14,7 @@
 * limitations under the License.
 */
 
-import { LitElement, html, css, unsafeCSS, nothing } from "https://unpkg.com/lit@2.8.0?module";
+import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
 
 const kUntitledPlaceholder = "untitled";
 
@@ -48,14 +48,17 @@ class MenuSection extends LitElement {
                 font-size: ${unsafeCSS(REGULAR_FONT_SIZE)}px;
                 color: ${unsafeCSS(UNSELECTED_COLOR)};
             }
+
             .section-title {
                 font-size: 16px;
                 color: ${unsafeCSS(UNSELECTED_COLOR)};
                 cursor: pointer;
             }
+
             .container {
                 margin-bottom: 20px;
             }
+
             hr {
                 display: block;
                 height: 1px;
@@ -65,6 +68,7 @@ class MenuSection extends LitElement {
                 width: 100%;
                 margin: 3px 0 8px 0;
             }
+
             .expander {
                 display: flex;
                 flex-direction: row;
@@ -85,18 +89,20 @@ class MenuSection extends LitElement {
 
     render() {
         const expandedIcon = this.showing ? '－' : '＋';
-        const slot = (() => html`<slot></slot>`)();
+        const slot = (() => html`
+            <slot></slot>`)();
         return html`
             <div class="container">
                 <div class="section-title expander" @click="${this._showClick}">
                     <span>${this.title}</span> <span>${expandedIcon}</span>
                 </div>
-                <hr />
+                <hr/>
                 ${this.showing ? slot : []}
             </div>
         `;
     }
 }
+
 customElements.define('menu-section', MenuSection);
 
 class FrameGraphSidePanel extends LitElement {
@@ -193,7 +199,11 @@ class FrameGraphSidePanel extends LitElement {
     }
 
     _handleFrameGraphClick(ev) {
-        this.dispatchEvent(new CustomEvent('select-framegraph', {detail: ev, bubbles: true, composed: true}));
+        this.dispatchEvent(new CustomEvent('select-framegraph', {
+            detail: ev,
+            bubbles: true,
+            composed: true
+        }));
     }
 
     render() {
@@ -211,7 +221,8 @@ class FrameGraphSidePanel extends LitElement {
                         `;
                     });
             if (fgs.length > 0) {
-                return html`<menu-section title="${title}">${fgs}</menu-section>`;
+                return html`
+                    <menu-section title="${title}">${fgs}</menu-section>`;
             }
             return null;
         };
@@ -226,6 +237,7 @@ class FrameGraphSidePanel extends LitElement {
     }
 
 }
+
 customElements.define("framegraph-sidepanel", FrameGraphSidePanel);
 
 class FrameGraphTable extends LitElement {
@@ -236,6 +248,7 @@ class FrameGraphTable extends LitElement {
                 flex-grow: 1;
                 width: 80%;
             }
+
             .table-container {
                 max-height: 100%;
                 max-width: 100%;
@@ -243,28 +256,34 @@ class FrameGraphTable extends LitElement {
                 border: 1px solid #ddd;
                 margin-left: 300px;
             }
+
             .scrollable-table {
                 width: 100%;
                 height: 100%;
                 border-collapse: collapse;
             }
+
             .collapsible {
                 background-color: #f9f9f9;
             }
+
             .toggle-icon {
                 cursor: pointer;
                 margin-right: 5px;
                 user-select: none;
             }
+
             .hidden {
                 display: none;
             }
+
             .scrollable-table td,
             .scrollable-table th {
                 padding: 12px;
                 text-align: left;
                 border: 1px solid #ddd;
             }
+
             .scrollable-table tr {
                 position: sticky;
                 padding: 12px;
@@ -273,11 +292,13 @@ class FrameGraphTable extends LitElement {
                 left: 0;
                 z-index: 1;
             }
+
             .sticky-col {
                 position: sticky;
                 left: 0;
                 z-index: 1;
             }
+
             th {
                 min-width: 100px;
                 background-color: #f2f2f2;
@@ -290,7 +311,7 @@ class FrameGraphTable extends LitElement {
 
     static get properties() {
         return {
-            frameGraphData: { type: Object, state: true }, // Expecting a JSON frame graph structure
+            frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
         };
     }
 
@@ -300,18 +321,23 @@ class FrameGraphTable extends LitElement {
     }
 
     updated(props) {
-        if(props.has('frameGraphData')){
+        if (props.has('frameGraphData')) {
             this.requestUpdate();
         }
     }
 
     _getCellColor(type, defaultColor) {
         switch (type) {
-            case 'read': return READ_COLOR;
-            case 'write': return WRITE_COLOR;
-            case 'no-access': return NO_ACCESS_COLOR;
-            case 'read-write': return READ_WRITE_COLOR;
-            default: return defaultColor;
+            case 'read':
+                return READ_COLOR;
+            case 'write':
+                return WRITE_COLOR;
+            case 'no-access':
+                return NO_ACCESS_COLOR;
+            case 'read-write':
+                return READ_WRITE_COLOR;
+            default:
+                return defaultColor;
         }
     }
 
@@ -323,7 +349,7 @@ class FrameGraphTable extends LitElement {
         icon.textContent = isHidden ? '▼' : '▶';
     }
 
-    _getRowHtml(allPasses, resourceId, defaultColor){
+    _getRowHtml(allPasses, resourceId, defaultColor) {
         return allPasses.map((passName, index) => {
             const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
             const isRead = passData?.reads.includes(resourceId);
@@ -342,7 +368,10 @@ class FrameGraphTable extends LitElement {
             else if (isRead) type = 'read';
             else if (isWrite) type = 'write';
             else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
-            return html`<td style="background-color: ${unsafeCSS(this._getCellColor(type, defaultColor))};">${type ?? nothing}</td>`;
+            return html`
+                <td style="background-color: ${unsafeCSS(this._getCellColor(type, defaultColor))};">
+                    ${type ?? nothing}
+                </td>`;
         });
     }
 
@@ -358,14 +387,15 @@ class FrameGraphTable extends LitElement {
                     <thead>
                     <tr>
                         <th class="sticky-col">Resources/Passes</th>
-                        ${allPasses.map(pass => html`<th>${pass}</th>`)}
+                        ${allPasses.map(pass => html`
+                            <th>${pass}</th>`)}
                     </tr>
                     </thead>
                     <tbody>
                     ${resources.map((resource, resourceIndex) => {
                         const isSubresource = resource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY);
                         if (isSubresource) return nothing;
-                        
+
                         const hasSubresources = resources.some(subresource =>
                                 subresource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY && Number(prop.value) === resource.id)
                         );
@@ -373,10 +403,10 @@ class FrameGraphTable extends LitElement {
                             <tr id="resource-${resourceIndex}">
                                 <th class="sticky-col">
                                     ${hasSubresources ? html`
-                                    <span
-                                      class="toggle-icon"
-                                      @click="${() => this._toggleCollapse(resourceIndex)}"
-                                    >▶</span>` : nothing} 
+                                        <span
+                                                class="toggle-icon"
+                                                @click="${() => this._toggleCollapse(resourceIndex)}"
+                                        >▶</span>` : nothing}
                                     ${resource.name}
                                 </th>
                                 ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
@@ -384,11 +414,15 @@ class FrameGraphTable extends LitElement {
                             ${resources.filter(subresource =>
                                     subresource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY && Number(prop.value) === resource.id)
                             ).map((subresource, subIndex) => html`
-                            <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
-                                <td class="sticky-col" style="background-color: ${SUBRESOURCE_COLOR}">${subresource.name}</td>
-                                ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
-                            </tr>
-                          `)}
+                                <tr id="subresource-${resourceIndex}-${subIndex}"
+                                    class="collapsible hidden">
+                                    <td class="sticky-col"
+                                        style="background-color: ${SUBRESOURCE_COLOR}">
+                                        ${subresource.name}
+                                    </td>
+                                    ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
+                                </tr>
+                            `)}
                         `;
                     })}
                     </tbody>
@@ -397,6 +431,7 @@ class FrameGraphTable extends LitElement {
         `;
     }
 }
+
 customElements.define("framegraph-table", FrameGraphTable);
 
 class FrameGraphViewer extends LitElement {
@@ -425,7 +460,7 @@ class FrameGraphViewer extends LitElement {
                 async (status, fgid) => {
                     this.connected = status == STATUS_CONNECTED || status == STATUS_FRAMEGRAPH_UPDATED;
 
-                    if(status == STATUS_FRAMEGRAPH_UPDATED){
+                    if (status == STATUS_FRAMEGRAPH_UPDATED) {
                         let fgInfo = await fetchFrameGraph(fgid);
                         this.database[fgInfo.fgid] = fgInfo;
                         this._framegraphTable.frameGraphData = fgInfo;
@@ -437,7 +472,7 @@ class FrameGraphViewer extends LitElement {
         this.database = framegraphs;
     }
 
-    _getFrameGraph(){
+    _getFrameGraph() {
         const framegraph = (this.database && this.currentFrameGraph) ?
                 this.database[this.currentFrameGraph] : null;
         return framegraph;
@@ -465,7 +500,7 @@ class FrameGraphViewer extends LitElement {
         }
     }
 
-    updated(props){
+    updated(props) {
         if (props.has('currentFrameGraph') || props.has('database')) {
             const framegraph = this._getFrameGraph();
             this._framegraphTable.frameGraphData = framegraph;
