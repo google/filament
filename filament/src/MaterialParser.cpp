@@ -713,6 +713,7 @@ bool ChunkDescriptorSetLayoutInfo::unflatten(Unflattener& unflattener,
             if (!unflattener.read(&count)) {
                 return false;
             }
+
             descriptors.push_back({
                     DescriptorType(type),
                     ShaderStageFlags(stageFlags),
