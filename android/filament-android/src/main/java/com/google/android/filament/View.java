@@ -1976,7 +1976,7 @@ public class View {
         }
 
         /**
-         * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
+         * @deprecated has no effect.
          */
         public float filterWidth = 1.0f;
         /**
@@ -1996,9 +1996,9 @@ public class View {
          */
         public boolean enabled = false;
         /**
-         * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+         * Upscaling factor. Disables Dynamic Resolution. [BETA]
          */
-        public boolean upscaling = false;
+        public float upscaling = 1.0f;
         /**
          * whether to filter the history buffer
          */
@@ -2011,6 +2011,10 @@ public class View {
          * whether to use the YcoCg color-space for history rejection
          */
         public boolean useYCoCg = false;
+        /**
+         * set to true for HDR content
+         */
+        public boolean hdr = true;
         /**
          * type of color gamut box
          */

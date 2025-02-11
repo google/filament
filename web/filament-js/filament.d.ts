@@ -1674,7 +1674,7 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
  */
 export interface View$TemporalAntiAliasingOptions {
     /**
-     * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
+     * @deprecated has no effect.
      */
     filterWidth?: number;
     /**
@@ -1694,9 +1694,9 @@ export interface View$TemporalAntiAliasingOptions {
      */
     enabled?: boolean;
     /**
-     * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+     * Upscaling factor. Disables Dynamic Resolution. [BETA]
      */
-    upscaling?: boolean;
+    upscaling?: number;
     /**
      * whether to filter the history buffer
      */
@@ -1709,6 +1709,10 @@ export interface View$TemporalAntiAliasingOptions {
      * whether to use the YcoCg color-space for history rejection
      */
     useYCoCg?: boolean;
+    /**
+     * set to true for HDR content
+     */
+    hdr?: boolean;
     /**
      * type of color gamut box
      */
