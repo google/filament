@@ -679,13 +679,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     VulkanContext context;
-    // Set the supported extensions in the vulkan context based on the shared context.
-    if (sharedContext) {
-        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
-        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
-        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
-        context.mMultiviewEnabled = scontext->multiviewSupported;
-    }
 
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
@@ -831,6 +824,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    } else {
+        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
+        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
+        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+        context.mMultiviewEnabled = scontext->multiviewSupported;
     }
 
     // Check the availability of lazily allocated memory
