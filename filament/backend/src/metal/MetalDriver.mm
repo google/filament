@@ -31,6 +31,7 @@
 #include "MetalTimerQuery.h"
 
 #include <backend/platforms/PlatformMetal.h>
+#include <backend/platforms/PlatformMetal-ObjC.h>
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -120,7 +121,10 @@ MetalDriver::MetalDriver(
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
 
-    mContext->device = mPlatform.createDevice();
+    MetalDevice device;
+    device.device = nil;
+    mPlatform.createDevice(device);
+    mContext->device = device.device;
     assert_invariant(mContext->device);
 
     mContext->emptyBuffer = [mContext->device newBufferWithLength:16
@@ -186,7 +190,12 @@ MetalDriver::MetalDriver(
             [mContext->device.name containsString:@"Apple A8 GPU"] ||
             [mContext->device.name containsString:@"Apple A7 GPU"];
 
-    mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
+    MetalCommandQueue commandQueue;
+    commandQueue.commandQueue = nil;
+    mPlatform.createCommandQueue(device, commandQueue);
+    assert_invariant(commandQueue.commandQueue);
+
+    mContext->commandQueue = commandQueue.commandQueue;
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
