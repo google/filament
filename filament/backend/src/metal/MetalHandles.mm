@@ -36,6 +36,42 @@
 
 #include <math.h>
 
+// A wrapper around a C void* pointer that will free the memory when deallocated, unless the pointer
+// is first reset.
+// ReleasablePointer serves a similar purpose as std::unique_ptr, but avoids false positives with
+// TSAN and Objective-C blocks.
+@interface ReleasablePointer : NSObject
+@property(nonatomic, readonly) void* p;
+@end
+
+@implementation ReleasablePointer {
+    void* _p;
+}
+
+- (id)initWithPointer:(void*)p {
+    self = [super init];
+    if (self) {
+        _p = p;
+    }
+    return self;
+}
+
+- (void)dealloc {
+    if (_p) {
+        free(_p);
+    }
+}
+
+- (void*)p {
+    return _p;
+}
+
+- (void)reset {
+    _p = nullptr;
+}
+
+@end
+
 namespace filament {
 namespace backend {
 
@@ -356,15 +392,17 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     };
 
     // This callback pointer will be captured by the block. Even if the scheduled handler is never
-    // called, the unique_ptr will still ensure we don't leak memory.
+    // called, the ReleasablePointer will still ensure we don't leak memory.
     uint64_t const flags = frameScheduled.flags;
-    __block auto callback = std::make_unique<Callback>(
-            frameScheduled.callback, drawable, layerDrawableMutex, context.driver, flags);
+    ReleasablePointer* callback = [[ReleasablePointer alloc]
+            initWithPointer:new Callback(frameScheduled.callback, drawable, layerDrawableMutex,
+                                    context.driver, flags)];
 
     backend::CallbackHandler* handler = frameScheduled.handler;
     MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-        Callback* user = callback.release();
+        Callback* user = static_cast<Callback*>(callback.p);
+        [callback reset];
         if (flags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
             Callback::func(user);
         } else {
@@ -390,12 +428,14 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
 
     // This callback pointer will be captured by the block. Even if the completed handler is never
     // called, the unique_ptr will still ensure we don't leak memory.
-    __block auto callback = std::make_unique<Callback>(frameCompleted.callback);
+    ReleasablePointer* callback =
+            [[ReleasablePointer alloc] initWithPointer:new Callback(frameCompleted.callback)];
 
     CallbackHandler* handler = frameCompleted.handler;
     MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        Callback* user = callback.release();
+        Callback* user = static_cast<Callback*>(callback.p);
+        [callback reset];
         driver->scheduleCallback(handler, user, &Callback::func);
     }];
 }
