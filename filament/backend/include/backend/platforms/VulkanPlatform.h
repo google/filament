@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 
 #include <backend/Platform.h>
+#include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 
@@ -344,12 +345,19 @@ public:
     virtual ImageData createExternalImage(void* externalImage,
             const ExternalImageMetadata& metadata);
 
+    virtual VkSampler createExternalSampler(SamplerYcbcrConversion chroma,
+            SamplerParams sampler,
+            uint32_t internalFormat);
+
 private:
     static ExtensionSet getSwapchainInstanceExtensions();
     static ExternalImageMetadata getExternalImageMetadataImpl(void* externalImage,
             VkDevice device);
     static ImageData createExternalImageImpl(void* externalImage, VkDevice device,
             const VkAllocationCallbacks* allocator, const ExternalImageMetadata& metadata);
+    static VkSampler createExternalSamplerImpl(VkDevice device,
+            SamplerYcbcrConversion chroma, SamplerParams sampler,
+            uint32_t externalFormat);
 
     // Platform dependent helper methods
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

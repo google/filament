@@ -87,7 +87,6 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
                 }
                 break;
             }
-            // TODO: properly handle external sampler
             case DescriptorType::SAMPLER_EXTERNAL:
             case DescriptorType::SAMPLER: {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);

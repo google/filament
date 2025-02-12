@@ -20,6 +20,7 @@
 #include "vulkan/VulkanHandles.h"
 #include "vulkan/VulkanTexture.h"
 #include "vulkan/VulkanUtility.h"
+#include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourcePointer.h"
 
 #include <backend/DriverEnums.h>
@@ -73,7 +74,9 @@ public:
     fvkmemory::resource_ptr<VulkanDescriptorSet> createSet(Handle<HwDescriptorSet> handle,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
-    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
+    void initVkLayout(fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+            DescriptorSetLayout const& info,
+            VulkanSamplerCache& cache);
 
     void clearHistory();
 

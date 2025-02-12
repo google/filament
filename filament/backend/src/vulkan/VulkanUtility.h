@@ -42,6 +42,11 @@ uint32_t getComponentCount(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle const swizzle[4]);
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
 
+// Ycbcr related functions
+VkSamplerYcbcrModelConversion getYcbcrModelConversion(SamplerYcbcrModelConversion model);
+VkSamplerYcbcrRange getYcbcrRange(SamplerYcbcrRange range);
+VkChromaLocation getChromaLocation(ChromaLocation loc);
+
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isVkDepthFormat(VkFormat format);

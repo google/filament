@@ -208,14 +208,77 @@ VulkanPlatform::ExternalImageMetadata VulkanPlatform::getExternalImageMetadataIm
     return metadata;
 }
 
-VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(void* externalImage,
-        VkDevice device, const VkAllocationCallbacks* allocator,
+VulkanPlatform::ImageData VulkanPlatform::createExternalImageImpl(
+        void* externalImage, VkDevice device,
+        const VkAllocationCallbacks* allocator,
         const ExternalImageMetadata& metadata) {
-    ImageData data = allocateExternalImage(externalImage, device, allocator, metadata);
+    ImageData data =
+        allocateExternalImage(externalImage, device, allocator, metadata);
     VkResult result = vkBindImageMemory(device, data.first, data.second, 0);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkBindImageMemory error=" << static_cast<int32_t>(result);
+        << "vkBindImageMemory error=" << static_cast<int32_t>(result);
     return data;
+}
+
+VkSampler VulkanPlatform::createExternalSamplerImpl(
+        VkDevice device, SamplerYcbcrConversion chroma, SamplerParams sampler,
+        uint32_t externalFormat) {
+    VkExternalFormatANDROID externalFormat = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
+        .pNext = nullptr,
+        .externalFormat = externalFormat,
+    };
+
+    VkSamplerYcbcrConversionCreateInfo conversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+        .pNext = &externalFormat,
+        .format = VK_FORMAT_UNDEFINED,
+        .ycbcrModel = getYcbcrModelConversion(chroma.ycbcrModel),
+        .ycbcrRange = getYcbcrRange(chroma.range),
+        .components = getSwizzleMap({chroma.r, chroma.g, chroma.b, chroma.a}),
+        .xChromaOffset = getChromaLocation(chroma.xChromaOffset),
+        .yChromaOffset = getChromaLocation(chroma.yChromaOffset),
+        .chromaFilter = (chroma.filter == SamplerMagFilter::NEAREST)
+                            ? VK_FILTER_NEAREST
+                            : VK_FILTER_LINEAR,
+    };
+    VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
+    VkResult result = vkCreateSamplerYcbcrConversion(device, &conversionInfo,
+                                                     nullptr, &conversion);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create Ycbcr Conversion."
+        << " error=" << static_cast<int32_t>(result);
+
+    VkSamplerYcbcrConversionInfo samplerYcbcrConversionInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO,
+        .pNext = nullptr,
+        .conversion = conversion,
+    };
+
+    VkSamplerCreateInfo samplerInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .pNext = &samplerYcbcrConversionInfo,
+        .magFilter = getFilter(params.filterMag),
+        .minFilter = getFilter(params.filterMin),
+        .mipmapMode = getMipmapMode(params.filterMin),
+        .addressModeU = getWrapMode(params.wrapS),
+        .addressModeV = getWrapMode(params.wrapT),
+        .addressModeW = getWrapMode(params.wrapR),
+        .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
+        .maxAnisotropy = (float)(1u << params.anisotropyLog2),
+        .compareEnable = getCompareEnable(params.compareMode),
+        .compareOp = getCompareOp(params.compareFunc),
+        .minLod = 0.0f,
+        .maxLod = getMaxLod(params.filterMin),
+        .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+        .unnormalizedCoordinates = VK_FALSE,
+    };
+    VkSampler sampler;
+    result = vkCreateSampler(device, &samplerInfo, VKALLOC, &sampler);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+        << "Unable to create sampler."
+        << " error=" << static_cast<int32_t>(result);
+    return sampler;
 }
 
 VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() {

@@ -906,17 +906,7 @@ enum class SamplerYcbcrModelConversion : uint8_t {
 
 enum class SamplerYcbcrRange : uint8_t {
     ITU_FULL = 0,
-    NARROW = 1,
-};
-
-enum class ComponentSwizzle : uint8_t {
-    IDENTITY = 0,
-    ZERO=1,
-    ONE=2,
-    R=3,
-    G=4,
-    B=5,
-    A=6,
+    ITU_NARROW = 1,
 };
 
 enum class ChromaLocation : uint8_t {
@@ -993,11 +983,11 @@ struct SamplerYcbcrConversion { // NOLINT
     SamplerYcbcrRange           ycbcrRange : 1;
     uint8_t                     padding0   : 4;
 
-    ComponentSwizzle            r        : 3;
-    ComponentSwizzle            g        : 3;
+    TextureSwizzle              r        : 3;
+    TextureSwizzle              g        : 3;
     uint8_t                     padding1 : 2;
-    ComponentSwizzle            b        : 3;
-    ComponentSwizzle            a        : 3;
+    TextureSwizzle              b        : 3;
+    TextureSwizzle              a        : 3;
     uint8_t                     padding2 : 2;
 
     ChromaLocation              xChromaOffset : 1;

@@ -742,7 +742,7 @@ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 void VulkanDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
     auto layout = resource_ptr<VulkanDescriptorSetLayout>::make(&mResourceManager, dslh, info);
-    mDescriptorSetManager.initVkLayout(layout);
+    mDescriptorSetManager.initVkLayout(layout, info, mSamplerCache);
     layout.inc();
 }
 

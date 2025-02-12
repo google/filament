@@ -325,7 +325,8 @@ public:
     DescriptorSetLayoutManager(VkDevice device)
         : mDevice(device) {}
 
-    VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks) {
+    VkDescriptorSetLayout getVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
+            DescriptorSetLayout const& info) {
         if (auto itr = mVkLayouts.find(bitmasks); itr != mVkLayouts.end()) {
             return itr->second;
         }
@@ -495,8 +496,10 @@ fvkmemory::resource_ptr<VulkanDescriptorSet> VulkanDescriptorSetManager::createS
 }
 
 void VulkanDescriptorSetManager::initVkLayout(
-        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
-    layout->setVkLayout(mLayoutManager->getVkLayout(layout->bitmask));
+        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+        DescriptorSetLayout const& info,
+        VulkanSamplerCache& cache) {
+    layout->setVkLayout(mLayoutManager->getVkLayout(layout->bitmask, info));
 }
 
 void VulkanDescriptorSetManager::clearHistory() {
