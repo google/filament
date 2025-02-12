@@ -131,7 +131,7 @@ void ColorPassDescriptorSet::init(
         BufferObjectHandle froxelBuffer) noexcept {
     for (auto&& descriptorSet: mDescriptorSet) {
         descriptorSet.setBuffer(+PerViewBindingPoints::LIGHTS,
-                lights, 0, sizeof(LightsUib));
+                lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
         descriptorSet.setBuffer(+PerViewBindingPoints::RECORD_BUFFER,
                 recordBuffer, 0, sizeof(FroxelRecordUib));
         descriptorSet.setBuffer(+PerViewBindingPoints::FROXEL_BUFFER,
