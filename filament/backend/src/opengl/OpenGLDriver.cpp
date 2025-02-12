@@ -896,6 +896,17 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
             t->externalTexture = mPlatform.createExternalImageTexture();
             if (t->externalTexture) {
+                if (target == SamplerType::SAMPLER_EXTERNAL) {
+                    if (UTILS_LIKELY(gl.ext.OES_EGL_image_external_essl3)) {
+                        t->externalTexture->target = GL_TEXTURE_EXTERNAL_OES;
+                    } else {
+                        // revert to texture 2D if external is not supported; what else can we do?
+                        t->externalTexture->target = GL_TEXTURE_2D;
+                    }
+                } else {
+                    t->externalTexture->target = getTextureTargetNotExternal(target);
+                }
+
                 t->gl.target = t->externalTexture->target;
                 t->gl.id = t->externalTexture->id;
                 // internalFormat actually depends on the external image, but it doesn't matter
