@@ -18,6 +18,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include "vulkan/VulkanContext.h"
 #include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriver.h"
@@ -68,7 +69,7 @@ FixedCapacityVector<const char*> getEnabledLayers() {
     constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
 
     const FixedCapacityVector<VkLayerProperties> availableLayers
-            = filament::backend::enumerate(vkEnumerateInstanceLayerProperties);
+            = fvkutils::enumerate(vkEnumerateInstanceLayerProperties);
 
     auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
     for (auto const& desired: DESIRED_LAYERS) {
@@ -150,7 +151,7 @@ void printDepthFormats(VkPhysicalDevice device) {
     const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
                                               | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     FVK_LOGI << "Sampleable depth formats: ";
-    for (VkFormat format : ALL_VK_FORMATS) {
+    for (VkFormat format : fvkutils::ALL_VK_FORMATS) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
         if ((props.optimalTilingFeatures & required) == required) {
@@ -248,7 +249,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     if (!enabledLayers.empty()) {
         // If layers are supported, Check if VK_EXT_validation_features is supported.
         FixedCapacityVector<VkExtensionProperties> const availableValidationExts
-                = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+                = fvkutils::enumerate(vkEnumerateInstanceExtensionProperties,
                         "VK_LAYER_KHRONOS_validation");
         for (auto const& extProps: availableValidationExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
@@ -819,9 +820,16 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     // Store the extension support in the context
-    context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-    context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    if (!mImpl->mSharedContext) {
+        context.mDebugUtilsSupported = setContains(instExts, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        context.mDebugMarkersSupported = setContains(deviceExts, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.mMultiviewEnabled = setContains(deviceExts, VK_KHR_MULTIVIEW_EXTENSION_NAME);
+    } else {
+        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
+        context.mDebugUtilsSupported = scontext->debugUtilsSupported;
+        context.mDebugMarkersSupported = scontext->debugMarkersSupported;
+        context.mMultiviewEnabled = scontext->multiviewSupported;
+    }
 
     // Check the availability of lazily allocated memory
     {

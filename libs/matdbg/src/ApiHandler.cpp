@@ -222,8 +222,13 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
 }
 
 void ApiHandler::addMaterial(MaterialRecord const* material) {
+    updateMaterial(material->key);
+}
+
+void ApiHandler::updateMaterial(uint32_t key) {
     std::unique_lock const lock(mStatusMutex);
-    snprintf(statusMaterialId, sizeof(statusMaterialId), "%8.8x", material->key);
+    mCurrentStatus++;
+    snprintf(statusMaterialId, sizeof(statusMaterialId), "%8.8x", key);
     mStatusCondition.notify_all();
 }
 
@@ -288,8 +293,11 @@ bool ApiHandler::handlePost(CivetServer* server, struct mg_connection* conn) {
         sstream >> std::hex >> matid >> std::dec >> api >> shaderIndex;
         std::string const shader = sstream.str().substr(sstream.tellg());
 
-        mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, shader.c_str(),
-                shader.size());
+        if (!mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, shader.c_str(),
+                shader.size())) {
+            return error(__LINE__, uri);
+        }
+        updateMaterial(matid);
 
         mg_printf(conn, "HTTP/1.1 200 OK\r\nConnection: close");
         return true;

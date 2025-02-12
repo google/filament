@@ -265,9 +265,9 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
         // Validate that the format is actually sampleable.
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, state->mVkFormat, &props);
+        vkGetPhysicalDeviceFormatProperties(physicalDevice, mState->mVkFormat, &props);
         if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << state->mVkFormat << " is not "
+            FVK_LOGW << "Texture usage is SAMPLEABLE but format " << mState->mVkFormat << " is not "
                     "sampleable with optimal tiling." << utils::io::endl;
         }
 #endif
@@ -649,15 +649,16 @@ bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceR
 
     if (hasTransitions) {
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-        FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
+        FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
                  << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
-                 << " format=" << state->mVkFormat << " depth=" << isVkDepthFormat(state->mVkFormat)
+                 << " format=" << mState->mVkFormat << " depth="
+                 << fvkutils::isVkDepthFormat(mState->mVkFormat)
                  << " slice-by-slice=" << transitionSliceBySlice << utils::io::endl;
 #endif
     } else {
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-        FVK_LOGD << "transition texture=" << state->mTextureImage << " (" << range.baseArrayLayer
+        FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
                  << range.levelCount << ")" << " to=" << newLayout
                  << " is skipped because of no change in layout" << utils::io::endl;

@@ -15,6 +15,7 @@
  */
 
 #include <backend/platforms/PlatformMetal.h>
+#include <backend/platforms/PlatformMetal-ObjC.h>
 
 #include "MetalDriverFactory.h"
 
@@ -47,7 +48,7 @@ Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::Dri
     return MetalDriverFactory::create(this, driverConfig);
 }
 
-id<MTLDevice> PlatformMetal::createDevice() noexcept {
+void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
     id<MTLDevice> result;
 
 #if !defined(FILAMENT_IOS)
@@ -72,19 +73,20 @@ id<MTLDevice> PlatformMetal::createDevice() noexcept {
                   << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
                   << utils::io::endl;
 
-    return result;
+    outDevice.device = result;
 }
 
-id<MTLCommandQueue> PlatformMetal::createCommandQueue(id<MTLDevice> device) noexcept {
-    pImpl->mCommandQueue = [device newCommandQueue];
+void PlatformMetal::createCommandQueue(
+        MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
+    pImpl->mCommandQueue = [device.device newCommandQueue];
     pImpl->mCommandQueue.label = @"Filament";
-    return pImpl->mCommandQueue;
+    outCommandQueue.commandQueue = pImpl->mCommandQueue;
 }
 
-id<MTLCommandBuffer> PlatformMetal::createAndEnqueueCommandBuffer() noexcept {
+void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
     id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
     [commandBuffer enqueue];
-    return commandBuffer;
+    outCommandBuffer.commandBuffer = commandBuffer;
 }
 
 void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
