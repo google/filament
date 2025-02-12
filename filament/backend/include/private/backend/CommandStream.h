@@ -50,7 +50,7 @@
 #include <stdint.h>
 
 // Set to true to print every command out on log.d. This requires RTTI and DEBUG
-#define DEBUG_COMMAND_STREAM false
+#define DEBUG_COMMAND_STREAM true
 
 namespace filament::backend {
 
