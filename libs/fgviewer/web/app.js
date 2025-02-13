@@ -351,7 +351,7 @@ class FrameGraphTable extends LitElement {
 
     _getRowHtml(allPasses, resourceId, defaultColor) {
         return allPasses.map((passName, index) => {
-            const passData = this.frameGraphData.passes.find(pass => pass.name === passName);
+            const passData = this.frameGraphData.passes[index];
             const isRead = passData?.reads.includes(resourceId);
             const isWrite = passData?.writes.includes(resourceId);
             let type = null;
