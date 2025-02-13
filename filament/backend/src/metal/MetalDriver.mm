@@ -125,7 +125,7 @@ MetalDriver::MetalDriver(
     device.device = nil;
     mPlatform.createDevice(device);
     mContext->device = device.device;
-    assert_invariant(mContext->device);
+    FILAMENT_CHECK_POSTCONDITION(mContext->device) << "Could not obtain Metal device.";
 
     mContext->emptyBuffer = [mContext->device newBufferWithLength:16
                                                           options:MTLResourceStorageModePrivate];
@@ -193,7 +193,8 @@ MetalDriver::MetalDriver(
     MetalCommandQueue commandQueue;
     commandQueue.commandQueue = nil;
     mPlatform.createCommandQueue(device, commandQueue);
-    assert_invariant(commandQueue.commandQueue);
+    FILAMENT_CHECK_POSTCONDITION(commandQueue.commandQueue)
+            << "Could not create Metal command queue.";
 
     mContext->commandQueue = commandQueue.commandQueue;
     mContext->pipelineStateCache.setDevice(mContext->device);
