@@ -35,14 +35,15 @@
 
 namespace filament {
 
-// Max number of froxels limited by:
-//   - max ubo size [min 16KiB]
-//
-// Also, increasing the number of froxels adds more pressure on the "record buffer" which stores
-// the light indices per froxel. The record buffer is limited to min(16K[ubo], 64K[uint16]) entries,
-// so with 8192 froxels, we can store 2 lights per froxels assuming they're all used. In practice,
-// some froxels are not used, so we can store more.
+// The number of froxel buffer entries is determined by max UBO size (see
+// getFroxelBufferByteCount()). We also introduce the limit below because increasing the number of
+// froxels adds more pressure on the "record buffer" which stores the light indices per froxel. The
+// record buffer is limited to min(16K[ubo], 64K[uint16]) entries. In practice some froxels are not
+// used, so we can store more.
 constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
+
+// Froxel buffer UBO is an array of uvec4. Make sure that the buffer is properly aligned.
+static_assert(FROXEL_BUFFER_MAX_ENTRY_COUNT % 4 == 0u);
 
 class FEngine;
 class FCamera;
@@ -146,6 +147,7 @@ public:
         inline uint16_t offset() const noexcept { return u32 >> 16u; }
         uint32_t u32 = 0;
     };
+    static_assert(sizeof(FroxelEntry) == 4u);
 
     // we can't change this easily because the shader expects 16 indices per uint4
     using RecordBufferType = uint8_t;
@@ -156,6 +158,8 @@ public:
     // this is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
     // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
     using LightGroupType = uint32_t;
+
+    static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
 
 private:
     size_t getFroxelBufferEntryCount() const noexcept {
