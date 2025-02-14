@@ -229,7 +229,7 @@ endif()
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
+    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp webgpu_dawn)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
     set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 
