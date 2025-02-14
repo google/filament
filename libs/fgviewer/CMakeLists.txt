@@ -23,6 +23,7 @@ set(SRCS
     src/ApiHandler.h
     src/DebugServer.cpp
     src/FrameGraphInfo.cpp
+    src/JsonWriter.cpp
 )
 
 # ==================================================================================================
