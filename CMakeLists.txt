@@ -765,6 +765,19 @@ add_subdirectory(${LIBRARIES}/mathio)
 add_subdirectory(${LIBRARIES}/uberz)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
+
+
+set(TINT_BUILD_TESTS OFF)
+set(TINT_BUILD_BENCHMARKS OFF)
+set(TINT_BUILD_IR_BINARY OFF)
+set(DAWN_ABSEIL_DIR ${EXTERNAL}/abseil)
+set(DAWN_SPIRV_TOOLS_DIR ${EXTERNAL}/spirv-tools/src)
+set(DAWN_SPIRV_HEADERS_DIR ${EXTERNAL}/spirv-headers)
+set(DAWN_GLSLANG_DIR ${EXTERNAL}/glslang/)
+
+add_subdirectory(${EXTERNAL}/dawn)
+
+
 add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/abseil/tnt)
