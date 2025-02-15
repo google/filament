@@ -32,6 +32,7 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
@@ -41,6 +42,13 @@
 #include <functional>
 
 #include <stdint.h>
+
+namespace utils{
+template<>
+CString to_string<uint32_t>(uint32_t value) noexcept {
+    return utils::CString(std::to_string(value).data());
+}
+} // namespace utils
 
 namespace filament {
 
@@ -514,12 +522,21 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     }
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
-    for (const auto &resource: mResourceNodes) {
+    for (const auto &resourceNode: mResourceNodes) {
         std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
         // TODO: Fill in resource properties
-        fgviewer::ResourceId id = resource->getId();
+        fgviewer::ResourceId id = resourceNode->getId();
+        auto resource = getResource(resourceNode->resourceHandle);
+        if (resource->refcount == 0)
+            continue;
+        if (resourceNode->getParentNode() != nullptr) {
+            resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
+                .name = "is_subresource",
+                .value = utils::to_string(resourceNode->getParentNode()->getId())
+            });
+        }
         resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
-                              id, utils::CString(resource->getName()),
+                              id, utils::CString(resourceNode->getName()),
                               std::move(resourceProps))
         );
     }
