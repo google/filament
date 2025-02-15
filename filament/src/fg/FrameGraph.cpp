@@ -522,21 +522,21 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     }
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
-    for (const auto &resource_node: mResourceNodes) {
+    for (const auto &resourceNode: mResourceNodes) {
         std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
         // TODO: Fill in resource properties
-        fgviewer::ResourceId id = resource_node->getId();
-        auto resource = getResource(resource_node->resourceHandle);
+        fgviewer::ResourceId id = resourceNode->getId();
+        auto resource = getResource(resourceNode->resourceHandle);
         if (resource->refcount == 0)
             continue;
-        if (resource_node->getParentNode() != nullptr) {
+        if (resourceNode->getParentNode() != nullptr) {
             resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
                 .name = "is_subresource",
-                .value = utils::to_string(resource_node->getParentNode()->getId())
+                .value = utils::to_string(resourceNode->getParentNode()->getId())
             });
         }
         resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
-                              id, utils::CString(resource_node->getName()),
+                              id, utils::CString(resourceNode->getName()),
                               std::move(resourceProps))
         );
     }
