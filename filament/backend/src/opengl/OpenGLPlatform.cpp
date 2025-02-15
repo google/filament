@@ -16,9 +16,8 @@
 
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include "OpenGLDriverBase.h"
 #include "OpenGLDriverFactory.h"
-
-#include "platforms/OpenGLDriverBase.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>

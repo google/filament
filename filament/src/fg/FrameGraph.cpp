@@ -43,8 +43,6 @@
 
 #include <stdint.h>
 
-#include "utils/Log.h"
-
 namespace utils{
 template<>
 CString to_string<uint32_t>(uint32_t value) noexcept {

@@ -31,8 +31,14 @@ const WRITE_COLOR = '#d43232';
 const NO_ACCESS_COLOR = '#d8dde754';
 const READ_WRITE_COLOR = '#ffeb99';
 const DEFAULT_COLOR = '#ffffff';
-
 const SUBRESOURCE_COLOR = '#d3d3d3';
+
+const RESOURCE_USAGE_TYPE_READ = 'read';
+const RESOURCE_USAGE_TYPE_WRITE = 'write';
+const RESOURCE_USAGE_TYPE_NO_ACCESS = 'no-access';
+const RESOURCE_USAGE_TYPE_READ_WRITE = 'read-write';
+
+const IS_SUBRESOURCE_KEY = 'is_subresource'
 
 class MenuSection extends LitElement {
     static get properties() {
@@ -328,13 +334,13 @@ class FrameGraphTable extends LitElement {
 
     _getCellColor(type, defaultColor) {
         switch (type) {
-            case 'read':
+            case RESOURCE_USAGE_TYPE_READ:
                 return READ_COLOR;
-            case 'write':
+            case RESOURCE_USAGE_TYPE_WRITE:
                 return WRITE_COLOR;
-            case 'no-access':
+            case RESOURCE_USAGE_TYPE_NO_ACCESS:
                 return NO_ACCESS_COLOR;
-            case 'read-write':
+            case RESOURCE_USAGE_TYPE_READ_WRITE:
                 return READ_WRITE_COLOR;
             default:
                 return defaultColor;
@@ -355,19 +361,19 @@ class FrameGraphTable extends LitElement {
             const isRead = passData?.reads.includes(resourceId);
             const isWrite = passData?.writes.includes(resourceId);
             let type = null;
-            const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
-                const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                return previousPassData?.reads.includes(resourceId) || previousPassData?.writes.includes(resourceId);
-            });
-            const willBeUsedLater = allPasses.slice(index + 1).some(p => {
-                const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                return futurePassData?.reads.includes(resourceId) || futurePassData?.writes.includes(resourceId);
-            });
+            // TODO: prevent using name to query
+            const getPassData = (index) => this.frameGraphData.passes.find(pass => pass.name === name);
+            const hasUsed = (name) => {
+                const passData = getPassData(name);
+                return passData?.reads.includes(resourceId) || passData?.writes.includes(resourceId);
+            };
+            const hasBeenUsedBefore = allPasses.slice(0, index).some(hasUsed);
+            const willBeUsedLater = allPasses.slice(index + 1).some(hasUsed);
 
-            if (isRead && isWrite) type = 'read-write';
-            else if (isRead) type = 'read';
-            else if (isWrite) type = 'write';
-            else if (hasBeenUsedBefore && willBeUsedLater) type = 'no-access';
+            if (isRead && isWrite) type = RESOURCE_USAGE_TYPE_READ_WRITE;
+            else if (isRead) type = RESOURCE_USAGE_TYPE_READ;
+            else if (isWrite) type = RESOURCE_USAGE_TYPE_WRITE;
+            else if (hasBeenUsedBefore && willBeUsedLater) type = RESOURCE_USAGE_TYPE_NO_ACCESS;
             return html`
                 <td style="background-color: ${unsafeCSS(this._getCellColor(type, defaultColor))};">
                     ${type ?? nothing}
@@ -375,9 +381,13 @@ class FrameGraphTable extends LitElement {
         });
     }
 
-    render() {
-        const IS_SUBRESOURCE_KEY = 'is_subresource'
+    _isSubresourceOfParent(resource, parentResource){
+        return resource.properties?.some(prop =>
+                prop.key === IS_SUBRESOURCE_KEY &&
+                Number(prop.value) === parentResource.id)
+    }
 
+    render() {
         if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
         const allPasses = this.frameGraphData.passes.map(pass => pass.name);
         const resources = Object.values(this.frameGraphData.resources);
@@ -396,23 +406,20 @@ class FrameGraphTable extends LitElement {
                         const isSubresource = resource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY);
                         if (isSubresource) return nothing;
 
-                        const hasSubresources = resources.some(subresource =>
-                                subresource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY && Number(prop.value) === resource.id)
-                        );
+                        const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
                         return html`
                             <tr id="resource-${resourceIndex}">
                                 <th class="sticky-col">
                                     ${hasSubresources ? html`
                                         <span
-                                                class="toggle-icon"
-                                                @click="${() => this._toggleCollapse(resourceIndex)}"
+                                            class="toggle-icon"
+                                            @click="${() => this._toggleCollapse(resourceIndex)}"
                                         >▶</span>` : nothing}
                                     ${resource.name}
                                 </th>
                                 ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
                             </tr>
-                            ${resources.filter(subresource =>
-                                    subresource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY && Number(prop.value) === resource.id)
+                            ${resources.filter(subresource => this._isSubresourceOfParent(subresource, resource)
                             ).map((subresource, subIndex) => html`
                                 <tr id="subresource-${resourceIndex}-${subIndex}"
                                     class="collapsible hidden">
