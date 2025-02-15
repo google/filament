@@ -8,5 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- matdbg: Add support for debugging ESSL 1.0 shaders
-- backend: New platform API to better handle external textures [⚠️ **New Material Version**]
+- Support including PlatformMetal.h in C++ files.

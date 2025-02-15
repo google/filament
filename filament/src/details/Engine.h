@@ -519,7 +519,7 @@ private:
     void shutdown();
 
     int loop();
-    void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
+    void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue) const;
 
     template<typename T>
     bool isValid(const T* ptr, ResourceList<T> const& list) const;
@@ -730,7 +730,7 @@ public:
         return { mFeatures.data(), mFeatures.size() };
     }
 
-    bool setFeatureFlag(char const* name, bool value) noexcept;
+    bool setFeatureFlag(char const* name, bool value) const noexcept;
     std::optional<bool> getFeatureFlag(char const* name) const noexcept;
     bool* getFeatureFlagPtr(std::string_view name, bool allowConstant = false) const noexcept;
 };

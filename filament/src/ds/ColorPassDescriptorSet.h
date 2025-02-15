@@ -79,6 +79,7 @@ public:
             TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
 
     void init(
+            FEngine& engine,
             backend::BufferObjectHandle lights,
             backend::BufferObjectHandle recordBuffer,
             backend::BufferObjectHandle froxelBuffer) noexcept;

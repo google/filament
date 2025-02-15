@@ -126,16 +126,17 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
 }
 
 void ColorPassDescriptorSet::init(
+        FEngine& engine,
         BufferObjectHandle lights,
         BufferObjectHandle recordBuffer,
         BufferObjectHandle froxelBuffer) noexcept {
     for (auto&& descriptorSet: mDescriptorSet) {
         descriptorSet.setBuffer(+PerViewBindingPoints::LIGHTS,
-                lights, 0, sizeof(LightsUib));
+                lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
         descriptorSet.setBuffer(+PerViewBindingPoints::RECORD_BUFFER,
                 recordBuffer, 0, sizeof(FroxelRecordUib));
         descriptorSet.setBuffer(+PerViewBindingPoints::FROXEL_BUFFER,
-                froxelBuffer, 0, sizeof(FroxelsUib));
+                froxelBuffer, 0, Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()));
     }
 }
 
@@ -573,4 +574,3 @@ void ColorPassDescriptorSet::setBuffer(descriptor_binding_t const binding,
 }
 
 } // namespace filament
-
