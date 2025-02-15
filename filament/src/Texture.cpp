@@ -82,6 +82,10 @@ bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const form
     return FTexture::isTextureFormatSupported(downcast(engine), format);
 }
 
+bool Texture::isTextureFormatMipmappable(Engine& engine, InternalFormat const format) noexcept {
+    return FTexture::isTextureFormatMipmappable(downcast(engine), format);
+}
+
 bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
     return FTexture::isProtectedTexturesSupported(downcast(engine));
 }

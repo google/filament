@@ -658,6 +658,10 @@ bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat const fo
     return engine.getDriverApi().isTextureFormatSupported(format);
 }
 
+bool FTexture::isTextureFormatMipmappable(FEngine& engine, InternalFormat const format) noexcept {
+    return engine.getDriverApi().isTextureFormatMipmappable(format);
+}
+
 bool FTexture::isProtectedTexturesSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isProtectedTexturesSupported();
 }

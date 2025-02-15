@@ -31,6 +31,7 @@
 #include "MetalTimerQuery.h"
 
 #include <backend/platforms/PlatformMetal.h>
+#include <backend/platforms/PlatformMetal-ObjC.h>
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -120,8 +121,11 @@ MetalDriver::MetalDriver(
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
 
-    mContext->device = mPlatform.createDevice();
-    assert_invariant(mContext->device);
+    MetalDevice device;
+    device.device = nil;
+    mPlatform.createDevice(device);
+    mContext->device = device.device;
+    FILAMENT_CHECK_POSTCONDITION(mContext->device) << "Could not obtain Metal device.";
 
     mContext->emptyBuffer = [mContext->device newBufferWithLength:16
                                                           options:MTLResourceStorageModePrivate];
@@ -186,7 +190,13 @@ MetalDriver::MetalDriver(
             [mContext->device.name containsString:@"Apple A8 GPU"] ||
             [mContext->device.name containsString:@"Apple A7 GPU"];
 
-    mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
+    MetalCommandQueue commandQueue;
+    commandQueue.commandQueue = nil;
+    mPlatform.createCommandQueue(device, commandQueue);
+    FILAMENT_CHECK_POSTCONDITION(commandQueue.commandQueue)
+            << "Could not create Metal command queue.";
+
+    mContext->commandQueue = commandQueue.commandQueue;
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
