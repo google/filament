@@ -356,15 +356,11 @@ class FrameGraphTable extends LitElement {
     }
 
     _getRowHtml(allPasses, resourceId, defaultColor) {
-        return allPasses.map((passName, index) => {
-            const passData = this.frameGraphData.passes[index];
+        return allPasses.map((passData, index) => {
             const isRead = passData?.reads.includes(resourceId);
             const isWrite = passData?.writes.includes(resourceId);
             let type = null;
-            // TODO: prevent using name to query
-            const getPassData = (index) => this.frameGraphData.passes.find(pass => pass.name === name);
-            const hasUsed = (name) => {
-                const passData = getPassData(name);
+            const hasUsed = (passData) => {
                 return passData?.reads.includes(resourceId) || passData?.writes.includes(resourceId);
             };
             const hasBeenUsedBefore = allPasses.slice(0, index).some(hasUsed);
@@ -389,7 +385,7 @@ class FrameGraphTable extends LitElement {
 
     render() {
         if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
-        const allPasses = this.frameGraphData.passes.map(pass => pass.name);
+        const allPasses = this.frameGraphData.passes;
         const resources = Object.values(this.frameGraphData.resources);
         return html`
             <div class="table-container">
@@ -398,7 +394,7 @@ class FrameGraphTable extends LitElement {
                     <tr>
                         <th class="sticky-col">Resources/Passes</th>
                         ${allPasses.map(pass => html`
-                            <th>${pass}</th>`)}
+                            <th>${pass.name}</th>`)}
                     </tr>
                     </thead>
                     <tbody>

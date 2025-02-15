@@ -539,23 +539,22 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) {
     }
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
-    for (const auto &resource_node: mResourceNodes) {
-        if (resources.find(resource_node->resourceHandle.index) != resources.end())
+    for (const auto &resourceNode: mResourceNodes) {
+        if (resources.find(resourceNode->resourceHandle.index) != resources.end())
             continue;
 
         std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
-        // TODO: Fill in resource properties
-        auto resource = getResource(resource_node->resourceHandle);
+        auto resource = getResource(resourceNode->resourceHandle);
         if (resource->refcount == 0)
             continue;
-        if (resource_node->getParentNode() != nullptr) {
+        if (resourceNode->getParentNode() != nullptr) {
             resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
                 .name = "is_subresource",
-                .value = utils::to_string(resource_node->getParentNode()->resourceHandle.index)
+                .value = utils::to_string(resourceNode->getParentNode()->resourceHandle.index)
             });
         }
-        resources.emplace(resource_node->resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
-                              resource_node->resourceHandle.index, utils::CString(resource_node->getName()),
+        resources.emplace(resourceNode->resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
+                              resourceNode->resourceHandle.index, utils::CString(resourceNode->getName()),
                               std::move(resourceProps))
         );
     }
