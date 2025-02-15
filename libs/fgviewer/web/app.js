@@ -361,14 +361,13 @@ class FrameGraphTable extends LitElement {
             const isRead = passData?.reads.includes(resourceId);
             const isWrite = passData?.writes.includes(resourceId);
             let type = null;
-            const hasBeenUsedBefore = allPasses.slice(0, index).some(p => {
-                const previousPassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                return previousPassData?.reads.includes(resourceId) || previousPassData?.writes.includes(resourceId);
-            });
-            const willBeUsedLater = allPasses.slice(index + 1).some(p => {
-                const futurePassData = this.frameGraphData.passes.find(pass => pass.name === p);
-                return futurePassData?.reads.includes(resourceId) || futurePassData?.writes.includes(resourceId);
-            });
+            const getPassData = (name) => this.frameGraphData.passes.find(pass => pass.name === name);
+            const hasUsed = (name) => {
+                const passData = getPassData(name);
+                return passData?.reads.includes(resourceId) || passData?.writes.includes(resourceId);
+            };
+            const hasBeenUsedBefore = allPasses.slice(0, index).some(hasUsed);
+            const willBeUsedLater = allPasses.slice(index + 1).some(hasUsed);
 
             if (isRead && isWrite) type = RESOURCE_USAGE_TYPE_READ_WRITE;
             else if (isRead) type = RESOURCE_USAGE_TYPE_READ;
