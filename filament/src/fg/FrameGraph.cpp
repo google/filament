@@ -43,21 +43,6 @@
 
 #include <stdint.h>
 
-namespace utils{
-template<>
-CString to_string<uint32_t>(uint32_t value) noexcept {
-    return utils::CString(std::to_string(value).data());
-}
-template<>
-CString to_string<int16_t>(int16_t value) noexcept {
-    return utils::CString(std::to_string(value).data());
-}
-template<>
-CString to_string<uint16_t>(uint16_t value) noexcept {
-    return utils::CString(std::to_string(value).data());
-}
-} // namespace utils
-
 namespace filament {
 
 inline FrameGraph::Builder::Builder(FrameGraph& fg, PassNode* passNode) noexcept
@@ -495,7 +480,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) {
     mGraph.export_graphviz(out, name);
 }
 
-fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) {
+fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) const {
 #if FILAMENT_ENABLE_FGVIEWER
     fgviewer::FrameGraphInfo info{utils::CString(viewName)};
     std::vector<fgviewer::FrameGraphInfo::Pass> passes;
@@ -504,7 +489,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) {
     const auto activePassNodesEnd = mActivePassNodesEnd;
     while (first != activePassNodesEnd) {
         PassNode *const pass = *first;
-        first++;
+        ++first;
 
         assert_invariant(!pass->isCulled());
         std::vector<fgviewer::ResourceId> reads;
@@ -512,7 +497,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) {
         for (auto const &edge: readEdges) {
             // all incoming edges should be valid by construction
             assert_invariant(mGraph.isEdgeValid(edge));
-            auto resourceNode = static_cast<ResourceNode*>(mGraph.getNode(edge->from));
+            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->from));
             assert_invariant(resourceNode);
             if (resourceNode->getRefCount() == 0)
                 continue;
@@ -528,7 +513,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) {
             if (!mGraph.isEdgeValid(edge)) {
                 continue;
             }
-            auto resourceNode = static_cast<ResourceNode*>(mGraph.getNode(edge->to));
+            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->to));
             assert_invariant(resourceNode);
             if (resourceNode->getRefCount() == 0)
                 continue;
@@ -540,21 +525,23 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) {
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
     for (const auto &resourceNode: mResourceNodes) {
-        if (resources.find(resourceNode->resourceHandle.index) != resources.end())
+        const FrameGraphHandle resourceHandle = resourceNode->resourceHandle;
+        if (resources.find(resourceHandle.index) != resources.end())
             continue;
 
         std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
-        auto resource = getResource(resourceNode->resourceHandle);
-        if (resource->refcount == 0)
+        if (resourceNode->getRefCount() == 0)
             continue;
         if (resourceNode->getParentNode() != nullptr) {
             resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
                 .name = "is_subresource",
-                .value = utils::to_string(resourceNode->getParentNode()->resourceHandle.index)
+                .value = utils::CString(std::to_string(
+                    resourceNode->getParentHandle().index).data())
             });
         }
-        resources.emplace(resourceNode->resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
-                              resourceNode->resourceHandle.index, utils::CString(resourceNode->getName()),
+        resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
+                              resourceHandle.index,
+                              utils::CString(resourceNode->getName()),
                               std::move(resourceProps))
         );
     }

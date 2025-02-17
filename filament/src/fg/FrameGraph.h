@@ -446,7 +446,7 @@ public:
      * Export a fgviewer::FrameGraphInfo for current graph.
      * Note that this function should be called after FrameGraph::compile().
      */
-    fgviewer::FrameGraphInfo getFrameGraphInfo(const char *viewName);
+    fgviewer::FrameGraphInfo getFrameGraphInfo(const char *viewName) const;
 
 private:
     friend class FrameGraphResources;
