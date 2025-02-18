@@ -774,7 +774,7 @@ set(DAWN_ABSEIL_DIR ${EXTERNAL}/abseil/tnt)
 set(DAWN_SPIRV_TOOLS_DIR ${EXTERNAL}/spirv-tools)
 set(DAWN_SPIRV_HEADERS_DIR ${EXTERNAL}/spirv-headers)
 set(DAWN_GLSLANG_DIR ${EXTERNAL}/glslang/tnt)
-
+set(DAWN_BUILD_MONOLITHIC_LIBRARY ON)
 add_subdirectory(${EXTERNAL}/dawn)
 
 

@@ -69,7 +69,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
+#include <tint/tint.h>
 namespace filamat {
 
 using namespace utils;
