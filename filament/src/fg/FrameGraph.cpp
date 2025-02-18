@@ -32,6 +32,7 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
@@ -488,7 +489,7 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
     const auto activePassNodesEnd = mActivePassNodesEnd;
     while (first != activePassNodesEnd) {
         PassNode *const pass = *first;
-        first++;
+        ++first;
 
         assert_invariant(!pass->isCulled());
         std::vector<fgviewer::ResourceId> reads;
@@ -496,7 +497,12 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
         for (auto const &edge: readEdges) {
             // all incoming edges should be valid by construction
             assert_invariant(mGraph.isEdgeValid(edge));
-            reads.push_back(edge->from);
+            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->from));
+            assert_invariant(resourceNode);
+            if (resourceNode->getRefCount() == 0)
+                continue;
+
+            reads.push_back(resourceNode->resourceHandle.index);
         }
 
         std::vector<fgviewer::ResourceId> writes;
@@ -507,19 +513,35 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
             if (!mGraph.isEdgeValid(edge)) {
                 continue;
             }
-            writes.push_back(edge->to);
+            auto resourceNode = static_cast<const ResourceNode*>(mGraph.getNode(edge->to));
+            assert_invariant(resourceNode);
+            if (resourceNode->getRefCount() == 0)
+                continue;
+            writes.push_back(resourceNode->resourceHandle.index);
         }
         passes.emplace_back(utils::CString(pass->getName()),
             std::move(reads), std::move(writes));
     }
 
     std::unordered_map<fgviewer::ResourceId, fgviewer::FrameGraphInfo::Resource> resources;
-    for (const auto &resource: mResourceNodes) {
+    for (const auto &resourceNode: mResourceNodes) {
+        const FrameGraphHandle resourceHandle = resourceNode->resourceHandle;
+        if (resources.find(resourceHandle.index) != resources.end())
+            continue;
+
         std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
-        // TODO: Fill in resource properties
-        fgviewer::ResourceId id = resource->getId();
-        resources.emplace(id, fgviewer::FrameGraphInfo::Resource(
-                              id, utils::CString(resource->getName()),
+        if (resourceNode->getRefCount() == 0)
+            continue;
+        if (resourceNode->getParentNode() != nullptr) {
+            resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
+                .name = "is_subresource",
+                .value = utils::CString(std::to_string(
+                    resourceNode->getParentHandle().index).data())
+            });
+        }
+        resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
+                              resourceHandle.index,
+                              utils::CString(resourceNode->getName()),
                               std::move(resourceProps))
         );
     }
