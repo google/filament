@@ -797,12 +797,11 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     if (FILAMENT_ENABLE_MATDBG OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/matdbg)
     endif()
-
-    # TODO: Uncomment below when fgviewer is ready
-    # if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
-    #     add_subdirectory(${LIBRARIES}/fgviewer)
-    # endif()
 endif()
+
+if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
+    add_subdirectory(${LIBRARIES}/fgviewer)
+endif ()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
